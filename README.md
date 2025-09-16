@@ -2,6 +2,7 @@
 ## License
 
 All code outside of the Oxyd folder is licensed under MIT
+
 All code inside the Oxyd folder is all rights reserved.
 
 Most assets are licensed under [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) unless stated otherwise. Assets have their license and copyright specified in the metadata file. For example, see the [metadata for a crowbar](https://github.com/space-wizards/space-station-14/blob/master/Resources/Textures/Objects/Tools/crowbar.rsi/meta.json).  
