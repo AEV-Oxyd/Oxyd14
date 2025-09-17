@@ -25,6 +25,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
     {
         foreach (var projectile in FireNextTick)
         {
+            Log.Debug($"Speed is {projectile.Comp.initialMovement}");
             _transform.SetCoordinates(projectile.Owner, projectile.Comp.initialPosition);
             _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, true);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);

@@ -26,4 +26,6 @@ public sealed partial class OxydProjectileComponent : Component
     // initial pos to fire from on tick
     public EntityCoordinates initialPosition;
 
+    public EntityCoordinates? Coordinates;
+
 }
