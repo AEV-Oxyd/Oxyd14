@@ -45,14 +45,14 @@
   - type: Item
     size: Large
   - type: OxydBullet
-    speed: 25
+    speed: 1
     projectileEntity: ProjectileOxyd
 
 - type: entity
   id: ProjectileOxyd
   name: bullet (15.2×169 mm shrapnel)
   categories: [ HideSpawnMenu ]
-  parent: BaseBullet
+  parent: BaseItem
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/Projectiles/projectiles2.rsi

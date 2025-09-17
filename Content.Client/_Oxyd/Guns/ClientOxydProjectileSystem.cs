@@ -36,7 +36,7 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     {
         foreach (var projectile in FireNextTick)
         {
-            _transform.SetCoordinates(projectile.Owner, (projectile.Comp.initialPosition));
+            _transform.SetCoordinates(projectile.Owner, projectile.Comp.initialPosition);
             _physics.UpdateIsPredicted(projectile.Owner);
             _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, false);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
