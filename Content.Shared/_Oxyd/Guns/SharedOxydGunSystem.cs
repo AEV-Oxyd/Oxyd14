@@ -17,7 +17,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
 {
 
     [Dependency] private readonly SharedMapSystem _mapSystem = default!;
-    [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
+    [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
     [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;
     [Dependency] private readonly IMapManager _mapManager = default!;
     [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
@@ -47,7 +47,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         if (!TryComp<OxydBulletComponent>(chambered, out var bulletComp))
             return false;
         EntityUid projectile = Spawn(bulletComp.projectileEntity.ToString(), MapCoordinates.Nullspace);
-        _itemSlotsSystem.TryEject(gun, slot, null, out var ejected);
+       // _itemSlotsSystem.TryEject(gun, slot, null, out var ejected);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;

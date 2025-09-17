@@ -8,6 +8,9 @@
     <WarningsAsErrors>RA0032;nullable</WarningsAsErrors>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DefineConstants>DEBUG;TRACE;WINDOWS;DEVELOPMENT;CLIENT_SCRIPTING;TOOLS;EXCEPTION_TOLERANCE</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" />
   </ItemGroup>

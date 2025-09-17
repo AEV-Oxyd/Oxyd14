@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.OxydGunSystem;
+using Robust.Shared.Physics.Components;
 
 
 namespace Content.Server._Crescent.HullrotGunSystem;
@@ -24,6 +25,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
     {
         foreach (var projectile in FireNextTick)
         {
+            _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, true);
             _transform.SetCoordinates(projectile.Owner, projectile.Comp.initialPosition);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
         }
