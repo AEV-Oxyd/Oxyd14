@@ -9,6 +9,9 @@ public class ClientSideGunFiredEvent : EntityEventArgs
 {
     public NetEntity gun;
     public NetEntity shooter;
-    public NetCoordinates shotFrom;
-    public NetCoordinates aimedPosition;
+    public MapCoordinates shotFrom;
+    // where was actually clicked
+    public MapCoordinates clickPosition;
+    // where it was actually aimed , might be relative since it might be a moving grid
+    public MapCoordinates aimedPosition;
 }

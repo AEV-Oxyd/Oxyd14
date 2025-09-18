@@ -19,18 +19,12 @@ public sealed partial class OxydProjectileComponent : Component
     // entities we won't hit
     public HashSet<EntityUid> ignoring = new();
     // where in the world was this initially aimed at
-    // relative-based on grids or the world map so it
-    // remains accurate to the true target
-    public EntityCoordinates aimedPosition;
+    public MapCoordinates aimedPosition;
     // initial movement to apply when firing
     public Vector2 initialMovement;
     // initial pos to fire from on tick
-    public EntityCoordinates initialPosition;
-
-    public EntityCoordinates? Coordinates;
     [AutoNetworkedField]
-    public bool client = false;
+    public MapCoordinates initialPosition = MapCoordinates.Nullspace;
 
-    public int tickCount = 0;
 
 }

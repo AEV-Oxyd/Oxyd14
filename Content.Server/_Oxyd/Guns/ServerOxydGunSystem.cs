@@ -21,10 +21,8 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
     {
         EntityUid gun = GetEntity(args.gun);
         EntityUid shooter = GetEntity(args.shooter);
-        EntityCoordinates targetCoordinates = GetCoordinates(args.aimedPosition);
-        EntityCoordinates firingCoordinates = GetCoordinates(args.shotFrom);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
-        fireGun(shooter, (gun, gunComp), firingCoordinates, targetCoordinates.Position);
+        fireGun(shooter, (gun, gunComp), args.shotFrom, args.clickPosition);
     }
 }

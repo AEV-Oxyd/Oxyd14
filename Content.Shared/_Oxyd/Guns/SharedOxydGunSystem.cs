@@ -1,10 +1,12 @@
 
 
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
 using Robust.Shared.Map;
+using Robust.Shared.Physics;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
@@ -25,6 +27,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+
     public bool getProjectile(EntityUid shooter, Entity<OxydGunComponent> gun, Entity<OxydBulletComponent> bullet,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
     {
         outputComp = null;
@@ -34,7 +37,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;
         projectileComp.initialMovement = new Vector2(bullet.Comp.Speed * gun.Comp.SpeedMultiplier, bullet.Comp.Speed * gun.Comp.SpeedMultiplier);
-        projectileComp.initialPosition = new EntityCoordinates(gun.Owner, 0, 0);
         outputComp = (projectile, projectileComp);
         return true;
     }
@@ -56,24 +58,24 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
-    public void fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, EntityCoordinates shootingFrom, Vector2 targetPos)
+    public void fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
         if(!getProjectileChambered(shooter, gun, out var projectileNullable))
             return;
-        var map = _transformSystem.GetMapId(gun.Owner);
-        MapCoordinates mapCoords = new MapCoordinates(_transformSystem.GetWorldPosition(gun.Owner) + targetPos, map);
         Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
         projectile.Comp.initialPosition = shootingFrom;
-        if (_mapManager.TryFindGridAt(mapCoords, out var gridUid, out var gridComp))
-        {
-            Vector2i tileIndices = _mapSystem.CoordinatesToTile(gridUid, gridComp, mapCoords);
-            projectile.Comp.aimedPosition = new EntityCoordinates(gridUid, tileIndices);
-        }
-        else
-        {
-            projectile.Comp.aimedPosition = _transformSystem.ToCoordinates(mapCoords);
-        }
+        projectile.Comp.initialMovement *= (targetPos.Position - shootingFrom.Position).Normalized();
+        projectile.Comp.aimedPosition = targetPos;
         _projectileSystem.queueProjectile(projectile);
+    }
+
+    public MapCoordinates resolveFiringPosition(Entity<OxydHandheldGunComponent> obj, MapCoordinates targetPos, EntityUid shooter)
+    {
+        if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
+            return MapCoordinates.Nullspace;
+        var map = _transformSystem.GetMapCoordinates(shooter);
+        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius);
+        return map;
     }
 
     public bool tryGetProvider(EntityUid from,[NotNullWhen(true)] out OxydGunProviderComponent? provider)
