@@ -51,12 +51,14 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
         }
         if (!_gameTiming.IsFirstTimePredicted)
             return;
-        var firingCoordinates = resolveFiringPosition(gun, _transformSystem.ToMapCoordinates(args.clickCoords), args.user);
+        var targetCoordinates = _transformSystem.ToMapCoordinates(args.clickCoords);
+        var firingCoordinates = resolveFiringPosition(gun, targetCoordinates, args.user);
+
         Log.Debug($"MouseClick pos at {args.clickCoords.Position}");
-        fireGun(args.user, (gun.Owner, gunComp), firingCoordinates, _transformSystem.ToMapCoordinates(args.clickCoords));
+        fireGun(args.user, (gun.Owner, gunComp), firingCoordinates, targetCoordinates);
         RaiseNetworkEvent(new ClientSideGunFiredEvent()
         {
-            aimedPosition = _transformSystem.ToMapCoordinates(args.clickCoords),
+            aimedPosition = targetCoordinates,
             shotFrom = firingCoordinates,
             gun = GetNetEntity(gun),
             shooter = GetNetEntity(args.user)

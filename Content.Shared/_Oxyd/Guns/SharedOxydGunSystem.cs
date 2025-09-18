@@ -74,7 +74,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
             return MapCoordinates.Nullspace;
         var map = _transformSystem.GetMapCoordinates(shooter);
-        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius);
+        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 1.3f) ;
         return map;
     }
 
