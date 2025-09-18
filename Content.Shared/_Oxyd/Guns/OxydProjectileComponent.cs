@@ -1,4 +1,5 @@
 using System.Numerics;
+using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 
 
@@ -8,7 +9,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydProjectileComponent : Component
 {
     // the gun/entity that actually sents out the bullet
@@ -27,5 +28,9 @@ public sealed partial class OxydProjectileComponent : Component
     public EntityCoordinates initialPosition;
 
     public EntityCoordinates? Coordinates;
+    [AutoNetworkedField]
+    public bool client = false;
+
+    public int tickCount = 0;
 
 }

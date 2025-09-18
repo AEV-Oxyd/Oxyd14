@@ -45,7 +45,7 @@
   - type: Item
     size: Large
   - type: OxydBullet
-    speed: 1
+    speed: 20
     projectileEntity: ProjectileOxyd
 
 - type: entity
@@ -71,5 +71,7 @@
         mask:
         - Impassable
         - BulletImpassable
+        friction: 0
   - type: TimedDespawn
-    lifetime: 30
+    lifetime: 60
+
