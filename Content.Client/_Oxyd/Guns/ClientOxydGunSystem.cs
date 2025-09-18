@@ -19,49 +19,32 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(TryUseGun);
+        SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
     }
-
-
-
-    public void onEmptyShootAttempt()
+    public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
     {
-
-    }
-
-    public void onInvalidShootAttempt()
-    {
-
-    }
-
-    public void TryUseGun(Entity<OxydHandheldGunComponent> gun, ref UsingMouseDownEvent args)
-    {
-        if (!TryComp<OxydGunComponent>(gun, out var gunComp))
-            return;
-        if (!gunComp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
+        if (!TryComp<OxydGunComponent>(obj, out var gun))
         {
-            onEmptyShootAttempt();
+            Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
             return;
         }
 
-        if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
-        {
-            onInvalidShootAttempt();
-            return;
-        }
+        var targetPos = _transformSystem.ToMapCoordinates(args.clickCoords);
+        TryFireGunAt((obj.Owner, gun), args.user, targetPos, resolveFiringPosition(obj, targetPos, args.user));
+    }
+
+    public new void TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
-        var targetCoordinates = _transformSystem.ToMapCoordinates(args.clickCoords);
-        var firingCoordinates = resolveFiringPosition(gun, targetCoordinates, args.user);
-
-        Log.Debug($"MouseClick pos at {args.clickCoords.Position}");
-        fireGun(args.user, (gun.Owner, gunComp), firingCoordinates, targetCoordinates);
+        base.TryFireGunAt(gun,shooter, targetCoordinates, firingCoordinates);
         RaiseNetworkEvent(new ClientSideGunFiredEvent()
         {
             aimedPosition = targetCoordinates,
             shotFrom = firingCoordinates,
             gun = GetNetEntity(gun),
-            shooter = GetNetEntity(args.user)
+            shooter = GetNetEntity(shooter)
         });
 
     }

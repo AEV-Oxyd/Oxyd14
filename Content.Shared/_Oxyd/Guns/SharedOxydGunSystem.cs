@@ -74,7 +74,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
             return MapCoordinates.Nullspace;
         var map = _transformSystem.GetMapCoordinates(shooter);
-        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 1.3f) ;
+        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 2f) ;
         return map;
     }
 
@@ -107,6 +107,33 @@ public abstract class SharedOxydGunSystem : EntitySystem
     public void onChamberInitialized(Entity<OxydGunAmmoChamberComponent> chamber, ref ComponentInit args)
     {
         _itemSlotsSystem.AddItemSlot(chamber.Owner, ammoChamberContainerName, chamber.Comp.bulletSlot);
+    }
+
+    public void onEmptyShootAttempt()
+    {
+
+    }
+
+    public void onInvalidShootAttempt()
+    {
+
+    }
+
+    public void TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
+        {
+            onEmptyShootAttempt();
+            return;
+        }
+
+        if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
+        {
+            onInvalidShootAttempt();
+            return;
+        }
+        fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
     public override void Initialize()
