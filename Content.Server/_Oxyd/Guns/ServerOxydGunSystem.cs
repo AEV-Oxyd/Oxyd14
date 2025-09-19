@@ -1,5 +1,5 @@
-using Content.Server._Oxyd.Framework;
 using Content.Server.Players.RateLimiting;
+using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Server.GameStates;
 using Robust.Shared.GameStates;
@@ -30,8 +30,8 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         var ent = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
         if (ent is not null)
         {
-            var pvsBlk = EnsureComp<PvsSessionBlockerComponent>(ent.Value.Owner);
-            pvsBlk.blacklistedFor.Add(inp.SenderSession.Name);
+            var pvsBlk = EnsureComp<DeleteClientsideComponent>(ent.Value.Owner);
+            pvsBlk.forSessions.Add(inp.SenderSession.Name);
         }
     }
 }
