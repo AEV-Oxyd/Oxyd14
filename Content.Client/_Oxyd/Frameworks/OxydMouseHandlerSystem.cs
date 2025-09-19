@@ -87,8 +87,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
 
     public bool HandleMouseEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
-        if (_stateManager.CurrentState is not GameplayState gameplayState)
-            return true;
         if (session is null)
             return true;
         if (session.AttachedEntity is null)
@@ -105,7 +103,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         });
         var active = _handsSystem.GetActiveHandEntity();
         if (active is null)
-            return true;
+            return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
         var targetedEvent = new UsingMouseDownEvent()
         {
@@ -123,8 +121,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
 
     public bool HandleMouseDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
-        if (_stateManager.CurrentState is not GameplayState gameplayState)
-            return true;
         if (session is null)
             return true;
         if (session.AttachedEntity is null)
@@ -140,7 +136,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         });
         var active = _handsSystem.GetActiveHandEntity();
         if (active is null)
-            return true;
+            return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
         var targetedEvent = new UsingMouseUpEvent()
         {

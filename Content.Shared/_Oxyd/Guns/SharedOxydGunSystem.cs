@@ -58,15 +58,16 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
-    public void fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
+    public Entity<OxydProjectileComponent>? fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
         if(!getProjectileChambered(shooter, gun, out var projectileNullable))
-            return;
+            return null;
         Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
         projectile.Comp.initialPosition = shootingFrom;
         projectile.Comp.initialMovement *= (targetPos.Position - shootingFrom.Position).Normalized();
         projectile.Comp.aimedPosition = targetPos;
         _projectileSystem.queueProjectile(projectile);
+        return projectile;
     }
 
     public MapCoordinates resolveFiringPosition(Entity<OxydHandheldGunComponent> obj, MapCoordinates targetPos, EntityUid shooter)
@@ -119,21 +120,21 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public void TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public Entity<OxydProjectileComponent>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
         {
             onEmptyShootAttempt();
-            return;
+            return null;
         }
 
         if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
         {
             onInvalidShootAttempt();
-            return;
+            return null;
         }
-        fireGun(shooter, gun, firingCoordinates, targetCoordinates);
+        return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
     public override void Initialize()
