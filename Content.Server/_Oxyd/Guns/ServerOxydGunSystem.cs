@@ -30,7 +30,7 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         var ent = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
         if (ent is not null)
         {
-            var pvsBlk = EnsureComp<DeleteClientsideComponent>(ent.Value.Owner);
+            var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(ent.Value.Owner);
             pvsBlk.forSessions.Add(inp.SenderSession.Name);
         }
     }

@@ -10,17 +10,17 @@ namespace Content.Client._Oxyd.Framework;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class OxydClientsideDeleterSystem : EntitySystem
+public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
-        SubscribeLocalEvent<DeleteClientsideComponent, ComponentInit>(Purge);
+        SubscribeLocalEvent<ClientsidePleaseIgnoreComponent, ComponentInit>(Purge);
     }
 
-    public void Purge(Entity<DeleteClientsideComponent> obj,ref ComponentInit componentAdd)
+    public void Purge(Entity<ClientsidePleaseIgnoreComponent> obj,ref ComponentInit componentAdd)
     {
         if (_playerManager.LocalSession is null)
             return;
