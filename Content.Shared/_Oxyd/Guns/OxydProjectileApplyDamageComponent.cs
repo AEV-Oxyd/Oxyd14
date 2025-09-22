@@ -1,3 +1,5 @@
+using Content.Shared.Damage;
+
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 /// <summary>
@@ -6,5 +8,6 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 [RegisterComponent]
 public sealed partial class OxydProjectileApplyDamageComponent : Component
 {
-    
+    [DataField("damage")]
+    public DamageSpecifier DamageSpecifier = default!;
 }
