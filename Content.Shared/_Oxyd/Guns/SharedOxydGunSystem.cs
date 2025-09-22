@@ -7,6 +7,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
 using Robust.Shared.Map;
 using Robust.Shared.Physics;
+using Robust.Shared.Timing;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
@@ -25,8 +26,15 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
     [Dependency] private readonly ILogManager _logManager = default!;
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
+    [Dependency] protected readonly IGameTiming _gameTiming = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
+        SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
+    }
 
     public bool getProjectile(EntityUid shooter, Entity<OxydGunComponent> gun, Entity<OxydBulletComponent> bullet,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
     {
@@ -58,16 +66,28 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
-    public Entity<OxydProjectileComponent>? fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
+    public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
-        if(!getProjectileChambered(shooter, gun, out var projectileNullable))
-            return null;
-        Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
-        projectile.Comp.initialPosition = shootingFrom;
-        projectile.Comp.initialMovement *= (targetPos.Position - shootingFrom.Position).Normalized();
-        projectile.Comp.aimedPosition = targetPos;
-        _projectileSystem.queueProjectile(projectile);
-        return projectile;
+        gun.Comp.nextFire =  _gameTiming.CurTime + gun.Comp.fireDelay;
+        gun.Comp.shootFraction += gun.Comp.fireDelay;
+        if (gun.Comp.fireDelay < _gameTiming.TickPeriod)
+        {
+            gun.Comp.shootFraction += (_gameTiming.TickPeriod - gun.Comp.fireDelay);
+        }
+        List<Entity<OxydProjectileComponent>> projectiles = new();
+        while (gun.Comp.shootFraction > gun.Comp.fireDelay)
+        {
+            if(!getProjectileChambered(shooter, gun, out var projectileNullable))
+                return projectiles;
+            gun.Comp.shootFraction -= gun.Comp.fireDelay;
+            Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
+            projectile.Comp.initialPosition = shootingFrom;
+            projectile.Comp.initialMovement *= (targetPos.Position - shootingFrom.Position).Normalized();
+            projectile.Comp.aimedPosition = targetPos;
+            projectiles.Add(projectile);
+            _projectileSystem.queueProjectile(projectile);
+        }
+        return projectiles;
     }
 
     public MapCoordinates resolveFiringPosition(Entity<OxydHandheldGunComponent> obj, MapCoordinates targetPos, EntityUid shooter)
@@ -120,7 +140,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public Entity<OxydProjectileComponent>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
@@ -134,12 +154,11 @@ public abstract class SharedOxydGunSystem : EntitySystem
             onInvalidShootAttempt();
             return null;
         }
+
+        if (gun.Comp.nextFire > _gameTiming.CurTime)
+            return null;
+
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
-        SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
-    }
 }

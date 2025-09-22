@@ -20,11 +20,21 @@ public sealed partial class OxydGunComponent : Component
 
     // bullets per second
     [DataField]
-    public float FireRate = 6;
+    public float FireRate = 1000;
     public int shootingPosIndex = 0;
     [DataField]
     public List<Vector2> shootingPosOffsets = new List<Vector2>();
     public OxydGunProviderComponent ammoProvider = default!;
+    [DataField]
+    public TimeSpan nextFire = TimeSpan.Zero;
+    [ViewVariables]
+    public TimeSpan fireDelay => TimeSpan.FromSeconds(1/FireRate);
+    // how many "extra" bullets have we accumulated due to
+    // firerate being faster than server tick rate
+    // will be used to spawn multiple bullets in a tick when
+    // falling behind. Triggers when shootFraction > fireDelay
+    [ViewVariables]
+    public TimeSpan shootFraction = TimeSpan.Zero;
 
     public Vector2 getShootingOffset()
     {

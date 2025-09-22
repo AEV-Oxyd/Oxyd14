@@ -74,4 +74,8 @@
         friction: 0
   - type: TimedDespawn
     lifetime: 60
+  - type: OxydProjectileApplyDamage
+    damage:
+      types:
+        Blunt: 7
 

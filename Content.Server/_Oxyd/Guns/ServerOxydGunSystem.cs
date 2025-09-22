@@ -27,10 +27,12 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
-        var ent = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
-        if (ent is not null)
+        var projectiles = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
+        if (projectiles is null)
+            return;
+        foreach (var bullet in projectiles)
         {
-            var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(ent.Value.Owner);
+            var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
             pvsBlk.forSessions.Add(inp.SenderSession.Name);
         }
     }

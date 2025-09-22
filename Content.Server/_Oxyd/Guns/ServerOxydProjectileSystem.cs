@@ -1,6 +1,9 @@
+using Content.Server.Effects;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Server.GameObjects;
 using Robust.Shared.Physics.Components;
+using Robust.Shared.Physics.Events;
+using Robust.Shared.Player;
 
 
 namespace Content.Server._Crescent.HullrotGunSystem;
@@ -12,15 +15,22 @@ namespace Content.Server._Crescent.HullrotGunSystem;
 public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
 {
     [Dependency] private readonly PhysicsSystem _physicsSystem = default!;
+    [Dependency] private readonly ColorFlashEffectSystem  _flashEffectSystem = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
-
+        base.Initialize();
     }
 
     public override void projectileQueued(Entity<OxydProjectileComponent> projectile)
     {
 
+    }
+
+    public override void afterBulletCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
+    {
+        _flashEffectSystem.RaiseEffect(Color.Red, new List<EntityUid>(){args.OtherEntity}, Filter.Pvs(args.OtherEntity));
+        base.afterBulletCollide(obj, ref args);
     }
 
     public override void processProjectiles(float deltaTime)
