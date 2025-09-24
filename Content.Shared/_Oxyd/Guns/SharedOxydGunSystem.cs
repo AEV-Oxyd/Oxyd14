@@ -75,17 +75,19 @@ public abstract class SharedOxydGunSystem : EntitySystem
             gun.Comp.shootFraction += (_gameTiming.TickPeriod - gun.Comp.fireDelay);
         }
         List<Entity<OxydProjectileComponent>> projectiles = new();
+        var sameTickCounter = 0;
         while (gun.Comp.shootFraction > gun.Comp.fireDelay)
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
             gun.Comp.shootFraction -= gun.Comp.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
-            projectile.Comp.initialPosition = shootingFrom;
             projectile.Comp.initialMovement *= (targetPos.Position - shootingFrom.Position).Normalized();
+            projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * gun.Comp.fireDelay.Seconds);
             projectile.Comp.aimedPosition = targetPos;
             projectiles.Add(projectile);
             _projectileSystem.queueProjectile(projectile);
+            sameTickCounter++;
         }
         return projectiles;
     }

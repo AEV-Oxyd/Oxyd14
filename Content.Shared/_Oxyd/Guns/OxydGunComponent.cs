@@ -20,7 +20,7 @@ public sealed partial class OxydGunComponent : Component
 
     // bullets per second
     [DataField]
-    public float FireRate = 1000;
+    public float FireRate = 1;
     public int shootingPosIndex = 0;
     [DataField]
     public List<Vector2> shootingPosOffsets = new List<Vector2>();
