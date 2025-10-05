@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
+using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
 
@@ -11,42 +13,41 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunComponent : Component
 {
     // bullet sets their own speed , gun can only influence it
     [DataField]
     public float SpeedMultiplier = 1;
 
-    // bullets per second
-    [DataField]
-    public float FireRate = 60;
-    public int shootingPosIndex = 0;
-    [DataField]
-    public List<Vector2> shootingPosOffsets = new List<Vector2>();
     public OxydGunProviderComponent ammoProvider = default!;
+
+    [ViewVariables]
+    // Firemodes handle most firing details that are not technical.
+    public OxydBaseGunFiremode selectedFiremode;
     [DataField]
-    public TimeSpan nextFire = TimeSpan.Zero;
+    public List<OxydBaseGunFiremode> firemodes = new();
+    [ViewVariables, AutoNetworkedField]
+    // used for randomization
+    public int timesFired = 0;
+    // How much actual firing time there is
+    // This depends on server tick period. A gun can accumulate
+    // extra firing time due to uneven ticks , this makes sure the
+    // firarate is always overall respected , even if it'd be lost due to
+    // ticks not being fast enough
     [ViewVariables]
-    public TimeSpan fireDelay => TimeSpan.FromSeconds(1/FireRate);
-    // how many "extra" bullets have we accumulated due to
-    // firerate being faster than server tick rate
-    // will be used to spawn multiple bullets in a tick when
-    // falling behind. Triggers when shootFraction > fireDelay
-    [ViewVariables]
-    public TimeSpan shootFraction = TimeSpan.Zero;
+    public TimeSpan firingTime = TimeSpan.Zero;
 
     public Vector2 getShootingOffset()
     {
-        if (shootingPosIndex == shootingPosOffsets.Count)
-            shootingPosIndex = 0;
-        return shootingPosOffsets[shootingPosIndex++];
+        if (selectedFiremode.shootingPosIndex == selectedFiremode.shootingPosOffsets.Count)
+            selectedFiremode.shootingPosIndex = 0;
+        return selectedFiremode.shootingPosOffsets[selectedFiremode.shootingPosIndex++];
     }
 };
 [RegisterComponent]
 public sealed partial class OxydHandheldGunComponent : Component
 {
-
 }
 
 public abstract partial class OxydGunProviderComponent : Component

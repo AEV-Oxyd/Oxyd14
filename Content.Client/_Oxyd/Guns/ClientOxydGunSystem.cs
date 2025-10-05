@@ -38,7 +38,8 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
-        base.TryFireGunAt(gun,shooter, targetCoordinates, firingCoordinates);
+        if (base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates) is null)
+            return;
         RaiseNetworkEvent(new ClientSideGunFiredEvent()
         {
             aimedPosition = targetCoordinates,

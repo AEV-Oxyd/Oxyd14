@@ -15,6 +15,9 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly PlayerRateLimitManager _playerRateLimitManager = default!;
     [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
+
+    // Acceptable timing inconsistencies during auto firing.
+    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(15);
     public override void Initialize()
     {
         base.Initialize();
@@ -27,6 +30,10 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
+        // Let  very small inconsistencies slide in , don't want state desyncs!
+        if (gunComp.nextFire > _gameTiming.CurTime && (gunComp.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
+            gunComp.nextFire = _gameTiming.CurTime;
+
         var projectiles = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
         if (projectiles is null)
             return;
