@@ -1,19 +1,38 @@
 using System.Numerics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
-[Serializable, NetSerializable, Prototype, DataDefinition]
+[Serializable, NetSerializable]
 public abstract class OxydBaseGunFiremode : IPrototype
 {
      // TECHNICAL
     [IdDataField]
     public string ID { get; } = default!;
-
+    [NonSerialized]
     public SharedOxydGunSystem _gunSystem;
-    public int UpdateTicks = 0;
+    [NonSerialized]
+    public readonly EntityUid gun;
+    private uint _intUpdateTicks = 0;
+
+    public uint UpdateTicks
+    {
+        get => _intUpdateTicks;
+        set
+        {
+            _intUpdateTicks = value;
+            if(_intUpdateTicks != 0)
+                _gunSystem.RegisterFiremodeAsActive(gun,  this);
+        }
+    }
+
     // prevent changing fire modes whilst this is true.
     public bool Active = false;
+
+    // SPRITE
+    [DataField("icon", required: true)]
+    public SpriteSpecifier Icon = default!;
 
     // GAME
 
@@ -43,18 +62,19 @@ public abstract class OxydBaseGunFiremode : IPrototype
 
 
 
-    public OxydBaseGunFiremode(ref SharedOxydGunSystem gun)
+    public OxydBaseGunFiremode(ref SharedOxydGunSystem gunSys, EntityUid gunId)
     {
-        _gunSystem = gun;
+        _gunSystem = gunSys;
+        gun = gunId;
     }
 
-    public TimeSpan getFireDelay()
-    {
-        return TimeSpan.Zero;
-    }
+    public abstract void Tick(float frameTime);
+}
 
-    public void Tick(float gameTime)
-    {
+[Prototype]
+public partial class FiremodeSemi : OxydBaseGunFiremode
+{
+    public FiremodeSemi(ref SharedOxydGunSystem gunSys, EntityUid gunId) : base(ref gunSys, gunId) {}
 
-    }
+    public override void Tick(float frameTime) {}
 }

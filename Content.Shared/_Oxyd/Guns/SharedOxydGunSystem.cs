@@ -8,6 +8,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
 using Robust.Shared.Map;
+using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Timing;
 
@@ -29,6 +30,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly ILogManager _logManager = default!;
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
     [Dependency] protected readonly IGameTiming _gameTiming = default!;
+    [Dependency] private readonly INetManager _netManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -40,9 +42,10 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
-        var seed = SharedRandomExtensions.HashCodeCombine(new() { (int)_gameTiming.CurTick.Value, GetNetEntity(gun).Id, gun.Comp.timesFired });
+        var firemode = gun.Comp.selectedFiremode;
+        var seed = SharedRandomExtensions.HashCodeCombine(new() { (int)_gameTiming.CurTick.Value, GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
         var rand = new System.Random(seed);
-        var inaccuracyDebuff = (gun.Comp.baseInaccuracy + rand.NextSingle() * gun.Comp.addedInaccuracyMaximum);
+        var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
         Log.Debug($"{inaccuracyDebuff.Degrees}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
@@ -95,6 +98,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
                 return projectiles;
             gun.Comp.firingTime -= gunFiremode.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
+            projectile.Comp.initialMovement *= gunFiremode.SpeedMultiplier;
             projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos);
             projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremode.fireDelay.TotalSeconds);
             projectile.Comp.aimedPosition = targetPos;
@@ -165,6 +169,11 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     }
 
+    public void RegisterFiremodeAsActive(EntityUid gun,  OxydBaseGunFiremode firemode)
+    {
+        var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
+        c.firemode =  firemode;
+    }
     public List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
@@ -186,4 +195,16 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
+        foreach (var active in query)
+        {
+            active.firemode.UpdateTicks--;
+            active.firemode.Tick(frameTime);
+            if(active.firemode.UpdateTicks == 0)
+                RemComp<OxydActiveFiremodeUpdatingComponent>(active.firemode.gun);
+        }
+    }
 }

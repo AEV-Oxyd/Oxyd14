@@ -29,7 +29,7 @@ public sealed partial class OxydGunComponent : Component
     public List<OxydBaseGunFiremode> firemodes = new();
     [ViewVariables, AutoNetworkedField]
     // used for randomization
-    public int timesFired = 0;
+    public uint timesFired = 0;
     // How much actual firing time there is
     // This depends on server tick period. A gun can accumulate
     // extra firing time due to uneven ticks , this makes sure the
@@ -45,6 +45,11 @@ public sealed partial class OxydGunComponent : Component
         return selectedFiremode.shootingPosOffsets[selectedFiremode.shootingPosIndex++];
     }
 };
+[RegisterComponent]
+public sealed partial class OxydActiveFiremodeUpdatingComponent : Component
+{
+    public OxydBaseGunFiremode firemode;
+}
 [RegisterComponent]
 public sealed partial class OxydHandheldGunComponent : Component
 {
