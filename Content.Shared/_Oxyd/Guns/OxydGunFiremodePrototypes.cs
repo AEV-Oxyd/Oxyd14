@@ -11,24 +11,11 @@ public abstract class OxydBaseGunFiremode : IPrototype
     [IdDataField]
     public string ID { get; } = default!;
     [NonSerialized]
-    public SharedOxydGunSystem _gunSystem;
+    public int currentStep = 0;
     [NonSerialized]
-    public readonly EntityUid gun;
-    private uint _intUpdateTicks = 0;
-
-    public uint UpdateTicks
-    {
-        get => _intUpdateTicks;
-        set
-        {
-            _intUpdateTicks = value;
-            if(_intUpdateTicks != 0)
-                _gunSystem.RegisterFiremodeAsActive(gun,  this);
-        }
-    }
-
+    public int maxSteps = 0;
     // prevent changing fire modes whilst this is true.
-    public bool Active = false;
+    public bool LockFiremode = false;
 
     // SPRITE
     [DataField("icon", required: true)]
@@ -60,21 +47,6 @@ public abstract class OxydBaseGunFiremode : IPrototype
     // Added depending on chance, from 0 to the value
     public Angle addedInaccuracyMaximum = Angle.FromDegrees(10);
 
+    [DataField("effects")] public List<OxydGunEffect> Effects = new();
 
-
-    public OxydBaseGunFiremode(ref SharedOxydGunSystem gunSys, EntityUid gunId)
-    {
-        _gunSystem = gunSys;
-        gun = gunId;
-    }
-
-    public abstract void Tick(float frameTime);
-}
-
-[Prototype]
-public partial class FiremodeSemi : OxydBaseGunFiremode
-{
-    public FiremodeSemi(ref SharedOxydGunSystem gunSys, EntityUid gunId) : base(ref gunSys, gunId) {}
-
-    public override void Tick(float frameTime) {}
 }

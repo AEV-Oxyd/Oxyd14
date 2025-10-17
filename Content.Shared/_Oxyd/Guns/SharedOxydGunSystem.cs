@@ -40,6 +40,17 @@ public abstract class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
     }
 
+    public bool InterpretStep(OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        Log.Error($"Unimplemented Gun Effect tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
+        return false;
+    }
+
+    public bool InterpretStep(GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        return false;
+    }
+
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
         var firemode = gun.Comp.selectedFiremode;
@@ -201,10 +212,13 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            active.firemode.UpdateTicks--;
-            active.firemode.Tick(frameTime);
-            if(active.firemode.UpdateTicks == 0)
-                RemComp<OxydActiveFiremodeUpdatingComponent>(active.firemode.gun);
+            while (active.firemode.currentStep < active.firemode.maxSteps)
+            {
+                if (!InterpretStep(active.firemode.Effects[active.firemode.currentStep++], active.gun, active.shooter))
+                {
+                    break;
+                }
+            }
         }
     }
 }

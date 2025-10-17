@@ -49,6 +49,8 @@ public sealed partial class OxydGunComponent : Component
 public sealed partial class OxydActiveFiremodeUpdatingComponent : Component
 {
     public OxydBaseGunFiremode firemode;
+    public Entity<OxydGunComponent> gun;
+    public EntityUid? shooter;
 }
 [RegisterComponent]
 public sealed partial class OxydHandheldGunComponent : Component
