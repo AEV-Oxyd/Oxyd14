@@ -10,12 +10,10 @@ public abstract class OxydBaseGunFiremode : IPrototype
      // TECHNICAL
     [IdDataField]
     public string ID { get; } = default!;
-    [NonSerialized]
     public int currentStep = 0;
-    [NonSerialized]
     public int maxSteps = 0;
     // prevent changing fire modes whilst this is true.
-    public bool LockFiremode = false;
+    public bool Active = false;
 
     // SPRITE
     [DataField("icon", required: true)]

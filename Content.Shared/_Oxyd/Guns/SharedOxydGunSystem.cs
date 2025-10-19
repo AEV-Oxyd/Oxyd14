@@ -40,16 +40,29 @@ public abstract class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
     }
 
-    public bool InterpretStep(OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public bool InterpretStep(OxydBaseGunFiremode firemode, OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         Log.Error($"Unimplemented Gun Effect tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
         return false;
     }
 
-    public bool InterpretStep(GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+
+    public bool InterpretStep(OxydBaseGunFiremode firemode, GunEffectTryFireGunDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        return false;
+        MapCoordinates gunCoords = _transformSystem.GetMapCoordinates(gun.Owner);
+        if (TryFireGunAt(gun,
+                gun.Owner,
+                gunCoords.Offset(_transformSystem.GetWorldRotation(gun).ToWorldVec()),
+                gunCoords) is null)
+        {
+            firemode.currentStep = 0;
+            return false;
+        }
+
+        return true;
     }
+
+
 
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
@@ -185,7 +198,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
         c.firemode =  firemode;
     }
-    public List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public virtual List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
@@ -206,19 +219,31 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
+    public bool TryExecuteFiremodeCycle(OxydBaseGunFiremode firemode, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (firemode.nextFire > _gameTiming.CurTime)
+            return false;
+        firemode.Active = true;
+        while (firemode.currentStep < firemode.maxSteps)
+        {
+            if (!InterpretStep(firemode, firemode.Effects[firemode.currentStep], gun, shooter))
+            {
+                return false;
+            }
+            firemode.currentStep++;
+        }
+        firemode.currentStep = 0;
+        firemode.Active = false;
+        return true;
+    }
+
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            while (active.firemode.currentStep < active.firemode.maxSteps)
-            {
-                if (!InterpretStep(active.firemode.Effects[active.firemode.currentStep++], active.gun, active.shooter))
-                {
-                    break;
-                }
-            }
+            TryExecuteFiremodeCycle(active.firemode, active.gun, active.shooter);
         }
     }
 }

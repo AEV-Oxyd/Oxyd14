@@ -29,17 +29,45 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             return;
         }
 
-        var targetPos = _transformSystem.ToMapCoordinates(args.clickCoords);
-        TryFireGunAt((obj.Owner, gun), args.user, targetPos, resolveFiringPosition(obj, targetPos, args.user));
+        TryExecuteFiremodeCycle(gun.selectedFiremode, (obj.Owner, gun), args.user);
     }
 
-    public new void TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public bool InterpretStep(OxydBaseGunFiremode firemode, GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (shooter is null)
+        {
+            firemode.currentStep = 0;
+            return false;
+        }
+        if(!TryComp<OxydMouseDataComponent>(shooter.Value, out var mouseData))
+        {
+            firemode.currentStep = 0;
+            return false;
+        }
+
+        MapCoordinates shootingPos = _transformSystem.GetMapCoordinates(gun);
+        if (TryComp<OxydHandheldGunComponent>(gun, out var handheldComp))
+        {
+            shootingPos = _transformSystem.GetMapCoordinates(shooter.Value);
+        }
+
+        if (TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos) is null)
+        {
+            firemode.currentStep = 0;
+            return false;
+        }
+        return true;
+
+    }
+
+    public override List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        if (base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates) is null)
-            return;
+            return null;
+        var projectiles = base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+        if (projectiles is null)
+            return null;
         RaiseNetworkEvent(new ClientSideGunFiredEvent()
         {
             aimedPosition = targetCoordinates,
@@ -47,6 +75,7 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             gun = GetNetEntity(gun),
             shooter = GetNetEntity(shooter)
         });
+        return projectiles;
 
     }
 }

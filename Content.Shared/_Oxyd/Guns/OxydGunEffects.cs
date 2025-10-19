@@ -13,9 +13,6 @@ public abstract partial class OxydGunEffect
     private protected string _id => this.GetType().Name;
 }
 
-public sealed partial class GunEffectLockFiremode : OxydGunEffect;
-
-public sealed partial class GunEffectUnlockFiremode : OxydGunEffect;
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;
 
 public sealed partial class GunEffectCheckCuffed : OxydGunEffect;

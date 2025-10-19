@@ -31,8 +31,8 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
         // Let  very small inconsistencies slide in , don't want state desyncs!
-        if (gunComp.nextFire > _gameTiming.CurTime && (gunComp.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
-            gunComp.nextFire = _gameTiming.CurTime;
+        if (gunComp.selectedFiremode.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremode.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
+            gunComp.selectedFiremode.nextFire = _gameTiming.CurTime;
 
         var projectiles = TryFireGunAt((gun, gunComp), shooter, args.aimedPosition, args.shotFrom);
         if (projectiles is null)
