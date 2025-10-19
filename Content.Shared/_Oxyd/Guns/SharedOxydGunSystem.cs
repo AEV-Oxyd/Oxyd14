@@ -46,6 +46,13 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
+    public bool InterpretStepWithPosition(OxydBaseGunFiremode firemode, OxydGunEffect effect, Entity<OxydGunComponent> gun, MapCoordinates firingFrom,
+            MapCoordinates towards, EntityUid? shooter)
+    {
+        Log.Error($"Unimplemented Gun Effect  WITH POSITION tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
+        return false;
+    }
+
 
     public bool InterpretStep(OxydBaseGunFiremode firemode, GunEffectTryFireGunDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {

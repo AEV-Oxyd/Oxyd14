@@ -44,7 +44,6 @@ public abstract class OxydBaseGunFiremode : IPrototype
     [DataField]
     // Added depending on chance, from 0 to the value
     public Angle addedInaccuracyMaximum = Angle.FromDegrees(10);
-
-    [DataField("effects")] public List<OxydGunEffect> Effects = new();
+    [DataField("effects"),NonSerialized] public List<OxydGunEffect> Effects = new();
 
 }

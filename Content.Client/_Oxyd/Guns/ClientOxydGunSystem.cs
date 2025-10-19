@@ -28,8 +28,17 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
             return;
         }
-
+        RaiseNetworkEvent(new ClientSideInterpretingFiremode()
+        {
+            gun = GetNetEntity(obj),
+            shooter = GetNetEntity(args.user),
+            clientsideStartingStep = gun.selectedFiremode.currentStep,
+        });
         TryExecuteFiremodeCycle(gun.selectedFiremode, (obj.Owner, gun), args.user);
+        RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
+        {
+            stoppedAt = gun.selectedFiremode.currentStep,
+        });
     }
 
     public bool InterpretStep(OxydBaseGunFiremode firemode, GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
@@ -51,11 +60,24 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             shootingPos = _transformSystem.GetMapCoordinates(shooter.Value);
         }
 
-        if (TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos) is null)
+        var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
+        if (returnedList is null)
         {
             firemode.currentStep = 0;
             return false;
         }
+        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
+        {
+            projectiles = returnedList,
+            shooter = shooter.Value,
+        });
+        RaiseNetworkEvent(new FiremodeClientsideFiredEvent()
+        {
+            gun = GetNetEntity(gun),
+            shotFrom = shootingPos,
+            aimedPosition = mouseData.mouseMap,
+            firemodeStep = firemode.currentStep,
+        });
         return true;
 
     }
@@ -73,7 +95,6 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             aimedPosition = targetCoordinates,
             shotFrom = firingCoordinates,
             gun = GetNetEntity(gun),
-            shooter = GetNetEntity(shooter)
         });
         return projectiles;
 

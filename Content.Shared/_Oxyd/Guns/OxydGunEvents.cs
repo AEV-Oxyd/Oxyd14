@@ -9,15 +9,12 @@ public class ClientSideInterpretingFiremode : EntityEventArgs
 {
     public NetEntity gun;
     public NetEntity shooter;
-    public required OxydBaseGunFiremode firemode;
     public int clientsideStartingStep = 0;
-    public MapCoordinates shotFrom;
-    public MapCoordinates aimedPosition;
 }
 
 public class ClientSideDoneInterpretingFiremode : EntityEventArgs
 {
-    public required OxydBaseGunFiremode firemode;
+    public NetEntity gun;
     public int stoppedAt = 0;
 }
 
@@ -26,7 +23,21 @@ public class ClientSideDoneInterpretingFiremode : EntityEventArgs
 public class ClientSideGunFiredEvent : EntityEventArgs
 {
     public NetEntity gun;
-    public NetEntity shooter;
     public MapCoordinates shotFrom;
     public MapCoordinates aimedPosition;
+}
+
+public class FiremodeProjectilesFiredEvent : EntityEventArgs
+{
+    public required List<Entity<OxydProjectileComponent>> projectiles;
+    public EntityUid shooter = EntityUid.Invalid;
+}
+
+[Serializable, NetSerializable]
+public class FiremodeClientsideFiredEvent : EntityEventArgs
+{
+    public MapCoordinates aimedPosition;
+    public MapCoordinates shotFrom;
+    public int firemodeStep = 0;
+    public NetEntity gun;
 }
