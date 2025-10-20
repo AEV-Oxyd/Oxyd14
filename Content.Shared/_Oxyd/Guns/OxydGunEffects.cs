@@ -11,6 +11,16 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 public abstract partial class OxydGunEffect
 {
     private protected string _id => this.GetType().Name;
+
+    public OxydGunEffect Clone()
+    {
+        return (OxydGunEffect)MemberwiseClone();
+    }
+
+    static OxydGunEffect()
+    {
+        EntityManager.System<SharedOxydGunSystem>().RegisterDynamicEffect(typeof(OxydGunEffect), SharedOxydGunSystem.InterpretStep );
+    }
 }
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;

@@ -1,9 +1,12 @@
 
 
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
+using Content.Shared._Oxyd.Framework;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
@@ -32,21 +35,46 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
     [Dependency] protected readonly IGameTiming _gameTiming = default!;
     [Dependency] private readonly INetManager _netManager = default!;
-    [Dependency] private readonly PrototypeManager _prototypeManager = default!;
+    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+
+    internal FrozenDictionary<Type, Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool>>
+        dynamicFunctionMap =
+            new Dictionary<Type, Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool>>()
+                .ToFrozenDictionary();
 
     public override void Initialize()
     {
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
+
+    }
+
+    public void RegisterDynamicEffect<T>(Func<GunFiremodePrototype, T, Entity<OxydGunComponent>, EntityUid, bool> linkingFunction) where T : OxydGunEffect
+    {
+        var defrosted = dynamicFunctionMap.ToDictionary();
+        Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool> adapter =
+            (fp, e, gun, shooter) => linkingFunction(fp, (T)e, gun, shooter);
+        defrosted.Add(typeof(T), adapter);
+        dynamicFunctionMap = defrosted.ToFrozenDictionary();
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        Log.Error($"Unimplemented Gun Effect tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
-        return false;
+        switch (effect)
+        {
+            case GunEffectTryFireMouseDirection e1:
+                return InterpretStep(firemodePrototype, e1, gun, shooter);
+            default:
+            {
+                Log.Error($"Unimplemented Gun Effect tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
+                return false;
+            }
+
+        }
     }
+
 
     public bool InterpretStepWithPosition(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, MapCoordinates firingFrom,
             MapCoordinates towards, EntityUid? shooter)
@@ -187,7 +215,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
         foreach (var proto in gun.Comp.firemodes)
         {
-            gun.Comp.InstanciatedFiremodes.Add(new _pro;
+            gun.Comp.InstanciatedFiremodes.Add(_prototypeManager.Index<GunFiremodePrototype>(proto).createCopy());
         }
         gun.Comp.ammoProvider = provider;
         gun.Comp.selectedFiremodePrototype = gun.Comp.InstanciatedFiremodes.First();

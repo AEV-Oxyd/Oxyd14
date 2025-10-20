@@ -11,7 +11,7 @@ public class ClientSideInterpretingFiremode : EntityEventArgs
     public NetEntity shooter;
     public int clientsideStartingStep = 0;
 }
-
+[Serializable, NetSerializable]
 public class ClientSideDoneInterpretingFiremode : EntityEventArgs
 {
     public NetEntity gun;

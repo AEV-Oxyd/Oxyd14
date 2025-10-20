@@ -11,7 +11,7 @@ public partial class GunFiremodePrototype : IPrototype
     [IdDataField]
     public string ID { get; } = default!;
     public int currentStep = 0;
-    public int maxSteps = 0;
+    public int maxSteps => Effects.Count;
     // prevent changing fire modes whilst this is true.
     public bool Active = false;
 
@@ -47,20 +47,16 @@ public partial class GunFiremodePrototype : IPrototype
     [DataField("effects"),NonSerialized]
     public List<OxydGunEffect> Effects = new();
 
-    public static GunFiremodePrototype createCopy(GunFiremodePrototype initial)
+    public GunFiremodePrototype createCopy()
     {
-        var thing = new GunFiremodePrototype()
+        var thing = (GunFiremodePrototype)this.MemberwiseClone();
+        thing.Effects = new();
+        foreach(var eff in Effects)
         {
-            Active = initial.Active,
-            addedInaccuracyMaximum = initial.addedInaccuracyMaximum,
-            baseInaccuracy = initial.baseInaccuracy,
-            currentStep = initial.currentStep,
-
-        };
-        foreach(var eff in initial.Effects)
-        {
-            eff.MemberwiseClone()
+            thing.Effects.Add(eff.Clone());
         }
+
+        return thing;
     }
 
 }
