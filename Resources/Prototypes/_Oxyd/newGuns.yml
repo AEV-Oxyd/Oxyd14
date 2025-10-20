@@ -1,3 +1,9 @@
+- type: gunFiremode
+  id: baseFiremode
+  effects:
+  - !type:GunEffectTryFireMouseDirection
+
+
 - type: entity
   name: Oxyd Gun
   parent: BaseItem
@@ -14,6 +20,8 @@
   - type: Item
     size: Large
   - type: OxydGun
+    firemodes:
+    - baseFiremode
   - type: OxydHandheldGun
   - type: OxydGunAmmoChamber
     bulletSlot:

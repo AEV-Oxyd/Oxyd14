@@ -38,14 +38,14 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         if (TerminatingOrDeleted(gun) || TerminatingOrDeleted(shooter))
             return;
         // state desync - force update to client or something - SPCR 2025
-        if (gunComp.selectedFiremode.currentStep != args.clientsideStartingStep)
+        if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
             return;
         }
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
         c.shooterNetworkId = inp.SenderSession.UserId;
-        if(TryExecuteFiremodeCycle(gunComp.selectedFiremode, (gun, gunComp), shooter))
+        if(TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter))
             c.fullCycle = true;
     }
 
@@ -56,18 +56,26 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
         {
-            Log.Error($"Sesiunea {inp.SenderSession.Name} are packet loss / increase sa termine firemode-uri neexistente pe arma {gun}");
+            Log.Error($"Sesiunea {inp.SenderSession.Name} are packet loss / increase sa termine firemodePrototype-uri neexistente pe arma {gun}");
             return;
         }
 
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
         // state desync
-        if (gunComp.selectedFiremode.currentStep != args.stoppedAt)
+        if (gunComp.selectedFiremodePrototype.currentStep != args.stoppedAt)
         {
             Log.Error($"Sesiunea {inp.SenderSession.Name} are un state desync pe arma {gun}");
             return;
         }
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype,
+        GunEffectTryFireMouseDirection effect,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        return true;
     }
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args,  EntitySessionEventArgs inp)
@@ -92,15 +100,15 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         }
 
-        if (args.firemodeStep > gunComp.selectedFiremode.currentStep && !handler.fullCycle)
+        if (args.firemodeStep > gunComp.selectedFiremodePrototype.currentStep && !handler.fullCycle)
         {
-            Log.Error($"{inp.SenderSession.Name} are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremode.currentStep}");
+            Log.Error($"{inp.SenderSession.Name} are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremodePrototype.currentStep}");
             return;
         }
         handler.executedFiringSteps.Add(args.firemodeStep);
         // Let  very small inconsistencies slide in , don't want state desyncs!
-        if (gunComp.selectedFiremode.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremode.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
-            gunComp.selectedFiremode.nextFire = _gameTiming.CurTime;
+        if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
+            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
 
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, args.aimedPosition, args.shotFrom);
         if (projectiles is null)

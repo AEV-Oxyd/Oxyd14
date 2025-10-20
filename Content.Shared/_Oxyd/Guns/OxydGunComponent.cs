@@ -24,9 +24,11 @@ public sealed partial class OxydGunComponent : Component
 
     [ViewVariables]
     // Firemodes handle most firing details that are not technical.
-    public OxydBaseGunFiremode selectedFiremode;
+    public GunFiremodePrototype selectedFiremodePrototype;
+    [ViewVariables]
+    public List<GunFiremodePrototype> InstanciatedFiremodes = new();
     [DataField]
-    public List<OxydBaseGunFiremode> firemodes = new();
+    public List<ProtoId<GunFiremodePrototype>> firemodes = new();
     [ViewVariables, AutoNetworkedField]
     // used for randomization
     public uint timesFired = 0;
@@ -40,15 +42,15 @@ public sealed partial class OxydGunComponent : Component
 
     public Vector2 getShootingOffset()
     {
-        if (selectedFiremode.shootingPosIndex == selectedFiremode.shootingPosOffsets.Count)
-            selectedFiremode.shootingPosIndex = 0;
-        return selectedFiremode.shootingPosOffsets[selectedFiremode.shootingPosIndex++];
+        if (selectedFiremodePrototype.shootingPosIndex == selectedFiremodePrototype.shootingPosOffsets.Count)
+            selectedFiremodePrototype.shootingPosIndex = 0;
+        return selectedFiremodePrototype.shootingPosOffsets[selectedFiremodePrototype.shootingPosIndex++];
     }
 };
 [RegisterComponent]
 public sealed partial class OxydActiveFiremodeUpdatingComponent : Component
 {
-    public OxydBaseGunFiremode firemode;
+    public GunFiremodePrototype FiremodePrototype;
     public Entity<OxydGunComponent> gun;
     public EntityUid? shooter;
 }

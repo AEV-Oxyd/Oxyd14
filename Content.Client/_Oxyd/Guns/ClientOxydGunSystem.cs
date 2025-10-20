@@ -32,25 +32,25 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
         {
             gun = GetNetEntity(obj),
             shooter = GetNetEntity(args.user),
-            clientsideStartingStep = gun.selectedFiremode.currentStep,
+            clientsideStartingStep = gun.selectedFiremodePrototype.currentStep,
         });
-        TryExecuteFiremodeCycle(gun.selectedFiremode, (obj.Owner, gun), args.user);
+        TryExecuteFiremodeCycle(gun.selectedFiremodePrototype, (obj.Owner, gun), args.user);
         RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
         {
-            stoppedAt = gun.selectedFiremode.currentStep,
+            stoppedAt = gun.selectedFiremodePrototype.currentStep,
         });
     }
 
-    public bool InterpretStep(OxydBaseGunFiremode firemode, GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         if (shooter is null)
         {
-            firemode.currentStep = 0;
+            firemodePrototype.currentStep = 0;
             return false;
         }
         if(!TryComp<OxydMouseDataComponent>(shooter.Value, out var mouseData))
         {
-            firemode.currentStep = 0;
+            firemodePrototype.currentStep = 0;
             return false;
         }
 
@@ -63,7 +63,7 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
         var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
         if (returnedList is null)
         {
-            firemode.currentStep = 0;
+            firemodePrototype.currentStep = 0;
             return false;
         }
         RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
@@ -76,7 +76,7 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
             gun = GetNetEntity(gun),
             shotFrom = shootingPos,
             aimedPosition = mouseData.mouseMap,
-            firemodeStep = firemode.currentStep,
+            firemodeStep = firemodePrototype.currentStep,
         });
         return true;
 
