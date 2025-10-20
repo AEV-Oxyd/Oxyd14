@@ -50,15 +50,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
 
     }
-
-    public void RegisterDynamicEffect<T>(Func<GunFiremodePrototype, T, Entity<OxydGunComponent>, EntityUid, bool> linkingFunction) where T : OxydGunEffect
-    {
-        var defrosted = dynamicFunctionMap.ToDictionary();
-        Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool> adapter =
-            (fp, e, gun, shooter) => linkingFunction(fp, (T)e, gun, shooter);
-        defrosted.Add(typeof(T), adapter);
-        dynamicFunctionMap = defrosted.ToFrozenDictionary();
-    }
+    
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {

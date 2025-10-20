@@ -11,6 +11,7 @@ namespace Content.Server._Oxyd.Guns;
 /// <summary>
 /// This handles...
 /// </summary>
+///
 public sealed class ServerOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly PlayerRateLimitManager _playerRateLimitManager = default!;
