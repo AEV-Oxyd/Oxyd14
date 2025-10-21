@@ -119,4 +119,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             pvsBlk.forSessions.Add(inp.SenderSession.Name);
         }
     }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
+        foreach (var active in query)
+        {
+            TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
+        }
+    }
+
 }

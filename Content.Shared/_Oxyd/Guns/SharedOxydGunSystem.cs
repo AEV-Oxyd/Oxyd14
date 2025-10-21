@@ -257,24 +257,4 @@ public abstract class SharedOxydGunSystem : EntitySystem
         firemodePrototype.Active = false;
         return true;
     }
-
-    public override void Update(float frameTime)
-    {
-        base.Update(frameTime);
-        var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
-        foreach (var active in query)
-        {
-            if (!TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter))
-            {
-                if (_netManager.IsClient && !HasComp<OxydActiveFiremodeUpdatingComponent>(active.gun))
-                {
-                    RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
-                    {
-                        gun = GetNetEntity(active.gun),
-                        stoppedAt = active.gun.Comp.selectedFiremodePrototype.currentStep,
-                    });
-                }
-            }
-        }
-    }
 }
