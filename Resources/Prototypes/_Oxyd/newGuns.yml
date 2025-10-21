@@ -2,7 +2,7 @@
   id: baseFiremode
   effects:
   - !type:GunEffectTryFireMouseDirection
-
+  - !type:GunEffectRepeatNextTickIfMouseHeld
 
 - type: entity
   name: Oxyd Gun

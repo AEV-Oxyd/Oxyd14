@@ -4,6 +4,7 @@ using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Server.GameStates;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
+using Robust.Shared.Network;
 
 namespace Content.Server._Oxyd.Guns;
 
@@ -71,6 +72,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Sesiunea {inp.SenderSession.Name} are un state desync pe arma {gun}");
             return;
         }
+        handler.executedFiringSteps.Clear();
+        handler.fullCycle = false;
+        handler.shooterEntity = EntityUid.Invalid;
     }
 
 

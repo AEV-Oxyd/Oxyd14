@@ -6,6 +6,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 
 public sealed partial class ClientOxydGunSystem
 {
+    [Dependency] private readonly OxydMouseHandlingSystem _mouseSys = default!;
     public override bool InterpretStep(
         GunFiremodePrototype firemodePrototype,
         OxydGunEffect effect,
@@ -15,44 +16,33 @@ public sealed partial class ClientOxydGunSystem
         switch (effect)
         {
             case GunEffectCheckHandheld e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckCuffed e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckConscious e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckWielded e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectWait e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectTryFireGunDirection e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectTryFireMouseDirection e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
-
+                return InterpretStep(firemodePrototype, e, gun, shooter);
             case GunEffectRepeatNextTick e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNow e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNextTickIfMouseHeld e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
@@ -97,7 +87,33 @@ public sealed partial class ClientOxydGunSystem
             aimedPosition = mouseData.mouseMap,
             firemodeStep = firemodePrototype.currentStep,
         });
+
         return true;
 
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype,
+        GunEffectRepeatNextTickIfMouseHeld effect,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        if (shooter is null)
+        {
+            firemodePrototype.currentStep = 0;
+            return false;
+        }
+
+        if (!_mouseSys.mousedDown)
+        {
+            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
+            Log.Debug("Stopped fullauto");
+            return true;
+        }
+        var comp = EnsureComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
+        comp.FiremodePrototype = firemodePrototype;
+        comp.gun = gun;
+        comp.shooter = shooter.Value;
+        Log.Debug("Ensured full auto");
+        return true;
     }
 }

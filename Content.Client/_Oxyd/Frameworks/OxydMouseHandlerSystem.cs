@@ -102,6 +102,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             clickCoords = mouseData.mouseEntity,
         });
         var active = _handsSystem.GetActiveHandEntity();
+        mousedDown = true;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
@@ -115,7 +116,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        mousedDown = true;
+        Log.Debug($"Mouse Down");
         return false;
     }
 
@@ -135,6 +136,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             clickCoords = mouseData.mouseEntity,
         });
         var active = _handsSystem.GetActiveHandEntity();
+        mousedDown = false;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
@@ -148,7 +150,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        mousedDown = false;
+        Log.Debug("Mouse Up");
         return false;
     }
 

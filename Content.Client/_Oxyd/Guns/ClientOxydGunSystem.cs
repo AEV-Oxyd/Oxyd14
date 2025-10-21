@@ -23,26 +23,33 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
     {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         if (!TryComp<OxydGunComponent>(obj, out var gun))
         {
             Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
             return;
         }
-        RaiseNetworkEvent(new ClientSideInterpretingFiremode()
-        {
-            gun = GetNetEntity(obj),
-            shooter = GetNetEntity(args.user),
-            clientsideStartingStep = gun.selectedFiremodePrototype.currentStep,
-        });
-        TryExecuteFiremodeCycle(gun.selectedFiremodePrototype, (obj.Owner, gun), args.user);
-        RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
-        {
-            stoppedAt = gun.selectedFiremodePrototype.currentStep,
-        });
+        BeginInterpret((obj.Owner, gun), args.user);
     }
 
-
-
+    public void BeginInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
+    {
+        RaiseNetworkEvent(new ClientSideInterpretingFiremode()
+        {
+            gun = GetNetEntity(gun),
+            shooter = GetNetEntity(shooter),
+            clientsideStartingStep = gun.Comp.selectedFiremodePrototype.currentStep,
+        });
+        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter) && !HasComp<OxydActiveFiremodeUpdatingComponent>(gun))
+        {
+            RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
+            {
+                gun = GetNetEntity(gun),
+                stoppedAt = gun.Comp.selectedFiremodePrototype.currentStep,
+            });
+        }
+    }
 
     public override List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)

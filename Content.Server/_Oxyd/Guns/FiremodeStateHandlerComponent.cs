@@ -8,9 +8,13 @@ namespace Content.Server._Oxyd.Guns;
 [RegisterComponent]
 public sealed partial class FiremodeStateHandlerComponent : Component
 {
+    [ViewVariables]
     public NetUserId shooterNetworkId;
+    [ViewVariables]
     public EntityUid shooterEntity;
     //  opreste cheaterii din a trage de mai multe ori
-    public HashSet<int> executedFiringSteps;
+    [ViewVariables]
+    public HashSet<int> executedFiringSteps = new();
+    [ViewVariables]
     public bool fullCycle = false;
 }

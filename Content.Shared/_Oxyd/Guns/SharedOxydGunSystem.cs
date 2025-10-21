@@ -264,7 +264,17 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
+            if (!TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter))
+            {
+                if (_netManager.IsClient && !HasComp<OxydActiveFiremodeUpdatingComponent>(active.gun))
+                {
+                    RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
+                    {
+                        gun = GetNetEntity(active.gun),
+                        stoppedAt = active.gun.Comp.selectedFiremodePrototype.currentStep,
+                    });
+                }
+            }
         }
     }
 }
