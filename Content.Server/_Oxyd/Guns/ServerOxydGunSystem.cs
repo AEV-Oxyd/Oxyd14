@@ -12,7 +12,7 @@ namespace Content.Server._Oxyd.Guns;
 /// This handles...
 /// </summary>
 ///
-public sealed class ServerOxydGunSystem : SharedOxydGunSystem
+public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly PlayerRateLimitManager _playerRateLimitManager = default!;
     [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
@@ -28,6 +28,8 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeNetworkEvent<ClientSideInterpretingFiremode>(OnClientInterpret);
         SubscribeNetworkEvent<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
     }
+
+
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args, EntitySessionEventArgs inp)
     {
@@ -71,13 +73,6 @@ public sealed class ServerOxydGunSystem : SharedOxydGunSystem
         }
     }
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype,
-        GunEffectTryFireMouseDirection effect,
-        Entity<OxydGunComponent> gun,
-        EntityUid? shooter)
-    {
-        return true;
-    }
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args,  EntitySessionEventArgs inp)
     {

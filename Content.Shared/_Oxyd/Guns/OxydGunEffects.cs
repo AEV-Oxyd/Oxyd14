@@ -17,10 +17,6 @@ public abstract partial class OxydGunEffect
         return (OxydGunEffect)MemberwiseClone();
     }
 
-    static OxydGunEffect()
-    {
-        EntityManager.System<SharedOxydGunSystem>().RegisterDynamicEffect(typeof(OxydGunEffect), SharedOxydGunSystem.InterpretStep );
-    }
 }
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;

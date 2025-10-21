@@ -50,22 +50,13 @@ public abstract class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
 
     }
-    
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        switch (effect)
-        {
-            case GunEffectTryFireMouseDirection e1:
-                return InterpretStep(firemodePrototype, e1, gun, shooter);
-            default:
-            {
-                Log.Error($"Unimplemented Gun Effect tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
-                return false;
-            }
 
-        }
-    }
+    public abstract bool InterpretStep(
+        GunFiremodePrototype firemodePrototype,
+        OxydGunEffect effect,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter);
 
 
     public bool InterpretStepWithPosition(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, MapCoordinates firingFrom,
@@ -228,11 +219,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public void RegisterFiremodeAsActive(EntityUid gun,  GunFiremodePrototype firemodePrototype)
-    {
-        var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
-        c.FiremodePrototype =  firemodePrototype;
-    }
     public virtual List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {

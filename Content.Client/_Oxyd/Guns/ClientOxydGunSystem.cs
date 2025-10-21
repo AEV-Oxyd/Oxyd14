@@ -11,7 +11,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientOxydGunSystem : SharedOxydGunSystem
+public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IGameTiming _gameTiming = default!;
 
@@ -41,46 +41,8 @@ public sealed class ClientOxydGunSystem : SharedOxydGunSystem
         });
     }
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectTryFireMouseDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (shooter is null)
-        {
-            firemodePrototype.currentStep = 0;
-            return false;
-        }
-        if(!TryComp<OxydMouseDataComponent>(shooter.Value, out var mouseData))
-        {
-            firemodePrototype.currentStep = 0;
-            return false;
-        }
 
-        MapCoordinates shootingPos = _transformSystem.GetMapCoordinates(gun);
-        if (TryComp<OxydHandheldGunComponent>(gun, out var handheldComp))
-        {
-            shootingPos = _transformSystem.GetMapCoordinates(shooter.Value);
-        }
 
-        var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
-        if (returnedList is null)
-        {
-            firemodePrototype.currentStep = 0;
-            return false;
-        }
-        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
-        {
-            projectiles = returnedList,
-            shooter = shooter.Value,
-        });
-        RaiseNetworkEvent(new FiremodeClientsideFiredEvent()
-        {
-            gun = GetNetEntity(gun),
-            shotFrom = shootingPos,
-            aimedPosition = mouseData.mouseMap,
-            firemodeStep = firemodePrototype.currentStep,
-        });
-        return true;
-
-    }
 
     public override List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
