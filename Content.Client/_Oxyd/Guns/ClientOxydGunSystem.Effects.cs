@@ -64,7 +64,7 @@ public sealed partial class ClientOxydGunSystem
         }
 
         MapCoordinates shootingPos = _transformSystem.GetMapCoordinates(gun);
-        if (TryComp<OxydHandheldGunComponent>(gun, out var handheldComp))
+        if (HasComp<OxydHandheldGunComponent>(gun))
         {
             shootingPos = _transformSystem.GetMapCoordinates(shooter.Value);
         }
@@ -75,17 +75,18 @@ public sealed partial class ClientOxydGunSystem
             firemodePrototype.currentStep = 0;
             return false;
         }
-        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
-        {
-            projectiles = returnedList,
-            shooter = shooter.Value,
-        });
+        Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
         RaiseNetworkEvent(new FiremodeClientsideFiredEvent()
         {
             gun = GetNetEntity(gun),
             shotFrom = shootingPos,
             aimedPosition = mouseData.mouseMap,
             firemodeStep = firemodePrototype.currentStep,
+        });
+        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
+        {
+            projectiles = returnedList,
+            shooter = shooter.Value,
         });
 
         return true;

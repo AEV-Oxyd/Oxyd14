@@ -79,7 +79,7 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-        if (!TryComp<FiremodeStateHandlerComponent>(shooter, out var firemode))
+        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var firemode))
         {
             firemodePrototype.currentStep = 0;
             return false;

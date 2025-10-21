@@ -26,7 +26,6 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
 
-    public Dictionary<int, Entity<OxydProjectileComponent>> predictedProjectiles = new Dictionary<int, Entity<OxydProjectileComponent>>();
     public override void Initialize()
     {
         base.Initialize();

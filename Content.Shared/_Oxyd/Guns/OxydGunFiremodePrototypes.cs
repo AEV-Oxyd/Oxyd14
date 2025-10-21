@@ -10,8 +10,11 @@ public partial class GunFiremodePrototype : IPrototype
      // TECHNICAL
     [IdDataField]
     public string ID { get; } = default!;
+    [ViewVariables]
     public int currentStep = 0;
+    [ViewVariables]
     public int maxSteps => Effects.Count;
+    [ViewVariables]
     // prevent changing fire modes whilst this is true.
     public bool Active = false;
 
@@ -22,9 +25,9 @@ public partial class GunFiremodePrototype : IPrototype
     // GAME
 
     // bullets per second
-    [DataField]
+    [DataField("firerate")]
     public int FireRate = 60;
-    [DataField]
+    [ViewVariables]
     public TimeSpan nextFire = TimeSpan.Zero;
     [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
@@ -32,7 +35,7 @@ public partial class GunFiremodePrototype : IPrototype
     // firemodePrototype specific speed mult
     [DataField]
     public float SpeedMultiplier = 1;
-
+    [ViewVariables]
     // firing positions handled here.
     public int shootingPosIndex = 0;
     [DataField]

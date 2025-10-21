@@ -1,5 +1,6 @@
 - type: gunFiremode
   id: baseFiremode
+  firerate: 1
   effects:
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld

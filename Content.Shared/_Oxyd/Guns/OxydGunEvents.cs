@@ -19,14 +19,6 @@ public class ClientSideDoneInterpretingFiremode : EntityEventArgs
 }
 
 
-[Serializable, NetSerializable]
-public class ClientSideGunFiredEvent : EntityEventArgs
-{
-    public NetEntity gun;
-    public MapCoordinates shotFrom;
-    public MapCoordinates aimedPosition;
-}
-
 public class FiremodeProjectilesFiredEvent : EntityEventArgs
 {
     public required List<Entity<OxydProjectileComponent>> projectiles;

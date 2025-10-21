@@ -35,12 +35,16 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
     {
-        RaiseNetworkEvent(new ClientSideInterpretingFiremode()
+        if (!gun.Comp.selectedFiremodePrototype.Active)
         {
-            gun = GetNetEntity(gun),
-            shooter = GetNetEntity(shooter),
-            clientsideStartingStep = gun.Comp.selectedFiremodePrototype.currentStep,
-        });
+            RaiseNetworkEvent(new ClientSideInterpretingFiremode()
+            {
+                gun = GetNetEntity(gun),
+                shooter = GetNetEntity(shooter),
+                clientsideStartingStep = gun.Comp.selectedFiremodePrototype.currentStep,
+            });
+        }
+
         if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter))
         {
             RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
@@ -56,22 +60,15 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return null;
-        var projectiles = base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
-        if (projectiles is null)
-            return null;
-        RaiseNetworkEvent(new ClientSideGunFiredEvent()
-        {
-            aimedPosition = targetCoordinates,
-            shotFrom = firingCoordinates,
-            gun = GetNetEntity(gun),
-        });
-        return projectiles;
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
 
     }
 
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {

@@ -39,10 +39,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
-    internal FrozenDictionary<Type, Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool>>
-        dynamicFunctionMap =
-            new Dictionary<Type, Func<GunFiremodePrototype, OxydGunEffect, Entity<OxydGunComponent>, EntityUid, bool>>()
-                .ToFrozenDictionary();
 
     public override void Initialize()
     {
@@ -91,7 +87,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
-        Log.Debug($"{inaccuracyDebuff.Degrees}");
+        //Log.Debug($"{inaccuracyDebuff.Degrees}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
     }
 

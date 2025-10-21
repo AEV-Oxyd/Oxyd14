@@ -69,16 +69,18 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
 
     public void onCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {
-        Log.Warning("OxydProjectileSystem::onCollide");
+        //Log.Warning("OxydProjectileSystem::onCollide");
         if(!shouldTriggerCollide(obj, ref args))
             return;
         if (TryComp<OxydProjectileApplyDamageComponent>(obj, out var damage))
         {
             _damage.TryChangeDamage(args.OtherEntity, damage.DamageSpecifier, false, true);
+            /*
             if (_netmanager.IsClient)
                 Log.Error($"CLIENT - Applying damage to {MetaData(args.OtherEntity).EntityName}");
             else
                 Log.Error($"SERVER - Applying damage to {MetaData(args.OtherEntity).EntityName}");
+                */
         }
         afterBulletCollide(obj, ref args);
 
