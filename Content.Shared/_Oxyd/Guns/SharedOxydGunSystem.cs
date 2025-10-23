@@ -34,7 +34,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly ILogManager _logManager = default!;
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
     [Dependency] protected readonly IGameTiming _gameTiming = default!;
-    [Dependency] private readonly INetManager _netManager = default!;
+    [Dependency] protected readonly INetManager _netManager = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";

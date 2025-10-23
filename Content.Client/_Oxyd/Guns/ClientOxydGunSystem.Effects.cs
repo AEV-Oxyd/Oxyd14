@@ -76,11 +76,11 @@ public sealed partial class ClientOxydGunSystem
             return false;
         }
         Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
-        RaiseNetworkEvent(new FiremodeClientsideFiredEvent()
+        _netManager.ClientSendMessage(new FiremodeClientsideFiredEvent()
         {
             gun = GetNetEntity(gun),
-            shotFrom = shootingPos,
-            aimedPosition = mouseData.mouseMap,
+            shotFrom = GetNetCoordinates(_transformSystem.ToCoordinates(shootingPos)),
+            aimedPosition =  GetNetCoordinates(_transformSystem.ToCoordinates(mouseData.mouseMap)),
             firemodeStep = firemodePrototype.currentStep,
         });
         RaiseLocalEvent(new FiremodeProjectilesFiredEvent()

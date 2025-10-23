@@ -2,6 +2,8 @@ using Content.Client._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Interaction;
 using Robust.Shared.Map;
+using Robust.Shared.Network;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 
@@ -20,6 +22,9 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
+        _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
+        _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
     }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
     {
@@ -37,10 +42,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (gun.Comp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime)
             return;
+
         if (!gun.Comp.selectedFiremodePrototype.Active)
         {
-            Log.Error($"Interpretare");
-            RaiseNetworkEvent(new ClientSideInterpretingFiremode()
+            _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 shooter = GetNetEntity(shooter),
@@ -52,7 +57,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (value)
         {
             Log.Error($"Done ");
-            RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
+            _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 stoppedAt = gun.Comp.selectedFiremodePrototype.currentStep,
