@@ -2,6 +2,7 @@ using Content.Server.Players.RateLimiting;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Server.GameStates;
+using Robust.Server.Player;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
@@ -18,6 +19,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly PlayerRateLimitManager _playerRateLimitManager = default!;
     [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
     [Dependency] private readonly IServerNetManager _serverNetManager = default!;
+    [Dependency] private readonly IPlayerManager _playerManager = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
@@ -121,10 +123,12 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
         if (projectiles is null)
             return;
+        if (!_playerManager.TryGetSessionByEntity(handler.shooterEntity, out var session))
+            return;
         foreach (var bullet in projectiles)
         {
             var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
-            pvsBlk.forSessions.Add(inp.SenderSession.Name);
+            pvsBlk.forSessions.Add(session.Name);
         }
     }
 
