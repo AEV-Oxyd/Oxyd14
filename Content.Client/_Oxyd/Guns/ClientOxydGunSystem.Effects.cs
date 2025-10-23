@@ -75,7 +75,7 @@ public sealed partial class ClientOxydGunSystem
             firemodePrototype.currentStep = 0;
             return false;
         }
-        Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
+        //Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
         _netManager.ClientSendMessage(new FiremodeClientsideFiredEvent()
         {
             gun = GetNetEntity(gun),
@@ -107,14 +107,14 @@ public sealed partial class ClientOxydGunSystem
         if (!_mouseSys.mousedDown)
         {
             RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
-            Log.Debug("Stopped fullauto");
+            //Log.Debug("Stopped fullauto");
             return true;
         }
         var comp = EnsureComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
         comp.FiremodePrototype = firemodePrototype;
         comp.gun = gun;
         comp.shooter = shooter.Value;
-        Log.Debug("Ensured full auto");
+        //Log.Debug("Ensured full auto");
         return true;
     }
 }

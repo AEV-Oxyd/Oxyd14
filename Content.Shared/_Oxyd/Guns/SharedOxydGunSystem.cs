@@ -87,7 +87,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
-        //Log.Debug($"{inaccuracyDebuff.Degrees}");
+        Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
     }
 
@@ -155,7 +155,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
         }
         // Due to Timing inconsistencies (because of lag, packet processing, there will be slight differences
         // when firing in big quantities , as such it is not that expensive to keep syncing the counter after every tick
-        Dirty(gun);
         return projectiles;
     }
 

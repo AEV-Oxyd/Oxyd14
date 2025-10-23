@@ -49,7 +49,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             return;
         }
-        Log.Warning("Started interp");
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
         //c.shooterNetworkId = inp.SenderSession.UserId;
@@ -76,7 +75,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}");
             return;
         }
-        Log.Warning("Ended interp");
         handler.executedFiringSteps.Clear();
         handler.fullCycle = false;
         handler.shooterEntity = EntityUid.Invalid;
@@ -85,9 +83,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
-        Log.Warning("Primit fire gun -----");
         EntityUid gun = GetEntity(args.gun);
-        Log.Warning("Primit fire gun");
         if (TerminatingOrDeleted(gun))
             return;
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
@@ -96,7 +92,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        Log.Warning("Executat fire gun");
         /*
         if (handler.shooterNetworkId != inp.SenderSession.UserId)
         {

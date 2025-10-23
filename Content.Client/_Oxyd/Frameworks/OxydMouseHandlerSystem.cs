@@ -116,7 +116,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        Log.Debug($"Mouse Down");
         return false;
     }
 
@@ -150,7 +149,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        Log.Debug("Mouse Up");
         return false;
     }
 
