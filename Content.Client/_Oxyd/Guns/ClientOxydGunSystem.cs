@@ -30,9 +30,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
             return;
         }
-
-        if (gun.selectedFiremodePrototype.Active)
-            return;
         DoInterpret((obj.Owner, gun), args.user);
     }
 
@@ -51,7 +48,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             });
         }
 
-        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter))
+        var value = TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter);
+        if (value)
         {
             Log.Error($"Done ");
             RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
