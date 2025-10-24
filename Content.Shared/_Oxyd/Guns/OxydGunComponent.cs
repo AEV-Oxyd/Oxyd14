@@ -37,7 +37,7 @@ public sealed partial class OxydGunComponent : Component
     // extra firing time due to uneven ticks , this makes sure the
     // firarate is always overall respected , even if it'd be lost due to
     // ticks not being fast enough
-    [ViewVariables]
+    [ViewVariables,  AutoNetworkedField]
     public TimeSpan firingTime = TimeSpan.Zero;
 
     public Vector2 getShootingOffset()

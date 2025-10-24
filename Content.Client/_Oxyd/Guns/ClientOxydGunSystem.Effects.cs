@@ -84,11 +84,6 @@ public sealed partial class ClientOxydGunSystem
             firemodeStep = firemodePrototype.currentStep,
             clientTick = _gameTiming.CurTick,
         });
-        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
-        {
-            projectiles = returnedList,
-            shooter = shooter.Value,
-        });
 
         return true;
 

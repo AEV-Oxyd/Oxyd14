@@ -86,6 +86,7 @@ public class ClientSideDoneInterpretingFiremode : NetMessage
 
 public class FiremodeProjectilesFiredEvent : EntityEventArgs
 {
+    public Entity<OxydGunComponent> gun;
     public required List<Entity<OxydProjectileComponent>> projectiles;
     public EntityUid shooter = EntityUid.Invalid;
 }

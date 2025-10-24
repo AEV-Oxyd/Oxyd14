@@ -83,7 +83,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
-        var seed = SharedRandomExtensions.HashCodeCombine(new() { (int)_gameTiming.CurTick.Value, GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
+        var seed = SharedRandomExtensions.HashCodeCombine(new() { GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
@@ -155,6 +155,12 @@ public abstract class SharedOxydGunSystem : EntitySystem
         }
         // Due to Timing inconsistencies (because of lag, packet processing, there will be slight differences
         // when firing in big quantities , as such it is not that expensive to keep syncing the counter after every tick
+        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
+        {
+            gun = gun,
+            projectiles = projectiles,
+            shooter = shooter
+        });
         return projectiles;
     }
 
