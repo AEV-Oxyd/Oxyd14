@@ -82,6 +82,7 @@ public sealed partial class ClientOxydGunSystem
             shotFrom = GetNetCoordinates(_transformSystem.ToCoordinates(shootingPos)),
             aimedPosition =  GetNetCoordinates(_transformSystem.ToCoordinates(mouseData.mouseMap)),
             firemodeStep = firemodePrototype.currentStep,
+            clientTick = _gameTiming.CurTick,
         });
         RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
         {

@@ -50,6 +50,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 gun = GetNetEntity(gun),
                 shooter = GetNetEntity(shooter),
                 clientsideStartingStep = gun.Comp.selectedFiremodePrototype.currentStep,
+                clientTick = _gameTiming.CurTick,
             });
         }
 
@@ -60,6 +61,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             {
                 gun = GetNetEntity(gun),
                 stoppedAt = gun.Comp.selectedFiremodePrototype.currentStep,
+                clientTick = _gameTiming.CurTick,
             });
         }
     }

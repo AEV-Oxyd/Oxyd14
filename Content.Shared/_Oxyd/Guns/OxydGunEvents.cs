@@ -3,6 +3,7 @@ using Lidgren.Network;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 
@@ -14,12 +15,14 @@ public class ClientSideInterpretingFiremode : NetMessage
     public NetEntity gun;
     public NetEntity shooter;
     public int clientsideStartingStep = 0;
+    public GameTick clientTick;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
        gun = buffer.ReadNetEntity();
        shooter = buffer.ReadNetEntity();
        clientsideStartingStep = buffer.ReadInt32();
+       clientTick = buffer.ReadGameTick();
     }
 
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
@@ -27,6 +30,7 @@ public class ClientSideInterpretingFiremode : NetMessage
         buffer.Write(gun);
         buffer.Write(shooter);
         buffer.Write(clientsideStartingStep);
+        buffer.Write(clientTick);
     }
 }
 
@@ -37,6 +41,7 @@ public class FiremodeClientsideFiredEvent : NetMessage
     public NetCoordinates shotFrom;
     public int firemodeStep = 0;
     public NetEntity gun;
+    public GameTick clientTick;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
@@ -44,6 +49,7 @@ public class FiremodeClientsideFiredEvent : NetMessage
         shotFrom = buffer.ReadNetCoordinates();
         firemodeStep = buffer.ReadInt32();
         gun = buffer.ReadNetEntity();
+        clientTick = buffer.ReadGameTick();
     }
 
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
@@ -52,6 +58,7 @@ public class FiremodeClientsideFiredEvent : NetMessage
         buffer.Write(shotFrom);
         buffer.Write(firemodeStep);
         buffer.Write(gun);
+        buffer.Write(clientTick);
     }
 }
 public class ClientSideDoneInterpretingFiremode : NetMessage
@@ -59,17 +66,20 @@ public class ClientSideDoneInterpretingFiremode : NetMessage
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public NetEntity gun;
     public int stoppedAt = 0;
+    public GameTick clientTick;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
         gun = buffer.ReadNetEntity();
         stoppedAt = buffer.ReadInt32();
+        clientTick = buffer.ReadGameTick();
     }
 
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
     {
         buffer.Write(gun);
         buffer.Write(stoppedAt);
+        buffer.Write(clientTick);
     }
 }
 

@@ -49,6 +49,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             return;
         }
+        if(args.clientTick != _gameTiming.CurTick)
+            Log.Debug($"Got mismatched tick! client {args.clientTick} , server {_gameTiming.CurTick}");
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
         //c.shooterNetworkId = inp.SenderSession.UserId;
@@ -75,6 +77,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}");
             return;
         }
+        if(args.clientTick != _gameTiming.CurTick)
+            Log.Debug($"Got mismatched tick! client {args.clientTick} , server {_gameTiming.CurTick}");
         handler.executedFiringSteps.Clear();
         handler.fullCycle = false;
         handler.shooterEntity = EntityUid.Invalid;
@@ -110,6 +114,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"----- are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremodePrototype.currentStep}");
             return;
         }
+        if(args.clientTick != _gameTiming.CurTick)
+            Log.Debug($"Got mismatched tick! client {args.clientTick} , server {_gameTiming.CurTick}");
         handler.executedFiringSteps.Add(args.firemodeStep);
         // Let  very small inconsistencies slide in , don't want state desyncs!
         if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
