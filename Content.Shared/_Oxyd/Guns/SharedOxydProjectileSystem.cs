@@ -52,17 +52,29 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
 
     public virtual bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {
+        if(!shouldTriggerCollide(obj, args.OtherEntity))
+            return false;
         if (!TryComp<FixturesComponent>(obj, out var fixtures))
             return false;
         if (args.OurFixture != fixtures.Fixtures.Values.First())
             return false;
-        if (args.OtherEntity == obj.Comp.shotBy)
+        return true;
+    }
+
+    public virtual bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, EntityUid hitting)
+    {
+        if (hitting == obj.Comp.shotBy)
             return false;
         return true;
     }
 
 
     public virtual void afterBulletCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
+    {
+        afterBulletCollide(obj, args.OtherEntity);
+    }
+
+    public virtual void afterBulletCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
     {
         QueueDel(obj);
     }
@@ -83,10 +95,26 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
                 */
         }
         afterBulletCollide(obj, ref args);
-
-
+        return;
     }
 
+    public void onCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
+    {
+        //Log.Warning("OxydProjectileSystem::onCollide");
+        if (!shouldTriggerCollide(obj, other))
+            return;
+        if (TryComp<OxydProjectileApplyDamageComponent>(obj, out var damage))
+        {
+            _damage.TryChangeDamage(other, damage.DamageSpecifier, false, true);
+            /*
+            if (_netmanager.IsClient)
+                Log.Error($"CLIENT - Applying damage to {MetaData(args.OtherEntity).EntityName}");
+            else
+                Log.Error($"SERVER - Applying damage to {MetaData(args.OtherEntity).EntityName}");
+                */
+        }
+        afterBulletCollide(obj, other);
+    }
     public void queueProjectile(Entity<OxydProjectileComponent> projectile)
     {
         FireNextTick.Add(projectile);
