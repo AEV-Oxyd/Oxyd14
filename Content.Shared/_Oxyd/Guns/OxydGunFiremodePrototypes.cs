@@ -1,6 +1,7 @@
 using System.Numerics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -29,6 +30,10 @@ public partial class GunFiremodePrototype : IPrototype
     public int FireRate = 60;
     [ViewVariables]
     public TimeSpan nextFire = TimeSpan.Zero;
+    [ViewVariables, NonSerialized]
+    public TimeSpan firingGaps = TimeSpan.Zero;
+    [ViewVariables, NonSerialized]
+    public GameTick lastFiredTick = default;
     [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
 
@@ -47,7 +52,8 @@ public partial class GunFiremodePrototype : IPrototype
     [DataField]
     // Added depending on chance, from 0 to the value
     public Angle addedInaccuracyMaximum = Angle.FromDegrees(10);
-    [DataField("effects"),NonSerialized]
+
+    [DataField("effects"), NonSerialized]
     public List<OxydGunEffect> Effects = new();
 
     public GunFiremodePrototype createCopy()

@@ -121,11 +121,18 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
-    public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter, Entity<OxydGunComponent> gun, MapCoordinates shootingFrom, MapCoordinates targetPos)
+    public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
+        Entity<OxydGunComponent> gun,
+        MapCoordinates shootingFrom,
+        MapCoordinates targetPos)
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
+        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
+        if (lastFireDelta > gunFiremodePrototype.fireDelay * 1.2 && lastFireDelta < TimeSpan.FromMilliseconds(100))
+            gunFiremodePrototype.firingGaps += lastFireDelta;
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
+        gunFiremodePrototype.lastFiredTick = _gameTiming.CurTick;
         if (gunFiremodePrototype.fireDelay < _gameTiming.TickPeriod)
         {
             gun.Comp.firingTime += (_gameTiming.TickPeriod - gunFiremodePrototype.fireDelay);
@@ -234,9 +241,16 @@ public abstract class SharedOxydGunSystem : EntitySystem
             onInvalidShootAttempt();
             return null;
         }
-
-        if (gun.Comp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime)
+        var gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
+        if (gunFiremodePrototype.nextFire > _gameTiming.CurTime)
             return null;
+        // compensare lag
+        if (gunFiremodePrototype.lastFiredTick == _gameTiming.CurTick)
+        {
+            if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
+                return null;
+            gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;
+        }
 
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }

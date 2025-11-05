@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Linq;
 using System.Numerics;
 using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Players.RateLimiting;
@@ -11,6 +12,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Guns;
@@ -27,13 +29,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IServerNetManager _serverNetManager = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
+    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
     public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(30);
     public static int MaxTicksIncosistencyBehind = 10; // Up to 10 ticks of delta-diff between client-server can and will be simulated to catch up
     public static int MaxTicksAhead = 10;
-
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
 
     public override void Initialize()
@@ -47,6 +49,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             delayedMessages.Add(new Queue<object>());
         }
+
     }
 
     public void handleLate(ClientSideDoneInterpretingFiremode args)

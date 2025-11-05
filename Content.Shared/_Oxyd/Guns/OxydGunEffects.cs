@@ -18,6 +18,11 @@ public abstract partial class OxydGunEffect
     }
 
 }
+
+public abstract partial class OxydFiringGunEffect : OxydGunEffect
+{
+
+}
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;
 [DataDefinition]
@@ -34,9 +39,9 @@ public sealed partial class GunEffectWait : OxydGunEffect
     public TimeSpan waitPeriod = TimeSpan.Zero;
 }
 [DataDefinition]
-public sealed partial class GunEffectTryFireGunDirection : OxydGunEffect;
+public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectTryFireMouseDirection: OxydGunEffect;
+public sealed partial class GunEffectTryFireMouseDirection: OxydFiringGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
 {
