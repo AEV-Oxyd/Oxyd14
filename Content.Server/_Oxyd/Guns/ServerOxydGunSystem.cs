@@ -37,6 +37,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public static int MaxTicksIncosistencyBehind = 10; // Up to 10 ticks of delta-diff between client-server can and will be simulated to catch up
     public static int MaxTicksAhead = 10;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
+    public int currentMessagesIndex = 0;
+
 
     public override void Initialize()
     {
@@ -52,39 +54,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     }
 
-    public void handleLate(ClientSideDoneInterpretingFiremode args)
-    {
-
-    }
-
-    public void handleLate(FiremodeClientsideFiredEvent args)
-    {
-        handler.executedFiringSteps.Add(args.firemodeStep);
-        // Let  very small inconsistencies slide in , don't want state desyncs!
-        if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
-
-        var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
-        if (projectiles is null)
-            return;
-        if (!_playerManager.TryGetSessionByEntity(handler.shooterEntity, out var session))
-            return;
-        foreach (var bullet in projectiles)
-        {
-            var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
-            pvsBlk.forSessions.Add(session.Name);
-        }
-        _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
-    }
-
-    public void handleLate(ClientSideInterpretingFiremode args)
-    {
-
-    }
-
     public void doMessageTick()
     {
-        while(delayedMessages[0].TryDequeue(out var thing))
+        while(delayedMessages[currentMessagesIndex].TryDequeue(out var thing))
         {
             switch (thing)
             {
@@ -103,13 +75,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             }
 
         }
+        delayedMessages[currentMessagesIndex].Clear();
+        currentMessagesIndex = (currentMessagesIndex + 1) % MaxTicksAhead;
+    }
 
-        delayedMessages[MaxTicksAhead - 1] = delayedMessages[0];
-        delayedMessages[MaxTicksAhead - 1].Clear();
-        for (var i = MaxTicksAhead - 3; i > 0; i--)
-        {
-            delayedMessages[i] = delayedMessages[i + 1];
-        }
+    public void queueMessage(object thing, int tickDiff)
+    {
+        delayedMessages[(currentMessagesIndex + tickDiff) % MaxTicksAhead].Enqueue(thing);
     }
 
 
@@ -128,20 +100,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             return;
         }
-        if(args.clientTick > _gameTiming.CurTick)
+        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
-            var aheadBy = (int)(args.clientTick.Value - _gameTiming.CurTick.Value);
-            if (aheadBy > MaxTicksAhead)
-                return;
-            delayedMessages[aheadBy-1].Enqueue(args);
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > 0)
+        if (tickDiff > MaxTicksIncosistencyBehind)
         {
-            if (tickDiff > MaxTicksIncosistencyBehind)
-                return;
-            handleLate(args);
+            DirtyEntity(gun);
             return;
         }
 
@@ -171,17 +138,14 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}");
             return;
         }
-        if(args.clientTick > _gameTiming.CurTick)
+        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
-            Log.Debug($"Got mismatched FUTURE??? tick! client {args.clientTick} , server {_gameTiming.CurTick}. Likely modified client on {handler.shooterEntity}");
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > 0)
+        if (tickDiff > MaxTicksIncosistencyBehind)
         {
-            if (tickDiff > MaxTicksIncosistencyBehind)
-                return;
-            handleLate(args);
             return;
         }
         handler.executedFiringSteps.Clear();
@@ -219,23 +183,25 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"----- are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremodePrototype.currentStep}");
             return;
         }
-        if(args.clientTick > _gameTiming.CurTick)
+        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
-            Log.Debug($"Got mismatched FUTURE??? tick! client {args.clientTick} , server {_gameTiming.CurTick}. Likely modified client on {handler.shooterEntity}");
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > 0)
+        if (tickDiff > MaxTicksIncosistencyBehind)
         {
-            if (tickDiff > MaxTicksIncosistencyBehind)
-                return;
-            handleLate(args);
             return;
         }
         handler.executedFiringSteps.Add(args.firemodeStep);
         // Let  very small inconsistencies slide in , don't want state desyncs!
+        var savedFire = gunComp.selectedFiremodePrototype.nextFire;
         if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
             gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
+        if (tickDiff > 0)
+        {
+            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
+        }
 
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
         if (projectiles is null)
@@ -246,6 +212,12 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
             pvsBlk.forSessions.Add(session.Name);
+        }
+
+        if (tickDiff > 0)
+        {
+            gunComp.selectedFiremodePrototype.nextFire = savedFire;
+            _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
         }
     }
 
