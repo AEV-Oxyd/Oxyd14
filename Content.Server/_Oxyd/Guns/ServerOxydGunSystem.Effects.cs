@@ -59,15 +59,6 @@ public sealed partial class ServerOxydGunSystem
         return true;
     }
 
-    public bool InterpretStep(
-        GunFiremodePrototype firemodePrototype,
-        GunEffectTryFireMouseDirection effect,
-        Entity<OxydGunComponent> gun,
-        EntityUid? shooter)
-    {
-        return true;
-    }
-
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
         GunEffectRepeatNextTickIfMouseHeld effect,
         Entity<OxydGunComponent> gun,
@@ -86,6 +77,27 @@ public sealed partial class ServerOxydGunSystem
         }
 
         firemode.executedFiringSteps.Clear();
+        return true;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype,
+        GunEffectTryFireMouseDirection effect,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        if (shooter is null)
+        {
+            firemodePrototype.currentStep = 0;
+            return false;
+        }
+
+        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
+        {
+            firemodePrototype.currentStep = 0;
+            return false;
+        }
+
+        stateComp.executedFiringSteps.Add(firemodePrototype.currentStep);
         return true;
     }
 }

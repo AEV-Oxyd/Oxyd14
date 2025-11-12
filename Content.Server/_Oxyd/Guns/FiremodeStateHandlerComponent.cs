@@ -15,6 +15,4 @@ public sealed partial class FiremodeStateHandlerComponent : Component
     //  opreste cheaterii din a trage de mai multe ori
     [ViewVariables]
     public HashSet<int> executedFiringSteps = new();
-    [ViewVariables]
-    public bool fullCycle = false;
 }

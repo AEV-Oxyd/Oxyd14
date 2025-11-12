@@ -120,9 +120,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
+        c.executedFiringSteps.Clear();
         //c.shooterNetworkId = inp.SenderSession.UserId;
-        if(TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter))
-            c.fullCycle = true;
+        TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
@@ -156,7 +156,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         }
         handler.executedFiringSteps.Clear();
-        handler.fullCycle = false;
         handler.shooterEntity = EntityUid.Invalid;
     }
 
@@ -184,24 +183,22 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Inconsistenta in state handler. Network id mismatch pe {gun} , sesiunea arma {handler.shooterNetworkId} , sesiunea client {inp.SenderSession.UserId}");
         }
         */
-
-        if (handler.executedFiringSteps.Contains(args.firemodeStep))
+        Log.Error($"Lungime hash {handler.executedFiringSteps.Count}, continut");
+        foreach (var thing in handler.executedFiringSteps)
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater?");
+            Log.Error($"{thing}");
+        }
+        if (!handler.executedFiringSteps.Contains(args.firemodeStep))
+        {
+            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep}");
             return;
         }
-
-        if (args.firemodeStep > gunComp.selectedFiremodePrototype.currentStep && !handler.fullCycle)
-        {
-            Log.Error($"----- are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremodePrototype.currentStep}");
-            return;
-        }
+        handler.executedFiringSteps.Remove(args.firemodeStep);
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
         if (tickDiff > MaxTicksIncosistencyBehind)
         {
             return;
         }
-        handler.executedFiringSteps.Add(args.firemodeStep);
         // Let  very small inconsistencies slide in , don't want state desyncs!
         var savedFire = gunComp.selectedFiremodePrototype.nextFire;
         if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)

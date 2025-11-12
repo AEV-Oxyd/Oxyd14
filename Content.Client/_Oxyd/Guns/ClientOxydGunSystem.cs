@@ -54,8 +54,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             });
         }
 
-        var value = TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter);
-        if (value)
+        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter))
         {
             _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
