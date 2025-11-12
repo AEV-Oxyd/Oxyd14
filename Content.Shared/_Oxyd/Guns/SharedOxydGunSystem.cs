@@ -38,6 +38,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+    private const float maxAcceptableFireGap = 500;
 
 
     public override void Initialize()
@@ -132,7 +133,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
         //Log.Debug($"Fire Delta is {lastFireDelta}");
-        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(500) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(500))
+        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(maxAcceptableFireGap) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(maxAcceptableFireGap))
         {
             gunFiremodePrototype.firingGaps += lastFireDelta - gunFiremodePrototype.fireDelay;
             Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
