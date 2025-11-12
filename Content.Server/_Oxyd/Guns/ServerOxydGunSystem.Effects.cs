@@ -75,8 +75,6 @@ public sealed partial class ServerOxydGunSystem
             firemodePrototype.currentStep = 0;
             return false;
         }
-
-        firemode.executedFiringSteps.Clear();
         return true;
     }
 
