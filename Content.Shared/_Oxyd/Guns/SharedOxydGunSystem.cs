@@ -128,10 +128,14 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
-        if (lastFireDelta > gunFiremodePrototype.fireDelay * 1.2 && lastFireDelta < TimeSpan.FromMilliseconds(100))
-            gunFiremodePrototype.firingGaps += lastFireDelta;
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
+        Log.Debug($"Fire Delta is {lastFireDelta}");
+        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(100))
+        {
+            gunFiremodePrototype.firingGaps += lastFireDelta - gunFiremodePrototype.fireDelay;
+            Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
+        }
         gunFiremodePrototype.lastFiredTick = _gameTiming.CurTick;
         if (gunFiremodePrototype.fireDelay < _gameTiming.TickPeriod)
         {
@@ -243,10 +247,14 @@ public abstract class SharedOxydGunSystem : EntitySystem
         }
         var gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         if (gunFiremodePrototype.nextFire > _gameTiming.CurTime)
+        {
+            Log.Debug("Firemode not ready");
             return null;
+        }
         // compensare lag
         if (gunFiremodePrototype.lastFiredTick == _gameTiming.CurTick)
         {
+            Log.Debug("Same tick fire");
             if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
                 return null;
             gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;

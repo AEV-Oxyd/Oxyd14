@@ -58,6 +58,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(delayedMessages[currentMessagesIndex].TryDequeue(out var thing))
         {
+            Log.Debug($"Message dequeued {thing}");
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:
@@ -81,6 +82,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void queueMessage(object thing, int tickDiff)
     {
+        Log.Debug($"Message queued {thing} with diff {tickDiff}") ;
         delayedMessages[(currentMessagesIndex + tickDiff) % MaxTicksAhead].Enqueue(thing);
     }
 
@@ -88,6 +90,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
+        Log.Debug($"primit start interp la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
@@ -98,6 +101,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
+            Log.Debug("State desync - interpret");
+            DirtyEntity(gun);
+
             return;
         }
         if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
@@ -121,6 +127,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
+        Log.Debug($"primit end interp la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -156,6 +163,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
+        Log.Debug($"primit fire la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -163,6 +171,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
             return;
+        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        {
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
+            return;
+        }
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
         /*
@@ -181,11 +194,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         if (args.firemodeStep > gunComp.selectedFiremodePrototype.currentStep && !handler.fullCycle)
         {
             Log.Error($"----- are un state desync pe arma {gun}, pasul primit {args.firemodeStep} , pasul armei {gunComp.selectedFiremodePrototype.currentStep}");
-            return;
-        }
-        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
-        {
-            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
@@ -219,6 +227,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             gunComp.selectedFiremodePrototype.nextFire = savedFire;
             _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
         }
+        Log.Debug("Fired Gun");
     }
 
     public override void Update(float frameTime)
