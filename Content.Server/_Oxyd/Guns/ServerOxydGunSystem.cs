@@ -46,7 +46,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         _serverNetManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
-        SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
+        //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
         for (var i = 0; i < MaxTicksAhead; i++)
         {
             delayedMessages.Add(new Queue<object>());
@@ -82,7 +82,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void queueMessage(object thing, int tickDiff)
     {
-        Log.Debug($"Message queued {thing} with diff {tickDiff}") ;
         delayedMessages[(currentMessagesIndex + tickDiff) % MaxTicksAhead].Enqueue(thing);
     }
 
@@ -90,7 +89,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
-        Log.Debug($"primit start interp la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
@@ -127,7 +125,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
-        Log.Debug($"primit end interp la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -162,7 +159,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
-        Log.Debug($"primit fire la {_gameTiming.RealTime} , tickD : {(int)(args.clientTick.Value - _gameTiming.CurTick.Value)}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -183,11 +179,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Inconsistenta in state handler. Network id mismatch pe {gun} , sesiunea arma {handler.shooterNetworkId} , sesiunea client {inp.SenderSession.UserId}");
         }
         */
-        Log.Error($"Lungime hash {handler.executedFiringSteps.Count}, continut");
-        foreach (var thing in handler.executedFiringSteps)
-        {
-            Log.Error($"{thing}");
-        }
         if (!handler.executedFiringSteps.Contains(args.firemodeStep))
         {
             Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep}");

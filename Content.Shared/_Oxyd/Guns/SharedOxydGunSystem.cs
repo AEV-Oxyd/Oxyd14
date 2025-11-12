@@ -84,10 +84,11 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
         var seed = SharedRandomExtensions.HashCodeCombine(new() { GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
+        Log.Error($"Seed is {seed}");
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
-        Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired}");
+        Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
     }
 
@@ -130,8 +131,8 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
-        Log.Debug($"Fire Delta is {lastFireDelta}");
-        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(100) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(100))
+        //Log.Debug($"Fire Delta is {lastFireDelta}");
+        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(500) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(500))
         {
             gunFiremodePrototype.firingGaps += lastFireDelta - gunFiremodePrototype.fireDelay;
             Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
@@ -270,7 +271,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         firemodePrototype.Active = true;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
-            Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps}");
+            //Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
                 return false;
