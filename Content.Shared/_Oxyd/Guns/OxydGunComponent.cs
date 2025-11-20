@@ -76,18 +76,13 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProviderComponent
         slot = bulletSlot;
         return bulletSlot.HasItem;
     }
+
 }
 [RegisterComponent]
-public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunProviderComponent
+public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
-    [DataField("bulletSlot")]
+    [DataField("magazineSlot")]
     public ItemSlot magazineSlot = new();
-    public override bool getAmmo([NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot)
-    {
-        ammo = magazineSlot.Item;
-        slot = magazineSlot;
-        return magazineSlot.HasItem;
-    }
 }
 
 [RegisterComponent]
@@ -103,7 +98,21 @@ public sealed partial class OxydBulletComponent : Component
 [RegisterComponent]
 public sealed partial class OxydMagazineComponent : Component
 {
-    public ItemSlot topBulletSlot = new();
-    public Queue<EntityUid> loadedBullets = new();
+    [DataField("capacity")]
+    public int maxBullets = 10;
+
+    public Stack<EntityUid> loadedBullets;
+
+    public OxydMagazineComponent()
+    {
+        loadedBullets = new(maxBullets);
+    }
+}
+
+[RegisterComponent]
+public sealed partial class OxydMagazineInitializerComponent : Component
+{
+    [DataField]
+    public EntityList initialBullets;
 }
 

@@ -38,6 +38,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+    // in milisecunde
     private const float maxAcceptableFireGap = 500;
 
 
@@ -114,13 +115,42 @@ public abstract class SharedOxydGunSystem : EntitySystem
         if (!TryComp<OxydBulletComponent>(chambered, out var bulletComp))
             return false;
         EntityUid projectile = Spawn(bulletComp.projectileEntity.ToString(), MapCoordinates.Nullspace);
-       // _itemSlotsSystem.TryEject(gun, slot, null, out var ejected);
+        endChambering(gun);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;
         projectileComp.initialMovement = new Vector2(bulletComp.Speed * gun.Comp.SpeedMultiplier, bulletComp.Speed * gun.Comp.SpeedMultiplier);
         outputComp = (projectile, projectileComp);
         return true;
+    }
+
+    public void endChambering(Entity<OxydGunComponent> gun)
+    {
+        switch (gun.Comp.ammoProvider)
+        {
+            case OxydGunAmmoMagazineChamberComponent a:
+            {
+                _itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected);
+                if (a.magazineSlot.Item is null)
+                    break;
+                var magComp = Comp<OxydMagazineComponent>(a.magazineSlot.Item.Value);
+                if (magComp.loadedBullets.Count == 0)
+                    break;
+                if (_itemSlotsSystem.TryInsert(gun.Owner, a.bulletSlot, magComp.loadedBullets.Peek(), null))
+                {
+                    magComp.loadedBullets.Pop();
+                }
+
+                break;
+            }
+            case OxydGunAmmoChamberComponent a:
+            {
+                _itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected);
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
