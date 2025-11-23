@@ -24,7 +24,7 @@
     firemodes:
     - baseFiremode
   - type: OxydHandheldGun
-  - type: OxydGunAmmoChamber
+  - type: OxydGunAmmoMagazineChamber
     bulletSlot:
       name: Chamber
       insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
@@ -33,6 +33,14 @@
       whitelist:
         components:
           - OxydBullet
+    magazineSlot:
+      name: Magazine
+      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
+      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+      priority: 1
+      whitelist:
+        components:
+          - OxydMagazine
   - type: ItemSlots
   - type: ContainerContainer
     containers:
@@ -56,6 +64,37 @@
   - type: OxydBullet
     speed: 20
     projectileEntity: ProjectileOxyd
+
+- type: entity
+  name: Oxyd Magazine
+  parent: BaseItem
+  id: MagazineOxyd
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Projectiles/projectiles2.rsi
+    state: slug
+  - type: Item
+    size: Large
+  - type: OxydMagazine
+    capacity: 10
+  - type: OxydMagazineInitializer
+    initialBullets: magazineOxydTest
+
+- type: entityList
+  id: magazineOxydTest
+  entities:
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
 
 - type: entity
   id: ProjectileOxyd
