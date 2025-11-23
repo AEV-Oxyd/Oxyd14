@@ -114,6 +114,6 @@ public sealed partial class OxydMagazineComponent : Component
 public sealed partial class OxydMagazineInitializerComponent : Component
 {
     [DataField]
-    public EntityListPrototype initialBullets;
+    public ProtoId<EntityListPrototype> initialBullets;
 }
 

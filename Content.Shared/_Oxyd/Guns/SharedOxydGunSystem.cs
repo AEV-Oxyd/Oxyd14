@@ -8,8 +8,10 @@ using System.Numerics;
 using System.Reflection;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.EntityList;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
+using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
@@ -38,6 +40,9 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+
+    private const string magazineContainerName = "Oxyd_Magazine";
+
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
 
@@ -46,19 +51,48 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
-        SubscribeLocalEvent<OxydMagazineInitializerComponent, ComponentInit>(onAmmoInitialized);
+        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
+        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
+        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
 
     }
 
-    public void onAmmoInitialized(Entity<OxydMagazineInitializerComponent> ent, ref ComponentInit args)
+    public void OnEntInsertMag(Entity<OxydGunAmmoMagazineChamberComponent> ent,
+        ref EntInsertedIntoContainerMessage args)
     {
-        if (!TryComp<OxydMagazineComponent>(ent.Owner, out var magazine))
+        if (ent.Comp.bulletSlot.HasItem)
             return;
-        foreach (var bulletProto in ent.Comp.initialBullets.GetEntities())
+        CycleMag(ent);
+    }
+
+    public void onMagazineChamberInit(Entity<OxydGunAmmoMagazineChamberComponent> ent, ref ComponentInit args)
+    {
+        _itemSlotsSystem.AddItemSlot(ent.Owner, ammoChamberContainerName, ent.Comp.bulletSlot);
+        _itemSlotsSystem.AddItemSlot(ent.Owner, magazineContainerName, ent.Comp.magazineSlot);
+    }
+
+    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    {
+        if (!TryComp<OxydMagazineInitializerComponent>(ent.Owner, out var initi))
+            return;
+        foreach (var bulletProto in _prototypeManager.Index<EntityListPrototype>(initi.initialBullets).GetEntities())
         {
-            magazine.loadedBullets.Push(Spawn(bulletProto.ToString(), MapCoordinates.Nullspace));
-            if (magazine.loadedBullets.Count > magazine.maxBullets)
+            ent.Comp.loadedBullets.Push(Spawn(bulletProto.ID, MapCoordinates.Nullspace));
+            if (ent.Comp.loadedBullets.Count > ent.Comp.maxBullets)
                 break;
+        }
+    }
+
+    public void CycleMag(Entity<OxydGunAmmoMagazineChamberComponent> a)
+    {
+        if (a.Comp.magazineSlot.Item is null)
+            return;
+        var magComp = Comp<OxydMagazineComponent>(a.Comp.magazineSlot.Item.Value);
+        if (magComp.loadedBullets.Count == 0)
+            return;
+        if (_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, magComp.loadedBullets.Peek(), null))
+        {
+            magComp.loadedBullets.Pop();
         }
     }
 
@@ -145,15 +179,8 @@ public abstract class SharedOxydGunSystem : EntitySystem
             {
                 if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
                     break;
-                if (a.magazineSlot.Item is null)
-                    break;
-                var magComp = Comp<OxydMagazineComponent>(a.magazineSlot.Item.Value);
-                if (magComp.loadedBullets.Count == 0)
-                    break;
-                if (_itemSlotsSystem.TryInsert(gun.Owner, a.bulletSlot, magComp.loadedBullets.Peek(), null))
-                {
-                    magComp.loadedBullets.Pop();
-                }
+                CycleMag((gun.Owner, a));
+
 
                 break;
             }
