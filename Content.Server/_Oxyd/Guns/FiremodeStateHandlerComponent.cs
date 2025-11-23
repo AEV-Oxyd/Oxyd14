@@ -9,6 +9,8 @@ namespace Content.Server._Oxyd.Guns;
 public sealed partial class FiremodeStateHandlerComponent : Component
 {
     [ViewVariables]
+    public TimeSpan lastAction = TimeSpan.Zero;
+    [ViewVariables]
     public NetUserId shooterNetworkId;
     [ViewVariables]
     public EntityUid shooterEntity;

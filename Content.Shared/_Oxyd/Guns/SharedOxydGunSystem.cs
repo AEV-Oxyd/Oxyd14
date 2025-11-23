@@ -46,7 +46,20 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
+        SubscribeLocalEvent<OxydMagazineInitializerComponent, ComponentInit>(onAmmoInitialized);
 
+    }
+
+    public void onAmmoInitialized(Entity<OxydMagazineInitializerComponent> ent, ref ComponentInit args)
+    {
+        if (!TryComp<OxydMagazineComponent>(ent.Owner, out var magazine))
+            return;
+        foreach (var bulletProto in ent.Comp.initialBullets.GetEntities())
+        {
+            magazine.loadedBullets.Push(Spawn(bulletProto.ToString(), MapCoordinates.Nullspace));
+            if (magazine.loadedBullets.Count > magazine.maxBullets)
+                break;
+        }
     }
 
 
@@ -130,7 +143,8 @@ public abstract class SharedOxydGunSystem : EntitySystem
         {
             case OxydGunAmmoMagazineChamberComponent a:
             {
-                _itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected);
+                if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
+                    break;
                 if (a.magazineSlot.Item is null)
                     break;
                 var magComp = Comp<OxydMagazineComponent>(a.magazineSlot.Item.Value);

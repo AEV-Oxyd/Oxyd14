@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
@@ -99,7 +100,7 @@ public sealed partial class OxydBulletComponent : Component
 public sealed partial class OxydMagazineComponent : Component
 {
     [DataField("capacity")]
-    public int maxBullets = 10;
+    public int maxBullets = 1;
 
     public Stack<EntityUid> loadedBullets;
 
@@ -113,6 +114,6 @@ public sealed partial class OxydMagazineComponent : Component
 public sealed partial class OxydMagazineInitializerComponent : Component
 {
     [DataField]
-    public EntityList initialBullets;
+    public EntityListPrototype initialBullets;
 }
 
