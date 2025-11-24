@@ -101,7 +101,7 @@ public sealed partial class OxydMagazineComponent : Component
 {
     [DataField("capacity")]
     public int maxBullets = 1;
-
+    [ViewVariables]
     public Stack<EntityUid> loadedBullets;
 
     public OxydMagazineComponent()
