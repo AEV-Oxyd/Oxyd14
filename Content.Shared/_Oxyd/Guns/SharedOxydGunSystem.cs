@@ -58,6 +58,8 @@ public abstract class SharedOxydGunSystem : EntitySystem
     public void OnEntInsertMag(Entity<OxydGunAmmoMagazineChamberComponent> ent,
         ref EntInsertedIntoContainerMessage args)
     {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         if (ent.Comp.bulletSlot.HasItem)
             return;
         CycleMag(ent);
@@ -76,10 +78,14 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var magComp = Comp<OxydMagazineComponent>(a.Comp.magazineSlot.Item.Value);
         if (magComp.loadedBullets.Count == 0)
             return;
-        if (_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, GetEntity(magComp.loadedBullets.Peek()), null))
+        var ent = GetEntity(magComp.loadedBullets.Pop());
+        if (!_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, ent, null))
         {
-            magComp.loadedBullets.Pop();
+            Log.Debug($"Failed to insert {ent} at {_gameTiming.CurTime}");
+            magComp.loadedBullets.Push(GetNetEntity(ent));
+            return;
         }
+        Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
     }
 
 
@@ -165,7 +171,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
             {
                 if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
                     break;
-                Log.Debug($"Ejected {ejected}");
+                Log.Debug($"Ejected {ejected} on tick {_gameTiming.CurTick} at {_gameTiming.CurTime}");
                 CycleMag((gun.Owner, a));
 
 
