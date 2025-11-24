@@ -5,6 +5,7 @@ using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Players.RateLimiting;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.EntityList;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
 using Robust.Shared.GameStates;
@@ -43,6 +44,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public override void Initialize()
     {
         base.Initialize();
+        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         _serverNetManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
@@ -52,6 +54,20 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             delayedMessages.Add(new Queue<object>());
         }
 
+    }
+
+
+    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    {
+        if (!TryComp<OxydMagazineInitializerComponent>(ent.Owner, out var initi))
+            return;
+        foreach (var bulletProto in _prototypeManager.Index<EntityListPrototype>(initi.initialBullets).GetEntities())
+        {
+            ent.Comp.loadedBullets.Push(GetNetEntity(Spawn(bulletProto.ID, MapCoordinates.Nullspace)));
+            if (ent.Comp.loadedBullets.Count > ent.Comp.maxBullets)
+                break;
+        }
+        Dirty(ent);
     }
 
     public void doMessageTick()

@@ -50,8 +50,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
     public override void Initialize()
     {
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
-        SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
-        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
 
@@ -71,18 +69,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
         _itemSlotsSystem.AddItemSlot(ent.Owner, magazineContainerName, ent.Comp.magazineSlot);
     }
 
-    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
-    {
-        if (!TryComp<OxydMagazineInitializerComponent>(ent.Owner, out var initi))
-            return;
-        foreach (var bulletProto in _prototypeManager.Index<EntityListPrototype>(initi.initialBullets).GetEntities())
-        {
-            ent.Comp.loadedBullets.Push(Spawn(bulletProto.ID, MapCoordinates.Nullspace));
-            if (ent.Comp.loadedBullets.Count > ent.Comp.maxBullets)
-                break;
-        }
-    }
-
     public void CycleMag(Entity<OxydGunAmmoMagazineChamberComponent> a)
     {
         if (a.Comp.magazineSlot.Item is null)
@@ -90,7 +76,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var magComp = Comp<OxydMagazineComponent>(a.Comp.magazineSlot.Item.Value);
         if (magComp.loadedBullets.Count == 0)
             return;
-        if (_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, magComp.loadedBullets.Peek(), null))
+        if (_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, GetEntity(magComp.loadedBullets.Peek()), null))
         {
             magComp.loadedBullets.Pop();
         }
@@ -133,11 +119,11 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
         var seed = SharedRandomExtensions.HashCodeCombine(new() { GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
-        Log.Error($"Seed is {seed}");
+        //Log.Error($"Seed is {seed}");
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
-        Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
+        //Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
     }
 
@@ -179,6 +165,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
             {
                 if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
                     break;
+                Log.Debug($"Ejected {ejected}");
                 CycleMag((gun.Owner, a));
 
 

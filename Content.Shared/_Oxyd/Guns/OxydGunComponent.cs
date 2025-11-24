@@ -96,13 +96,13 @@ public sealed partial class OxydBulletComponent : Component
     public EntProtoId projectileEntity = default!;
 }
 
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydMagazineComponent : Component
 {
-    [DataField("capacity")]
+    [DataField("capacity"), AutoNetworkedField]
     public int maxBullets = 1;
-    [ViewVariables]
-    public Stack<EntityUid> loadedBullets;
+    [ViewVariables, AutoNetworkedField]
+    public Stack<NetEntity> loadedBullets;
 
     public OxydMagazineComponent()
     {
