@@ -38,10 +38,13 @@ public abstract class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly IGameTiming _gameTiming = default!;
     [Dependency] protected readonly INetManager _netManager = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
+    [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
     private const string magazineContainerName = "Oxyd_Magazine";
+
+    protected const string oxydContents = "storagebase";
 
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
@@ -85,6 +88,9 @@ public abstract class SharedOxydGunSystem : EntitySystem
             magComp.loadedBullets.Push(GetNetEntity(ent));
             return;
         }
+
+        var cnt = _containerSystem.GetContainer(a.Owner, oxydContents);
+        _containerSystem.Remove(ent, cnt, true, true);
         Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
     }
 

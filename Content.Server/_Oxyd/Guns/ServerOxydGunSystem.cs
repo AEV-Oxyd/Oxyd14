@@ -61,9 +61,12 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         if (!TryComp<OxydMagazineInitializerComponent>(ent.Owner, out var initi))
             return;
+        var cnt = _containerSystem.GetContainer(ent, oxydContents);
         foreach (var bulletProto in _prototypeManager.Index<EntityListPrototype>(initi.initialBullets).GetEntities())
         {
-            ent.Comp.loadedBullets.Push(GetNetEntity(Spawn(bulletProto.ID, MapCoordinates.Nullspace)));
+            var spawned = Spawn(bulletProto.ID, MapCoordinates.Nullspace);
+            ent.Comp.loadedBullets.Push(GetNetEntity(spawned));
+            _containerSystem.Insert(spawned, cnt);
             if (ent.Comp.loadedBullets.Count > ent.Comp.maxBullets)
                 break;
         }

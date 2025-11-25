@@ -81,6 +81,10 @@
     capacity: 10
   - type: OxydMagazineInitializer
     initialBullets: magazineOxydTest
+  - type: ContainerContainer
+    containers:
+      storagebase: !type:Container
+        ents: []
 
 - type: entityList
   id: magazineOxydTest
