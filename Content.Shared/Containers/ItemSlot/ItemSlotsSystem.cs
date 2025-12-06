@@ -894,7 +894,7 @@ namespace Content.Shared.Containers.ItemSlots
 
             foreach (var (serverKey, serverSlot) in state.Slots)
             {
-                if (component.Slots.TryGetValue(serverKey, out var itemSlot))
+                if (component.Slots.TryGetValue(serverKey, out var itemSlot) && itemSlot.Item != serverSlot.Item)
                 {
                     itemSlot.CopyFrom(serverSlot);
                     itemSlot.ContainerSlot = _containers.EnsureContainer<ContainerSlot>(uid, serverKey);
