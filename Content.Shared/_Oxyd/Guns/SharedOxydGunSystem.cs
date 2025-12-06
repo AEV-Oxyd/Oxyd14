@@ -81,16 +81,17 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var magComp = Comp<OxydMagazineComponent>(a.Comp.magazineSlot.Item.Value);
         if (magComp.loadedBullets.Count == 0)
             return;
+        var cnt = _containerSystem.GetContainer(a.Comp.magazineSlot.Item.Value, oxydContents);
         var ent = GetEntity(magComp.loadedBullets.Pop());
+        _containerSystem.Remove(ent, cnt, true, true);
         if (!_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, ent, null))
         {
             Log.Debug($"Failed to insert {ent} at {_gameTiming.CurTime}");
             magComp.loadedBullets.Push(GetNetEntity(ent));
+            _containerSystem.Insert(ent, cnt, null, true);
             return;
         }
 
-        var cnt = _containerSystem.GetContainer(a.Owner, oxydContents);
-        _containerSystem.Remove(ent, cnt, true, true);
         Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
     }
 

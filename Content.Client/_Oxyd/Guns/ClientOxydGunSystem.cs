@@ -1,6 +1,8 @@
 using Content.Client._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
+using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
@@ -22,9 +24,15 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
+    }
+
+    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    {
+        _containerSystem.EnsureContainer<Container>(ent.Owner, oxydContents);
     }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
     {
