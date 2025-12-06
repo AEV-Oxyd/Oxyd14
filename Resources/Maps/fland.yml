@@ -1,11 +1,11 @@
 meta:
   format: 7
   category: Map
-  engineVersion: 267.1.0
+  engineVersion: 267.2.0
   forkId: ""
   forkVersion: ""
-  time: 09/24/2025 21:56:25
-  entityCount: 36083
+  time: 10/08/2025 23:22:51
+  entityCount: 36080
 maps:
 - 1
 grids:
@@ -30897,11 +30897,6 @@ entities:
     - type: Transform
       pos: 16.61324,11.471256
       parent: 13329
-  - uid: 10642
-    components:
-    - type: Transform
-      pos: 31.342075,13.304442
-      parent: 13329
   - uid: 18486
     components:
     - type: Transform
@@ -31281,11 +31276,6 @@ entities:
     components:
     - type: Transform
       pos: 16.446573,11.429589
-      parent: 13329
-  - uid: 9340
-    components:
-    - type: Transform
-      pos: 31.685825,13.288817
       parent: 13329
 - proto: BoxLightMixed
   entities:
@@ -227060,13 +227050,6 @@ entities:
     components:
     - type: Transform
       pos: 19.469765,12.608503
-      parent: 13329
-- proto: WeaponShotgunEnforcer
-  entities:
-  - uid: 9339
-    components:
-    - type: Transform
-      pos: 31.498325,13.851317
       parent: 13329
 - proto: WeaponShotgunHandmade
   entities:
