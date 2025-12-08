@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.Damage;
+using Content.Shared.Damage.Systems;
 using Content.Shared.Weapons.Ranged.Components;
 using Robust.Shared.Map;
 using Robust.Shared.Network;

@@ -132,7 +132,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
-        var seed = SharedRandomExtensions.HashCodeCombine(new() { GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
+        var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
         //Log.Error($"Seed is {seed}");
         var rand = new System.Random(seed);
         var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
