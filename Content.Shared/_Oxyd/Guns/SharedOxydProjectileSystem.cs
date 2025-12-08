@@ -88,12 +88,12 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
         if (TryComp<OxydProjectileApplyDamageComponent>(obj, out var damage))
         {
             _damage.TryChangeDamage(args.OtherEntity, damage.DamageSpecifier, false, true);
-            /*
+
             if (_netmanager.IsClient)
                 Log.Error($"CLIENT - Applying damage to {MetaData(args.OtherEntity).EntityName}");
             else
                 Log.Error($"SERVER - Applying damage to {MetaData(args.OtherEntity).EntityName}");
-                */
+
         }
         afterBulletCollide(obj, ref args);
         return;
@@ -107,12 +107,12 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
         if (TryComp<OxydProjectileApplyDamageComponent>(obj, out var damage))
         {
             _damage.TryChangeDamage(other, damage.DamageSpecifier, false, true);
-            /*
+
             if (_netmanager.IsClient)
-                Log.Error($"CLIENT - Applying damage to {MetaData(args.OtherEntity).EntityName}");
+                Log.Error($"CLIENT - Applying damage to {MetaData(other).EntityName}");
             else
-                Log.Error($"SERVER - Applying damage to {MetaData(args.OtherEntity).EntityName}");
-                */
+                Log.Error($"SERVER - Applying damage to {MetaData(other).EntityName}");
+
         }
         afterBulletCollide(obj, other);
     }

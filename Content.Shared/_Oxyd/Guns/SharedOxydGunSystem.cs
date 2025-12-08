@@ -84,7 +84,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
         var cnt = _containerSystem.GetContainer(a.Comp.magazineSlot.Item.Value, oxydContents);
         var ent = GetEntity(magComp.loadedBullets.Pop());
         _containerSystem.Remove(ent, cnt, true, true);
-        // Dont  dirty, client-server fight over what is actually in the mag
         if (!_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, ent, null))
         {
             Log.Debug($"Failed to insert {ent} at {_gameTiming.CurTime}");
@@ -92,7 +91,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
             _containerSystem.Insert(ent, cnt, null, true);
             return;
         }
-
+        a.Comp.nextBullet = ent;
         Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
     }
 

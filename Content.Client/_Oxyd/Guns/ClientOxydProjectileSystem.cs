@@ -70,10 +70,25 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
             _physics.SetSleepingAllowed(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), false, false);
             _physics.SetAngularDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
+            _physics.UpdateIsPredicted(projectile.Owner);
         }
     }
 
-    public override void FrameUpdate(float deltaTime)
+    public override void Update(float deltaTime)
     {
+        if (_playerManager.LocalSession is null)
+            return;
+        // horrible...
+        var qery = EntityQueryEnumerator<ClientsidePleaseIgnoreComponent>();
+        while (qery.MoveNext(out var uid, out var comp))
+        {
+            if (TerminatingOrDeleted(uid))
+                continue;
+            if (!comp.forSessions.Contains(_playerManager.LocalSession.Name))
+                continue;
+            var transf = Transform(uid);
+            transf.PredictedLerp = false;
+        }
+
     }
 }
