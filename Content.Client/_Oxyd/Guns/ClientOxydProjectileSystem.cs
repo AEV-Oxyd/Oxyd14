@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client._Oxyd.Framework;
 using Content.Client.Effects;
 using Content.Client.Projectiles;
 using Content.Shared._Oxyd.Framework;
@@ -25,14 +26,7 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
-
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydProjectileComponent, UpdateIsPredictedEvent>(OnUpdatePred);
-
-        UpdatesBefore.Add(typeof(TransformSystem));
-    }
+    [Dependency] private readonly FixClientsidePhysicsSystem _patcher = default!;
 
     public override bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {
@@ -51,10 +45,6 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
         base.afterBulletCollide(obj, ref args);
     }
 
-    public void OnUpdatePred(Entity<OxydProjectileComponent> ent, ref UpdateIsPredictedEvent ev)
-    {
-        ev.IsPredicted = true;
-    }
     public override void projectileQueued(Entity<OxydProjectileComponent> projectile)
     {
 
@@ -64,31 +54,13 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     {
         foreach (var projectile in FireNextTick)
         {
+
             _transform.SetMapCoordinates(projectile.Owner, projectile.Comp.initialPosition);
             _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, false);
             _physics.SetLinearDamping(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), 0f, false);
-            _physics.SetSleepingAllowed(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), false, false);
             _physics.SetAngularDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
-            _physics.UpdateIsPredicted(projectile.Owner);
+            _patcher.startForcedPrediction(projectile.Owner);
         }
-    }
-
-    public override void Update(float deltaTime)
-    {
-        if (_playerManager.LocalSession is null)
-            return;
-        // horrible...
-        var qery = EntityQueryEnumerator<ClientsidePleaseIgnoreComponent>();
-        while (qery.MoveNext(out var uid, out var comp))
-        {
-            if (TerminatingOrDeleted(uid))
-                continue;
-            if (!comp.forSessions.Contains(_playerManager.LocalSession.Name))
-                continue;
-            var transf = Transform(uid);
-            transf.PredictedLerp = false;
-        }
-
     }
 }
