@@ -83,6 +83,11 @@ public abstract class SharedOxydGunSystem : EntitySystem
             return;
         var cnt = _containerSystem.GetContainer(a.Comp.magazineSlot.Item.Value, oxydContents);
         var ent = GetEntity(magComp.loadedBullets.Pop());
+        if (ent == EntityUid.Invalid)
+        {
+            Log.Debug($"Invalid entity popped in cycle mag!");
+            return;
+        }
         _containerSystem.Remove(ent, cnt, true, true);
         if (!_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, ent, null))
         {
@@ -178,6 +183,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
             {
                 if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
                     break;
+                a.nextBullet = EntityUid.Invalid;
                 Log.Debug($"Ejected {ejected} on tick {_gameTiming.CurTick} at {_gameTiming.CurTime}");
                 CycleMag((gun.Owner, a));
 
@@ -187,6 +193,7 @@ public abstract class SharedOxydGunSystem : EntitySystem
             case OxydGunAmmoChamberComponent a:
             {
                 _itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected);
+                a.nextBullet = EntityUid.Invalid;
                 break;
             }
             default:

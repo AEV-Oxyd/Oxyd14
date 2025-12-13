@@ -72,6 +72,7 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProviderComponent
     public ItemSlot bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
+    [ViewVariables]
     public EntityUid nextBullet = EntityUid.Invalid;
 
     public override bool getAmmo([NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
