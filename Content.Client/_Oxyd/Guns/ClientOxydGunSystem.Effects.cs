@@ -13,6 +13,7 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -42,6 +43,8 @@ public sealed partial class ClientOxydGunSystem
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNextTickIfMouseHeld e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+            case GunEffectCheckAmmo e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             default:

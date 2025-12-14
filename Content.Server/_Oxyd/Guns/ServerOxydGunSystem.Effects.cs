@@ -52,6 +52,10 @@ public sealed partial class ServerOxydGunSystem
                 InterpretStep(firemodePrototype, e, gun, shooter);
                 break;
 
+            case GunEffectCheckAmmo e:
+                InterpretStep(firemodePrototype, e, gun, shooter);
+                break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
         }

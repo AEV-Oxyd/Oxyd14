@@ -133,14 +133,16 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckAmmo effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && !chamberComp.bulletSlot.HasItem)
+        if (shooter is null)
+            return false;
+        if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && chamberComp.nextBullet == EntityUid.Invalid)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
             return false;
         }
-        if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && !magComp.bulletSlot.HasItem)
+        if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && magComp.nextBullet == EntityUid.Invalid)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
             return false;
         }
 

@@ -28,7 +28,7 @@ public sealed partial class FixClientsidePhysicsComponent : Component
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class FixClientsidePhysicsSystem : EntitySystem
+public sealed class FixClientsidePhysicsSystem : VirtualController
 {
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly TransformSystem _transform = default!;
@@ -43,6 +43,20 @@ public sealed class FixClientsidePhysicsSystem : EntitySystem
         UpdatesBefore.Add(typeof(Robust.Client.Physics.PhysicsSystem));
     }
 
+    public override void UpdateBeforeSolve(bool prediction, float frameTime)
+    {
+        base.UpdateBeforeSolve(prediction, frameTime);
+        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        var setValue = !_timing.IsFirstTimePredicted;
+        while (qery.MoveNext(out var uid, out var comp))
+        {
+            SetPaused(uid, setValue);
+            //_physics.SetCanCollide(uid, _timing.IsFirstTimePredicted);
+            var transf = Transform(uid);
+            transf.PredictedLerp = false;
+        }
+    }
+
     public void OnUpdatePred(Entity<FixClientsidePhysicsComponent> ent, ref UpdateIsPredictedEvent ev)
     {
         ev.IsPredicted = true;
@@ -53,23 +67,5 @@ public sealed class FixClientsidePhysicsSystem : EntitySystem
         _physics.SetSleepingAllowed(entity,Comp<PhysicsComponent>(entity), false, false);
         _physics.UpdateIsPredicted(entity);
         EnsureComp<FixClientsidePhysicsComponent>(entity);
-    }
-
-    public override void Update(float deltaTime)
-    {
-        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
-        var setValue = !_timing.IsFirstTimePredicted;
-        while (qery.MoveNext(out var uid, out var comp))
-        {
-            if (TerminatingOrDeleted(uid))
-                continue;
-            if (!TryComp<MetaDataComponent>(uid, out var meta))
-                continue;
-            SetPaused(uid, setValue, meta);
-            var transf = Transform(uid);
-            transf.PredictedLerp = false;
-            //transf.ActivelyLerping = false;
-        }
-
     }
 }

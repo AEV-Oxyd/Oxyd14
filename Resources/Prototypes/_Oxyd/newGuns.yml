@@ -2,6 +2,7 @@
   id: baseFiremode
   firerate: 10
   effects:
+  - !type:GunEffectCheckAmmo
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
 
