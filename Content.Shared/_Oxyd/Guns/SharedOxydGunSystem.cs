@@ -131,6 +131,23 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckAmmo effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && !chamberComp.bulletSlot.HasItem)
+        {
+            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            return false;
+        }
+        if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && !magComp.bulletSlot.HasItem)
+        {
+            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            return false;
+        }
+
+        return true;
+    }
+
+
 
 
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)

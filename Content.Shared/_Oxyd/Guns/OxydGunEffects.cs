@@ -31,6 +31,9 @@ public sealed partial class GunEffectCheckCuffed : OxydGunEffect;
 public sealed partial class GunEffectCheckConscious : OxydGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectCheckWielded : OxydGunEffect;
+
+[DataDefinition]
+public sealed partial class GunEffectCheckAmmo : OxydGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectWait : OxydGunEffect
 {
