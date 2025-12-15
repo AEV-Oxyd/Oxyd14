@@ -43,7 +43,9 @@ public sealed partial class GunEffectWait : OxydGunEffect
     public int stepBack = 0;
     [DataField]
     public TimeSpan waitPeriod = TimeSpan.Zero;
+    [ViewVariables]
     public TimeSpan alreadyWaited = TimeSpan.Zero;
+    [ViewVariables]
     public GameTick skipTick = GameTick.Zero;
 }
 [DataDefinition]
