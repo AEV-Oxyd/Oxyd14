@@ -133,19 +133,36 @@ public abstract class SharedOxydGunSystem : EntitySystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckAmmo effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (shooter is null)
-            return false;
         if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && chamberComp.nextBullet == EntityUid.Invalid)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
+            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
             return false;
         }
         if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && magComp.nextBullet == EntityUid.Invalid)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
+            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
             return false;
         }
 
+        return true;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
+        if (effect.skipTick == _gameTiming.CurTick)
+        {
+            return true;
+        }
+        effect.alreadyWaited += _gameTiming.TickPeriod;
+        if (effect.alreadyWaited < effect.waitPeriod)
+            return false;
+        effect.alreadyWaited = TimeSpan.Zero;
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
+            effect.skipTick = _gameTiming.CurTick;
+        }
         return true;
     }
 
@@ -362,11 +379,24 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
+    public void EnsureActiveUpdating(GunFiremodePrototype fireProto, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (HasComp<OxydActiveFiremodeUpdatingComponent>(gun))
+            return;
+        var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
+        c.FiremodePrototype = fireProto;
+        c.gun = gun;
+        c.shooter = shooter;
+    }
+
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         if (firemodePrototype.nextFire > _gameTiming.CurTime)
             return false;
+        if (firemodePrototype.lastFiredTick == _gameTiming.CurTick)
+            return false;
         firemodePrototype.Active = true;
+        firemodePrototype.lastFiredTick = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
             //Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps}");

@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Robust.Shared.Timing;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
@@ -37,9 +38,13 @@ public sealed partial class GunEffectCheckAmmo : OxydGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectWait : OxydGunEffect
 {
-    public TimeSpan alreadyWaited = TimeSpan.Zero;
+    // x steps to go back if we want to rerun checks
+    [DataField]
+    public int stepBack = 0;
     [DataField]
     public TimeSpan waitPeriod = TimeSpan.Zero;
+    public TimeSpan alreadyWaited = TimeSpan.Zero;
+    public GameTick skipTick = GameTick.Zero;
 }
 [DataDefinition]
 public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;

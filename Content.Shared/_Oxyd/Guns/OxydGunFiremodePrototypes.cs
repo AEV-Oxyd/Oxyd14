@@ -18,6 +18,8 @@ public partial class GunFiremodePrototype : IPrototype
     [ViewVariables]
     // prevent changing fire modes whilst this is true.
     public bool Active = false;
+    // last interpret tick. To not run it multiuple times in the same.
+    public GameTick lastInterpreted = GameTick.Zero;
 
     // SPRITE
     [DataField("icon", required: false)]

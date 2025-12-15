@@ -105,14 +105,11 @@ public sealed partial class ClientOxydGunSystem
 
         if (!_mouseSys.mousedDown)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
+            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
             //Log.Debug("Stopped fullauto");
             return true;
         }
-        var comp = EnsureComp<OxydActiveFiremodeUpdatingComponent>(shooter.Value);
-        comp.FiremodePrototype = firemodePrototype;
-        comp.gun = gun;
-        comp.shooter = shooter.Value;
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
         //Log.Debug("Ensured full auto");
         return true;
     }
