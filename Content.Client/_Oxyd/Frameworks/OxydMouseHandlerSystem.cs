@@ -157,16 +157,16 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         base.Update(frameTime);
         if (_stateManager.CurrentState is not GameplayState gameplayState)
             return;
-        if (!mousedDown)
-            return;
         if (_playerManager.LocalEntity is null)
+            return;
+        var mouseScreenPos = _inputManager.MouseScreenPosition;
+        var mouseData = EnsureComp<OxydMouseDataComponent>(_playerManager.LocalEntity.Value);
+        var mousePos = _eyeManager.PixelToMap(mouseScreenPos);
+        mouseData.mouseMap = mousePos;
+        if (!mousedDown)
             return;
         var held = _handsSystem.GetActiveHandEntity();
         var heldList = _handsSystem.EnumerateHeld(_playerManager.LocalEntity.Value).ToList();
-        var mouseScreenPos = _inputManager.MouseScreenPosition;
-        var mousePos = _eyeManager.PixelToMap(mouseScreenPos);
-        var mouseData = EnsureComp<OxydMouseDataComponent>(_playerManager.LocalEntity.Value);
-        mouseData.mouseMap = mousePos;
         var ent = gameplayState.GetClickedEntity(mousePos);
         if (ent is not null)
         {

@@ -3,8 +3,7 @@
   firerate: 10
   effects:
   - !type:GunEffectWait
-    stepBack: 1
-    waitPeriod: 10
+    waitPeriod: 2
   - !type:GunEffectCheckAmmo
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld

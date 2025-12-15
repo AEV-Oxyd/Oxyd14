@@ -25,7 +25,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This handles...
 /// </summary>
-public abstract class SharedOxydGunSystem : EntitySystem
+public abstract partial class SharedOxydGunSystem : EntitySystem
 {
 
     [Dependency] private readonly SharedMapSystem _mapSystem = default!;
@@ -116,55 +116,6 @@ public abstract class SharedOxydGunSystem : EntitySystem
     }
 
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectTryFireGunDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        MapCoordinates gunCoords = _transformSystem.GetMapCoordinates(gun.Owner);
-        if (TryFireGunAt(gun,
-                gun.Owner,
-                gunCoords.Offset(_transformSystem.GetWorldRotation(gun).ToWorldVec()),
-                gunCoords) is null)
-        {
-            firemodePrototype.currentStep = 0;
-            return false;
-        }
-
-        return true;
-    }
-
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckAmmo effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && chamberComp.nextBullet == EntityUid.Invalid)
-        {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
-            return false;
-        }
-        if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && magComp.nextBullet == EntityUid.Invalid)
-        {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
-            return false;
-        }
-
-        return true;
-    }
-
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        if (effect.skipTick == _gameTiming.CurTick)
-        {
-            return true;
-        }
-        effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (effect.alreadyWaited < effect.waitPeriod)
-            return false;
-        effect.alreadyWaited = TimeSpan.Zero;
-        if (effect.stepBack != 0)
-        {
-            firemodePrototype.currentStep -= effect.stepBack;
-            effect.skipTick = _gameTiming.CurTick;
-        }
-        return true;
-    }
 
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
     {
@@ -376,8 +327,13 @@ public abstract class SharedOxydGunSystem : EntitySystem
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
-    public void EnsureActiveUpdating(GunFiremodePrototype fireProto, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public void EnsureActiveUpdating(GunFiremodePrototype fireProto,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter,
+        bool clientOnly = false)
     {
+        if (clientOnly && _netManager.IsServer)
+            return;
         if (HasComp<OxydActiveFiremodeUpdatingComponent>(gun))
             return;
         var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
@@ -390,10 +346,10 @@ public abstract class SharedOxydGunSystem : EntitySystem
     {
         if (firemodePrototype.nextFire > _gameTiming.CurTime)
             return false;
-        if (firemodePrototype.lastFiredTick == _gameTiming.CurTick)
+        if (firemodePrototype.lastInterpret == _gameTiming.CurTick)
             return false;
         firemodePrototype.Active = true;
-        firemodePrototype.lastFiredTick = _gameTiming.CurTick;
+        firemodePrototype.lastInterpret = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
             //Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps}");

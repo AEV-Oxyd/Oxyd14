@@ -15,10 +15,11 @@ public partial class GunFiremodePrototype : IPrototype
     public int currentStep = 0;
     [ViewVariables]
     public int maxSteps => Effects.Count;
-    [ViewVariables]
     // prevent changing fire modes whilst this is true.
+    [ViewVariables]
     public bool Active = false;
     // last interpret tick. To not run it multiuple times in the same.
+    [ViewVariables]
     public GameTick lastInterpreted = GameTick.Zero;
 
     // SPRITE
@@ -36,6 +37,9 @@ public partial class GunFiremodePrototype : IPrototype
     public TimeSpan firingGaps = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     public GameTick lastFiredTick = default;
+
+    [ViewVariables, NonSerialized]
+    public GameTick lastInterpret = default;
     [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
 
