@@ -1,3 +1,4 @@
+using Content.Shared.Hands.Components;
 using Robust.Shared.Map;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -54,5 +55,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         return true;
     }
+
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckHandheld effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (shooter is null)
+            return false;
+        if (!TryComp<HandsComponent>(shooter, out var hands))
+            return false;
+        var holdings = _handsSystem.EnumerateHeld((shooter.Value, hands));
+        foreach (var thing in holdings)
+        {
+            if (gun.Owner == thing)
+                return true;
+        }
+
+        return false;
+    }
+
 
 }

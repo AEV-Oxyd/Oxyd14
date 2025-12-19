@@ -9,6 +9,7 @@ using System.Reflection;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.EntityList;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
 using Robust.Shared.Containers;
@@ -39,6 +40,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly INetManager _netManager = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
+    [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
