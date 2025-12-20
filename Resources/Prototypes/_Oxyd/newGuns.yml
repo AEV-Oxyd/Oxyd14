@@ -2,10 +2,11 @@
   id: baseFiremode
   firerate: 10
   effects:
+  - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectWait
-    waitPeriod: 2
+    waitPeriod: 10
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
