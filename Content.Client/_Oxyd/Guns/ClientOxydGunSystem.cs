@@ -38,6 +38,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
+        if (!args.holding.Contains(obj.Owner))
+            return;
         if (!TryComp<OxydGunComponent>(obj, out var gun))
         {
             Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
@@ -53,6 +55,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
         if (!gun.Comp.selectedFiremodePrototype.Active)
         {
+            Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
@@ -93,5 +96,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             if(active.shooter is not null)
                 DoInterpret(active.gun, active.shooter.Value);
         }
+        
     }
 }

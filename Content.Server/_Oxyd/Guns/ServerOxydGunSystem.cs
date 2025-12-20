@@ -81,13 +81,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:
-                    OnClientInterpret(ev);
+                    DoNetMessage(ev);
                     break;
                 case ClientSideDoneInterpretingFiremode ev:
-                    OnClientEndInterpret(ev);
+                    DoNetMessage(ev);
                     break;
                 case  FiremodeClientsideFiredEvent ev:
-                    OnClientFireGun(ev);
+                    DoNetMessage(ev, 0);
                     break;
                 default:
                     Log.Error($"Unimplemented doMessageTick in ServerOxydGunSystem for {thing}");
@@ -109,6 +109,25 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
         EntityUid gun = GetEntity(args.gun);
+        if (TerminatingOrDeleted(gun))
+            return;
+        if (args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        {
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
+            return;
+        }
+        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
+        if (tickDiff > MaxTicksIncosistencyBehind)
+        {
+            DirtyEntity(gun);
+            return;
+        }
+        DoNetMessage(args);
+    }
+
+    public void DoNetMessage(ClientSideInterpretingFiremode args)
+    {
+        EntityUid gun = GetEntity(args.gun);
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
@@ -123,18 +142,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
             return;
         }
-        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
-        {
-            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
-            return;
-        }
-        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > MaxTicksIncosistencyBehind)
-        {
-            DirtyEntity(gun);
-            return;
-        }
-
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
         c.executedFiringSteps.Clear();
@@ -143,6 +150,24 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     }
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
+    {
+        EntityUid gun = GetEntity(args.gun);
+        if (TerminatingOrDeleted(gun))
+            return;
+        if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        {
+            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
+            return;
+        }
+        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
+        if (tickDiff > MaxTicksIncosistencyBehind)
+        {
+            return;
+        }
+        DoNetMessage(args);
+    }
+
+    public void DoNetMessage(ClientSideDoneInterpretingFiremode args)
     {
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
@@ -161,16 +186,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}");
             return;
         }
-        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
-        {
-            queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
-            return;
-        }
-        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > MaxTicksIncosistencyBehind)
-        {
-            return;
-        }
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
     }
@@ -181,15 +196,28 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
-        if (!TryComp<OxydGunComponent>(gun, out var gunComp))
-            return;
-        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
-            return;
-        if(args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
             queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
+        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
+        if (tickDiff > MaxTicksIncosistencyBehind)
+        {
+            return;
+        }
+        DoNetMessage(args, tickDiff);
+    }
+
+    public void DoNetMessage(FiremodeClientsideFiredEvent args, uint tickDiff)
+    {
+        EntityUid gun = GetEntity(args.gun);
+        if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gunComp))
+            return;
+        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
+            return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
         /*
@@ -200,15 +228,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         */
         if (!handler.executedFiringSteps.Contains(args.firemodeStep))
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep}");
+            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
             return;
         }
         handler.executedFiringSteps.Remove(args.firemodeStep);
-        var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
-        if (tickDiff > MaxTicksIncosistencyBehind)
-        {
-            return;
-        }
         // Let  very small inconsistencies slide in , don't want state desyncs!
         var savedFire = gunComp.selectedFiremodePrototype.nextFire;
         if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
@@ -240,13 +263,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
-        doMessageTick();
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
             TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
+        doMessageTick();
     }
 
 }

@@ -13,48 +13,35 @@ public sealed partial class ServerOxydGunSystem
         switch (effect)
         {
             case GunEffectCheckHandheld e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckCuffed e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
-
+                return InterpretStep(firemodePrototype, e, gun, shooter);
             case GunEffectCheckConscious e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckWielded e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectWait e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectTryFireGunDirection e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectTryFireMouseDirection e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
-
+                return InterpretStep(firemodePrototype, e, gun, shooter);
             case GunEffectRepeatNextTick e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNow e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNextTickIfMouseHeld e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckAmmo e:
-                InterpretStep(firemodePrototype, e, gun, shooter);
-                break;
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
@@ -98,7 +85,7 @@ public sealed partial class ServerOxydGunSystem
             firemodePrototype.currentStep = 0;
             return false;
         }
-
+        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
         stateComp.executedFiringSteps.Add(firemodePrototype.currentStep);
         return true;
     }

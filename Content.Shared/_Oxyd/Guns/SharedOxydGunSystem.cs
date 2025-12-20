@@ -209,7 +209,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         List<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
-        while (gun.Comp.firingTime > gunFiremodePrototype.fireDelay)
+        while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
@@ -354,7 +354,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         firemodePrototype.lastInterpret = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
-            //Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps}");
+            Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
                 return false;
