@@ -96,6 +96,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             if(active.shooter is not null)
                 DoInterpret(active.gun, active.shooter.Value);
         }
-        
+
     }
 }
