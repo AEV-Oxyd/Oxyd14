@@ -22,6 +22,7 @@ using Robust.Shared.Timing;
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 
+public record struct OxydFireDataWrap(GunFiremodePrototype firemode,Entity<OxydGunComponent> gun, EntityUid? shooter);
 
 /// <summary>
 /// This handles...
@@ -50,6 +51,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
+
+    protected HashSet<OxydFireDataWrap> checkActive = new();
 
 
     public override void Initialize()
@@ -331,18 +334,20 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void EnsureActiveUpdating(GunFiremodePrototype fireProto,
         Entity<OxydGunComponent> gun,
-        EntityUid? shooter,
-        bool clientOnly = false)
+        EntityUid? shooter)
     {
-        if (clientOnly && _netManager.IsServer)
-            return;
-        if (HasComp<OxydActiveFiremodeUpdatingComponent>(gun))
-            return;
-        var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(gun);
-        c.FiremodePrototype = fireProto;
-        c.gun = gun;
-        c.shooter = shooter;
+        checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
+        gun.Comp.keepUpdating = true;
     }
+
+    public void RemoveActiveUpdating(GunFiremodePrototype fireProto,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
+        gun.Comp.keepUpdating = false;
+    }
+
 
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
@@ -357,12 +362,17 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
-                return false;
+                break;
             }
             firemodePrototype.currentStep++;
         }
-        firemodePrototype.currentStep = 0;
-        firemodePrototype.Active = false;
+
+        if (firemodePrototype.currentStep == firemodePrototype.maxSteps)
+        {
+            firemodePrototype.currentStep = 0;
+            firemodePrototype.Active = false;
+        }
+
         return true;
     }
 }

@@ -20,8 +20,12 @@ public sealed partial class OxydGunComponent : Component
     // bullet sets their own speed , gun can only influence it
     [DataField]
     public float SpeedMultiplier = 1;
-
+    [ViewVariables]
     public OxydGunProviderComponent ammoProvider = default!;
+
+    [ViewVariables]
+    public bool keepUpdating = false;
+
 
     [ViewVariables]
     // Firemodes handle most firing details that are not technical.

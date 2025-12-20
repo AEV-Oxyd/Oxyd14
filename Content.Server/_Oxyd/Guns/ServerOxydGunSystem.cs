@@ -77,7 +77,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(delayedMessages[currentMessagesIndex].TryDequeue(out var thing))
         {
-            Log.Debug($"Message dequeued {thing}");
+            Log.Error($"Message dequeued {thing} at {_gameTiming.RealTime}");
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:
@@ -127,6 +127,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void DoNetMessage(ClientSideInterpretingFiremode args)
     {
+        Log.Error($"Interpreting Client-Firemode at {_gameTiming.RealTime}");
         EntityUid gun = GetEntity(args.gun);
         EntityUid shooter = GetEntity(args.shooter);
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
@@ -270,6 +271,26 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
         doMessageTick();
+
+        foreach (var ent in checkActive)
+        {
+            if (ent.gun.Comp.keepUpdating)
+            {
+                if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+                c.gun = ent.gun;
+                c.FiremodePrototype = ent.firemode;
+                c.shooter = ent.shooter;
+            }
+            else
+            {
+                if (!HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                RemComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+            }
+
+        }
     }
 
 }

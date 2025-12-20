@@ -65,7 +65,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             });
         }
 
-        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter))
+        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter) && !gun.Comp.selectedFiremodePrototype.Active)
         {
             _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
@@ -95,6 +95,25 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         {
             if(active.shooter is not null)
                 DoInterpret(active.gun, active.shooter.Value);
+        }
+        foreach (var ent in checkActive)
+        {
+            if (ent.gun.Comp.keepUpdating)
+            {
+                if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+                c.gun = ent.gun;
+                c.FiremodePrototype = ent.firemode;
+                c.shooter = ent.shooter;
+            }
+            else
+            {
+                if (!HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                RemComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+            }
+
         }
 
     }

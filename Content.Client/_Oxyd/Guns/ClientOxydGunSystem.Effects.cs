@@ -105,7 +105,7 @@ public sealed partial class ClientOxydGunSystem
 
         if (!_mouseSys.mousedDown)
         {
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            RemoveActiveUpdating(firemodePrototype, gun, shooter);
             //Log.Debug("Stopped fullauto");
             return true;
         }

@@ -27,13 +27,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && chamberComp.nextBullet == EntityUid.Invalid)
         {
             firemodePrototype.currentStep = 0;
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            RemoveActiveUpdating(firemodePrototype, gun, shooter);
             return false;
         }
         if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && magComp.nextBullet == EntityUid.Invalid)
         {
             firemodePrototype.currentStep = 0;
-            RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+            RemoveActiveUpdating(firemodePrototype, gun, shooter);
             return false;
         }
 
@@ -51,7 +51,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (effect.alreadyWaited < effect.waitPeriod)
             return false;
         effect.alreadyWaited = TimeSpan.Zero;
-        RemComp<OxydActiveFiremodeUpdatingComponent>(gun);
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)
         {
             firemodePrototype.currentStep -= effect.stepBack;

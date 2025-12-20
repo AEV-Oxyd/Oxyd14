@@ -66,6 +66,7 @@ public sealed partial class ServerOxydGunSystem
             firemodePrototype.currentStep = 0;
             return false;
         }
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
         return true;
     }
 
