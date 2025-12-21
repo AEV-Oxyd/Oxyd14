@@ -11,6 +11,21 @@
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
 
+- type: gunFiremode
+  id: baseBurstFiremode
+  firerate: 10
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectWait
+    waitPeriod: 0.1
+    stepBack: 3
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatNextTick
+    repeatCount: 2
+    stepBack: 5
+
 - type: entity
   name: Oxyd Gun
   parent: BaseItem
@@ -28,7 +43,7 @@
     size: Large
   - type: OxydGun
     firemodes:
-    - baseFiremode
+    - baseBurstFiremode
   - type: OxydHandheldGun
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:

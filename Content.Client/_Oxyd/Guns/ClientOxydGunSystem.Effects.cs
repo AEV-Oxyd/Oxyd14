@@ -36,14 +36,13 @@ public sealed partial class ClientOxydGunSystem
 
             case GunEffectTryFireMouseDirection e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
-            case GunEffectRepeatNextTick e:
-                return InterpretStep(firemodePrototype, e, gun, shooter);
 
-            case GunEffectRepeatNow e:
+            case GunEffectRepeatNextTick e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectRepeatNextTickIfMouseHeld e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
+
             case GunEffectCheckAmmo e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 

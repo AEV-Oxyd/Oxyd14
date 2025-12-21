@@ -110,25 +110,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (effect.timesBack < effect.repeatCount)
         {
             effect.timesBack++;
-            firemodePrototype.currentStep -= effect.stepsBack;
+            firemodePrototype.currentStep -= effect.stepBack;
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
             return false;
         }
 
         effect.timesBack = 0;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
-        return true;
-    }
-
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNow effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (effect.timesBack < effect.repeatCount)
-        {
-            effect.timesBack++;
-            firemodePrototype.currentStep -= effect.stepsBack;
-            return true;
-        }
-        effect.timesBack = 0;
         return true;
     }
 
