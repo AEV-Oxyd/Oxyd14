@@ -58,6 +58,8 @@ public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
     public int timesBack = 0;
     [DataField]
     public int repeatCount = 1;
+    [DataField]
+    public int stepsBack = 0;
 }
 [DataDefinition]
 public sealed partial class GunEffectRepeatNow : OxydGunEffect
@@ -65,6 +67,8 @@ public sealed partial class GunEffectRepeatNow : OxydGunEffect
     public int timesBack = 0;
     [DataField]
     public int repeatCount = 1;
+    [DataField]
+    public int stepsBack = 0;
 }
 [DataDefinition]
 public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect;
