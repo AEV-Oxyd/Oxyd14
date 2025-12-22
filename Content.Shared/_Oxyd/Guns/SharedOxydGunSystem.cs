@@ -339,7 +339,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
         gun.Comp.keepUpdating = true;
     }
-
     public void RemoveActiveUpdating(GunFiremodePrototype fireProto,
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)

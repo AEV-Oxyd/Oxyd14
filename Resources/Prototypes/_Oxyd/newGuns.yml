@@ -25,6 +25,7 @@
   - !type:GunEffectRepeatNextTick
     repeatCount: 2
     stepBack: 5
+    triggerTimeout: 0.11
 
 - type: entity
   name: Oxyd Gun

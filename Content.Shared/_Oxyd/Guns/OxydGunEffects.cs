@@ -55,11 +55,17 @@ public sealed partial class GunEffectTryFireMouseDirection: OxydFiringGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
 {
-    public int timesBack = 0;
     [DataField]
     public int repeatCount = 1;
     [DataField]
     public int stepBack = 0;
+    [DataField]
+    public TimeSpan triggerTimeout = TimeSpan.FromSeconds(1000);
+    [ViewVariables]
+    public int timesBack = 0;
+    [ViewVariables]
+    public TimeSpan lastTrigger = TimeSpan.Zero;
+
 }
 [DataDefinition]
 public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect;
