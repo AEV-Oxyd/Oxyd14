@@ -107,8 +107,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        Log.Error($"time delta is {_gameTiming.CurTime.TotalSeconds} {effect.lastTrigger.TotalSeconds} compared to {effect.triggerTimeout.TotalSeconds}. curperiod {_gameTiming.TickPeriod} ");
-        if (TimeSpan.FromSeconds(_gameTiming.CurTime.TotalSeconds).TotalSeconds - effect.lastTrigger.TotalSeconds> effect.triggerTimeout.TotalSeconds)
+        if (_gameTiming.CurTime.Ticks - effect.lastTrigger.Ticks> effect.triggerTimeout.Ticks)
         {
             effect.timesBack = 0;
         }

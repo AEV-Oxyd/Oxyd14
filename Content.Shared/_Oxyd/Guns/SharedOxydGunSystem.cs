@@ -32,7 +32,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     [Dependency] private readonly SharedMapSystem _mapSystem = default!;
     [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;
+    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;dS
     [Dependency] private readonly IMapManager _mapManager = default!;
     [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
     [Dependency] private readonly ILogManager _logManager = default!;
@@ -358,7 +358,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         firemodePrototype.lastInterpret = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
-            Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}");
+            Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}, time is {_gameTiming.CurTime}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
                 break;
