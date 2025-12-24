@@ -13,7 +13,7 @@
 
 - type: gunFiremode
   id: baseBurstFiremode
-  firerate: 10
+  firerate: 30
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -25,7 +25,7 @@
   - !type:GunEffectRepeatNextTick
     repeatCount: 2
     stepBack: 5
-    triggerTimeout: 0.11
+    triggerTimeout: 0.2
 
 - type: entity
   name: Oxyd Gun
