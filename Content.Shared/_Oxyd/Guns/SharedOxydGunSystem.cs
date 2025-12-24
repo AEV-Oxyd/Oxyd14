@@ -32,7 +32,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     [Dependency] private readonly SharedMapSystem _mapSystem = default!;
     [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;dS
+    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;
     [Dependency] private readonly IMapManager _mapManager = default!;
     [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
     [Dependency] private readonly ILogManager _logManager = default!;
