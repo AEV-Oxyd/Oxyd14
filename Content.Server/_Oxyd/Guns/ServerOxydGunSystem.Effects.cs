@@ -55,13 +55,13 @@ public sealed partial class ServerOxydGunSystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var firemode))
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
@@ -75,13 +75,13 @@ public sealed partial class ServerOxydGunSystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
