@@ -138,7 +138,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
-            Log.Debug("State desync - interpret");
+            Log.Debug($"State desync - interpret {gunComp.selectedFiremodePrototype.currentStep} != {args.clientsideStartingStep}");
             DirtyEntity(gun);
 
             return;
@@ -184,7 +184,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         // state desync
         if (gunComp.selectedFiremodePrototype.currentStep != args.stoppedAt)
         {
-            Log.Error($"Sesiunea ------ are un state desync pe arma {gun}");
+            Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
             return;
         }
         handler.executedFiringSteps.Clear();

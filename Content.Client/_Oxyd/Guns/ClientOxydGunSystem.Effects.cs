@@ -56,12 +56,12 @@ public sealed partial class ClientOxydGunSystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         if(!TryComp<OxydMouseDataComponent>(shooter.Value, out var mouseData))
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
@@ -74,7 +74,7 @@ public sealed partial class ClientOxydGunSystem
         var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
         if (returnedList is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         //Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
@@ -98,7 +98,7 @@ public sealed partial class ClientOxydGunSystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 

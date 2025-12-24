@@ -7,6 +7,13 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public abstract partial class SharedOxydGunSystem : EntitySystem
 {
+
+    public void ResetFiremode(GunFiremodePrototype fire, Entity<OxydGunComponent> gun, EntityUid? shooter )
+    {
+        fire.currentStep = 0;
+        fire.Active = false;
+        RemoveActiveUpdating(fire, gun, shooter);
+    }
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectTryFireGunDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         MapCoordinates gunCoords = _transformSystem.GetMapCoordinates(gun.Owner);
@@ -15,7 +22,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 gunCoords.Offset(_transformSystem.GetWorldRotation(gun).ToWorldVec()),
                 gunCoords) is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
@@ -26,14 +33,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (TryComp<OxydGunAmmoChamberComponent>(gun, out var chamberComp) && chamberComp.nextBullet == EntityUid.Invalid)
         {
-            firemodePrototype.currentStep = 0;
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         if (TryComp<OxydGunAmmoMagazineChamberComponent>(gun, out var magComp) && magComp.nextBullet == EntityUid.Invalid)
         {
-            firemodePrototype.currentStep = 0;
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
@@ -65,13 +70,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
         if (!TryComp<HandsComponent>(shooter, out var hands))
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
@@ -81,7 +86,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (gun.Owner == thing)
                 return true;
         }
-        firemodePrototype.currentStep = 0;
+        ResetFiremode(firemodePrototype, gun, shooter);
         return false;
     }
 
@@ -89,19 +94,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (shooter is null)
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
         if (!TryComp<MobStateComponent>(shooter.Value, out var comp))
         {
-            firemodePrototype.currentStep = 0;
+            ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
 
         if (comp.CurrentState == MobState.Alive)
             return true;
-        firemodePrototype.currentStep = 0;
+        ResetFiremode(firemodePrototype, gun, shooter);
         return false;
     }
 
