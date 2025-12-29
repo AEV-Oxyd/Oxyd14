@@ -1,3 +1,4 @@
+using System.Numerics;
 using Content.Client._Oxyd.Framework;
 using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
@@ -35,16 +36,27 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)
     {
-        args.Controls.Add(new Control()
+        var adding = new BoxContainer()
         {
+            HorizontalExpand = true,
+            HorizontalAlignment = Control.HAlignment.Left,
             Children =
             {
                 new TextureButton()
                 {
-                    TexturePath = ""
+                    TexturePath = "/Textures/Interface/NavMap/beveled_circle.png",
+                    MinSize = new Vector2(32, 32),
+                    MaxSize = new Vector2(32, 32)
+                },
+                new TextureButton()
+                {
+                    TexturePath = "/Textures/Interface/NavMap/beveled_arrow_south.png",
+                    MinSize = new Vector2(32, 32),
+                    MaxSize = new Vector2(32, 32)
                 }
             }
-        });
+        };
+        args.Controls.Add(adding);
     }
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
