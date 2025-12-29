@@ -1,8 +1,10 @@
 using Content.Client._Oxyd.Framework;
+using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
-using Robust.Shared.Containers;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
@@ -24,15 +26,30 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
     }
 
+    public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)
+    {
+        args.Controls.Add(new Control()
+        {
+            Children =
+            {
+                new TextureButton()
+                {
+                    TexturePath = ""
+                }
+            }
+        });
+    }
+
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
     {
-        _containerSystem.EnsureContainer<Container>(ent.Owner, oxydContents);
+        _containerSystem.EnsureContainer<Robust.Shared.Containers.Container>(ent.Owner, oxydContents);
     }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
     {
