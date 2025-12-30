@@ -282,7 +282,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             gun.Comp.InstanciatedFiremodes.Add(_prototypeManager.Index<GunFiremodePrototype>(proto).createCopy());
         }
         gun.Comp.ammoProvider = provider;
-        gun.Comp.selectedFiremodePrototype = gun.Comp.InstanciatedFiremodes.First();
+        gun.Comp.selectedFiremodeIndex = 0;
     }
 
     public void onChamberInitialized(Entity<OxydGunAmmoChamberComponent> chamber, ref ComponentInit args)

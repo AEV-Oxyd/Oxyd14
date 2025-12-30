@@ -90,3 +90,10 @@ public class FiremodeProjectilesFiredEvent : EntityEventArgs
     public required List<Entity<OxydProjectileComponent>> projectiles;
     public EntityUid shooter = EntityUid.Invalid;
 }
+[Serializable, NetSerializable]
+public class FiremodeChangedEvent : EntityEventArgs
+{
+    public required NetEntity gun;
+    public required NetEntity switcher;
+    public required int index;
+}

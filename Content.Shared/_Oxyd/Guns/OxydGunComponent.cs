@@ -29,7 +29,9 @@ public sealed partial class OxydGunComponent : Component
 
     [ViewVariables]
     // Firemodes handle most firing details that are not technical.
-    public GunFiremodePrototype selectedFiremodePrototype;
+    public GunFiremodePrototype selectedFiremodePrototype => InstanciatedFiremodes[selectedFiremodeIndex];
+    [ViewVariables]
+    public int selectedFiremodeIndex = 0;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
     [DataField]

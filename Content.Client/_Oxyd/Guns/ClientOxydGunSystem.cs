@@ -4,6 +4,8 @@ using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
+using Robust.Client.GameStates;
+using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Map;
@@ -21,6 +23,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IGameTiming _gameTiming = default!;
+    [Dependency] private readonly IPlayerManager _playerManager = default!;
 
     /// <inheritdoc/>
     public override void Initialize()
@@ -36,27 +39,52 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)
     {
+        var firemodeSwitchButton = new TextureButton()
+        {
+            TexturePath = "/Textures/Interface/NavMap/beveled_circle.png",
+            MinSize = new Vector2(32, 32),
+            MaxSize = new Vector2(32, 32)
+        };
+        firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
+        var gunSafetyButton = new TextureButton()
+        {
+            TexturePath = "/Textures/Interface/NavMap/beveled_arrow_south.png",
+            MinSize = new Vector2(32, 32),
+            MaxSize = new Vector2(32, 32)
+        };
+        gunSafetyButton.OnPressed += eventargs => HandleSafetySwitch(eventargs, ent);
+
         var adding = new BoxContainer()
         {
             HorizontalExpand = true,
             HorizontalAlignment = Control.HAlignment.Left,
             Children =
             {
-                new TextureButton()
-                {
-                    TexturePath = "/Textures/Interface/NavMap/beveled_circle.png",
-                    MinSize = new Vector2(32, 32),
-                    MaxSize = new Vector2(32, 32)
-                },
-                new TextureButton()
-                {
-                    TexturePath = "/Textures/Interface/NavMap/beveled_arrow_south.png",
-                    MinSize = new Vector2(32, 32),
-                    MaxSize = new Vector2(32, 32)
-                }
+                firemodeSwitchButton,
+                gunSafetyButton
             }
         };
         args.Controls.Add(adding);
+    }
+
+    public void HandleFiremodeSwitch(BaseButton.ButtonEventArgs args, Entity<OxydHandheldGunComponent> gun)
+    {
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        var playerEnt = _playerManager.LocalSession!.AttachedEntity;
+        if (playerEnt is null)
+            return;
+        gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        RaiseNetworkEvent(new FiremodeChangedEvent()
+        {
+            gun = GetNetEntity(gun.Owner),
+            index = gcomp.selectedFiremodeIndex,
+            switcher = GetNetEntity(playerEnt.Value)
+        });
+    }
+
+    public void HandleSafetySwitch(BaseButton.ButtonEventArgs args, Entity<OxydHandheldGunComponent> gun)
+    {
     }
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
