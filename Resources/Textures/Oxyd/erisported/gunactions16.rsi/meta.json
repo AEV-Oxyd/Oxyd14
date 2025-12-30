@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": "https://github.com/discordia-space/CEV-Eris",
+  "size": {
+    "x": 16,
+    "y": 16
+  },
+  "states": [
+    {
+      "name": "templatea"
+    },
+    {
+      "name": "templateb"
+    },
+    {
+      "name": "templatec"
+    },
+    {
+      "name": "templated"
+    },
+    {
+      "name": "safety1"
+    },
+    {
+      "name": "safety0"
+    },
+    {
+      "name": "modestun"
+    },
+    {
+      "name": "modelethal"
+    },
+    {
+      "name": "modepulse"
+    },
+    {
+      "name": "modedestroy"
+    },
+    {
+      "name": "semi"
+    },
+    {
+      "name": "burst"
+    },
+    {
+      "name": "auto"
+    },
+    {
+      "name": "grenade"
+    },
+    {
+      "name": "scope"
+    },
+    {
+      "name": "flashlight"
+    },
+    {
+      "name": "info"
+    },
+    {
+      "name": "modecharge"
+    }
+  ]
+}
