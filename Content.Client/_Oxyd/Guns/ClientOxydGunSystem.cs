@@ -4,6 +4,7 @@ using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
+using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
@@ -24,6 +25,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IGameTiming _gameTiming = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
+    [Dependency] private readonly SpriteSystem _spriteSystem = default!;
 
     /// <inheritdoc/>
     public override void Initialize()
@@ -75,6 +77,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (playerEnt is null)
             return;
         gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        var b = (TextureButton)args.Button;
+        b.TextureNormal = _spriteSystem.Frame0(gcomp.selectedFiremodePrototype.Icon);
         RaiseNetworkEvent(new FiremodeChangedEvent()
         {
             gun = GetNetEntity(gun.Owner),
