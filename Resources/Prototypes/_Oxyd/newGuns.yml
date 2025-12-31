@@ -9,7 +9,7 @@
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectWait
-    waitPeriod: 10
+    waitPeriod: 2
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld

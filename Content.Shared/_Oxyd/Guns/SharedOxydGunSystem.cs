@@ -79,6 +79,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         var gcomp = gun.Comp;
         gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        Log.Debug($"Switched firemode to {gcomp.selectedFiremodeIndex}");
         return true;
     }
 

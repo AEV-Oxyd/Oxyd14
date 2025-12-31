@@ -339,8 +339,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                     continue;
                 RemComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
             }
-
         }
+        checkActive.Clear();
     }
 
 }

@@ -47,6 +47,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
+        Log.Debug($"Wait interpreted with wait period of {effect.waitPeriod}");
         if (effect.skipTick == _gameTiming.CurTick)
         {
             return true;

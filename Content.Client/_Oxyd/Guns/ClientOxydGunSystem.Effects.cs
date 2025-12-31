@@ -66,10 +66,11 @@ public sealed partial class ClientOxydGunSystem
         }
 
         MapCoordinates shootingPos = _transformSystem.GetMapCoordinates(gun);
-        if (HasComp<OxydHandheldGunComponent>(gun))
+        if (TryComp<OxydHandheldGunComponent>(gun, out var handheld))
         {
-            shootingPos = _transformSystem.GetMapCoordinates(shooter.Value);
+            shootingPos = resolveFiringPosition((gun.Owner, handheld), mouseData.mouseMap, shooter.Value);
         }
+
 
         var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
         if (returnedList is null)
