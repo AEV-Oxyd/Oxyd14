@@ -50,7 +50,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
         var gunSafetyButton = new TextureButton()
         {
-            TexturePath = "/Textures/Interface/NavMap/beveled_arrow_south.png",
+            TexturePath = "/Textures/Oxyd/erisported/gunactions16.rsi/safety1.png",
             MinSize = new Vector2(32, 32),
             MaxSize = new Vector2(32, 32)
         };
@@ -63,7 +63,13 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             Children =
             {
                 firemodeSwitchButton,
-                gunSafetyButton
+                gunSafetyButton,
+                new TextureButton()
+                {
+                TexturePath = "/Textures/Oxyd/erisported/gunactions16.rsi/auto.png",
+                MinSize = new Vector2(32, 32),
+                MaxSize = new Vector2(32, 32)
+                }
             }
         };
         args.Controls.Add(adding);
