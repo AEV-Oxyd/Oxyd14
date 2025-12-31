@@ -52,6 +52,7 @@
   - type: OxydGun
     firemodes:
     - baseBurstFiremode
+    - baseFiremode
   - type: OxydHandheldGun
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:
