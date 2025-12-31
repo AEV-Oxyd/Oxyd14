@@ -41,12 +41,14 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)
     {
+        if (!TryComp<OxydGunComponent>(ent, out var gunComp))
+            return;
         var firemodeSwitchButton = new TextureButton()
         {
-            TexturePath = "/Textures/Interface/NavMap/beveled_circle.png",
             MinSize = new Vector2(32, 32),
             MaxSize = new Vector2(32, 32)
         };
+        firemodeSwitchButton.TextureNormal = _spriteSystem.Frame0(gunComp.selectedFiremodePrototype.Icon);
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
         var gunSafetyButton = new TextureButton()
         {
@@ -82,7 +84,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         var playerEnt = _playerManager.LocalSession!.AttachedEntity;
         if (playerEnt is null)
             return;
-        gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        if(!TryDoFiremodeSwitch((gun.Owner, gcomp), playerEnt.Value))
+            return;
         var b = (TextureButton)args.Button;
         b.TextureNormal = _spriteSystem.Frame0(gcomp.selectedFiremodePrototype.Icon);
         RaiseNetworkEvent(new FiremodeChangedEvent()

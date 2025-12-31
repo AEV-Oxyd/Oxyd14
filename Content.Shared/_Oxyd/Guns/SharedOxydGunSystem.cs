@@ -73,6 +73,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         CycleMag(ent);
     }
 
+    public bool TryDoFiremodeSwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
+    {
+        if (gun.Comp.selectedFiremodePrototype.Active)
+            return false;
+        var gcomp = gun.Comp;
+        gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        return true;
+    }
+
     public void onMagazineChamberInit(Entity<OxydGunAmmoMagazineChamberComponent> ent, ref ComponentInit args)
     {
         _itemSlotsSystem.AddItemSlot(ent.Owner, ammoChamberContainerName, ent.Comp.bulletSlot);

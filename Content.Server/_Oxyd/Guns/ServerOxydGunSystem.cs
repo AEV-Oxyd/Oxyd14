@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Linq;
 using System.Numerics;
 using Content.Server._Crescent.HullrotGunSystem;
+using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
@@ -31,6 +32,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
+    [Dependency] private readonly HandsSystem _serverHands = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
@@ -48,6 +50,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         _serverNetManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
+        SubscribeNetworkEvent<FiremodeChangedEvent>(OnClientFiremodeChange);
         //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
         for (var i = 0; i < MaxTicksAhead; i++)
         {
@@ -56,6 +59,32 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     }
 
+    public bool ValidateUserPosition(Entity<OxydGunComponent> gun, EntityUid user)
+    {
+        if (HasComp<OxydHandheldGunComponent>(gun) && !_handsSystem.IsHolding(user, gun.Owner))
+            return false;
+        return true;
+    }
+
+    public void OnClientFiremodeChange(FiremodeChangedEvent ev, EntitySessionEventArgs arg)
+    {
+        var switcher = GetEntity(ev.switcher);
+        var gun = GetEntity(ev.gun);
+        if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (TerminatingOrDeleted(switcher))
+            return;
+        if (switcher != arg.SenderSession.AttachedEntity)
+        {
+            Log.Info($"{arg.SenderSession.Name} has tried to set the firemode for someone else. [EXPLOIT][BUG]");
+            return;
+        }
+        if(!ValidateUserPosition((gun, gcomp), switcher))
+            return;
+        TryDoFiremodeSwitch((gun, gcomp), switcher);
+    }
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
     {
@@ -108,8 +137,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
+        var player = _playerManager.GetSessionByChannel(args.MsgChannel);
+        if (player.AttachedEntity is null)
+            return;
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
             return;
         if (args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
@@ -152,8 +188,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
+        var player = _playerManager.GetSessionByChannel(args.MsgChannel);
+        if (player.AttachedEntity is null)
+            return;
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
             return;
         if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
@@ -194,8 +237,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
+        var player = _playerManager.GetSessionByChannel(args.MsgChannel);
+        if (player.AttachedEntity is null)
+            return;
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
             return;
         if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
