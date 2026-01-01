@@ -52,7 +52,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        Log.Debug($"Wait interpreted with wait period of {effect.waitPeriod}");
         if (effect.skipTick == _gameTiming.CurTick)
         {
             return true;

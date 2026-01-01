@@ -136,10 +136,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:
-                    DoNetMessage(ev);
+                    DoNetMessage(ev, 0);
                     break;
                 case ClientSideDoneInterpretingFiremode ev:
-                    DoNetMessage(ev);
+                    DoNetMessage(ev, 0);
                     break;
                 case  FiremodeClientsideFiredEvent ev:
                     DoNetMessage(ev, 0);
@@ -184,10 +184,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             DirtyEntity(gun);
             return;
         }
-        DoNetMessage(args);
+        DoNetMessage(args, tickDiff);
     }
 
-    public void DoNetMessage(ClientSideInterpretingFiremode args)
+    public void DoNetMessage(ClientSideInterpretingFiremode args, uint tickDiff)
     {
         Log.Error($"Interpreting Client-Firemode at {_gameTiming.RealTime}");
         EntityUid gun = GetEntity(args.gun);
@@ -205,6 +205,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
             return;
         }
+
+        if (HasComp<OxydHandheldGunComponent>(gun))
+        {
+            var b = EnsureComp<PlayerRecoilBacktrackerComponent>(shooter);
+        }
+
+        gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
         c.executedFiringSteps.Clear();
@@ -234,10 +241,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             return;
         }
-        DoNetMessage(args);
+        DoNetMessage(args, tickDiff);
     }
 
-    public void DoNetMessage(ClientSideDoneInterpretingFiremode args)
+    public void DoNetMessage(ClientSideDoneInterpretingFiremode args, uint tickDiff)
     {
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))

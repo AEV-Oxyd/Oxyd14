@@ -5,6 +5,7 @@ using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 
@@ -33,6 +34,11 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables]
     public int selectedFiremodeIndex = 0;
     // wheter gun safety is on or not
+    [ViewVariables]
+    // used for backtracking , none of the actual GunEffects make use of this
+    // as they depend on linearity of execution. This is used for late-message recoil &
+    // other features if they might get added and depend on past values for catching up
+    public GameTick simulateAsTick;
     [ViewVariables]
     public bool safety = true;
     [ViewVariables]

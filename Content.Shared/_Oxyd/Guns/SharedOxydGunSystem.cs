@@ -235,6 +235,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
+            RaiseLocalEvent(new GunBeforeFireIndividualProjectileEvent()
+            {
+                projectile = projectileNullable.Value,
+                simTick = gun.Comp.simulateAsTick
+            });
             gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
@@ -245,7 +250,18 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             _projectileSystem.queueProjectile(projectile);
             gun.Comp.timesFired++;
             sameTickCounter++;
+            RaiseLocalEvent(new GunAfterFireIndividualProjectileEvent()
+            {
+                projectile = projectileNullable.Value,
+                simTick = gun.Comp.simulateAsTick
+            });
         }
+
+        RaiseLocalEvent(new GunFiredEvent()
+        {
+            projectiles = projectiles,
+            simTick = gun.Comp.simulateAsTick
+        });
 
         // fallback
         if (gun.Comp.timesFired > int.MaxValue - 1000)

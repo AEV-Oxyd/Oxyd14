@@ -1,0 +1,21 @@
+using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
+
+namespace Content.Shared._Oxyd.OxydGunSystem;
+
+[Serializable, NetSerializable]
+public class RecoilChangedEvent : EntityEventArgs
+{
+    public required float oldRecoil;
+    public required float currentRecoil;
+    public required GameTick fromTick;
+}
+
+[Serializable, NetSerializable]
+public class RecoilGetModifiersEvent : CancellableEntityEventArgs
+{
+    public required GameTick fromTick;
+    public float add = 0f;
+    public float multiply = 1f;
+    public float? set;
+}
