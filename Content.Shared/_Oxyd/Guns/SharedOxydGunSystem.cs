@@ -147,7 +147,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
         //Log.Error($"Seed is {seed}");
         var rand = new System.Random(seed);
-        var inaccuracyDebuff = (firemode.baseInaccuracy + rand.NextSingle() * firemode.addedInaccuracyMaximum);
+        var ev = new GunGetRecoilEvent()
+        {
+            addedInaccuracy = firemode.addedInaccuracyMaximum,
+            baseInaccuracy = firemode.baseInaccuracy
+        };
+        RaiseLocalEvent(gun.Owner, ev);
+        var inaccuracyDebuff = (ev.baseInaccuracy + rand.NextSingle() * ev.addedInaccuracy);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
         //Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
         return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
@@ -235,7 +241,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
-            RaiseLocalEvent(new GunBeforeFireIndividualProjectileEvent()
+            RaiseLocalEvent(gun.Owner, new GunBeforeFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
@@ -250,14 +256,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             _projectileSystem.queueProjectile(projectile);
             gun.Comp.timesFired++;
             sameTickCounter++;
-            RaiseLocalEvent(new GunAfterFireIndividualProjectileEvent()
+            RaiseLocalEvent(gun.Owner, new GunAfterFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
             });
         }
 
-        RaiseLocalEvent(new GunFiredEvent()
+        RaiseLocalEvent(gun.Owner, new GunFiredEvent()
         {
             projectiles = projectiles,
             simTick = gun.Comp.simulateAsTick
