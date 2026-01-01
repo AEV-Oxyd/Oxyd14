@@ -32,6 +32,9 @@ public sealed partial class OxydGunComponent : Component
     public GunFiremodePrototype selectedFiremodePrototype => InstanciatedFiremodes[selectedFiremodeIndex];
     [ViewVariables]
     public int selectedFiremodeIndex = 0;
+    // wheter gun safety is on or not
+    [ViewVariables]
+    public bool safety = true;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
     [DataField]
