@@ -66,6 +66,12 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             {
                 firemodeSwitchButton,
                 gunSafetyButton,
+                new TextureButton()
+                {
+                    TexturePath = "/Textures/Oxyd/erisported/gunactions16.rsi/safety1.png",
+                    MinSize = new Vector2(32, 32),
+                    MaxSize = new Vector2(32, 32)
+                }
             }
         };
         args.Controls.Add(adding);
