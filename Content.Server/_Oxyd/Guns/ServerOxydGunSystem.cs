@@ -51,6 +51,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
         SubscribeNetworkEvent<FiremodeChangedEvent>(OnClientFiremodeChange);
+        SubscribeNetworkEvent<GunSafetyChangedEvent>(OnClientSafetyChange);
         //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
         for (var i = 0; i < MaxTicksAhead; i++)
         {
@@ -78,12 +79,37 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         if (switcher != arg.SenderSession.AttachedEntity)
         {
-            Log.Info($"{arg.SenderSession.Name} has tried to set the firemode for someone else. [EXPLOIT][BUG]");
+            Log.Info($"{arg.SenderSession.Name} {arg.SenderSession.AttachedEntity} has tried to set the firemode for someone else. [EXPLOIT][BUG]");
             return;
         }
         if(!ValidateUserPosition((gun, gcomp), switcher))
             return;
         TryDoFiremodeSwitch((gun, gcomp), switcher);
+    }
+
+    public void OnClientSafetyChange(GunSafetyChangedEvent ev, EntitySessionEventArgs arg)
+    {
+        var switcher = GetEntity(ev.switcher);
+        var gun = GetEntity(ev.gun);
+        if (TerminatingOrDeleted(gun))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (TerminatingOrDeleted(switcher))
+            return;
+        if (switcher != arg.SenderSession.AttachedEntity)
+        {
+            Log.Info($"{arg.SenderSession.Name} {arg.SenderSession.AttachedEntity} has tried to set the safety for someone else. [EXPLOIT][BUG]");
+            return;
+        }
+        if(!ValidateUserPosition((gun, gcomp), switcher))
+            return;
+        TryDoSafetySwitch((gun, gcomp), switcher);
+        if (ev.newState != gcomp.safety)
+        {
+            Log.Error($"State desync on switching firearm safety of gun {gun} , by player {switcher}");
+            DirtyEntity(gun);
+        }
     }
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
@@ -106,7 +132,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(delayedMessages[currentMessagesIndex].TryDequeue(out var thing))
         {
-            Log.Error($"Message dequeued {thing} at {_gameTiming.RealTime}");
+            Log.Debug($"Message dequeued {thing} at {_gameTiming.RealTime}");
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:

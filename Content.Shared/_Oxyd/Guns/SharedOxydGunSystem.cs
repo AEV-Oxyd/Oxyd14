@@ -83,6 +83,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
+    public bool TryDoSafetySwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
+    {
+        if (gun.Comp.selectedFiremodePrototype.Active)
+            return false;
+        gun.Comp.safety = !gun.Comp.safety;
+        Log.Debug($"Switched safety to  {gun.Comp.safety}");
+        return true;
+    }
+
     public void onMagazineChamberInit(Entity<OxydGunAmmoMagazineChamberComponent> ent, ref ComponentInit args)
     {
         _itemSlotsSystem.AddItemSlot(ent.Owner, ammoChamberContainerName, ent.Comp.bulletSlot);
@@ -310,9 +319,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     }
 
+    public void onSafetyShootAttempt()
+    {
+
+    }
+
     public virtual List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
+        if (gun.Comp.safety)
+        {
+            onSafetyShootAttempt();
+            return null;
+        }
         if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
         {
             onEmptyShootAttempt();

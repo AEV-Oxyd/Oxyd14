@@ -52,7 +52,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
         var gunSafetyButton = new TextureButton()
         {
-            TexturePath = "/Textures/Oxyd/erisported/gunactions16.rsi/safety1.png",
+            TexturePath = $"/Textures/Oxyd/erisported/gunactions16.rsi/safety{(gunComp.safety ? '1' : '0')}.png",
             MinSize = new Vector2(32, 32),
             MaxSize = new Vector2(32, 32)
         };
@@ -92,6 +92,21 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void HandleSafetySwitch(BaseButton.ButtonEventArgs args, Entity<OxydHandheldGunComponent> gun)
     {
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        var playerEnt = _playerManager.LocalSession!.AttachedEntity;
+        if (playerEnt is null)
+            return;
+        if (!TryDoSafetySwitch((gun.Owner, gcomp), playerEnt.Value))
+            return;
+        var b = (TextureButton)args.Button;
+        b.TexturePath = $"/Textures/Oxyd/erisported/gunactions16.rsi/safety{(gcomp.safety ? '1' : '0')}.png";
+        RaiseNetworkEvent(new GunSafetyChangedEvent()
+        {
+            gun = GetNetEntity(gun.Owner),
+            switcher = GetNetEntity(playerEnt.Value),
+            newState = gcomp.safety
+        });
     }
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)

@@ -97,3 +97,11 @@ public class FiremodeChangedEvent : EntityEventArgs
     public required NetEntity switcher;
     public required int index;
 }
+
+[Serializable, NetSerializable]
+public class GunSafetyChangedEvent : EntityEventArgs
+{
+    public required NetEntity gun;
+    public required NetEntity switcher;
+    public required bool newState;
+}
