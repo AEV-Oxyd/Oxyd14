@@ -212,11 +212,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         }
 
-        if (HasComp<OxydHandheldGunComponent>(gun))
-        {
-            var b = EnsureComp<PlayerRecoilBacktrackerComponent>(shooter);
-        }
-
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;

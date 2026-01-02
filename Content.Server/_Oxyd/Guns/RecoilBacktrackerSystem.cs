@@ -15,6 +15,7 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
     {
         SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, RecoilChangedEvent>(OnRecoilChange);
         SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, ComponentStartup>(OnStart);
+        SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, GunGetRecoilEvent>(OnRequestRecoil);
 
     }
 
