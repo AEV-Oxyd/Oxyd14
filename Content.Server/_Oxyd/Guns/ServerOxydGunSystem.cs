@@ -47,6 +47,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
+        SubscribeLocalEvent<RecoilHandlerComponent, ComponentAdd>(onAddRecoil);
         _serverNetManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
@@ -58,6 +59,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             delayedMessages.Add(new Queue<object>());
         }
 
+    }
+
+    public void onAddRecoil(Entity<RecoilHandlerComponent> ent, ref ComponentAdd args)
+    {
+        EnsureComp<PlayerRecoilBacktrackerComponent>(ent);
     }
 
     public bool ValidateUserPosition(Entity<OxydGunComponent> gun, EntityUid user)

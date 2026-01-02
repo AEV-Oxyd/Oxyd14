@@ -150,7 +150,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var ev = new GunGetRecoilEvent()
         {
             addedInaccuracy = firemode.addedInaccuracyMaximum,
-            baseInaccuracy = firemode.baseInaccuracy
+            baseInaccuracy = firemode.baseInaccuracy,
+            simTick = gun.Comp.simulateAsTick
         };
         RaiseLocalEvent(gun.Owner, ev);
         var inaccuracyDebuff = (ev.baseInaccuracy + rand.NextSingle() * ev.addedInaccuracy);

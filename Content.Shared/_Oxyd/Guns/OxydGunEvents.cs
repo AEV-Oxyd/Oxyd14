@@ -129,6 +129,7 @@ public class GunGetRecoilEvent : EntityEventArgs
 {
     public required Angle baseInaccuracy;
     public required Angle addedInaccuracy;
+    public required GameTick simTick;
 }
 
 

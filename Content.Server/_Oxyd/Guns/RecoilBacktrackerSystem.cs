@@ -14,10 +14,21 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
     public override void Initialize()
     {
         SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, RecoilChangedEvent>(OnRecoilChange);
-        SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, ComponentInit>(OnInit);
+        SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, ComponentStartup>(OnStart);
+
     }
 
-    public void OnInit(Entity<PlayerRecoilBacktrackerComponent> ent, ref ComponentInit args)
+    public void OnRequestRecoil(Entity<PlayerRecoilBacktrackerComponent> ent, ref GunGetRecoilEvent args)
+    {
+        // same tick is handled by normal recoil!
+        if (_timing.CurTick.Value - args.simTick.Value == 0)
+            return;
+        if (!TryComp<RecoilHandlerComponent>(ent, out var rcomp))
+            return;
+        args.addedInaccuracy += SharedOxydGunSystem.getRecoilDeviation(rcomp.currentRecoil, rcomp.maxRecoil, rcomp.MaxDeviation);
+    }
+
+    public void OnStart(Entity<PlayerRecoilBacktrackerComponent> ent, ref ComponentStartup args)
     {
         if (!TryComp<RecoilHandlerComponent>(ent, out var recoil))
             return;
