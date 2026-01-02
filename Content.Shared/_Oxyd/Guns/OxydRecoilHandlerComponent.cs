@@ -9,7 +9,7 @@ public sealed partial class RecoilHandlerComponent : Component
     [DataField]
     public float lossPerTick = 1f;
 
-    [DataField]
+    [ViewVariables]
     public float currentRecoil = 0f;
 
     [DataField]
@@ -22,6 +22,5 @@ public sealed partial class RecoilHandlerComponent : Component
 [RegisterComponent]
 public sealed partial class ActiveRecoilHandlerComponent : Component
 {
-    public int activeTicks = 30;
 }
 

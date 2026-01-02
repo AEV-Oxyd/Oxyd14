@@ -160,4 +160,6 @@
     damage:
       types:
         Blunt: 7
+  - type: OxydBulletOnFireRecoil
+    recoil: 10
 

@@ -7,11 +7,16 @@ public partial class SharedOxydGunSystem : EntitySystem
 {
     public void InitRecoil()
     {
+        SubscribeLocalEvent<RecoilHandlerComponent, ComponentStartup>(onStart);
         SubscribeLocalEvent<RecoilHandlerComponent, RecoilChangedEvent>(onChange);
         SubscribeLocalEvent<RecoilHandlerComponent, GunAfterFireIndividualProjectileEvent>(onFireGun);
         SubscribeLocalEvent<RecoilHandlerComponent, GunGetRecoilEvent>(OnRequestRecoil);
     }
 
+    public void onStart(Entity<RecoilHandlerComponent> ent, ref ComponentStartup args)
+    {
+        EnsureComp<ActiveRecoilHandlerComponent>(ent);
+    }
     public static Angle getRecoilDeviation(float curRecoil, float maxRecoil , Angle maxDev)
     {
         return (curRecoil + 1) / maxRecoil * maxDev;
@@ -31,7 +36,7 @@ public partial class SharedOxydGunSystem : EntitySystem
 
     public void onFireGun(Entity<RecoilHandlerComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
-        if (!TryComp<OxydBulletOnFireRecoilComponent>(ent, out var rec))
+        if (!TryComp<OxydBulletOnFireRecoilComponent>(args.projectile, out var rec))
             return;
         RaiseLocalEvent(ent, new RecoilChangedEvent()
         {
@@ -44,12 +49,12 @@ public partial class SharedOxydGunSystem : EntitySystem
     {
         var entQ = EntityQueryEnumerator<ActiveRecoilHandlerComponent>();
         var recoilCheck = GetEntityQuery<RecoilHandlerComponent>();
-        var removeAfter = new List<EntityUid>(16);
+        //var removeAfter = new List<EntityUid>(16);
         while (entQ.MoveNext(out var id, out var comp))
         {
-            comp.activeTicks--;
-            if(comp.activeTicks <= 0)
-                removeAfter.Add(id);
+            //comp.activeTicks--;
+            //if(comp.activeTicks <= 0)
+            //    removeAfter.Add(id);
             if (!recoilCheck.TryComp(id, out var handler))
                 continue;
             var oldR = handler.currentRecoil;
@@ -71,10 +76,11 @@ public partial class SharedOxydGunSystem : EntitySystem
                 fromTick = _gameTiming.CurTick
             });
         }
-
+        /*
         foreach (var ent in removeAfter)
         {
             RemComp<ActiveRecoilHandlerComponent>(ent);
         }
+        */
     }
 }

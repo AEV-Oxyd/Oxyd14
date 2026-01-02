@@ -48,12 +48,10 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
         var tickDiff = _timing.CurTick.Value - args.fromTick.Value;
         if (tickDiff > 0 && ent.Comp.recoils.ContainsKey(args.fromTick.Value))
         {
-            Log.Debug("Before");
-            var outstf = ent.Comp.recoils.Select((key, value) => { return $"k:{key} v:{value} ";});
-            foreach (var (tick, value) in ent.Comp.recoils)
-            {
-                Log.Debug($"{string.Join("", outstf)}");
-            }
+            Log.Debug($"Before with tick diff of {tickDiff}");
+            var outstf = ent.Comp.recoils.Select((key, value) => { return $"k:{key.Key} v:{key.Value} ";});
+            Log.Debug($"{string.Join("", outstf)}");
+
             var deltaDiff = ent.Comp.recoils[args.fromTick.Value] - args.currentRecoil;
 
             ent.Comp.recoils[args.fromTick.Value] = args.currentRecoil;
@@ -69,20 +67,21 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
                         recoilLoss = recoilCom.lossPerTick - stepChange;
                 }
 
-                ent.Comp.recoils[targetTick] += deltaDiff;
+                ent.Comp.recoils[targetTick] += Math.Clamp(deltaDiff - recoilLoss, 0, recoilCom.maxRecoil);
                 tickDiff--;
             }
             Log.Debug("After");
-            var outsta = ent.Comp.recoils.Select((key, value) => { return $"k:{key} v:{value} ";});
-            foreach (var (tick, value) in ent.Comp.recoils)
-            {
-                Log.Debug($"{string.Join("", outsta)}");
-            }
+            var outsta = ent.Comp.recoils.Select((key, value) => { return $"k:{key.Key} v:{key.Value} ";});
+            Log.Debug($"{string.Join("", outsta)}");
+
 
         }
         else
         {
-            ent.Comp.recoils.Add(args.fromTick.Value, args.currentRecoil );
+            if (ent.Comp.recoils.ContainsKey(args.fromTick.Value))
+                ent.Comp.recoils[args.fromTick.Value] = Math.Clamp(args.currentRecoil, 0, recoilCom.maxRecoil);
+            else
+                ent.Comp.recoils.Add(args.fromTick.Value, Math.Clamp(args.currentRecoil, 0, recoilCom.maxRecoil));
         }
 
         if (ent.Comp.recoils.Count > ServerOxydGunSystem.MaxTicksIncosistencyBehind * 2)

@@ -47,7 +47,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
-        SubscribeLocalEvent<RecoilHandlerComponent, ComponentAdd>(onAddRecoil);
+        SubscribeLocalEvent<RecoilHandlerComponent, ComponentInit>(onAddRecoil);
         _serverNetManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
@@ -61,7 +61,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     }
 
-    public void onAddRecoil(Entity<RecoilHandlerComponent> ent, ref ComponentAdd args)
+    public void onAddRecoil(Entity<RecoilHandlerComponent> ent, ref ComponentInit args)
     {
         EnsureComp<PlayerRecoilBacktrackerComponent>(ent);
     }
@@ -211,7 +211,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
             return;
         }
-
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
@@ -317,6 +316,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             return;
         }
         handler.executedFiringSteps.Remove(args.firemodeStep);
+        gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         // Let  very small inconsistencies slide in , don't want state desyncs!
         var savedFire = gunComp.selectedFiremodePrototype.nextFire;
         if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)

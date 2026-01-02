@@ -132,6 +132,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (gun.Comp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime)
             return;
 
+        gun.Comp.simulateAsTick = _gameTiming.CurTick;
         if (!gun.Comp.selectedFiremodePrototype.Active)
         {
             Log.Debug($"Sending new interpretation start message!");

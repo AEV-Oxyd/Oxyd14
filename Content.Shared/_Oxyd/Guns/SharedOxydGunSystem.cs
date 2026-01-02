@@ -57,6 +57,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public override void Initialize()
     {
+        InitRecoil();
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
@@ -141,7 +142,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
 
 
-    public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos)
+    public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
         var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
@@ -154,6 +155,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             simTick = gun.Comp.simulateAsTick
         };
         RaiseLocalEvent(gun.Owner, ev);
+        if(shooter != gun.Owner)
+            RaiseLocalEvent(shooter, ev);
+        Log.Debug($"b: {ev.baseInaccuracy.Degrees}, a: {ev.addedInaccuracy.Degrees}");
         var inaccuracyDebuff = (ev.baseInaccuracy + rand.NextSingle() * ev.addedInaccuracy);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
         //Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
@@ -253,7 +257,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
-            projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos);
+            projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos, shooter);
             projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
             projectile.Comp.aimedPosition = targetPos;
             projectiles.Add(projectile);
