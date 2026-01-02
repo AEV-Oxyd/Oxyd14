@@ -1,3 +1,5 @@
+All code & assets included within folders marked as Oxyd, _Oxyd are all rights reserved . You may not use it without permission.
+
 MIT License
 
 Copyright (c) 2017-2025 Space Wizards Federation
