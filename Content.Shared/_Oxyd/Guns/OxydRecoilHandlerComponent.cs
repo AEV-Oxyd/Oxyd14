@@ -19,5 +19,6 @@ public sealed partial class RecoilHandlerComponent : Component
 [RegisterComponent]
 public sealed partial class ActiveRecoilHandlerComponent : Component
 {
+    public int activeTicks = 30;
 }
 

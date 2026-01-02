@@ -52,7 +52,7 @@ public sealed partial class OxydGunComponent : Component
     // This depends on server tick period. A gun can accumulate
     // extra firing time due to uneven ticks , this makes sure the
     // firarate is always overall respected , even if it'd be lost due to
-    // ticks not being fast enough
+    // ticks not being fast enough or varying network ping
     [ViewVariables,  AutoNetworkedField]
     public TimeSpan firingTime = TimeSpan.Zero;
 

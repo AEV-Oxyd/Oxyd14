@@ -241,11 +241,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
-            RaiseLocalEvent(gun.Owner, new GunBeforeFireIndividualProjectileEvent()
+            var shootEv = new GunBeforeFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
-            });
+            };
+            RaiseLocalEvent(gun.Owner, shootEv);
+            if(shooter != gun.Owner)
+                RaiseLocalEvent(shooter, shootEv);
             gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
@@ -256,11 +259,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             _projectileSystem.queueProjectile(projectile);
             gun.Comp.timesFired++;
             sameTickCounter++;
-            RaiseLocalEvent(gun.Owner, new GunAfterFireIndividualProjectileEvent()
+            var afterEv = new GunAfterFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
-            });
+            };
+            RaiseLocalEvent(gun.Owner, afterEv);
+            if(shooter != gun.Owner)
+                RaiseLocalEvent(shooter, afterEv);
         }
 
         RaiseLocalEvent(gun.Owner, new GunFiredEvent()
@@ -274,8 +280,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             gun.Comp.timesFired = 0;
         }
-        // Due to Timing inconsistencies (because of lag, packet processing, there will be slight differences
-        // when firing in big quantities , as such it is not that expensive to keep syncing the counter after every tick
         RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
         {
             gun = gun,
@@ -424,5 +428,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
 
         return true;
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        HandleActiveRecoil();
     }
 }

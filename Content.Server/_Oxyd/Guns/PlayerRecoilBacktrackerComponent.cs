@@ -9,6 +9,6 @@ namespace Content.Server._Oxyd.Guns;
 public sealed partial class PlayerRecoilBacktrackerComponent : Component
 {
     [ViewVariables]
-    public Dictionary<GameTick, List<float>> recoils = new Dictionary<GameTick, List<float>>();
+    public Dictionary<uint, float> recoils = new Dictionary<uint, float>();
 }
 

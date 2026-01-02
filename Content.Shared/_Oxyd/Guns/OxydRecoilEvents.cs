@@ -14,7 +14,6 @@ public class RecoilChangedEvent : EntityEventArgs
 [Serializable, NetSerializable]
 public class RecoilGetModifiersEvent : CancellableEntityEventArgs
 {
-    public required GameTick fromTick;
     public float add = 0f;
     public float multiply = 1f;
     public float? set;

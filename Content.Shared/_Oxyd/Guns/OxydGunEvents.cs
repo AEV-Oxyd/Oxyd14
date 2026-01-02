@@ -106,7 +106,6 @@ public class GunSafetyChangedEvent : EntityEventArgs
     public required bool newState;
 }
 
-[Serializable, NetSerializable]
 public class GunFiredEvent : EntityEventArgs
 {
     public required List<Entity<OxydProjectileComponent>> projectiles;
@@ -114,21 +113,18 @@ public class GunFiredEvent : EntityEventArgs
     public GameTick simTick;
 }
 
-[Serializable, NetSerializable]
 public class GunBeforeFireIndividualProjectileEvent : EntityEventArgs
 {
     public required Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
-[Serializable, NetSerializable]
 public class GunAfterFireIndividualProjectileEvent : EntityEventArgs
 {
     public required Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
-[Serializable, NetSerializable]
 public class GunGetRecoilEvent : EntityEventArgs
 {
     public required Angle baseInaccuracy;

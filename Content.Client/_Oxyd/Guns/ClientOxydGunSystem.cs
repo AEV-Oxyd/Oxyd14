@@ -166,9 +166,9 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public override void Update(float frameTime)
     {
-        base.Update(frameTime);
         if (!_gameTiming.IsFirstTimePredicted)
             return;
+        base.Update(frameTime);
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
