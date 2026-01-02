@@ -125,7 +125,7 @@ public class GunAfterFireIndividualProjectileEvent : EntityEventArgs
     public GameTick simTick;
 }
 
-public class GunGetRecoilEvent : EntityEventArgs
+public class GunGetInaccuracyEvent : EntityEventArgs
 {
     public required Angle baseInaccuracy;
     public required Angle addedInaccuracy;

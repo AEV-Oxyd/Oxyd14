@@ -148,7 +148,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
         //Log.Error($"Seed is {seed}");
         var rand = new System.Random(seed);
-        var ev = new GunGetRecoilEvent()
+        var ev = new GunGetInaccuracyEvent()
         {
             addedInaccuracy = firemode.addedInaccuracyMaximum,
             baseInaccuracy = firemode.baseInaccuracy,

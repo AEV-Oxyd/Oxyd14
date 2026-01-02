@@ -10,7 +10,7 @@ public partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentStartup>(onStart);
         SubscribeLocalEvent<RecoilHandlerComponent, RecoilChangedEvent>(onChange);
         SubscribeLocalEvent<RecoilHandlerComponent, GunAfterFireIndividualProjectileEvent>(onFireGun);
-        SubscribeLocalEvent<RecoilHandlerComponent, GunGetRecoilEvent>(OnRequestRecoil);
+        SubscribeLocalEvent<RecoilHandlerComponent, GunGetInaccuracyEvent>(OnRequestRecoil);
     }
 
     public void onStart(Entity<RecoilHandlerComponent> ent, ref ComponentStartup args)
@@ -22,7 +22,7 @@ public partial class SharedOxydGunSystem : EntitySystem
         return (curRecoil + 1) / maxRecoil * maxDev;
     }
 
-    public void OnRequestRecoil(Entity<RecoilHandlerComponent> ent, ref GunGetRecoilEvent args)
+    public void OnRequestRecoil(Entity<RecoilHandlerComponent> ent, ref GunGetInaccuracyEvent args)
     {
         if(_gameTiming.CurTick.Value - args.simTick.Value == 0)
             args.addedInaccuracy += getRecoilDeviation(ent.Comp.currentRecoil, ent.Comp.maxRecoil, ent.Comp.MaxDeviation);

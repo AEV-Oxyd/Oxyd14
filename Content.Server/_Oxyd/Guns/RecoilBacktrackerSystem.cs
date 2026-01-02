@@ -15,11 +15,11 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
     {
         SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, RecoilChangedEvent>(OnRecoilChange);
         SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, ComponentStartup>(OnStart);
-        SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, GunGetRecoilEvent>(OnRequestRecoil);
+        SubscribeLocalEvent<PlayerRecoilBacktrackerComponent, GunGetInaccuracyEvent>(OnRequestRecoil);
 
     }
 
-    public void OnRequestRecoil(Entity<PlayerRecoilBacktrackerComponent> ent, ref GunGetRecoilEvent args)
+    public void OnRequestRecoil(Entity<PlayerRecoilBacktrackerComponent> ent, ref GunGetInaccuracyEvent args)
     {
         // same tick is handled by normal recoil!
         if (_timing.CurTick.Value - args.simTick.Value == 0)
