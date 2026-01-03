@@ -177,9 +177,9 @@
   - type: TimedDespawn
     lifetime: 60
   - type: OxydProjectileApplyDamage
-  damage:
-      types:
-        Blunt: 7
+    damage:
+        types:
+          Blunt: 7
   - type: OxydBulletOnFireRecoil
     recoil: 10
 
