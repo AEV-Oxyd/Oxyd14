@@ -1,0 +1,443 @@
+
+
+using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
+using System.Dynamic;
+using System.Linq;
+using System.Numerics;
+using System.Reflection;
+using Content.Shared._Oxyd.Framework;
+using Content.Shared.Containers.ItemSlots;
+using Content.Shared.EntityList;
+using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Interaction;
+using Content.Shared.Random.Helpers;
+using Robust.Shared.Containers;
+using Robust.Shared.Map;
+using Robust.Shared.Network;
+using Robust.Shared.Physics;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
+
+namespace Content.Shared._Oxyd.OxydGunSystem;
+
+
+public record struct OxydFireDataWrap(GunFiremodePrototype firemode,Entity<OxydGunComponent> gun, EntityUid? shooter);
+
+/// <summary>
+/// This handles...
+/// </summary>
+public abstract partial class SharedOxydGunSystem : EntitySystem
+{
+
+    [Dependency] private readonly SharedMapSystem _mapSystem = default!;
+    [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
+    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;
+    [Dependency] private readonly IMapManager _mapManager = default!;
+    [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
+    [Dependency] private readonly ILogManager _logManager = default!;
+    [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
+    [Dependency] protected readonly IGameTiming _gameTiming = default!;
+    [Dependency] protected readonly INetManager _netManager = default!;
+    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
+    [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
+    [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
+
+    private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
+
+    private const string magazineContainerName = "Oxyd_Magazine";
+
+    protected const string oxydContents = "storagebase";
+
+    // in milisecunde
+    private const float maxAcceptableFireGap = 500;
+
+    protected HashSet<OxydFireDataWrap> checkActive = new();
+
+
+    public override void Initialize()
+    {
+        InitRecoil();
+        SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
+        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
+        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
+
+    }
+
+    public void OnEntInsertMag(Entity<OxydGunAmmoMagazineChamberComponent> ent,
+        ref EntInsertedIntoContainerMessage args)
+    {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
+        if (ent.Comp.bulletSlot.HasItem)
+            return;
+        CycleMag(ent);
+    }
+
+    public bool TryDoFiremodeSwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
+    {
+        if (gun.Comp.selectedFiremodePrototype.Active)
+            return false;
+        var gcomp = gun.Comp;
+        gcomp.selectedFiremodeIndex = (++gcomp.selectedFiremodeIndex) % gcomp.InstanciatedFiremodes.Count;
+        Log.Debug($"Switched firemode to {gcomp.selectedFiremodeIndex}");
+        return true;
+    }
+
+    public bool TryDoSafetySwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
+    {
+        if (gun.Comp.selectedFiremodePrototype.Active)
+            return false;
+        gun.Comp.safety = !gun.Comp.safety;
+        Log.Debug($"Switched safety to  {gun.Comp.safety}");
+        return true;
+    }
+
+    public void onMagazineChamberInit(Entity<OxydGunAmmoMagazineChamberComponent> ent, ref ComponentInit args)
+    {
+        _itemSlotsSystem.AddItemSlot(ent.Owner, ammoChamberContainerName, ent.Comp.bulletSlot);
+        _itemSlotsSystem.AddItemSlot(ent.Owner, magazineContainerName, ent.Comp.magazineSlot);
+    }
+
+    public void CycleMag(Entity<OxydGunAmmoMagazineChamberComponent> a)
+    {
+        if (a.Comp.magazineSlot.Item is null)
+            return;
+        var magComp = Comp<OxydMagazineComponent>(a.Comp.magazineSlot.Item.Value);
+        if (magComp.loadedBullets.Count == 0)
+            return;
+        var cnt = _containerSystem.GetContainer(a.Comp.magazineSlot.Item.Value, oxydContents);
+        var ent = GetEntity(magComp.loadedBullets.Pop());
+        if (ent == EntityUid.Invalid)
+        {
+            Log.Debug($"Invalid entity popped in cycle mag!");
+            return;
+        }
+        _containerSystem.Remove(ent, cnt, true, true);
+        if (!_itemSlotsSystem.TryInsert(a.Owner, a.Comp.bulletSlot, ent, null))
+        {
+            Log.Debug($"Failed to insert {ent} at {_gameTiming.CurTime}");
+            magComp.loadedBullets.Push(GetNetEntity(ent));
+            _containerSystem.Insert(ent, cnt, null, true);
+            return;
+        }
+        a.Comp.nextBullet = ent;
+        Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
+    }
+
+
+    public abstract bool InterpretStep(
+        GunFiremodePrototype firemodePrototype,
+        OxydGunEffect effect,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter);
+
+
+    public bool InterpretStepWithPosition(GunFiremodePrototype firemodePrototype, OxydGunEffect effect, Entity<OxydGunComponent> gun, MapCoordinates firingFrom,
+            MapCoordinates towards, EntityUid? shooter)
+    {
+        Log.Error($"Unimplemented Gun Effect  WITH POSITION tried to be interpreted. Effect: {effect} , IsServer {_netManager.IsServer}");
+        return false;
+    }
+
+
+
+    public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
+    {
+        var firemode = gun.Comp.selectedFiremodePrototype;
+        var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
+        //Log.Error($"Seed is {seed}");
+        var rand = new System.Random(seed);
+        var ev = new GunGetInaccuracyEvent()
+        {
+            addedInaccuracy = firemode.addedInaccuracyMaximum,
+            baseInaccuracy = firemode.baseInaccuracy,
+            simTick = gun.Comp.simulateAsTick
+        };
+        RaiseLocalEvent(gun.Owner, ev);
+        if(shooter != gun.Owner)
+            RaiseLocalEvent(shooter, ev);
+        Log.Debug($"b: {ev.baseInaccuracy.Degrees}, a: {ev.addedInaccuracy.Degrees}");
+        var inaccuracyDebuff = (ev.baseInaccuracy + rand.NextSingle() * ev.addedInaccuracy);
+        inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
+        //Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
+        return ((targetPos.Position - shootingFrom.Position).Normalized().ToAngle() + inaccuracyDebuff).ToVec();
+    }
+
+    public bool getProjectile(EntityUid shooter, Entity<OxydGunComponent> gun, Entity<OxydBulletComponent> bullet,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
+    {
+        outputComp = null;
+        EntityUid projectile = Spawn(bullet.Comp.projectileEntity.ToString(), MapCoordinates.Nullspace);
+        if (!TryComp<OxydProjectileComponent>(projectile, out var projectileComp))
+            return false;
+        projectileComp.firedFrom = gun.Owner;
+        projectileComp.shotBy = shooter;
+        projectileComp.initialMovement = new Vector2(bullet.Comp.Speed * gun.Comp.SpeedMultiplier, bullet.Comp.Speed * gun.Comp.SpeedMultiplier);
+        outputComp = (projectile, projectileComp);
+        return true;
+    }
+
+    public bool getProjectileChambered(EntityUid shooter, Entity<OxydGunComponent> gun,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
+    {
+        outputComp = null;
+        if (!gun.Comp.ammoProvider.getAmmo(out var chambered, out var slot))
+            return false;
+        if (!TryComp<OxydBulletComponent>(chambered, out var bulletComp))
+            return false;
+        EntityUid projectile = Spawn(bulletComp.projectileEntity.ToString(), MapCoordinates.Nullspace);
+        endChambering(gun);
+        var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
+        projectileComp.firedFrom = gun.Owner;
+        projectileComp.shotBy = shooter;
+        projectileComp.initialMovement = new Vector2(bulletComp.Speed * gun.Comp.SpeedMultiplier, bulletComp.Speed * gun.Comp.SpeedMultiplier);
+        outputComp = (projectile, projectileComp);
+        return true;
+    }
+
+    public void endChambering(Entity<OxydGunComponent> gun)
+    {
+        switch (gun.Comp.ammoProvider)
+        {
+            case OxydGunAmmoMagazineChamberComponent a:
+            {
+                if (!_itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected))
+                    break;
+                a.nextBullet = EntityUid.Invalid;
+                Log.Debug($"Ejected {ejected} on tick {_gameTiming.CurTick} at {_gameTiming.CurTime}");
+                CycleMag((gun.Owner, a));
+
+
+                break;
+            }
+            case OxydGunAmmoChamberComponent a:
+            {
+                _itemSlotsSystem.TryEject(gun, a.bulletSlot, null, out var ejected);
+                a.nextBullet = EntityUid.Invalid;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
+        Entity<OxydGunComponent> gun,
+        MapCoordinates shootingFrom,
+        MapCoordinates targetPos)
+    {
+        GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
+        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
+        gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
+        gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
+        //Log.Debug($"Fire Delta is {lastFireDelta}");
+        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(maxAcceptableFireGap) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(maxAcceptableFireGap))
+        {
+            gunFiremodePrototype.firingGaps += lastFireDelta - gunFiremodePrototype.fireDelay;
+            Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
+        }
+        gunFiremodePrototype.lastFiredTick = _gameTiming.CurTick;
+        if (gunFiremodePrototype.fireDelay < _gameTiming.TickPeriod)
+        {
+            gun.Comp.firingTime += (_gameTiming.TickPeriod - gunFiremodePrototype.fireDelay);
+        }
+        List<Entity<OxydProjectileComponent>> projectiles = new();
+        var sameTickCounter = 0;
+        while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
+        {
+            if(!getProjectileChambered(shooter, gun, out var projectileNullable))
+                return projectiles;
+            var shootEv = new GunBeforeFireIndividualProjectileEvent()
+            {
+                projectile = projectileNullable.Value,
+                simTick = gun.Comp.simulateAsTick
+            };
+            RaiseLocalEvent(gun.Owner, shootEv);
+            if(shooter != gun.Owner)
+                RaiseLocalEvent(shooter, shootEv);
+            gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
+            Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
+            projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
+            projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos, shooter);
+            projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
+            projectile.Comp.aimedPosition = targetPos;
+            projectiles.Add(projectile);
+            _projectileSystem.queueProjectile(projectile);
+            gun.Comp.timesFired++;
+            sameTickCounter++;
+            var afterEv = new GunAfterFireIndividualProjectileEvent()
+            {
+                projectile = projectileNullable.Value,
+                simTick = gun.Comp.simulateAsTick
+            };
+            RaiseLocalEvent(gun.Owner, afterEv);
+            if(shooter != gun.Owner)
+                RaiseLocalEvent(shooter, afterEv);
+        }
+
+        RaiseLocalEvent(gun.Owner, new GunFiredEvent()
+        {
+            projectiles = projectiles,
+            simTick = gun.Comp.simulateAsTick
+        });
+
+        // fallback
+        if (gun.Comp.timesFired > int.MaxValue - 1000)
+        {
+            gun.Comp.timesFired = 0;
+        }
+        RaiseLocalEvent(new FiremodeProjectilesFiredEvent()
+        {
+            gun = gun,
+            projectiles = projectiles,
+            shooter = shooter
+        });
+        return projectiles;
+    }
+
+    public MapCoordinates resolveFiringPosition(Entity<OxydHandheldGunComponent> obj, MapCoordinates targetPos, EntityUid shooter)
+    {
+        if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
+            return MapCoordinates.Nullspace;
+        var map = _transformSystem.GetMapCoordinates(shooter);
+        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 2f) ;
+        return map;
+    }
+
+    public bool tryGetProvider(EntityUid from,[NotNullWhen(true)] out OxydGunProviderComponent? provider)
+    {
+        provider = null;
+        if (TryComp<OxydGunAmmoChamberComponent>(from, out var chambered))
+        {
+            provider = chambered;
+            return true;
+        }
+        if (TryComp<OxydGunAmmoMagazineChamberComponent>(from, out var magazine))
+        {
+            provider = magazine;
+            return true;
+        }
+        return false;
+    }
+
+    public void onGunInitialized(Entity<OxydGunComponent> gun, ref ComponentInit args)
+    {
+        if (!tryGetProvider(gun.Owner, out var provider))
+        {
+            Log.Error($"Gun prototype {MetaData(gun.Owner).EntityPrototype} does not have any GunAmmo components to fetch ammo from!");
+            return;
+        }
+
+        foreach (var proto in gun.Comp.firemodes)
+        {
+            gun.Comp.InstanciatedFiremodes.Add(_prototypeManager.Index<GunFiremodePrototype>(proto).createCopy());
+        }
+        gun.Comp.ammoProvider = provider;
+        gun.Comp.selectedFiremodeIndex = 0;
+    }
+
+    public void onChamberInitialized(Entity<OxydGunAmmoChamberComponent> chamber, ref ComponentInit args)
+    {
+        _itemSlotsSystem.AddItemSlot(chamber.Owner, ammoChamberContainerName, chamber.Comp.bulletSlot);
+    }
+
+    public void onEmptyShootAttempt()
+    {
+
+    }
+
+    public void onInvalidShootAttempt()
+    {
+
+    }
+
+    public void onSafetyShootAttempt()
+    {
+
+    }
+
+    public virtual List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        if (gun.Comp.safety)
+        {
+            onSafetyShootAttempt();
+            return null;
+        }
+        if (!gun.Comp.ammoProvider.getAmmo(out var bullet, out var itemSlot))
+        {
+            onEmptyShootAttempt();
+            return null;
+        }
+
+        if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
+        {
+            onInvalidShootAttempt();
+            return null;
+        }
+        var gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
+        if (gunFiremodePrototype.nextFire > _gameTiming.CurTime)
+        {
+            Log.Debug("Firemode not ready");
+            return null;
+        }
+        // compensare lag
+        if (gunFiremodePrototype.lastFiredTick == _gameTiming.CurTick)
+        {
+            Log.Debug("Same tick fire");
+            if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
+                return null;
+            gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;
+        }
+
+        return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
+    }
+
+    public void EnsureActiveUpdating(GunFiremodePrototype fireProto,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
+        gun.Comp.keepUpdating = true;
+    }
+    public void RemoveActiveUpdating(GunFiremodePrototype fireProto,
+        Entity<OxydGunComponent> gun,
+        EntityUid? shooter)
+    {
+        checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
+        gun.Comp.keepUpdating = false;
+    }
+
+
+    public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (firemodePrototype.nextFire > _gameTiming.CurTime)
+            return false;
+        if (firemodePrototype.lastInterpret == _gameTiming.CurTick)
+            return false;
+        firemodePrototype.Active = true;
+        firemodePrototype.lastInterpret = _gameTiming.CurTick;
+        while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
+        {
+            Log.Error($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}, time is {_gameTiming.CurTime}");
+            if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
+            {
+                break;
+            }
+            firemodePrototype.currentStep++;
+        }
+
+        if (firemodePrototype.currentStep == firemodePrototype.maxSteps)
+        {
+            firemodePrototype.currentStep = 0;
+            firemodePrototype.Active = false;
+        }
+
+        return true;
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        HandleActiveRecoil();
+    }
+}

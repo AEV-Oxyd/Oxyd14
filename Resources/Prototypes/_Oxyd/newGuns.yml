@@ -1,0 +1,185 @@
+- type: gunFiremode
+  id: baseFiremode
+  firerate: 10
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: semi
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectWait
+    waitPeriod: 2
+    stepBack: 3
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatNextTickIfMouseHeld
+
+- type: gunFiremode
+  id: baseBurstFiremode
+  firerate: 30
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: burst
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectWait
+    waitPeriod: 0.1
+    stepBack: 3
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatNextTick
+    repeatCount: 2
+    stepBack: 5
+    triggerTimeout: 0.2
+  - !type:GunEffectRepeatNextTickIfMouseHeld
+
+- type: entity
+  name: Oxyd Gun
+  parent: BaseItem
+  id: WeaponOxyd
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
+    layers:
+    - state: base
+      map: ["enum.GunVisualLayers.Base"]
+    - state: mag-0
+      map: ["enum.GunVisualLayers.Mag"]
+  - type: Item
+    size: Large
+  - type: OxydGun
+    firemodes:
+    - baseBurstFiremode
+    - baseFiremode
+  - type: OxydHandheldGun
+  - type: OxydGunAmmoMagazineChamber
+    bulletSlot:
+      name: Chamber
+      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
+      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+      priority: 2
+      whitelist:
+        components:
+          - OxydBullet
+    magazineSlot:
+      name: Magazine
+      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
+      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+      priority: 1
+      whitelist:
+        components:
+          - OxydMagazine
+  - type: ItemSlots
+  - type: ContainerContainer
+    containers:
+      gun_magazine: !type:ContainerSlot
+      gun_chamber: !type:ContainerSlot
+  - type: StaticPrice
+    price: 500
+
+- type: entity
+  name: Oxyd Bullet
+  parent: BaseItem
+  id: BulletOxyd
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Projectiles/projectiles2.rsi
+    state: slug
+  - type: Item
+    size: Large
+  - type: OxydBullet
+    speed: 20
+    projectileEntity: ProjectileOxyd
+
+- type: entity
+  name: Oxyd Magazine
+  parent: BaseItem
+  id: MagazineOxyd
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Ammunition/Magazine/Pistol/pistol_mag.rsi
+    state: base
+  - type: Item
+    size: Large
+  - type: OxydMagazine
+    capacity: 30
+  - type: OxydMagazineInitializer
+    initialBullets: magazineOxydTest
+  - type: ContainerContainer
+    containers:
+      storagebase: !type:Container
+        ents: []
+
+- type: entityList
+  id: magazineOxydTest
+  entities:
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+
+- type: entity
+  id: ProjectileOxyd
+  name: bullet (15.2×169 mm shrapnel)
+  categories: [ HideSpawnMenu ]
+  parent: BaseItem
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/Projectiles/projectiles2.rsi
+    state: buckshot-flare
+  - type: Physics
+    bodyType: Dynamic
+    linearDamping: 0
+    angularDamping: 0
+  - type: Fixtures
+    fixtures:
+      oxyd:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.1,-0.1,0.1,0.1"
+        hard: false
+        mask:
+        - Impassable
+        - BulletImpassable
+        friction: 0
+  - type: TimedDespawn
+    lifetime: 60
+  - type: OxydProjectileApplyDamage
+  damage:
+      types:
+        Blunt: 7
+  - type: OxydBulletOnFireRecoil
+    recoil: 10
+

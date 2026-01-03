@@ -231,14 +231,14 @@ public sealed partial class GunComponent : Component
     public TimeSpan NextFire = TimeSpan.Zero;
 
     /// <summary>
-    /// What firemodes can be selected.
+    /// What InstanciatedFiremodes can be selected.
     /// </summary>
     [DataField]
     [AutoNetworkedField]
     public SelectiveFire AvailableModes = SelectiveFire.SemiAuto;
 
     /// <summary>
-    /// What firemode is currently selected.
+    /// What firemodePrototype is currently selected.
     /// </summary>
     [DataField]
     [AutoNetworkedField]
