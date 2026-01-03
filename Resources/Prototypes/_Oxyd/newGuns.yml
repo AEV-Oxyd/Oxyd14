@@ -103,12 +103,12 @@
   components:
   - type: Sprite
     noRot: false
-    sprite: Objects/Weapons/Guns/Projectiles/projectiles2.rsi
-    state: slug
+    sprite: Objects/Weapons/Guns/Ammunition/Magazine/Pistol/pistol_mag.rsi
+    state: base
   - type: Item
     size: Large
   - type: OxydMagazine
-    capacity: 10
+    capacity: 30
   - type: OxydMagazineInitializer
     initialBullets: magazineOxydTest
   - type: ContainerContainer
@@ -119,6 +119,26 @@
 - type: entityList
   id: magazineOxydTest
   entities:
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
   - BulletOxyd
   - BulletOxyd
   - BulletOxyd
@@ -157,7 +177,7 @@
   - type: TimedDespawn
     lifetime: 60
   - type: OxydProjectileApplyDamage
-    damage:
+  damage:
       types:
         Blunt: 7
   - type: OxydBulletOnFireRecoil
