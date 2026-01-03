@@ -84,7 +84,7 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
                 ent.Comp.recoils.Add(args.fromTick.Value, Math.Clamp(args.currentRecoil, 0, recoilCom.maxRecoil));
         }
 
-        if (ent.Comp.recoils.Count > ServerOxydGunSystem.MaxTicksIncosistencyBehind * 2)
+        if (ent.Comp.recoils.Count > ServerOxydGunSystem.MaxTicksIncosistencyBehind * 5)
         {
             ent.Comp.recoils = ent.Comp.recoils.Where((pair, i) =>
             {
