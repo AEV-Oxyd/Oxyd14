@@ -2,6 +2,7 @@ using System.Numerics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
+using Robust.Shared.Toolshed.TypeParsers;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -21,6 +22,14 @@ public partial class GunFiremodePrototype : IPrototype
     // last interpret tick. To not run it multiuple times in the same.
     [ViewVariables]
     public GameTick lastInterpreted = GameTick.Zero;
+    [ViewVariables]
+    public OxydGunProvidersComponent AmmoProviders = default!;
+    // which ammo provider index we pull from(used to set the AmmoProvidersat init)
+    [DataField]
+    public int providerId = 0;
+    // type of ammo provider(same as above)
+    [DataField("provider")]
+    public string providerComp = "";
 
     // SPRITE
     [DataField("icon", required: false)]
@@ -29,6 +38,7 @@ public partial class GunFiremodePrototype : IPrototype
     // GAME
 
     // bullets per second
+    // bullet sets their own speed , gun can only influence it
     [DataField("firerate")]
     public int FireRate = 60;
     [ViewVariables]
