@@ -18,12 +18,6 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunComponent : Component
 {
-    // bullet sets their own speed , gun can only influence it
-    [DataField]
-    public float SpeedMultiplier = 1;
-    [ViewVariables]
-    public OxydGunProviderComponent ammoProvider = default!;
-
     [ViewVariables]
     public bool keepUpdating = false;
 
@@ -75,26 +69,26 @@ public sealed partial class OxydHandheldGunComponent : Component
 {
 }
 
-public abstract partial class OxydGunProviderComponent : Component
+public abstract partial class OxydGunProvidersComponent : Component
 {
-    public abstract bool getAmmo([NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot);
+    public abstract bool getAmmo(int index, [NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot);
 };
 
 [RegisterComponent]
-public partial class OxydGunAmmoChamberComponent : OxydGunProviderComponent
+public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 {
     [DataField("bulletSlot")]
-    public ItemSlot bulletSlot = new();
+    public List<ItemSlot> bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
     [ViewVariables]
-    public EntityUid nextBullet = EntityUid.Invalid;
+    public List<EntityUid> nextBullet = new List<EntityUid>();
 
-    public override bool getAmmo([NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
+    public override bool getAmmo(int index,[NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
     {
-        ammo = nextBullet;
-        slot = bulletSlot;
-        return nextBullet != EntityUid.Invalid;
+        ammo = nextBullet[index];
+        slot = bulletSlot[index];
+        return nextBullet[index] != EntityUid.Invalid;
     }
 
 }
@@ -102,7 +96,7 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProviderComponent
 public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
     [DataField("magazineSlot")]
-    public ItemSlot magazineSlot = new();
+    public List<ItemSlot> magazineSlot = new();
 }
 
 [RegisterComponent]

@@ -4,6 +4,8 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: semi
+  provider: OxydGunAmmoMagazineChamber
+  providerId: 0
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -20,6 +22,8 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: burst
+  provider: OxydGunAmmoMagazineChamber
+  providerId: 0
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -56,7 +60,7 @@
   - type: OxydHandheldGun
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:
-      name: Chamber
+    - name: Chamber
       insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
       ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
       priority: 2
@@ -64,7 +68,7 @@
         components:
           - OxydBullet
     magazineSlot:
-      name: Magazine
+    - name: Magazine
       insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
       ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
       priority: 1
@@ -73,9 +77,6 @@
           - OxydMagazine
   - type: ItemSlots
   - type: ContainerContainer
-    containers:
-      gun_magazine: !type:ContainerSlot
-      gun_chamber: !type:ContainerSlot
   - type: StaticPrice
     price: 500
 
