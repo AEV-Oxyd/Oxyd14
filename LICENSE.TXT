@@ -1,4 +1,5 @@
 All code & assets included within folders marked as Oxyd, _Oxyd are all rights reserved . You may not use it without permission.
+Ported assets are put in folders which include the keyword Ported. Any exceptions to the rule above are mentioned through code comments, RSI credits or through a new license.txt in said folder
 
 Everything else is MIT Licensed.
 
