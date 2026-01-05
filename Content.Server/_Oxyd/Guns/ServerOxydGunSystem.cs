@@ -41,6 +41,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public static int MaxTicksAhead = 10;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
+    public float acceptableOffset = 1.5f;
 
 
     public override void Initialize()
@@ -65,12 +66,30 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         EnsureComp<PlayerRecoilBacktrackerComponent>(ent);
     }
-
+    // validates the user's position to the gun entity
     public bool ValidateUserPosition(Entity<OxydGunComponent> gun, EntityUid user)
     {
         if (HasComp<OxydHandheldGunComponent>(gun) && !_handsSystem.IsHolding(user, gun.Owner))
+        {
+            Log.Debug($"Entity {user} failed userPosition check! using gun {gun}");
             return false;
+        }
+
         return true;
+    }
+    // validates the client-side received firing position to the current knonw position of the user
+    // add backtracking handling if desyncs too much / false triggers - SPCR 2026
+    public bool ValidateFiringPosition(Entity<OxydGunComponent> gun, EntityUid user, MapCoordinates firingPos)
+    {
+        if (HasComp<OxydHandheldGunComponent>(gun) &&
+            (_transformSystem.GetMapCoordinates(user).Position - firingPos.Position).Length() >
+            acceptableOffset)
+        {
+            Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}");
+            return false;
+        }
+        return true;
+
     }
 
     public void OnClientFiremodeChange(FiremodeChangedEvent ev, EntitySessionEventArgs arg)
@@ -279,6 +298,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
         if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
+            return;
+        if(!ValidateFiringPosition((gun, gcomp), player.AttachedEntity.Value, _transformSystem.ToMapCoordinates(args.shotFrom)))
             return;
         if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
