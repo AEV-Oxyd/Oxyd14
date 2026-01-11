@@ -233,8 +233,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
+        c.shooterNetworkId = args.MsgChannel.UserId;
         c.executedFiringSteps.Clear();
-        //c.shooterNetworkId = inp.SenderSession.UserId;
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
