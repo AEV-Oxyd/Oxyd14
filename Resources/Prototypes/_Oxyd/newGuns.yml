@@ -6,6 +6,7 @@
     state: semi
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
+  addedInaccuracyMaximum: 1
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -24,6 +25,7 @@
     state: burst
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
+  addedInaccuracyMaximum: 1
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
