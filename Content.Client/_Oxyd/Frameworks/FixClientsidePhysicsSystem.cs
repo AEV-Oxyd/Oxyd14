@@ -24,6 +24,12 @@ public sealed partial class FixClientsidePhysicsComponent : Component
 
 }
 
+[RegisterComponent]
+public sealed partial class ForcePredictionComponent : Component
+{
+
+}
+
 
 /// <summary>
 /// This handles...
@@ -38,9 +44,16 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
     {
         base.Initialize();
         SubscribeLocalEvent<FixClientsidePhysicsComponent, UpdateIsPredictedEvent>(OnUpdatePred);
+        SubscribeLocalEvent<ForcePredictionComponent, UpdateIsPredictedEvent>(OnUpdatePred);
+        SubscribeLocalEvent<ForcePredictionComponent, ComponentStartup>(OnStart);
 
         UpdatesBefore.Add(typeof(TransformSystem));
         UpdatesBefore.Add(typeof(Robust.Client.Physics.PhysicsSystem));
+    }
+
+    public void OnStart(Entity<ForcePredictionComponent> ent, ref ComponentStartup args)
+    {
+        _physics.UpdateIsPredicted(ent);
     }
 
     public override void UpdateBeforeSolve(bool prediction, float frameTime)
@@ -57,7 +70,7 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         }
     }
 
-    public void OnUpdatePred(Entity<FixClientsidePhysicsComponent> ent, ref UpdateIsPredictedEvent ev)
+    public void OnUpdatePred(EntityUid ent, IComponent comp, ref UpdateIsPredictedEvent ev)
     {
         ev.IsPredicted = true;
     }
