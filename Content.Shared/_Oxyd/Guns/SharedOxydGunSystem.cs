@@ -301,6 +301,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
             projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos, shooter);
             projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
+            _transformSystem.SetWorldRotationNoLerp(projectile.Owner, projectile.Comp.initialMovement.ToAngle());
             projectile.Comp.aimedPosition = targetPos;
             projectiles.Add(projectile);
             _projectileSystem.queueProjectile(projectile);
@@ -341,7 +342,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
             return MapCoordinates.Nullspace;
         var map = _transformSystem.GetMapCoordinates(shooter);
-        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 2f) ;
+        var radius = fixtHolder.Fixtures.Values.First().Shape.Radius;
+        map.Offset((targetPos.Position - map.Position).Normalized() * radius * 4f) ;
         return map;
     }
 
