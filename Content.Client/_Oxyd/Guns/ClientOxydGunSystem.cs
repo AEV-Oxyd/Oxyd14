@@ -34,7 +34,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
-        SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(muzzleEffect);
+        SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
@@ -49,7 +49,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             MinSize = new Vector2(32, 32),
             MaxSize = new Vector2(32, 32)
         };
-        firemodeSwitchButton.TextureNormal = _spriteSystem.Frame0(gunComp.selectedFiremodePrototype.Icon);
+        firemodeSwitchButton.TextureNormal = _spriteSystem.Frame0(gunComp.selectedFiremodePrototype.icon);
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
         var gunSafetyButton = new TextureButton()
         {
@@ -82,7 +82,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if(!TryDoFiremodeSwitch((gun.Owner, gcomp), playerEnt.Value))
             return;
         var b = (TextureButton)args.Button;
-        b.TextureNormal = _spriteSystem.Frame0(gcomp.selectedFiremodePrototype.Icon);
+        b.TextureNormal = _spriteSystem.Frame0(gcomp.selectedFiremodePrototype.icon);
         RaiseNetworkEvent(new FiremodeChangedEvent()
         {
             gun = GetNetEntity(gun.Owner),

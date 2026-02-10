@@ -41,7 +41,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public static int MaxTicksAhead = 10;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
-    public float acceptableOffset = 1.5f;
+    public float acceptableOffset = 1f;
 
 
     public override void Initialize()

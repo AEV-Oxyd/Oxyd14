@@ -1,7 +1,11 @@
+using Content.Client.Sound;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Sound;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
 using Robust.Shared.Animations;
+using Robust.Shared.Audio.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Spawners;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
@@ -12,8 +16,9 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 public partial class ClientOxydGunSystem
 {
     [Dependency] private readonly AnimationPlayerSystem _animPlayer = default!;
+    [Dependency] private readonly SharedAudioSystem _soundPlayer = default!;
 
-    public void muzzleEffect(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
+    public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
         var effect = Spawn("MuzzleFlashEffect", args.projectile.Comp.initialPosition);
         _transformSystem.SetWorldRotation(effect, args.projectile.Comp.initialMovement.ToAngle());
@@ -43,7 +48,7 @@ public partial class ClientOxydGunSystem
             }
         };
 
-        _animPlayer.Play(effect, anim, $"muzzle-flash-{ent.Comp.timesFired}");
+        _animPlayer.Play(effect, anim, $"mf{ent.Comp.timesFired}");
 
     }
 }

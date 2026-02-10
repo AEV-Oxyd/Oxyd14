@@ -13,6 +13,7 @@ using Content.Shared.EntityList;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
+using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
@@ -44,6 +45,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
     [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
     [Dependency] private readonly IComponentFactory _factory = default!;
+    [Dependency] protected readonly SharedAudioSystem _audio = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -288,6 +290,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
+            var shootSound = gunFiremodePrototype.fire
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
@@ -344,7 +347,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var map = _transformSystem.GetMapCoordinates(shooter);
         var radius = fixtHolder.Fixtures.Values.First().Shape.Radius;
         var mapOffset = (targetPos.Position - map.Position).Normalized();
-        mapOffset *= radius * 4f;
+        mapOffset *= radius;
         return map.Offset(mapOffset);
     }
 

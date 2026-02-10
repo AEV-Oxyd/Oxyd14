@@ -1,4 +1,5 @@
 using System.Numerics;
+using Robust.Shared.Audio;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
@@ -33,7 +34,11 @@ public partial class GunFiremodePrototype : IPrototype
 
     // SPRITE
     [DataField("icon", required: false)]
-    public SpriteSpecifier Icon = default!;
+    public SpriteSpecifier icon = default!;
+
+    // SOUND
+    [DataField("fireSound")]
+    public SoundCollectionSpecifier fireSound = default!;
 
     // GAME
 
