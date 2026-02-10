@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using Robust.Client.Debugging;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
@@ -38,10 +39,11 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly IResourceCache _resourceCache = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly SpriteSystem _sprite = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
-        _overlay.AddOverlay(new ShitDebugOverlay(EntityManager, _resourceCache, _physics, _timing, _transformSystem));
+        _overlay.AddOverlay(new ShitDebugOverlay(EntityManager, _resourceCache, _physics, _timing, _transformSystem, _sprite));
     }
 
     internal sealed class ShitDebugOverlay : Overlay
@@ -50,6 +52,7 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
         private readonly IGameTiming _gameTiming;
         private readonly SharedTransformSystem _transformSystem = default!;
         private readonly SharedPhysicsSystem _physicsSystem;
+        private readonly SpriteSystem _sprite = default!;
 
         public override OverlaySpace Space => OverlaySpace.WorldSpace | OverlaySpace.ScreenSpace;
 
@@ -57,12 +60,14 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
 
         private readonly Font _font;
 
-        public ShitDebugOverlay(IEntityManager entityManager, IResourceCache cache, SharedPhysicsSystem physicsSystem, IGameTiming timing, SharedTransformSystem tsf)
+        public ShitDebugOverlay(IEntityManager entityManager, IResourceCache cache,
+            SharedPhysicsSystem physicsSystem, IGameTiming timing, SharedTransformSystem tsf, SpriteSystem sprt)
         {
             _entityManager = entityManager;
             _gameTiming = timing;
             _physicsSystem = physicsSystem;
             _transformSystem = tsf;
+            _sprite = sprt;
             _font = new VectorFont(cache.GetResource<FontResource>("/EngineFonts/NotoSans/NotoSans-Regular.ttf"), 10);
         }
 
@@ -87,9 +92,10 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
                 var xform = _physicsSystem.GetPhysicsTransform(ent.Owner);
 
                 const float AlphaModifier = 0.8f;
-
-                foreach(var a in _entityManager.GetComponent<FixturesComponent>(ent).Fixtures.Values)
-                    DrawShape(worldHandle, a,  entq2.GetComponent(ent), new Color(0.5f, 0.5f, 0.3f).WithAlpha(AlphaModifier), comp.ticksFoward * (float)_gameTiming.TickPeriod.TotalSeconds * ent.Comp.LinearVelocity );
+                var offset = comp.ticksFoward * (float)_gameTiming.TickPeriod.TotalSeconds * ent.Comp.LinearVelocity;
+                //foreach(var a in _entityManager.GetComponent<FixturesComponent>(ent).Fixtures.Values)
+                //    DrawShape(worldHandle, a,  entq2.GetComponent(ent), new Color(0.5f, 0.5f, 0.3f).WithAlpha(AlphaModifier), offset );
+                _sprite.SetOffset((ent.Owner, null), offset);
             }
 
 

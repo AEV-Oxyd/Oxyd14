@@ -343,8 +343,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return MapCoordinates.Nullspace;
         var map = _transformSystem.GetMapCoordinates(shooter);
         var radius = fixtHolder.Fixtures.Values.First().Shape.Radius;
-        map.Offset((targetPos.Position - map.Position).Normalized() * radius * 4f) ;
-        return map;
+        var mapOffset = (targetPos.Position - map.Position).Normalized();
+        mapOffset *= radius * 4f;
+        return map.Offset(mapOffset);
     }
 
     public bool tryGetProvider(EntityUid from,[NotNullWhen(true)] out OxydGunProvidersComponent? provider)
