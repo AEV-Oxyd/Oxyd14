@@ -290,7 +290,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
-            var shootSound = gunFiremodePrototype.fire
+            var shootSound = gunFiremodePrototype.fireSound;
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,

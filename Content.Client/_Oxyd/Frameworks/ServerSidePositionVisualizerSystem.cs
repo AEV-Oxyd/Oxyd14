@@ -43,7 +43,7 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
-        _overlay.AddOverlay(new ShitDebugOverlay(EntityManager, _resourceCache, _physics, _timing, _transformSystem, _sprite));
+        _overlay.AddOverlay(new ShitDebugOverlay(EntityManager, _resourceCache, _physics, _timing, _transformSystem, _sprite, _eye));
     }
 
     internal sealed class ShitDebugOverlay : Overlay
@@ -53,6 +53,7 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
         private readonly SharedTransformSystem _transformSystem = default!;
         private readonly SharedPhysicsSystem _physicsSystem;
         private readonly SpriteSystem _sprite = default!;
+        private readonly IEyeManager _eye = default!;
 
         public override OverlaySpace Space => OverlaySpace.WorldSpace | OverlaySpace.ScreenSpace;
 
@@ -61,13 +62,14 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
         private readonly Font _font;
 
         public ShitDebugOverlay(IEntityManager entityManager, IResourceCache cache,
-            SharedPhysicsSystem physicsSystem, IGameTiming timing, SharedTransformSystem tsf, SpriteSystem sprt)
+            SharedPhysicsSystem physicsSystem, IGameTiming timing, SharedTransformSystem tsf, SpriteSystem sprt, IEyeManager eye)
         {
             _entityManager = entityManager;
             _gameTiming = timing;
             _physicsSystem = physicsSystem;
             _transformSystem = tsf;
             _sprite = sprt;
+            _eye = eye;
             _font = new VectorFont(cache.GetResource<FontResource>("/EngineFonts/NotoSans/NotoSans-Regular.ttf"), 10);
         }
 
@@ -92,15 +94,22 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
                 var xform = _physicsSystem.GetPhysicsTransform(ent.Owner);
 
                 const float AlphaModifier = 0.8f;
+                _eye.GetScreenProjectionMatrix(out var eyeMat);
                 var offset = comp.ticksFoward * (float)_gameTiming.TickPeriod.TotalSeconds * ent.Comp.LinearVelocity;
-                //foreach(var a in _entityManager.GetComponent<FixturesComponent>(ent).Fixtures.Values)
-                //    DrawShape(worldHandle, a,  entq2.GetComponent(ent), new Color(0.5f, 0.5f, 0.3f).WithAlpha(AlphaModifier), offset );
-                _sprite.SetOffset((ent.Owner, null), offset);
+                foreach(var a in _entityManager.GetComponent<FixturesComponent>(ent).Fixtures.Values)
+                    DrawShape(worldHandle, a,  entq2.GetComponent(ent), new Color(0.5f, 0.5f, 0.3f).WithAlpha(AlphaModifier), offset );
+                var grid = _transformSystem.GetGrid(ent.Owner);
+                var rotVec = _transformSystem.GetWorldRotation(ent.Owner);
+                if (grid is not null)
+                {
+                    rotVec = -eyeMat.Rotation() + _entityManager.GetComponent<TransformComponent>(grid.Value).LocalRotation.Reduced();
+                }
+                _sprite.SetOffset((ent.Owner, null), -eyeMat.Rotation().Reduced().RotateVec(offset));
             }
-
-
             worldHandle.UseShader(null);
             worldHandle.SetTransform(Matrix3x2.Identity);
+
+
         }
 
 
@@ -108,9 +117,23 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
         {
             switch (args.Space)
             {
+                case OverlaySpace.ScreenSpace:
+                    DrawScreen(args);
+                    break;
                 case OverlaySpace.WorldSpace:
                     DrawWorld((DrawingHandleWorld)args.DrawingHandle, args);
                     break;
+            }
+        }
+
+        public void DrawScreen(OverlayDrawArgs args)
+        {
+            var q = _entityManager.EntityQueryEnumerator<TellMePosComponent>();
+            while(q.MoveNext(out var uid , out var comp))
+            {
+                args.ScreenHandle.DrawString(_font,
+                    _eye.WorldToScreen(_transformSystem.GetWorldPosition(uid)),
+                    comp.ticksFoward.ToString());
             }
         }
 
