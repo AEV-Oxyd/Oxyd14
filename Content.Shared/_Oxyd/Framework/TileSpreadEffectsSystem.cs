@@ -6,6 +6,7 @@ namespace Content.Shared._Oxyd.Framework;
 public sealed class TileSpreadEffectsSystem : EntitySystem
 {
 
+
     /// <inheritdoc/>
     public override void Initialize()
     {

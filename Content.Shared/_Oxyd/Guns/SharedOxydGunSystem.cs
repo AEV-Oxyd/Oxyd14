@@ -18,6 +18,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -315,6 +316,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
             };
+            _audio.PlayEntity(_audio.ResolveSound(shootSound), Filter.PvsExcept(shooter, 2F), gun.Owner, true);
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);

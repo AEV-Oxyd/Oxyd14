@@ -94,17 +94,12 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
                 var xform = _physicsSystem.GetPhysicsTransform(ent.Owner);
 
                 const float AlphaModifier = 0.8f;
-                _eye.GetScreenProjectionMatrix(out var eyeMat);
                 var offset = comp.ticksFoward * (float)_gameTiming.TickPeriod.TotalSeconds * ent.Comp.LinearVelocity;
                 foreach(var a in _entityManager.GetComponent<FixturesComponent>(ent).Fixtures.Values)
                     DrawShape(worldHandle, a,  entq2.GetComponent(ent), new Color(0.5f, 0.5f, 0.3f).WithAlpha(AlphaModifier), offset );
-                var grid = _transformSystem.GetGrid(ent.Owner);
-                var rotVec = _transformSystem.GetWorldRotation(ent.Owner);
-                if (grid is not null)
-                {
-                    rotVec = -eyeMat.Rotation() + _entityManager.GetComponent<TransformComponent>(grid.Value).LocalRotation.Reduced();
-                }
-                _sprite.SetOffset((ent.Owner, null), -eyeMat.Rotation().Reduced().RotateVec(offset));
+                _eye.CurrentEye.GetViewMatrix(out var viewMat, Vector2.One);
+                var altVec = viewMat.Rotation().RotateVec(offset);
+                _sprite.SetOffset((ent.Owner, null),  altVec);
             }
             worldHandle.UseShader(null);
             worldHandle.SetTransform(Matrix3x2.Identity);
