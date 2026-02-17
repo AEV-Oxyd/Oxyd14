@@ -43,6 +43,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public int currentMessagesIndex = 0;
     public float acceptableOffset = 1f;
 
+    private EntityQuery<PhysicsComponent> physQ;
+    public int predictedTicks = 7;
+
 
     public override void Initialize()
     {
@@ -59,7 +62,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             delayedMessages.Add(new Queue<object>());
         }
-
+        physQ = GetEntityQuery<PhysicsComponent>();
     }
 
     public void onAddRecoil(Entity<RecoilHandlerComponent> ent, ref ComponentInit args)
@@ -356,6 +359,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
             pvsBlk.forSessions.Add(session.Name);
+            if (TryComp<OxydHandheldGunComponent>(gun, out var handheld))
+            {
+                if (!physQ.TryGetComponent(handler.shooterEntity, out var physicsComponent))
+                    continue;
+                var offset = EnsureComp<ApplyVisualOffsetComponent>(bullet.Owner);
+                offset.offset = predictedTicks * (float)_gameTiming.TickPeriod.TotalSeconds * physicsComponent.LinearVelocity;
+            }
         }
 
         if (tickDiff > 0)

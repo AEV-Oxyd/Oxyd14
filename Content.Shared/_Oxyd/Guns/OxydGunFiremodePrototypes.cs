@@ -38,7 +38,7 @@ public partial class GunFiremodePrototype : IPrototype
 
     // SOUND
     [DataField("fireSound")]
-    public SoundCollectionSpecifier fireSound = default!;
+    public SoundSpecifier fireSound = default!;
 
     // GAME
 
