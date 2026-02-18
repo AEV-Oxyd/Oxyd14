@@ -13,10 +13,12 @@ using Content.Shared.EntityList;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
+using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -44,6 +46,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
     [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
     [Dependency] private readonly IComponentFactory _factory = default!;
+    [Dependency] protected readonly SharedAudioSystem _audio = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -288,6 +291,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
                 return projectiles;
+            var shootSound = gunFiremodePrototype.fireSound;
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
             {
                 projectile = projectileNullable.Value,
@@ -301,6 +305,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
             projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos, shooter);
             projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
+            _transformSystem.SetWorldRotationNoLerp(projectile.Owner, projectile.Comp.initialMovement.ToAngle());
             projectile.Comp.aimedPosition = targetPos;
             projectiles.Add(projectile);
             _projectileSystem.queueProjectile(projectile);
@@ -311,6 +316,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
             };
+            _audio.PlayEntity(_audio.ResolveSound(shootSound), Filter.PvsExcept(shooter, 2F), gun.Owner, true);
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);
@@ -341,8 +347,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if(!TryComp<FixturesComponent>(shooter, out var fixtHolder))
             return MapCoordinates.Nullspace;
         var map = _transformSystem.GetMapCoordinates(shooter);
-        map.Offset((targetPos.Position - map.Position).Normalized() * fixtHolder.Fixtures.Values.First().Shape.Radius * 2f) ;
-        return map;
+        var radius = fixtHolder.Fixtures.Values.First().Shape.Radius;
+        var mapOffset = (targetPos.Position - map.Position).Normalized();
+        mapOffset *= radius;
+        return map.Offset(mapOffset);
     }
 
     public bool tryGetProvider(EntityUid from,[NotNullWhen(true)] out OxydGunProvidersComponent? provider)

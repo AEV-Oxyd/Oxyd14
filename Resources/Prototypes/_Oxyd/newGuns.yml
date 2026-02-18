@@ -4,8 +4,11 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: semi
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
+  addedInaccuracyMaximum: 1
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -16,6 +19,11 @@
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
 
+- type: soundCollection
+  id: oxydFire
+  files:
+  - /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+
 - type: gunFiremode
   id: baseBurstFiremode
   firerate: 30
@@ -24,6 +32,9 @@
     state: burst
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
+  addedInaccuracyMaximum: 1
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
@@ -61,8 +72,8 @@
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:
     - name: Chamber
-      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
-      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+      insertSound: null
+      ejectSound: null
       priority: 2
       whitelist:
         components:

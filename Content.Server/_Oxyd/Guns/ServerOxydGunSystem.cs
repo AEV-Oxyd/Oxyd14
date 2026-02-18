@@ -41,7 +41,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public static int MaxTicksAhead = 10;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
-    public float acceptableOffset = 1.5f;
+    public float acceptableOffset = 1f;
+
+    private EntityQuery<PhysicsComponent> physQ;
+    public int predictedTicks = 7;
 
 
     public override void Initialize()
@@ -59,7 +62,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             delayedMessages.Add(new Queue<object>());
         }
-
+        physQ = GetEntityQuery<PhysicsComponent>();
     }
 
     public void onAddRecoil(Entity<RecoilHandlerComponent> ent, ref ComponentInit args)
@@ -81,8 +84,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // add backtracking handling if desyncs too much / false triggers - SPCR 2026
     public bool ValidateFiringPosition(Entity<OxydGunComponent> gun, EntityUid user, MapCoordinates firingPos)
     {
+        var physOffset = Vector2.Zero;
+        if (TryComp<PhysicsComponent>(user, out var phys))
+            physOffset = phys.LinearVelocity * predictedTicks * (float)_gameTiming.TickPeriod.Seconds;
         if (HasComp<OxydHandheldGunComponent>(gun) &&
-            (_transformSystem.GetMapCoordinates(user).Position - firingPos.Position).Length() >
+            (_transformSystem.GetMapCoordinates(user).Position + physOffset - firingPos.Position).Length() >
             acceptableOffset)
         {
             Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}");
@@ -233,8 +239,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
+        c.shooterNetworkId = args.MsgChannel.UserId;
         c.executedFiringSteps.Clear();
-        //c.shooterNetworkId = inp.SenderSession.UserId;
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
@@ -356,6 +362,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);
             pvsBlk.forSessions.Add(session.Name);
+            if (TryComp<OxydHandheldGunComponent>(gun, out var handheld))
+            {
+                if (!physQ.TryGetComponent(handler.shooterEntity, out var physicsComponent))
+                    continue;
+                var offset = EnsureComp<ApplyVisualOffsetComponent>(bullet.Owner);
+                offset.offset = predictedTicks * (float)_gameTiming.TickPeriod.TotalSeconds * physicsComponent.LinearVelocity;
+            }
         }
 
         if (tickDiff > 0)

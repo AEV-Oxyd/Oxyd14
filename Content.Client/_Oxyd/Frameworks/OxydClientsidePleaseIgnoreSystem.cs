@@ -14,10 +14,12 @@ public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
+    private EntityQuery<ClientsidePleaseIgnoreComponent> ignore;
     /// <inheritdoc/>
     public override void Initialize()
     {
         SubscribeLocalEvent<ClientsidePleaseIgnoreComponent, ComponentInit>(Purge);
+        ignore = GetEntityQuery<ClientsidePleaseIgnoreComponent>();
     }
 
     public void Purge(Entity<ClientsidePleaseIgnoreComponent> obj,ref ComponentInit componentAdd)
@@ -28,5 +30,19 @@ public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
         {
             RemComp<SpriteComponent>(obj);
         }
+
+    }
+
+    public bool shouldIgnore(EntityUid uid)
+    {
+        if (_playerManager.LocalSession is null)
+            return true;
+
+        if (ignore.TryGetComponent(uid, out var comp) &&  comp.forSessions.Contains(_playerManager.LocalSession.Name))
+        {
+            return true;
+        }
+
+        return false;
     }
 }
