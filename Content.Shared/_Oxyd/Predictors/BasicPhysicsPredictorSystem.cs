@@ -38,9 +38,6 @@ public sealed class BasicPhysicsPredictorSystem : EntitySystem
             return Vector2.Zero;
         if (!transf.TryComp(target, out var transComp))
             return Vector2.Zero;
-        var mapped = _transform.GetMap(target);
-        if(!mapped.HasValue)
-            return Vector2.Zero;
         var futurePos = (float)_timing.TickPeriod.TotalSeconds * ticks * physComp.LinearVelocity;
         if (fixt.TryComp(target, out var fixtComp))
         {
@@ -48,14 +45,14 @@ public sealed class BasicPhysicsPredictorSystem : EntitySystem
             QueryFilter filter = new QueryFilter();
             filter.LayerBits = physData.CollisionLayer;
             filter.MaskBits = physData.CollisionMask;
-            var results = new RayResult();
-            _raycast.CastShape(mapped.Value,ref results, physData.Shape, _physics.GetPhysicsTransform(target, transComp), futurePos, filter , RayCastSystem.RayCastClosestCallback);
+            filter.IsIgnored = uid => uid == target;
+            var results = _raycast.CastShape(_transform.GetMapId(target), physData.Shape, _physics.GetPhysicsTransform(target, transComp), futurePos, filter , RayCastSystem.RayCastClosestCallback);
             if (results.Hit)
             {
                 var hit = results.Results.First();
-                return hit.Point;
+                return hit.Point - futurePos.Normalized() * physData.Shape.Radius;
             }
         }
-        return futurePos;
+        return futurePos + _transform.GetWorldPosition(target);
     }
 }

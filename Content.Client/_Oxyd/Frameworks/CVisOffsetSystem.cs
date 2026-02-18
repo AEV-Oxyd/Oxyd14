@@ -58,7 +58,7 @@ public sealed class CVisOffsetSystem : EntitySystem
             var applying = GetEffectiveWorldRotation(uid);
             if (HasComp<BasicPredictorOffsetSetterComponent>(uid))
             {
-                comp.offset = _predictor.PredictWorldPosition(uid, 7);
+                comp.offset = _predictor.PredictWorldPosition(uid, 7) - _transformSystem.GetWorldPosition(uid);
             }
             _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }
