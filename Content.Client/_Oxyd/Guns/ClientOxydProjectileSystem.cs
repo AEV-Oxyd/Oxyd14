@@ -27,6 +27,7 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
     [Dependency] private readonly FixClientsidePhysicsSystem _patcher = default!;
+    [Dependency] private readonly SpriteSystem _sprites = default!;
 
     public override bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {
@@ -54,11 +55,11 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     {
         foreach (var projectile in FireNextTick)
         {
-
             _transform.SetMapCoordinates(projectile.Owner, projectile.Comp.initialPosition);
             _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, false);
             _physics.SetLinearDamping(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), 0f, false);
             _physics.SetAngularDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
+            _physics.SetFriction(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
             _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
             _patcher.startForcedPrediction(projectile.Owner);
         }

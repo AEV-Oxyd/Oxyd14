@@ -28,6 +28,23 @@ public sealed class CVisOffsetSystem : EntitySystem
     [Dependency] private readonly SpriteSystem _sprite = default!;
     [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
 
+    public Angle GetEffectiveWorldRotation(EntityUid uid)
+    {
+        var worldRot = _transformSystem.GetWorldRotation(uid);
+        var eyeRot = _eye.CurrentEye.Rotation;
+        if (!TryComp<SpriteComponent>(uid, out var sprite))
+            return worldRot;
+        if (sprite.NoRotation)
+            return -eyeRot;
+        if (sprite.SnapCardinals)
+        {
+            var angle = worldRot + eyeRot;
+            var cardinal = angle.RoundToCardinalAngle();
+            return worldRot - cardinal;
+        }
+        return worldRot;
+    }
+
     public override void FrameUpdate(float frameTime)
     {
         base.FrameUpdate(frameTime);
@@ -35,10 +52,10 @@ public sealed class CVisOffsetSystem : EntitySystem
         _eye.CurrentEye.GetViewMatrix(out var viewMat, Vector2.One);
         while (qery.MoveNext(out var uid, out var comp))
         {
-            //if (_ignore.shouldIgnore(uid))
-            //    continue;
-            //_sprite.SetOffset((uid, null), viewMat.Rotation().RotateVec(comp.offset));
-            _sprite.SetOffset((uid, null), -_transformSystem.GetWorldRotation(uid).RotateVec(comp.offset));
+            if (_ignore.shouldIgnore(uid))
+                continue;
+            var applying = GetEffectiveWorldRotation(uid);
+            _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }
     }
 }

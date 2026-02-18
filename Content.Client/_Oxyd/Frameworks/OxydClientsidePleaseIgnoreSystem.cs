@@ -26,12 +26,11 @@ public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
     {
         if (_playerManager.LocalSession is null)
             return;
-                /*
         if (obj.Comp.forSessions.Contains(_playerManager.LocalSession.Name))
         {
             RemComp<SpriteComponent>(obj);
         }
-        */
+
     }
 
     public bool shouldIgnore(EntityUid uid)
