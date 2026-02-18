@@ -49,7 +49,6 @@ public sealed class CVisOffsetSystem : EntitySystem
     {
         base.FrameUpdate(frameTime);
         var qery = EntityQueryEnumerator<ApplyVisualOffsetComponent>();
-        _eye.CurrentEye.GetViewMatrix(out var viewMat, Vector2.One);
         while (qery.MoveNext(out var uid, out var comp))
         {
             if (_ignore.shouldIgnore(uid))
