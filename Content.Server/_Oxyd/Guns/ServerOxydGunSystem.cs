@@ -367,7 +367,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                 if (!physQ.TryGetComponent(handler.shooterEntity, out var physicsComponent))
                     continue;
                 var offset = EnsureComp<ApplyVisualOffsetComponent>(bullet.Owner);
-                offset.offset = predictedTicks * (float)_gameTiming.TickPeriod.TotalSeconds * physicsComponent.LinearVelocity;
+                offset.offset = _predictor.PredictWorldPosition(handler.shooterEntity, predictedTicks) - _transformSystem.GetWorldPosition(handler.shooterEntity);
             }
         }
 

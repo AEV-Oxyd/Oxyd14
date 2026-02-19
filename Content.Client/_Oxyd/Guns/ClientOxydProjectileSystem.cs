@@ -28,13 +28,13 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
     [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
     [Dependency] private readonly FixClientsidePhysicsSystem _patcher = default!;
     [Dependency] private readonly SpriteSystem _sprites = default!;
+    [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
 
     public override bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {
         if (!base.shouldTriggerCollide(obj, ref args))
             return false;
-        if (TryComp<ClientsidePleaseIgnoreComponent>(obj, out var ignore) && _playerManager.LocalSession is not null &&
-            ignore.forSessions.Contains(_playerManager.LocalSession.Name))
+        if (_ignore.shouldIgnore(obj.Owner))
             return false;
         return true;
 

@@ -28,7 +28,7 @@ public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
             return;
         if (obj.Comp.forSessions.Contains(_playerManager.LocalSession.Name))
         {
-            RemComp<SpriteComponent>(obj);
+            //RemComp<SpriteComponent>(obj);
         }
 
     }
