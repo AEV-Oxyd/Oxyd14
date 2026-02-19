@@ -20,6 +20,11 @@
     hideLayersOnEquip:
     - Hair
     - Snout
+  - type: MovementSpeedModifier # slower
+    acceleration: 3
+    baseAcceleration: 3
+    baseFriction: 1
+    minimumFrictionSpeed: 0.05
   - type: Inventory
     femaleDisplacements:
       jumpsuit:
