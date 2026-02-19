@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 using Content.Server.Effects;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared._Oxyd.Predictors;
 using Robust.Server.GameObjects;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Events;

@@ -14,4 +14,8 @@ public partial class ApplyVisualOffsetComponent : Component
 {
     [DataField, AutoNetworkedField]
     public Vector2 offset;
+
+    // is server streaming data or are local sources trusted?
+    [DataField, AutoNetworkedField]
+    public bool localControl = true;
 }

@@ -1,9 +1,11 @@
 using System.Linq;
 using System.Numerics;
+using Content.Shared._Oxyd.Framework;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Collision.Shapes;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Shared._Oxyd.Predictors;
@@ -11,7 +13,7 @@ namespace Content.Shared._Oxyd.Predictors;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class BasicPhysicsPredictorSystem : EntitySystem
+public abstract class BasicPhysicsPredictorSystem : EntitySystem
 {
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly SharedPhysicsSystem _physics = default!;
@@ -27,11 +29,18 @@ public sealed class BasicPhysicsPredictorSystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
+        base.Initialize();
         phys = GetEntityQuery<PhysicsComponent>();
         transf = GetEntityQuery<TransformComponent>();
         fixt = GetEntityQuery<FixturesComponent>();
+        SubscribeLocalEvent<UseBasicPredictionComponent, PlayerAttachedEvent>(onAttach);
     }
 
+    public virtual void onAttach(Entity<UseBasicPredictionComponent> ent, ref PlayerAttachedEvent args)
+    {
+        var ensure = EnsureComp<ApplyVisualOffsetComponent>(ent);
+        ensure.localControl = true;
+    }
     public Vector2 PredictWorldPosition(EntityUid target, int ticks)
     {
         if (!phys.TryComp(target, out var physComp))

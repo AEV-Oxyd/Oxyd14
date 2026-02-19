@@ -280,6 +280,7 @@
     alternateState: Standing
   - type: StunVisuals
   - type: RecoilHandler
+  - type: UseBasicPrediction
 
 - type: entity
   save: false

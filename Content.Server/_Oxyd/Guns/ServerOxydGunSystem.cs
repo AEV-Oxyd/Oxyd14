@@ -6,6 +6,7 @@ using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
@@ -33,6 +34,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly HandsSystem _serverHands = default!;
+    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
@@ -84,11 +86,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // add backtracking handling if desyncs too much / false triggers - SPCR 2026
     public bool ValidateFiringPosition(Entity<OxydGunComponent> gun, EntityUid user, MapCoordinates firingPos)
     {
-        var physOffset = Vector2.Zero;
-        if (TryComp<PhysicsComponent>(user, out var phys))
-            physOffset = phys.LinearVelocity * predictedTicks * (float)_gameTiming.TickPeriod.Seconds;
+        var predicedWorldPosition = _predictor.PredictWorldPosition(user, predictedTicks);
         if (HasComp<OxydHandheldGunComponent>(gun) &&
-            (_transformSystem.GetMapCoordinates(user).Position + physOffset - firingPos.Position).Length() >
+            (predicedWorldPosition- firingPos.Position).Length() >
             acceptableOffset)
         {
             Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}");
