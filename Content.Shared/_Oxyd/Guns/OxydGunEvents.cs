@@ -132,5 +132,11 @@ public class GunGetInaccuracyEvent : EntityEventArgs
     public required Angle addedInaccuracy;
     public required GameTick simTick;
 }
+[Serializable, NetSerializable]
+public class GunCompareFired : EntityEventArgs
+{
+    public int firedCount;
+    public NetEntity target;
+}
 
 

@@ -1,11 +1,14 @@
 using System.Linq;
 using System.Numerics;
+using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
+using Content.Shared._Oxyd.Predictors;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
 using Robust.Client.ResourceManagement;
+using Robust.Shared;
 using Robust.Shared.Enums;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
@@ -27,6 +30,7 @@ public sealed class CVisOffsetSystem : EntitySystem
     [Dependency] private readonly IEyeManager _eye = default!;
     [Dependency] private readonly SpriteSystem _sprite = default!;
     [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
+    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
     public Angle GetEffectiveWorldRotation(EntityUid uid)
     {
@@ -54,6 +58,10 @@ public sealed class CVisOffsetSystem : EntitySystem
             if (_ignore.shouldIgnore(uid))
                 continue;
             var applying = GetEffectiveWorldRotation(uid);
+            if (HasComp<BasicPredictorOffsetSetterComponent>(uid))
+            {
+                comp.offset = _predictor.PredictWorldPosition(uid, OxydCvars.predictionTicks.DefaultValue) - _transformSystem.GetWorldPosition(uid);
+            }
             _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }
     }

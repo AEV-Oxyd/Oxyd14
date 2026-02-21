@@ -17,6 +17,7 @@ public sealed partial class ServerOxydGunSystem
 
             case GunEffectCheckCuffed e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
+
             case GunEffectCheckConscious e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 

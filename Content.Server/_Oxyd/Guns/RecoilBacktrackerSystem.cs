@@ -49,7 +49,7 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
         if (tickDiff > 0 && ent.Comp.recoils.ContainsKey(args.fromTick.Value))
         {
             Log.Debug($"Before with tick diff of {tickDiff}");
-            var outstf = ent.Comp.recoils.Select((key, value) => { return $"k:{key.Key} v:{key.Value} ";});
+            var outstf = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
             Log.Debug($"{string.Join("", outstf)}");
 
             var deltaDiff = ent.Comp.recoils[args.fromTick.Value] - args.currentRecoil;
@@ -70,9 +70,10 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
                 ent.Comp.recoils[targetTick] += Math.Clamp(deltaDiff - recoilLoss, 0, recoilCom.maxRecoil);
                 tickDiff--;
             }
-            Log.Debug("After");
-            var outsta = ent.Comp.recoils.Select((key, value) => { return $"k:{key.Key} v:{key.Value} ";});
-            Log.Debug($"{string.Join("", outsta)}");
+            Log.Debug($"after");
+            var outstf2 = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
+            Log.Debug($"{string.Join("", outstf2)}");
+
 
 
         }
@@ -84,7 +85,7 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
                 ent.Comp.recoils.Add(args.fromTick.Value, Math.Clamp(args.currentRecoil, 0, recoilCom.maxRecoil));
         }
 
-        if (ent.Comp.recoils.Count > ServerOxydGunSystem.MaxTicksIncosistencyBehind * 5)
+        if (ent.Comp.recoils.Count > ServerOxydGunSystem.MaxTicksIncosistencyBehind * 2)
         {
             ent.Comp.recoils = ent.Comp.recoils.Where((pair, i) =>
             {

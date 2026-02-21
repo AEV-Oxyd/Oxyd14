@@ -91,6 +91,7 @@
     partType: Leg
     symmetry: Left
   - type: MovementBodyPart
+    acceleration: 3
 
 - type: entity
   id: BaseRightLeg
@@ -102,6 +103,7 @@
     partType: Leg
     symmetry: Right
   - type: MovementBodyPart
+    acceleration: 3
 
 - type: entity
   id: BaseLeftFoot

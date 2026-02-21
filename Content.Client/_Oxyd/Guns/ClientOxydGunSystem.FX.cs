@@ -1,5 +1,6 @@
 using Content.Client.Sound;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared._Oxyd.Predictors;
 using Content.Shared.Sound;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
@@ -17,6 +18,7 @@ public partial class ClientOxydGunSystem
 {
     [Dependency] private readonly AnimationPlayerSystem _animPlayer = default!;
     [Dependency] private readonly SharedAudioSystem _soundPlayer = default!;
+    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
     public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {

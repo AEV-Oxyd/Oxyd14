@@ -35,9 +35,22 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
+        SubscribeNetworkEvent<GunCompareFired>(onCompare);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
+    }
+
+    public void onCompare(GunCompareFired args)
+    {
+        var ent = GetEntity(args.target);
+        if (TryComp<OxydGunComponent>(ent, out var gcomp))
+        {
+            if (gcomp.timesFired != args.firedCount)
+            {
+                Log.Fatal($"Mismatched fired count on {ent}!");
+            }
+        }
     }
 
     public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)

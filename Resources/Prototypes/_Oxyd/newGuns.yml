@@ -8,16 +8,12 @@
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
-  addedInaccuracyMaximum: 1
+  addedInaccuracyMaximum: 0
   effects:
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
-  - !type:GunEffectWait
-    waitPeriod: 2
-    stepBack: 3
   - !type:GunEffectTryFireMouseDirection
-  - !type:GunEffectRepeatNextTickIfMouseHeld
 
 - type: soundCollection
   id: oxydFire
@@ -32,7 +28,7 @@
     state: burst
   provider: OxydGunAmmoMagazineChamber
   providerId: 0
-  addedInaccuracyMaximum: 1
+  addedInaccuracyMaximum: 0
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
   effects:

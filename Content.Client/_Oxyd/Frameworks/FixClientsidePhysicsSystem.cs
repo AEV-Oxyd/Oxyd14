@@ -3,9 +3,12 @@ using Content.Client.Effects;
 using Content.Client.Projectiles;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Friction;
 using Robust.Client.GameObjects;
 using Robust.Client.Physics;
 using Robust.Client.Player;
+using Robust.Shared;
+using Robust.Shared.Configuration;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Controllers;
 using Robust.Shared.Physics.Events;
@@ -39,13 +42,15 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly TransformSystem _transform = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
+    [Dependency] private readonly IConfigurationManager _config = default!;
 
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<FixClientsidePhysicsComponent, UpdateIsPredictedEvent>(OnUpdatePred);
-        SubscribeLocalEvent<ForcePredictionComponent, UpdateIsPredictedEvent>(OnUpdatePred);
-        SubscribeLocalEvent<ForcePredictionComponent, ComponentStartup>(OnStart);
+        var beforeAr = new[] { typeof(Robust.Client.Physics.PhysicsSystem), typeof(TileFrictionController) };
+        SubscribeLocalEvent<FixClientsidePhysicsComponent, UpdateIsPredictedEvent>(OnUpdatePred, beforeAr);
+        SubscribeLocalEvent<ForcePredictionComponent, UpdateIsPredictedEvent>(OnUpdatePred,beforeAr);
+        SubscribeLocalEvent<ForcePredictionComponent, ComponentStartup>(OnStart, beforeAr);
 
         UpdatesBefore.Add(typeof(TransformSystem));
         UpdatesBefore.Add(typeof(Robust.Client.Physics.PhysicsSystem));
@@ -58,6 +63,8 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
 
     public override void UpdateBeforeSolve(bool prediction, float frameTime)
     {
+        //if (_config.GetCVar(CVars.NetTickrate) == _config.GetCVar(CVars.TargetMinimumTickrate))
+        //    return;
         base.UpdateBeforeSolve(prediction, frameTime);
         var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
         var setValue = !_timing.IsFirstTimePredicted;

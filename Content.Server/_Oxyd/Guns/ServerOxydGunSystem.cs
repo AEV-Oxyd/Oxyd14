@@ -4,11 +4,15 @@ using System.Numerics;
 using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
+using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
+using Robust.Shared;
+using Robust.Shared.Configuration;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
@@ -33,18 +37,20 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly HandsSystem _serverHands = default!;
+    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private readonly IConfigurationManager _config = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
-    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(30);
-    public static int MaxTicksIncosistencyBehind = 10; // Up to 10 ticks of delta-diff between client-server can and will be simulated to catch up
-    public static int MaxTicksAhead = 10;
+    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(10);
+    public static int MaxTicksIncosistencyBehind = OxydCvars.maxPastTicks.DefaultValue;
+    public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
     public float acceptableOffset = 1f;
 
     private EntityQuery<PhysicsComponent> physQ;
-    public int predictedTicks = 7;
+    public int predictedTicks = OxydCvars.predictionTicks.DefaultValue;
 
 
     public override void Initialize()
@@ -84,11 +90,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // add backtracking handling if desyncs too much / false triggers - SPCR 2026
     public bool ValidateFiringPosition(Entity<OxydGunComponent> gun, EntityUid user, MapCoordinates firingPos)
     {
-        var physOffset = Vector2.Zero;
-        if (TryComp<PhysicsComponent>(user, out var phys))
-            physOffset = phys.LinearVelocity * predictedTicks * (float)_gameTiming.TickPeriod.Seconds;
+        var predicedWorldPosition = _predictor.PredictWorldPosition(user, predictedTicks);
         if (HasComp<OxydHandheldGunComponent>(gun) &&
-            (_transformSystem.GetMapCoordinates(user).Position + physOffset - firingPos.Position).Length() >
+            (predicedWorldPosition- firingPos.Position).Length() >
             acceptableOffset)
         {
             Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}");
@@ -246,6 +250,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
+        Log.Error($"Ending Client-Firemode at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -290,11 +295,14 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         }
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
+
+        RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
+        Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -354,8 +362,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         }
 
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
+
         if (projectiles is null)
+        {
+            Log.Debug($"fara proiectil {_gameTiming.RealTime}");
             return;
+        }
+
         if (!_playerManager.TryGetSessionByEntity(handler.shooterEntity, out var session))
             return;
         foreach (var bullet in projectiles)
@@ -367,7 +380,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                 if (!physQ.TryGetComponent(handler.shooterEntity, out var physicsComponent))
                     continue;
                 var offset = EnsureComp<ApplyVisualOffsetComponent>(bullet.Owner);
-                offset.offset = predictedTicks * (float)_gameTiming.TickPeriod.TotalSeconds * physicsComponent.LinearVelocity;
+                offset.offset = _predictor.PredictWorldPosition(handler.shooterEntity, predictedTicks) - _transformSystem.GetWorldPosition(handler.shooterEntity);
             }
         }
 
