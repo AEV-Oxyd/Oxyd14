@@ -13,7 +13,7 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        Log.Debug($"Interpreting effect of type {effect}");
+        //Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:

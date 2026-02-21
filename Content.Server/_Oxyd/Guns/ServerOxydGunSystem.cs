@@ -4,6 +4,7 @@ using System.Numerics;
 using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
+using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
@@ -41,15 +42,15 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
 
     // Acceptable timing inconsistencies during auto firing.
-    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(30);
-    public static int MaxTicksIncosistencyBehind = CVars.maxPastTicksAccepted.DefaultValue;
-    public static int MaxTicksAhead = CVars.maxFutureTicksAccepted.DefaultValue;
+    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(10);
+    public static int MaxTicksIncosistencyBehind = OxydCvars.maxPastTicks.DefaultValue;
+    public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
     public float acceptableOffset = 1f;
 
     private EntityQuery<PhysicsComponent> physQ;
-    public int predictedTicks = CVars.predictionTicks.DefaultValue;
+    public int predictedTicks = OxydCvars.predictionTicks.DefaultValue;
 
 
     public override void Initialize()
@@ -249,6 +250,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
+        Log.Error($"Ending Client-Firemode at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -293,11 +295,14 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         }
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
+
+        RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
+        Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -357,8 +362,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         }
 
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
+
         if (projectiles is null)
+        {
+            Log.Debug($"fara proiectil {_gameTiming.RealTime}");
             return;
+        }
+
         if (!_playerManager.TryGetSessionByEntity(handler.shooterEntity, out var session))
             return;
         foreach (var bullet in projectiles)

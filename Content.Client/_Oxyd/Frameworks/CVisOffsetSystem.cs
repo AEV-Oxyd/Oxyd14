@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.Predictors;
 using Robust.Client.GameObjects;
@@ -59,7 +60,7 @@ public sealed class CVisOffsetSystem : EntitySystem
             var applying = GetEffectiveWorldRotation(uid);
             if (HasComp<BasicPredictorOffsetSetterComponent>(uid))
             {
-                comp.offset = _predictor.PredictWorldPosition(uid, CVars.predictionTicks.DefaultValue) - _transformSystem.GetWorldPosition(uid);
+                comp.offset = _predictor.PredictWorldPosition(uid, OxydCvars.predictionTicks.DefaultValue) - _transformSystem.GetWorldPosition(uid);
             }
             _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }
