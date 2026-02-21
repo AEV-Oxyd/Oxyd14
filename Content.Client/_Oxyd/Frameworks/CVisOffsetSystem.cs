@@ -7,6 +7,7 @@ using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
 using Robust.Client.ResourceManagement;
+using Robust.Shared;
 using Robust.Shared.Enums;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
@@ -58,7 +59,7 @@ public sealed class CVisOffsetSystem : EntitySystem
             var applying = GetEffectiveWorldRotation(uid);
             if (HasComp<BasicPredictorOffsetSetterComponent>(uid))
             {
-                comp.offset = _predictor.PredictWorldPosition(uid, 7) - _transformSystem.GetWorldPosition(uid);
+                comp.offset = _predictor.PredictWorldPosition(uid, CVars.predictionTicks.DefaultValue) - _transformSystem.GetWorldPosition(uid);
             }
             _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }

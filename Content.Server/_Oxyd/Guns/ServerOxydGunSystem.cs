@@ -10,6 +10,8 @@ using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
+using Robust.Shared;
+using Robust.Shared.Configuration;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
@@ -35,18 +37,19 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly HandsSystem _serverHands = default!;
     [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private readonly IConfigurationManager _config = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.
     public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(30);
-    public static int MaxTicksIncosistencyBehind = 10; // Up to 10 ticks of delta-diff between client-server can and will be simulated to catch up
-    public static int MaxTicksAhead = 10;
+    public static int MaxTicksIncosistencyBehind = CVars.maxPastTicksAccepted.DefaultValue;
+    public static int MaxTicksAhead = CVars.maxFutureTicksAccepted.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
     public float acceptableOffset = 1f;
 
     private EntityQuery<PhysicsComponent> physQ;
-    public int predictedTicks = 7;
+    public int predictedTicks = CVars.predictionTicks.DefaultValue;
 
 
     public override void Initialize()

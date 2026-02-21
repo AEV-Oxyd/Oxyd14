@@ -56,6 +56,7 @@ namespace Content.Shared.Friction
         public override void UpdateBeforeSolve(bool prediction, float frameTime)
         {
             base.UpdateBeforeSolve(prediction, frameTime);
+            return;
             foreach (var ent in PhysicsSystem.AwakeBodies)
             {
                 var uid = ent.Owner;
