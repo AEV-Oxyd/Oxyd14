@@ -13,6 +13,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 
 namespace Content.Client._Oxyd.OxydGunSystem;
@@ -66,7 +67,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
         var gunSafetyButton = new TextureButton()
         {
-            TexturePath = $"/Textures/Oxyd/erisported/gunactions16.rsi/safety{(gunComp.safety ? '1' : '0')}.png",
+            TexturePath = getSafetySprite(gunComp.safety).ToRootedPath().ToString(),
             MinSize = new Vector2(32, 32),
             MaxSize = new Vector2(32, 32)
         };
@@ -114,7 +115,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (!TryDoSafetySwitch((gun.Owner, gcomp), playerEnt.Value))
             return;
         var b = (TextureButton)args.Button;
-        b.TexturePath = $"/Textures/Oxyd/erisported/gunactions16.rsi/safety{(gcomp.safety ? '1' : '0')}.png";
+        b.TexturePath = getSafetySprite(gcomp.safety).ToRootedPath().ToString();
         RaiseNetworkEvent(new GunSafetyChangedEvent()
         {
             gun = GetNetEntity(gun.Owner),
