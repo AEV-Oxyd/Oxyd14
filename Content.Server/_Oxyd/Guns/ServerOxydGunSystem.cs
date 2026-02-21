@@ -47,7 +47,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
     public int currentMessagesIndex = 0;
-    public float acceptableOffset = 1f;
+    public float acceptableOffset = 2f;
 
     private EntityQuery<PhysicsComponent> physQ;
     public int predictedTicks = OxydCvars.predictionTicks.DefaultValue;
@@ -95,7 +95,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             (predicedWorldPosition- firingPos.Position).Length() >
             acceptableOffset)
         {
-            Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}");
+            Log.Debug($"Entity {user} failed firingPosition check! using gun {gun}, diff was {(predicedWorldPosition- firingPos.Position).Length()} ");
             return false;
         }
         return true;
