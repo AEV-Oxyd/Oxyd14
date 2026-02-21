@@ -21,12 +21,23 @@ using Robust.Shared.Physics;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 
 public record struct OxydFireDataWrap(GunFiremodePrototype firemode,Entity<OxydGunComponent> gun, EntityUid? shooter);
+[Prototype("oxydGunConfig")]
+public class OxydGunConfig : IPrototype
+{
+    [IdDataField] public string ID { get; private set; } = default!;
 
+    [DataField]
+    public SpriteSpecifier safetyOn = default!;
+
+    [DataField]
+    public SpriteSpecifier safetyOff = default!;
+}
 /// <summary>
 /// This handles...
 /// </summary>
@@ -52,12 +63,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     private const string magazineContainerName = "Oxyd_Magazine";
 
+    private const string configPrototype = "OxydGunConfig";
+
     protected const string oxydContents = "storagebase";
 
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
 
     protected HashSet<OxydFireDataWrap> checkActive = new();
+
+    public ResPath getSafetySprite(bool toggle)
+    {
+        var prot = _prototypeManager.Index<OxydGunConfig>("gunConfig");
+        if (toggle)
+            return OxydHelpers.getSpritePath(prot.safetyOn);
+        return OxydHelpers.getSpritePath(prot.safetyOff);
+
+    }
 
 
     public override void Initialize()

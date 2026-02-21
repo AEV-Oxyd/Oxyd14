@@ -1,0 +1,8 @@
+- type: oxydGunConfig
+  id: gunConfig
+  safetyOn:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: safety1
+  safetyOff:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: safety0
