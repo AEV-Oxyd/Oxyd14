@@ -24,7 +24,7 @@ namespace Content.Client._Oxyd.Framework;
 [RegisterComponent]
 public sealed partial class FixClientsidePhysicsComponent : Component
 {
-
+    public Vector2 truePos = Vector2.Zero;
 }
 
 [RegisterComponent]
@@ -49,11 +49,17 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         base.Initialize();
         var beforeAr = new[] { typeof(Robust.Client.Physics.PhysicsSystem), typeof(TileFrictionController) };
         SubscribeLocalEvent<FixClientsidePhysicsComponent, UpdateIsPredictedEvent>(OnUpdatePred, beforeAr);
+        SubscribeLocalEvent<FixClientsidePhysicsComponent, ComponentStartup>(onPhysStart, beforeAr);
         SubscribeLocalEvent<ForcePredictionComponent, UpdateIsPredictedEvent>(OnUpdatePred,beforeAr);
         SubscribeLocalEvent<ForcePredictionComponent, ComponentStartup>(OnStart, beforeAr);
 
         UpdatesBefore.Add(typeof(TransformSystem));
         UpdatesBefore.Add(typeof(Robust.Client.Physics.PhysicsSystem));
+    }
+
+    public void onPhysStart(Entity<FixClientsidePhysicsComponent> ent, ref ComponentStartup args)
+    {
+        ent.Comp.truePos = Transform(ent).LocalPosition;
     }
 
     public void OnStart(Entity<ForcePredictionComponent> ent, ref ComponentStartup args)
@@ -65,16 +71,30 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
     {
         //if (_config.GetCVar(CVars.NetTickrate) == _config.GetCVar(CVars.TargetMinimumTickrate))
         //    return;
+
         base.UpdateBeforeSolve(prediction, frameTime);
         var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
-        var setValue = !_timing.IsFirstTimePredicted;
         while (qery.MoveNext(out var uid, out var comp))
         {
-            SetPaused(uid, setValue);
-            //_physics.SetCanCollide(uid, _timing.IsFirstTimePredicted);
             var transf = Transform(uid);
+            _transform.SetLocalPositionNoLerp(uid, comp.truePos);
             transf.PredictedLerp = false;
         }
+    }
+
+    public override void UpdateAfterSolve(bool prediction, float frameTime)
+    {
+        base.UpdateAfterSolve(prediction, frameTime);
+        if (!_timing.IsFirstTimePredicted)
+            return;
+        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        while (qery.MoveNext(out var uid, out var comp))
+        {
+            var thing = Transform(uid).NextPosition;
+            if(thing is not null)
+                comp.truePos = thing.Value;
+        }
+
     }
 
     public void OnUpdatePred(EntityUid ent, IComponent comp, ref UpdateIsPredictedEvent ev)
