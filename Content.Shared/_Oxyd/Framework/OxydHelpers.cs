@@ -14,7 +14,7 @@ public static class OxydHelpers
         switch (target)
         {
             case SpriteSpecifier.Rsi cast:
-                return new ResPath(cast.RsiPath + $"/{cast.RsiState}");
+                return new ResPath(cast.RsiPath + $"/{cast.RsiState}.png");
             case SpriteSpecifier.Texture cast:
                 return cast.TexturePath;
         }
