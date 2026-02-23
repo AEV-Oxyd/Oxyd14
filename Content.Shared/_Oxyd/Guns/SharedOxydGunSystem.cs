@@ -257,7 +257,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if (TryComp<OxydProjectileApplyDamageComponent>(projectile, out var damageComp))
             {
-                damageComp.DamageSpecifier *= 1 + ((chargeComp.charge+0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
+                var mult = 1+ ((chargeComp.charge + 0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
+                Log.Debug($"Gun applied mult of {mult}");
+                damageComp.DamageSpecifier *= mult;
             }
 
         }

@@ -67,8 +67,13 @@ public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
     public TimeSpan lastTrigger = TimeSpan.Zero;
 
 }
+
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect;
+public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect
+{
+    [DataField]
+    public bool reset = false;
+}
 
 [DataDefinition]
 public sealed partial class GunEffectModifyCharge : OxydGunEffect

@@ -76,8 +76,16 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        RemoveActiveUpdating(firemodePrototype, gun, shooter);
-        return true;
+        if (effect.reset)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+            else
+        {
+            RemoveActiveUpdating(firemodePrototype, gun, shooter);
+            return true;
+        }
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,

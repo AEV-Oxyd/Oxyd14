@@ -21,16 +21,16 @@ public sealed partial class OxydGunChargeupComponent : Component
     public TimeSpan lastCharge = TimeSpan.Zero;
 
     [DataField, AutoNetworkedField]
-    public TimeSpan chargeDecayBegin = TimeSpan.Zero;
+    public TimeSpan chargeDecayBegin = TimeSpan.FromSeconds(5);
 
     [DataField, AutoNetworkedField]
-    public TimeSpan decayDelay = TimeSpan.Zero;
+    public TimeSpan decayDelay = TimeSpan.FromSeconds(1);
 
     [ViewVariables]
     public TimeSpan lastDecay = TimeSpan.Zero;
 
     [DataField, AutoNetworkedField]
-    public float amountPerDecay = 0f;
+    public float amountPerDecay = 0.1f;
 
 
 }
