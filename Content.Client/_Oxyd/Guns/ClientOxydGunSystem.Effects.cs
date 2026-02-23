@@ -46,6 +46,15 @@ public sealed partial class ClientOxydGunSystem
             case GunEffectCheckAmmo e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
+            case GunEffectCheckCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
+            case GunEffectModifyCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
+            case GunEffectResetCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
         }
@@ -113,4 +122,5 @@ public sealed partial class ClientOxydGunSystem
         //Log.Debug("Ensured full auto");
         return true;
     }
+
 }

@@ -253,6 +253,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         EntityUid projectile = Spawn(bulletComp.projectileEntity.ToString(), MapCoordinates.Nullspace);
         endChambering(gun);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
+        if (TryComp<OxydGunChargeupComponent>(gun, out var chargeComp))
+        {
+            if (TryComp<OxydProjectileApplyDamageComponent>(projectile, out var damageComp))
+            {
+                damageComp.DamageSpecifier *= 1 + ((chargeComp.charge+0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
+            }
+
+        }
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;
         projectileComp.initialMovement = new Vector2(bulletComp.Speed * firemode.SpeedMultiplier, bulletComp.Speed * firemode.SpeedMultiplier);

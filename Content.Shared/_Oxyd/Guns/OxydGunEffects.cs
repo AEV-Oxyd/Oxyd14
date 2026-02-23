@@ -69,3 +69,25 @@ public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
 }
 [DataDefinition]
 public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect;
+
+[DataDefinition]
+public sealed partial class GunEffectModifyCharge : OxydGunEffect
+{
+    [DataField]
+    public float addAmount = 0;
+}
+
+[DataDefinition]
+public sealed partial class GunEffectResetCharge : OxydGunEffect;
+
+
+[DataDefinition]
+public sealed partial class GunEffectCheckCharge : OxydGunEffect
+{
+    [DataField]
+    public float min = float.NegativeInfinity;
+
+    [DataField]
+    public float max = float.PositiveInfinity;
+}
+
