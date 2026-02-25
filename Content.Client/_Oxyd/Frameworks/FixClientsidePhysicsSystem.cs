@@ -88,7 +88,7 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
             var t = Transform(uid);
             if (comp.lastParent != t.ParentUid)
                 _transform.SetWorldPosition((uid, t), comp.lastWorld);
-            if(comp.truePos is not null)
+            else if(comp.truePos is not null)
                 _transform.SetLocalPositionNoLerp(uid, comp.truePos.Value);
         }
     }
