@@ -13,14 +13,12 @@ public class ClientSideInterpretingFiremode : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public NetEntity gun;
-    public NetEntity shooter;
     public int clientsideStartingStep = 0;
     public GameTick clientTick;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
        gun = buffer.ReadNetEntity();
-       shooter = buffer.ReadNetEntity();
        clientsideStartingStep = buffer.ReadInt32();
        clientTick = buffer.ReadGameTick();
     }
@@ -28,8 +26,29 @@ public class ClientSideInterpretingFiremode : NetMessage
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
     {
         buffer.Write(gun);
-        buffer.Write(shooter);
         buffer.Write(clientsideStartingStep);
+        buffer.Write(clientTick);
+    }
+}
+
+public class FiremodeMouseStatus : NetMessage
+{
+    public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
+    public bool held = false;
+    public NetEntity gun;
+    public GameTick clientTick;
+
+    public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
+    {
+        held = buffer.ReadBoolean();
+        gun = buffer.ReadNetEntity();
+        clientTick = buffer.ReadGameTick();
+    }
+
+    public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
+    {
+        buffer.Write(held);
+        buffer.Write(gun);
         buffer.Write(clientTick);
     }
 }

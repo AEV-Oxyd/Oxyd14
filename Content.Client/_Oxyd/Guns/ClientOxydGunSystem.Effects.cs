@@ -106,6 +106,12 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        _netManager.ClientSendMessage(new FiremodeMouseStatus()
+        {
+            clientTick = _gameTiming.CurTick,
+            gun = GetNetEntity(gun.Owner),
+            held = _mouseSys.mousedDown
+        });
         if (shooter is null)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
@@ -117,6 +123,11 @@ public sealed partial class ClientOxydGunSystem
             RemoveActiveUpdating(firemodePrototype, gun, shooter);
             //Log.Debug("Stopped fullauto");
             return true;
+        }
+
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         //Log.Debug("Ensured full auto");

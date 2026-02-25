@@ -76,16 +76,23 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        if (effect.reset)
+        // keep repeating until message from client comes
+        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
         {
-            ResetFiremode(firemodePrototype, gun, shooter);
+            EnsureActiveUpdating(firemodePrototype, gun, shooter);
             return false;
         }
-            else
+
+        if (!effect.mouseHeld)
         {
             RemoveActiveUpdating(firemodePrototype, gun, shooter);
             return true;
         }
+
+        if (effect.stepBack != 0)
+            firemodePrototype.currentStep -= effect.stepBack;
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
+        return true;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,

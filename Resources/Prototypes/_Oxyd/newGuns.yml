@@ -210,7 +210,7 @@
         - BulletImpassable
         friction: 0
   - type: TimedDespawn
-    lifetime: 60
+    lifetime: 10
   - type: OxydProjectileApplyDamage
     damage:
         types:

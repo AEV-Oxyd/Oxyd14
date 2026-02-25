@@ -24,7 +24,14 @@ namespace Content.Client._Oxyd.Framework;
 [RegisterComponent]
 public sealed partial class FixClientsidePhysicsComponent : Component
 {
-    public Vector2 truePos = Vector2.Zero;
+    [ViewVariables]
+    public Vector2? truePos = Vector2.Zero;
+
+    [ViewVariables]
+    public EntityUid lastParent = EntityUid.Invalid;
+
+    [ViewVariables]
+    public Vector2 lastWorld = Vector2.Zero;
 }
 
 [RegisterComponent]
@@ -60,6 +67,8 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
     public void onPhysStart(Entity<FixClientsidePhysicsComponent> ent, ref ComponentStartup args)
     {
         ent.Comp.truePos = Transform(ent).LocalPosition;
+        ent.Comp.lastParent = Transform(ent).ParentUid;
+        ent.Comp.lastWorld = _transform.GetWorldPosition(ent);
     }
 
     public void OnStart(Entity<ForcePredictionComponent> ent, ref ComponentStartup args)
@@ -76,9 +85,11 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
         while (qery.MoveNext(out var uid, out var comp))
         {
-            var transf = Transform(uid);
-            _transform.SetLocalPositionNoLerp(uid, comp.truePos);
-            transf.PredictedLerp = false;
+            var t = Transform(uid);
+            if (comp.lastParent != t.ParentUid)
+                _transform.SetWorldPosition((uid, t), comp.lastWorld);
+            if(comp.truePos is not null)
+                _transform.SetLocalPositionNoLerp(uid, comp.truePos.Value);
         }
     }
 
@@ -90,9 +101,9 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
         while (qery.MoveNext(out var uid, out var comp))
         {
-            var thing = Transform(uid).NextPosition;
-            if(thing is not null)
-                comp.truePos = thing.Value;
+            var t = Transform(uid);
+            comp.truePos = t.NextPosition;
+            comp.lastWorld = _transform.GetWorldPosition(t);
         }
 
     }
