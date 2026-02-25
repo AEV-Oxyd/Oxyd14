@@ -3,6 +3,7 @@ using Content.Client.Effects;
 using Content.Client.Projectiles;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared._Oxyd.Predictors;
 using Content.Shared.Friction;
 using Robust.Client.GameObjects;
 using Robust.Client.Physics;
@@ -32,6 +33,9 @@ public sealed partial class FixClientsidePhysicsComponent : Component
 
     [ViewVariables]
     public Vector2 lastWorld = Vector2.Zero;
+
+    [ViewVariables]
+    public TimeSpan lastProcessed = TimeSpan.Zero;
 }
 
 [RegisterComponent]
@@ -50,6 +54,7 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
     [Dependency] private readonly TransformSystem _transform = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
     [Dependency] private readonly IConfigurationManager _config = default!;
+    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
     public override void Initialize()
     {
@@ -69,6 +74,7 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         ent.Comp.truePos = Transform(ent).LocalPosition;
         ent.Comp.lastParent = Transform(ent).ParentUid;
         ent.Comp.lastWorld = _transform.GetWorldPosition(ent);
+        ent.Comp.lastProcessed = _timing.CurTime;
     }
 
     public void OnStart(Entity<ForcePredictionComponent> ent, ref ComponentStartup args)
@@ -87,9 +93,19 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         {
             var t = Transform(uid);
             if (comp.lastParent != t.ParentUid)
+            {
                 _transform.SetWorldPosition((uid, t), comp.lastWorld);
+            }
             else if(comp.truePos is not null)
                 _transform.SetLocalPositionNoLerp(uid, comp.truePos.Value);
+            // parent changes must be handled here on the first tick
+            // couldnt figure out another way SPCR 2026
+            if (_timing.IsFirstTimePredicted)
+            {
+                comp.lastParent = t.ParentUid;
+                comp.lastWorld = _transform.GetWorldPosition(uid);
+            }
+
         }
     }
 
@@ -118,5 +134,21 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         _physics.SetSleepingAllowed(entity,Comp<PhysicsComponent>(entity), false, false);
         _physics.UpdateIsPredicted(entity);
         EnsureComp<FixClientsidePhysicsComponent>(entity);
+    }
+    // if client skips tick catch up!!!!!!! SPCR 2026
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        while (qery.MoveNext(out var uid, out var comp))
+        {
+            if (_timing.CurTime - comp.lastProcessed >= _timing.TickPeriod * 2)
+            {
+                var tickc = (int)Math.Floor((_timing.CurTime - comp.lastProcessed) / _timing.TickPeriod) - 1;
+                _transform.SetWorldPosition(uid, _predictor.PredictWorldPosition(uid, tickc));
+            }
+            comp.lastProcessed = _timing.CurTime;
+        }
+
     }
 }
