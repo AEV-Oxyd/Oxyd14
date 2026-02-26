@@ -28,7 +28,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public record struct OxydFireDataWrap(GunFiremodePrototype firemode,Entity<OxydGunComponent> gun, EntityUid? shooter);
 [Prototype("oxydGunConfig")]
-public class OxydGunConfig : IPrototype
+public partial class OxydGunConfig : IPrototype
 {
     [IdDataField] public string ID { get; private set; } = default!;
 

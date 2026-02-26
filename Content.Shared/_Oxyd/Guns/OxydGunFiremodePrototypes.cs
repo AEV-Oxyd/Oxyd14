@@ -12,7 +12,7 @@ public partial class GunFiremodePrototype : IPrototype
 {
      // TECHNICAL
     [IdDataField]
-    public string ID { get; } = default!;
+    public string ID { get; set; } = default!;
     [ViewVariables]
     public int currentStep = 0;
     [ViewVariables]
