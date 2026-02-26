@@ -43,13 +43,8 @@ public partial class OxydGunConfig : IPrototype
 /// </summary>
 public abstract partial class SharedOxydGunSystem : EntitySystem
 {
-
-    [Dependency] private readonly SharedMapSystem _mapSystem = default!;
     [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly EntityLookupSystem _lookupSystem = default!;
-    [Dependency] private readonly IMapManager _mapManager = default!;
     [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
-    [Dependency] private readonly ILogManager _logManager = default!;
     [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
     [Dependency] protected readonly IGameTiming _gameTiming = default!;
     [Dependency] protected readonly INetManager _netManager = default!;

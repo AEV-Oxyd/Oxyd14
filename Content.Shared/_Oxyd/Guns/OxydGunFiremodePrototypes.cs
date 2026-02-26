@@ -7,12 +7,12 @@ using Robust.Shared.Toolshed.TypeParsers;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
-[Serializable, NetSerializable, Prototype]
-public partial class GunFiremodePrototype : IPrototype
+[Prototype]
+public sealed partial class GunFiremodePrototype : IPrototype
 {
      // TECHNICAL
     [IdDataField]
-    public string ID { get; set; } = default!;
+    public string ID { get; private set; } = default!;
     [ViewVariables]
     public int currentStep = 0;
     [ViewVariables]

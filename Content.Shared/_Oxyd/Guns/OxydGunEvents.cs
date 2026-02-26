@@ -9,7 +9,7 @@ using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
-public class ClientSideInterpretingFiremode : NetMessage
+public sealed class ClientSideInterpretingFiremode : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public NetEntity gun;
@@ -31,7 +31,7 @@ public class ClientSideInterpretingFiremode : NetMessage
     }
 }
 
-public class FiremodeMouseStatus : NetMessage
+public sealed class FiremodeMouseStatus : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public bool held = false;
@@ -53,7 +53,7 @@ public class FiremodeMouseStatus : NetMessage
     }
 }
 
-public class FiremodeClientsideFiredEvent : NetMessage
+public sealed class FiremodeClientsideFiredEvent : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public NetCoordinates aimedPosition;
@@ -80,7 +80,7 @@ public class FiremodeClientsideFiredEvent : NetMessage
         buffer.Write(clientTick);
     }
 }
-public class ClientSideDoneInterpretingFiremode : NetMessage
+public sealed class ClientSideDoneInterpretingFiremode : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public NetEntity gun;
@@ -103,14 +103,14 @@ public class ClientSideDoneInterpretingFiremode : NetMessage
 }
 
 
-public class FiremodeProjectilesFiredEvent : EntityEventArgs
+public sealed class FiremodeProjectilesFiredEvent : EntityEventArgs
 {
     public Entity<OxydGunComponent> gun;
     public required List<Entity<OxydProjectileComponent>> projectiles;
     public EntityUid shooter = EntityUid.Invalid;
 }
 [Serializable, NetSerializable]
-public class FiremodeChangedEvent : EntityEventArgs
+public sealed class FiremodeChangedEvent : EntityEventArgs
 {
     public required NetEntity gun;
     public required NetEntity switcher;
@@ -118,41 +118,41 @@ public class FiremodeChangedEvent : EntityEventArgs
 }
 
 [Serializable, NetSerializable]
-public class GunSafetyChangedEvent : EntityEventArgs
+public sealed class GunSafetyChangedEvent : EntityEventArgs
 {
     public required NetEntity gun;
     public required NetEntity switcher;
     public required bool newState;
 }
 
-public class GunFiredEvent : EntityEventArgs
+public sealed  class GunFiredEvent : EntityEventArgs
 {
     public required List<Entity<OxydProjectileComponent>> projectiles;
 
     public GameTick simTick;
 }
 
-public class GunBeforeFireIndividualProjectileEvent : EntityEventArgs
+public sealed class GunBeforeFireIndividualProjectileEvent : EntityEventArgs
 {
     public required Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
-public class GunAfterFireIndividualProjectileEvent : EntityEventArgs
+public sealed class GunAfterFireIndividualProjectileEvent : EntityEventArgs
 {
     public required Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
 
-public class GunGetInaccuracyEvent : EntityEventArgs
+public sealed class GunGetInaccuracyEvent : EntityEventArgs
 {
     public required Angle baseInaccuracy;
     public required Angle addedInaccuracy;
     public required GameTick simTick;
 }
 [Serializable, NetSerializable]
-public class GunCompareFired : EntityEventArgs
+public sealed class GunCompareFired : EntityEventArgs
 {
     public int firedCount;
     public NetEntity target;

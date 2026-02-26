@@ -10,7 +10,7 @@ namespace Content.Shared._Oxyd.Framework;
 /// or there is no client-side data to deduce it from!
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public partial class ApplyVisualOffsetComponent : Component
+public sealed partial class ApplyVisualOffsetComponent : Component
 {
     [DataField, AutoNetworkedField]
     public Vector2 offset;

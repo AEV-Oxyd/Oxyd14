@@ -18,7 +18,7 @@ using Robust.Shared.Timing;
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 [Serializable, NetSerializable]
-public class OxydProjectileFiredEvent : EntityEventArgs
+public sealed class OxydProjectileFiredEvent : EntityEventArgs
 {
     public NetCoordinates shootingPosition;
     public NetCoordinates targetPosition;

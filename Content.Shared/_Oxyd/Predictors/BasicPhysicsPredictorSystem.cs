@@ -17,10 +17,8 @@ public abstract class BasicPhysicsPredictorSystem : EntitySystem
 {
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly SharedPhysicsSystem _physics = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly RayCastSystem _raycast = default!;
-    [Dependency] private readonly FixtureSystem _fixtures = default!;
 
     private EntityQuery<PhysicsComponent> phys;
     private EntityQuery<TransformComponent> transf;

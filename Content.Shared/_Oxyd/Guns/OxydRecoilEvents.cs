@@ -4,7 +4,7 @@ using Robust.Shared.Timing;
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 [Serializable, NetSerializable]
-public class RecoilChangedEvent : EntityEventArgs
+public sealed class RecoilChangedEvent : EntityEventArgs
 {
     public required float oldRecoil;
     public required float currentRecoil;
@@ -12,7 +12,7 @@ public class RecoilChangedEvent : EntityEventArgs
 }
 
 [Serializable, NetSerializable]
-public class RecoilGetModifiersEvent : CancellableEntityEventArgs
+public sealed class RecoilGetModifiersEvent : CancellableEntityEventArgs
 {
     public float add = 0f;
     public float multiply = 1f;
