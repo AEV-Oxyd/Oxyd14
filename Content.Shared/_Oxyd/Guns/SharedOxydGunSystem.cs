@@ -28,7 +28,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public record struct OxydFireDataWrap(GunFiremodePrototype firemode,Entity<OxydGunComponent> gun, EntityUid? shooter);
 [Prototype("oxydGunConfig")]
-public partial class OxydGunConfig : IPrototype
+public sealed partial class OxydGunConfig : IPrototype
 {
     [IdDataField] public string ID { get; private set; } = default!;
 
@@ -62,6 +62,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     protected const string oxydContents = "storagebase";
 
+    protected const string configProto = "gunConfig";
+
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
 
@@ -69,7 +71,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public ResPath getSafetySprite(bool toggle)
     {
-        var prot = _prototypeManager.Index<OxydGunConfig>("gunConfig");
+        var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
         if (toggle)
             return OxydHelpers.getSpritePath(prot.safetyOn);
         return OxydHelpers.getSpritePath(prot.safetyOff);
