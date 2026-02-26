@@ -46,6 +46,15 @@ public sealed partial class ClientOxydGunSystem
             case GunEffectCheckAmmo e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
+            case GunEffectCheckCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
+            case GunEffectModifyCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
+            case GunEffectResetCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
         }
@@ -97,6 +106,12 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        _netManager.ClientSendMessage(new FiremodeMouseStatus()
+        {
+            clientTick = _gameTiming.CurTick,
+            gun = GetNetEntity(gun.Owner),
+            held = _mouseSys.mousedDown
+        });
         if (shooter is null)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
@@ -109,8 +124,14 @@ public sealed partial class ClientOxydGunSystem
             //Log.Debug("Stopped fullauto");
             return true;
         }
+
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
+        }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         //Log.Debug("Ensured full auto");
         return true;
     }
+
 }

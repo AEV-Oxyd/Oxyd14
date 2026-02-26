@@ -1,3 +1,8 @@
+- type: soundCollection
+  id: oxydFire
+  files:
+  - /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+
 - type: gunFiremode
   id: baseFiremode
   firerate: 10
@@ -15,10 +20,28 @@
   - !type:GunEffectCheckHandheld
   - !type:GunEffectTryFireMouseDirection
 
-- type: soundCollection
-  id: oxydFire
-  files:
-  - /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+- type: gunFiremode
+  id: chargeFiremode
+  firerate: 10
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: modecharge
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  provider: OxydGunAmmoMagazineChamber
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  effects:
+  - !type:GunEffectWait
+    waitPeriod: 0.3125
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectModifyCharge
+    addAmount: 0.2
+  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectResetCharge
 
 - type: gunFiremode
   id: baseBurstFiremode
@@ -64,6 +87,7 @@
     firemodes:
     - baseBurstFiremode
     - baseFiremode
+    - chargeFiremode
   - type: OxydHandheldGun
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:
@@ -86,6 +110,9 @@
   - type: ContainerContainer
   - type: StaticPrice
     price: 500
+  - type: OxydGunChargeup
+    maxCharge: 1.0
+
 
 - type: entity
   name: Oxyd Bullet
@@ -183,7 +210,7 @@
         - BulletImpassable
         friction: 0
   - type: TimedDespawn
-    lifetime: 60
+    lifetime: 10
   - type: OxydProjectileApplyDamage
     damage:
         types:

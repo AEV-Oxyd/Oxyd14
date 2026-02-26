@@ -47,6 +47,8 @@ public abstract class BasicPhysicsPredictorSystem : EntitySystem
             return Vector2.Zero;
         if (!transf.TryComp(target, out var transComp))
             return Vector2.Zero;
+        if (ticks == 0)
+            return _transform.GetWorldPosition(target);
         var futurePos = (float)_timing.TickPeriod.TotalSeconds * ticks * physComp.LinearVelocity;
         if (fixt.TryComp(target, out var fixtComp))
         {
@@ -63,5 +65,10 @@ public abstract class BasicPhysicsPredictorSystem : EntitySystem
             }
         }
         return futurePos + _transform.GetWorldPosition(target);
+    }
+
+    public Vector2 PredictWorldOffset(EntityUid target, int ticks)
+    {
+        return PredictWorldPosition(target, ticks) - _transform.GetWorldPosition(target);
     }
 }

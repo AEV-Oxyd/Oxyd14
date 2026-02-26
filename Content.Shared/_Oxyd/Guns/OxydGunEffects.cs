@@ -24,6 +24,13 @@ public abstract partial class OxydFiringGunEffect : OxydGunEffect
 {
 
 }
+
+public abstract partial class OxydMouseStatusGunEffect : OxydGunEffect
+{
+    public bool mouseHeld = false;
+    public TimeSpan receivedUpdate = TimeSpan.Zero;
+    public TimeSpan validDiff = TimeSpan.FromSeconds(1);
+}
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;
 [DataDefinition]
@@ -67,5 +74,32 @@ public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
     public TimeSpan lastTrigger = TimeSpan.Zero;
 
 }
+
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydGunEffect;
+public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatusGunEffect
+{
+    [DataField]
+    public int stepBack = 0;
+}
+
+[DataDefinition]
+public sealed partial class GunEffectModifyCharge : OxydGunEffect
+{
+    [DataField]
+    public float addAmount = 0;
+}
+
+[DataDefinition]
+public sealed partial class GunEffectResetCharge : OxydGunEffect;
+
+
+[DataDefinition]
+public sealed partial class GunEffectCheckCharge : OxydGunEffect
+{
+    [DataField]
+    public float min = float.NegativeInfinity;
+
+    [DataField]
+    public float max = float.PositiveInfinity;
+}
+
