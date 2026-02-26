@@ -5,3 +5,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Usage", "RA0037", Justification = "Temporarily disabled")]
 [assembly: SuppressMessage("Usage", "RA0038", Justification = "Temporarily disabled")]
 [assembly: SuppressMessage("Usage", "CS0414", Justification = "Temporarily disabled")]
+[assembly: SuppressMessage("Compiler", "CS0162", Justification = "Freedom")]
