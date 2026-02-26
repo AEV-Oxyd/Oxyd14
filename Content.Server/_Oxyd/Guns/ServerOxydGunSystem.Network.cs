@@ -17,7 +17,7 @@ public partial class ServerOxydGunSystem
             return;
         if (ev.clientTick > _gameTiming.CurTick && ev.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
-            queueMessage(ev, (int)(ev.clientTick.Value - _gameTiming.CurTick.Value));
+            queueStatus(ev, (int)(ev.clientTick.Value - _gameTiming.CurTick.Value));
             return;
         }
         var tickDiff = _gameTiming.CurTick.Value - ev.clientTick.Value;
@@ -40,15 +40,13 @@ public partial class ServerOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        if (gunComp.selectedFiremodePrototype.Effects[gunComp.selectedFiremodePrototype.currentStep] is
-            OxydMouseStatusGunEffect effect)
+        foreach (var effect in gunComp.selectedFiremodePrototype.Effects)
         {
-            effect.mouseHeld = args.held;
-            effect.receivedUpdate = _gameTiming.CurTime;
-        }
-        else
-        {
-            Log.Error($"Desync on {gun}, td {tickDiff} !");
+            if (effect is OxydMouseStatusGunEffect cast)
+            {
+                cast.mouseHeld = args.held;
+                cast.receivedUpdate = _gameTiming.CurTime;
+            }
         }
     }
 

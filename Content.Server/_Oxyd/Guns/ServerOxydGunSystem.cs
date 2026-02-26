@@ -94,6 +94,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                 case  FiremodeClientsideFiredEvent ev:
                     DoNetMessage(ev, 0);
                     break;
+                case FiremodeMouseStatus ev:
+                    DoNetMessage(ev, 0);
+                    break;
                 default:
                     Log.Error($"Unimplemented doMessageTick in ServerOxydGunSystem for {thing}");
                     break;
