@@ -55,6 +55,7 @@ namespace Content.Shared.Friction
         {
             base.UpdateBeforeSolve(prediction, frameTime);
             return;
+            /*
             foreach (var ent in PhysicsSystem.AwakeBodies)
             {
                 var uid = ent.Owner;
@@ -119,7 +120,9 @@ namespace Content.Shared.Friction
                 _mover.Friction(0f, frameTime, friction, ref angVelocity);
                 PhysicsSystem.SetLinearVelocity(uid, velocity, body: body);
                 PhysicsSystem.SetAngularVelocity(uid, angVelocity, body: body);
+
             }
+            */
         }
 
         [Pure]
