@@ -21,8 +21,6 @@ namespace Content.Shared.Friction
     {
         [Dependency] private readonly IConfigurationManager _configManager = default!;
         [Dependency] private readonly ITileDefinitionManager _tileDefinitionManager = default!;
-        [Dependency] private readonly SharedGravitySystem _gravity = default!;
-        [Dependency] private readonly SharedMoverController _mover = default!;
         [Dependency] private readonly SharedMapSystem _map = default!;
 
         private EntityQuery<TileFrictionModifierComponent> _frictionQuery;
