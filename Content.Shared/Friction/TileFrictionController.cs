@@ -14,7 +14,6 @@ using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Controllers;
 using Robust.Shared.Physics.Dynamics;
 using Robust.Shared.Physics.Systems;
-using Robust.Shared.Timing;
 
 namespace Content.Shared.Friction
 {
@@ -25,7 +24,6 @@ namespace Content.Shared.Friction
         [Dependency] private readonly SharedGravitySystem _gravity = default!;
         [Dependency] private readonly SharedMoverController _mover = default!;
         [Dependency] private readonly SharedMapSystem _map = default!;
-        [Dependency] private readonly IGameTiming _timing = default!;
 
         private EntityQuery<TileFrictionModifierComponent> _frictionQuery;
         private EntityQuery<TransformComponent> _xformQuery;
@@ -56,7 +54,7 @@ namespace Content.Shared.Friction
         public override void UpdateBeforeSolve(bool prediction, float frameTime)
         {
             base.UpdateBeforeSolve(prediction, frameTime);
-            return;
+
             foreach (var ent in PhysicsSystem.AwakeBodies)
             {
                 var uid = ent.Owner;
