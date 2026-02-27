@@ -13,7 +13,6 @@ namespace Content.Client._Oxyd.Framework;
 public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
     private EntityQuery<ClientsidePleaseIgnoreComponent> ignore;
     /// <inheritdoc/>
     public override void Initialize()

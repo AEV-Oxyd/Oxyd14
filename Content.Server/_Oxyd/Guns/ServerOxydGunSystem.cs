@@ -30,15 +30,11 @@ namespace Content.Server._Oxyd.Guns;
 ///
 public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 {
-    [Dependency] private readonly PlayerRateLimitManager _playerRateLimitManager = default!;
-    [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
-    [Dependency] private readonly IServerNetManager _serverNetManager = default!;
+
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-    [Dependency] private readonly HandsSystem _serverHands = default!;
     [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
-    [Dependency] private readonly IConfigurationManager _config = default!;
 
 
     // Acceptable timing inconsistencies during auto firing.

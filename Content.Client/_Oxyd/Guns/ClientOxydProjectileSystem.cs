@@ -22,12 +22,8 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// </summary>
 public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
 {
-    [Dependency] private readonly AnimationPlayerSystem _player = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
     [Dependency] private readonly FixClientsidePhysicsSystem _patcher = default!;
-    [Dependency] private readonly SpriteSystem _sprites = default!;
     [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
 
     public override bool shouldTriggerCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)

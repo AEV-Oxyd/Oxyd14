@@ -56,8 +56,6 @@ public sealed partial class ServerOxydGunSystem
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
         }
-
-        return true;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,

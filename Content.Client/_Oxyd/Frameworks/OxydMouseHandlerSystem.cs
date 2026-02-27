@@ -65,10 +65,8 @@ public class MouseCrossEvent : EntityEventArgs
 public sealed class OxydMouseHandlingSystem : EntitySystem
 {
     [Dependency] private readonly HandsSystem _handsSystem = default!;
-    [Dependency] private readonly InputSystem _inputSystem = default!;
     [Dependency] private readonly IInputManager _inputManager = default!;
     [Dependency] private readonly IEyeManager _eyeManager = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly TransformSystem _transformSystem = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly IStateManager _stateManager = default!;
