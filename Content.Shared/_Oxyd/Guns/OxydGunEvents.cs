@@ -106,7 +106,7 @@ public sealed class ClientSideDoneInterpretingFiremode : NetMessage
 public sealed class FiremodeProjectilesFiredEvent : EntityEventArgs
 {
     public Entity<OxydGunComponent> gun;
-    public required List<Entity<OxydProjectileComponent>> projectiles;
+    public required HashSet<Entity<OxydProjectileComponent>> projectiles;
     public EntityUid shooter = EntityUid.Invalid;
 }
 [Serializable, NetSerializable]
@@ -127,7 +127,7 @@ public sealed class GunSafetyChangedEvent : EntityEventArgs
 
 public sealed  class GunFiredEvent : EntityEventArgs
 {
-    public required List<Entity<OxydProjectileComponent>> projectiles;
+    public required HashSet<Entity<OxydProjectileComponent>> projectiles;
 
     public GameTick simTick;
 }

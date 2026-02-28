@@ -85,6 +85,7 @@ public sealed partial class ClientOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
+        _charge.applyMultiplier(returnedList, _charge.getMultiplier(gun.Owner));
         //Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
         _netManager.ClientSendMessage(new FiremodeClientsideFiredEvent()
         {
@@ -98,6 +99,7 @@ public sealed partial class ClientOxydGunSystem
         return true;
 
     }
+
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
         GunEffectRepeatNextTickIfMouseHeld effect,

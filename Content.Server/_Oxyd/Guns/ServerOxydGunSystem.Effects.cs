@@ -109,7 +109,8 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
         Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
-        stateComp.executedFiringSteps.Add(firemodePrototype.currentStep);
+        stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, _charge.getMultiplier((gun.Owner, null)));
         return true;
     }
+
 }

@@ -170,7 +170,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
     }
 
-    public override List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!_gameTiming.IsFirstTimePredicted)

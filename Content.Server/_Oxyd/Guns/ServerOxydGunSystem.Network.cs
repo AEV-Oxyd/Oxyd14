@@ -250,11 +250,13 @@ public partial class ServerOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        if (!handler.executedFiringSteps.Contains(args.firemodeStep))
+        if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
         {
             Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
             return;
         }
+
+        var damageMult = handler.executedFiringSteps[args.firemodeStep];
         handler.executedFiringSteps.Remove(args.firemodeStep);
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         // Let  very small inconsistencies slide in , don't want state desyncs!
@@ -276,6 +278,7 @@ public partial class ServerOxydGunSystem
 
         if (!_playerManager.TryGetSessionByEntity(handler.shooterEntity, out var session))
             return;
+        _charge.applyMultiplier(projectiles, damageMult);
         foreach (var bullet in projectiles)
         {
             var pvsBlk = EnsureComp<ClientsidePleaseIgnoreComponent>(bullet.Owner);

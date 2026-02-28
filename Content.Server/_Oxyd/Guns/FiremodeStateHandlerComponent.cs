@@ -16,5 +16,5 @@ public sealed partial class FiremodeStateHandlerComponent : Component
     public EntityUid shooterEntity;
     //  opreste cheaterii din a trage de mai multe ori
     [ViewVariables]
-    public HashSet<int> executedFiringSteps = new();
+    public Dictionary<int, float> executedFiringSteps = new();
 }

@@ -181,15 +181,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectResetCharge effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (!TryComp<OxydGunChargeupComponent>(gun.Owner, out var ccomp))
-            return true;
-        ccomp.charge = 0;
-        ccomp.lastCharge = TimeSpan.Zero;
-        RemComp<ActiveOxydGunChargeupComponent>(gun.Owner);
-        return true;
-    }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckCharge effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
@@ -199,6 +190,16 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return true;
         ResetFiremode(firemodePrototype, gun, shooter);
         return false;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectResetCharge effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (!TryComp<OxydGunChargeupComponent>(gun.Owner, out var ccomp))
+            return true;
+        ccomp.charge = 0;
+        ccomp.lastCharge = TimeSpan.Zero;
+        RemComp<ActiveOxydGunChargeupComponent>(gun.Owner);
+        return true;
     }
 
 

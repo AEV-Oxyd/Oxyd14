@@ -53,6 +53,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
     [Dependency] private readonly IComponentFactory _factory = default!;
     [Dependency] protected readonly SharedAudioSystem _audio = default!;
+    [Dependency] protected readonly GunChargeDecaySystem _charge = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -250,16 +251,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         EntityUid projectile = Spawn(bulletComp.projectileEntity.ToString(), MapCoordinates.Nullspace);
         endChambering(gun);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
-        if (TryComp<OxydGunChargeupComponent>(gun, out var chargeComp))
-        {
-            if (TryComp<OxydProjectileApplyDamageComponent>(projectile, out var damageComp))
-            {
-                var mult = 1+ ((chargeComp.charge + 0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
-                Log.Debug($"Gun applied mult of {mult}");
-                damageComp.DamageSpecifier *= mult;
-            }
-
-        }
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;
         projectileComp.initialMovement = new Vector2(bulletComp.Speed * firemode.SpeedMultiplier, bulletComp.Speed * firemode.SpeedMultiplier);
@@ -294,7 +285,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
-    public List<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
+    public HashSet<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
         Entity<OxydGunComponent> gun,
         MapCoordinates shootingFrom,
         MapCoordinates targetPos)
@@ -314,7 +305,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             gun.Comp.firingTime += (_gameTiming.TickPeriod - gunFiremodePrototype.fireDelay);
         }
-        List<Entity<OxydProjectileComponent>> projectiles = new();
+        HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
         while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
@@ -445,7 +436,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public virtual List<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+    public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (gun.Comp.safety)

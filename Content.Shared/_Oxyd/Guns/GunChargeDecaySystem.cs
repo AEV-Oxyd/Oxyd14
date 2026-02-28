@@ -8,6 +8,31 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 public sealed class GunChargeDecaySystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _time = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+    }
+
+    public float getMultiplier(Entity<OxydGunChargeupComponent?> target)
+    {
+        var (uid, chargeComp) = target;
+        if (!Resolve(uid, ref chargeComp))
+            return 1f;
+        return 1f + (float)((chargeComp.charge + 0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
+
+    }
+
+    public void applyMultiplier(HashSet<Entity<OxydProjectileComponent>> projectiles, float multiplier)
+    {
+        foreach (var proj in projectiles)
+        {
+            if (!TryComp<OxydProjectileApplyDamageComponent>(proj.Owner, out var damageComp))
+                continue;
+            damageComp.DamageSpecifier *= multiplier;
+        }
+    }
+
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
