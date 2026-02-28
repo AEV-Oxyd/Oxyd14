@@ -80,6 +80,9 @@ public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatus
 {
     [DataField]
     public int stepBack = 0;
+
+    [DataField]
+    public GameTick skipTick = GameTick.Zero;
 }
 
 [DataDefinition]

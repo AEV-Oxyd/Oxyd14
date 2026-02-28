@@ -15,7 +15,7 @@ public partial class ServerOxydGunSystem
             return;
         if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
-        if (ev.clientTick > _gameTiming.CurTick && ev.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        if (ev.clientTick >= _gameTiming.CurTick && ev.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
             queueStatus(ev, (int)(ev.clientTick.Value - _gameTiming.CurTick.Value));
             return;
@@ -30,7 +30,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(FiremodeMouseStatus args, uint tickDiff)
     {
-        Log.Error($"Handling mouse status change!");
+        Log.Error($"Handling mouse status change at {_gameTiming.RealTime}, td {tickDiff}!");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -47,6 +47,11 @@ public partial class ServerOxydGunSystem
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
             }
+        }
+        // handle immediate ticking
+        if (tickDiff > 0)
+        {
+            TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
     }
 
@@ -111,7 +116,7 @@ public partial class ServerOxydGunSystem
             return;
         if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
             return;
-        if (args.clientTick > _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
+        if (args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
             queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
             return;
@@ -127,7 +132,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(ClientSideInterpretingFiremode args, uint tickDiff)
     {
-        Log.Error($"Interpreting Client-Firemode at {_gameTiming.RealTime}");
+        Log.Error($"Interpreting Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
@@ -156,7 +161,6 @@ public partial class ServerOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
-        Log.Error($"Ending Client-Firemode at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -182,6 +186,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(ClientSideDoneInterpretingFiremode args, uint tickDiff)
     {
+        Log.Error($"Ending Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -208,7 +213,6 @@ public partial class ServerOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
-        Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -236,6 +240,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(FiremodeClientsideFiredEvent args, uint tickDiff)
     {
+        Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;

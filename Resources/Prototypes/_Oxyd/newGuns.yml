@@ -40,6 +40,8 @@
   - !type:GunEffectModifyCharge
     addAmount: 0.2
   - !type:GunEffectRepeatNextTickIfMouseHeld
+    stepBack: 6
+    validDiff: 0.2
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectResetCharge
 

@@ -90,9 +90,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                 case  FiremodeClientsideFiredEvent ev:
                     DoNetMessage(ev, 0);
                     break;
-                case FiremodeMouseStatus ev:
-                    DoNetMessage(ev, 0);
-                    break;
                 default:
                     Log.Error($"Unimplemented doMessageTick in ServerOxydGunSystem for {thing}");
                     break;
@@ -192,6 +189,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
+            Log.Error($"Handling active firemode cycle at {_gameTiming.RealTime}!");
             TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
