@@ -27,7 +27,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
         base.Initialize();
     }
 
-    public void SimulateExtraPhysicsTicks(List<Entity<OxydProjectileComponent>> entities, int ticksToSim)
+    public void SimulateExtraPhysicsTicks(HashSet<Entity<OxydProjectileComponent>> entities, int ticksToSim)
     {
         if (ticksToSim == 0)
             return;

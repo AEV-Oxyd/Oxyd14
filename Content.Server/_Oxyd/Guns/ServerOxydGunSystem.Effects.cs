@@ -109,7 +109,12 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
         Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
-        stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, _charge.getMultiplier((gun.Owner, null)));
+        // this is clear sign of missing fire from client, mby in future move some of lag compensation
+        // here ? SPCR 2026
+        if (stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
+            stateComp.executedFiringSteps[firemodePrototype.currentStep] = _charge.getMultiplier(gun.Owner);
+        else
+            stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, _charge.getMultiplier((gun.Owner, null)));
         return true;
     }
 
