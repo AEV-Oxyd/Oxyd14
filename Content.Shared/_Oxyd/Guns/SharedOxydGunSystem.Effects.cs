@@ -69,7 +69,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (_netManager.IsServer)
+        if (_netManager.IsServer && effect.waitPeriod > _gameTiming.TickPeriod)
         {
             // end time steps 1 tick earlier to stop timing incosistencies
             // overall firing time analysis in TryFireGun will stop people exploiting this anyway

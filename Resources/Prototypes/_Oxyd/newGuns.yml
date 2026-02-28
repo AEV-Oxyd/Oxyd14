@@ -47,7 +47,7 @@
 
 - type: gunFiremode
   id: baseBurstFiremode
-  firerate: 30
+  firerate: 60
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: burst
@@ -61,13 +61,13 @@
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectWait
-    waitPeriod: 0.1
+    waitPeriod: 0.20
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTick
     repeatCount: 2
     stepBack: 5
-    triggerTimeout: 0.2
+    triggerTimeout: 0.3
   - !type:GunEffectRepeatNextTickIfMouseHeld
 
 - type: entity

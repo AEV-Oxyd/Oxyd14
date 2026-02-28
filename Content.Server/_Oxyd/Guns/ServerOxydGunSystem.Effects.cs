@@ -10,6 +10,7 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -79,16 +80,24 @@ public sealed partial class ServerOxydGunSystem
         if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
         {
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
+            effect.missedTicks++;
+            if(effect.missedTicks > effect.maxMissed)
+                ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
         effect.receivedUpdate = TimeSpan.Zero;
+        effect.missedTicks = 0;
         if (!effect.mouseHeld)
         {
             RemoveActiveUpdating(firemodePrototype, gun, shooter);
             return true;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        firemodePrototype.currentStep -= effect.stepBack;
+        if(effect.stepBack != 0)
+            firemodePrototype.currentStep -= effect.stepBack;
+        //  let client handle full firemode cycles instead.
+        else if(firemodePrototype.maxSteps == firemodePrototype.currentStep)
+            RemoveActiveUpdating(firemodePrototype, gun, shooter);
         return true;
     }
 

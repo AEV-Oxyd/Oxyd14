@@ -13,6 +13,7 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}");
         //Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)
         {
@@ -82,6 +83,7 @@ public sealed partial class ClientOxydGunSystem
         var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
         if (returnedList is null)
         {
+            Log.Debug($"Fail la fire mouse direction");
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }

@@ -78,7 +78,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(delayedMessages[currentMessagesIndex].TryDequeue(out var thing))
         {
-            //Log.Debug($"Message dequeued {thing} at {_gameTiming.RealTime}");
             switch (thing)
             {
                 case ClientSideInterpretingFiremode ev:
@@ -104,7 +103,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(immediateStatus[currentImmediateIndex].TryDequeue(out var thing))
         {
-            //Log.Debug($"Message dequeued {thing} at {_gameTiming.RealTime}");
+            Log.Debug($"Dequeqed {thing} at {_gameTiming.CurTime}");
             switch (thing)
             {
                 case FiremodeMouseStatus ev:
