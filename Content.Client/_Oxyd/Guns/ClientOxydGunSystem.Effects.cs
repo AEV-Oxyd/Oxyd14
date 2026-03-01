@@ -7,6 +7,20 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 public sealed partial class ClientOxydGunSystem
 {
     [Dependency] private readonly OxydMouseHandlingSystem _mouseSys = default!;
+
+    public void BroadcastMouseStatus(Entity<OxydGunComponent> gun)
+    {
+        // dont spam to overwhelm.
+        if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
+            return;
+        _netManager.ClientSendMessage(new FiremodeMouseStatus()
+        {
+            clientTick = _gameTiming.CurTick,
+            gun = GetNetEntity(gun.Owner),
+            held = _mouseSys.mousedDown
+        });
+        lastBroadcast = _gameTiming.RealTime;
+    }
     public override bool InterpretStep(
         GunFiremodePrototype firemodePrototype,
         OxydGunEffect effect,
@@ -113,14 +127,8 @@ public sealed partial class ClientOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-
-        _netManager.ClientSendMessage(new FiremodeMouseStatus()
-        {
-            clientTick = _gameTiming.CurTick,
-            gun = GetNetEntity(gun.Owner),
-            held = _mouseSys.mousedDown
-        });
-
+        // this sometimes doesnt arrive in time which necessitates waits also implementing broadcast
+        BroadcastMouseStatus(gun);
         if (!_mouseSys.mousedDown)
         {
             RemoveActiveUpdating(firemodePrototype, gun, shooter);
@@ -129,6 +137,38 @@ public sealed partial class ClientOxydGunSystem
 
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         firemodePrototype.currentStep -= effect.stepBack;
+        return true;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (gun.Comp.safety)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+        if (effect.skipTick == _gameTiming.CurTick)
+        {
+            return true;
+        }
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
+        effect.alreadyWaited += _gameTiming.TickPeriod;
+        if (effect.alreadyWaited < effect.waitPeriod)
+        {
+            // early broadcast to ensure arrival for the full tick.
+            if(effect.waitPeriod - effect.alreadyWaited < _gameTiming.TickPeriod*10)
+                BroadcastMouseStatus(gun);
+
+            return false;
+        }
+
+        effect.alreadyWaited = TimeSpan.Zero;
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
+            effect.skipTick = _gameTiming.CurTick;
+        }
         return true;
     }
 

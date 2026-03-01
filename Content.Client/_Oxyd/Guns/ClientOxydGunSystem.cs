@@ -27,6 +27,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly SpriteSystem _spriteSystem = default!;
 
+    private TimeSpan lastBroadcast = TimeSpan.Zero;
+
     /// <inheritdoc/>
     public override void Initialize()
     {

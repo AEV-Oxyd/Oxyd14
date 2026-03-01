@@ -127,4 +127,37 @@ public sealed partial class ServerOxydGunSystem
         return true;
     }
 
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (gun.Comp.safety)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+        if (effect.skipTick == _gameTiming.CurTick)
+        {
+            return true;
+        }
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
+        effect.alreadyWaited += _gameTiming.TickPeriod;
+        if (effect.waitPeriod > _gameTiming.TickPeriod)
+        {
+            // end time steps 1 tick earlier to stop timing incosistencies
+            // overall firing time analysis in TryFireGun will stop people exploiting this anyway
+            // SPCR 2026
+            if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
+                return false;
+        }
+        else if(effect.alreadyWaited < effect.waitPeriod)
+            return false;
+        effect.alreadyWaited = TimeSpan.Zero;
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
+            effect.skipTick = _gameTiming.CurTick;
+        }
+        return true;
+    }
+
 }

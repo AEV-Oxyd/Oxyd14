@@ -48,11 +48,13 @@ public partial class ServerOxydGunSystem
                 cast.receivedUpdate = _gameTiming.CurTime;
             }
         }
+        /*
         // handle immediate ticking
         if (tickDiff > 0)
         {
             TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
+        */
     }
 
     public void OnClientFiremodeChange(FiremodeChangedEvent ev, EntitySessionEventArgs arg)
