@@ -1,6 +1,7 @@
 using Content.Client._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Shared.Map;
+using Lidgren.Network;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
 
@@ -11,9 +12,10 @@ public sealed partial class ClientOxydGunSystem
     public void BroadcastMouseStatus(Entity<OxydGunComponent> gun)
     {
         // dont spam to overwhelm.
-        if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
-            return;
-        _netManager.ClientSendMessage(new FiremodeMouseStatus()
+        //if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
+        //    return;
+        Log.Error($"Sending mouse data at {_gameTiming.RealTime}");
+        RaiseNetworkEvent(new FiremodeMouseStatus()
         {
             clientTick = _gameTiming.CurTick,
             gun = GetNetEntity(gun.Owner),
@@ -155,9 +157,11 @@ public sealed partial class ClientOxydGunSystem
         effect.alreadyWaited += _gameTiming.TickPeriod;
         if (effect.alreadyWaited < effect.waitPeriod)
         {
-            // early broadcast to ensure arrival for the full tick.
-            if(effect.waitPeriod - effect.alreadyWaited < _gameTiming.TickPeriod*10)
+            if (effect.lastNetwork < _gameTiming.RealTime)
+            {
+                effect.lastNetwork = _gameTiming.RealTime + _gameTiming.TickPeriod * 2;
                 BroadcastMouseStatus(gun);
+            }
 
             return false;
         }

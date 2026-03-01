@@ -54,6 +54,9 @@ public sealed partial class GunEffectWait : OxydGunEffect
     public TimeSpan alreadyWaited = TimeSpan.Zero;
     [ViewVariables]
     public GameTick skipTick = GameTick.Zero;
+
+    [ViewVariables]
+    public TimeSpan lastNetwork = TimeSpan.Zero;
 }
 [DataDefinition]
 public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;

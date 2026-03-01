@@ -5,9 +5,10 @@ namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
-    public void OnClientMouseInform(FiremodeMouseStatus ev)
+    public void OnClientMouseInform(FiremodeMouseStatus ev, EntitySessionEventArgs arg)
     {
-        var player = _playerManager.GetSessionByChannel(ev.MsgChannel);
+        Log.Error($"Received mouse network at {_gameTiming.RealTime}");
+        var player = arg.SenderSession;
         if (player.AttachedEntity is null)
             return;
         EntityUid gun = GetEntity(ev.gun);

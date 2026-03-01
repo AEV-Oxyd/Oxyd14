@@ -41,7 +41,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
-        _netManager.RegisterNetMessage<FiremodeMouseStatus>();
     }
 
     public void onCompare(GunCompareFired args)

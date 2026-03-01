@@ -8,7 +8,6 @@ using Robust.Shared.Utility;
 
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
-
 public sealed class ClientSideInterpretingFiremode : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
@@ -30,27 +29,13 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
         buffer.Write(clientTick);
     }
 }
-
-public sealed class FiremodeMouseStatus : NetMessage
+[Serializable, NetSerializable]
+public sealed class FiremodeMouseStatus : EntityEventArgs
 {
-    public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public bool held = false;
     public NetEntity gun;
     public GameTick clientTick;
 
-    public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
-    {
-        held = buffer.ReadBoolean();
-        gun = buffer.ReadNetEntity();
-        clientTick = buffer.ReadGameTick();
-    }
-
-    public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
-    {
-        buffer.Write(held);
-        buffer.Write(gun);
-        buffer.Write(clientTick);
-    }
 }
 
 public sealed class FiremodeClientsideFiredEvent : NetMessage
