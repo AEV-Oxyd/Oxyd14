@@ -109,6 +109,7 @@ public partial class ServerOxydGunSystem
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
+        Log.Error($"Receiving client interpret at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -159,11 +160,13 @@ public partial class ServerOxydGunSystem
         c.shooterEntity = shooter;
         c.shooterNetworkId = args.MsgChannel.UserId;
         c.executedFiringSteps.Clear();
+        c.catchupNeeded = (int)tickDiff;
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
+        Log.Error($"Receiving end interpret at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -207,6 +210,7 @@ public partial class ServerOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
             return;
         }
+        ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
 
@@ -216,6 +220,7 @@ public partial class ServerOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
+        Log.Error($"Receiving fire gun at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;

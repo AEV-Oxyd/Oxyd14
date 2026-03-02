@@ -93,12 +93,8 @@ public sealed partial class ServerOxydGunSystem
             return true;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        if(effect.stepBack != 0)
-            firemodePrototype.currentStep -= effect.stepBack;
-        //  let client handle full firemode cycles instead.
-        else if(firemodePrototype.maxSteps == firemodePrototype.currentStep)
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
-        return true;
+        firemodePrototype.currentStep -= effect.stepBack;
+        return false;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
@@ -134,22 +130,32 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
+        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
         if (effect.skipTick == _gameTiming.CurTick)
         {
             return true;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (effect.waitPeriod > _gameTiming.TickPeriod)
+        // end 1 tick earlier to ensure prediction doesnt miss due to networking
+        if (stateComp.ticksFoward < 3 || stateComp.catchupNeeded > 0)
         {
-            // end time steps 1 tick earlier to stop timing incosistencies
-            // overall firing time analysis in TryFireGun will stop people exploiting this anyway
-            // SPCR 2026
             if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
+            {
+                if(stateComp.catchupNeeded > 0)
+                    stateComp.catchupNeeded--;
+                else
+                    stateComp.ticksFoward++;
                 return false;
+            }
         }
         else if(effect.alreadyWaited < effect.waitPeriod)
             return false;
+
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)

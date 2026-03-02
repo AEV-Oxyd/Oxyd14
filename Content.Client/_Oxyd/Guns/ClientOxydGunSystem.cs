@@ -162,6 +162,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
         if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter) && !gun.Comp.selectedFiremodePrototype.Active)
         {
+            Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
             _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),

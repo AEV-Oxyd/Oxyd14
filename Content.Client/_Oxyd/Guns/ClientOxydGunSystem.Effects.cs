@@ -139,7 +139,7 @@ public sealed partial class ClientOxydGunSystem
 
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         firemodePrototype.currentStep -= effect.stepBack;
-        return true;
+        return false;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
@@ -153,8 +153,12 @@ public sealed partial class ClientOxydGunSystem
         {
             return true;
         }
+
+        if (effect.lastRealProcess == TimeSpan.Zero)
+            effect.lastRealProcess = _gameTiming.CurTime - _gameTiming.TickPeriod;
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        effect.alreadyWaited += _gameTiming.TickPeriod;
+        Log.Debug($"Clientside waited and added time {_gameTiming.CurTime - effect.lastRealProcess}");
+        effect.alreadyWaited += _gameTiming.CurTime - effect.lastRealProcess;
         if (effect.alreadyWaited < effect.waitPeriod)
         {
             if (effect.lastNetwork < _gameTiming.RealTime)
@@ -163,9 +167,11 @@ public sealed partial class ClientOxydGunSystem
                 BroadcastMouseStatus(gun);
             }
 
+            effect.lastRealProcess = _gameTiming.CurTime;
             return false;
         }
 
+        effect.lastRealProcess = TimeSpan.Zero;
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)

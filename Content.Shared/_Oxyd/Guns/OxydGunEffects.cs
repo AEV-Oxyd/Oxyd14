@@ -54,9 +54,11 @@ public sealed partial class GunEffectWait : OxydGunEffect
     public TimeSpan alreadyWaited = TimeSpan.Zero;
     [ViewVariables]
     public GameTick skipTick = GameTick.Zero;
-
     [ViewVariables]
     public TimeSpan lastNetwork = TimeSpan.Zero;
+    // CLIENT can and will skip ticks. we need to do this to ensure accurate timing
+    [ViewVariables]
+    public TimeSpan lastRealProcess = TimeSpan.Zero;
 }
 [DataDefinition]
 public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;

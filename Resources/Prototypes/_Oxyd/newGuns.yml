@@ -61,7 +61,7 @@
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectWait
-    waitPeriod: 0.20
+    waitPeriod: 0.1
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTick
@@ -69,6 +69,7 @@
     stepBack: 5
     triggerTimeout: 0.3
   - !type:GunEffectRepeatNextTickIfMouseHeld
+    stepBack: 6
 
 - type: entity
   name: Oxyd Gun
