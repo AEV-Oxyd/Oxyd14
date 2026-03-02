@@ -155,7 +155,10 @@ public sealed partial class ClientOxydGunSystem
         }
 
         if (effect.lastRealProcess == TimeSpan.Zero)
-            effect.lastRealProcess = _gameTiming.CurTime - _gameTiming.TickPeriod;
+        {
+            effect.lastRealProcess = firemo
+        }
+
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         Log.Debug($"Clientside waited and added time {_gameTiming.CurTime - effect.lastRealProcess}");
         effect.alreadyWaited += _gameTiming.CurTime - effect.lastRealProcess;
