@@ -213,6 +213,8 @@ public partial class ServerOxydGunSystem
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
+        handler.catchupNeeded = 0;
+        handler.ticksFoward = 0;
 
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
@@ -264,7 +266,12 @@ public partial class ServerOxydGunSystem
             return;
         }
 
-        var damageMult = handler.executedFiringSteps[args.firemodeStep];
+        if (!handler.executedFiringSteps[args.firemodeStep].TryDequeue(out var damageMult))
+        {
+            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            return;
+        }
+
         handler.executedFiringSteps.Remove(args.firemodeStep);
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         // Let  very small inconsistencies slide in , don't want state desyncs!

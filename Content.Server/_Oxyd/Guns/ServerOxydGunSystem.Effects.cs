@@ -116,10 +116,9 @@ public sealed partial class ServerOxydGunSystem
         Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
         // this is clear sign of missing fire from client, mby in future move some of lag compensation
         // here ? SPCR 2026
-        if (stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
-            stateComp.executedFiringSteps[firemodePrototype.currentStep] = _charge.getMultiplier(gun.Owner);
-        else
-            stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, _charge.getMultiplier((gun.Owner, null)));
+        if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
+            stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
+        stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
         return true;
     }
 
@@ -141,20 +140,28 @@ public sealed partial class ServerOxydGunSystem
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         effect.alreadyWaited += _gameTiming.TickPeriod;
-        // end 1 tick earlier to ensure prediction doesnt miss due to networking
-        if (stateComp.ticksFoward < 3 || stateComp.catchupNeeded > 0)
+        if (stateComp.catchupNeeded > 0)
         {
-            if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
-            {
-                if(stateComp.catchupNeeded > 0)
-                    stateComp.catchupNeeded--;
-                else
-                    stateComp.ticksFoward++;
-                return false;
-            }
+            var maxCatch = Math.Min((int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod), stateComp.catchupNeeded);
+            Log.Error($"Catched up {maxCatch} ticks, total behind {stateComp.catchupNeeded}");
+            stateComp.catchupNeeded -= maxCatch;
+            effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
         }
-        else if(effect.alreadyWaited < effect.waitPeriod)
-            return false;
+        // end 1 tick earlier to ensure prediction doesnt miss due to networking
+        if (effect.alreadyWaited < effect.waitPeriod)
+        {
+            if (stateComp.ticksFoward < 3)
+            {
+                if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
+                {
+                    return false;
+                }
+                stateComp.ticksFoward++;
+            }
+            else if (effect.alreadyWaited < effect.waitPeriod)
+                return false;
+        }
+
 
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);

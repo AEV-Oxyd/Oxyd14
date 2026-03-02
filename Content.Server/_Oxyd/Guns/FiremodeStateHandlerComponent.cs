@@ -16,7 +16,7 @@ public sealed partial class FiremodeStateHandlerComponent : Component
     public EntityUid shooterEntity;
     //  opreste cheaterii din a trage de mai multe ori
     [ViewVariables]
-    public Dictionary<int, float> executedFiringSteps = new();
+    public Dictionary<int, Queue<float>> executedFiringSteps = new();
     // total ticks ahead of client due to Wait early ending!
     [ViewVariables]
     public int ticksFoward = 0;

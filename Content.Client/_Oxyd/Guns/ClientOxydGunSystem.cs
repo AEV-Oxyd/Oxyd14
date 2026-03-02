@@ -145,28 +145,34 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
     {
-        if (gun.Comp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime)
+        var firemode = gun.Comp.selectedFiremodePrototype;
+        if (firemode.nextFire > _gameTiming.CurTime)
             return;
 
+
         gun.Comp.simulateAsTick = _gameTiming.CurTick;
-        if (!gun.Comp.selectedFiremodePrototype.Active)
+        if (!firemode.Active)
         {
             Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
-                clientsideStartingStep = gun.Comp.selectedFiremodePrototype.currentStep,
+                clientsideStartingStep = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
         }
+        else
+        {
+            firemode.ticksBehind += (int)(_gameTiming.CurTick.Value - firemode.lastInterpreted.Value) - 1;
+        }
 
-        if (TryExecuteFiremodeCycle(gun.Comp.selectedFiremodePrototype, gun, shooter) && !gun.Comp.selectedFiremodePrototype.Active)
+        if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
         {
             Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
             _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
-                stoppedAt = gun.Comp.selectedFiremodePrototype.currentStep,
+                stoppedAt = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
         }

@@ -493,10 +493,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (firemodePrototype.nextFire > _gameTiming.CurTime)
             return false;
-        if (firemodePrototype.lastInterpret == _gameTiming.CurTick)
+        if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
             return false;
         firemodePrototype.Active = true;
-        firemodePrototype.lastInterpret = _gameTiming.CurTick;
+        firemodePrototype.lastInterpreted = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
         {
             //Log.Debug($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}, time is {_gameTiming.CurTime}");

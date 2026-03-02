@@ -154,14 +154,16 @@ public sealed partial class ClientOxydGunSystem
             return true;
         }
 
-        if (effect.lastRealProcess == TimeSpan.Zero)
-        {
-            effect.lastRealProcess = firemo
-        }
-
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        Log.Debug($"Clientside waited and added time {_gameTiming.CurTime - effect.lastRealProcess}");
-        effect.alreadyWaited += _gameTiming.CurTime - effect.lastRealProcess;
+        effect.alreadyWaited += _gameTiming.TickPeriod;
+        if (firemodePrototype.ticksBehind > 0)
+        {
+            var maxCatch = (int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod);
+            maxCatch = Math.Min(maxCatch, firemodePrototype.ticksBehind);
+            effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
+            Log.Debug($"Clientside waited and had behind {firemodePrototype.ticksBehind}, compensated {maxCatch}");
+            firemodePrototype.ticksBehind -= maxCatch;
+        }
         if (effect.alreadyWaited < effect.waitPeriod)
         {
             if (effect.lastNetwork < _gameTiming.RealTime)
@@ -169,12 +171,8 @@ public sealed partial class ClientOxydGunSystem
                 effect.lastNetwork = _gameTiming.RealTime + _gameTiming.TickPeriod * 2;
                 BroadcastMouseStatus(gun);
             }
-
-            effect.lastRealProcess = _gameTiming.CurTime;
             return false;
         }
-
-        effect.lastRealProcess = TimeSpan.Zero;
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)

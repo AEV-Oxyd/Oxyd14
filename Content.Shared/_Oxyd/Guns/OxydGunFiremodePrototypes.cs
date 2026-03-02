@@ -23,6 +23,9 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // last interpret tick. To not run it multiuple times in the same.
     [ViewVariables]
     public GameTick lastInterpreted = GameTick.Zero;
+    // client-side variable, since ticks can be skipped
+    [ViewVariables]
+    public int ticksBehind = 0;
     [ViewVariables]
     public OxydGunProvidersComponent AmmoProviders = default!;
     // which ammo provider index we pull from(used to set the AmmoProvidersat init)
@@ -53,8 +56,6 @@ public sealed partial class GunFiremodePrototype : IPrototype
     [ViewVariables, NonSerialized]
     public GameTick lastFiredTick = default;
 
-    [ViewVariables, NonSerialized]
-    public GameTick lastInterpret = default;
     [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
 
