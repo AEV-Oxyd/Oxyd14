@@ -651,3 +651,6 @@ binds:
   type: State
   key: MouseRight
   canFocus: true
+- function: AltInteractionMode
+  type: State
+  key: Alt

@@ -18,6 +18,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -182,8 +183,23 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public void PunishChud(Entity<OxydGunComponent> target)
     {
         target.Comp.jammed = true;
-        _audio.PlayEntity()
+        _audio.PlayEntity(_audio.ResolveSound(getJammedSound(false)), Filter.Pvs(target.Owner, 2f), target.Owner, true);
+        TotalResync(target);
+    }
+    // when the gun desync!!
+    public void TotalResync(Entity<OxydGunComponent> target)
+    {
         Dirty(target);
+        if(TryComp<OxydGunAmmoMagazineChamberComponent>(target.Owner, out var chamber))
+            Dirty(target.Owner, chamber);
+        foreach (var container in _containerSystem.GetAllContainers(target))
+        {
+            foreach (var ent in container.ContainedEntities)
+            {
+                foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(ent))
+                    Dirty(ent, comp);
+            }
+        }
     }
 
 

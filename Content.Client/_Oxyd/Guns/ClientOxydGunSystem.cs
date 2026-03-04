@@ -1,8 +1,10 @@
 using System.Numerics;
 using Content.Client._Oxyd.Framework;
+using Content.Client.DoAfter;
 using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.DoAfter;
 using Content.Shared.Interaction;
 using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
@@ -18,6 +20,10 @@ using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
 
+public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
+{
+}
+
 
 /// <summary>
 /// This handles...
@@ -26,14 +32,16 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly SpriteSystem _spriteSystem = default!;
+    [Dependency] private readonly DoAfterSystem _doafter = default!;
 
-    private TimeSpan lastBroadcast = TimeSpan.Zero;
 
     /// <inheritdoc/>
     public override void Initialize()
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        SubscribeLocalEvent<OxydHandheldGunComponent, MouseAltClickEvent>(HandleUnjam);
+        SubscribeLocalEvent<OxydGunComponent, UnjamGunEvent>(DoUnjam);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
@@ -41,6 +49,32 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
+    }
+
+    public void DoUnjam(Entity<OxydGunComponent> ent, ref UnjamGunEvent args)
+    {
+        ent.Comp.jammed = false;
+    }
+
+    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickEvent args)
+    {
+        if (!TryComp<OxydGunComponent>(ent, out var gcomp))
+            return;
+        _doafter.TryStartDoAfter(new DoAfterArgs(EntityManager,
+            args.user,
+            TimeSpan.FromSeconds(1),
+            new UnjamGunEvent(),
+            ent.Owner,
+            ent.Owner,
+            null)
+        {
+            BreakOnDamage = false,
+            BreakOnMove = false,
+            BreakOnWeightlessMove = false,
+            NeedHand = true,
+        });
+
+
     }
 
     public void onCompare(GunCompareFired args)
@@ -145,6 +179,12 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
     {
+        if (gun.Comp.jammed)
+        {
+            _audio.PlayEntity(getJammedSound(true), Filter.Local(), gun.Owner, true);
+            return;
+        }
+
         var firemode = gun.Comp.selectedFiremodePrototype;
         if (firemode.nextFire > _gameTiming.CurTime)
             return;

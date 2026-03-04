@@ -10,6 +10,12 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        if (gun.Comp.jammed)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+
         Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {_gameTiming.RealTime}");
         switch (effect)
         {

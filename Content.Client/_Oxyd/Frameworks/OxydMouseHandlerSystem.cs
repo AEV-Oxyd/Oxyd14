@@ -57,7 +57,13 @@ public class MouseCrossEvent : EntityEventArgs
     public List<EntityUid> holding = new();
     public MapCoordinates clickCoords;
 }
-
+// raised when clicking with alt held
+public class MouseAltClickEvent : EntityEventArgs
+{
+    public EntityUid clickedOn;
+    public EntityUid user;
+    public EntityCoordinates clickCoords;
+}
 
 /// <summary>
 /// This handles...
@@ -71,6 +77,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly IStateManager _stateManager = default!;
     public bool mousedDown = false;
+    public bool altDown = false;
     public EntityUid crossed = EntityUid.Invalid;
     /// <inheritdoc/>
     public override void Initialize()
@@ -80,15 +87,28 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
                 EngineKeyFunctions.Use,
                 new PointerStateInputCmdHandler(HandleMouseEnabled, HandleMouseDisabled, false)
             )
+            .Bind(ContentKeyFunctions.AltInteractionMode, new PointerStateInputCmdHandler(HandleAltEnabled, HandleAltDisabled))
             .Register<OxydMouseHandlingSystem>();
+    }
+
+    public bool HandleAltEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    {
+        altDown = true;
+        return false;
+    }
+
+    public bool HandleAltDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    {
+        altDown = false;
+        return false;
     }
 
     public bool HandleMouseEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
         if (session is null)
-            return true;
+            return false;
         if (session.AttachedEntity is null)
-            return true;
+            return false;
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
@@ -99,6 +119,13 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             user = session.AttachedEntity.Value,
             clickCoords = mouseData.mouseEntity,
         });
+        if (altDown)
+            RaiseLocalEvent(new MouseAltClickEvent()
+            {
+                clickedOn = mouseData.lastClicked,
+                user = session.AttachedEntity.Value,
+                clickCoords = mouseData.mouseEntity,
+            });
         var active = _handsSystem.GetActiveHandEntity();
         mousedDown = true;
         if (active is null)
@@ -120,9 +147,9 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
     public bool HandleMouseDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
         if (session is null)
-            return true;
+            return false;
         if (session.AttachedEntity is null)
-            return true;
+            return false;
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);

@@ -6,3 +6,7 @@
   safetyOff:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: safety0
+  jammedBallistic:
+    path: /Audio/Oxyd/gunjam.ogg
+  jammedLaser:
+    path: /Audio/Oxyd/gunjam.ogg

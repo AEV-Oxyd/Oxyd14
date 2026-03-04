@@ -14,14 +14,13 @@ public sealed partial class ClientOxydGunSystem
         // dont spam to overwhelm.
         //if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
         //    return;
-        Log.Error($"Sending mouse data at {_gameTiming.RealTime}");
+        Log.Debug($"Sending mouse data at {_gameTiming.RealTime}");
         RaiseNetworkEvent(new FiremodeMouseStatus()
         {
             clientTick = _gameTiming.CurTick,
             gun = GetNetEntity(gun.Owner),
             held = _mouseSys.mousedDown
         });
-        lastBroadcast = _gameTiming.RealTime;
     }
     public override bool InterpretStep(
         GunFiremodePrototype firemodePrototype,
@@ -29,6 +28,12 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        if (gun.Comp.jammed)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+
         Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick},  real {_gameTiming.RealTime}");
         //Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)

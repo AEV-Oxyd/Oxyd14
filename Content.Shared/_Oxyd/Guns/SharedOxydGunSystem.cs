@@ -13,6 +13,7 @@ using Content.Shared.EntityList;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
+using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
@@ -37,6 +38,12 @@ public sealed partial class OxydGunConfig : IPrototype
 
     [DataField]
     public SpriteSpecifier safetyOff = default!;
+
+    [DataField]
+    public SoundSpecifier jammedBallistic = default!;
+
+    [DataField]
+    public SoundSpecifier jammedLaser = default!;
 }
 /// <summary>
 /// This handles...
@@ -74,6 +81,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (toggle)
             return prot.safetyOn;
         return prot.safetyOff;
+    }
+
+    public SoundSpecifier getJammedSound(bool laser)
+    {
+        var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
+        return laser ? prot.jammedLaser : prot.jammedBallistic;
     }
 
 
@@ -506,6 +519,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
+        if (gun.Comp.jammed)
+            return false;
         if (firemodePrototype.nextFire > _gameTiming.CurTime)
             return false;
         if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
