@@ -155,10 +155,10 @@
     stealGroup: AnimalIan
 
 - type: entity
-  name: Runtime
+  name: Aves
   parent: MobCat
   id: MobCatRuntime
-  description: Professional mouse hunter. Escape artist.
+  description: The cat that walks by himself
   components:
   - type: NpcFactionMember
     factions:
@@ -169,7 +169,7 @@
   - type: Grammar
     attributes:
       proper: true
-      gender: female
+      gender: male
   - type: Tag
     tags:
     - CannotSuicide
