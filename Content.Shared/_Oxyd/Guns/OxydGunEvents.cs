@@ -87,7 +87,6 @@ public sealed class ClientSideDoneInterpretingFiremode : NetMessage
     }
 }
 
-
 public sealed class FiremodeProjectilesFiredEvent : EntityEventArgs
 {
     public Entity<OxydGunComponent> gun;

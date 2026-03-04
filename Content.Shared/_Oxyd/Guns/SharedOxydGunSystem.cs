@@ -59,8 +59,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     private const string magazineContainerName = "Oxyd_Magazine";
 
-    private const string configPrototype = "OxydGunConfig";
-
     protected const string oxydContents = "storagebase";
 
     protected const string configProto = "gunConfig";
@@ -70,13 +68,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     protected HashSet<OxydFireDataWrap> checkActive = new();
 
-    public ResPath getSafetySprite(bool toggle)
+    public SpriteSpecifier getSafetySprite(bool toggle)
     {
         var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
         if (toggle)
-            return OxydHelpers.getSpritePath(prot.safetyOn);
-        return OxydHelpers.getSpritePath(prot.safetyOff);
-
+            return prot.safetyOn;
+        return prot.safetyOff;
     }
 
 
@@ -322,6 +319,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
+        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= gunFiremodePrototype.fireDelay * 2)
+            gun.Comp.firingTime = gunFiremodePrototype.fireDelay;
         while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))

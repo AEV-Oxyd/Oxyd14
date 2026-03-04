@@ -25,7 +25,7 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables]
     // Firemodes handle most firing details that are not technical.
     public GunFiremodePrototype selectedFiremodePrototype => InstanciatedFiremodes[selectedFiremodeIndex];
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public int selectedFiremodeIndex = 0;
     // wheter gun safety is on or not
     [ViewVariables]
@@ -33,8 +33,14 @@ public sealed partial class OxydGunComponent : Component
     // as they depend on linearity of execution. This is used for late-message recoil &
     // other features if they might get added and depend on past values for catching up
     public GameTick simulateAsTick;
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public bool safety = true;
+
+    [DataField, AutoNetworkedField]
+    public bool hasSafety = true;
+
+    [ViewVariables, AutoNetworkedField]
+    public bool jammed = false;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
     [DataField]

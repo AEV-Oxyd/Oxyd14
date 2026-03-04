@@ -59,6 +59,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (!TryComp<OxydGunComponent>(ent, out var gunComp))
             return;
+        var adding = new BoxContainer()
+        {
+            HorizontalExpand = true,
+            HorizontalAlignment = Control.HAlignment.Left
+        };
         var firemodeSwitchButton = new TextureButton()
         {
             MinSize = new Vector2(32, 32),
@@ -66,24 +71,19 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         };
         firemodeSwitchButton.TextureNormal = _spriteSystem.Frame0(gunComp.selectedFiremodePrototype.icon);
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
-        var gunSafetyButton = new TextureButton()
+        adding.AddChild(firemodeSwitchButton);
+        if (gunComp.hasSafety)
         {
-            TexturePath = getSafetySprite(gunComp.safety).ToRootedPath().ToString(),
-            MinSize = new Vector2(32, 32),
-            MaxSize = new Vector2(32, 32)
-        };
-        gunSafetyButton.OnPressed += eventargs => HandleSafetySwitch(eventargs, ent);
-
-        var adding = new BoxContainer()
-        {
-            HorizontalExpand = true,
-            HorizontalAlignment = Control.HAlignment.Left,
-            Children =
+            var gunSafetyButton = new TextureButton()
             {
-                firemodeSwitchButton,
-                gunSafetyButton,
-            }
-        };
+                TextureNormal = _spriteSystem.Frame0(getSafetySprite(gunComp.safety)),
+                MinSize = new Vector2(32, 32),
+                MaxSize = new Vector2(32, 32)
+            };
+            gunSafetyButton.OnPressed += eventargs => HandleSafetySwitch(eventargs, ent);
+            adding.AddChild(gunSafetyButton);
+        }
+
         args.Controls.Add(adding);
     }
 
@@ -116,7 +116,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (!TryDoSafetySwitch((gun.Owner, gcomp), playerEnt.Value))
             return;
         var b = (TextureButton)args.Button;
-        b.TexturePath = getSafetySprite(gcomp.safety).ToRootedPath().ToString();
+        b.TextureNormal = _spriteSystem.Frame0(getSafetySprite(gcomp.safety));
         RaiseNetworkEvent(new GunSafetyChangedEvent()
         {
             gun = GetNetEntity(gun.Owner),

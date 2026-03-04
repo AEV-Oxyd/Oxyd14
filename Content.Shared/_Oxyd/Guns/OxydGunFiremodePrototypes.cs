@@ -59,6 +59,9 @@ public sealed partial class GunFiremodePrototype : IPrototype
     public GameTick lastFiredTick = default;
 
     [ViewVariables]
+    public bool SingleShot = true;
+
+    [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
 
     // firemodePrototype specific speed mult

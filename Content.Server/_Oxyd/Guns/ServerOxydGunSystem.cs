@@ -179,6 +179,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         Dirty(ent);
     }
 
+    public void PunishChud(Entity<OxydGunComponent> target)
+    {
+        target.Comp.jammed = true;
+        _audio.PlayEntity()
+        Dirty(target);
+    }
+
 
 
     public override void Update(float frameTime)
