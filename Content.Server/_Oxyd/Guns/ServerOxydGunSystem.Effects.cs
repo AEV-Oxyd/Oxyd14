@@ -10,7 +10,7 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}");
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {_gameTiming.RealTime}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -119,6 +119,7 @@ public sealed partial class ServerOxydGunSystem
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
             stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
         stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
+        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}, gap {firemodePrototype.firingGaps}");
         return true;
     }
 

@@ -17,6 +17,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         fire.currentStep = 0;
         fire.Active = false;
         RemoveActiveUpdating(fire, gun, shooter);
+        foreach (OxydGunEffect eff in fire.Effects)
+        {
+            if(eff is OxydResetableEffect casted)
+                casted.Reset();
+        }
     }
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectTryFireGunDirection effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {

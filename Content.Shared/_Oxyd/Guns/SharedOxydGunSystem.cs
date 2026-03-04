@@ -285,6 +285,21 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
+    public static TimeSpan getTotalWait(GunFiremodePrototype target)
+    {
+        TimeSpan totalWait = TimeSpan.Zero;
+        foreach (var effect in target.Effects)
+        {
+            switch (effect)
+            {
+                case GunEffectWait wait:
+                    totalWait += wait.waitPeriod;
+                    break;
+            }
+        }
+        return totalWait;
+    }
+
     public HashSet<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
         Entity<OxydGunComponent> gun,
         MapCoordinates shootingFrom,
@@ -467,6 +482,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             Log.Debug("Same tick fire");
             if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
                 return null;
+            Log.Error("Same tick fired succesfully!!");
             gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;
         }
 

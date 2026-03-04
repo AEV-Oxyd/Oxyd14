@@ -262,17 +262,15 @@ public partial class ServerOxydGunSystem
             return;
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            Log.Error($"-111- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
             return;
         }
 
         if (!handler.executedFiringSteps[args.firemodeStep].TryDequeue(out var damageMult))
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            Log.Error($"-222- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
             return;
         }
-
-        handler.executedFiringSteps.Remove(args.firemodeStep);
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         // Let  very small inconsistencies slide in , don't want state desyncs!
         var savedFire = gunComp.selectedFiremodePrototype.nextFire;

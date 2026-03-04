@@ -29,7 +29,7 @@ public sealed partial class ClientOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}");
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick},  real {_gameTiming.RealTime}");
         //Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)
         {

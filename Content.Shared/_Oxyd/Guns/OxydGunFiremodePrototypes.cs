@@ -34,6 +34,8 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // type of ammo provider(same as above)
     [DataField("provider")]
     public string providerComp = "";
+    [ViewVariables]
+    public TimeSpan totalWait = TimeSpan.Zero;
 
     // SPRITE
     [DataField("icon", required: false)]
@@ -86,6 +88,8 @@ public sealed partial class GunFiremodePrototype : IPrototype
         {
             thing.Effects.Add(eff.Clone());
         }
+
+        thing.totalWait = SharedOxydGunSystem.getTotalWait(this);
 
         return thing;
     }
