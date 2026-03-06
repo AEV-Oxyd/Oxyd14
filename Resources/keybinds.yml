@@ -642,7 +642,7 @@ binds:
 - function: MappingRemoveDecal
   type: State
   key: MouseLeft
-  canFocus: true
+  canFocus: true 
 - function: MappingCancelEraseDecal
   type: State
   key: MouseRight
