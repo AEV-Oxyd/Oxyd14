@@ -25,7 +25,7 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables]
     // Firemodes handle most firing details that are not technical.
     public GunFiremodePrototype selectedFiremodePrototype => InstanciatedFiremodes[selectedFiremodeIndex];
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public int selectedFiremodeIndex = 0;
     // wheter gun safety is on or not
     [ViewVariables]
@@ -33,8 +33,14 @@ public sealed partial class OxydGunComponent : Component
     // as they depend on linearity of execution. This is used for late-message recoil &
     // other features if they might get added and depend on past values for catching up
     public GameTick simulateAsTick;
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public bool safety = true;
+
+    [DataField, AutoNetworkedField]
+    public bool hasSafety = true;
+
+    [ViewVariables, AutoNetworkedField]
+    public bool jammed = false;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
     [DataField]
@@ -74,14 +80,14 @@ public abstract partial class OxydGunProvidersComponent : Component
     public abstract bool getAmmo(int index, [NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot);
 };
 
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 {
-    [DataField("bulletSlot")]
+    [DataField("bulletSlot"), AutoNetworkedField]
     public List<ItemSlot> bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public List<EntityUid> nextBullet = new List<EntityUid>();
 
     public override bool getAmmo(int index,[NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
@@ -92,10 +98,10 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
     }
 
 }
-[RegisterComponent]
+[RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
-    [DataField("magazineSlot")]
+    [DataField("magazineSlot"), AutoNetworkedField]
     public List<ItemSlot> magazineSlot = new();
 }
 

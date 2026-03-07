@@ -34,6 +34,8 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // type of ammo provider(same as above)
     [DataField("provider")]
     public string providerComp = "";
+    [ViewVariables]
+    public TimeSpan totalWait = TimeSpan.Zero;
 
     // SPRITE
     [DataField("icon", required: false)]
@@ -55,6 +57,9 @@ public sealed partial class GunFiremodePrototype : IPrototype
     public TimeSpan firingGaps = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     public GameTick lastFiredTick = default;
+
+    [ViewVariables]
+    public bool SingleShot = true;
 
     [ViewVariables]
     public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
@@ -86,6 +91,8 @@ public sealed partial class GunFiremodePrototype : IPrototype
         {
             thing.Effects.Add(eff.Clone());
         }
+
+        thing.totalWait = SharedOxydGunSystem.getTotalWait(this);
 
         return thing;
     }

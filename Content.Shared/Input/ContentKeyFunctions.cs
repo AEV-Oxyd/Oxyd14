@@ -103,6 +103,9 @@ namespace Content.Shared.Input
         public static readonly BoundKeyFunction HotbarShift8 = "HotbarShift8";
         public static readonly BoundKeyFunction HotbarShift9 = "HotbarShift9";
 
+        // OXYD
+        public static readonly BoundKeyFunction AltInteractionMode = "AltInteractionMode";
+
         public static BoundKeyFunction[] GetHotbarBoundKeys() =>
             new[]
             {

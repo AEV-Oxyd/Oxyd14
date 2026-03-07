@@ -147,12 +147,16 @@ public partial class ServerOxydGunSystem
         // entity desync
         if (TerminatingOrDeleted(gun) || TerminatingOrDeleted(shooter))
             return;
+        gunComp.jammed = false;
+        if (gunComp.selectedFiremodePrototype.nextFire == TimeSpan.Zero)
+        {
+            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime - _gameTiming.TickPeriod;
+        }
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
             Log.Debug($"State desync - interpret {gunComp.selectedFiremodePrototype.currentStep} != {args.clientsideStartingStep}");
-            DirtyEntity(gun);
-
+            PunishChud((gun, gunComp));
             return;
         }
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
@@ -208,13 +212,14 @@ public partial class ServerOxydGunSystem
         if (gunComp.selectedFiremodePrototype.currentStep != args.stoppedAt)
         {
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
-            return;
         }
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
         handler.ticksFoward = 0;
+        gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
+        gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
 
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
@@ -232,9 +237,18 @@ public partial class ServerOxydGunSystem
         if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
         if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
+        {
+            Log.Error($"Failed to validate user pos");
+            PunishChud((gun, gcomp));
             return;
+        }
+
         if(!ValidateFiringPosition((gun, gcomp), player.AttachedEntity.Value, _transformSystem.ToMapCoordinates(args.shotFrom)))
+        {
+            Log.Error($"Did not fire due to failed position validation");
+            PunishChud((gun, gcomp));
             return;
+        }
         if(args.clientTick >= _gameTiming.CurTick && args.clientTick.Value - _gameTiming.CurTick.Value < MaxTicksAhead)
         {
             queueMessage(args, (int)(args.clientTick.Value - _gameTiming.CurTick.Value));
@@ -243,6 +257,8 @@ public partial class ServerOxydGunSystem
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
         if (tickDiff > MaxTicksIncosistencyBehind)
         {
+            Log.Error($"Message discarded due to many ticks behind");
+            PunishChud((gun, gcomp));
             return;
         }
         DoNetMessage(args, tickDiff);
@@ -253,36 +269,33 @@ public partial class ServerOxydGunSystem
         Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
+
             return;
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
             return;
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
+        {
+            Log.Error("Missing state handler");
+            PunishChud((gun, gunComp));
             return;
+        }
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            Log.Error($"-111- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+
+            PunishChud((gun, gunComp));
             return;
         }
 
         if (!handler.executedFiringSteps[args.firemodeStep].TryDequeue(out var damageMult))
         {
-            Log.Error($"----- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            PunishChud((gun, gunComp));
+            Log.Error($"-222- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
             return;
         }
-
-        handler.executedFiringSteps.Remove(args.firemodeStep);
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
-        // Let  very small inconsistencies slide in , don't want state desyncs!
-        var savedFire = gunComp.selectedFiremodePrototype.nextFire;
-        if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
-        if (tickDiff > 0)
-        {
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
-        }
-
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
 
         if (projectiles is null)
@@ -309,7 +322,6 @@ public partial class ServerOxydGunSystem
 
         if (tickDiff > 0)
         {
-            gunComp.selectedFiremodePrototype.nextFire = savedFire;
             _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
         }
         Log.Debug("Fired Gun");

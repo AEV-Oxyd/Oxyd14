@@ -13,6 +13,7 @@ using Content.Shared.EntityList;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
+using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
@@ -37,6 +38,12 @@ public sealed partial class OxydGunConfig : IPrototype
 
     [DataField]
     public SpriteSpecifier safetyOff = default!;
+
+    [DataField]
+    public SoundSpecifier jammedBallistic = default!;
+
+    [DataField]
+    public SoundSpecifier jammedLaser = default!;
 }
 /// <summary>
 /// This handles...
@@ -59,8 +66,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     private const string magazineContainerName = "Oxyd_Magazine";
 
-    private const string configPrototype = "OxydGunConfig";
-
     protected const string oxydContents = "storagebase";
 
     protected const string configProto = "gunConfig";
@@ -70,13 +75,18 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     protected HashSet<OxydFireDataWrap> checkActive = new();
 
-    public ResPath getSafetySprite(bool toggle)
+    public SpriteSpecifier getSafetySprite(bool toggle)
     {
         var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
         if (toggle)
-            return OxydHelpers.getSpritePath(prot.safetyOn);
-        return OxydHelpers.getSpritePath(prot.safetyOff);
+            return prot.safetyOn;
+        return prot.safetyOff;
+    }
 
+    public SoundSpecifier getJammedSound(bool laser)
+    {
+        var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
+        return laser ? prot.jammedLaser : prot.jammedBallistic;
     }
 
 
@@ -285,13 +295,29 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
+    public static TimeSpan getTotalWait(GunFiremodePrototype target)
+    {
+        TimeSpan totalWait = TimeSpan.Zero;
+        foreach (var effect in target.Effects)
+        {
+            switch (effect)
+            {
+                case GunEffectWait wait:
+                    totalWait += wait.waitPeriod;
+                    break;
+            }
+        }
+        return totalWait;
+    }
+
     public HashSet<Entity<OxydProjectileComponent>> fireGun(EntityUid shooter,
         Entity<OxydGunComponent> gun,
         MapCoordinates shootingFrom,
         MapCoordinates targetPos)
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
-        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
+        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - gunFiremodePrototype.totalWait;
+        Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {gunFiremodePrototype.totalWait}, gap {gunFiremodePrototype.firingGaps}");
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
         //Log.Debug($"Fire Delta is {lastFireDelta}");
@@ -307,6 +333,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
+        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= gunFiremodePrototype.fireDelay * 2)
+            gun.Comp.firingTime = gunFiremodePrototype.fireDelay;
         while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
             if(!getProjectileChambered(shooter, gun, out var projectileNullable))
@@ -436,40 +464,37 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    public bool preFireChecks(Entity<OxydGunComponent> gun)
     {
         if (gun.Comp.safety)
         {
             onSafetyShootAttempt();
-            return null;
+            return false;
         }
         if (!gun.Comp.selectedFiremodePrototype.AmmoProviders.getAmmo(gun.Comp.selectedFiremodePrototype.providerId, out var bullet, out var itemSlot))
         {
             onEmptyShootAttempt();
-            return null;
+            return false;
         }
 
         if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
         {
             onInvalidShootAttempt();
-            return null;
+            return false;
         }
-        var gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
-        if (gunFiremodePrototype.nextFire > _gameTiming.CurTime)
+
+        return true;
+    }
+
+    public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        var gfp = gun.Comp.selectedFiremodePrototype;
+        if (gfp.nextFire > _gameTiming.CurTime)
         {
             Log.Debug("Firemode not ready");
             return null;
         }
-        // compensare lag
-        if (gunFiremodePrototype.lastFiredTick == _gameTiming.CurTick)
-        {
-            Log.Debug("Same tick fire");
-            if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
-                return null;
-            gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;
-        }
-
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 
@@ -491,7 +516,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (firemodePrototype.nextFire > _gameTiming.CurTime)
+        if (gun.Comp.jammed)
+            return false;
+        if (firemodePrototype.nextFire > _gameTiming.CurTime && _netManager.IsClient)
             return false;
         if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
             return false;

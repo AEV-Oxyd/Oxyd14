@@ -18,6 +18,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -36,9 +37,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
-
-    // Acceptable timing inconsistencies during auto firing.
-    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(10);
     public static int MaxTicksIncosistencyBehind = OxydCvars.maxPastTicks.DefaultValue;
     public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
@@ -177,6 +175,58 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                 break;
         }
         Dirty(ent);
+    }
+
+    public void PunishChud(Entity<OxydGunComponent> target)
+    {
+        Log.Error($"Doing total resync");
+        target.Comp.jammed = true;
+        _audio.PlayPvs(_audio.ResolveSound(getJammedSound(false)), new EntityCoordinates(target.Owner, 0, 0));
+        TotalResync(target);
+    }
+    // when the gun desync!!
+    public void TotalResync(Entity<OxydGunComponent> target)
+    {
+        Dirty(target);
+        if(TryComp<OxydGunAmmoMagazineChamberComponent>(target.Owner, out var chamber))
+            Dirty(target.Owner, chamber);
+        foreach (var container in _containerSystem.GetAllContainers(target))
+        {
+            foreach (var ent in container.ContainedEntities)
+            {
+                foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(ent))
+                    Dirty(ent, comp);
+            }
+        }
+    }
+
+    public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        if (!preFireChecks(gun))
+            return null;
+        var gfp = gun.Comp.selectedFiremodePrototype;
+        if (gfp.nextFire > _gameTiming.CurTime || gfp.lastFiredTick == _gameTiming.CurTick)
+        {
+            if (gfp.firingGaps < gfp.fireDelay)
+                return null;
+            // compensare lag
+            gfp.firingGaps -= gfp.fireDelay;
+            if (gfp.lastFiredTick == _gameTiming.CurTick)
+            {
+                Log.Debug("Same tick fire compensation");
+                gfp.nextFire = _gameTiming.CurTime;
+            }
+            else
+            {
+                Log.Debug("Firemode nextFire compensation");
+                gfp.nextFire = _gameTiming.CurTime;
+            }
+
+            Log.Error("Compensated succesfully");
+        }
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+
     }
 
 

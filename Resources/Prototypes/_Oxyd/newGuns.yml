@@ -34,13 +34,14 @@
   effects:
   - !type:GunEffectWait
     waitPeriod: 0.3125
+    fowardMax: 0
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectModifyCharge
     addAmount: 0.2
   - !type:GunEffectRepeatNextTickIfMouseHeld
-    stepBack: 6
+    stepBack: 5
     validDiff: 0.2
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectResetCharge

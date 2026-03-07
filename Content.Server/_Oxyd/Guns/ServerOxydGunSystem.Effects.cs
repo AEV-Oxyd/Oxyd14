@@ -10,7 +10,13 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}");
+        if (gun.Comp.jammed)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -113,18 +119,18 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
         // this is clear sign of missing fire from client, mby in future move some of lag compensation
         // here ? SPCR 2026
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
             stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
         stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
+        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}, gap {firemodePrototype.firingGaps}");
         return true;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (gun.Comp.safety)
+        if (gun.Comp.safety || !firemodePrototype.Active)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
@@ -150,7 +156,7 @@ public sealed partial class ServerOxydGunSystem
         // end 1 tick earlier to ensure prediction doesnt miss due to networking
         if (effect.alreadyWaited < effect.waitPeriod)
         {
-            if (stateComp.ticksFoward < 3)
+            if (stateComp.ticksFoward < effect.fowardMax)
             {
                 if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
                 {

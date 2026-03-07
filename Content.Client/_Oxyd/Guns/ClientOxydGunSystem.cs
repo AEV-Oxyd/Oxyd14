@@ -1,8 +1,10 @@
 using System.Numerics;
 using Content.Client._Oxyd.Framework;
+using Content.Client.DoAfter;
 using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.DoAfter;
 using Content.Shared.Interaction;
 using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
@@ -18,6 +20,10 @@ using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
 
+public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
+{
+}
+
 
 /// <summary>
 /// This handles...
@@ -26,14 +32,16 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly SpriteSystem _spriteSystem = default!;
+    [Dependency] private readonly DoAfterSystem _doafter = default!;
 
-    private TimeSpan lastBroadcast = TimeSpan.Zero;
 
     /// <inheritdoc/>
     public override void Initialize()
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        SubscribeLocalEvent<OxydHandheldGunComponent, MouseAltClickedEvent>(HandleUnjam);
+        SubscribeLocalEvent<OxydGunComponent, UnjamGunEvent>(DoUnjam);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
@@ -41,6 +49,32 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
+    }
+
+    public void DoUnjam(Entity<OxydGunComponent> ent, ref UnjamGunEvent args)
+    {
+        ent.Comp.jammed = false;
+    }
+
+    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickedEvent args)
+    {
+        if (!TryComp<OxydGunComponent>(ent, out var gcomp))
+            return;
+        _doafter.TryStartDoAfter(new DoAfterArgs(EntityManager,
+            args.user,
+            TimeSpan.FromSeconds(1),
+            new UnjamGunEvent(),
+            ent.Owner,
+            ent.Owner,
+            null)
+        {
+            BreakOnDamage = false,
+            BreakOnMove = false,
+            BreakOnWeightlessMove = false,
+            NeedHand = true,
+        });
+
+
     }
 
     public void onCompare(GunCompareFired args)
@@ -59,6 +93,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (!TryComp<OxydGunComponent>(ent, out var gunComp))
             return;
+        var adding = new BoxContainer()
+        {
+            HorizontalExpand = true,
+            HorizontalAlignment = Control.HAlignment.Left
+        };
         var firemodeSwitchButton = new TextureButton()
         {
             MinSize = new Vector2(32, 32),
@@ -66,24 +105,19 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         };
         firemodeSwitchButton.TextureNormal = _spriteSystem.Frame0(gunComp.selectedFiremodePrototype.icon);
         firemodeSwitchButton.OnPressed += eventargs => HandleFiremodeSwitch(eventargs, ent);
-        var gunSafetyButton = new TextureButton()
+        adding.AddChild(firemodeSwitchButton);
+        if (gunComp.hasSafety)
         {
-            TexturePath = getSafetySprite(gunComp.safety).ToRootedPath().ToString(),
-            MinSize = new Vector2(32, 32),
-            MaxSize = new Vector2(32, 32)
-        };
-        gunSafetyButton.OnPressed += eventargs => HandleSafetySwitch(eventargs, ent);
-
-        var adding = new BoxContainer()
-        {
-            HorizontalExpand = true,
-            HorizontalAlignment = Control.HAlignment.Left,
-            Children =
+            var gunSafetyButton = new TextureButton()
             {
-                firemodeSwitchButton,
-                gunSafetyButton,
-            }
-        };
+                TextureNormal = _spriteSystem.Frame0(getSafetySprite(gunComp.safety)),
+                MinSize = new Vector2(32, 32),
+                MaxSize = new Vector2(32, 32)
+            };
+            gunSafetyButton.OnPressed += eventargs => HandleSafetySwitch(eventargs, ent);
+            adding.AddChild(gunSafetyButton);
+        }
+
         args.Controls.Add(adding);
     }
 
@@ -116,7 +150,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (!TryDoSafetySwitch((gun.Owner, gcomp), playerEnt.Value))
             return;
         var b = (TextureButton)args.Button;
-        b.TexturePath = getSafetySprite(gcomp.safety).ToRootedPath().ToString();
+        b.TextureNormal = _spriteSystem.Frame0(getSafetySprite(gcomp.safety));
         RaiseNetworkEvent(new GunSafetyChangedEvent()
         {
             gun = GetNetEntity(gun.Owner),
@@ -145,6 +179,13 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
     {
+        if (gun.Comp.jammed)
+        {
+            ResetFiremode(gun.Comp.selectedFiremodePrototype, gun, shooter);
+            _audio.PlayEntity(getJammedSound(true), Filter.Local(), gun.Owner, true);
+            return;
+        }
+
         var firemode = gun.Comp.selectedFiremodePrototype;
         if (firemode.nextFire > _gameTiming.CurTime)
             return;
@@ -182,6 +223,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!_gameTiming.IsFirstTimePredicted)
+            return null;
+        if (!preFireChecks(gun))
             return null;
         return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
 

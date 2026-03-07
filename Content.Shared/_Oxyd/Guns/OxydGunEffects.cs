@@ -20,7 +20,11 @@ public abstract partial class OxydGunEffect
 
 }
 
-public abstract partial class OxydFiringGunEffect : OxydGunEffect
+public interface OxydResetableEffect
+{
+    public abstract void Reset();
+}
+public interface  OxydFiringGunEffect
 {
 
 }
@@ -43,7 +47,7 @@ public sealed partial class GunEffectCheckWielded : OxydGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectCheckAmmo : OxydGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectWait : OxydGunEffect
+public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect
 {
     // x steps to go back if we want to rerun checks
     [DataField]
@@ -56,13 +60,22 @@ public sealed partial class GunEffectWait : OxydGunEffect
     public GameTick skipTick = GameTick.Zero;
     [ViewVariables]
     public TimeSpan lastNetwork = TimeSpan.Zero;
+
+    [DataField]
+    public int fowardMax = 3;
+
+    public void Reset()
+    {
+        alreadyWaited = TimeSpan.Zero;
+        skipTick = GameTick.Zero;
+    }
 }
 [DataDefinition]
-public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;
+public sealed partial class GunEffectTryFireGunDirection : OxydGunEffect,OxydFiringGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectTryFireMouseDirection: OxydFiringGunEffect;
+public sealed partial class GunEffectTryFireMouseDirection: OxydGunEffect,OxydFiringGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
+public sealed partial class GunEffectRepeatNextTick : OxydGunEffect, OxydResetableEffect
 {
     [DataField]
     public int repeatCount = 1;
@@ -75,10 +88,16 @@ public sealed partial class GunEffectRepeatNextTick : OxydGunEffect
     [ViewVariables]
     public TimeSpan lastTrigger = TimeSpan.Zero;
 
+    public void Reset()
+    {
+        timesBack = 0;
+        lastTrigger = TimeSpan.Zero;
+    }
+
 }
 
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatusGunEffect
+public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatusGunEffect, OxydResetableEffect
 {
     [DataField]
     public int stepBack = 0;
@@ -88,6 +107,11 @@ public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatus
 
     [DataField]
     public int maxMissed = 5;
+
+    public void Reset()
+    {
+        missedTicks = 0;
+    }
 
 
 }
