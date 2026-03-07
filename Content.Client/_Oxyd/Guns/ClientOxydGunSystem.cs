@@ -40,7 +40,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
-        SubscribeLocalEvent<OxydHandheldGunComponent, MouseAltClickEvent>(HandleUnjam);
+        SubscribeLocalEvent<OxydHandheldGunComponent, MouseAltClickedEvent>(HandleUnjam);
         SubscribeLocalEvent<OxydGunComponent, UnjamGunEvent>(DoUnjam);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
@@ -56,7 +56,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         ent.Comp.jammed = false;
     }
 
-    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickEvent args)
+    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickedEvent args)
     {
         if (!TryComp<OxydGunComponent>(ent, out var gcomp))
             return;
@@ -181,6 +181,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if (gun.Comp.jammed)
         {
+            ResetFiremode(gun.Comp.selectedFiremodePrototype, gun, shooter);
             _audio.PlayEntity(getJammedSound(true), Filter.Local(), gun.Owner, true);
             return;
         }
@@ -222,6 +223,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
     {
         if (!_gameTiming.IsFirstTimePredicted)
+            return null;
+        if (!preFireChecks(gun))
             return null;
         return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
 

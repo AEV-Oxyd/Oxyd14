@@ -316,7 +316,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         MapCoordinates targetPos)
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
-        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire;
+        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - gunFiremodePrototype.totalWait;
+        Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {gunFiremodePrototype.totalWait}, gap {gunFiremodePrototype.firingGaps}");
         gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
         //Log.Debug($"Fire Delta is {lastFireDelta}");
@@ -463,41 +464,37 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     }
 
-    public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    public bool preFireChecks(Entity<OxydGunComponent> gun)
     {
         if (gun.Comp.safety)
         {
             onSafetyShootAttempt();
-            return null;
+            return false;
         }
         if (!gun.Comp.selectedFiremodePrototype.AmmoProviders.getAmmo(gun.Comp.selectedFiremodePrototype.providerId, out var bullet, out var itemSlot))
         {
             onEmptyShootAttempt();
-            return null;
+            return false;
         }
 
         if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
         {
             onInvalidShootAttempt();
-            return null;
+            return false;
         }
-        var gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
-        if (gunFiremodePrototype.nextFire > _gameTiming.CurTime)
+
+        return true;
+    }
+
+    public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        var gfp = gun.Comp.selectedFiremodePrototype;
+        if (gfp.nextFire > _gameTiming.CurTime)
         {
             Log.Debug("Firemode not ready");
             return null;
         }
-        // compensare lag
-        if (gunFiremodePrototype.lastFiredTick == _gameTiming.CurTick)
-        {
-            Log.Debug("Same tick fire");
-            if (gunFiremodePrototype.firingGaps < gunFiremodePrototype.fireDelay)
-                return null;
-            Log.Error("Same tick fired succesfully!!");
-            gunFiremodePrototype.firingGaps -= gunFiremodePrototype.fireDelay;
-        }
-
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates);
     }
 

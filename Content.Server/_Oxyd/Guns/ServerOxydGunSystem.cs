@@ -37,9 +37,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
 
-
-    // Acceptable timing inconsistencies during auto firing.
-    public static TimeSpan TimingIncosistencyBuffer = TimeSpan.FromMilliseconds(10);
     public static int MaxTicksIncosistencyBehind = OxydCvars.maxPastTicks.DefaultValue;
     public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
     public List<Queue<object>> delayedMessages = new List<Queue<object>>();
@@ -182,8 +179,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void PunishChud(Entity<OxydGunComponent> target)
     {
+        Log.Error($"Doing total resync");
         target.Comp.jammed = true;
-        _audio.PlayEntity(_audio.ResolveSound(getJammedSound(false)), Filter.Pvs(target.Owner, 2f), target.Owner, true);
+        _audio.PlayPvs(_audio.ResolveSound(getJammedSound(false)), new EntityCoordinates(target.Owner, 0, 0));
         TotalResync(target);
     }
     // when the gun desync!!
@@ -200,6 +198,33 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
                     Dirty(ent, comp);
             }
         }
+    }
+
+    public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+    {
+        if (!preFireChecks(gun))
+            return null;
+        var gfp = gun.Comp.selectedFiremodePrototype;
+        if (gfp.nextFire > _gameTiming.CurTime || gfp.lastFiredTick == _gameTiming.CurTick)
+        {
+            // compensare lag
+            if (gfp.lastFiredTick == _gameTiming.CurTick)
+            {
+                Log.Debug("Same tick fire compensation");
+            }
+            else
+            {
+                Log.Debug("Firemode nextFire compensation");
+            }
+
+            if (gfp.firingGaps < gfp.fireDelay)
+                return null;
+            Log.Error("Compensated succesfully");
+            gfp.firingGaps -= gfp.fireDelay;
+        }
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+
     }
 
 

@@ -148,6 +148,10 @@ public partial class ServerOxydGunSystem
         if (TerminatingOrDeleted(gun) || TerminatingOrDeleted(shooter))
             return;
         gunComp.jammed = false;
+        if (gunComp.selectedFiremodePrototype.nextFire == TimeSpan.Zero)
+        {
+            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime - _gameTiming.TickPeriod;
+        }
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
@@ -207,7 +211,6 @@ public partial class ServerOxydGunSystem
         // state desync
         if (gunComp.selectedFiremodePrototype.currentStep != args.stoppedAt)
         {
-            PunishChud((gun, gunComp));
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
         }
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
@@ -233,12 +236,14 @@ public partial class ServerOxydGunSystem
             return;
         if (!ValidateUserPosition((gun, gcomp), player.AttachedEntity.Value))
         {
+            Log.Error($"Failed to validate user pos");
             PunishChud((gun, gcomp));
             return;
         }
 
         if(!ValidateFiringPosition((gun, gcomp), player.AttachedEntity.Value, _transformSystem.ToMapCoordinates(args.shotFrom)))
         {
+            Log.Error($"Did not fire due to failed position validation");
             PunishChud((gun, gcomp));
             return;
         }
@@ -250,6 +255,7 @@ public partial class ServerOxydGunSystem
         var tickDiff = _gameTiming.CurTick.Value - args.clientTick.Value;
         if (tickDiff > MaxTicksIncosistencyBehind)
         {
+            Log.Error($"Message discarded due to many ticks behind");
             PunishChud((gun, gcomp));
             return;
         }
@@ -267,6 +273,7 @@ public partial class ServerOxydGunSystem
             return;
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var handler))
         {
+            Log.Error("Missing state handler");
             PunishChud((gun, gunComp));
             return;
         }
@@ -287,15 +294,6 @@ public partial class ServerOxydGunSystem
             return;
         }
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
-        // Let  very small inconsistencies slide in , don't want state desyncs!
-        var savedFire = gunComp.selectedFiremodePrototype.nextFire;
-        if (gunComp.selectedFiremodePrototype.nextFire > _gameTiming.CurTime && (gunComp.selectedFiremodePrototype.nextFire - _gameTiming.CurTime) < TimingIncosistencyBuffer)
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
-        if (tickDiff > 0)
-        {
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime;
-        }
-
         var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
 
         if (projectiles is null)
@@ -322,7 +320,6 @@ public partial class ServerOxydGunSystem
 
         if (tickDiff > 0)
         {
-            gunComp.selectedFiremodePrototype.nextFire = savedFire;
             _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
         }
         Log.Debug("Fired Gun");

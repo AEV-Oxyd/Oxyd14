@@ -119,7 +119,6 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}");
         // this is clear sign of missing fire from client, mby in future move some of lag compensation
         // here ? SPCR 2026
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
@@ -131,7 +130,7 @@ public sealed partial class ServerOxydGunSystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (gun.Comp.safety)
+        if (gun.Comp.safety || !firemodePrototype.Active)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;

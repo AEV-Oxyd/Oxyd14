@@ -65,6 +65,13 @@ public class MouseAltClickEvent : EntityEventArgs
     public EntityCoordinates clickCoords;
 }
 
+public class MouseAltClickedEvent : EntityEventArgs
+{
+    public EntityUid user;
+    public EntityCoordinates clickCoords;
+}
+
+
 /// <summary>
 /// This handles...
 /// </summary>
@@ -93,12 +100,14 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
 
     public bool HandleAltEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
+        Log.Error($"Alt enabled");
         altDown = true;
         return false;
     }
 
     public bool HandleAltDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
     {
+        Log.Error($"Alt disabled");
         altDown = false;
         return false;
     }
@@ -120,12 +129,19 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             clickCoords = mouseData.mouseEntity,
         });
         if (altDown)
+        {
             RaiseLocalEvent(new MouseAltClickEvent()
             {
                 clickedOn = mouseData.lastClicked,
                 user = session.AttachedEntity.Value,
                 clickCoords = mouseData.mouseEntity,
             });
+            RaiseLocalEvent(mouseData.lastClicked, new MouseAltClickedEvent()
+            {
+                user = session.AttachedEntity.Value,
+                clickCoords = mouseData.mouseEntity,
+            });
+        }
         var active = _handsSystem.GetActiveHandEntity();
         mousedDown = true;
         if (active is null)
