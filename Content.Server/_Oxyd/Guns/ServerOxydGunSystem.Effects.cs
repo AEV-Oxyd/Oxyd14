@@ -16,7 +16,7 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {_gameTiming.RealTime}");
+        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -156,7 +156,7 @@ public sealed partial class ServerOxydGunSystem
         // end 1 tick earlier to ensure prediction doesnt miss due to networking
         if (effect.alreadyWaited < effect.waitPeriod)
         {
-            if (stateComp.ticksFoward < 3)
+            if (stateComp.ticksFoward < 6)
             {
                 if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
                 {

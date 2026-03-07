@@ -208,20 +208,22 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         var gfp = gun.Comp.selectedFiremodePrototype;
         if (gfp.nextFire > _gameTiming.CurTime || gfp.lastFiredTick == _gameTiming.CurTick)
         {
+            if (gfp.firingGaps < gfp.fireDelay)
+                return null;
             // compensare lag
+            gfp.firingGaps -= gfp.fireDelay;
             if (gfp.lastFiredTick == _gameTiming.CurTick)
             {
                 Log.Debug("Same tick fire compensation");
+                gfp.nextFire = _gameTiming.CurTime;
             }
             else
             {
                 Log.Debug("Firemode nextFire compensation");
+                gfp.nextFire = _gameTiming.CurTime;
             }
 
-            if (gfp.firingGaps < gfp.fireDelay)
-                return null;
             Log.Error("Compensated succesfully");
-            gfp.firingGaps -= gfp.fireDelay;
         }
         return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
 

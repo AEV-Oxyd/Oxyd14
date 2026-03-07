@@ -218,6 +218,8 @@ public partial class ServerOxydGunSystem
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
         handler.ticksFoward = 0;
+        gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
+        gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
 
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }

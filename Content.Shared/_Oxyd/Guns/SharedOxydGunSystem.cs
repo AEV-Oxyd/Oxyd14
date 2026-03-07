@@ -518,7 +518,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (gun.Comp.jammed)
             return false;
-        if (firemodePrototype.nextFire > _gameTiming.CurTime)
+        if (firemodePrototype.nextFire > _gameTiming.CurTime && _netManager.IsClient)
             return false;
         if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
             return false;
