@@ -61,6 +61,9 @@ public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect
     [ViewVariables]
     public TimeSpan lastNetwork = TimeSpan.Zero;
 
+    [DataField]
+    public int fowardMax = 3;
+
     public void Reset()
     {
         alreadyWaited = TimeSpan.Zero;

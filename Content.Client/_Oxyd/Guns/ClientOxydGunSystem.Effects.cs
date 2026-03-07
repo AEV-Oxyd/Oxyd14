@@ -176,6 +176,10 @@ public sealed partial class ClientOxydGunSystem
                 effect.lastNetwork = _gameTiming.RealTime + _gameTiming.TickPeriod * 2;
                 BroadcastMouseStatus(gun);
             }
+            // need to spam it a bit for very short cycles
+            else if(effect.waitPeriod - effect.alreadyWaited < _gameTiming.TickPeriod * 3)
+                BroadcastMouseStatus(gun);
+
             return false;
         }
         effect.alreadyWaited = TimeSpan.Zero;

@@ -156,7 +156,7 @@ public sealed partial class ServerOxydGunSystem
         // end 1 tick earlier to ensure prediction doesnt miss due to networking
         if (effect.alreadyWaited < effect.waitPeriod)
         {
-            if (stateComp.ticksFoward < 6)
+            if (stateComp.ticksFoward < effect.fowardMax)
             {
                 if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
                 {
