@@ -34,7 +34,7 @@
   effects:
   - !type:GunEffectWait
     waitPeriod: 0.3125
-    fowardMax: 0
+    fowardMax: 3
   - !type:GunEffectCheckConscious
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
@@ -43,6 +43,8 @@
   - !type:GunEffectRepeatNextTickIfMouseHeld
     stepBack: 5
     validDiff: 0.2
+    hardWait: true
+    maxMissed: 15
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectResetCharge
 

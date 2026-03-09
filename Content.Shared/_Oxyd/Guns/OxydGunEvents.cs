@@ -29,12 +29,29 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
         buffer.Write(clientTick);
     }
 }
-[Serializable, NetSerializable]
-public sealed class FiremodeMouseStatus : EntityEventArgs
+public sealed class FiremodeMouseStatus : NetMessage
 {
+    public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
     public bool held = false;
     public NetEntity gun;
     public GameTick clientTick;
+    public int fromStep;
+
+    public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
+    {
+        held = buffer.ReadBoolean();
+        gun = buffer.ReadNetEntity();
+        clientTick = buffer.ReadGameTick();
+        fromStep = buffer.ReadInt32();
+    }
+
+    public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
+    {
+        buffer.Write(held);
+        buffer.Write(gun);
+        buffer.Write(clientTick);
+        buffer.Write(fromStep);
+    }
 
 }
 

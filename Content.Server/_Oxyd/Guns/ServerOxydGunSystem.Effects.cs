@@ -83,7 +83,8 @@ public sealed partial class ServerOxydGunSystem
         }
 
         // keep repeating until message from client comes
-        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
+        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff ||
+            effect.hardWait && effect.updateFromStep != firemodePrototype.currentStep)
         {
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
             effect.missedTicks++;
