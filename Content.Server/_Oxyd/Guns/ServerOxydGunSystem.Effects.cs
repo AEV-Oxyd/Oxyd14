@@ -70,7 +70,7 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        if (shooter is null)
+        if (shooter is null || !gun.Comp.selectedFiremodePrototype.Active)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;

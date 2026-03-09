@@ -509,6 +509,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        Log.Debug($"Queued for active removal {gun.Owner}");
         checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
         gun.Comp.keepUpdating = false;
     }

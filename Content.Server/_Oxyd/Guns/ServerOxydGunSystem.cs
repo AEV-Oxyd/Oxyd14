@@ -235,6 +235,28 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         base.Update(frameTime);
         doStatusTick();
+        foreach (var ent in checkActive)
+        {
+            Log.Debug($"Running change on {ent.gun.Owner}");
+            if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
+                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
+            if (ent.gun.Comp.keepUpdating)
+            {
+                if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                var c = EnsureComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+                c.gun = ent.gun;
+                c.FiremodePrototype = ent.firemode;
+                c.shooter = ent.shooter;
+            }
+            else
+            {
+                if (!HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
+                    continue;
+                RemComp<OxydActiveFiremodeUpdatingComponent>(ent.gun);
+            }
+        }
+        checkActive.Clear();
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
@@ -243,9 +265,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
         doMessageTick();
-
         foreach (var ent in checkActive)
         {
+            Log.Debug($"Running change on {ent.gun.Owner}");
+            if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
+                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
             if (ent.gun.Comp.keepUpdating)
             {
                 if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
