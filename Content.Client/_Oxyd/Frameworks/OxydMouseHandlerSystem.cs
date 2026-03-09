@@ -118,6 +118,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             return false;
         if (session.AttachedEntity is null)
             return false;
+        Log.Debug($"Mouse enabled");
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
@@ -130,6 +131,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         });
         if (altDown)
         {
+            Log.Debug($"Raising alt click event");
             RaiseLocalEvent(new MouseAltClickEvent()
             {
                 clickedOn = mouseData.lastClicked,

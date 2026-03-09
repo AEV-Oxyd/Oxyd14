@@ -49,6 +49,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
+        _netManager.RegisterNetMessage<FiremodeMouseStatus>();
     }
 
     public void DoUnjam(Entity<OxydGunComponent> ent, ref UnjamGunEvent args)
@@ -58,6 +59,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickedEvent args)
     {
+        Log.Error($"Trying unjam");
         if (!TryComp<OxydGunComponent>(ent, out var gcomp))
             return;
         _doafter.TryStartDoAfter(new DoAfterArgs(EntityManager,

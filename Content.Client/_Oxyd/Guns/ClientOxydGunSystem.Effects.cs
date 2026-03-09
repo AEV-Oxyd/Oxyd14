@@ -15,11 +15,12 @@ public sealed partial class ClientOxydGunSystem
         //if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
         //    return;
         Log.Debug($"Sending mouse data at {_gameTiming.RealTime}");
-        RaiseNetworkEvent(new FiremodeMouseStatus()
+        _netManager.ClientSendMessage(new FiremodeMouseStatus()
         {
             clientTick = _gameTiming.CurTick,
             gun = GetNetEntity(gun.Owner),
-            held = _mouseSys.mousedDown
+            held = _mouseSys.mousedDown,
+            fromStep = gun.Comp.selectedFiremodePrototype.currentStep
         });
     }
     public override bool InterpretStep(

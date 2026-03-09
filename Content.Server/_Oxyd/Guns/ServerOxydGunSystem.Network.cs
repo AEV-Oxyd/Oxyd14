@@ -1,14 +1,15 @@
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Doors.Electronics;
 
 namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
-    public void OnClientMouseInform(FiremodeMouseStatus ev, EntitySessionEventArgs arg)
+    public void OnClientMouseInform(FiremodeMouseStatus ev)
     {
-        Log.Error($"Received mouse network at {_gameTiming.RealTime}");
-        var player = arg.SenderSession;
+        Log.Debug($"Received mouse network at {_gameTiming.RealTime}");
+        var player = _playerManager.GetSessionByChannel(ev.MsgChannel);
         if (player.AttachedEntity is null)
             return;
         EntityUid gun = GetEntity(ev.gun);
@@ -31,7 +32,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(FiremodeMouseStatus args, uint tickDiff)
     {
-        Log.Error($"Handling mouse status change at {_gameTiming.RealTime}, td {tickDiff}!");
+        Log.Debug($"Handling mouse status change at {_gameTiming.RealTime}, td {tickDiff}!");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -41,13 +42,29 @@ public partial class ServerOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        foreach (var effect in gunComp.selectedFiremodePrototype.Effects)
+        Log.Debug($"Mouse status succesfull , from step {args.fromStep}");
+        var immediateInterpret = false;
+        for(var i = 0; i < gunComp.selectedFiremodePrototype.Effects.Count; i++)
         {
+            var effect = gunComp.selectedFiremodePrototype.Effects[i];
             if (effect is OxydMouseStatusGunEffect cast)
             {
+                Log.Debug($"Trying to apply to {i}");
+                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i)
+                    continue;
+                Log.Debug($"Succesfully applied to  step {i}");
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
+                cast.updateFromStep = args.fromStep;
+                if (effect is OxydImmediateInterpret second && second.shouldInterpretImmediately())
+                    immediateInterpret = true;
             }
+        }
+
+        if (immediateInterpret)
+        {
+            Log.Debug($"Immediate interpret ran!");
+            TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
         /*
         // handle immediate ticking
@@ -109,7 +126,7 @@ public partial class ServerOxydGunSystem
 
     public void OnClientInterpret(ClientSideInterpretingFiremode args)
     {
-        Log.Error($"Receiving client interpret at {_gameTiming.RealTime}");
+        Log.Debug($"Receiving client interpret at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -136,7 +153,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(ClientSideInterpretingFiremode args, uint tickDiff)
     {
-        Log.Error($"Interpreting Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
+        Log.Debug($"Interpreting Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
@@ -155,7 +172,7 @@ public partial class ServerOxydGunSystem
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
-            Log.Debug($"State desync - interpret {gunComp.selectedFiremodePrototype.currentStep} != {args.clientsideStartingStep}");
+            Log.Error($"State desync - interpret {gunComp.selectedFiremodePrototype.currentStep} != {args.clientsideStartingStep}");
             PunishChud((gun, gunComp));
             return;
         }
@@ -170,7 +187,7 @@ public partial class ServerOxydGunSystem
 
     public void OnClientEndInterpret(ClientSideDoneInterpretingFiremode args)
     {
-        Log.Error($"Receiving end interpret at {_gameTiming.RealTime}");
+        Log.Debug($"Receiving end interpret at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -196,7 +213,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(ClientSideDoneInterpretingFiremode args, uint tickDiff)
     {
-        Log.Error($"Ending Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
+        Log.Debug($"Ending Client-Firemode at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -227,7 +244,7 @@ public partial class ServerOxydGunSystem
 
     public void OnClientFireGun(FiremodeClientsideFiredEvent args)
     {
-        Log.Error($"Receiving fire gun at {_gameTiming.RealTime}");
+        Log.Debug($"Receiving fire gun at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -266,7 +283,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(FiremodeClientsideFiredEvent args, uint tickDiff)
     {
-        Log.Error($"Interpreting fire gun at {_gameTiming.RealTime}, td {tickDiff}");
+        Log.Debug($"Interpreting fire gun at {_gameTiming.RealTime}, td {tickDiff}");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
 
