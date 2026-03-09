@@ -58,6 +58,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickedEvent args)
     {
+        Log.Error($"Trying unjam");
         if (!TryComp<OxydGunComponent>(ent, out var gcomp))
             return;
         _doafter.TryStartDoAfter(new DoAfterArgs(EntityManager,
