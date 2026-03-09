@@ -91,6 +91,7 @@ public sealed partial class ServerOxydGunSystem
                 ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
+        firemode.catchupNeeded += effect.missedTicks;
         effect.receivedUpdate = TimeSpan.Zero;
         effect.missedTicks = 0;
         if (!effect.mouseHeld)

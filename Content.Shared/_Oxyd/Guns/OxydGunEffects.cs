@@ -108,6 +108,7 @@ public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatus
     [DataField]
     public int maxMissed = 5;
 
+
     public void Reset()
     {
         missedTicks = 0;
