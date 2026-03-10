@@ -70,7 +70,7 @@ public sealed partial class ServerOxydGunSystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        if (shooter is null)
+        if (shooter is null || !gun.Comp.selectedFiremodePrototype.Active)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
@@ -102,6 +102,14 @@ public sealed partial class ServerOxydGunSystem
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         firemodePrototype.currentStep -= effect.stepBack;
+        if (firemode.catchupNeeded > 0)
+        {
+            Log.Debug($"MouseHeld doing instant catchup");
+            firemode.catchupNeeded--;
+            firemodePrototype.currentStep--;
+            return true;
+        }
+
         return false;
     }
 

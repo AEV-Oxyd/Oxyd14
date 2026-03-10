@@ -73,6 +73,9 @@
     triggerTimeout: 0.3
   - !type:GunEffectRepeatNextTickIfMouseHeld
     stepBack: 6
+    validDiff: 0.1
+    hardWait: true
+    maxMissed: 15
 
 - type: entity
   name: Oxyd Gun

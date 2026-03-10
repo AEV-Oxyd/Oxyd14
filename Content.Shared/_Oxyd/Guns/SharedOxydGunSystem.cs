@@ -509,6 +509,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
+        Log.Debug($"Queued for active removal {gun.Owner}");
         checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
         gun.Comp.keepUpdating = false;
     }
@@ -516,12 +517,26 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
+        Log.Debug($"Executing firecycle at {_gameTiming.CurTick}");
         if (gun.Comp.jammed)
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            Log.Debug($"Interpret failed: jam");
             return false;
+        }
+
         if (firemodePrototype.nextFire > _gameTiming.CurTime && _netManager.IsClient)
+        {
+            Log.Debug($"Interpret failed: nextFire");
             return false;
+        }
+
         if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
+        {
+            Log.Debug($"Interpret failed: sameTick");
             return false;
+        }
+
         firemodePrototype.Active = true;
         firemodePrototype.lastInterpreted = _gameTiming.CurTick;
         while (firemodePrototype.currentStep < firemodePrototype.maxSteps)
