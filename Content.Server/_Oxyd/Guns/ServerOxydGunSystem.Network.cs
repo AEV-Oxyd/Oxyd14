@@ -42,17 +42,15 @@ public partial class ServerOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        Log.Debug($"Mouse status succesfull , from step {args.fromStep}");
         var immediateInterpret = false;
         for(var i = 0; i < gunComp.selectedFiremodePrototype.Effects.Count; i++)
         {
             var effect = gunComp.selectedFiremodePrototype.Effects[i];
             if (effect is OxydMouseStatusGunEffect cast)
             {
-                Log.Debug($"Trying to apply to {i}");
                 if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i)
                     continue;
-                Log.Debug($"Succesfully applied to  step {i}");
+                Log.Debug($"Succesfully mouse status applied to  step {i}, state {args.held}");
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
                 cast.updateFromStep = args.fromStep;
@@ -157,13 +155,24 @@ public partial class ServerOxydGunSystem
         EntityUid gun = GetEntity(args.gun);
         var player = _playerManager.GetSessionByChannel(args.MsgChannel);
         if (player.AttachedEntity is null)
+        {
+            Log.Debug($"Interpret failed to AttachedEntity");
             return;
+        }
+
         EntityUid shooter = player.AttachedEntity.Value;
         if (!TryComp<OxydGunComponent>(gun, out var gunComp))
+        {
+            Log.Debug($"Interpret failed to GunComp");
             return;
+        }
         // entity desync
         if (TerminatingOrDeleted(gun) || TerminatingOrDeleted(shooter))
+        {
+            Log.Debug($"Interpret failed to Deletion");
             return;
+        }
+
         gunComp.jammed = false;
         if (gunComp.selectedFiremodePrototype.nextFire == TimeSpan.Zero)
         {
@@ -237,6 +246,7 @@ public partial class ServerOxydGunSystem
         handler.ticksFoward = 0;
         gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
         gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
+        gunComp.selectedFiremodePrototype.lastInterpreted = _gameTiming.CurTick - tickDiff;
 
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
