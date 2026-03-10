@@ -17,6 +17,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 public partial class ClientOxydGunSystem
 {
     [Dependency] private readonly AnimationPlayerSystem _animPlayer = default!;
+    [Dependency] private readonly SharedPointLightSystem _lightSystem = default!;
 
     public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
@@ -50,5 +51,24 @@ public partial class ClientOxydGunSystem
 
         _animPlayer.Play(effect, anim, $"mf{ent.Comp.timesFired}");
 
+    }
+
+    public void visualUpdate()
+    {
+        var visquery = EntityQueryEnumerator<GlowOnChargeComponent>();
+        while (visquery.MoveNext(out var uid, out var visual))
+        {
+            var charge = Comp<OxydGunChargeupComponent>(uid);
+            if (charge.charge < visual.minCharge)
+            {
+                _lightSystem.RemoveLightDeferred(uid);
+                continue;
+            }
+
+            var glow = _lightSystem.EnsureLight(uid);
+            var scale = (charge.charge - visual.minCharge + 0.001f) / (charge.maxCharge - visual.minCharge);
+            _lightSystem.SetRadius(uid, (visual.maxRadius - visual.minRadius) * scale, glow);
+            _lightSystem.SetEnergy(uid, (visual.maxPower - visual.minPower) * scale, glow );
+        }
     }
 }

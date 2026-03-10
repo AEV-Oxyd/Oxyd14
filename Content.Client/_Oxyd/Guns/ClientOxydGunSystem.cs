@@ -5,6 +5,7 @@ using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
+using Content.Shared.EntityEffects.Effects;
 using Content.Shared.Interaction;
 using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
@@ -262,6 +263,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             }
         }
         checkActive.Clear();
+        visualUpdate();
+
 
     }
 }
