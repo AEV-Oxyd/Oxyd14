@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.OxydGunSystem;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Guns;
 
@@ -138,6 +139,37 @@ public sealed partial class ServerOxydGunSystem
         return true;
     }
 
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
+        {
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+        if (_gameTiming.CurTime.Ticks - effect.lastTrigger.Ticks> effect.triggerTimeout.Ticks)
+        {
+            effect.timesBack = 0;
+        }
+        effect.lastTrigger = _gameTiming.CurTime;
+        if (effect.timesBack < effect.repeatCount)
+        {
+            effect.timesBack++;
+            firemodePrototype.currentStep -= effect.stepBack;
+            EnsureActiveUpdating(firemodePrototype, gun, shooter);
+            if (stateComp.catchupNeeded > 0)
+            {
+                Log.Debug("Repeat effect doing instant catchup");
+                stateComp.catchupNeeded--;
+                firemodePrototype.currentStep--;
+                return true;
+            }
+            return false;
+        }
+        effect.timesBack = 0;
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
+        return true;
+    }
+
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         if (gun.Comp.safety || !firemodePrototype.Active)
@@ -152,13 +184,14 @@ public sealed partial class ServerOxydGunSystem
         }
         if (effect.skipTick == _gameTiming.CurTick)
         {
+            effect.skipTick = GameTick.First;
             return true;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         effect.alreadyWaited += _gameTiming.TickPeriod;
         if (stateComp.catchupNeeded > 0)
         {
-            var maxCatch = Math.Min((int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod), stateComp.catchupNeeded);
+            var maxCatch = Math.Min((int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod)+1, stateComp.catchupNeeded);
             Log.Error($"Catched up {maxCatch} ticks, total behind {stateComp.catchupNeeded}");
             stateComp.catchupNeeded -= maxCatch;
             effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
