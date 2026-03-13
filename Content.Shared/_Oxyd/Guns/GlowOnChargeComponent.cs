@@ -14,11 +14,11 @@ public sealed partial class GlowOnChargeComponent : Component
     public float minRadius = 1f;
 
     [DataField]
-    public float maxRadius = 3f;
+    public float maxRadius = 8f;
 
     [DataField]
     public float minPower = 2f;
 
     [DataField]
-    public float maxPower = 5f;
+    public float maxPower = 10f;
 }

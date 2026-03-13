@@ -18,7 +18,7 @@ public sealed class ServerGunChargeDecaySystem : GunChargeDecaySystem
             var filter = Filter.Pvs(uid);
             if (TryComp<FiremodeStateHandlerComponent>(uid, out var firemodeStateHandler) && firemodeStateHandler.shooterEntity != EntityUid.Invalid)
                 filter = Filter.PvsExcept(firemodeStateHandler.shooterEntity, 2F);
-            RaiseNetworkEvent(new SetGunChargeEvent(){charge = c.charge}, filter, true);
+            RaiseNetworkEvent(new SetGunChargeEvent(){charge = c.charge, gun = GetNetEntity(uid)}, filter, true);
         }
     }
 }

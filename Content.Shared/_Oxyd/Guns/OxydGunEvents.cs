@@ -33,6 +33,7 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
 public sealed class SetGunChargeEvent : EntityEventArgs
 {
     public float charge = 0f;
+    public NetEntity gun = NetEntity.Invalid;
 }
 public sealed class FiremodeMouseStatus : NetMessage
 {

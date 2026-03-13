@@ -103,7 +103,7 @@
     - name: Chamber
       insertSound: null
       ejectSound: null
-      priority: 2
+      priority: 1
       whitelist:
         components:
           - OxydBullet
@@ -111,7 +111,7 @@
     - name: Magazine
       insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
       ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
-      priority: 1
+      priority: 2
       whitelist:
         components:
           - OxydMagazine
@@ -121,6 +121,7 @@
     price: 500
   - type: OxydGunChargeup
     maxCharge: 1.0
+  - type: GlowOnCharge
 
 
 - type: entity

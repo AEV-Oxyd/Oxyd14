@@ -46,11 +46,21 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
+        SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
         _netManager.RegisterNetMessage<FiremodeMouseStatus>();
+    }
+
+    public void onChargeSet(SetGunChargeEvent ev)
+    {
+        var ent = GetEntity(ev.gun);
+        if (TerminatingOrDeleted(ent))
+            return;
+        if(TryComp<OxydGunChargeupComponent>(ent, out var ccomp))
+            ccomp.charge = ev.charge;
     }
 
     public void DoUnjam(Entity<OxydGunComponent> ent, ref UnjamGunEvent args)
