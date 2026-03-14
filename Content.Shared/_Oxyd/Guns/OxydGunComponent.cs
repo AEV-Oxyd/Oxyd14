@@ -77,7 +77,6 @@ public sealed partial class OxydHandheldGunComponent : Component
 
 public abstract partial class OxydGunProvidersComponent : Component
 {
-    public abstract bool getAmmo(int index, [NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot);
 };
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
@@ -90,12 +89,6 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
     [ViewVariables, AutoNetworkedField]
     public List<EntityUid> nextBullet = new List<EntityUid>();
 
-    public override bool getAmmo(int index,[NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
-    {
-        ammo = nextBullet[index];
-        slot = bulletSlot[index];
-        return nextBullet[index] != EntityUid.Invalid;
-    }
 
 }
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
@@ -103,6 +96,27 @@ public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoCha
 {
     [DataField("magazineSlot"), AutoNetworkedField]
     public List<ItemSlot> magazineSlot = new();
+}
+
+[DataDefinition]
+[Serializable, NetSerializable]
+public sealed partial class LaserAmmoDef
+{
+    [DataField]
+    public EntProtoId laser = default!;
+
+    [DataField]
+    public float cost = default!;
+
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public partial class OxydGunLaserProviderComponent : OxydGunProvidersComponent
+{
+    [DataField("laserProto"), AutoNetworkedField]
+    public List<LaserAmmoDef> laserProto = new();
+
+
 }
 
 [RegisterComponent]
@@ -113,6 +127,9 @@ public sealed partial class OxydBulletComponent : Component
     public float Speed = 100;
     [DataField]
     public EntProtoId projectileEntity = default!;
+    [DataField]
+    public EntProtoId casingEntity = default!;
+
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
@@ -123,7 +140,7 @@ public sealed partial class OxydMagazineComponent : Component
     [ViewVariables, AutoNetworkedField]
     public Stack<NetEntity> loadedBullets;
 
-    public OxydMagazineComponent()
+    public OxydMagazineComponent(
     {
         loadedBullets = new(maxBullets);
     }

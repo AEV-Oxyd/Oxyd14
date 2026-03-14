@@ -52,12 +52,24 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
         foreach (var projectile in FireNextTick)
         {
             _transform.SetMapCoordinates(projectile.Owner, projectile.Comp.initialPosition);
-            _physics.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, false);
-            _physics.SetLinearDamping(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), 0f, false);
-            _physics.SetAngularDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
-            _physics.SetFriction(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
-            _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
-            _patcher.startForcedPrediction(projectile.Owner);
+            if(!projectile.Comp.hitscan)
+            {
+                _transform.SetMapCoordinates(projectile.Owner, projectile.Comp.initialPosition);
+                _physics.SetBodyStatus(projectile.Owner,
+                    Comp<PhysicsComponent>(projectile.Owner),
+                    BodyStatus.InAir,
+                    false);
+                _physics.SetLinearDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
+                _physics.SetAngularDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
+                _physics.SetFriction(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0f, false);
+                _physics.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement);
+                _patcher.startForcedPrediction(projectile.Owner);
+            }
+            else
+            {
+
+            }
+
         }
     }
 }

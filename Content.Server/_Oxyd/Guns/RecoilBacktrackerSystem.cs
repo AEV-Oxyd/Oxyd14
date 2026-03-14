@@ -26,7 +26,7 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
             return;
         if (!TryComp<RecoilHandlerComponent>(ent, out var rcomp))
             return;
-        args.addedInaccuracy += SharedOxydGunSystem.getRecoilDeviation(rcomp.currentRecoil, rcomp.maxRecoil, rcomp.MaxDeviation);
+        args.addedInaccuracy += SharedOxydGunSystem.getRecoilDeviation(rcomp.currentRecoil, rcomp.maxRecoil, rcomp.maxDeviation);
     }
 
     public void OnStart(Entity<PlayerRecoilBacktrackerComponent> ent, ref ComponentStartup args)
