@@ -141,8 +141,8 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
             else
             {
                 GetHitscanEffect(new EntityCoordinates(projectile.Owner, 0, 0),
-                    200,
-                    projectile.Comp.initialMovement.ToAngle(),
+                    30,
+                    _transform.GetWorldRotation(projectile.Owner),
                     projectile.Owner,
                     out var data);
                 DrawHitscans(data);

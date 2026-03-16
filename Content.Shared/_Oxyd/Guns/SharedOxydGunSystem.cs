@@ -99,6 +99,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         InitRecoil();
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
+        SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
 
     }

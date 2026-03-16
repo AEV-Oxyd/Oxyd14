@@ -21,7 +21,7 @@ public sealed partial class OxydProjectileComponent : Component
     // where in the world was this initially aimed at
     public MapCoordinates aimedPosition;
     // initial movement to apply when firing
-    public Vector2 initialMovement;
+    public Vector2 initialMovement = Vector2.One;
     // initial pos to fire from on tick
     [AutoNetworkedField]
     public MapCoordinates initialPosition = MapCoordinates.Nullspace;

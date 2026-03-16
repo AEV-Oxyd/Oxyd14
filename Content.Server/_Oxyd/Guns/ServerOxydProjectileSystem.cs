@@ -99,7 +99,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
             {
                 GetHitscanEffect(new EntityCoordinates(projectile.Owner, 0, 0),
                     200,
-                    projectile.Comp.initialMovement.ToAngle(),
+                    _transform.GetWorldRotation(projectile.Owner),
                     projectile.Owner,
                     out var data);
                 var pvsRange = _config.GetCVar(CVars.NetMaxUpdateRange);
