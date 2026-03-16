@@ -5,8 +5,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// </summary>
 public partial class SharedOxydGunSystem : EntitySystem
 {
-    public void
-    ()
+    public void InitRecoil()
     {
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentStartup>(onStart);
         SubscribeLocalEvent<RecoilHandlerComponent, RecoilChangedEvent>(onChange);

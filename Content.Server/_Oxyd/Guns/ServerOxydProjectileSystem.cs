@@ -1,9 +1,13 @@
 using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
+using Content.Server._Oxyd.Framework;
 using Content.Server.Effects;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
 using Robust.Server.GameObjects;
+using Robust.Shared;
+using Robust.Shared.Configuration;
+using Robust.Shared.Map;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Events;
 using Robust.Shared.Physics.Systems;
@@ -21,6 +25,8 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
     [Dependency] private readonly PhysicsSystem _physicsSystem = default!;
     [Dependency] private readonly ColorFlashEffectSystem  _flashEffectSystem = default!;
     [Dependency] private readonly RayCastSystem _rayCastSystem = default!;
+    [Dependency] private readonly IConfigurationManager _config = default!;
+    [Dependency] private readonly ServerOxydHelpers _serverHelp = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
@@ -69,15 +75,42 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
         base.afterBulletCollide(obj, ref args);
     }
 
+
+
     public override void processProjectiles(float deltaTime)
     {
         foreach (var projectile in FireNextTick)
         {
             _transform.SetMapCoordinates(projectile.Owner, projectile.Comp.initialPosition);
-            _physicsSystem.SetBodyStatus(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), BodyStatus.InAir, true);
-            _physicsSystem.SetLinearDamping(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), 0, true);
-            _physicsSystem.SetSleepingAllowed(projectile.Owner,Comp<PhysicsComponent>(projectile.Owner), false, true);
-            _physicsSystem.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement, true);
+            if (!HasComp<OxydHitscanProjectileComponent>(projectile.Owner))
+            {
+                _physicsSystem.SetBodyStatus(projectile.Owner,
+                    Comp<PhysicsComponent>(projectile.Owner),
+                    BodyStatus.InAir,
+                    true);
+                _physicsSystem.SetLinearDamping(projectile.Owner, Comp<PhysicsComponent>(projectile.Owner), 0, true);
+                _physicsSystem.SetSleepingAllowed(projectile.Owner,
+                    Comp<PhysicsComponent>(projectile.Owner),
+                    false,
+                    true);
+                _physicsSystem.SetLinearVelocity(projectile.Owner, projectile.Comp.initialMovement, true);
+            }
+            else
+            {
+                GetHitscanEffect(new EntityCoordinates(projectile.Owner, 0, 0),
+                    200,
+                    projectile.Comp.initialMovement.ToAngle(),
+                    projectile.Owner,
+                    out var data);
+                var pvsRange = _config.GetCVar(CVars.NetMaxUpdateRange);
+                var c = projectile.Comp.initialPosition.Position;
+                var m = projectile.Comp.initialMovement;
+                var pvsBox = new Box2Rotated(new Box2(c.X,c.Y - pvsRange, c.X + m.X*50, c.Y + pvsRange ), projectile.Comp.initialMovement.ToAngle());
+                var targets = _serverHelp.lookupPlayerSessions(projectile.Comp.initialPosition.MapId, pvsBox);
+                Filter pvf = Filter.Empty();
+                pvf.AddPlayers(targets);
+                RaiseNetworkEvent(new DrawHitscanEvent(){data = data}, pvf);
+            }
         }
     }
 }

@@ -129,6 +129,11 @@ public sealed partial class OxydBulletComponent : Component
     public EntProtoId projectileEntity = default!;
     [DataField]
     public EntProtoId casingEntity = default!;
+}
+
+[RegisterComponent]
+public sealed partial class OxydHitscanProjectileComponent : Component
+{
 
 }
 
@@ -137,10 +142,11 @@ public sealed partial class OxydMagazineComponent : Component
 {
     [DataField("capacity"), AutoNetworkedField]
     public int maxBullets = 1;
+
     [ViewVariables, AutoNetworkedField]
     public Stack<NetEntity> loadedBullets;
 
-    public OxydMagazineComponent(
+    public OxydMagazineComponent()
     {
         loadedBullets = new(maxBullets);
     }

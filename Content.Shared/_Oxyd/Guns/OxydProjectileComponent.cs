@@ -25,8 +25,4 @@ public sealed partial class OxydProjectileComponent : Component
     // initial pos to fire from on tick
     [AutoNetworkedField]
     public MapCoordinates initialPosition = MapCoordinates.Nullspace;
-    // are we a hitscan? has different handling
-    public bool hitscan = false;
-
-
 }

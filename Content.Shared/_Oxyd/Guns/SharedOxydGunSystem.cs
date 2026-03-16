@@ -261,6 +261,22 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
+    public bool hasDischargeAmount(EntityUid gun, float amount)
+    {
+        foreach (var container in _containerSystem.GetAllContainers(gun))
+        {
+            if (container is not ContainerSlot slot)
+                continue;
+            if (slot.ContainedEntity is null)
+                continue;
+            if (!TryComp<BatteryComponent>(slot.ContainedEntity, out var batt))
+                continue;
+            if (_battery.GetCharge((slot.ContainedEntity.Value, batt)) >= amount)
+                return true;
+        }
+        return false;
+    }
+
     public bool tryGetProviderAmmo(Entity<OxydGunComponent> gun,
         int index,
         [NotNullWhen(true)] out EntProtoId? projectile,
@@ -310,6 +326,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
+    public bool hasProviderAmmo(Entity<OxydGunComponent> gun, int index)
+    {
+        var frd = gun.Comp.selectedFiremodePrototype;
+        switch (frd.AmmoProviders)
+        {
+            case OxydGunAmmoMagazineChamberComponent provider:
+                return provider.nextBullet[index] != EntityUid.Invalid;
+            case OxydGunAmmoChamberComponent provider:
+                return provider.nextBullet[index] != EntityUid.Invalid;
+            case OxydGunLaserProviderComponent provider:
+                return hasDischargeAmount(gun.Owner, provider.laserProto[index].cost);
+            default:
+                Log.Error($"Unimplemented hasProviderAmmo case ,  type {frd.AmmoProviders}");
+                return false;
+        }
+    }
+
 
     public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
     {
@@ -325,12 +358,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             projectileComp.initialMovement = new Vector2(ammoBullet.Speed, ammoBullet.Speed);
         }
-        else
-        { // assume hitscan
-            projectileComp.initialMovement = Vector2.One;
-            projectileComp.hitscan = true;
-        }
-
         outputComp = (projectile, projectileComp);
         return true;
     }
@@ -512,15 +539,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             onSafetyShootAttempt();
             return false;
         }
-        if (!gun.Comp.selectedFiremodePrototype.AmmoProviders.getAmmo(gun.Comp.selectedFiremodePrototype.providerId, out var bullet, out var itemSlot))
+        if (!hasProviderAmmo(gun, gun.Comp.selectedFiremodePrototype.providerId))
         {
             onEmptyShootAttempt();
-            return false;
-        }
-
-        if (!TryComp<OxydBulletComponent>(bullet, out var chambered))
-        {
-            onInvalidShootAttempt();
             return false;
         }
 
