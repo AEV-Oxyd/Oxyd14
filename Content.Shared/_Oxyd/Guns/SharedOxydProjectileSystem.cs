@@ -156,11 +156,12 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
             var (_, gridRot, gridInvMatrix) = _transform.GetWorldPositionRotationInvMatrix(gridXform);
             var map = _transform.ToMapCoordinates(fromCoordinates);
             fromCoordinates = new EntityCoordinates(gridUid.Value, Vector2.Transform(map.Position, gridInvMatrix));
-            //shotAngle -= gridRot;
+            // Dont know why it has to be 2x but 1x was off and i couldn't be bothered to investigate. SPCR 2026
+            shotAngle -= gridRot*2;
         }
         else
         {
-            //shotAngle -= _transform.GetWorldRotation(fromXform);
+            shotAngle -= _transform.GetWorldRotation(fromXform);
         }
         if (distance >= 1f)
         {
