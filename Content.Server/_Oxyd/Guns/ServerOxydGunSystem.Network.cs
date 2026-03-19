@@ -1,6 +1,7 @@
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Doors.Electronics;
+using Robust.Shared.GameStates;
 
 namespace Content.Server._Oxyd.Guns;
 
@@ -217,6 +218,7 @@ public partial class ServerOxydGunSystem
         {
             return;
         }
+
         DoNetMessage(args, tickDiff);
     }
 
@@ -247,7 +249,6 @@ public partial class ServerOxydGunSystem
         gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
         gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
         gunComp.selectedFiremodePrototype.lastInterpreted = _gameTiming.CurTick - tickDiff;
-
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 
