@@ -23,8 +23,7 @@ public sealed class ServerOxydHelpers : EntitySystem
     {
         List<ICommonSession> found = new();
         box = box.Enlarged(_config.GetCVar(CVars.NetMaxUpdateRange));
-        var consts = SharedOxydHelpers.getIntersectionCheckConstants(box);
-        Log.Debug($"Checking box with points {box.BottomLeft} and {box.TopRight}, rot {box.Rotation.Degrees}");
+        Log.Debug($"Checking box with points {box.Box.Left} and {box.Box.Right}, rot {box.Rotation.Degrees}");
 
         foreach (var player in _playerManager.Sessions)
         {
@@ -35,7 +34,9 @@ public sealed class ServerOxydHelpers : EntitySystem
             var entPos = _transform.GetMapCoordinates(player.AttachedEntity.Value);
             if (entPos.MapId != map)
                 continue;
-            if (!SharedOxydHelpers.checkIntersect(entPos.Position, box, consts))
+            var r = (-box.Rotation).RotateVec(entPos.Position - box.Box.Center) + box.Box.Center;
+            Log.Debug($"relative conversion got {r}, before rot { entPos.Position}");
+            if (!SharedOxydHelpers.checkIntersect(entPos.Position, box))
                 continue;
             found.Add(player);
         }
@@ -55,9 +56,8 @@ public sealed class ServerOxydHelpers : EntitySystem
             var entPos = _transform.GetMapCoordinates(player.AttachedEntity.Value);
             if (entPos.MapId != map)
                 continue;
-            var consts = SharedOxydHelpers.getIntersectionCheckConstants(box);
             box = box.Enlarged(_config.GetCVar(CVars.NetMaxUpdateRange));
-            if (!SharedOxydHelpers.checkIntersect(entPos.Position, box, consts))
+            if (!SharedOxydHelpers.checkIntersect(entPos.Position, box))
                 continue;
             found.Add(player.AttachedEntity.Value);
         }

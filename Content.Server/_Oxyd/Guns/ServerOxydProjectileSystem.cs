@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 using Content.Server._Oxyd.Framework;
 using Content.Server.Effects;
+using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
 using Content.Shared.Weapons.Hitscan.Components;
@@ -92,7 +93,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
                     out var data);
                 var c = projectile.Comp.initialPosition.Position;
                 var m = projectile.Comp.initialMovement;
-                var box = new Box2(c.X, c.Y, c.X + m.X * actualTravel, c.Y);
+                var box = SharedOxydHelpers.buildWorldBox(c.X, c.Y, c.X + m.X * actualTravel, c.Y);
                 var pvsBox = new Box2Rotated(box, rot, box.Center );
                 var targets = _serverHelp.lookupPlayerSessions(projectile.Comp.initialPosition.MapId, pvsBox);
                 Log.Error($"Target count for PVS {targets.Count}");
