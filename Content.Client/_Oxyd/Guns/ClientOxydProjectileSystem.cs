@@ -4,6 +4,7 @@ using Content.Client.Effects;
 using Content.Client.Projectiles;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Weapons.Hitscan.Components;
 using Content.Shared.Weapons.Ranged.Systems;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
@@ -140,10 +141,17 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
             }
             else
             {
-                GetHitscanEffect(new EntityCoordinates(projectile.Owner, 0, 0),
-                    30,
-                    _transform.GetWorldRotation(projectile.Owner),
-                    projectile.Owner,
+                var map = _transform.GetMap(projectile.Owner);
+                if(map is null || TerminatingOrDeleted(map) || !TryComp<HitscanBasicVisualsComponent>(projectile, out var vizComp))
+                    continue;
+                Vector2 pos = _transform.GetWorldPosition(projectile.Owner);
+                Angle rot = Transform(projectile.Owner).LocalRotation;
+                ProcessHitscan(projectile, HitscanTickRange, out float actualTravel);
+                Log.Error($"Actual travel {actualTravel}");
+                GetHitscanEffect(new EntityCoordinates(map.Value, pos),
+                    actualTravel,
+                    rot,
+                    vizComp,
                     out var data);
                 DrawHitscans(data);
             }

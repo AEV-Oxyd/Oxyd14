@@ -60,10 +60,12 @@ public class SharedOxydHelpers
         c2 = constants[2]*(p.Y - lp.Y) - constants[3]*(p.X - lp.X);
         if(float.Sign(c1) != float.Sign(c2))
             return false;
+        c1 = c2;
         lp = b.BottomLeft;
         c2 = constants[4]*(p.Y - lp.Y) - constants[5]*(p.X - lp.X);
         if(float.Sign(c1) != float.Sign(c2))
             return false;
+        c1 = c2;
         lp = b.BottomRight;
         c2 = constants[6]*(p.Y - lp.Y) - constants[7]*(p.X - lp.X);
         if(float.Sign(c1) != float.Sign(c2))

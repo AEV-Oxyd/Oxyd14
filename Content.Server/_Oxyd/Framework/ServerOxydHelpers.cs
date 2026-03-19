@@ -22,6 +22,9 @@ public sealed class ServerOxydHelpers : EntitySystem
     public List<ICommonSession> lookupPlayerSessions(MapId map, Box2Rotated box)
     {
         List<ICommonSession> found = new();
+        box = box.Enlarged(_config.GetCVar(CVars.NetMaxUpdateRange));
+        var consts = SharedOxydHelpers.getIntersectionCheckConstants(box);
+        Log.Debug($"Checking box with points {box.BottomLeft} and {box.TopRight}, rot {box.Rotation.Degrees}");
 
         foreach (var player in _playerManager.Sessions)
         {
@@ -32,8 +35,6 @@ public sealed class ServerOxydHelpers : EntitySystem
             var entPos = _transform.GetMapCoordinates(player.AttachedEntity.Value);
             if (entPos.MapId != map)
                 continue;
-            var consts = SharedOxydHelpers.getIntersectionCheckConstants(box);
-            box = box.Enlarged(_config.GetCVar(CVars.NetMaxUpdateRange));
             if (!SharedOxydHelpers.checkIntersect(entPos.Position, box, consts))
                 continue;
             found.Add(player);

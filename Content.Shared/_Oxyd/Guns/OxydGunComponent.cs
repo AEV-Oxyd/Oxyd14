@@ -134,7 +134,7 @@ public sealed partial class OxydBulletComponent : Component
 [RegisterComponent]
 public sealed partial class OxydHitscanProjectileComponent : Component
 {
-
+    public EntProtoId effectEntity = default!;
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]

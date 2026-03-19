@@ -18,6 +18,11 @@ public sealed partial class OxydProjectileComponent : Component
     public EntityUid shotBy;
     // entities we won't hit
     public HashSet<EntityUid> ignoring = new();
+    // entities we have hit
+    public List<EntityUid> hits = new();
+    // max entities we can hit
+    [DataField]
+    public int maxHits = 0;
     // where in the world was this initially aimed at
     public MapCoordinates aimedPosition;
     // initial movement to apply when firing
