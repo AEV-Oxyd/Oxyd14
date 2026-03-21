@@ -1,23 +1,26 @@
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
+using System.Runtime.Intrinsics;
 using Robust.Shared;
 using Robust.Shared.Configuration;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Framework;
 
-public static class OxydHelpers
+public class SharedOxydHelpers
 {
-    public static ResPath getSpritePath(SpriteSpecifier target)
+    public static bool checkIntersect(Vector2 p, Box2Rotated b)
     {
-        switch (target)
-        {
-            case SpriteSpecifier.Rsi cast:
-                return new ResPath(cast.RsiPath + $"/{cast.RsiState}.png");
-            case SpriteSpecifier.Texture cast:
-                return cast.TexturePath;
-        }
-        return ResPath.Empty;
+        var r = (-b.Rotation).RotateVec(p - b.Box.Center) + b.Box.Center;
+        var t = b.Box;
+        return r.X > t.Left && r.Y > t.Bottom && r.X < t.Right && r.Y < t.Top;
+    }
+
+    public static Box2 buildWorldBox(float x1, float y1, float x2, float y2)
+    {
+        return new Box2(x1 > x2 ? x2 : x1, y1 > y2 ? y2 : y1, x1 < x2 ? x2 : x1, y1 < y2 ? y2 : y1);
     }
 }

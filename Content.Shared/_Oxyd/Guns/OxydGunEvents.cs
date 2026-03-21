@@ -29,6 +29,14 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
         buffer.Write(clientTick);
     }
 }
+
+[NetSerializable, Serializable]
+public sealed class SetGunChargeEvent : EntityEventArgs
+{
+    public float charge = 0f;
+    public NetEntity gun = NetEntity.Invalid;
+}
+
 public sealed class FiremodeMouseStatus : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;

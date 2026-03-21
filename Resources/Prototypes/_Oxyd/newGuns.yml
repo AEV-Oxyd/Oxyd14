@@ -49,6 +49,34 @@
   - !type:GunEffectResetCharge
 
 - type: gunFiremode
+  id: chargeHitscanFiremode
+  firerate: 10
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: modecharge
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  provider: OxydGunLaserProvider
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  effects:
+  - !type:GunEffectWait
+    waitPeriod: 0.3125
+    fowardMax: 3
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectModifyCharge
+    addAmount: 0.2
+  - !type:GunEffectRepeatNextTickIfMouseHeld
+    stepBack: 5
+    validDiff: 0.2
+    hardWait: true
+    maxMissed: 15
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectResetCharge
+
+- type: gunFiremode
   id: baseBurstFiremode
   firerate: 60
   icon:
@@ -95,6 +123,7 @@
   - type: OxydGun
     firemodes:
     - baseBurstFiremode
+    - chargeHitscanFiremode
     - baseFiremode
     - chargeFiremode
   - type: OxydHandheldGun
@@ -103,7 +132,7 @@
     - name: Chamber
       insertSound: null
       ejectSound: null
-      priority: 2
+      priority: 0
       whitelist:
         components:
           - OxydBullet
@@ -111,16 +140,70 @@
     - name: Magazine
       insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
       ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
-      priority: 1
+      priority: 2
       whitelist:
         components:
           - OxydMagazine
-  - type: ItemSlots
+  - type: OxydGunLaserProvider
+    laserProto:
+    - !type:LaserAmmoDef
+      cost: 10
+      laser: OxydHitscan
   - type: ContainerContainer
+    containers:
+      cell_slot: !type:ContainerSlot
+  - type: ItemSlots
+    slots:
+      cell_slot:
+        name: power-cell-slot-component-slot-name-default
+        startingItem: PowerCellMedium
+        priority: 1
   - type: StaticPrice
     price: 500
   - type: OxydGunChargeup
     maxCharge: 1.0
+  - type: GlowOnCharge
+  - type: RecoilHandler
+
+- type: entity
+  parent: BasicHitscan
+  id: OxydHitscan
+  name: oxyd debug laser ray
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: HitscanBasicVisuals
+    muzzleFlash:
+      sprite: Objects/Weapons/Guns/Projectiles/projectiles.rsi
+      state: muzzle_laser
+    travelFlash:
+      sprite: Objects/Weapons/Guns/Projectiles/projectiles.rsi
+      state: beam
+    impactFlash:
+      sprite: Objects/Weapons/Guns/Projectiles/projectiles.rsi
+      state: impact_laser
+  - type: HitscanBasicEffects
+  - type: OxydHitscanProjectile
+  - type: Physics
+    bodyType: Static
+    linearDamping: 0
+    angularDamping: 0
+  - type: Fixtures
+    fixtures:
+      oxyd:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.1,-0.1,0.1,0.1"
+        hard: false
+        mask:
+        - Impassable
+        - BulletImpassable
+        friction: 0
+  - type: OxydProjectileApplyDamage
+    damage:
+        types:
+          Blunt: 7
+  - type: TimedDespawn
+    lifetime: 10
 
 
 - type: entity

@@ -135,7 +135,7 @@ public sealed partial class ServerOxydGunSystem
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
             stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
         stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
-        Log.Error($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}, gap {firemodePrototype.firingGaps}");
+        Log.Debug($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}, gap {firemodePrototype.firingGaps}");
         return true;
     }
 
@@ -192,7 +192,7 @@ public sealed partial class ServerOxydGunSystem
         if (stateComp.catchupNeeded > 0)
         {
             var maxCatch = Math.Min((int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod)+1, stateComp.catchupNeeded);
-            Log.Error($"Catched up {maxCatch} ticks, total behind {stateComp.catchupNeeded}");
+            Log.Debug($"Catched up {maxCatch} ticks, total behind {stateComp.catchupNeeded}");
             stateComp.catchupNeeded -= maxCatch;
             effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
         }

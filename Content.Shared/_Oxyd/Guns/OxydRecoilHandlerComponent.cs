@@ -16,7 +16,7 @@ public sealed partial class RecoilHandlerComponent : Component
     public float maxRecoil = 100f;
 
     [DataField]
-    public Angle MaxDeviation = Angle.FromDegrees(5);
+    public Angle maxDeviation = Angle.FromDegrees(5);
 }
 
 [RegisterComponent]

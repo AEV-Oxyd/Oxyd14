@@ -19,13 +19,13 @@ public partial class SharedOxydGunSystem : EntitySystem
     }
     public static Angle getRecoilDeviation(float curRecoil, float maxRecoil , Angle maxDev)
     {
-        return (curRecoil + 1) / maxRecoil * maxDev;
+        return (curRecoil + 1) / maxRecoil * maxDev/2;
     }
 
     public void OnRequestRecoil(Entity<RecoilHandlerComponent> ent, ref GunGetInaccuracyEvent args)
     {
         if(_gameTiming.CurTick.Value - args.simTick.Value == 0)
-            args.addedInaccuracy += getRecoilDeviation(ent.Comp.currentRecoil, ent.Comp.maxRecoil, ent.Comp.MaxDeviation);
+            args.addedInaccuracy += getRecoilDeviation(ent.Comp.currentRecoil, ent.Comp.maxRecoil, ent.Comp.maxDeviation);
     }
 
     public void onChange(Entity<RecoilHandlerComponent> ent, ref RecoilChangedEvent args)

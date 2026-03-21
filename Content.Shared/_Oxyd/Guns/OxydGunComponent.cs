@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.DoAfter;
 using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -10,14 +11,18 @@ using Robust.Shared.Utility;
 
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
-
-
+[Serializable, NetSerializable]
+public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
+{
+}
 /// <summary>
 /// This is used for...
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunComponent : Component
 {
+    public override bool SessionSpecific => true;
+
     [ViewVariables]
     public bool keepUpdating = false;
 
@@ -39,7 +44,7 @@ public sealed partial class OxydGunComponent : Component
     [DataField, AutoNetworkedField]
     public bool hasSafety = true;
 
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public bool jammed = false;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
@@ -77,32 +82,50 @@ public sealed partial class OxydHandheldGunComponent : Component
 
 public abstract partial class OxydGunProvidersComponent : Component
 {
-    public abstract bool getAmmo(int index, [NotNullWhen(true)] out EntityUid? ammo,  out ItemSlot slot);
+    public override bool SessionSpecific => true;
 };
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 {
-    [DataField("bulletSlot"), AutoNetworkedField]
+
+    [DataField("bulletSlot")]
     public List<ItemSlot> bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
     [ViewVariables, AutoNetworkedField]
     public List<EntityUid> nextBullet = new List<EntityUid>();
 
-    public override bool getAmmo(int index,[NotNullWhen(true)] out EntityUid? ammo, out ItemSlot slot)
-    {
-        ammo = nextBullet[index];
-        slot = bulletSlot[index];
-        return nextBullet[index] != EntityUid.Invalid;
-    }
 
 }
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
-    [DataField("magazineSlot"), AutoNetworkedField]
+    [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
+}
+
+[DataDefinition]
+[Serializable, NetSerializable]
+public sealed partial class LaserAmmoDef
+{
+    [DataField]
+    public EntProtoId laser = default!;
+
+    [DataField]
+    public float cost = default!;
+
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public partial class OxydGunLaserProviderComponent : OxydGunProvidersComponent
+{
+
+
+    [DataField("laserProto"), AutoNetworkedField]
+    public List<LaserAmmoDef> laserProto = new();
+
+
 }
 
 [RegisterComponent]
@@ -113,13 +136,22 @@ public sealed partial class OxydBulletComponent : Component
     public float Speed = 100;
     [DataField]
     public EntProtoId projectileEntity = default!;
+    [DataField]
+    public EntProtoId casingEntity = default!;
+}
+
+[RegisterComponent]
+public sealed partial class OxydHitscanProjectileComponent : Component
+{
+    public EntProtoId effectEntity = default!;
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydMagazineComponent : Component
+public sealed partial class OxydMagazineComponent : OxydGunProvidersComponent
 {
     [DataField("capacity"), AutoNetworkedField]
     public int maxBullets = 1;
+
     [ViewVariables, AutoNetworkedField]
     public Stack<NetEntity> loadedBullets;
 

@@ -20,7 +20,7 @@ public sealed partial class CCVars
         CVarDef.Create("physics.offgrid_friction", 0.05f, CVar.ARCHIVE | CVar.REPLICATED | CVar.SERVER);
 
     public static readonly CVarDef<float> TileFrictionModifier =
-        CVarDef.Create("physics.tile_friction", 8.0f, CVar.ARCHIVE | CVar.REPLICATED | CVar.SERVER);
+        CVarDef.Create("physics.tile_friction", 1.0f, CVar.ARCHIVE | CVar.REPLICATED | CVar.SERVER);
 
     public static readonly CVarDef<float> StopSpeed =
         CVarDef.Create("physics.stop_speed", 0.1f, CVar.ARCHIVE | CVar.REPLICATED | CVar.SERVER);

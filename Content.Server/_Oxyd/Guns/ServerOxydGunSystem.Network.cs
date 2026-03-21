@@ -1,11 +1,165 @@
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.Actions.Components;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Doors.Electronics;
+using Content.Shared.Weapons.Ranged.Components;
+using Robust.Shared.GameStates;
+using Robust.Shared.Map.Components;
+using Robust.Shared.Player;
+using Robust.Shared.Utility;
 
 namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
+    public bool GetParentWithComp<T>(EntityUid uid,[NotNullWhen(true)] out Entity<T>? ent) where T : Component
+    {
+        ent = null;
+        var target = uid;
+        while (TryComp<TransformComponent>(target, out var transform))
+        {
+            if (TryComp<T>(target, out var comp))
+            {
+                ent = new Entity<T>(target, comp);
+                return true;
+            }
+            if(HasComp<MapGridComponent>(target) || HasComp<MapComponent>(target))
+                break;
+            if (TerminatingOrDeleted(transform.ParentUid))
+                break;
+            target = transform.ParentUid;
+        }
+        return false;
+    }
+    public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
+    {
+        lst ??= new();
+        switch( variable)
+        {
+            case null:
+                break;
+            case EntityUid c:
+                if(c != EntityUid.Invalid)
+                    lst.Add(c);
+                break;
+            case IEnumerable array:
+                foreach(var thing in array)
+                    extractEntitities(thing, lst);
+                break;
+            case ItemSlot slot:
+                if (slot.Item is null)
+                    break;
+                lst.Add(slot.Item.Value);
+                break;
+        }
+
+        return lst;
+    }
+    public Dictionary<EntityUid, List<IComponent>> getInvolvedComponents(Entity<OxydGunComponent> gun)
+    {
+        var dict = new Dictionary<EntityUid, List<IComponent>>();
+        var firemode = gun.Comp.selectedFiremodePrototype;
+        if (!_factory.TryGetRegistration(firemode.providerComp, out var registration))
+            return dict;
+        if (EntityManager.TryGetComponent(gun.Owner, registration, out var comp))
+        {
+            var targetType = comp.GetType();
+            dict.Add(gun.Owner, new List<IComponent>() {comp});
+            foreach (var field in targetType.GetAllFields())
+            {
+                var indexed = false;
+                foreach (var data in field.CustomAttributes)
+                {
+                    if (data.AttributeType != typeof(CheckForGunUpdateAttribute))
+                        continue;
+                    if(data.ConstructorArguments.Count == 1 && data.ConstructorArguments[0].Value is bool truth)
+                        indexed = truth;
+                    goto fieldCheck;
+                }
+                continue;
+            fieldCheck:
+                var fieldValue = field.GetValue(comp);
+                if (fieldValue is null)
+                    continue;
+                if (indexed && fieldValue is IEnumerable enumerable)
+                    fieldValue = enumerable.Cast<object?>().ToList()[firemode.shootingPosIndex];
+                foreach (var thing in extractEntitities(fieldValue, null))
+                {
+                    getInvolvedComponents(thing, dict);
+                }
+            }
+        }
+        return dict;
+    }
+
+    public void getInvolvedComponents(EntityUid target, Dictionary<EntityUid, List<IComponent>> dict)
+    {
+        var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(target);
+        if (!comps.Any())
+            return;
+        dict.TryAdd(target, new List<IComponent>());
+        foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(target))
+        {
+            dict.TryAdd(target, new List<IComponent>());
+            dict[target].Add(comp);
+            var targetType = comp.GetType();
+            foreach (var field in targetType.GetAllFields())
+            {
+                foreach (var data in field.CustomAttributes)
+                {
+                    if (data.AttributeType != typeof(CheckForGunUpdateAttribute))
+                        continue;
+                    goto fieldCheck;
+                }
+                continue;
+                fieldCheck:
+                var fieldValue = field.GetValue(comp);
+                if (fieldValue is null)
+                    continue;
+                foreach (var thing in extractEntitities(fieldValue, null))
+                {
+                    getInvolvedComponents(thing, dict);
+                }
+            }
+        }
+    }
+    public void onTryStateGun(Entity<OxydGunComponent> ent, ref ComponentGetStateAttemptEvent args)
+    {
+        Log.Debug($"getstate {args.Player} {ent.Comp}");
+        if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
+            return;
+        // always give state to replay
+        if (args.Player is null)
+            return;
+        if (args.Player == state.shooterSession)
+        {
+            Log.Debug($"canceled {args.Player} {ent.Comp}");
+            return;
+        }
+
+    }
+
+    public void onTryStateGeneric(EntityUid target, IComponent comp, ref ComponentGetStateAttemptEvent args)
+    {
+        Log.Debug($"getstate {args.Player} {comp}");
+        if (!GetParentWithComp<OxydGunComponent>(target, out var ent))
+            return;
+        if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
+            return;
+        // always give state to replay
+        if (args.Player is null)
+            return;
+        if (args.Player == state.shooterSession)
+        {
+            Log.Debug($"canceled {args.Player} {comp}");
+            args.Cancelled = true;
+            return;
+        }
+    }
     public void OnClientMouseInform(FiremodeMouseStatus ev)
     {
         Log.Debug($"Received mouse network at {_gameTiming.RealTime}");
@@ -188,7 +342,7 @@ public partial class ServerOxydGunSystem
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
         var c = EnsureComp<FiremodeStateHandlerComponent>(gun);
         c.shooterEntity = shooter;
-        c.shooterNetworkId = args.MsgChannel.UserId;
+        c.shooterSession = player;
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
@@ -217,6 +371,7 @@ public partial class ServerOxydGunSystem
         {
             return;
         }
+
         DoNetMessage(args, tickDiff);
     }
 
@@ -240,6 +395,8 @@ public partial class ServerOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
         }
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
+        if(handler.executedFiringSteps.Values.Sum(t => t.Count) != 0)
+            Log.Error($"Done Intrepret ended with a bullet never being fired!");
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
@@ -247,7 +404,15 @@ public partial class ServerOxydGunSystem
         gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
         gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
         gunComp.selectedFiremodePrototype.lastInterpreted = _gameTiming.CurTick - tickDiff;
-
+        // this wont get to user since  the state is sessionSpecific handled, just everyone else
+        Dirty(gun, gunComp);
+        var dict = getInvolvedComponents((gun, gunComp));
+        Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
+        foreach (var (target, components) in dict)
+        {
+            foreach(var comp in components)
+                Dirty(target, comp);
+        }
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 

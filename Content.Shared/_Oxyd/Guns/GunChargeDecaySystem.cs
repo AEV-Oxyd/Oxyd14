@@ -5,7 +5,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class GunChargeDecaySystem : EntitySystem
+public abstract class GunChargeDecaySystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _time = default!;
 

@@ -231,3 +231,7 @@
   - type: FireVisuals
     alternateState: Standing
   - type: StunVisuals
+  - type: MovementSpeedModifier
+    baseAcceleration: 3
+    baseFriction: 3
+  - type: UseBasicPrediction
