@@ -139,7 +139,7 @@ public sealed partial class ServerOxydGunSystem
         return true;
     }
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public override bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
         {
