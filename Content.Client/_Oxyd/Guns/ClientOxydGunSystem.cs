@@ -31,7 +31,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly SpriteSystem _spriteSystem = default!;
-    [Dependency] private readonly DoAfterSystem _doafter = default!;
 
 
     /// <inheritdoc/>
