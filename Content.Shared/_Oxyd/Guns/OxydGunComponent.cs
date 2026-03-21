@@ -18,6 +18,8 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunComponent : Component
 {
+    public override bool SessionSpecific => true;
+
     [ViewVariables]
     public bool keepUpdating = false;
 
@@ -82,7 +84,7 @@ public abstract partial class OxydGunProvidersComponent : Component
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 {
-    [DataField("bulletSlot"), AutoNetworkedField]
+    [DataField("bulletSlot"), AutoNetworkedField, CheckForGunUpdate(true)]
     public List<ItemSlot> bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
@@ -94,7 +96,7 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
-    [DataField("magazineSlot"), AutoNetworkedField]
+    [DataField("magazineSlot"), AutoNetworkedField, CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
 }
 
@@ -138,7 +140,7 @@ public sealed partial class OxydHitscanProjectileComponent : Component
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydMagazineComponent : Component
+public sealed partial class OxydMagazineComponent : OxydGunProvidersComponent
 {
     [DataField("capacity"), AutoNetworkedField]
     public int maxBullets = 1;

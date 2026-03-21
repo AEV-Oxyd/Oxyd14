@@ -147,7 +147,6 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
                 Vector2 pos = _transform.GetWorldPosition(projectile.Owner);
                 Angle rot = Transform(projectile.Owner).LocalRotation;
                 ProcessHitscan(projectile, HitscanTickRange, out float actualTravel);
-                Log.Error($"Actual travel {actualTravel}");
                 GetHitscanEffect(new EntityCoordinates(map.Value, pos),
                     actualTravel,
                     rot,

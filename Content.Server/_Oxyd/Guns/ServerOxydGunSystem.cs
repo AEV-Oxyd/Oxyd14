@@ -55,6 +55,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         base.Initialize();
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentInit>(onAddRecoil);
+        SubscribeLocalEvent<OxydGunComponent, ComponentGetStateAttemptEvent>(onTryStateGun);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
@@ -188,9 +189,14 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // when the gun desync!!
     public void TotalResync(Entity<OxydGunComponent> target)
     {
+        if (TryComp<FiremodeStateHandlerComponent>(target, out var state))
+        {
+            ResetFiremode(target.Comp.selectedFiremodePrototype,target, state.shooterEntity);
+            state.shooterSession = null;
+        }
         Dirty(target);
-        if(TryComp<OxydGunAmmoMagazineChamberComponent>(target.Owner, out var chamber))
-            Dirty(target.Owner, chamber);
+        foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(target.Owner))
+            Dirty(target.Owner, comp);
         foreach (var container in _containerSystem.GetAllContainers(target))
         {
             foreach (var ent in container.ContainedEntities)

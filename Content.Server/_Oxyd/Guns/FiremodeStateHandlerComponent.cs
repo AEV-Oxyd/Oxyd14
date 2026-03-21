@@ -1,4 +1,5 @@
 using Robust.Shared.Network;
+using Robust.Shared.Player;
 
 namespace Content.Server._Oxyd.Guns;
 
@@ -11,7 +12,7 @@ public sealed partial class FiremodeStateHandlerComponent : Component
     [ViewVariables]
     public TimeSpan lastAction = TimeSpan.Zero;
     [ViewVariables]
-    public NetUserId shooterNetworkId;
+    public ICommonSession? shooterSession;
     [ViewVariables]
     public EntityUid shooterEntity;
     //  opreste cheaterii din a trage de mai multe ori

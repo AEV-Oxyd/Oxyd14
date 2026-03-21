@@ -61,7 +61,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
     [Dependency] protected readonly SharedHandsSystem _handsSystem = default!;
-    [Dependency] private readonly IComponentFactory _factory = default!;
+    [Dependency] protected readonly IComponentFactory _factory = default!;
     [Dependency] protected readonly SharedAudioSystem _audio = default!;
     [Dependency] protected readonly GunChargeDecaySystem _charge = default!;
     [Dependency] protected readonly SharedBatterySystem _battery = default!;

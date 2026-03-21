@@ -37,11 +37,6 @@ public sealed class SetGunChargeEvent : EntityEventArgs
     public NetEntity gun = NetEntity.Invalid;
 }
 
-[NetSerializable, Serializable]
-public sealed class CustomGunDirty : EntityEventArgs
-{
-
-}
 public sealed class FiremodeMouseStatus : NetMessage
 {
     public override MsgGroups MsgGroup { get; } = MsgGroups.EntityEvent;
