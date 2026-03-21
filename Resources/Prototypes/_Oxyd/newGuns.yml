@@ -201,7 +201,7 @@
   - type: OxydProjectileApplyDamage
     damage:
         types:
-          Blunt: 7
+          Blunt: 25
   - type: TimedDespawn
     lifetime: 10
 
@@ -306,7 +306,7 @@
   - type: OxydProjectileApplyDamage
     damage:
         types:
-          Blunt: 7
+          Blunt: 25
   - type: OxydBulletOnFireRecoil
     recoil: 10
 
