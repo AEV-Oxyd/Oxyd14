@@ -7,6 +7,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityEffects.Effects;
 using Content.Shared.Interaction;
+using Content.Shared.Verbs;
 using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
 using Robust.Client.Player;
@@ -15,15 +16,12 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
+using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 
 namespace Content.Client._Oxyd.OxydGunSystem;
-
-public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
-{
-}
 
 
 /// <summary>
@@ -41,11 +39,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
-        SubscribeLocalEvent<OxydHandheldGunComponent, MouseAltClickedEvent>(HandleUnjam);
-        SubscribeLocalEvent<OxydGunComponent, UnjamGunEvent>(DoUnjam);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
+        SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
@@ -68,24 +65,12 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         ent.Comp.jammed = false;
     }
 
-    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, ref MouseAltClickedEvent args)
+    public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, EntityUid user)
     {
         Log.Error($"Trying unjam");
         if (!TryComp<OxydGunComponent>(ent, out var gcomp))
             return;
-        _doafter.TryStartDoAfter(new DoAfterArgs(EntityManager,
-            args.user,
-            TimeSpan.FromSeconds(1),
-            new UnjamGunEvent(),
-            ent.Owner,
-            ent.Owner,
-            null)
-        {
-            BreakOnDamage = false,
-            BreakOnMove = false,
-            BreakOnWeightlessMove = false,
-            NeedHand = true,
-        });
+        gcomp.jammed = false;
 
 
     }
@@ -100,6 +85,25 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 Log.Fatal($"Mismatched fired count on {ent}!");
             }
         }
+    }
+
+    private void OnGetInteractionVerbs(Entity<OxydHandheldGunComponent> ent,ref GetVerbsEvent<InteractionVerb> args)
+    {
+        if (!args.CanAccess || !args.CanInteract || args.Hands == null)
+            return;
+        if (!TryComp<OxydGunComponent>(ent, out var gcomp))
+            return;
+        if (!gcomp.jammed)
+            return;
+
+        var user = args.User;
+
+        args.Verbs.Add(new()
+        {
+            Act = () => HandleUnjam(ent, user),
+            Message = "Unjam!",
+            Text = "Unjam your weapon!",
+        });
     }
 
     public void onInventoryControlRequest(Entity<OxydHandheldGunComponent> ent, ref ItemStatusCollectMessage args)

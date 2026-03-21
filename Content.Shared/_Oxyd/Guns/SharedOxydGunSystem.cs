@@ -286,11 +286,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         ammo  = null;
         slot = null;
+        projectile = null;
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
             case OxydGunAmmoMagazineChamberComponent provider:
                 ammo = provider.nextBullet[index];
+                if (ammo is null || TerminatingOrDeleted(ammo))
+                    return false;
                 projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
                 slot = provider.bulletSlot[index];
                 if (_itemSlotsSystem.TryEject(gun, slot, null, out _))
@@ -302,6 +305,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 return ammo.Value != EntityUid.Invalid;
             case OxydGunAmmoChamberComponent provider:
                 ammo = provider.nextBullet[index];
+                if (ammo is null || TerminatingOrDeleted(ammo))
+                    return false;
                 projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
                 slot = provider.bulletSlot[index];
                 if (_itemSlotsSystem.TryEject(gun, slot, null, out _))

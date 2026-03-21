@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
@@ -56,6 +57,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentInit>(onAddRecoil);
         SubscribeLocalEvent<OxydGunComponent, ComponentGetStateAttemptEvent>(onTryStateGun);
+        SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
+        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);

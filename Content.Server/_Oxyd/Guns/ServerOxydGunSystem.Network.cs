@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
@@ -7,6 +8,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Doors.Electronics;
 using Content.Shared.Weapons.Ranged.Components;
 using Robust.Shared.GameStates;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Player;
 using Robust.Shared.Utility;
 
@@ -14,6 +16,25 @@ namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
+    public bool GetParentWithComp<T>(EntityUid uid,[NotNullWhen(true)] out Entity<T>? ent) where T : Component
+    {
+        ent = null;
+        var target = uid;
+        while (TryComp<TransformComponent>(target, out var transform))
+        {
+            if (TryComp<T>(target, out var comp))
+            {
+                ent = new Entity<T>(target, comp);
+                return true;
+            }
+            if(HasComp<MapGridComponent>(target) || HasComp<MapComponent>(target))
+                break;
+            if (TerminatingOrDeleted(transform.ParentUid))
+                break;
+            target = transform.ParentUid;
+        }
+        return false;
+    }
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
@@ -108,7 +129,7 @@ public partial class ServerOxydGunSystem
     }
     public void onTryStateGun(Entity<OxydGunComponent> ent, ref ComponentGetStateAttemptEvent args)
     {
-        Log.Debug($"Trying to get state for {args.Player}");
+        Log.Debug($"getstate {args.Player} {ent.Comp}");
         if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
             return;
         // always give state to replay
@@ -116,17 +137,27 @@ public partial class ServerOxydGunSystem
             return;
         if (args.Player == state.shooterSession)
         {
-            Log.Debug($"State canceled for {args.Player}");
-        //    args.Cancelled = true;
-        //    return;
+            Log.Debug($"canceled {args.Player} {ent.Comp}");
+            return;
         }
 
-        var dict = getInvolvedComponents(ent);
-        Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
-        foreach (var (target, components) in dict)
+    }
+
+    public void onTryStateGeneric(EntityUid target, IComponent comp, ref ComponentGetStateAttemptEvent args)
+    {
+        Log.Debug($"getstate {args.Player} {comp}");
+        if (!GetParentWithComp<OxydGunComponent>(target, out var ent))
+            return;
+        if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
+            return;
+        // always give state to replay
+        if (args.Player is null)
+            return;
+        if (args.Player == state.shooterSession)
         {
-            foreach(var comp in components)
-                Dirty(target, comp);
+            Log.Debug($"canceled {args.Player} {comp}");
+            args.Cancelled = true;
+            return;
         }
     }
     public void OnClientMouseInform(FiremodeMouseStatus ev)
@@ -364,6 +395,8 @@ public partial class ServerOxydGunSystem
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
         }
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
+        if(handler.executedFiringSteps.Values.Sum(t => t.Count) != 0)
+            Log.Error($"Done Intrepret ended with a bullet never being fired!");
         handler.executedFiringSteps.Clear();
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
@@ -373,6 +406,13 @@ public partial class ServerOxydGunSystem
         gunComp.selectedFiremodePrototype.lastInterpreted = _gameTiming.CurTick - tickDiff;
         // this wont get to user since  the state is sessionSpecific handled, just everyone else
         Dirty(gun, gunComp);
+        var dict = getInvolvedComponents((gun, gunComp));
+        Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
+        foreach (var (target, components) in dict)
+        {
+            foreach(var comp in components)
+                Dirty(target, comp);
+        }
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 

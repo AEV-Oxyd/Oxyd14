@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.DoAfter;
 using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -10,8 +11,10 @@ using Robust.Shared.Utility;
 
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
-
-
+[Serializable, NetSerializable]
+public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
+{
+}
 /// <summary>
 /// This is used for...
 /// </summary>
@@ -41,7 +44,7 @@ public sealed partial class OxydGunComponent : Component
     [DataField, AutoNetworkedField]
     public bool hasSafety = true;
 
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public bool jammed = false;
     [ViewVariables]
     public List<GunFiremodePrototype> InstanciatedFiremodes = new();
@@ -79,12 +82,14 @@ public sealed partial class OxydHandheldGunComponent : Component
 
 public abstract partial class OxydGunProvidersComponent : Component
 {
+    public override bool SessionSpecific => true;
 };
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 {
-    [DataField("bulletSlot"), AutoNetworkedField, CheckForGunUpdate(true)]
+
+    [DataField("bulletSlot")]
     public List<ItemSlot> bulletSlot = new();
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
@@ -96,7 +101,7 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
 {
-    [DataField("magazineSlot"), AutoNetworkedField, CheckForGunUpdate(true)]
+    [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
 }
 
@@ -115,6 +120,8 @@ public sealed partial class LaserAmmoDef
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public partial class OxydGunLaserProviderComponent : OxydGunProvidersComponent
 {
+
+
     [DataField("laserProto"), AutoNetworkedField]
     public List<LaserAmmoDef> laserProto = new();
 
