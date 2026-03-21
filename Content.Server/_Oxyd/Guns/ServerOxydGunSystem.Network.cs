@@ -20,7 +20,7 @@ public partial class ServerOxydGunSystem
     {
         ent = null;
         var target = uid;
-        while (TryComp<TransformComponent>(target, out var transform))
+        while (TryComp(uid, out TransformComponent? transform))
         {
             if (TryComp<T>(target, out var comp))
             {

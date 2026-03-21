@@ -26,7 +26,6 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
 {
     [Dependency] private readonly PhysicsSystem _physicsSystem = default!;
     [Dependency] private readonly ColorFlashEffectSystem  _flashEffectSystem = default!;
-    [Dependency] private readonly IConfigurationManager _config = default!;
     [Dependency] private readonly ServerOxydHelpers _serverHelp = default!;
     /// <inheritdoc/>
     public override void Initialize()

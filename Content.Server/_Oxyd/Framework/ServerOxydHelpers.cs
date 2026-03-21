@@ -12,9 +12,7 @@ namespace Content.Server._Oxyd.Framework;
 
 public sealed class ServerOxydHelpers : EntitySystem
 {
-    [Dependency] private readonly IServerNetManager _netManager = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly TransformSystem _transform = default!;
     [Dependency] private readonly IConfigurationManager _config = default!;
 
