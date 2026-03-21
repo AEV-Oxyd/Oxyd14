@@ -206,10 +206,6 @@
     lifetime: 10
 
 
-
-
-
-
 - type: entity
   name: Oxyd Bullet
   parent: BaseItem
