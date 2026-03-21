@@ -57,10 +57,10 @@ public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
         DrawHitscans(msg.data);
     }
 
-    public override void afterBulletCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
+    public override void afterBulletCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
     {
-        _colorFlashEffect.RaiseEffect(Color.Red, new List<EntityUid>(){args.OtherEntity}, Filter.Local());
-        base.afterBulletCollide(obj, ref args);
+        _colorFlashEffect.RaiseEffect(Color.Red, new List<EntityUid>(){other}, Filter.Local());
+        base.afterBulletCollide(obj, other);
     }
 
     public override void projectileQueued(Entity<OxydProjectileComponent> projectile)

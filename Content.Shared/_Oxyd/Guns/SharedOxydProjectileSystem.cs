@@ -121,12 +121,6 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
         return true;
     }
 
-
-    public virtual void afterBulletCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
-    {
-        afterBulletCollide(obj, args.OtherEntity);
-    }
-
     public virtual void afterBulletCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
     {
         if(obj.Comp.maxHits < obj.Comp.hits.Count)

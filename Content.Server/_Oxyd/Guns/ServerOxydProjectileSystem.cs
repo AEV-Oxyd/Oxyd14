@@ -50,10 +50,10 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
 
     }
 
-    public override void afterBulletCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
+    public override void afterBulletCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
     {
-        _flashEffectSystem.RaiseEffect(Color.Red, new List<EntityUid>(){args.OtherEntity}, Filter.Pvs(args.OtherEntity));
-        base.afterBulletCollide(obj, ref args);
+        _flashEffectSystem.RaiseEffect(Color.Red, new List<EntityUid>(){other}, Filter.Pvs(other));
+        base.afterBulletCollide(obj, other);
     }
 
 
