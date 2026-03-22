@@ -19,7 +19,9 @@ public abstract class GunChargeDecaySystem : EntitySystem
         var (uid, chargeComp) = target;
         if (!Resolve(uid, ref chargeComp))
             return 1f;
-        return 1f + (float)((chargeComp.charge + 0.001) / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
+        if (chargeComp.charge == 0 || chargeComp.maxCharge == 0)
+            return 1f;
+        return 1f + (float)(chargeComp.charge / chargeComp.maxCharge) * chargeComp.chargeToMultRatio;
 
     }
 

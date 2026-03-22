@@ -65,6 +65,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly SharedAudioSystem _audio = default!;
     [Dependency] protected readonly GunChargeDecaySystem _charge = default!;
     [Dependency] protected readonly SharedBatterySystem _battery = default!;
+    [Dependency] protected readonly SharedOxydHelpers _help = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -290,31 +291,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
-            case OxydGunAmmoMagazineChamberComponent provider:
-                ammo = provider.nextBullet[index];
-                if (ammo is null || TerminatingOrDeleted(ammo))
-                    return false;
-                projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
-                slot = provider.bulletSlot[index];
-                if (_itemSlotsSystem.TryEject(gun, slot, null, out _))
-                {
-                    EntityManager.QueueDeleteEntity(provider.nextBullet[index]);
-                    provider.nextBullet[index] = EntityUid.Invalid;
-                    CycleMag(index, (gun.Owner, provider));
-                }
-                return ammo.Value != EntityUid.Invalid;
+            // magazine uses the same handling
             case OxydGunAmmoChamberComponent provider:
                 ammo = provider.nextBullet[index];
-                if (ammo is null || TerminatingOrDeleted(ammo))
+                if (TerminatingOrDeleted(ammo))
                     return false;
                 projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
                 slot = provider.bulletSlot[index];
-                if (_itemSlotsSystem.TryEject(gun, slot, null, out _))
-                {
-                    EntityManager.QueueDeleteEntity(provider.nextBullet[index]);
-                    provider.nextBullet[index] = EntityUid.Invalid;
-                }
                 return ammo.Value != EntityUid.Invalid;
+                break;
             case OxydGunLaserProviderComponent provider:
                 projectile = provider.laserProto[index].laser;
                 if (tryDischargeAmount(gun.Owner, provider.laserProto[index].cost, out var used))
@@ -337,8 +322,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
-            case OxydGunAmmoMagazineChamberComponent provider:
-                return provider.nextBullet[index] != EntityUid.Invalid;
+            // magazine also fits here
             case OxydGunAmmoChamberComponent provider:
                 return provider.nextBullet[index] != EntityUid.Invalid;
             case OxydGunLaserProviderComponent provider:
@@ -346,6 +330,28 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             default:
                 Log.Error($"Unimplemented hasProviderAmmo case ,  type {frd.AmmoProviders}");
                 return false;
+        }
+    }
+
+    public void afterProviderAmmo(Entity<OxydGunComponent> gun, int index, EntityUid ammo,EntProtoId projectile, ItemSlot? slot)
+    {
+        var frd = gun.Comp.selectedFiremodePrototype;
+        switch (frd.AmmoProviders)
+        {
+            case OxydGunAmmoChamberComponent provider:
+                if (_itemSlotsSystem.TryEject(gun, slot!, null, out _))
+                {
+                    _help.QueueDel(provider.nextBullet[index]);
+                    provider.nextBullet[index] = EntityUid.Invalid;
+                    if(provider is OxydGunAmmoMagazineChamberComponent mag)
+                        CycleMag(index, (gun.Owner, mag));
+                }
+                break;
+            case OxydGunLaserProviderComponent provider:
+                break;
+            default:
+                Log.Error($"Unimplemented afterProviderAmmo case ,  type {frd.AmmoProviders}");
+                return;
         }
     }
 

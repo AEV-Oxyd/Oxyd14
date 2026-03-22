@@ -95,6 +95,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
                 var box = SharedOxydHelpers.buildWorldBox(c.X, c.Y, c.X + m.X * actualTravel, c.Y);
                 var pvsBox = new Box2Rotated(box, rot, box.Center );
                 var targets = _serverHelp.lookupPlayerSessions(projectile.Comp.initialPosition.MapId, pvsBox);
+                targets.RemoveAll(x => x.AttachedEntity == projectile.Comp.shotBy);
                 Log.Error($"Target count for PVS {targets.Count}");
                 Filter pvf = Filter.Empty();
                 pvf.AddPlayers(targets);

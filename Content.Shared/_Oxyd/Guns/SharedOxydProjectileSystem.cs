@@ -56,6 +56,7 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
     [Dependency] protected readonly RayCastSystem _rayCastSystem = default!;
     [Dependency] protected readonly INetManager _netmanager = default!;
     [Dependency] protected readonly DamageableSystem _damage = default!;
+    [Dependency] protected readonly SharedOxydHelpers _help = default!;
     //[Dependency] private readonly EntityManager _entityManager = default!;
     public List<Entity<OxydProjectileComponent>> FireNextTick =  new List<Entity<OxydProjectileComponent>>();
     private float tickDelay = 0;
@@ -123,9 +124,13 @@ public abstract class SharedOxydProjectileSystem : EntitySystem
 
     public virtual void afterBulletCollide(Entity<OxydProjectileComponent> obj, EntityUid other)
     {
-        if(obj.Comp.maxHits < obj.Comp.hits.Count)
-            QueueDel(obj);
+        if (obj.Comp.maxHits < obj.Comp.hits.Count)
+        {
+            _help.QueueDel(obj.Owner);
+
+        }
     }
+
 
     public void onCollide(Entity<OxydProjectileComponent> obj, ref StartCollideEvent args)
     {

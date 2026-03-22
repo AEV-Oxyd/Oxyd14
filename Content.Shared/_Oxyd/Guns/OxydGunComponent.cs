@@ -4,6 +4,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
@@ -143,7 +144,6 @@ public sealed partial class OxydBulletComponent : Component
 [RegisterComponent]
 public sealed partial class OxydHitscanProjectileComponent : Component
 {
-    public EntProtoId effectEntity = default!;
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
