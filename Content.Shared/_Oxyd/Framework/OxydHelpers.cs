@@ -17,7 +17,6 @@ public class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
-    [Dependency] private readonly SharedPhysicsSystem _phys = default!;
 
     public override void Initialize()
     {
