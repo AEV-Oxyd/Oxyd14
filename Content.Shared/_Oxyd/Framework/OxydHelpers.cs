@@ -7,6 +7,8 @@ using System.Runtime.Intrinsics;
 using Robust.Shared;
 using Robust.Shared.Configuration;
 using Robust.Shared.Network;
+using Robust.Shared.Physics;
+using Robust.Shared.Physics.Systems;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Framework;
@@ -15,13 +17,23 @@ public class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private readonly SharedPhysicsSystem _phys = default!;
+
+    public override void Initialize()
+    {
+        UpdatesBefore.Add(typeof(SharedTransformSystem));
+        UpdatesBefore.Add(typeof(SharedPhysicsSystem));
+    }
 
     public void QueueDel(EntityUid uid)
     {
-        if(_netManager.IsClient)
+        if (_netManager.IsClient)
+        {
+            SetPaused(uid, true);
             _transform.DetachEntity(uid);
+        }
         else
-            QueueDel(uid);
+            EntityManager.QueueDeleteEntity(uid);
     }
     public static bool checkIntersect(Vector2 p, Box2Rotated b)
     {

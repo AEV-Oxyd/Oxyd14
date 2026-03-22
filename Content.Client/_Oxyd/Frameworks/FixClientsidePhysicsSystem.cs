@@ -91,6 +91,8 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
         while (qery.MoveNext(out var uid, out var comp))
         {
             var t = Transform(uid);
+            if (t.ParentUid == EntityUid.Invalid)
+                continue;
             if (comp.lastParent != t.ParentUid)
             {
                 _transform.SetWorldPosition((uid, t), comp.lastWorld);

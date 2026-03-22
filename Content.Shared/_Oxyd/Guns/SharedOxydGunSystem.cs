@@ -280,29 +280,24 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
     public bool tryGetProviderAmmo(Entity<OxydGunComponent> gun,
-        int index,
         [NotNullWhen(true)] out EntProtoId? projectile,
-        [NotNullWhen(true)] out EntityUid? ammo,
-        out ItemSlot? slot)
+        [NotNullWhen(true)] out EntityUid? ammo)
     {
         ammo  = null;
-        slot = null;
         projectile = null;
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
             // magazine uses the same handling
             case OxydGunAmmoChamberComponent provider:
-                ammo = provider.nextBullet[index];
+                ammo = provider.nextBullet[frd.providerId];
                 if (TerminatingOrDeleted(ammo))
                     return false;
                 projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
-                slot = provider.bulletSlot[index];
                 return ammo.Value != EntityUid.Invalid;
-                break;
             case OxydGunLaserProviderComponent provider:
-                projectile = provider.laserProto[index].laser;
-                if (tryDischargeAmount(gun.Owner, provider.laserProto[index].cost, out var used))
+                projectile = provider.laserProto[frd.providerId].laser;
+                if (tryDischargeAmount(gun.Owner, provider.laserProto[frd.providerId].cost, out var used))
                 {
                     ammo = used;
                 }
@@ -333,18 +328,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
-    public void afterProviderAmmo(Entity<OxydGunComponent> gun, int index, EntityUid ammo,EntProtoId projectile, ItemSlot? slot)
+    public void afterProviderAmmo(Entity<OxydGunComponent> gun, EntityUid bullet)
     {
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
             case OxydGunAmmoChamberComponent provider:
-                if (_itemSlotsSystem.TryEject(gun, slot!, null, out _))
+                var slot = provider.bulletSlot[frd.providerId];
+                if (_itemSlotsSystem.TryEject(gun, slot, null, out _))
                 {
-                    _help.QueueDel(provider.nextBullet[index]);
-                    provider.nextBullet[index] = EntityUid.Invalid;
+                    _help.QueueDel(bullet);
+                    provider.nextBullet[frd.providerId] = EntityUid.Invalid;
                     if(provider is OxydGunAmmoMagazineChamberComponent mag)
-                        CycleMag(index, (gun.Owner, mag));
+                        CycleMag(frd.providerId, (gun.Owner, mag));
                 }
                 break;
             case OxydGunLaserProviderComponent provider:
@@ -356,11 +352,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
 
-    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,[NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp)
+    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,
+        [NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp,
+        [NotNullWhen(true)] out EntityUid? used)
     {
         outputComp = null;
+        used = null;
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (!tryGetProviderAmmo(gun, firemode.providerId, out var proj, out var ammoEnt, out var itemSlot))
+        if (!tryGetProviderAmmo(gun, out var proj, out var ammoEnt))
             return false;
         EntityUid projectile = Spawn(proj.ToString(), MapCoordinates.Nullspace);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
@@ -371,6 +370,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             projectileComp.initialMovement = new Vector2(ammoBullet.Speed, ammoBullet.Speed);
         }
         outputComp = (projectile, projectileComp);
+        used = ammoEnt;
         return true;
     }
 
@@ -417,7 +417,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             gun.Comp.firingTime = gunFiremodePrototype.fireDelay;
         while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
-            if(!getProjectileLoaded(shooter, gun, out var projectileNullable))
+            if(!getProjectileLoaded(shooter, gun, out var projectileNullable, out var used))
                 return projectiles;
             var shootSound = gunFiremodePrototype.fireSound;
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
@@ -448,6 +448,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);
+            afterProviderAmmo(gun, used.Value);
         }
 
         RaiseLocalEvent(gun.Owner, new GunFiredEvent()
