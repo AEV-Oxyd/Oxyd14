@@ -18,6 +18,8 @@ public class SharedOxydHelpers : EntitySystem
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
 
+    public HashSet<EntityUid> queued = new HashSet<EntityUid>();
+
     public override void Initialize()
     {
         UpdatesBefore.Add(typeof(SharedTransformSystem));
@@ -28,8 +30,7 @@ public class SharedOxydHelpers : EntitySystem
     {
         if (_netManager.IsClient)
         {
-            SetPaused(uid, true);
-            _transform.DetachEntity(uid);
+            queued.Add(uid);
         }
         else
             EntityManager.QueueDeleteEntity(uid);
@@ -44,5 +45,16 @@ public class SharedOxydHelpers : EntitySystem
     public static Box2 buildWorldBox(float x1, float y1, float x2, float y2)
     {
         return new Box2(x1 > x2 ? x2 : x1, y1 > y2 ? y2 : y1, x1 < x2 ? x2 : x1, y1 < y2 ? y2 : y1);
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        foreach (var uid in queued)
+        {
+            SetPaused(uid, true);
+            _transform.DetachEntity(uid);
+        }
+        queued.Clear();
     }
 }

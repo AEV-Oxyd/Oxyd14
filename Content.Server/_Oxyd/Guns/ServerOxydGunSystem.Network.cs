@@ -38,6 +38,7 @@ public partial class ServerOxydGunSystem
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
+        Log.Debug($"Extracting {variable}");
         switch( variable)
         {
             case null:
@@ -51,8 +52,9 @@ public partial class ServerOxydGunSystem
                     extractEntitities(thing, lst);
                 break;
             case ItemSlot slot:
-                if (slot.Item is null)
+                if (slot.Item is null || slot.Item.Value == EntityUid.Invalid)
                     break;
+                Log.Debug($"got item slot item {slot.Item.Value}");
                 lst.Add(slot.Item.Value);
                 break;
         }
@@ -83,10 +85,15 @@ public partial class ServerOxydGunSystem
                 continue;
             fieldCheck:
                 var fieldValue = field.GetValue(comp);
+                Log.Debug($"Got field {field.Name} with value {fieldValue}");
                 if (fieldValue is null)
                     continue;
                 if (indexed && fieldValue is IEnumerable enumerable)
+                {
                     fieldValue = enumerable.Cast<object?>().ToList()[firemode.shootingPosIndex];
+                    Log.Debug($"Is Indexed, casting got us {fieldValue} {fieldValue is IEnumerable}");
+                }
+
                 foreach (var thing in extractEntitities(fieldValue, null))
                 {
                     getInvolvedComponents(thing, dict);
@@ -99,12 +106,11 @@ public partial class ServerOxydGunSystem
     public void getInvolvedComponents(EntityUid target, Dictionary<EntityUid, List<IComponent>> dict)
     {
         var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(target);
-        if (!comps.Any())
-            return;
         dict.TryAdd(target, new List<IComponent>());
-        foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(target))
+        Log.Debug($"Verifying {target} at second level");
+        foreach(var comp in comps)
         {
-            dict.TryAdd(target, new List<IComponent>());
+            Log.Debug($"Got component {comp}");
             dict[target].Add(comp);
             var targetType = comp.GetType();
             foreach (var field in targetType.GetAllFields())
@@ -118,6 +124,7 @@ public partial class ServerOxydGunSystem
                 continue;
                 fieldCheck:
                 var fieldValue = field.GetValue(comp);
+                Log.Debug($"Second level indexation got {fieldValue} {field.Name}");
                 if (fieldValue is null)
                     continue;
                 foreach (var thing in extractEntitities(fieldValue, null))

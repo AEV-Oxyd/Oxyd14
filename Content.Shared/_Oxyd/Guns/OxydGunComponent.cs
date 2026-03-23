@@ -149,6 +149,8 @@ public sealed partial class OxydHitscanProjectileComponent : Component
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydMagazineComponent : OxydGunProvidersComponent
 {
+    public override bool SessionSpecific => true;
+
     [DataField("capacity"), AutoNetworkedField]
     public int maxBullets = 1;
 

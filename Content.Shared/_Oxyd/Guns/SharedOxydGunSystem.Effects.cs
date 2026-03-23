@@ -40,25 +40,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckAmmo effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        var provider = firemodePrototype.AmmoProviders;
-        if (provider is OxydGunAmmoChamberComponent chamber)
-        {
-            if (chamber.nextBullet[firemodePrototype.providerId] == EntityUid.Invalid)
-            {
-                ResetFiremode(firemodePrototype, gun, shooter);
-                return false;
-            }
-        }
-        if(provider is OxydGunAmmoMagazineChamberComponent mag)
-        {
-            if (mag.nextBullet[firemodePrototype.providerId] == EntityUid.Invalid)
-            {
-                ResetFiremode(firemodePrototype, gun, shooter);
-                return false;
-            }
-        }
-
-        return true;
+        if (hasProviderAmmo(gun, firemodePrototype.providerId))
+            return true;
+        ResetFiremode(firemodePrototype, gun, shooter);
+        return false;
     }
 
 
