@@ -82,7 +82,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         physQ = GetEntityQuery<PhysicsComponent>();
     }
 
-\\
 
     public void doMessageTick()
     {

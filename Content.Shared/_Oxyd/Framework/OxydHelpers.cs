@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.Intrinsics;
 using Robust.Shared;
 using Robust.Shared.Configuration;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Systems;
@@ -34,6 +35,26 @@ public class SharedOxydHelpers : EntitySystem
         }
         else
             EntityManager.QueueDeleteEntity(uid);
+    }
+
+    public bool GetParentWithComp<T>(EntityUid uid,[NotNullWhen(true)] out Entity<T>? ent) where T : Component
+    {
+        ent = null;
+        var target = uid;
+        while (TryComp(uid, out TransformComponent? transform))
+        {
+            if (TryComp<T>(target, out var comp))
+            {
+                ent = new Entity<T>(target, comp);
+                return true;
+            }
+            if(HasComp<MapGridComponent>(target) || HasComp<MapComponent>(target))
+                break;
+            if (TerminatingOrDeleted(transform.ParentUid))
+                break;
+            target = transform.ParentUid;
+        }
+        return false;
     }
     public static bool checkIntersect(Vector2 p, Box2Rotated b)
     {

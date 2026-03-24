@@ -67,6 +67,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly GunChargeDecaySystem _charge = default!;
     [Dependency] protected readonly SharedBatterySystem _battery = default!;
     [Dependency] protected readonly SharedOxydHelpers _help = default!;
+    [Dependency] protected readonly ISharedPlayerManager _players = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -104,7 +105,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
-        SubscribeLocalEvent<OxydChargeComponent, BatteryStateChangedEvent>(onBatteryState);
+        SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
 
     }
 
@@ -118,9 +119,21 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         ent.Comp.charge = bat.StartingCharge;
     }
 
-    public void onBatteryState(Entity<OxydChargeComponent> ent, BatteryStateChangedEvent args)
+    public void onBatteryCharge(Entity<OxydChargeComponent> ent, ref ChargeChangedEvent args)
     {
+        // cancel update to battery if client-side and active
+        if (_netManager.IsClient && _players.LocalEntity is not null)
+        {
+            if (_help.GetParentWithComp<OxydGunComponent>(ent.Owner, out var target))
+            {
+                if (_handsSystem.EnumerateHeld((_players.LocalEntity.Value, null))
+                    .ToList()
+                    .Contains(target.Value.Owner) && target.Value.Comp.selectedFiremodePrototype.Active)
+                    return;
+            }
+        }
 
+        ent.Comp.charge = args.CurrentCharge;
     }
 
     public void OnEntInsertMag(Entity<OxydGunAmmoMagazineChamberComponent> ent,

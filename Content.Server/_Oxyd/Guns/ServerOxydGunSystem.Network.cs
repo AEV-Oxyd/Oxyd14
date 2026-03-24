@@ -16,25 +16,6 @@ namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
-    public bool GetParentWithComp<T>(EntityUid uid,[NotNullWhen(true)] out Entity<T>? ent) where T : Component
-    {
-        ent = null;
-        var target = uid;
-        while (TryComp(uid, out TransformComponent? transform))
-        {
-            if (TryComp<T>(target, out var comp))
-            {
-                ent = new Entity<T>(target, comp);
-                return true;
-            }
-            if(HasComp<MapGridComponent>(target) || HasComp<MapComponent>(target))
-                break;
-            if (TerminatingOrDeleted(transform.ParentUid))
-                break;
-            target = transform.ParentUid;
-        }
-        return false;
-    }
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
@@ -153,7 +134,7 @@ public partial class ServerOxydGunSystem
     public void onTryStateGeneric(EntityUid target, IComponent comp, ref ComponentGetStateAttemptEvent args)
     {
         Log.Debug($"getstate {args.Player} {comp}");
-        if (!GetParentWithComp<OxydGunComponent>(target, out var ent))
+        if (!_help.GetParentWithComp<OxydGunComponent>(target, out var ent))
             return;
         if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
             return;
