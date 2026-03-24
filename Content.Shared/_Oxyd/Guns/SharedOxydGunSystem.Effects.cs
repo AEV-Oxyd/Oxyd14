@@ -46,9 +46,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
-
-
-
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectCheckHandheld effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
         if (shooter is null)

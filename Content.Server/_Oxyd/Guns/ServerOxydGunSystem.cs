@@ -10,6 +10,8 @@ using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
+using Content.Shared.Power;
+using Content.Shared.Power.Components;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
 using Robust.Shared;
@@ -71,12 +73,16 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             delayedMessages.Add(new Queue<object>());
         }
+
         for (var i = 0; i < MaxTicksAhead; i++)
         {
             immediateStatus.Add(new Queue<object>());
         }
+
         physQ = GetEntityQuery<PhysicsComponent>();
     }
+
+\\
 
     public void doMessageTick()
     {

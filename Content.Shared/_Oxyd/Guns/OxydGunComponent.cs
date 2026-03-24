@@ -163,6 +163,18 @@ public sealed partial class OxydMagazineComponent : OxydGunProvidersComponent
     }
 }
 
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydChargeComponent : OxydGunProvidersComponent
+{
+    public override bool SessionSpecific => true;
+    [DataField, AutoNetworkedField]
+    public float charge = 0;
+}
+[RegisterComponent]
+public sealed partial class ActiveOxydChargeComponent : Component
+{
+}
+
 [RegisterComponent]
 public sealed partial class OxydMagazineInitializerComponent : Component
 {

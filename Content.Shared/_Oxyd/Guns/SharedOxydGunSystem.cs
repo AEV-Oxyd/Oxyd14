@@ -13,6 +13,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.EntityList;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
+using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Power.EntitySystems;
 using Content.Shared.Random.Helpers;
@@ -102,6 +103,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
+        SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
+        SubscribeLocalEvent<OxydChargeComponent, BatteryStateChangedEvent>(onBatteryState);
+
+    }
+
+    public void onChargeInit(Entity<OxydChargeComponent> ent, ref ComponentInit args)
+    {
+        if (!TryComp<BatteryComponent>(ent, out var bat))
+        {
+            Log.Error($"OxydChargeComponent on {ent} has no BatteryComponent!");
+            return;
+        }
+        ent.Comp.charge = bat.StartingCharge;
+    }
+
+    public void onBatteryState(Entity<OxydChargeComponent> ent, BatteryStateChangedEvent args)
+    {
 
     }
 
