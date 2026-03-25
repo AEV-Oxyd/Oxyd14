@@ -285,6 +285,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             if (batt.charge < amount)
                 continue;
+            _battery.UseCharge((slot.ContainedEntity.Value, null), amount);
             batt.charge -= amount;
             used = slot.ContainedEntity;
             return true;

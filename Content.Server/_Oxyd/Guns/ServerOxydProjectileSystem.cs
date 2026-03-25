@@ -84,7 +84,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
                 Vector2 pos = _transform.GetWorldPosition(projectile.Owner);
                 Angle rot = Transform(projectile.Owner).LocalRotation;
                 ProcessHitscan(projectile, HitscanTickRange, out float actualTravel);
-                Log.Error($"Actual travel {actualTravel}");
+                //.Error($"Actual travel {actualTravel}");
                 GetHitscanEffect(new EntityCoordinates(map.Value, pos),
                     actualTravel,
                     rot,
@@ -96,7 +96,7 @@ public sealed class ServerOxydProjectileSystem : SharedOxydProjectileSystem
                 var pvsBox = new Box2Rotated(box, rot, box.Center );
                 var targets = _serverHelp.lookupPlayerSessions(projectile.Comp.initialPosition.MapId, pvsBox);
                 targets.RemoveAll(x => x.AttachedEntity == projectile.Comp.shotBy);
-                Log.Error($"Target count for PVS {targets.Count}");
+                //Log.Error($"Target count for PVS {targets.Count}");
                 Filter pvf = Filter.Empty();
                 pvf.AddPlayers(targets);
                 RaiseNetworkEvent(new DrawHitscanEvent(){data = data}, pvf);
