@@ -7,6 +7,7 @@
     storedRotation: -90
   - type: Battery
     pricePerJoule: 0.15
+  - type: OxydCharge
   - type: PowerCell
   - type: Explosive
     explosionType: Default
@@ -40,6 +41,7 @@
           Full: {visible: true, state: o2}
           Neither: {visible: true, state: o1}
           Empty: {visible: false}
+
 
 - type: entity
   name: potato battery

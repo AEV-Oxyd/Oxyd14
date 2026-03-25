@@ -132,6 +132,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                     return;
             }
         }
+        Log.Debug($"Oxyd battery charge from {ent.Comp.charge} to {args.CurrentCharge}");
 
         ent.Comp.charge = args.CurrentCharge;
     }
@@ -285,8 +286,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             if (batt.charge < amount)
                 continue;
-            _battery.UseCharge((slot.ContainedEntity.Value, null), amount);
+
             batt.charge -= amount;
+            _battery.UseCharge((slot.ContainedEntity.Value, null), amount);
             used = slot.ContainedEntity;
             return true;
 

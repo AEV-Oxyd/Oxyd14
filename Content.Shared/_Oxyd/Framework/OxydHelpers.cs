@@ -41,16 +41,18 @@ public class SharedOxydHelpers : EntitySystem
     {
         ent = null;
         var target = uid;
-        while (TryComp(uid, out TransformComponent? transform))
+        while (!TerminatingOrDeleted(target))
         {
             if (TryComp<T>(target, out var comp))
             {
                 ent = new Entity<T>(target, comp);
                 return true;
             }
+            if (!TryComp(uid, out TransformComponent? transform))
+                break;
             if(HasComp<MapGridComponent>(target) || HasComp<MapComponent>(target))
                 break;
-            if (TerminatingOrDeleted(transform.ParentUid))
+            if (target == transform.ParentUid)
                 break;
             target = transform.ParentUid;
         }

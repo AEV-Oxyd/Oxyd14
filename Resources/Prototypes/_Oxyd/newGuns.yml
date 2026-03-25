@@ -177,7 +177,7 @@
   - type: OxydGunLaserProvider
     laserProto:
     - !type:LaserAmmoDef
-      cost: 10
+      cost: 50
       laser: OxydHitscan
   - type: ContainerContainer
     containers:
