@@ -105,6 +105,35 @@
     hardWait: true
     maxMissed: 15
 
+- type: gunFiremode
+  id: baseBurstLaserFiremode
+  firerate: 60
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: burst
+  provider: OxydGunLaserProvider
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectWait
+    waitPeriod: 0.1
+    stepBack: 3
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatNextTick
+    repeatCount: 2
+    stepBack: 5
+    triggerTimeout: 0.3
+  - !type:GunEffectRepeatNextTickIfMouseHeld
+    stepBack: 6
+    validDiff: 0.1
+    hardWait: true
+    maxMissed: 15
+
 - type: entity
   name: Oxyd Gun
   parent: BaseItem
@@ -126,6 +155,7 @@
     - chargeHitscanFiremode
     - baseFiremode
     - chargeFiremode
+    - baseBurstLaserFiremode
   - type: OxydHandheldGun
   - type: OxydGunAmmoMagazineChamber
     bulletSlot:

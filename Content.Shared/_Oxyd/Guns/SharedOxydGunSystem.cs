@@ -281,13 +281,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             if (slot.ContainedEntity is null)
                 continue;
-            if (!TryComp<BatteryComponent>(slot.ContainedEntity, out var batt))
+            if (!TryComp<OxydChargeComponent>(slot.ContainedEntity, out var batt))
                 continue;
-            if (_battery.TryUseCharge((slot.ContainedEntity.Value, batt), amount))
-            {
-                used = slot.ContainedEntity;
-                return true;
-            }
+            if (batt.charge < amount)
+                continue;
+            batt.charge -= amount;
+            used = slot.ContainedEntity;
+            return true;
+
         }
 
         used = null;
@@ -302,9 +303,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             if (slot.ContainedEntity is null)
                 continue;
-            if (!TryComp<BatteryComponent>(slot.ContainedEntity, out var batt))
+            if (!TryComp<OxydChargeComponent>(slot.ContainedEntity, out var batt))
                 continue;
-            if (_battery.GetCharge((slot.ContainedEntity.Value, batt)) >= amount)
+            if (batt.charge >= amount)
                 return true;
         }
         return false;
@@ -513,29 +514,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return map.Offset(mapOffset);
     }
 
-    public bool tryGetProvider(EntityUid from,[NotNullWhen(true)] out OxydGunProvidersComponent? provider)
-    {
-        provider = null;
-        if (TryComp<OxydGunAmmoChamberComponent>(from, out var chambered))
-        {
-            provider = chambered;
-            return true;
-        }
-        if (TryComp<OxydGunAmmoMagazineChamberComponent>(from, out var magazine))
-        {
-            provider = magazine;
-            return true;
-        }
-        return false;
-    }
-
     public void onGunInitialized(Entity<OxydGunComponent> gun, ref ComponentInit args)
     {
-        if (!tryGetProvider(gun.Owner, out var provider))
-        {
-            Log.Error($"Gun prototype {MetaData(gun.Owner).EntityPrototype} does not have any GunAmmo components to fetch ammo from!");
-            return;
-        }
+
 
         foreach (var proto in gun.Comp.firemodes)
         {

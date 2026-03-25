@@ -12,6 +12,7 @@ using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
+using Content.Shared.Trigger.Components.Effects;
 using Robust.Server.GameStates;
 using Robust.Server.Player;
 using Robust.Shared;

@@ -171,11 +171,6 @@ public sealed partial class OxydChargeComponent : OxydGunProvidersComponent
     public float charge = 0;
 }
 [RegisterComponent]
-public sealed partial class ActiveOxydChargeComponent : Component
-{
-}
-
-[RegisterComponent]
 public sealed partial class OxydMagazineInitializerComponent : Component
 {
     [DataField]
