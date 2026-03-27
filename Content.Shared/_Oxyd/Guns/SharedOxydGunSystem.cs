@@ -11,8 +11,10 @@ using System.Runtime.InteropServices;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.EntityList;
+using Content.Shared.Hands;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
+using Content.Shared.Inventory.Events;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Power.EntitySystems;
@@ -107,11 +109,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
-        SubscribeLocalEvent<OxydGunComponent, ThrownEvent>(onThrow);
+        SubscribeLocalEvent<OxydGunComponent, GotUnequippedHandEvent>(onDrop);
 
     }
 
-    public void onThrow(Entity<OxydGunComponent> ent, ref ThrownEvent args)
+    public void onDrop(Entity<OxydGunComponent> ent, ref GotUnequippedHandEvent args)
     {
         var frd = ent.Comp.selectedFiremodePrototype;
         if (frd.Active)
