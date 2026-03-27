@@ -39,7 +39,7 @@ public abstract class BasicPhysicsPredictorSystem : EntitySystem
         var ensure = EnsureComp<ApplyVisualOffsetComponent>(ent);
         ensure.localControl = true;
     }
-    public Vector2 PredictWorldPosition(EntityUid target, int ticks)
+    public Vector2 PredictWorldPosition(EntityUid target, uint ticks)
     {
         if (!phys.TryComp(target, out var physComp))
             return Vector2.Zero;
@@ -65,7 +65,7 @@ public abstract class BasicPhysicsPredictorSystem : EntitySystem
         return futurePos + _transform.GetWorldPosition(target);
     }
 
-    public Vector2 PredictWorldOffset(EntityUid target, int ticks)
+    public Vector2 PredictWorldOffset(EntityUid target, uint ticks)
     {
         return PredictWorldPosition(target, ticks) - _transform.GetWorldPosition(target);
     }

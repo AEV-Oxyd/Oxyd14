@@ -146,7 +146,7 @@ public sealed class FixClientsidePhysicsSystem : VirtualController
             if (_timing.CurTime - comp.lastProcessed >= _timing.TickPeriod * 2)
             {
                 var tickc = (int)Math.Floor((_timing.CurTime - comp.lastProcessed) / _timing.TickPeriod) - 1;
-                _transform.SetWorldPosition(uid, _predictor.PredictWorldPosition(uid, tickc));
+                _transform.SetWorldPosition(uid, _predictor.PredictWorldPosition(uid, (uint)tickc));
             }
             comp.lastProcessed = _timing.CurTime;
         }

@@ -31,6 +31,7 @@ public sealed class CVisOffsetSystem : EntitySystem
     [Dependency] private readonly SpriteSystem _sprite = default!;
     [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
     [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private readonly ClientOxydHelpers _help = default!;
 
     public Angle GetEffectiveWorldRotation(EntityUid uid)
     {
@@ -60,7 +61,7 @@ public sealed class CVisOffsetSystem : EntitySystem
             var applying = GetEffectiveWorldRotation(uid);
             if (HasComp<BasicPredictorOffsetSetterComponent>(uid))
             {
-                comp.offset = _predictor.PredictWorldPosition(uid, OxydCvars.predictionTicks.DefaultValue) - _transformSystem.GetWorldPosition(uid);
+                comp.offset = _predictor.PredictWorldPosition(uid, _help.getPredTicks()) - _transformSystem.GetWorldPosition(uid);
             }
             _sprite.SetOffset((uid, null), (-applying).RotateVec(comp.offset));
         }

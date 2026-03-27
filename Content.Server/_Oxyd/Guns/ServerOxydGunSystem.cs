@@ -159,7 +159,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // add backtracking handling if desyncs too much / false triggers - SPCR 2026
     public bool ValidateFiringPosition(Entity<OxydGunComponent> gun, EntityUid user, MapCoordinates firingPos)
     {
-        var predicedWorldPosition = _predictor.PredictWorldPosition(user, predictedTicks);
+        var predicedWorldPosition = _predictor.PredictWorldPosition(user,(uint)predictedTicks);
         if (HasComp<OxydHandheldGunComponent>(gun) &&
             (predicedWorldPosition- firingPos.Position).Length() >
             acceptableOffset)

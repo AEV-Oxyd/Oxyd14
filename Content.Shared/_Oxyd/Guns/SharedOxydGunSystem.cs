@@ -17,6 +17,7 @@ using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Power.EntitySystems;
 using Content.Shared.Random.Helpers;
+using Content.Shared.Throwing;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
@@ -106,7 +107,22 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
+        SubscribeLocalEvent<OxydGunComponent, ThrownEvent>(onThrow);
 
+    }
+
+    public void onThrow(Entity<OxydGunComponent> ent, ref ThrownEvent args)
+    {
+        var frd = ent.Comp.selectedFiremodePrototype;
+        if (frd.Active)
+        {
+            Log.Debug($"Resetting thrown weapon");
+            ResetFiremode(frd, ent, args.User);
+        }
+        else
+        {
+            Log.Debug($"Thrown but not reset weapon");
+        }
     }
 
     public void onChargeInit(Entity<OxydChargeComponent> ent, ref ComponentInit args)

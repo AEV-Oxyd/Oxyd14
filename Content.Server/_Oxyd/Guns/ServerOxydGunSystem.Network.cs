@@ -496,7 +496,7 @@ public partial class ServerOxydGunSystem
                 if (!physQ.TryGetComponent(handler.shooterEntity, out var physicsComponent))
                     continue;
                 var offset = EnsureComp<ApplyVisualOffsetComponent>(bullet.Owner);
-                offset.offset = _predictor.PredictWorldPosition(handler.shooterEntity, predictedTicks) - _transformSystem.GetWorldPosition(handler.shooterEntity);
+                offset.offset = _predictor.PredictWorldPosition(handler.shooterEntity, (uint)predictedTicks) - _transformSystem.GetWorldPosition(handler.shooterEntity);
             }
         }
 
