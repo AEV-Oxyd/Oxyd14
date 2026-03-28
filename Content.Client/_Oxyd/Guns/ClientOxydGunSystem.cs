@@ -7,6 +7,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityEffects.Effects;
 using Content.Shared.Interaction;
+using Content.Shared.Interaction.Events;
 using Content.Shared.Verbs;
 using Robust.Client.GameObjects;
 using Robust.Client.GameStates;
@@ -42,12 +43,29 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
+        SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
         _netManager.RegisterNetMessage<FiremodeMouseStatus>();
+    }
+
+    public void onDrop(Entity<OxydHandheldGunComponent> ent, ref DroppedEvent args)
+    {
+        if (!TryComp<OxydGunComponent>(ent, out var gcomp))
+            return;
+        var frd = gcomp.selectedFiremodePrototype;
+        if (frd.Active)
+        {
+            Log.Debug($"Resetting thrown weapon");
+            ResetFiremode(frd, (ent.Owner, gcomp), args.User);
+        }
+        else
+        {
+            Log.Debug($"Thrown but not reset weapon");
+        }
     }
 
     public void onChargeSet(SetGunChargeEvent ev)
@@ -57,11 +75,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             return;
         if(TryComp<OxydGunChargeupComponent>(ent, out var ccomp))
             ccomp.charge = ev.charge;
-    }
-
-    public void DoUnjam(Entity<OxydGunComponent> ent, ref UnjamGunEvent args)
-    {
-        ent.Comp.jammed = false;
     }
 
     public void HandleUnjam(Entity<OxydHandheldGunComponent> ent, EntityUid user)

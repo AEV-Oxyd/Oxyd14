@@ -10,6 +10,7 @@ using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
 using Content.Shared.EntityList;
+using Content.Shared.Interaction.Events;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Trigger.Components.Effects;
@@ -63,6 +64,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
+        SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
@@ -81,6 +83,26 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         }
 
         physQ = GetEntityQuery<PhysicsComponent>();
+    }
+
+    public void onDrop(Entity<OxydHandheldGunComponent> ent, ref DroppedEvent args)
+    {
+        if (!TryComp<OxydGunComponent>(ent, out var gcomp))
+            return;
+        var c = EnsureComp<FiremodeStateHandlerComponent>(ent);
+        var frd = gcomp.selectedFiremodePrototype;
+        if (frd.Active)
+        {
+            Log.Debug($"Resetting thrown weapon");
+            ResetFiremode(frd, (ent.Owner, gcomp), args.User);
+            TotalResync((ent, gcomp));
+            c.silenceDesyncs = _gameTiming.CurTime + TimeSpan.FromMilliseconds(500);
+
+        }
+        else
+        {
+            Log.Debug($"Thrown but not reset weapon");
+        }
     }
 
 
@@ -192,8 +214,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public void PunishChud(Entity<OxydGunComponent> target)
     {
         Log.Error($"Doing total resync");
-        target.Comp.jammed = true;
-        _audio.PlayPvs(_audio.ResolveSound(getJammedSound(false)), new EntityCoordinates(target.Owner, 0, 0));
+        if (!(TryComp<FiremodeStateHandlerComponent>(target, out var state) &&
+              state.silenceDesyncs > _gameTiming.CurTime))
+        {
+            target.Comp.jammed = true;
+            _audio.PlayPvs(_audio.ResolveSound(getJammedSound(false)), new EntityCoordinates(target.Owner, 0, 0));
+        }
+
         TotalResync(target);
     }
     // when the gun desync!!

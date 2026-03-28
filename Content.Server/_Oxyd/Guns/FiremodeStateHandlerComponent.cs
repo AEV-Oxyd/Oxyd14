@@ -24,4 +24,10 @@ public sealed partial class FiremodeStateHandlerComponent : Component
     // total ticks known to need to be executed faster due to message arriving late
     [ViewVariables]
     public int catchupNeeded = 0;
+    [ViewVariables]
+    // there are cases where desyncs will certainly happen on the spot
+    // but will be handled immediately (such as the case of throwing
+    // because it is on a diferent event bus, but the end result will still
+    // be synced after a net update - SPCR 2026
+    public TimeSpan silenceDesyncs = TimeSpan.Zero;
 }

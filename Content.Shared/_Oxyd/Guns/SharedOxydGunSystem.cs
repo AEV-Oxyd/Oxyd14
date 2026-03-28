@@ -109,23 +109,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
-        SubscribeLocalEvent<OxydGunComponent, GotUnequippedHandEvent>(onDrop);
 
     }
 
-    public void onDrop(Entity<OxydGunComponent> ent, ref GotUnequippedHandEvent args)
-    {
-        var frd = ent.Comp.selectedFiremodePrototype;
-        if (frd.Active)
-        {
-            Log.Debug($"Resetting thrown weapon");
-            ResetFiremode(frd, ent, args.User);
-        }
-        else
-        {
-            Log.Debug($"Thrown but not reset weapon");
-        }
-    }
 
     public void onChargeInit(Entity<OxydChargeComponent> ent, ref ComponentInit args)
     {
