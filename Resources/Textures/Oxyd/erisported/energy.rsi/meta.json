@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "energy"
+    },
+    {
+      "name": "energy100"
+    },
+    {
+      "name": "energy75"
+    },
+    {
+      "name": "energy50"
+    },
+    {
+      "name": "energy25"
+    },
+    {
+      "name": "energy0",
+      "delays": [
+        [
+          0.3,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "energykill"
+    },
+    {
+      "name": "energystun"
+    },
+    {
+      "name": "lefthand-0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand",
+      "directions": 4
+    },
+    {
+      "name": "righthand-0",
+      "directions": 4
+    },
+    {
+      "name": "righthand-25",
+      "directions": 4
+    },
+    {
+      "name": "righthand-50",
+      "directions": 4
+    },
+    {
+      "name": "righthand-75",
+      "directions": 4
+    },
+    {
+      "name": "righthand-100",
+      "directions": 4
+    },
+    {
+      "name": "righthand",
+      "directions": 4
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "drozd"
+    },
+    {
+      "name": "drozd_s"
+    },
+    {
+      "name": "mag"
+    },
+    {
+      "name": "mag_s"
+    },
+    {
+      "name": "slide"
+    },
+    {
+      "name": "slide_s"
+    },
+    {
+      "name": "mag_r"
+    },
+    {
+      "name": "mag_s_r"
+    },
+    {
+      "name": "mag_l"
+    },
+    {
+      "name": "mag_s_l"
+    },
+    {
+      "name": "mag_hv"
+    },
+    {
+      "name": "mag_s_hv"
+    },
+    {
+      "name": "mag_p"
+    },
+    {
+      "name": "mag_s_p"
+    },
+    {
+      "name": "righthand_mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand",
+      "directions": 4
+    },
+    {
+      "name": "lefthand",
+      "directions": 4
+    },
+    {
+      "name": "righthand_s",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_s",
+      "directions": 4
+    }
+  ]
+}

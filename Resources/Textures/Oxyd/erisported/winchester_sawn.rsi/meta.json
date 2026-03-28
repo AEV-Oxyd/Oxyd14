@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "onsuit",
+      "directions": 4
+    },
+    {
+      "name": "back",
+      "directions": 4
+    },
+    {
+      "name": "lever_winchester_sawn_closed"
+    },
+    {
+      "name": "lever_winchester_sawn_open"
+    },
+    {
+      "name": "lefthand_winchester_sawn",
+      "directions": 4
+    },
+    {
+      "name": "righthand_winchester_sawn",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_winchester_sawn",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_winchester_sawn",
+      "directions": 4
+    },
+    {
+      "name": "lever_shotgun_sawn_closed"
+    },
+    {
+      "name": "lever_shotgun_sawn_open"
+    },
+    {
+      "name": "lefthand_shotgun_sawn",
+      "directions": 4
+    },
+    {
+      "name": "righthand_shotgun_sawn",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_shotgun_sawn",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_shotgun_sawn",
+      "directions": 4
+    }
+  ]
+}

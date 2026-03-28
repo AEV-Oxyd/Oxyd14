@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "l6closed100"
+    },
+    {
+      "name": "l6closed75"
+    },
+    {
+      "name": "l6closed50"
+    },
+    {
+      "name": "l6closed25"
+    },
+    {
+      "name": "l6closed0"
+    },
+    {
+      "name": "l6closed-empty"
+    },
+    {
+      "name": "l6open100"
+    },
+    {
+      "name": "l6open75"
+    },
+    {
+      "name": "l6open50"
+    },
+    {
+      "name": "l6open25"
+    },
+    {
+      "name": "l6open0"
+    },
+    {
+      "name": "l6open-empty"
+    },
+    {
+      "name": "lefthand-mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-openmag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-nomag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-openmag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-nomag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "back-nomag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-nomag",
+      "directions": 4
+    },
+    {
+      "name": "back-mag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_openmag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_openmag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_open",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_open",
+      "directions": 4
+    }
+  ]
+}

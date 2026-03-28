@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "frame"
+    },
+    {
+      "name": "well_pistol"
+    },
+    {
+      "name": "well_pistol-e"
+    },
+    {
+      "name": "well_pistol-fullpiece"
+    },
+    {
+      "name": "grip_black"
+    },
+    {
+      "name": "grip_rubber"
+    },
+    {
+      "name": "grip_excelsior"
+    },
+    {
+      "name": "grip_serbian"
+    },
+    {
+      "name": "grip_wood"
+    },
+    {
+      "name": "grip_makeshift"
+    },
+    {
+      "name": "grip_makeshift-e"
+    },
+    {
+      "name": "grip_black-e"
+    },
+    {
+      "name": "grip_rubber-e"
+    },
+    {
+      "name": "grip_excelsior-e"
+    },
+    {
+      "name": "grip_serbian-e"
+    },
+    {
+      "name": "grip_wood-e"
+    },
+    {
+      "name": "frame_black"
+    },
+    {
+      "name": "frame_gray"
+    },
+    {
+      "name": "frame_tan"
+    },
+    {
+      "name": "frame_altgray"
+    },
+    {
+      "name": "light"
+    },
+    {
+      "name": "mag_2.35"
+    },
+    {
+      "name": "mag_4.35"
+    },
+    {
+      "name": "frame_black-e"
+    },
+    {
+      "name": "frame_gray-e"
+    },
+    {
+      "name": "frame_tan-e"
+    },
+    {
+      "name": "frame_altgray-e"
+    },
+    {
+      "name": "righthand_frame_gray",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_gray",
+      "directions": 4
+    },
+    {
+      "name": "righthand_frame_black",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_black",
+      "directions": 4
+    },
+    {
+      "name": "righthand_frame_tan",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_tan",
+      "directions": 4
+    },
+    {
+      "name": "righthand_frame_gray-e",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_gray-e",
+      "directions": 4
+    },
+    {
+      "name": "righthand_frame_black-e",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_black-e",
+      "directions": 4
+    },
+    {
+      "name": "righthand_frame_tan-e",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_frame_tan-e",
+      "directions": 4
+    },
+    {
+      "name": "mechanism_pistol"
+    },
+    {
+      "name": "mechanism_pistol-e"
+    }
+  ]
+}

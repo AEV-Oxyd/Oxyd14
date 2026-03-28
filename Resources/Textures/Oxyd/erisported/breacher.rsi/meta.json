@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "Hatton_Hammer_1"
+    },
+    {
+      "name": "Hatton_Hammer_1_empty"
+    },
+    {
+      "name": "Hatton_Hammer_0"
+    },
+    {
+      "name": "Hatton_box1"
+    },
+    {
+      "name": "Hatton_box0"
+    },
+    {
+      "name": "Moebius_Hammer_1"
+    },
+    {
+      "name": "Moebius_Hammer_1_empty"
+    },
+    {
+      "name": "Moebius_Hammer_0"
+    },
+    {
+      "name": "Moebius_box1"
+    },
+    {
+      "name": "Moebius_box0"
+    },
+    {
+      "name": "3_3"
+    },
+    {
+      "name": "2_3"
+    },
+    {
+      "name": "1_3"
+    }
+  ]
+}

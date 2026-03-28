@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "frame_item"
+    },
+    {
+      "name": "stock_"
+    },
+    {
+      "name": "frame"
+    },
+    {
+      "name": "frame-sl"
+    },
+    {
+      "name": "grip_makeshift"
+    },
+    {
+      "name": "stock_makeshift"
+    },
+    {
+      "name": "stock_rubber"
+    },
+    {
+      "name": "grip_rubber"
+    },
+    {
+      "name": "stock_excelsior"
+    },
+    {
+      "name": "grip_excelsior"
+    },
+    {
+      "name": "stock_serbian"
+    },
+    {
+      "name": "grip_serbian"
+    },
+    {
+      "name": "stock_black"
+    },
+    {
+      "name": "grip_black"
+    },
+    {
+      "name": "stock_wood"
+    },
+    {
+      "name": "grip_wood"
+    },
+    {
+      "name": "mag_8.35"
+    },
+    {
+      "name": "mag_16.30"
+    },
+    {
+      "name": "mag_128.30"
+    },
+    {
+      "name": "well_lrifle"
+    },
+    {
+      "name": "mag_16.20"
+    },
+    {
+      "name": "mag_256.20"
+    },
+    {
+      "name": "mag_128.20"
+    },
+    {
+      "name": "well_srifle"
+    },
+    {
+      "name": "mag_8.40"
+    },
+    {
+      "name": "well_magnum"
+    },
+    {
+      "name": "righthand_grip_rubber",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_rubber",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_rubber",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_rubber",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_rubber_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_rubber_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_rubber_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_rubber_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_rubber_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_rubber_full",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_rubber_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_rubber_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_excelsior",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_excelsior",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_excelsior",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_excelsior",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_excelsior_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_excelsior_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_excelsior_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_excelsior_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_excelsior_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_excelsior_full",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_excelsior_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_excelsior_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_black",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_black",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_black",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_black",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_black_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_black_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_black_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_black_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_black_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_black_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_black_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_black_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_wood_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_wood_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_wood_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_wood_full",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_wood_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_wood_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_wood",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_wood",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_wood",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_wood",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_wood_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_wood_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_serbian",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_serbian",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_serbian",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_serbian",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_serbian_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_serbian_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_serbian_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_serbian_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_serbian_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_serbian_full",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_serbian_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_serbian_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_makeshift_full",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_makeshift_full",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_makeshift_full",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_makeshift_full",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_makeshift_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_makeshift_full_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_makeshift",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_makeshift",
+      "directions": 4
+    },
+    {
+      "name": "back_grip_makeshift",
+      "directions": 4
+    },
+    {
+      "name": "onsuit_grip_makeshift",
+      "directions": 4
+    },
+    {
+      "name": "righthand_grip_makeshift_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_grip_makeshift_doble",
+      "directions": 4
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "florayield100"
+    },
+    {
+      "name": "florayield75"
+    },
+    {
+      "name": "florayield50"
+    },
+    {
+      "name": "florayield25"
+    },
+    {
+      "name": "florayield0"
+    },
+    {
+      "name": "floramut100"
+    },
+    {
+      "name": "floramut75"
+    },
+    {
+      "name": "floramut50"
+    },
+    {
+      "name": "floramut25"
+    },
+    {
+      "name": "floramut0"
+    },
+    {
+      "name": "righthand-yield",
+      "directions": 4
+    },
+    {
+      "name": "righthand-mut",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-yield",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-mut",
+      "directions": 4
+    },
+    {
+      "name": "righthand_dobleflorayield100",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doblefloramut100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_dobleflorayield100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doblefloramut100",
+      "directions": 4
+    }
+  ]
+}

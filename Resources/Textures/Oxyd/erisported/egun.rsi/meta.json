@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "energystun100"
+    },
+    {
+      "name": "energystun75"
+    },
+    {
+      "name": "energystun50"
+    },
+    {
+      "name": "energystun25"
+    },
+    {
+      "name": "energystun0"
+    },
+    {
+      "name": "energykill100"
+    },
+    {
+      "name": "energykill75"
+    },
+    {
+      "name": "energykill50"
+    },
+    {
+      "name": "energykill25"
+    },
+    {
+      "name": "energykill0"
+    },
+    {
+      "name": "lefthand-kill0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-kill25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-kill50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-kill75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-kill100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-kill",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-stun",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill0",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill25",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill50",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill75",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill100",
+      "directions": 4
+    },
+    {
+      "name": "righthand-kill",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun0",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun25",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun50",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun75",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun100",
+      "directions": 4
+    },
+    {
+      "name": "righthand-stun",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-stun0",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-stun25",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-stun50",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-stun75",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-stun100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-stun0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-stun25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-stun50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-stun75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-stun100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-kill0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-kill25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-kill50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-kill75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-kill100",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-kill0",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-kill25",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-kill50",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-kill75",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-kill100",
+      "directions": 4
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "crossbow"
+    },
+    {
+      "name": "crossbow_backup"
+    },
+    {
+      "name": "crossbow_drawn"
+    },
+    {
+      "name": "lefthand",
+      "directions": 4
+    },
+    {
+      "name": "righthand",
+      "directions": 4
+    },
+    {
+      "name": "back",
+      "directions": 4
+    },
+    {
+      "name": "onsuit",
+      "directions": 4
+    },
+    {
+      "name": "crossbow_nocked"
+    },
+    {
+      "name": "lefthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble",
+      "directions": 4
+    }
+  ]
+}

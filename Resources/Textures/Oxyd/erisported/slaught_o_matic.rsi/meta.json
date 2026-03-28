@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "slaught_purple"
+    },
+    {
+      "name": "righthand_purple",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_purple",
+      "directions": 4
+    },
+    {
+      "name": "slaught_magenta"
+    },
+    {
+      "name": "righthand_magenta",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_magenta",
+      "directions": 4
+    },
+    {
+      "name": "slaught_blue"
+    },
+    {
+      "name": "righthand_blue",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_blue",
+      "directions": 4
+    },
+    {
+      "name": "slaught_cyan"
+    },
+    {
+      "name": "righthand_cyan",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_cyan",
+      "directions": 4
+    },
+    {
+      "name": "slaught_aqua"
+    },
+    {
+      "name": "righthand_aqua",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_aqua",
+      "directions": 4
+    },
+    {
+      "name": "slaught_green"
+    },
+    {
+      "name": "righthand_green",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_green",
+      "directions": 4
+    },
+    {
+      "name": "slaught_yellow"
+    },
+    {
+      "name": "righthand_yellow",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_yellow",
+      "directions": 4
+    },
+    {
+      "name": "slaught_orange"
+    },
+    {
+      "name": "righthand_orange",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_orange",
+      "directions": 4
+    },
+    {
+      "name": "slaught_red"
+    },
+    {
+      "name": "righthand_red",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_red",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_purple",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_purple",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_magenta",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_magenta",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_blue",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_blue",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_cyan",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_cyan",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_aqua",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_aqua",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_green",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_green",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_orange",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_orange",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_red",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_red",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_yellow",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_yellow",
+      "directions": 4
+    }
+  ]
+}

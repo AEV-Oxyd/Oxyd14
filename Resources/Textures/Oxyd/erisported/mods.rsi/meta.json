@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "silencer"
+    },
+    {
+      "name": "Excruciator"
+    },
+    {
+      "name": "Glass_Widow"
+    },
+    {
+      "name": "Danger_Zone"
+    },
+    {
+      "name": "DNA_lock"
+    },
+    {
+      "name": "Cop_Block"
+    },
+    {
+      "name": "Boom"
+    },
+    {
+      "name": "Overshooter"
+    },
+    {
+      "name": "Weintraub"
+    },
+    {
+      "name": "Reverse_loader"
+    },
+    {
+      "name": "dampener"
+    },
+    {
+      "name": "battery_shunt"
+    },
+    {
+      "name": "overdrive"
+    },
+    {
+      "name": "honker"
+    },
+    {
+      "name": "toxin_coater"
+    },
+    {
+      "name": "isotope_diffuser"
+    },
+    {
+      "name": "Forged_barrel"
+    },
+    {
+      "name": "Penetrator"
+    },
+    {
+      "name": "Caster"
+    },
+    {
+      "name": "psionic_catalyst"
+    },
+    {
+      "name": "Gauss"
+    },
+    {
+      "name": "Watchman"
+    },
+    {
+      "name": "Killer"
+    },
+    {
+      "name": "2,0"
+    },
+    {
+      "name": "gravbarrel"
+    },
+    {
+      "name": "gold_pot"
+    },
+    {
+      "name": "bipod"
+    }
+  ]
+}

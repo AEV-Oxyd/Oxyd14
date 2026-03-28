@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "lancer"
+    },
+    {
+      "name": "lancer100"
+    },
+    {
+      "name": "lancer50"
+    },
+    {
+      "name": "lancer0"
+    },
+    {
+      "name": "righthand-100",
+      "directions": 4
+    },
+    {
+      "name": "righthand-50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-50",
+      "directions": 4
+    },
+    {
+      "name": "righthand-0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-0",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-0",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-100",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-100",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-50",
+      "directions": 4
+    }
+  ]
+}

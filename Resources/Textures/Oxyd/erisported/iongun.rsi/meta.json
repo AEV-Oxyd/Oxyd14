@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "ionrifle"
+    },
+    {
+      "name": "ionrifle100"
+    },
+    {
+      "name": "ionrifle75"
+    },
+    {
+      "name": "ionrifle50"
+    },
+    {
+      "name": "ionrifle25",
+      "delays": [
+        [
+          0.4,
+          0.3
+        ]
+      ]
+    },
+    {
+      "name": "ionrifle0"
+    },
+    {
+      "name": "lefthand",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-empty",
+      "directions": 4
+    },
+    {
+      "name": "righthand",
+      "directions": 4
+    },
+    {
+      "name": "righthand-empty",
+      "directions": 4
+    },
+    {
+      "name": "back",
+      "directions": 4
+    },
+    {
+      "name": "back-100",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-100",
+      "directions": 4
+    },
+    {
+      "name": "back-75",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-75",
+      "directions": 4
+    },
+    {
+      "name": "back-50",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-50",
+      "directions": 4
+    },
+    {
+      "name": "back-25",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-25",
+      "directions": 4
+    },
+    {
+      "name": "back-0",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-0",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-100",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-100",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-75",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-75",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-50",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-50",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-25",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-25",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble-0",
+      "directions": 4
+    },
+    {
+      "name": "onsuit",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble-0",
+      "directions": 4
+    }
+  ]
+}

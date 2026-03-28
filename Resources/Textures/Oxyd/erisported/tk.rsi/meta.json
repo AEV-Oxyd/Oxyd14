@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "tkclosed-empty"
+    },
+    {
+      "name": "tkopen-empty"
+    },
+    {
+      "name": "tkopen100"
+    },
+    {
+      "name": "tkopen75"
+    },
+    {
+      "name": "tkopen50"
+    },
+    {
+      "name": "tkopen25"
+    },
+    {
+      "name": "tkopen0"
+    },
+    {
+      "name": "tkclosed100"
+    },
+    {
+      "name": "tkclosed75"
+    },
+    {
+      "name": "tkclosed50"
+    },
+    {
+      "name": "tkclosed25"
+    },
+    {
+      "name": "tkclosed0"
+    },
+    {
+      "name": "lefthand-mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-openmag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-nomag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-openmag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-nomag",
+      "directions": 4
+    },
+    {
+      "name": "righthand-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "back-nomag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-nomag",
+      "directions": 4
+    },
+    {
+      "name": "back-mag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_openmag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_openmag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_open",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_open",
+      "directions": 4
+    },
+    {
+      "name": "back-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-opennomag",
+      "directions": 4
+    },
+    {
+      "name": "back-openmag",
+      "directions": 4
+    },
+    {
+      "name": "onsuit-openmag",
+      "directions": 4
+    }
+  ]
+}

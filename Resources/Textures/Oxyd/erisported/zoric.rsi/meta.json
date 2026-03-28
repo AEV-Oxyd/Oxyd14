@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "zoric"
+    },
+    {
+      "name": "slide"
+    },
+    {
+      "name": "mag"
+    },
+    {
+      "name": "mag_p"
+    },
+    {
+      "name": "mag_hv"
+    },
+    {
+      "name": "mag_l"
+    },
+    {
+      "name": "mag_r"
+    },
+    {
+      "name": "lefthand",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand",
+      "directions": 4
+    },
+    {
+      "name": "righthand_mag",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "lefthand_doble_mag",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble",
+      "directions": 4
+    },
+    {
+      "name": "righthand_doble_mag",
+      "directions": 4
+    }
+  ]
+}
