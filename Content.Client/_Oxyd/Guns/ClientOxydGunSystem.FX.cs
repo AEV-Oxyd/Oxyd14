@@ -53,6 +53,41 @@ public partial class ClientOxydGunSystem
 
     }
 
+    public void updateGunIcon(Entity<OxydGunComponent> target)
+    {
+        foreach (var key in Enum.GetValues<GVis>())
+        {
+            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, false))
+                continue;
+            switch (key)
+            {
+                case GVis.MagUnder:
+                    break;
+                case GVis.MagAbove:
+                    break;
+                case GVis.BoltOpen:
+                    break;
+                case GVis.BoltClosed:
+                    break;
+                case GVis.AmmoIndicator:
+                    break;
+                case GVis.AttStock:
+                    break;
+                case GVis.AttScope:
+                    break;
+                case GVis.AttBarrel:
+                    break;
+                case GVis.AttUnderBarrel:
+                    break;
+                case GVis.AttInternal:
+                    break;
+
+            }
+
+        }
+    }
+
+
     public void visualUpdate()
     {
         var visquery = EntityQueryEnumerator<GlowOnChargeComponent>();
