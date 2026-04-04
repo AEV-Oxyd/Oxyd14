@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "atreides"
+      "name": "base"
     },
     {
       "name": "atreides_mag"
@@ -32,19 +32,19 @@
       "name": "atreides_mag_slide_s"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     },
     {
@@ -72,115 +72,115 @@
       "name": "atreides_gold_mag_slide_s"
     },
     {
-      "name": "righthand_gold_mag",
+      "name": "inhand-right-gold_mag",
       "directions": 4
     },
     {
-      "name": "lefthand_gold_mag",
+      "name": "inhand-left-gold_mag",
       "directions": 4
     },
     {
-      "name": "righthand_gold",
+      "name": "inhand-right-gold",
       "directions": 4
     },
     {
-      "name": "lefthand_gold",
+      "name": "inhand-left-gold",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble_gold_mag",
+      "name": "wielded-inhand-right-gold_mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_gold_mag",
+      "name": "wielded-inhand-left-gold_mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble_gold",
+      "name": "wielded-inhand-right-gold",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_gold",
+      "name": "wielded-inhand-left-gold",
       "directions": 4
     },
     {
-      "name": "lefthand_s",
+      "name": "inhand-left-s",
       "directions": 4
     },
     {
-      "name": "lefthand_mag_s",
+      "name": "inhand-left-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_s",
+      "name": "inhand-right-s",
       "directions": 4
     },
     {
-      "name": "righthand_mag_s",
+      "name": "inhand-right-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_gold_mag_s",
+      "name": "inhand-right-gold_mag_s",
       "directions": 4
     },
     {
-      "name": "lefthand_gold_mag_s",
+      "name": "inhand-left-gold_mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_gold_s",
+      "name": "inhand-right-gold_s",
       "directions": 4
     },
     {
-      "name": "lefthand_gold_s",
+      "name": "inhand-left-gold_s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_s",
+      "name": "wielded-inhand-left-s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag_s",
+      "name": "wielded-inhand-left-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_s",
+      "name": "wielded-inhand-right-s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag_s",
+      "name": "wielded-inhand-right-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_gold_mag_s",
+      "name": "wielded-inhand-right-gold_mag_s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_gold_mag_s",
+      "name": "wielded-inhand-left-gold_mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_gold_s",
+      "name": "wielded-inhand-right-gold_s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_gold_s",
+      "name": "wielded-inhand-left-gold_s",
       "directions": 4
     }
   ]

@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "molly"
+      "name": "base"
     },
     {
       "name": "molly_mag"
@@ -20,11 +20,11 @@
       "name": "molly_mag_slide"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
@@ -40,27 +40,27 @@
       "name": "molly_mag_slide_s"
     },
     {
-      "name": "righthand_s",
+      "name": "inhand-right-s",
       "directions": 4
     },
     {
-      "name": "lefthand_s",
+      "name": "inhand-left-s",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble_s",
+      "name": "wielded-inhand-right-s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_s",
+      "name": "wielded-inhand-left-s",
       "directions": 4
     }
   ]

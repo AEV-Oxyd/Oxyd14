@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "boltgun_hand"
+      "name": "base"
     },
     {
       "name": "boltgun_hand_open",
@@ -35,27 +35,27 @@
       ]
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "righthand_hand",
+      "name": "inhand-right-hand",
       "directions": 4
     },
     {
-      "name": "lefthand_hand",
+      "name": "inhand-left-hand",
       "directions": 4
     },
     {
-      "name": "righthand_doble_hand",
+      "name": "wielded-inhand-right-hand",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_hand",
+      "name": "wielded-inhand-left-hand",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     }
   ]

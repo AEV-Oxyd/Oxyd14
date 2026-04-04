@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "z8"
+      "name": "base"
     },
     {
       "name": "z8_slide"
@@ -26,35 +26,35 @@
       "name": "z8_mag_l"
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "onsuit_mag",
+      "name": "equipped-SUITSTORAGE-mag",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back_mag",
+      "name": "equipped-BACKPACK-mag",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     }
   ]

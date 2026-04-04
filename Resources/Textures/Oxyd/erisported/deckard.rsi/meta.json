@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "deckard"
+      "name": "base"
     },
     {
       "name": "deckard_off"
@@ -23,11 +23,11 @@
       "name": "deckard_off"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     }
   ]

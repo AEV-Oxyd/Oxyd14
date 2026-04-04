@@ -8,14 +8,14 @@
   },
   "states": [
     {
-      "name": "inspector"
+      "name": "base"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     }
   ]

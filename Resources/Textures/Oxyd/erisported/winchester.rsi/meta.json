@@ -14,27 +14,27 @@
       "name": "lever_winchester_closed"
     },
     {
-      "name": "lefthand_winchester",
+      "name": "inhand-left-winchester",
       "directions": 4
     },
     {
-      "name": "righthand_winchester",
+      "name": "inhand-right-winchester",
       "directions": 4
     },
     {
-      "name": "righthand_doble_winchester",
+      "name": "wielded-inhand-right-winchester",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_winchester",
+      "name": "wielded-inhand-left-winchester",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
@@ -44,19 +44,19 @@
       "name": "lever_shotgun_open"
     },
     {
-      "name": "lefthand_shotgun",
+      "name": "inhand-left-shotgun",
       "directions": 4
     },
     {
-      "name": "righthand_shotgun",
+      "name": "inhand-right-shotgun",
       "directions": 4
     },
     {
-      "name": "righthand_doble_shotgun",
+      "name": "wielded-inhand-right-shotgun",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_shotgun",
+      "name": "wielded-inhand-left-shotgun",
       "directions": 4
     }
   ]

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__rider__list_directory_tree",
+      "Bash(ls Resources/Textures/Oxyd/erisported/*/meta.json)",
+      "mcp__rider__get_file_text_by_path",
+      "Bash(python rename_erisported.py)"
+    ]
+  }
+}

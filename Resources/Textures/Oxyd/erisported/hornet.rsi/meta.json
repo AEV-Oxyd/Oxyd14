@@ -8,15 +8,15 @@
   },
   "states": [
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "hornet"
+      "name": "base"
     }
   ]
 }

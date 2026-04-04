@@ -14,27 +14,27 @@
       "name": "arisaka_ih_open"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "onsuit_ih",
+      "name": "equipped-SUITSTORAGE-ih",
       "directions": 4
     },
     {
-      "name": "back_ih",
+      "name": "equipped-BACKPACK-ih",
       "directions": 4
     },
     {
@@ -44,27 +44,27 @@
       "name": "arisaka_ih_scope_open"
     },
     {
-      "name": "righthand_ih_scope",
+      "name": "inhand-right-ih_scope",
       "directions": 4
     },
     {
-      "name": "lefthand_ih_scope",
+      "name": "inhand-left-ih_scope",
       "directions": 4
     },
     {
-      "name": "righthand_doble_ih_scope",
+      "name": "wielded-inhand-right-ih_scope",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_ih_scope",
+      "name": "wielded-inhand-left-ih_scope",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     }
   ]

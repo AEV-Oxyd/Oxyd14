@@ -8,25 +8,25 @@
   },
   "states": [
     {
-      "name": "type_90"
+      "name": "base"
     },
     {
       "name": "type_90_mag"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     }
   ]

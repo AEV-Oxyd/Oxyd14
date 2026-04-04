@@ -20,7 +20,7 @@
       "name": "AK_drum"
     },
     {
-      "name": "AK"
+      "name": "base"
     },
     {
       "name": "AK_mag30_f"
@@ -38,99 +38,99 @@
       "name": "AK_f"
     },
     {
-      "name": "onsuit_mag",
+      "name": "equipped-SUITSTORAGE-mag",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back_mag",
+      "name": "equipped-BACKPACK-mag",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
-      "name": "onsuit_mag_f",
+      "name": "equipped-SUITSTORAGE-mag_f",
       "directions": 4
     },
     {
-      "name": "onsuit_f",
+      "name": "equipped-SUITSTORAGE-f",
       "directions": 4
     },
     {
-      "name": "back_mag_f",
+      "name": "equipped-BACKPACK-mag_f",
       "directions": 4
     },
     {
-      "name": "back_f",
+      "name": "equipped-BACKPACK-f",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_mag_f",
+      "name": "inhand-left-mag_f",
       "directions": 4
     },
     {
-      "name": "lefthand_f",
+      "name": "inhand-left-f",
       "directions": 4
     },
     {
-      "name": "righthand_mag_f",
+      "name": "inhand-right-mag_f",
       "directions": 4
     },
     {
-      "name": "righthand_f",
+      "name": "inhand-right-f",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag_f",
+      "name": "wielded-inhand-left-mag_f",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_f",
+      "name": "wielded-inhand-left-f",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag_f",
+      "name": "wielded-inhand-right-mag_f",
       "directions": 4
     },
     {
-      "name": "righthand_doble_f",
+      "name": "wielded-inhand-right-f",
       "directions": 4
     }
   ]

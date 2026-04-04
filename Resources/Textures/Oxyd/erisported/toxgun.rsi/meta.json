@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "toxgun"
+      "name": "base"
     },
     {
       "name": "toxgun100"
@@ -32,11 +32,11 @@
       "name": "toxgun0"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     }
   ]

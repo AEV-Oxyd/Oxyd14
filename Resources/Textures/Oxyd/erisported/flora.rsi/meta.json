@@ -54,19 +54,19 @@
       "directions": 4
     },
     {
-      "name": "righthand_dobleflorayield100",
+      "name": "inhand-right-dobleflorayield100",
       "directions": 4
     },
     {
-      "name": "righthand_doblefloramut100",
+      "name": "inhand-right-doblefloramut100",
       "directions": 4
     },
     {
-      "name": "lefthand_dobleflorayield100",
+      "name": "inhand-left-dobleflorayield100",
       "directions": 4
     },
     {
-      "name": "lefthand_doblefloramut100",
+      "name": "inhand-left-doblefloramut100",
       "directions": 4
     }
   ]

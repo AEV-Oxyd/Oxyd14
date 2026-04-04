@@ -32,43 +32,43 @@
       "name": "0_PW"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "lefthand_empty",
+      "name": "inhand-left-empty",
       "directions": 4
     },
     {
-      "name": "righthand_empty",
+      "name": "inhand-right-empty",
       "directions": 4
     }
   ]

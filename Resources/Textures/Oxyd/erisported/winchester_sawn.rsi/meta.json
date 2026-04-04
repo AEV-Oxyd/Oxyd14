@@ -8,11 +8,11 @@
   },
   "states": [
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
@@ -22,19 +22,19 @@
       "name": "lever_winchester_sawn_open"
     },
     {
-      "name": "lefthand_winchester_sawn",
+      "name": "inhand-left-winchester_sawn",
       "directions": 4
     },
     {
-      "name": "righthand_winchester_sawn",
+      "name": "inhand-right-winchester_sawn",
       "directions": 4
     },
     {
-      "name": "righthand_doble_winchester_sawn",
+      "name": "wielded-inhand-right-winchester_sawn",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_winchester_sawn",
+      "name": "wielded-inhand-left-winchester_sawn",
       "directions": 4
     },
     {
@@ -44,19 +44,19 @@
       "name": "lever_shotgun_sawn_open"
     },
     {
-      "name": "lefthand_shotgun_sawn",
+      "name": "inhand-left-shotgun_sawn",
       "directions": 4
     },
     {
-      "name": "righthand_shotgun_sawn",
+      "name": "inhand-right-shotgun_sawn",
       "directions": 4
     },
     {
-      "name": "righthand_doble_shotgun_sawn",
+      "name": "wielded-inhand-right-shotgun_sawn",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_shotgun_sawn",
+      "name": "wielded-inhand-left-shotgun_sawn",
       "directions": 4
     }
   ]

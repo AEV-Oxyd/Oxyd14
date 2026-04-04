@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "redtag"
+      "name": "base"
     },
     {
       "name": "redtag100"
@@ -32,19 +32,19 @@
       "name": "redtag0"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "lefthand-0",
+      "name": "inhand-left-0",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "righthand-0",
+      "name": "inhand-right-0",
       "directions": 4
     }
   ]

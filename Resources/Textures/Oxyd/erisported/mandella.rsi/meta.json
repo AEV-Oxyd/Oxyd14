@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "mandella"
+      "name": "base"
     },
     {
       "name": "mandella_mag"
@@ -20,19 +20,19 @@
       "name": "mandella_mag_slide"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     }
   ]

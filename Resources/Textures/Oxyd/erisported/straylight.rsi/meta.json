@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "straylight"
+      "name": "base"
     },
     {
       "name": "straylight_mag"
@@ -32,67 +32,67 @@
       "name": "straylight_mag_slide_s"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_s",
+      "name": "inhand-left-s",
       "directions": 4
     },
     {
-      "name": "righthand_s",
+      "name": "inhand-right-s",
       "directions": 4
     },
     {
-      "name": "lefthand_mag_s",
+      "name": "inhand-left-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_mag_s",
+      "name": "inhand-right-mag_s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_s",
+      "name": "wielded-inhand-left-s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_s",
+      "name": "wielded-inhand-right-s",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag_s",
+      "name": "wielded-inhand-left-mag_s",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag_s",
+      "name": "wielded-inhand-right-mag_s",
       "directions": 4
     }
   ]

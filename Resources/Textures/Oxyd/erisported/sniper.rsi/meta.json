@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "sniper"
+      "name": "base"
     },
     {
       "name": "sniper100"
@@ -32,39 +32,39 @@
       "name": "sniper0"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand-100",
+      "name": "inhand-right-100",
       "directions": 4
     },
     {
-      "name": "lefthand-100",
+      "name": "inhand-left-100",
       "directions": 4
     },
     {
-      "name": "righthand-75",
+      "name": "inhand-right-75",
       "directions": 4
     },
     {
-      "name": "lefthand-75",
+      "name": "inhand-left-75",
       "directions": 4
     },
     {
-      "name": "righthand-50",
+      "name": "inhand-right-50",
       "directions": 4
     },
     {
-      "name": "lefthand-50",
+      "name": "inhand-left-50",
       "directions": 4
     },
     {
-      "name": "righthand-25",
+      "name": "inhand-right-25",
       "directions": 4,
       "delays": [
         [
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "lefthand-25",
+      "name": "inhand-left-25",
       "directions": 4,
       "delays": [
         [
@@ -108,67 +108,67 @@
       ]
     },
     {
-      "name": "righthand-0",
+      "name": "inhand-right-0",
       "directions": 4
     },
     {
-      "name": "lefthand-0",
+      "name": "inhand-left-0",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-100",
+      "name": "wielded-inhand-left-100",
       "directions": 4
     },
     {
-      "name": "righthand_doble-100",
+      "name": "wielded-inhand-right-100",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-75",
+      "name": "wielded-inhand-left-75",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-50",
+      "name": "wielded-inhand-left-50",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-25",
+      "name": "wielded-inhand-left-25",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-0",
+      "name": "wielded-inhand-left-0",
       "directions": 4
     },
     {
-      "name": "righthand_doble-75",
+      "name": "wielded-inhand-right-75",
       "directions": 4
     },
     {
-      "name": "righthand_doble-50",
+      "name": "wielded-inhand-right-50",
       "directions": 4
     },
     {
-      "name": "righthand_doble-25",
+      "name": "wielded-inhand-right-25",
       "directions": 4
     },
     {
-      "name": "righthand_doble-0",
+      "name": "wielded-inhand-right-0",
       "directions": 4
     }
   ]

@@ -14,27 +14,27 @@
       "name": "arisaka_civilian_open"
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble_arisaka",
+      "name": "wielded-inhand-right-arisaka",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_arisaka",
+      "name": "wielded-inhand-left-arisaka",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     }
   ]

@@ -8,25 +8,25 @@
   },
   "states": [
     {
-      "name": "olivawcivil"
+      "name": "base"
     },
     {
       "name": "olivawcivil_empty"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     }
   ]

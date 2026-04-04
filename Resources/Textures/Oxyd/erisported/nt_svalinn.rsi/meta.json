@@ -8,7 +8,7 @@
   },
   "states": [
     {
-      "name": "nt_svalinn"
+      "name": "base"
     },
     {
       "name": "nt_svalinn100"
@@ -32,11 +32,11 @@
       "name": "nt_svalinn0"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     }
   ]

@@ -50,27 +50,27 @@
       "name": "mag_s_p"
     },
     {
-      "name": "righthand_mag",
+      "name": "inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_mag",
+      "name": "inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_s",
+      "name": "inhand-right-s",
       "directions": 4
     },
     {
-      "name": "lefthand_s",
+      "name": "inhand-left-s",
       "directions": 4
     }
   ]

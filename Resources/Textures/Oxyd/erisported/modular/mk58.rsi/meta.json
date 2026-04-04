@@ -89,51 +89,51 @@
       "name": "frame_altgray-e"
     },
     {
-      "name": "righthand_frame_gray",
+      "name": "inhand-right-frame_gray",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_gray",
+      "name": "inhand-left-frame_gray",
       "directions": 4
     },
     {
-      "name": "righthand_frame_black",
+      "name": "inhand-right-frame_black",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_black",
+      "name": "inhand-left-frame_black",
       "directions": 4
     },
     {
-      "name": "righthand_frame_tan",
+      "name": "inhand-right-frame_tan",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_tan",
+      "name": "inhand-left-frame_tan",
       "directions": 4
     },
     {
-      "name": "righthand_frame_gray-e",
+      "name": "inhand-right-frame_gray-e",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_gray-e",
+      "name": "inhand-left-frame_gray-e",
       "directions": 4
     },
     {
-      "name": "righthand_frame_black-e",
+      "name": "inhand-right-frame_black-e",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_black-e",
+      "name": "inhand-left-frame_black-e",
       "directions": 4
     },
     {
-      "name": "righthand_frame_tan-e",
+      "name": "inhand-right-frame_tan-e",
       "directions": 4
     },
     {
-      "name": "lefthand_frame_tan-e",
+      "name": "inhand-left-frame_tan-e",
       "directions": 4
     },
     {

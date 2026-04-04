@@ -11,35 +11,35 @@
       "name": "maxim"
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "lefthand_full",
+      "name": "inhand-left-full",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "righthand_full",
+      "name": "inhand-right-full",
       "directions": 4
     },
     {
-      "name": "lefthand_full_doble",
+      "name": "inhand-left-full_doble",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "righthand_full_doble",
+      "name": "inhand-right-full_doble",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {

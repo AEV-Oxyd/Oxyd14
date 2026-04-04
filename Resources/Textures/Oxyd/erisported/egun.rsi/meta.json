@@ -134,83 +134,83 @@
       "directions": 4
     },
     {
-      "name": "righthand_doble-stun0",
+      "name": "inhand-right-doble-stun0",
       "directions": 4
     },
     {
-      "name": "righthand_doble-stun25",
+      "name": "inhand-right-doble-stun25",
       "directions": 4
     },
     {
-      "name": "righthand_doble-stun50",
+      "name": "inhand-right-doble-stun50",
       "directions": 4
     },
     {
-      "name": "righthand_doble-stun75",
+      "name": "inhand-right-doble-stun75",
       "directions": 4
     },
     {
-      "name": "righthand_doble-stun100",
+      "name": "inhand-right-doble-stun100",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-stun0",
+      "name": "inhand-left-doble-stun0",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-stun25",
+      "name": "inhand-left-doble-stun25",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-stun50",
+      "name": "inhand-left-doble-stun50",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-stun75",
+      "name": "inhand-left-doble-stun75",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-stun100",
+      "name": "inhand-left-doble-stun100",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-kill0",
+      "name": "inhand-left-doble-kill0",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-kill25",
+      "name": "inhand-left-doble-kill25",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-kill50",
+      "name": "inhand-left-doble-kill50",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-kill75",
+      "name": "inhand-left-doble-kill75",
       "directions": 4
     },
     {
-      "name": "lefthand_doble-kill100",
+      "name": "inhand-left-doble-kill100",
       "directions": 4
     },
     {
-      "name": "righthand_doble-kill0",
+      "name": "inhand-right-doble-kill0",
       "directions": 4
     },
     {
-      "name": "righthand_doble-kill25",
+      "name": "inhand-right-doble-kill25",
       "directions": 4
     },
     {
-      "name": "righthand_doble-kill50",
+      "name": "inhand-right-doble-kill50",
       "directions": 4
     },
     {
-      "name": "righthand_doble-kill75",
+      "name": "inhand-right-doble-kill75",
       "directions": 4
     },
     {
-      "name": "righthand_doble-kill100",
+      "name": "inhand-right-doble-kill100",
       "directions": 4
     }
   ]

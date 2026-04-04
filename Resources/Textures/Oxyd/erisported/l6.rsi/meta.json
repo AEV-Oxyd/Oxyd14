@@ -92,35 +92,35 @@
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble_openmag",
+      "name": "wielded-inhand-right-openmag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_openmag",
+      "name": "wielded-inhand-left-openmag",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble_open",
+      "name": "wielded-inhand-right-open",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_open",
+      "name": "wielded-inhand-left-open",
       "directions": 4
     }
   ]

@@ -47,51 +47,51 @@
       ]
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_wood",
+      "name": "inhand-left-wood",
       "directions": 4
     },
     {
-      "name": "righthand_wood",
+      "name": "inhand-right-wood",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_wood",
+      "name": "wielded-inhand-left-wood",
       "directions": 4
     },
     {
-      "name": "righthand_doble_wood",
+      "name": "wielded-inhand-right-wood",
       "directions": 4
     },
     {
-      "name": "righthand_hand",
+      "name": "inhand-right-hand",
       "directions": 4
     },
     {
-      "name": "lefthand_hand",
+      "name": "inhand-left-hand",
       "directions": 4
     },
     {
-      "name": "righthand_doble_hand",
+      "name": "wielded-inhand-right-hand",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_hand",
+      "name": "wielded-inhand-left-hand",
       "directions": 4
     }
   ]

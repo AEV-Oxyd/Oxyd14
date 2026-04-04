@@ -11,171 +11,171 @@
       "name": "slaught_purple"
     },
     {
-      "name": "righthand_purple",
+      "name": "inhand-right-purple",
       "directions": 4
     },
     {
-      "name": "lefthand_purple",
+      "name": "inhand-left-purple",
       "directions": 4
     },
     {
       "name": "slaught_magenta"
     },
     {
-      "name": "righthand_magenta",
+      "name": "inhand-right-magenta",
       "directions": 4
     },
     {
-      "name": "lefthand_magenta",
+      "name": "inhand-left-magenta",
       "directions": 4
     },
     {
       "name": "slaught_blue"
     },
     {
-      "name": "righthand_blue",
+      "name": "inhand-right-blue",
       "directions": 4
     },
     {
-      "name": "lefthand_blue",
+      "name": "inhand-left-blue",
       "directions": 4
     },
     {
       "name": "slaught_cyan"
     },
     {
-      "name": "righthand_cyan",
+      "name": "inhand-right-cyan",
       "directions": 4
     },
     {
-      "name": "lefthand_cyan",
+      "name": "inhand-left-cyan",
       "directions": 4
     },
     {
       "name": "slaught_aqua"
     },
     {
-      "name": "righthand_aqua",
+      "name": "inhand-right-aqua",
       "directions": 4
     },
     {
-      "name": "lefthand_aqua",
+      "name": "inhand-left-aqua",
       "directions": 4
     },
     {
       "name": "slaught_green"
     },
     {
-      "name": "righthand_green",
+      "name": "inhand-right-green",
       "directions": 4
     },
     {
-      "name": "lefthand_green",
+      "name": "inhand-left-green",
       "directions": 4
     },
     {
       "name": "slaught_yellow"
     },
     {
-      "name": "righthand_yellow",
+      "name": "inhand-right-yellow",
       "directions": 4
     },
     {
-      "name": "lefthand_yellow",
+      "name": "inhand-left-yellow",
       "directions": 4
     },
     {
       "name": "slaught_orange"
     },
     {
-      "name": "righthand_orange",
+      "name": "inhand-right-orange",
       "directions": 4
     },
     {
-      "name": "lefthand_orange",
+      "name": "inhand-left-orange",
       "directions": 4
     },
     {
       "name": "slaught_red"
     },
     {
-      "name": "righthand_red",
+      "name": "inhand-right-red",
       "directions": 4
     },
     {
-      "name": "lefthand_red",
+      "name": "inhand-left-red",
       "directions": 4
     },
     {
-      "name": "righthand_doble_purple",
+      "name": "wielded-inhand-right-purple",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_purple",
+      "name": "wielded-inhand-left-purple",
       "directions": 4
     },
     {
-      "name": "righthand_doble_magenta",
+      "name": "wielded-inhand-right-magenta",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_magenta",
+      "name": "wielded-inhand-left-magenta",
       "directions": 4
     },
     {
-      "name": "righthand_doble_blue",
+      "name": "wielded-inhand-right-blue",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_blue",
+      "name": "wielded-inhand-left-blue",
       "directions": 4
     },
     {
-      "name": "righthand_doble_cyan",
+      "name": "wielded-inhand-right-cyan",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_cyan",
+      "name": "wielded-inhand-left-cyan",
       "directions": 4
     },
     {
-      "name": "righthand_doble_aqua",
+      "name": "wielded-inhand-right-aqua",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_aqua",
+      "name": "wielded-inhand-left-aqua",
       "directions": 4
     },
     {
-      "name": "righthand_doble_green",
+      "name": "wielded-inhand-right-green",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_green",
+      "name": "wielded-inhand-left-green",
       "directions": 4
     },
     {
-      "name": "righthand_doble_orange",
+      "name": "wielded-inhand-right-orange",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_orange",
+      "name": "wielded-inhand-left-orange",
       "directions": 4
     },
     {
-      "name": "righthand_doble_red",
+      "name": "wielded-inhand-right-red",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_red",
+      "name": "wielded-inhand-left-red",
       "directions": 4
     },
     {
-      "name": "righthand_doble_yellow",
+      "name": "wielded-inhand-right-yellow",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_yellow",
+      "name": "wielded-inhand-left-yellow",
       "directions": 4
     }
   ]

@@ -14,27 +14,27 @@
       "name": "boltgun_wood_closed"
     },
     {
-      "name": "righthand_doble_wood",
+      "name": "wielded-inhand-right-wood",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_wood",
+      "name": "wielded-inhand-left-wood",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "righthand_wood",
+      "name": "inhand-right-wood",
       "directions": 4
     },
     {
-      "name": "lefthand_wood",
+      "name": "inhand-left-wood",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     }
   ]

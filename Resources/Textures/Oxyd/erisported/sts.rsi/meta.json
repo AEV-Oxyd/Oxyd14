@@ -23,62 +23,62 @@
       "name": "sts_slide"
     },
     {
-      "name": "sts"
+      "name": "base"
     },
     {
-      "name": "righthand_mag20",
+      "name": "inhand-right-mag20",
       "directions": 4
     },
     {
-      "name": "righthand_mag30",
+      "name": "inhand-right-mag30",
       "directions": 4
     },
     {
-      "name": "lefthand_mag20",
+      "name": "inhand-left-mag20",
       "directions": 4
     },
     {
-      "name": "lefthand_mag30",
+      "name": "inhand-left-mag30",
       "directions": 4
     },
     {
-      "name": "righthand",
+      "name": "inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand",
+      "name": "inhand-left",
       "directions": 4
     },
     {
-      "name": "back",
+      "name": "equipped-BACKPACK",
       "directions": 4
     },
     {
-      "name": "back_empty",
+      "name": "equipped-BACKPACK-empty",
       "directions": 4
     },
     {
-      "name": "onsuit",
+      "name": "equipped-SUITSTORAGE",
       "directions": 4
     },
     {
-      "name": "onsuit_empty",
+      "name": "equipped-SUITSTORAGE-empty",
       "directions": 4
     },
     {
-      "name": "righthand_doble_mag",
+      "name": "wielded-inhand-right-mag",
       "directions": 4
     },
     {
-      "name": "righthand_doble",
+      "name": "wielded-inhand-right",
       "directions": 4
     },
     {
-      "name": "lefthand_doble_mag",
+      "name": "wielded-inhand-left-mag",
       "directions": 4
     },
     {
-      "name": "lefthand_doble",
+      "name": "wielded-inhand-left",
       "directions": 4
     }
   ]

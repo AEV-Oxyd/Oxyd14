@@ -11,88 +11,88 @@
       "name": "artwork_revolver_1"
     },
     {
-      "name": "righthand_1",
+      "name": "inhand-right-1",
       "directions": 4
     },
     {
-      "name": "lefthand_1",
+      "name": "inhand-left-1",
       "directions": 4
     },
     {
       "name": "artwork_revolver_2"
     },
     {
-      "name": "righthand_2",
+      "name": "inhand-right-2",
       "directions": 4
     },
     {
-      "name": "lefthand_2",
+      "name": "inhand-left-2",
       "directions": 4
     },
     {
       "name": "artwork_revolver_3"
     },
     {
-      "name": "righthand_3",
+      "name": "inhand-right-3",
       "directions": 4
     },
     {
-      "name": "lefthand_3",
+      "name": "inhand-left-3",
       "directions": 4
     },
     {
       "name": "artwork_revolver_4"
     },
     {
-      "name": "righthand_4",
+      "name": "inhand-right-4",
       "directions": 4
     },
     {
-      "name": "lefthand_4",
+      "name": "inhand-left-4",
       "directions": 4
     },
     {
       "name": "artwork_revolver_5"
     },
     {
-      "name": "righthand_5",
+      "name": "inhand-right-5",
       "directions": 4
     },
     {
-      "name": "lefthand_5",
+      "name": "inhand-left-5",
       "directions": 4
     },
     {
-      "name": "lefthand_6",
+      "name": "inhand-left-6",
       "directions": 4
     },
     {
       "name": "artwork_revolver_6"
     },
     {
-      "name": "righthand_6",
+      "name": "inhand-right-6",
       "directions": 4
     },
     {
-      "name": "lefthand_7",
+      "name": "inhand-left-7",
       "directions": 4
     },
     {
       "name": "artwork_revolver_7"
     },
     {
-      "name": "righthand_7",
+      "name": "inhand-right-7",
       "directions": 4
     },
     {
-      "name": "lefthand_8",
+      "name": "inhand-left-8",
       "directions": 4
     },
     {
       "name": "artwork_revolver_8"
     },
     {
-      "name": "righthand_8",
+      "name": "inhand-right-8",
       "directions": 4
     }
   ]
