@@ -166,5 +166,9 @@ public sealed class GunCompareFired : EntityEventArgs
     public int firedCount;
     public NetEntity target;
 }
-
-
+[ByRefEvent]
+public sealed class GetModsEvent : EntityEventArgs
+{
+    public required Type typeFilter;
+    public List<OxydModifier> mods = new();
+}
