@@ -34,7 +34,8 @@ public class GunData
 }
 
 // gun attachment types / slots
-public enum AttSlots
+[Serializable, NetSerializable]
+public enum AttSlot
 {
     Barrel,
     UnderBarrel,

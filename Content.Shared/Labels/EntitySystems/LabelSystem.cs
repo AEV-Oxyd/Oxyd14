@@ -144,7 +144,7 @@ public sealed partial class LabelSystem : EntitySystem
     }
 
     /// <summary>
-    /// Retrieves a label with the specified component from the default label slot.
+    /// Retrieves a label with the specified component from the default label Slot.
     /// </summary>
     public bool TryGetLabel<T>(Entity<PaperLabelComponent?> ent, [NotNullWhen(true)] out Entity<T>? label) where T : Component
     {

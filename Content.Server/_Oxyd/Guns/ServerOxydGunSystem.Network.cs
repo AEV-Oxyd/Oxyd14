@@ -35,7 +35,7 @@ public partial class ServerOxydGunSystem
             case ItemSlot slot:
                 if (slot.Item is null || slot.Item.Value == EntityUid.Invalid)
                     break;
-                Log.Debug($"got item slot item {slot.Item.Value}");
+                Log.Debug($"got item Slot item {slot.Item.Value}");
                 lst.Add(slot.Item.Value);
                 break;
         }

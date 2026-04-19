@@ -1,5 +1,7 @@
 using Content.Shared.Whitelist;
+using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -7,16 +9,26 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydAttachmentHolderComponent : Component
 {
-    [DataField]
+    [DataField, AutoNetworkedField]
     public EntityWhitelist allowedAttachments = new();
-
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public CompoundedModifiers mods = new();
-    [ViewVariables]
-    public Dictionary<AttSlots, EntityUid> attachments = new();
+    [DataField, AutoNetworkedField]
+    public Dictionary<AttSlot, NetEntity> attachments = new();
+
+    [DataField, AutoNetworkedField]
+    public List<AttSlot> slots = new();
+}
+
+/// <summary>
+/// This is used for...
+/// </summary>
+[RegisterComponent]
+public sealed partial class OxydAttachmentSpawnerComponent : Component
+{
     [DataField]
-    public List<EntProtoId> starting = default!;
+    public List<EntProtoId> insert = new();
 }

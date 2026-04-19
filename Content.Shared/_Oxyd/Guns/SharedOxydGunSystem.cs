@@ -153,7 +153,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             if (slot.ContainerSlot is null)
                 continue;
-            Log.Debug($"Comparing slot container {slot.ContainerSlot.ID} with {args.Container.ID}");
+            Log.Debug($"Comparing Slot container {slot.ContainerSlot.ID} with {args.Container.ID}");
             if (slot.ContainerSlot.ID == args.Container.ID)
                 targetIndex =
                     ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == slot.ContainerSlot.ID);
@@ -162,7 +162,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         if (targetIndex == -1)
         {
-            Log.Error($"Entity {ent} had a mag inserted for a magazine slot without a linked slot!");
+            Log.Error($"Entity {ent} had a mag inserted for a magazine Slot without a linked Slot!");
             return;
         }
 
