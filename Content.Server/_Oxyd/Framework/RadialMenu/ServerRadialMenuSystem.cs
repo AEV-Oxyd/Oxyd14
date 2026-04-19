@@ -51,8 +51,15 @@ public sealed class ServerRadialMenuSystem : SharedRadialMenuSystem
         }
     }
 
-    public override void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null)
+    public override void ShowRadial(ICommonSession player,
+        List<RadialMenuOption> options,
+        Action<RadialBaseSelection> callback,
+        EntityUid? target = null,
+        bool server = true,
+        bool client = true)
     {
+        if (!server)
+            return;
         var count = _playerRequestCount.GetValueOrDefault(player);
         if (count >= MaxPendingRequestsPerPlayer)
         {

@@ -4,6 +4,7 @@ using Robust.Client.UserInterface;
 using Robust.Client.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Player;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Frameworks.RadialMenu;
 
@@ -11,6 +12,7 @@ public sealed class ClientRadialMenuSystem : SharedRadialMenuSystem
 {
     [Dependency] private readonly IUserInterfaceManager _ui = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
+    [Dependency] private readonly IGameTiming _timing = default!;
 
     public override void Initialize()
     {
@@ -23,8 +25,15 @@ public sealed class ClientRadialMenuSystem : SharedRadialMenuSystem
         OpenMenu(ev.RequestId, ev.Options, GetEntity(ev.Target));
     }
 
-    public override void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null)
+    public override void ShowRadial(ICommonSession player,
+        List<RadialMenuOption> options,
+        Action<RadialBaseSelection> callback,
+        EntityUid? target = null,
+        bool server = true,
+        bool client = true)
     {
+        if (!client)
+            return;
         if (player == _playerManager.LocalSession)
         {
             OpenMenu(Guid.NewGuid(), options, target);
@@ -33,6 +42,8 @@ public sealed class ClientRadialMenuSystem : SharedRadialMenuSystem
 
     protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null)
     {
+        if (!_timing.IsFirstTimePredicted)
+            return;
         var menu = _ui.CreateWindow<SimpleRadialMenu>();
 
         if (target != null)

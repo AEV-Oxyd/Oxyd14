@@ -188,12 +188,21 @@
         name: power-cell-slot-component-slot-name-default
         startingItem: PowerCellMedium
         priority: 1
+        whitelist:
+          components:
+            - OxydCharge
   - type: StaticPrice
     price: 500
   - type: OxydGunChargeup
     maxCharge: 1.0
   - type: GlowOnCharge
   - type: RecoilHandler
+  - type: OxydAttachmentHolder
+    slots:
+      - Barrel
+    whitelist:
+      components:
+        - OxydAttachment
 
 - type: entity
   parent: BasicHitscan
@@ -272,6 +281,26 @@
     containers:
       storagebase: !type:Container
         ents: []
+
+- type: entity
+  name: Oxyd Attachment
+  parent: BaseItem
+  id: AttachmentOxyd
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Ammunition/Magazine/Pistol/pistol_mag.rsi
+    state: base
+  - type: Item
+    size: Large
+  - type: OxydAttachment
+    slot: Barrel
+    mods:
+     - !type:DamageMod
+        addMod:
+          types:
+            Blunt: 50
 
 - type: entityList
   id: magazineOxydTest

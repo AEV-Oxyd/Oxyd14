@@ -24,22 +24,37 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 [Serializable, NetSerializable]
 public sealed class CompoundedModifiers
 {
+    [ViewVariables(VVAccess.ReadWrite)]
     public float recoilAdd = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float recoilMult = 1;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float firerateAdd = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float firerateMult = 1;
+    [ViewVariables(VVAccess.ReadWrite)]
     public DamageSpecifier? damageAdd;
+    [ViewVariables(VVAccess.ReadWrite)]
     public DamageSpecifier? damageMult;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float zoomMod = 1;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float soundRange = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float soundVolume = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float soundPitch = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float useSpeedMult = 1;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float gunCapacityAdd = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float toolCapacityAdd = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
     public SoundSpecifier? soundOverride;
-}
 
+}
+[Serializable, NetSerializable]
 public sealed partial class RemoveAttachmentEvent : DoAfterEvent
 {
     public AttSlot attachment;
@@ -104,17 +119,17 @@ public sealed class OxydModifiersSystem : EntitySystem
                         holder.Owner,
                         holder.Owner,
                         used));
-                } );
+                } , holder, true, false );
             return;
         }
         if (!TryComp<OxydAttachmentComponent>(used, out var att))
             return;
         if (!tryAddAttachment(holder, (used, att), out var errorMsg))
         {
-            _popup.PopupClient(errorMsg, holder, PopupType.Small);
+            _popup.PopupClient(errorMsg, user, PopupType.Small);
             return;
         }
-        _popup.PopupClient($"You attach the {MetaData(args.Used).EntityName}!", holder);
+        _popup.PopupClient($"You attach the {MetaData(args.Used).EntityName}!", user);
     }
 
     public void onInit(Entity<OxydAttachmentHolderComponent> ent, ref ComponentInit args)
@@ -164,20 +179,20 @@ public sealed class OxydModifiersSystem : EntitySystem
         return getModifiers((ent.Owner, ent.Comp), typeof(ToolMod));
     }
 
-    public CompoundedModifiers updateModifiers(Entity<OxydAttachmentHolderComponent> ent)
+    public void updateModifiers(Entity<OxydAttachmentHolderComponent> ent)
     {
         var mods = getModifiers(ent, typeof(OxydModifier));
         var compound = new CompoundedModifiers();
         foreach (var mod in mods)
             mod.addToCompound(compound);
-        return compound;
+        ent.Comp.mods = compound;
     }
 
     public bool tryAddAttachment(Entity<OxydAttachmentHolderComponent> ent, Entity<OxydAttachmentComponent> attachment, out string errorMsg)
     {
         errorMsg = "";
         var cont = (Container)_container.GetContainer(ent.Owner, cid);
-        if (!_whitelist.IsValid(ent.Comp.allowedAttachments, attachment.Owner))
+        if (!_whitelist.IsValid(ent.Comp.whitelist, attachment.Owner))
         {
             errorMsg = "The attachment cannot be installed on this!";
             return false;

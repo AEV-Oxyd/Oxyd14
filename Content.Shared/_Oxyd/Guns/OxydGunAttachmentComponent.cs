@@ -49,9 +49,9 @@ public sealed partial class FirerateMod : OxydModifier, GunMod
 public sealed partial class DamageMod : OxydModifier, GunMod, ToolMod
 {
     [DataField]
-    public DamageSpecifier addMod;
+    public DamageSpecifier addMod = new DamageSpecifier();
     [DataField]
-    public DamageSpecifier multMod;
+    public DamageSpecifier multMod = new DamageSpecifier();
 
     public override void addToCompound(CompoundedModifiers target)
     {

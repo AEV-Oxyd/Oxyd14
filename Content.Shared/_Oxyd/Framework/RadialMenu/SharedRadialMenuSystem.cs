@@ -22,7 +22,7 @@ public abstract class SharedRadialMenuSystem : EntitySystem
     /// <summary>
     /// Show a generic radial menu to <paramref name="player"/>.
     /// </summary>
-    public abstract void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null);
+    public abstract void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null, bool server = true, bool client = true);
 
     /// <summary>
     /// Helper to show a radial menu with entity icons.

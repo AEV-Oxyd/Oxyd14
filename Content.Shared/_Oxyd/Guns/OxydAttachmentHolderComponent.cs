@@ -13,7 +13,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 public sealed partial class OxydAttachmentHolderComponent : Component
 {
     [DataField, AutoNetworkedField]
-    public EntityWhitelist allowedAttachments = new();
+    public EntityWhitelist whitelist = new();
     [ViewVariables, AutoNetworkedField]
     public CompoundedModifiers mods = new();
     [DataField, AutoNetworkedField]
