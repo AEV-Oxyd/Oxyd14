@@ -1,64 +1,83 @@
 using Content.Shared._Oxyd.Framework.RadialMenu;
 using Robust.Server.Player;
 using Robust.Shared.Player;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Framework.RadialMenu;
 
-public sealed class ServerRadialMenuSystem : EntitySystem
+public sealed class ServerRadialMenuSystem : SharedRadialMenuSystem
 {
-    private readonly record struct PendingRequest(
-        Action<RadialBaseSelection> Callback,
-        List<NetEntity> Options,
-        bool ExpectsItem
-    );
+    [Dependency] private readonly IGameTiming _timing = default!;
 
     private readonly Dictionary<Guid, PendingRequest> _pending = new();
+    private readonly Dictionary<ICommonSession, int> _playerRequestCount = new();
+
+    private const int MaxPendingRequestsPerPlayer = 5;
+    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(5);
 
     public override void Initialize()
     {
+        base.Initialize();
         SubscribeNetworkEvent<RadialMenuSelectionEvent>(OnSelection);
     }
 
-    /// <summary>
-    /// Show a radial menu to <paramref name="player"/> with entity icons.
-    /// The callback receives a <see cref="RadialItemSelection"/> with both index and entity.
-    /// </summary>
-    public void ShowRadial(ICommonSession player, List<NetEntity> options, Action<RadialItemSelection> callback)
+    public override void Update(float frameTime)
     {
-        var id = Guid.NewGuid();
-        _pending[id] = new PendingRequest(
-            sel =>
+        base.Update(frameTime);
+
+        Timer += frameTime;
+        if (Timer < 60f)
+            return;
+
+        Timer = 0f;
+
+        var now = _timing.CurTime;
+        var toRemove = new List<Guid>();
+
+        foreach (var (id, request) in _pending)
+        {
+            if (now - request.CreationTime > DefaultTimeout)
             {
-                if (sel is not RadialItemSelection item)
-                {
-                    Log.Error($"RadialMenu: expected RadialItemSelection but got {sel.GetType().Name} for request {id}. Dropping callback.");
-                    return;
-                }
-                callback(item);
-            },
-            options,
-            ExpectsItem: true
-        );
-        RaiseNetworkEvent(new RadialMenuOpenEvent { RequestId = id, Options = options }, player);
+                toRemove.Add(id);
+            }
+        }
+
+        foreach (var id in toRemove)
+        {
+            if (_pending.Remove(id, out var request))
+            {
+                DecrementPlayerCount(request.Player);
+            }
+        }
     }
 
-    /// <summary>
-    /// Show a radial menu to <paramref name="player"/> with entity icons.
-    /// The callback receives a <see cref="RadialBaseSelection"/> with the chosen index.
-    /// </summary>
-    public void ShowRadial(ICommonSession player, List<NetEntity> options, Action<RadialBaseSelection> callback)
+    public override void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null)
     {
+        var count = _playerRequestCount.GetValueOrDefault(player);
+        if (count >= MaxPendingRequestsPerPlayer)
+        {
+            Log.Warning($"Player {player.Name} reached max pending radial menu requests ({MaxPendingRequestsPerPlayer}). Ignoring new request.");
+            return;
+        }
+
         var id = Guid.NewGuid();
-        _pending[id] = new PendingRequest(callback, options, ExpectsItem: false);
-        RaiseNetworkEvent(new RadialMenuOpenEvent { RequestId = id, Options = options }, player);
+        _pending[id] = new PendingRequest(callback, options, _timing.CurTime, player, target);
+        _playerRequestCount[player] = count + 1;
+
+        RaiseNetworkEvent(new RadialMenuOpenEvent
+        {
+            RequestId = id,
+            Options = options,
+            Target = GetNetEntity(target)
+        }, player);
     }
 
     private void OnSelection(RadialMenuSelectionEvent ev, EntitySessionEventArgs args)
     {
-        if (!_pending.TryGetValue(ev.RequestId, out var request))
+        if (!_pending.Remove(ev.RequestId, out var request))
             return;
 
-        _pending.Remove(ev.RequestId);
+        DecrementPlayerCount(request.Player);
 
         if (ev.SelectedIndex < 0 || ev.SelectedIndex >= request.Options.Count)
         {
@@ -66,10 +85,19 @@ public sealed class ServerRadialMenuSystem : EntitySystem
             return;
         }
 
-        RadialBaseSelection selection = request.ExpectsItem
-            ? new RadialItemSelection { Index = ev.SelectedIndex, Entity = request.Options[ev.SelectedIndex] }
-            : new RadialBaseSelection { Index = ev.SelectedIndex };
-
-        request.Callback(selection);
+        request.Callback(new RadialBaseSelection { Index = ev.SelectedIndex, Options = request.Options });
     }
+
+    private void DecrementPlayerCount(ICommonSession player)
+    {
+        if (!_playerRequestCount.TryGetValue(player, out var count))
+            return;
+
+        if (count <= 1)
+            _playerRequestCount.Remove(player);
+        else
+            _playerRequestCount[player] = count - 1;
+    }
+
+    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null) { }
 }

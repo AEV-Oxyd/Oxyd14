@@ -1,12 +1,19 @@
 using System.ComponentModel.Design;
+using Content.Shared._Oxyd.Framework.RadialMenu;
 using Content.Shared.Damage;
+using Content.Shared.DoAfter;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Popups;
+using Content.Shared.Tools;
+using Content.Shared.Tools.Components;
+using Content.Shared.Tools.Systems;
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
+using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -32,6 +39,18 @@ public sealed class CompoundedModifiers
     public float toolCapacityAdd = 0;
     public SoundSpecifier? soundOverride;
 }
+
+public sealed partial class RemoveAttachmentEvent : DoAfterEvent
+{
+    public AttSlot attachment;
+
+    public RemoveAttachmentEvent(AttSlot attachment)
+    {
+        this.attachment = attachment;
+    }
+
+    public override DoAfterEvent Clone() => new RemoveAttachmentEvent(attachment);
+}
 public sealed class OxydModifiersSystem : EntitySystem
 {
     [Dependency] private readonly SharedContainerSystem _container = default!;
@@ -39,22 +58,58 @@ public sealed class OxydModifiersSystem : EntitySystem
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly MetaDataSystem _meta = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly CircularSelect
+    [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
+    [Dependency] private readonly SharedToolSystem _tools = default!;
+    [Dependency] private readonly ISharedPlayerManager _player = default!;
+    [Dependency] private readonly SharedDoAfterSystem _after = default!;
 
     public const string cid = "oAtts";
+    private static readonly ProtoId<ToolQualityPrototype> ScrewingQuality = "Screwing";
     /// <inheritdoc/>
 
     public override void Initialize()
     {
         SubscribeLocalEvent<OxydAttachmentHolderComponent, ComponentInit>(onInit);
         SubscribeLocalEvent<OxydAttachmentHolderComponent, AfterInteractUsingEvent>(onUse);
+        SubscribeLocalEvent<OxydAttachmentHolderComponent, RemoveAttachmentEvent>(onRemove);
+    }
+
+    public void onRemove(Entity<OxydAttachmentHolderComponent> holder, ref RemoveAttachmentEvent args)
+    {
+        tryRemoveAttachment(holder, args.attachment, out var removed, out var errorMsg);
     }
 
     public void onUse(Entity<OxydAttachmentHolderComponent> holder, ref AfterInteractUsingEvent args)
     {
-        if (!TryComp<OxydAttachmentComponent>(args.Used, out var att))
+        EntityUid user = args.User;
+        EntityUid used = args.Used;
+        if (!_player.TryGetSessionByEntity(user, out var session))
             return;
-        if (!tryAddAttachment(holder, (args.Used, att), out var errorMsg))
+        if (TryComp<ToolComponent>(used, out var tool) && _tools.HasQuality(used, ScrewingQuality, tool))
+        {
+            var options = new List<RadialMenuOption>();
+            var revMap = new List<AttSlot>();
+            foreach (var (key , thing) in holder.Comp.attachments)
+            {
+                options.Add(new EntityRadialMenuOption(){ Entity = thing});
+                revMap.Add(key);
+            }
+            _radials.ShowRadial(session, options,
+                selection =>
+                {
+                    _after.TryStartDoAfter(new DoAfterArgs(EntityManager,
+                        user,
+                        TimeSpan.FromSeconds(2),
+                        new RemoveAttachmentEvent(revMap[selection.Index]),
+                        holder.Owner,
+                        holder.Owner,
+                        used));
+                } );
+            return;
+        }
+        if (!TryComp<OxydAttachmentComponent>(used, out var att))
+            return;
+        if (!tryAddAttachment(holder, (used, att), out var errorMsg))
         {
             _popup.PopupClient(errorMsg, holder, PopupType.Small);
             return;

@@ -1,33 +1,54 @@
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Framework.RadialMenu;
 using Robust.Client.UserInterface;
+using Robust.Client.Player;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Player;
 
 namespace Content.Client._Oxyd.Frameworks.RadialMenu;
 
-public sealed class ClientRadialMenuSystem : EntitySystem
+public sealed class ClientRadialMenuSystem : SharedRadialMenuSystem
 {
     [Dependency] private readonly IUserInterfaceManager _ui = default!;
+    [Dependency] private readonly IPlayerManager _playerManager = default!;
 
     public override void Initialize()
     {
+        base.Initialize();
         SubscribeNetworkEvent<RadialMenuOpenEvent>(OnOpenRadial);
     }
 
     private void OnOpenRadial(RadialMenuOpenEvent ev)
     {
+        OpenMenu(ev.RequestId, ev.Options, GetEntity(ev.Target));
+    }
+
+    public override void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null)
+    {
+        if (player == _playerManager.LocalSession)
+        {
+            OpenMenu(Guid.NewGuid(), options, target);
+        }
+    }
+
+    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null)
+    {
         var menu = _ui.CreateWindow<SimpleRadialMenu>();
 
-        var options = new List<RadialMenuOptionBase>();
-        for (var i = 0; i < ev.Options.Count; i++)
+        if (target != null)
+            menu.Track(target.Value);
+
+        var menuOptions = new List<RadialMenuOptionBase>();
+        for (var i = 0; i < options.Count; i++)
         {
             var index = i;
-            var entity = ev.Options[i];
-            options.Add(new RadialMenuActionOption<int>(
+            var opt = options[i];
+            var option = new RadialMenuActionOption<int>(
                 selectedIndex =>
                 {
                     RaiseNetworkEvent(new RadialMenuSelectionEvent
                     {
-                        RequestId = ev.RequestId,
+                        RequestId = requestId,
                         SelectedIndex = selectedIndex,
                     });
                     menu.Close();
@@ -35,11 +56,34 @@ public sealed class ClientRadialMenuSystem : EntitySystem
                 index
             )
             {
-                IconSpecifier = RadialMenuIconSpecifier.With(GetEntity(entity)),
-            });
+                ToolTip = opt.Tooltip
+            };
+
+            if (opt is EntityRadialMenuOption entityOpt)
+            {
+                option.IconSpecifier = RadialMenuIconSpecifier.With(GetEntity(entityOpt.Entity));
+            }
+            else if (opt is SpriteRadialMenuOption spriteOpt)
+            {
+                option.IconSpecifier = RadialMenuIconSpecifier.With(spriteOpt.Sprite);
+            }
+            else if (opt is PrototypeRadialMenuOption protoOpt)
+            {
+                option.IconSpecifier = RadialMenuIconSpecifier.With(new EntProtoId(protoOpt.Prototype));
+            }
+
+            menuOptions.Add(option);
         }
 
-        menu.SetButtons(options);
-        menu.OpenOverMouseScreenPosition();
+        menu.SetButtons(menuOptions);
+
+        if (target != null)
+        {
+            menu.UpdatePosition();
+        }
+        else
+        {
+            menu.OpenOverMouseScreenPosition();
+        }
     }
 }

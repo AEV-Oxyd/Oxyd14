@@ -242,7 +242,7 @@ public sealed partial class SimpleRadialMenu : RadialMenu
         }
     }
 
-    private void UpdatePosition()
+    public void UpdatePosition()
     {
         if (!_entManager.TryGetComponent(_attachMenuToEntity, out TransformComponent? xform))
         {
