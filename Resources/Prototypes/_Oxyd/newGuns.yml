@@ -200,6 +200,7 @@
   - type: OxydAttachmentHolder
     slots:
       - Barrel
+      - Scope
     whitelist:
       components:
         - OxydAttachment
@@ -283,9 +284,9 @@
         ents: []
 
 - type: entity
-  name: Oxyd Attachment
+  name: Oxyd Barrel Attachemnt
   parent: BaseItem
-  id: AttachmentOxyd
+  id: AttachmentOxydBarrel
   description: A rooty tooty point and shooty.
   components:
   - type: Sprite
@@ -301,6 +302,30 @@
         addMod:
           types:
             Blunt: 50
+
+- type: entity
+  name: Oxyd Scope Attachment
+  parent: BaseItem
+  id: AttachmentOxydScope
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Ammunition/Magazine/Pistol/pistol_mag.rsi
+    state: base
+  - type: Item
+    size: Large
+  - type: OxydAttachment
+    slot: Scope
+    mods:
+     - !type:DamageMod
+        addMod:
+          types:
+          Heat: 250
+    - !type:DamageMod
+        addMod:
+          types:
+          Heat: 250
 
 - type: entityList
   id: magazineOxydTest
