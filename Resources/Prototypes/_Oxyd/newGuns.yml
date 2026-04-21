@@ -322,7 +322,7 @@
         addMod:
           types:
           Heat: 250
-    - !type:DamageMod
+     - !type:DamageMod
         addMod:
           types:
           Heat: 250

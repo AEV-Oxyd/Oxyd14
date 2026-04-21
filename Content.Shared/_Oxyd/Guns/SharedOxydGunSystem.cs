@@ -112,7 +112,16 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
+        SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
 
+    }
+
+    public void onModifiersUpdated(Entity<OxydGunComponent> gun, ref ModifiersUpdatedEvent args)
+    {
+        foreach (var firemode in gun.Comp.InstanciatedFiremodes)
+        {
+            firemode.ApplyMods(args.mods);
+        }
     }
 
 
@@ -266,7 +275,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var rand = new System.Random(seed);
         var ev = new GunGetInaccuracyEvent()
         {
-            addedInaccuracy = (firemode.addedInaccuracyMaximum+mods.accuracyAdd)*mods.accuracyMult/2,
+            addedInaccuracy = firemode.addedInaccuracyMaximum/2,
             baseInaccuracy = firemode.baseInaccuracy/2,
             simTick = gun.Comp.simulateAsTick
         };
@@ -396,10 +405,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         OxydProjectileApplyDamageComponent? dc = null;
         OxydBulletOnFireRecoilComponent? rc = null;
-        OxydBulletComponent? bc = null;
         TryComp<OxydProjectileApplyDamageComponent>(projectile, out dc);
         TryComp<OxydBulletOnFireRecoilComponent>(projectile, out rc);
-        TryComp<OxydBulletComponent>(projectile, out bc);
 
         if (mods.damageAdd is not null)
         {
@@ -423,10 +430,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             rc.recoil *= mods.recoilMult;
         }
 
-        if (mods.speedMult != 1 && bc is not null)
-        {
-            bc.Speed *= mods.speedMult;
-        }
     }
 
 
@@ -436,7 +439,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         outputComp = null;
         used = null;
-        var firemode = gun.Comp.selectedFiremodePrototype;
         if (!tryGetProviderAmmo(gun, out var proj, out var ammoEnt))
             return false;
         EntityUid projectile = Spawn(proj.ToString(), MapCoordinates.Nullspace);
@@ -476,8 +478,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         var mods = _mods.getModifiers(gun.Owner);
-        var aFireDelay = (gunFiremodePrototype.fireDelay + mods.firerateAdd) * mods.firerateMult;
-        var aTotalWait = (gunFiremodePrototype.totalWait + mods.firerateAdd) * mods.firerateMult;
+        AudioParams param = new AudioParams(mods.soundVolume, mods.soundPitch, 200, 1, false, 0, 0.2f);
+        var aFireDelay = gunFiremodePrototype.fireDelay;
+        var aTotalWait = gunFiremodePrototype.totalWait;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;
         Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {aTotalWait}, gap {gunFiremodePrototype.firingGaps}");
         gunFiremodePrototype.nextFire = _gameTiming.CurTime + aFireDelay;
@@ -526,7 +529,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
             };
-            _audio.PlayEntity(_audio.ResolveSound(shootSound), Filter.PvsExcept(shooter, 2F), gun.Owner, true);
+            _audio.PlayEntity(_audio.ResolveSound(shootSound), Filter.PvsExcept(shooter, _help.getRangeToPvsMultiplier(25f + mods.soundRange)), gun.Owner, true, param);
+            param.PlayOffsetSeconds += (float)aFireDelay.TotalSeconds;
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);
@@ -571,6 +575,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         foreach (var proto in gun.Comp.firemodes)
         {
             var newFiremode = _prototypeManager.Index<GunFiremodePrototype>(proto).createCopy();
+            newFiremode.Initialize();
             if (!_factory.TryGetRegistration(newFiremode.providerComp, out var registration))
             {
                 Log.Debug($"Invalid ammoprovider component {newFiremode.providerComp} for firemode prototype {proto}");

@@ -30,7 +30,11 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float recoilMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
-    public TimeSpan firerateAdd = TimeSpan.Zero;
+    public int firerateAdd = 0;
+    [ViewVariables(VVAccess.ReadWrite)]
+    public TimeSpan waitAdd = TimeSpan.Zero;
+    [ViewVariables(VVAccess.ReadWrite)]
+    public double waitMult = 0d;
     [ViewVariables(VVAccess.ReadWrite)]
     public Angle accuracyAdd = Angle.Zero;
     [ViewVariables(VVAccess.ReadWrite)]
@@ -71,6 +75,12 @@ public sealed partial class RemoveAttachmentEvent : DoAfterEvent
     }
 
     public override DoAfterEvent Clone() => new RemoveAttachmentEvent(attachment);
+}
+
+[Serializable, NetSerializable]
+public sealed partial class ModifiersUpdatedEvent : EntityEventArgs
+{
+    public required CompoundedModifiers mods;
 }
 public sealed class OxydModifiersSystem : EntitySystem
 {
@@ -215,6 +225,7 @@ public sealed class OxydModifiersSystem : EntitySystem
         foreach (var mod in mods)
             mod.addToCompound(compound);
         ent.Comp.mods = compound;
+        RaiseLocalEvent(ent.Owner, new ModifiersUpdatedEvent { mods = compound });
     }
 
     public bool tryAddAttachment(Entity<OxydAttachmentHolderComponent> ent, Entity<OxydAttachmentComponent> attachment, out string errorMsg)

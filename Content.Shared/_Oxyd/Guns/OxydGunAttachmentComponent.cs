@@ -61,7 +61,7 @@ public sealed partial class ProjectileSpeedMod : OxydModifier, GunMod
 public sealed partial class FirerateMod : OxydModifier, GunMod
 {
     [DataField]
-    public TimeSpan addMod;
+    public int addMod;
     [DataField]
     public float multMod;
 
@@ -69,6 +69,20 @@ public sealed partial class FirerateMod : OxydModifier, GunMod
     {
         target.firerateAdd += addMod;
         target.firerateMult *= multMod;
+    }
+}
+
+public sealed partial class GunWaitMod : OxydModifier, GunMod
+{
+    [DataField]
+    public TimeSpan add;
+    [DataField]
+    public double mult;
+
+    public override void addToCompound(CompoundedModifiers target)
+    {
+        target.waitAdd += add;
+        target.waitMult *= mult;
     }
 }
 

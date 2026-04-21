@@ -17,7 +17,6 @@ public abstract partial class OxydGunEffect
     {
         return (OxydGunEffect)MemberwiseClone();
     }
-
 }
 
 public interface OxydResetableEffect
@@ -27,6 +26,11 @@ public interface OxydResetableEffect
 public interface  OxydFiringGunEffect
 {
 
+}
+
+public interface OxydModdableEffect
+{
+    public void applyMods(CompoundedModifiers mods);
 }
 
 public interface OxydImmediateInterpret
@@ -52,7 +56,7 @@ public sealed partial class GunEffectCheckWielded : OxydGunEffect;
 [DataDefinition]
 public sealed partial class GunEffectCheckAmmo : OxydGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect
+public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect, OxydModdableEffect
 {
     // x steps to go back if we want to rerun checks
     [DataField]
@@ -73,6 +77,11 @@ public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect
     {
         alreadyWaited = TimeSpan.Zero;
         skipTick = GameTick.Zero;
+    }
+
+    public void applyMods(CompoundedModifiers mods)
+    {
+        waitPeriod = (waitPeriod + mods.waitAdd ) * mods.waitMult;
     }
 }
 [DataDefinition]

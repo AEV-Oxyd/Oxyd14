@@ -51,14 +51,14 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // bullet sets their own speed , gun can only influence it
     [DataField("firerate")]
     public int FireRate = 60;
-    [ViewVariables]
+    [ViewVariables, NonSerialized]
     public TimeSpan nextFire = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     public TimeSpan firingGaps = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     public GameTick lastFiredTick = default;
 
-    [ViewVariables]
+    [DataField]
     public bool SingleShot = true;
 
     [ViewVariables]
@@ -80,8 +80,17 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // Added depending on chance, from 0 to the value
     public Angle addedInaccuracyMaximum = Angle.FromDegrees(10);
 
-    [DataField("effects"), NonSerialized]
+    [DataField("effects")]
     public List<OxydGunEffect> Effects = new();
+
+    [DataField(required: false)]
+    public GunFiremodePrototype? cleanClone = null;
+
+    public void Initialize()
+    {
+        cleanClone = createCopy();
+    }
+
 
     public GunFiremodePrototype createCopy()
     {
@@ -91,10 +100,35 @@ public sealed partial class GunFiremodePrototype : IPrototype
         {
             thing.Effects.Add(eff.Clone());
         }
-
         thing.totalWait = SharedOxydGunSystem.getTotalWait(this);
-
+        thing.cleanClone = cleanClone;
         return thing;
+    }
+
+    public void ApplyMods(CompoundedModifiers mods)
+    {
+        if (cleanClone is null)
+        {
+            throw new InvalidOperationException("Firemode prototype has no clean clone, cannot apply mods");
+        }
+        providerComp = cleanClone.providerComp;
+        providerId = cleanClone.providerId;
+        FireRate = (int)((cleanClone.FireRate + mods.firerateAdd) * mods.firerateMult);
+        SpeedMultiplier = cleanClone.SpeedMultiplier * mods.speedMult;
+        SingleShot = cleanClone.SingleShot;
+        baseInaccuracy = cleanClone.baseInaccuracy;
+        addedInaccuracyMaximum = ( cleanClone.addedInaccuracyMaximum + mods.accuracyAdd ) * mods.accuracyMult;
+        Effects.Clear();
+        foreach (var eff in cleanClone.Effects)
+        {
+            var cl = eff.Clone();
+            Effects.Add(cl);
+            if (cl is OxydModdableEffect casted)
+            {
+                casted.applyMods(mods);
+            }
+        }
+        totalWait = SharedOxydGunSystem.getTotalWait(this);
     }
 
 }

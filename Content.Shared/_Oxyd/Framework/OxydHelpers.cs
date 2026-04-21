@@ -42,6 +42,7 @@ public class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private readonly IConfigurationManager _config = default!;
     public HashSet<EntityUid> queued = new HashSet<EntityUid>();
 
     public override void Initialize()
@@ -50,8 +51,9 @@ public class SharedOxydHelpers : EntitySystem
         UpdatesBefore.Add(typeof(SharedPhysicsSystem));
     }
 
-    public static float getRangeToPvsMultiplier(float range)
+    public float getRangeToPvsMultiplier(float range)
     {
+        return 2*range / _config.GetCVar(CVars.NetMaxUpdateRange);
     }
 
     public void QueueDel(EntityUid uid)
