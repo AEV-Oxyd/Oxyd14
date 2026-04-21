@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Damage;
 using Content.Shared.EntityList;
 using Content.Shared.Hands;
 using Content.Shared.Hands.EntitySystems;
@@ -71,6 +72,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly SharedBatterySystem _battery = default!;
     [Dependency] protected readonly SharedOxydHelpers _help = default!;
     [Dependency] protected readonly ISharedPlayerManager _players = default!;
+    [Dependency] protected readonly OxydModifiersSystem _mods = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -79,6 +81,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     protected const string oxydContents = "storagebase";
 
     protected const string configProto = "gunConfig";
+
 
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
@@ -255,8 +258,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
 
-
-    public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
+    public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun, CompoundedModifiers mods,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
         var seed = SharedRandomExtensions.HashCodeCombine( new int[]{ GetNetEntity(gun).Id, (int)gun.Comp.timesFired });
@@ -264,7 +266,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var rand = new System.Random(seed);
         var ev = new GunGetInaccuracyEvent()
         {
-            addedInaccuracy = firemode.addedInaccuracyMaximum/2,
+            addedInaccuracy = (firemode.addedInaccuracyMaximum+mods.accuracyAdd)*mods.accuracyMult/2,
             baseInaccuracy = firemode.baseInaccuracy/2,
             simTick = gun.Comp.simulateAsTick
         };
@@ -390,8 +392,32 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
+    public void applyMods(Entity<OxydProjectileComponent> projectile, CompoundedModifiers mods)
+    {
+        OxydProjectileApplyDamageComponent? dc;
+        OxydBulletOnFireRecoilComponent? rc;
 
-    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,
+        if (mods.damageAdd is not null)
+        {
+            dc ??= EnsureComp<OxydProjectileApplyDamageComponent>(projectile);
+            dcomp.DamageSpecifier += mods.damageAdd;
+        }
+
+        if (mods.damageMult is not null && TryComp<OxydProjectileApplyDamageComponent>(projectile, out var ammoDamComp))
+        {
+            ammoDamComp.DamageSpecifier = DamageHelpers.multiply(ammoDamComp.DamageSpecifier, mods.damageMult);
+        }
+
+        if (mods.recoilAdd != 0)
+        {
+            var rec = EnsureComp<OxydBulletOnFireRecoilComponent>(projectile);
+            rec.recoil += mods.recoilAdd;
+        }
+        if(mods.recoilMult != 0)
+    }
+
+
+    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,CompoundedModifiers mods,
         [NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp,
         [NotNullWhen(true)] out EntityUid? used)
     {
@@ -408,6 +434,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             projectileComp.initialMovement = new Vector2(ammoBullet.Speed, ammoBullet.Speed);
         }
+        applyMods((projectile, projectileComp), mods);
         outputComp = (projectile, projectileComp);
         used = ammoEnt;
         return true;
@@ -454,9 +481,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var sameTickCounter = 0;
         if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= gunFiremodePrototype.fireDelay * 2)
             gun.Comp.firingTime = gunFiremodePrototype.fireDelay;
+        var mods = _mods.getModifiers(gun.Owner);
         while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
         {
-            if(!getProjectileLoaded(shooter, gun, out var projectileNullable, out var used))
+            if(!getProjectileLoaded(shooter, gun, mods, out var projectileNullable, out var used))
                 return projectiles;
             var shootSound = gunFiremodePrototype.fireSound;
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
@@ -470,7 +498,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
-            projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, shootingFrom, targetPos, shooter);
+            projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, mods, shootingFrom, targetPos, shooter);
             projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
             _transformSystem.SetWorldRotationNoLerp(projectile.Owner, projectile.Comp.initialMovement.ToAngle());
             projectile.Comp.aimedPosition = targetPos;

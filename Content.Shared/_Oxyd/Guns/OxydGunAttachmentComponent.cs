@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Framework;
 using Content.Shared.Damage;
 using JetBrains.Annotations;
 using Robust.Shared.Audio;
@@ -29,6 +30,31 @@ public sealed partial class RecoilMod : OxydModifier, GunMod
     {
         target.recoilAdd += addMod;
         target.recoilMult *= multMod;
+    }
+}
+
+public sealed partial class AccuracyMod : OxydModifier, GunMod
+{
+    [DataField]
+    public Angle addMod;
+    [DataField]
+    public float multMod;
+
+    public override void addToCompound(CompoundedModifiers target)
+    {
+        target.accuracyAdd += addMod;
+        target.accuracyMult *= multMod;
+    }
+}
+
+public sealed partial class ProjectileSpeedMod : OxydModifier, GunMod
+{
+    [DataField]
+    public float mult;
+
+    public override void addToCompound(CompoundedModifiers target)
+    {
+        target.speedMult *= mult;
     }
 }
 
@@ -69,16 +95,7 @@ public sealed partial class DamageMod : OxydModifier, GunMod, ToolMod
         }
         else
         {
-            foreach (var (damageType, multiplier) in multMod.DamageDict)
-            {
-                if (target.damageMult.DamageDict.ContainsKey(damageType))
-                    target.damageMult.DamageDict[damageType] *= multiplier;
-                else
-                    target.damageMult.DamageDict.Add(
-                        damageType,
-                        target.damageMult.DamageDict.GetValueOrDefault(damageType) * multiplier
-                    );
-            }
+            target.damageMult = DamageHelpers.multiply(target.damageMult, multMod);
         }
     }
 }
@@ -144,14 +161,14 @@ public sealed partial class ToolFuelCapacityMod : OxydModifier, ToolMod
     }
 }
 
-public sealed partial class UseSpeedMod : OxydModifier, ToolMod
+public sealed partial class WorkSpeedMod : OxydModifier, ToolMod
 {
     [DataField]
-    public float useSpeedMult;
+    public float mult;
 
     public override void addToCompound(CompoundedModifiers target)
     {
-        target.useSpeedMult *= useSpeedMult;
+        target.workspeedMult *= mult;
     }
 }
 

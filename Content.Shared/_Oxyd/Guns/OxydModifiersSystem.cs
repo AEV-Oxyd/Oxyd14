@@ -1,4 +1,5 @@
 using System.ComponentModel.Design;
+using System.Diagnostics.CodeAnalysis;
 using Content.Shared._Oxyd.Framework.RadialMenu;
 using Content.Shared.Damage;
 using Content.Shared.DoAfter;
@@ -31,6 +32,10 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float firerateAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
+    public Angle accuracyAdd = Angle.Zero;
+    [ViewVariables(VVAccess.ReadWrite)]
+    public float accuracyMult = 1;
+    [ViewVariables(VVAccess.ReadWrite)]
     public float firerateMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
     public DamageSpecifier? damageAdd;
@@ -45,14 +50,15 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float soundPitch = 0;
     [ViewVariables(VVAccess.ReadWrite)]
-    public float useSpeedMult = 1;
+    public float workspeedMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
     public float gunCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
     public float toolCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
     public SoundSpecifier? soundOverride;
-
+    [ViewVariables(VVAccess.ReadWrite)]
+    public float speedMult = 1;
 }
 [Serializable, NetSerializable]
 public sealed partial class RemoveAttachmentEvent : DoAfterEvent
@@ -80,6 +86,7 @@ public sealed class OxydModifiersSystem : EntitySystem
 
     public const string cid = "oAtts";
     private static readonly ProtoId<ToolQualityPrototype> ScrewingQuality = "Screwing";
+    private EntityQuery<OxydAttachmentHolderComponent> oAttHoldQuery;
     /// <inheritdoc/>
 
     public override void Initialize()
@@ -87,6 +94,28 @@ public sealed class OxydModifiersSystem : EntitySystem
         SubscribeLocalEvent<OxydAttachmentHolderComponent, ComponentInit>(onInit);
         SubscribeLocalEvent<OxydAttachmentHolderComponent, AfterInteractUsingEvent>(onUse);
         SubscribeLocalEvent<OxydAttachmentHolderComponent, RemoveAttachmentEvent>(onRemove);
+        oAttHoldQuery = GetEntityQuery<OxydAttachmentHolderComponent>();
+    }
+
+    public bool tryGetModifiers(EntityUid target, [NotNullWhen(true)] out CompoundedModifiers? mods)
+    {
+        if (oAttHoldQuery.TryGetComponent(target, out var c))
+        {
+            mods = c.mods;
+            return true;
+        }
+
+        mods = null;
+        return false;
+    }
+
+    public CompoundedModifiers getModifiers(EntityUid target)
+    {
+        if (oAttHoldQuery.TryGetComponent(target, out var c))
+        {
+            return c.mods;
+        }
+        return new CompoundedModifiers();
     }
 
     public void onRemove(Entity<OxydAttachmentHolderComponent> holder, ref RemoveAttachmentEvent args)

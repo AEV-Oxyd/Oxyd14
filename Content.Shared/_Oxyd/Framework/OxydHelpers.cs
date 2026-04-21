@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.Intrinsics;
+using Content.Shared.Damage;
 using Robust.Shared;
 using Robust.Shared.Configuration;
 using Robust.Shared.Map.Components;
@@ -14,6 +15,27 @@ using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Framework;
+
+
+public static class DamageHelpers
+{
+    public static DamageSpecifier multiply(DamageSpecifier first, DamageSpecifier second)
+    {
+        var newSpec = new DamageSpecifier(first);
+        foreach (var (damageType, multiplier) in first.DamageDict)
+        {
+            if (second.DamageDict.ContainsKey(damageType))
+                newSpec.DamageDict[damageType] *= multiplier;
+            else
+                newSpec.DamageDict.Add(
+                    damageType,
+                    second.DamageDict.GetValueOrDefault(damageType) * multiplier
+                );
+        }
+
+        return newSpec;
+    }
+}
 
 public class SharedOxydHelpers : EntitySystem
 {
