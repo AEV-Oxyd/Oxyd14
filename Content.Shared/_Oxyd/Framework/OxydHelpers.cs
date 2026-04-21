@@ -37,6 +37,7 @@ public static class DamageHelpers
     }
 }
 
+
 public class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private readonly INetManager _netManager = default!;
@@ -47,6 +48,10 @@ public class SharedOxydHelpers : EntitySystem
     {
         UpdatesBefore.Add(typeof(SharedTransformSystem));
         UpdatesBefore.Add(typeof(SharedPhysicsSystem));
+    }
+
+    public static float getRangeToPvsMultiplier(float range)
+    {
     }
 
     public void QueueDel(EntityUid uid)

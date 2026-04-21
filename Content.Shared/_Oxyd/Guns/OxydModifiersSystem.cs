@@ -30,7 +30,7 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float recoilMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
-    public float firerateAdd = 0;
+    public TimeSpan firerateAdd = TimeSpan.Zero;
     [ViewVariables(VVAccess.ReadWrite)]
     public Angle accuracyAdd = Angle.Zero;
     [ViewVariables(VVAccess.ReadWrite)]

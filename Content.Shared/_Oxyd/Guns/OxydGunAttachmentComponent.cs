@@ -61,7 +61,7 @@ public sealed partial class ProjectileSpeedMod : OxydModifier, GunMod
 public sealed partial class FirerateMod : OxydModifier, GunMod
 {
     [DataField]
-    public float addMod;
+    public TimeSpan addMod;
     [DataField]
     public float multMod;
 

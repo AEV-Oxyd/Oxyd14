@@ -394,26 +394,39 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void applyMods(Entity<OxydProjectileComponent> projectile, CompoundedModifiers mods)
     {
-        OxydProjectileApplyDamageComponent? dc;
-        OxydBulletOnFireRecoilComponent? rc;
+        OxydProjectileApplyDamageComponent? dc = null;
+        OxydBulletOnFireRecoilComponent? rc = null;
+        OxydBulletComponent? bc = null;
+        TryComp<OxydProjectileApplyDamageComponent>(projectile, out dc);
+        TryComp<OxydBulletOnFireRecoilComponent>(projectile, out rc);
+        TryComp<OxydBulletComponent>(projectile, out bc);
 
         if (mods.damageAdd is not null)
         {
             dc ??= EnsureComp<OxydProjectileApplyDamageComponent>(projectile);
-            dcomp.DamageSpecifier += mods.damageAdd;
+            dc.DamageSpecifier += mods.damageAdd;
         }
 
-        if (mods.damageMult is not null && TryComp<OxydProjectileApplyDamageComponent>(projectile, out var ammoDamComp))
+        if (mods.damageMult is not null && dc is not null)
         {
-            ammoDamComp.DamageSpecifier = DamageHelpers.multiply(ammoDamComp.DamageSpecifier, mods.damageMult);
+            dc.DamageSpecifier = DamageHelpers.multiply(dc.DamageSpecifier, mods.damageMult);
         }
 
         if (mods.recoilAdd != 0)
         {
-            var rec = EnsureComp<OxydBulletOnFireRecoilComponent>(projectile);
-            rec.recoil += mods.recoilAdd;
+            rc ??= EnsureComp<OxydBulletOnFireRecoilComponent>(projectile);
+            rc.recoil += mods.recoilAdd;
         }
-        if(mods.recoilMult != 0)
+
+        if (mods.recoilMult != 1 && rc is not null)
+        {
+            rc.recoil *= mods.recoilMult;
+        }
+
+        if (mods.speedMult != 1 && bc is not null)
+        {
+            bc.Speed *= mods.speedMult;
+        }
     }
 
 
@@ -430,11 +443,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
         projectileComp.firedFrom = gun.Owner;
         projectileComp.shotBy = shooter;
+        applyMods((projectile, projectileComp), mods);
         if (TryComp<OxydBulletComponent>(ammoEnt, out var ammoBullet))
         {
             projectileComp.initialMovement = new Vector2(ammoBullet.Speed, ammoBullet.Speed);
         }
-        applyMods((projectile, projectileComp), mods);
         outputComp = (projectile, projectileComp);
         used = ammoEnt;
         return true;
@@ -462,27 +475,29 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         MapCoordinates targetPos)
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
-        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - gunFiremodePrototype.totalWait;
-        Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {gunFiremodePrototype.totalWait}, gap {gunFiremodePrototype.firingGaps}");
-        gunFiremodePrototype.nextFire =  _gameTiming.CurTime + gunFiremodePrototype.fireDelay;
+        var mods = _mods.getModifiers(gun.Owner);
+        var aFireDelay = (gunFiremodePrototype.fireDelay + mods.firerateAdd) * mods.firerateMult;
+        var aTotalWait = (gunFiremodePrototype.totalWait + mods.firerateAdd) * mods.firerateMult;
+        var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;
+        Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {aTotalWait}, gap {gunFiremodePrototype.firingGaps}");
+        gunFiremodePrototype.nextFire = _gameTiming.CurTime + aFireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
         //Log.Debug($"Fire Delta is {lastFireDelta}");
-        if (lastFireDelta > gunFiremodePrototype.fireDelay && lastFireDelta < TimeSpan.FromMilliseconds(maxAcceptableFireGap) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(maxAcceptableFireGap))
+        if (lastFireDelta > aFireDelay && lastFireDelta < TimeSpan.FromMilliseconds(maxAcceptableFireGap) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(maxAcceptableFireGap))
         {
-            gunFiremodePrototype.firingGaps += lastFireDelta - gunFiremodePrototype.fireDelay;
+            gunFiremodePrototype.firingGaps += lastFireDelta - aFireDelay;
             Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
         }
         gunFiremodePrototype.lastFiredTick = _gameTiming.CurTick;
-        if (gunFiremodePrototype.fireDelay < _gameTiming.TickPeriod)
+        if (aFireDelay < _gameTiming.TickPeriod)
         {
-            gun.Comp.firingTime += (_gameTiming.TickPeriod - gunFiremodePrototype.fireDelay);
+            gun.Comp.firingTime += (_gameTiming.TickPeriod - aFireDelay);
         }
         HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
-        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= gunFiremodePrototype.fireDelay * 2)
-            gun.Comp.firingTime = gunFiremodePrototype.fireDelay;
-        var mods = _mods.getModifiers(gun.Owner);
-        while (gun.Comp.firingTime >= gunFiremodePrototype.fireDelay)
+        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= aFireDelay * 2)
+            gun.Comp.firingTime = aFireDelay;
+        while (gun.Comp.firingTime >= aFireDelay)
         {
             if(!getProjectileLoaded(shooter, gun, mods, out var projectileNullable, out var used))
                 return projectiles;
@@ -495,11 +510,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             RaiseLocalEvent(gun.Owner, shootEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, shootEv);
-            gun.Comp.firingTime -= gunFiremodePrototype.fireDelay;
+            gun.Comp.firingTime -= aFireDelay;
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
             projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, mods, shootingFrom, targetPos, shooter);
-            projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)gunFiremodePrototype.fireDelay.TotalSeconds);
+            projectile.Comp.initialPosition = shootingFrom.Offset(projectile.Comp.initialMovement * sameTickCounter * (float)aFireDelay.TotalSeconds);
             _transformSystem.SetWorldRotationNoLerp(projectile.Owner, projectile.Comp.initialMovement.ToAngle());
             projectile.Comp.aimedPosition = targetPos;
             projectiles.Add(projectile);
