@@ -251,6 +251,70 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Log.Debug($"Inserted! {ent} at {_gameTiming.CurTime}");
     }
 
+    public void InsertChamber(int index,
+        Entity<OxydChamberExtensionComponent> chamber,
+        EntityUid ammo,
+        bool cycle = false)
+    {
+        var bl = chamber.Comp.extending[index];
+        if (bl is null)
+        {
+            Log.Error($"Chamber extension {chamber}  at index {index} had no list initialized!");
+            return;
+        }
+
+        if (cycle)
+        {
+            var cnt = _containerSystem.GetContainer(chamber.Owner, oxydContents);
+            if (bl[0] == EntityUid.Invalid)
+            {
+                Log.Error($"Chamber extension {chamber}  at index {index} tried to cycle with bullet at the end");
+                return;
+            }
+            OxydGunAmmoChamberComponent? comp = CompOrNull<OxydGunAmmoChamberComponent>(chamber.Owner);
+            comp ??= CompOrNull<OxydGunAmmoChamberComponent>(chamber.Owner);
+            if (comp is null)
+            {
+                Log.Error($"Chamber extension {chamber}  at index {index} had no chamber component!");
+                return;
+            }
+
+            if (comp.nextBullet[index] != EntityUid.Invalid)
+            {
+                Log.Error($"Chamber extension {chamber}  at index {index} tried to cycle with bullet at the end");
+                return;
+            }
+            _containerSystem.Remove(ammo, cnt, true, true);
+            if (!_itemSlotsSystem.TryInsert(chamber.Owner, comp.bulletSlot[index], ammo, null))
+            {
+                Log.Debug($"Failed to insert {ammo} at {_gameTiming.CurTime}");
+                return;
+            }
+            comp.nextBullet[index] = bl[0];
+
+            for (var i = 0; i < bl.Length - 1; i++)
+            {
+                bl[i] = bl[i + 1];
+            }
+            bl[Index.End] = EntityUid.Invalid;
+        }
+        for(var i = bl.Length; i > 0; i--)
+        {
+            if (bl[i] == EntityUid.Invalid)
+            {
+                bl[i] = ammo;
+                ammo = EntityUid.Invalid;
+                break;
+            }
+        }
+
+        if (ammo != EntityUid.Invalid)
+        {
+            Log.Error($"Chamber extension {chamber}  at index {index} tried to insert {ammo} but there was no space!");
+            return;
+        }
+    }
+
 
     public abstract bool InterpretStep(
         GunFiremodePrototype firemodePrototype,
@@ -478,7 +542,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         var mods = _mods.getModifiers(gun.Owner);
-        AudioParams param = new AudioParams(mods.soundVolume, mods.soundPitch, 200, 1, false, 0, 0.2f);
+        AudioParams param = new AudioParams(mods.soundVolume, mods.soundPitch, 30, 1, false, 0, 0.2f);
         var aFireDelay = gunFiremodePrototype.fireDelay;
         var aTotalWait = gunFiremodePrototype.totalWait;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;
