@@ -106,10 +106,10 @@ public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoCha
     public List<ItemSlot> magazineSlot = new();
 }
 // acts as a buffer between magazines / loading if present
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent]
 public sealed partial class OxydChamberExtensionComponent : OxydGunProvidersComponent
 {
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables]
     // will be null for every firemode index present unless set
     //  array length defines how many extra bullet slots are given
     public List<EntityUid[]?> extending = new();

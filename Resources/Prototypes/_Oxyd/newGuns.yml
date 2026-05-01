@@ -327,6 +327,24 @@
           types:
           Heat: 250
 
+- type: entity
+  name: Oxyd Capacity Attachment
+  parent: BaseItem
+  id: AttachmentOxydCapacitiy
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Objects/Weapons/Guns/Ammunition/Magazine/Pistol/pistol_mag.rsi
+    state: base
+  - type: Item
+    size: Large
+  - type: OxydAttachment
+    slot: Internal
+    mods:
+    - !type:WeaponCapacityMod
+      capacityAdd: 8
+
 - type: entityList
   id: magazineOxydTest
   entities:
