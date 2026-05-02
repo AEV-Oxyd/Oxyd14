@@ -136,6 +136,8 @@ public partial class ServerOxydGunSystem
         Log.Debug($"getstate {args.Player} {comp}");
         if (!_help.GetParentWithComp<OxydGunComponent>(target, out var ent))
             return;
+        if (comp.CreationTick.Value - _gameTiming.CurTick.Value == 0)
+            return;
         if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
             return;
         // always give state to replay

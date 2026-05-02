@@ -162,7 +162,7 @@ public sealed partial class ClientOxydGunSystem
 
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (firemodePrototype.ticksBehind > 0)
+        if (firemodePrototype.ticksBehind > 0 && effect.alreadyWaited < effect.waitPeriod)
         {
             var maxCatch = (int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod);
             maxCatch = Math.Min(maxCatch, firemodePrototype.ticksBehind);

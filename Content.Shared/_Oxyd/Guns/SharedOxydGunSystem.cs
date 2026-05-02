@@ -114,7 +114,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
-        SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, AfterInteractUsingEvent>(OnTryInsertChamber);
+        SubscribeLocalEvent<OxydGunAmmoChamberComponent, AfterInteractUsingEvent>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
         SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
@@ -127,16 +127,20 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             firemode.ApplyMods(args.mods);
         }
+        if (_netManager.IsClient)
+            return;
 
         if (args.mods.gunCapacityAdd > 0)
         {
             var ext = EnsureComp<OxydChamberExtensionComponent>(gun);
-            while (ext.extending.Count < gun.Comp.InstanciatedFiremodes.Count)
+            var maxprovider = gun.Comp.InstanciatedFiremodes.Max(inp => inp.providerId)+1;
+            Log.Debug($"OxydGunSystem: Updating chamber extension with max provider ID {maxprovider}");
+            while (ext.extending.Count < maxprovider)
             {
                 ext.extending.Add(null);
             }
 
-            for (var i = 0; i < gun.Comp.InstanciatedFiremodes.Count; i++)
+            for (var i = 0; i < maxprovider; i++)
             {
                 var current = ext.extending[i];
                 var targetSize = (int) args.mods.gunCapacityAdd;
@@ -204,18 +208,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return;
         if (!HasComp<OxydMagazineComponent>(args.Entity))
             return;
-        var targetIndex = -1;
-        foreach (var slot in ent.Comp.magazineSlot)
-        {
-            if (slot.ContainerSlot is null)
-                continue;
-            Log.Debug($"Comparing Slot container {slot.ContainerSlot.ID} with {args.Container.ID}");
-            if (slot.ContainerSlot.ID == args.Container.ID)
-                targetIndex =
-                    ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == slot.ContainerSlot.ID);
-            Log.Debug($"Got target {targetIndex}");
-        }
-
+        var target = args.Container;
+        var targetIndex = ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == target.ID);
         if (targetIndex == -1)
         {
             Log.Error($"Entity {ent} had a mag inserted for a magazine Slot without a linked Slot!");
@@ -224,7 +218,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         FillAmmo(ent.Comp, (ent, Comp<OxydGunComponent>(ent)), targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
     }
 
-    public void OnTryInsertChamber(Entity<OxydGunAmmoChamberComponent> ent, ref AfterInteractUsingEvent args)
+    public void OnTryInsertChamber(Entity<OxydGunAmmoChamberComponent> ent,ref AfterInteractUsingEvent args)
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
@@ -233,33 +227,20 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (args.Handled)
             return;
         var targets =  _help.GetValidSlots(args.Used, (ent.Owner,null));
-        var targ = targets.First();
-        if (targets.Count >= 1)
+        foreach (var target in targets)
         {
-            if (!_players.TryGetSessionByEntity(args.User, out var ses))
+            var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
+            if (targetIndex == -1)
+            {
+                Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
+                continue;
+            }
+            if (extend.extending[targetIndex] is not null &&  TryInsertAmmo(extend,args.Used!, targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents)))
+            {
+                args.Handled = true;
                 return;
-            _radials.ShowRadial(ses, )
-            var index = ent.Comp.bulletSlot.FindIndex(inp => inp == targ);
-            if (index == -1)
-                return;
-            TryInsertAmmo(extend, args.Used, index, _containerSystem.GetContainer(ent.Owner, oxydContents));
-            return;
+            }
         }
-        var copy = args.Slot;
-        var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == copy);
-        if (targetIndex == -1)
-        {
-            Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
-            return;
-        }
-
-        if (TryComp<OxydChamberExtensionComponent>(ent, out var extension) &&
-            extension.extending[targetIndex] is not null)
-        {
-            TryInsertAmmo(extension, args., targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents));
-        }
-
-
     }
 
     public bool TryDoFiremodeSwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
@@ -322,32 +303,37 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     public void FillAmmo(OxydGunAmmoMagazineChamberComponent magazines,Entity<OxydGunComponent> gun, int i, BaseContainer container, OxydChamberExtensionComponent? extend = null)
     {
         var slot = magazines.magazineSlot[i];
-        if (magazines.realBullet[i] != EntityUid.Invalid)
-            return;
         var item = slot.Item;
+        // pull from extension
         if (item is null)
+        {
+            FillAmmo((OxydGunAmmoChamberComponent)magazines, gun, i, container, extend);
             return;
+        }
         if (!TryComp<OxydMagazineComponent>(slot.Item, out var magComp))
             return;
-        var bull = TryGetMagBullet(i, (item.Value, magComp));
-        if (bull is null)
-            return;
-        if (extend?.extending[i] != null)
+        var mag = (item.Value, magComp);
+        if (extend is not null)
         {
-            if (TryInsertAmmo(extend, bull, i, container))
-            {
-                while (TryInsertAmmo(extend, TryGetMagBullet(i, (item.Value, magComp)), i, container)) { }
-            }
-
-            if (!TryGetAmmo(extend, i, container, out bull))
-                return;
-            TryInsertAmmo(extend, TryGetMagBullet(i, (item.Value, magComp)), i, container);
+            // fill buffer
+            TryInsertAmmo(extend, mag, i, container);
+            if(FillAmmo((OxydGunAmmoChamberComponent)magazines, gun, i, container, extend))
+                TryInsertAmmo(extend,  mag, i, container);
         }
-        if(_containerSystem.InsertOrDrop(bull.Value, magazines.bulletSlot[i].ContainerSlot!))
-            magazines.realBullet[i] = bull.Value;
+        else
+        {
+            var bull = TryGetMagBullet(i, mag);
+            // pull from buffer
+            if (bull is null)
+            {
+                FillAmmo((OxydGunAmmoChamberComponent)magazines, gun, i, container, extend);
+                return;
+            }
+            FillAmmo((OxydGunAmmoChamberComponent)magazines, gun, i, container, bull.Value, extend);
+        }
     }
 
-    public void FillAmmo(OxydGunAmmoChamberComponent chamber,
+    public bool FillAmmo(OxydGunAmmoChamberComponent chamber,
         Entity<OxydGunComponent> gun,
         int i,
         BaseContainer container,
@@ -355,12 +341,49 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         var item = chamber.bulletSlot[i].Item;
         if (item is not null)
-            return;
+            return false;
         if (extend is not null && TryGetAmmo(extend, i, container, out var newBullet))
         {
-            if(_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
+            if (_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
+            {
                 chamber.realBullet[i] = newBullet.Value;
+                return true;
+            }
         }
+        return false;
+    }
+
+    public bool FillAmmo(OxydGunAmmoChamberComponent chamber,
+        Entity<OxydGunComponent> gun,
+        int i,
+        BaseContainer container,
+        EntityUid bullet,
+        OxydChamberExtensionComponent? extend = null)
+    {
+        var item = chamber.bulletSlot[i].Item;
+        if (item is not null)
+            return false;
+        if (extend is not null)
+        {
+            if (TryGetAmmo(extend, i, container, out var newBullet))
+            {
+                if (_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
+                {
+                    chamber.realBullet[i] = newBullet.Value;
+                }
+
+                if (!TryInsertAmmo(extend, newBullet, i, container))
+                    return false;
+                return true;
+            }
+        }
+        if (_containerSystem.InsertOrDrop(bullet, chamber.bulletSlot[i].ContainerSlot!))
+        {
+            chamber.realBullet[i] = bullet;
+            return true;
+        }
+
+        return false;
     }
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid? bullet, int i, BaseContainer container)
     {
@@ -375,6 +398,29 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         _containerSystem.Insert(bullet.Value, container, null, true);
         targ.Enqueue(GetNetEntity(bullet.Value));
+        return true;
+    }
+
+    public bool TryInsertAmmo(OxydChamberExtensionComponent extension,
+        Entity<OxydMagazineComponent> magazine,
+        int i,
+        BaseContainer container)
+    {
+        if (magazine.Comp.loadedBullets.Count == 0)
+            return false;
+        var targ = extension!.extending[i];
+        if (targ is null)
+            return false;
+        if(targ.Count >= targ.Capacity)
+            return false;
+        while (targ.Count < targ.Capacity)
+        {
+            var bullet = TryGetMagBullet(i, magazine);
+            if (bullet is null)
+                break;
+            _containerSystem.Insert(bullet.Value, container, null, true);
+            targ.Enqueue(GetNetEntity(bullet.Value));
+        }
         return true;
     }
 
@@ -606,6 +652,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                     _help.QueueDel(bullet);
                     provider.realBullet[frd.providerId] = EntityUid.Invalid;
                 }
+                FillAmmo(gun, frd);
                 break;
             case OxydGunLaserProviderComponent provider:
                 break;
@@ -808,6 +855,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         }
         gun.Comp.selectedFiremodeIndex = 0;
+        _containerSystem.EnsureContainer<Container>(gun, oxydContents);
     }
 
 

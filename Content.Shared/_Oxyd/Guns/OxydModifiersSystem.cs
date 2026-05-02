@@ -34,7 +34,7 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public TimeSpan waitAdd = TimeSpan.Zero;
     [ViewVariables(VVAccess.ReadWrite)]
-    public double waitMult = 0d;
+    public double waitMult = 1d;
     [ViewVariables(VVAccess.ReadWrite)]
     public Angle accuracyAdd = Angle.Zero;
     [ViewVariables(VVAccess.ReadWrite)]
