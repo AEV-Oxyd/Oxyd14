@@ -9,18 +9,33 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent]
 public sealed partial class OxydAttachmentHolderComponent : Component
 {
-    [DataField, AutoNetworkedField]
+    [DataField]
     public EntityWhitelist whitelist = new();
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables]
     public CompoundedModifiers mods = new();
-    [DataField, AutoNetworkedField]
+    [DataField]
     public Dictionary<AttSlot, NetEntity> attachments = new();
 
-    [DataField, AutoNetworkedField]
+    [DataField]
     public List<AttSlot> slots = new();
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydAttachmentHolderComponentState : ComponentState
+{
+    public readonly Dictionary<AttSlot, NetEntity> Attachments;
+    public readonly List<AttSlot> Slots;
+    public readonly CompoundedModifiers Mods;
+
+    public OxydAttachmentHolderComponentState(Dictionary<AttSlot, NetEntity> attachments, List<AttSlot> slots, CompoundedModifiers mods)
+    {
+        Attachments = attachments;
+        Slots = slots;
+        Mods = mods;
+    }
 }
 
 /// <summary>

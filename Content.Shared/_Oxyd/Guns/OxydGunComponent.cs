@@ -113,7 +113,7 @@ public sealed partial class OxydChamberExtensionComponent : Component
     [ViewVariables, AutoNetworkedField]
     // will be null for every firemode index present unless set
     //  array length defines how many extra bullet slots are given
-    public List<Queue<NetEntity>?> extending = new();
+    public List<List<NetEntity>?> extending = new();
 }
 
 [DataDefinition]

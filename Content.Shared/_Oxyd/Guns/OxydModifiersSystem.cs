@@ -13,6 +13,8 @@ using Content.Shared.Whitelist;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
+using Robust.Shared.GameStates;
+using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
@@ -97,6 +99,7 @@ public sealed class OxydModifiersSystem : EntitySystem
     [Dependency] private readonly SharedToolSystem _tools = default!;
     [Dependency] private readonly ISharedPlayerManager _player = default!;
     [Dependency] private readonly SharedDoAfterSystem _after = default!;
+    [Dependency] private readonly INetManager _net = default!;
 
     public const string cid = "oAtts";
     private static readonly ProtoId<ToolQualityPrototype> ScrewingQuality = "Screwing";
@@ -108,7 +111,43 @@ public sealed class OxydModifiersSystem : EntitySystem
         SubscribeLocalEvent<OxydAttachmentHolderComponent, ComponentInit>(onInit);
         SubscribeLocalEvent<OxydAttachmentHolderComponent, AfterInteractUsingEvent>(onUse);
         SubscribeLocalEvent<OxydAttachmentHolderComponent, RemoveAttachmentEvent>(onRemove);
+        SubscribeLocalEvent<OxydAttachmentHolderComponent, ComponentGetState>(OnGetState);
+        SubscribeLocalEvent<OxydAttachmentHolderComponent, ComponentHandleState>(OnHandleState);
+        SubscribeLocalEvent<OxydAttachmentSpawnerComponent, ComponentStartup>(onStart);
         oAttHoldQuery = GetEntityQuery<OxydAttachmentHolderComponent>();
+    }
+
+    private void OnGetState(Entity<OxydAttachmentHolderComponent> ent, ref ComponentGetState args)
+    {
+        args.State = new OxydAttachmentHolderComponentState(ent.Comp.attachments, ent.Comp.slots, ent.Comp.mods);
+    }
+
+    private void OnHandleState(Entity<OxydAttachmentHolderComponent> ent, ref ComponentHandleState args)
+    {
+        if (args.Current is not OxydAttachmentHolderComponentState state)
+            return;
+
+        ent.Comp.attachments = new Dictionary<AttSlot, NetEntity>(state.Attachments);
+        ent.Comp.slots = new List<AttSlot>(state.Slots);
+        ent.Comp.mods = state.Mods;
+        updateModifiers(ent);
+    }
+
+    public void onStart(Entity<OxydAttachmentSpawnerComponent> ent, ref ComponentStartup args)
+    {
+        if (_net.IsClient)
+            return;
+        foreach (var id in ent.Comp.insert)
+        {
+            var entId = EntityManager.SpawnNextToOrDrop(id, ent.Owner);
+            if (TerminatingOrDeleted(entId))
+            {
+                Log.Error($"Invalid entity {entId} in OxydAttachmentSpawnerComponent {ent}!");
+                continue;
+            }
+            tryAddAttachment((ent, Comp<OxydAttachmentHolderComponent>(ent)), (entId, Comp<OxydAttachmentComponent>(entId)), out var errorMsg);
+        }
+        Dirty(ent, Comp<OxydAttachmentHolderComponent>(ent));
     }
 
     public bool tryGetModifiers(EntityUid target, [NotNullWhen(true)] out CompoundedModifiers? mods)
@@ -229,6 +268,7 @@ public sealed class OxydModifiersSystem : EntitySystem
         foreach (var mod in mods)
             mod.addToCompound(compound);
         ent.Comp.mods = compound;
+        Dirty(ent, ent.Comp);
         RaiseLocalEvent(ent.Owner, new ModifiersUpdatedEvent { mods = compound });
     }
 

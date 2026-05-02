@@ -17,7 +17,7 @@ using Robust.Shared.Timing;
 namespace Content.Client._Oxyd.Framework;
 // global event
 // raised when pressed the mouse down
-public class MouseDownEvent : EntityEventArgs
+public class MouseDownEvent
 {
     public EntityUid clickedOn;
     public EntityUid user;
@@ -25,15 +25,17 @@ public class MouseDownEvent : EntityEventArgs
 }
 
 // targeted event , raised on user, used item and the target(if any)
-public class UsingMouseDownEvent : EntityEventArgs
+public class UsingMouseDownEvent
 {
     public EntityUid clickedOn;
     public List<EntityUid> holding = new();
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public EntityUid activeHeld;
+    public bool Handled = false;
 }
 // raised when the mouse gets released
-public class MouseUpEvent : EntityEventArgs
+public class MouseUpEvent
 {
     public EntityUid clickedOn;
     public EntityUid user;
@@ -41,15 +43,17 @@ public class MouseUpEvent : EntityEventArgs
 }
 
 // targeted event , raised on user, used item and the target(if any)
-public class UsingMouseUpEvent : EntityEventArgs
+public class UsingMouseUpEvent
 {
     public EntityUid clickedOn;
     public List<EntityUid> holding = new();
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public EntityUid activeHeld;
+    public bool Handled = false;
 }
 // raised for every tile-change(on player, on held item if any, on crossed entities)
-public class MouseCrossEvent : EntityEventArgs
+public class MouseCrossEvent
 {
     public EntityUid crossed;
     public EntityUid user;
@@ -58,14 +62,14 @@ public class MouseCrossEvent : EntityEventArgs
     public MapCoordinates clickCoords;
 }
 // raised when clicking with alt held
-public class MouseAltClickEvent : EntityEventArgs
+public class MouseAltClickEvent
 {
     public EntityUid clickedOn;
     public EntityUid user;
     public EntityCoordinates clickCoords;
 }
 
-public class MouseAltClickedEvent : EntityEventArgs
+public class MouseAltClickedEvent
 {
     public EntityUid user;
     public EntityCoordinates clickCoords;
@@ -123,42 +127,63 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
         mouseData.mouseEntity = coords;
-        RaiseLocalEvent(new MouseDownEvent()
+        var ev = new SyncedEntityEventArgs<MouseDownEvent>()
         {
-            clickedOn = mouseData.lastClicked,
-            user = session.AttachedEntity.Value,
-            clickCoords = mouseData.mouseEntity,
-        });
-        if (altDown)
-        {
-            Log.Debug($"Raising alt click event");
-            RaiseLocalEvent(new MouseAltClickEvent()
+            self = new MouseDownEvent()
             {
                 clickedOn = mouseData.lastClicked,
                 user = session.AttachedEntity.Value,
                 clickCoords = mouseData.mouseEntity,
-            });
-            RaiseLocalEvent(mouseData.lastClicked, new MouseAltClickedEvent()
+            }
+        };
+        RaiseLocalEvent(ev);
+        ev.Execute();
+        if (altDown)
+        {
+            Log.Debug($"Raising alt click event");
+            var evAlt = new SyncedEntityEventArgs<MouseAltClickEvent>()
             {
-                user = session.AttachedEntity.Value,
-                clickCoords = mouseData.mouseEntity,
-            });
+                self = new MouseAltClickEvent()
+                {
+                    clickedOn = mouseData.lastClicked,
+                    user = session.AttachedEntity.Value,
+                    clickCoords = mouseData.mouseEntity,
+                }
+            };
+            RaiseLocalEvent(evAlt);
+            evAlt.Execute();
+
+            var evAltClicked = new SyncedEntityEventArgs<MouseAltClickedEvent>()
+            {
+                self = new MouseAltClickedEvent()
+                {
+                    user = session.AttachedEntity.Value,
+                    clickCoords = mouseData.mouseEntity,
+                }
+            };
+            RaiseLocalEvent(mouseData.lastClicked, evAltClicked);
+            evAltClicked.Execute();
         }
         var active = _handsSystem.GetActiveHandEntity();
         mousedDown = true;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
-        var targetedEvent = new UsingMouseDownEvent()
+        var targetedEvent = new SyncedEntityEventArgs<UsingMouseDownEvent>()
         {
-            clickedOn = mouseData.lastClicked,
-            user = session.AttachedEntity.Value,
-            holding = heldItems,
-            clickCoords = mouseData.mouseEntity,
+            self = new UsingMouseDownEvent()
+            {
+                clickedOn = mouseData.lastClicked,
+                user = session.AttachedEntity.Value,
+                holding = heldItems,
+                clickCoords = mouseData.mouseEntity,
+                activeHeld = active.Value,
+            }
         };
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
+        targetedEvent.Execute();
         return false;
     }
 
@@ -171,27 +196,37 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
-        RaiseLocalEvent(new MouseUpEvent()
+        var evUp = new SyncedEntityEventArgs<MouseUpEvent>()
         {
-            clickedOn = mouseData.lastClicked,
-            user = session.AttachedEntity.Value,
-            clickCoords = mouseData.mouseEntity,
-        });
+            self = new MouseUpEvent()
+            {
+                clickedOn = mouseData.lastClicked,
+                user = session.AttachedEntity.Value,
+                clickCoords = mouseData.mouseEntity,
+            }
+        };
+        RaiseLocalEvent(evUp);
+        evUp.Execute();
         var active = _handsSystem.GetActiveHandEntity();
         mousedDown = false;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
-        var targetedEvent = new UsingMouseUpEvent()
+        var targetedEvent = new SyncedEntityEventArgs<UsingMouseUpEvent>()
         {
-            clickedOn = mouseData.lastClicked,
-            user = session.AttachedEntity.Value,
-            holding = heldItems,
-            clickCoords = mouseData.mouseEntity,
+            self = new UsingMouseUpEvent()
+            {
+                clickedOn = mouseData.lastClicked,
+                user = session.AttachedEntity.Value,
+                holding = heldItems,
+                clickCoords = mouseData.mouseEntity,
+                activeHeld = active.Value,
+            }
         };
         RaiseLocalEvent(active.Value, targetedEvent);
         RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
+        targetedEvent.Execute();
         return false;
     }
 
@@ -216,22 +251,26 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             mouseData.lastHovered = ent.Value;
         }
 
-        var ev = new MouseCrossEvent()
+        var ev = new SyncedEntityEventArgs<MouseCrossEvent>()
         {
-            user = _playerManager.LocalEntity.Value,
-            clickCoords = mousePos,
-            holding = heldList,
+            self = new MouseCrossEvent()
+            {
+                user = _playerManager.LocalEntity.Value,
+                clickCoords = mousePos,
+                holding = heldList,
+            }
         };
         if (ent is not null)
-            ev.crossed = ent.Value;
+            ev.self.crossed = ent.Value;
         if (held is not null)
         {
-            ev.activeHolding = held.Value;
+            ev.self.activeHolding = held.Value;
             RaiseLocalEvent(held.Value, ev);
         }
         RaiseLocalEvent(ev);
         if (ent is not null)
             RaiseLocalEvent(ent.Value, ev);
+        ev.Execute();
 
     }
 }

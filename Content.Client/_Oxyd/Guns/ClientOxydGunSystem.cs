@@ -38,7 +38,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydHandheldGunComponent, UsingMouseDownEvent>(HandleHandheldGun);
+        SubscribeLocalEvent<OxydHandheldGunComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
@@ -67,6 +67,33 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             Log.Debug($"Thrown but not reset weapon");
         }
     }
+
+    public void OnTryInsertChamber(Entity<OxydGunAmmoChamberComponent> ent,ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
+    {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
+        if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
+            return;
+        Log.Debug($"Received {args.self.activeHeld} for chamber insertion on {ent}");
+        if (args.self.Handled)
+            return;
+        var targets =  _help.GetValidSlots(args.self.activeHeld, (ent.Owner,null));
+        foreach (var target in targets)
+        {
+            var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
+            if (targetIndex == -1)
+            {
+                Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
+                continue;
+            }
+            if (extend.extending[targetIndex] is not null && TryInsertAmmo(extend, (EntityUid?)args.self.activeHeld, targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents)))
+            {
+                args.self.Handled = true;
+                return;
+            }
+        }
+    }
+
 
     public void onChargeSet(SetGunChargeEvent ev)
     {
@@ -192,18 +219,18 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         _containerSystem.EnsureContainer<Robust.Shared.Containers.Container>(ent.Owner, oxydContents);
     }
-    public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref UsingMouseDownEvent args)
+    public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
-        if (!args.holding.Contains(obj.Owner))
+        if (!args.self.holding.Contains(obj.Owner))
             return;
         if (!TryComp<OxydGunComponent>(obj, out var gun))
         {
             Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
             return;
         }
-        DoInterpret((obj.Owner, gun), args.user);
+        DoInterpret((obj.Owner, gun), args.self.user);
     }
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)
