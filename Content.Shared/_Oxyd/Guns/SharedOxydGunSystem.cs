@@ -740,7 +740,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         var mods = _mods.getModifiers(gun.Owner);
         AudioParams param = AudioParams.Default;
-        AudioParams param = new AudioParams(mods.soundVolume+100, mods.soundPitch, 30, 1, false, 0, 0.2f);
+        param.Volume += mods.soundVolume+30;
+        param.Pitch += mods.soundPitch;
         var aFireDelay = gunFiremodePrototype.fireDelay;
         var aTotalWait = gunFiremodePrototype.totalWait;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;
@@ -791,8 +792,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 projectile = projectileNullable.Value,
                 simTick = gun.Comp.simulateAsTick
             };
-            _audio.PlayEntity(_audio.ResolveSound(shootSound), Filter.PvsExcept(shooter, _help.getRangeToPvsMultiplier(25f + mods.soundRange)), gun.Owner, true, param);
-            param.PlayOffsetSeconds += (float)aFireDelay.TotalSeconds;
+            var filter = Filter.Pvs(gun, _help.getRangeToPvsMultiplier(25f + mods.soundRange));
+            if (_netManager.IsServer)
+                filter.RemoveWhereAttachedEntity(play => play == shooter);
+            _audio.PlayEntity(_audio.ResolveSound(shootSound), filter, gun.Owner, true, param.WithPlayOffset((float)aFireDelay.TotalSeconds));
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);
