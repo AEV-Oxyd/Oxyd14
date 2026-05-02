@@ -95,7 +95,7 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
     // actual bullet is pulled from here , bulletSlot is synced to what is in here
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
     [ViewVariables, AutoNetworkedField]
-    public List<EntityUid> nextBullet = new List<EntityUid>();
+    public List<EntityUid> realBullet = new List<EntityUid>();
 
 
 }
@@ -106,13 +106,14 @@ public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoCha
     public List<ItemSlot> magazineSlot = new();
 }
 // acts as a buffer between magazines / loading if present
-[RegisterComponent]
-public sealed partial class OxydChamberExtensionComponent : OxydGunProvidersComponent
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydChamberExtensionComponent : Component
 {
-    [ViewVariables]
+    public override bool SessionSpecific => true;
+    [ViewVariables, AutoNetworkedField]
     // will be null for every firemode index present unless set
     //  array length defines how many extra bullet slots are given
-    public List<EntityUid[]?> extending = new();
+    public List<Queue<NetEntity>?> extending = new();
 }
 
 [DataDefinition]

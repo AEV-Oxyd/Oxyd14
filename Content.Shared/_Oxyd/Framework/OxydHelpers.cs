@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.Intrinsics;
 using Content.Shared.Damage;
+using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Whitelist;
 using Robust.Shared;
 using Robust.Shared.Configuration;
 using Robust.Shared.Map.Components;
@@ -43,6 +45,7 @@ public class SharedOxydHelpers : EntitySystem
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly IConfigurationManager _config = default!;
+    [Dependency] private readonly EntityWhitelistSystem _whitelistSystem = default!;
     public HashSet<EntityUid> queued = new HashSet<EntityUid>();
 
     public override void Initialize()
@@ -97,6 +100,31 @@ public class SharedOxydHelpers : EntitySystem
     public static Box2 buildWorldBox(float x1, float y1, float x2, float y2)
     {
         return new Box2(x1 > x2 ? x2 : x1, y1 > y2 ? y2 : y1, x1 < x2 ? x2 : x1, y1 < y2 ? y2 : y1);
+    }
+
+    /// <summary>
+    /// Returns a list of ItemSlots that the given item can be inserted into,
+    /// checking ONLY whitelist and blacklist.
+    /// </summary>
+    public List<ItemSlot> GetValidSlots(EntityUid item, Entity<ItemSlotsComponent?> target)
+    {
+        var validSlots = new List<ItemSlot>();
+
+        if (!Resolve(target, ref target.Comp, false))
+            return validSlots;
+
+        foreach (var (_, slot) in target.Comp.Slots)
+        {
+            if (_whitelistSystem.IsWhitelistFail(slot.Whitelist, item) ||
+                _whitelistSystem.IsWhitelistPass(slot.Blacklist, item))
+            {
+                continue;
+            }
+
+            validSlots.Add(slot);
+        }
+
+        return validSlots.OrderByDescending(s => s.Priority).ToList();
     }
 
     public override void Update(float frameTime)
