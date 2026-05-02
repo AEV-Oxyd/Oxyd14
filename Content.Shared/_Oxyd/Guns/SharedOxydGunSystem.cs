@@ -739,7 +739,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         GunFiremodePrototype gunFiremodePrototype = gun.Comp.selectedFiremodePrototype;
         var mods = _mods.getModifiers(gun.Owner);
-        AudioParams param = new AudioParams(mods.soundVolume, mods.soundPitch, 30, 1, false, 0, 0.2f);
+        AudioParams param = AudioParams.Default;
+        AudioParams param = new AudioParams(mods.soundVolume+100, mods.soundPitch, 30, 1, false, 0, 0.2f);
         var aFireDelay = gunFiremodePrototype.fireDelay;
         var aTotalWait = gunFiremodePrototype.totalWait;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;

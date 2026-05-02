@@ -46,6 +46,7 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public DamageSpecifier? damageMult;
     [ViewVariables(VVAccess.ReadWrite)]
+            // unimplemented
     public float zoomMod = 1;
     [ViewVariables(VVAccess.ReadWrite)]
     public float soundRange = 0;
@@ -53,13 +54,16 @@ public sealed class CompoundedModifiers
     public float soundVolume = 0;
     [ViewVariables(VVAccess.ReadWrite)]
     public float soundPitch = 0;
+    // unimplemented
     [ViewVariables(VVAccess.ReadWrite)]
     public float workspeedMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
     public float gunCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
+        // unimplemented
     public float toolCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
+        // unimplemented
     public SoundSpecifier? soundOverride;
     [ViewVariables(VVAccess.ReadWrite)]
     public float speedMult = 1;
