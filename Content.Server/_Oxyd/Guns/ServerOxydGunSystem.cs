@@ -72,6 +72,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<FiremodeMouseStatus>(OnClientMouseInform);
         SubscribeNetworkEvent<FiremodeChangedEvent>(OnClientFiremodeChange);
         SubscribeNetworkEvent<GunSafetyChangedEvent>(OnClientSafetyChange);
+        SubscribeNetworkEvent<ChamberInsertionEvent>(OnChamberInsertion);
         //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
         for (var i = 0; i < MaxTicksAhead; i++)
         {

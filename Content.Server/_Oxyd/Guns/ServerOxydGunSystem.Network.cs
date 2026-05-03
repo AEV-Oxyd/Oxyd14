@@ -509,4 +509,32 @@ public partial class ServerOxydGunSystem
         Log.Debug("Fired Gun");
     }
 
+    public void OnChamberInsertion(ChamberInsertionEvent ev, EntitySessionEventArgs arg)
+    {
+        var user = arg.SenderSession.AttachedEntity;
+        if (user is null)
+            return;
+        var inserting = GetEntity(ev.inserting);
+        var into = GetEntity(ev.into);
+
+        if (TerminatingOrDeleted(inserting) || TerminatingOrDeleted(into) || TerminatingOrDeleted(user.Value))
+            return;
+
+        if (!_handsSystem.IsHolding(user.Value, inserting, out _))
+            return;
+
+        if (!_actionBlockerSystem.CanUseHeldEntity(user.Value, inserting) || !_actionBlockerSystem.CanInteract(user.Value, into))
+            return;
+
+        if (!TryComp<OxydGunAmmoChamberComponent>(into, out var chamber) || !TryComp<OxydChamberExtensionComponent>(into, out var extend))
+            return;
+
+        if (ev.slotId < 0 || ev.slotId >= extend.extending.Count)
+            return;
+
+        if (extend.extending[ev.slotId] is not null && TryInsertAmmo(extend, (EntityUid?)inserting, ev.slotId, _containerSystem.GetContainer(into, oxydContents), true))
+        {
+            // success
+        }
+    }
 }

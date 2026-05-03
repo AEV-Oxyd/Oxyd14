@@ -3,6 +3,7 @@ using Content.Client._Oxyd.Framework;
 using Content.Client.DoAfter;
 using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
+using Content.Shared.ActionBlocker;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityEffects.Effects;
@@ -24,7 +25,6 @@ using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
 
-
 /// <summary>
 /// This handles...
 /// </summary>
@@ -41,6 +41,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
+        SubscribeLocalEvent<OxydGunAmmoChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
@@ -70,28 +71,39 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
     public void OnTryInsertChamber(Entity<OxydGunAmmoChamberComponent> ent,ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
     {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
-            return;
-        Log.Debug($"Received {args.self.activeHeld} for chamber insertion on {ent}");
-        if (args.self.Handled)
-            return;
-        var targets =  _help.GetValidSlots(args.self.activeHeld, (ent.Owner,null));
-        foreach (var target in targets)
+        args.Register(1, (ev) =>
         {
-            var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
-            if (targetIndex == -1)
+            if (!_gameTiming.IsFirstTimePredicted)
+                return false;
+            if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
+                return false;
+            if (!_actionBlockerSystem.CanUseHeldEntity(ev.self.user, ev.self.activeHeld))
+                return false;
+            if(!_actionBlockerSystem.CanInteract(ev.self.user, ent.Owner))
+                return false;
+            Log.Debug($"Received {ev.self.activeHeld} for chamber insertion on {ent}");
+            var targets = _help.GetValidSlots(ev.self.activeHeld, (ent.Owner, null));
+            if (targets.Count == 0)
+                return false;
+            foreach (var target in targets)
             {
-                Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
-                continue;
+                var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
+                if (targetIndex == -1)
+                {
+                    Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
+                    continue;
+                }
+
+                if (extend.extending[targetIndex] is not null && TryInsertAmmo(extend, (EntityUid?) ev.self.activeHeld,
+                        targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents)))
+                {
+                    RaiseNetworkEvent(new ChamberInsertionEvent(GetNetEntity(ev.self.activeHeld), GetNetEntity(ent), targetIndex));
+                    return true;
+                }
             }
-            if (extend.extending[targetIndex] is not null && TryInsertAmmo(extend, (EntityUid?)args.self.activeHeld, targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents)))
-            {
-                args.self.Handled = true;
-                return;
-            }
-        }
+
+            return false;
+        });
     }
 
 
@@ -221,16 +233,21 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
     {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        if (!args.self.holding.Contains(obj.Owner))
-            return;
-        if (!TryComp<OxydGunComponent>(obj, out var gun))
+        args.Register(0, (ev) =>
         {
-            Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
-            return;
-        }
-        DoInterpret((obj.Owner, gun), args.self.user);
+            if (!_gameTiming.IsFirstTimePredicted)
+                return false;
+            if (!ev.self.holding.Contains(obj.Owner))
+                return false;
+            if (!TryComp<OxydGunComponent>(obj, out var gun))
+            {
+                Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
+                return false;
+            }
+
+            DoInterpret((obj.Owner, gun), ev.self.user);
+            return true;
+        });
     }
 
     public void DoInterpret(Entity<OxydGunComponent> gun, EntityUid shooter)

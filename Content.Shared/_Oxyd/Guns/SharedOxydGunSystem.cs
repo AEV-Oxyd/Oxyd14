@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using Content.Shared._Oxyd.Framework;
+using Content.Shared.ActionBlocker;
 using Content.Shared._Oxyd.Framework.RadialMenu;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Damage;
@@ -32,6 +33,7 @@ using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -56,6 +58,22 @@ public sealed partial class OxydGunConfig : IPrototype
     [DataField]
     public SoundSpecifier jammedLaser = default!;
 }
+
+[Serializable, NetSerializable]
+public partial class ChamberInsertionEvent : EntityEventArgs
+{
+    public NetEntity inserting = NetEntity.Invalid;
+    public NetEntity into = NetEntity.Invalid;
+    public int slotId;
+
+    public ChamberInsertionEvent(NetEntity inserting, NetEntity into, int slotId)
+    {
+        this.inserting = inserting;
+        this.into = into;
+        this.slotId = slotId;
+    }
+}
+
 /// <summary>
 /// This handles...
 /// </summary>
@@ -77,6 +95,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected readonly ISharedPlayerManager _players = default!;
     [Dependency] protected readonly OxydModifiersSystem _mods = default!;
     [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
+    [Dependency] protected readonly ActionBlockerSystem _actionBlockerSystem = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -114,7 +133,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydGunAmmoMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
-        SubscribeLocalEvent<OxydGunAmmoChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertChamber);
         SubscribeLocalEvent<OxydGunAmmoChamberComponent, EntRemovedFromContainerMessage>(OnEntRemoveChamber);
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);

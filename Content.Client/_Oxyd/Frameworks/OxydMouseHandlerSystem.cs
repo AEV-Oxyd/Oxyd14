@@ -32,7 +32,6 @@ public class UsingMouseDownEvent
     public EntityUid user;
     public EntityCoordinates clickCoords;
     public EntityUid activeHeld;
-    public bool Handled = false;
 }
 // raised when the mouse gets released
 public class MouseUpEvent
@@ -50,7 +49,6 @@ public class UsingMouseUpEvent
     public EntityUid user;
     public EntityCoordinates clickCoords;
     public EntityUid activeHeld;
-    public bool Handled = false;
 }
 // raised for every tile-change(on player, on held item if any, on crossed entities)
 public class MouseCrossEvent
@@ -98,18 +96,18 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
                 EngineKeyFunctions.Use,
                 new PointerStateInputCmdHandler(HandleMouseEnabled, HandleMouseDisabled, false)
             )
-            .Bind(ContentKeyFunctions.AltInteractionMode, new PointerStateInputCmdHandler(HandleAltEnabled, HandleAltDisabled))
+            .Bind(ContentKeyFunctions.AltInteractionMode, InputCmdHandler.FromDelegate(HandleAltEnabled, HandleAltDisabled, false, false))
             .Register<OxydMouseHandlingSystem>();
     }
 
-    public bool HandleAltEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    public void HandleAltEnabled(ICommonSession? session)
     {
         Log.Error($"Alt enabled");
         altDown = true;
         return false;
     }
 
-    public bool HandleAltDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    public void HandleAltDisabled(ICommonSession? session)
     {
         Log.Error($"Alt disabled");
         altDown = false;
