@@ -15,13 +15,15 @@ public sealed class SyncedEntityEventArgs<T> : EntityEventArgs
         preds.Add(priority, pred);
     }
 
-    public void Execute()
+    public bool Execute()
     {
         foreach (var pred in preds.OrderBy(item => item.Key))
         {
             if (pred.Value(this))
-                return;
+                return true;
         }
+
+        return false;
     }
 
     public bool Execute(int priority)

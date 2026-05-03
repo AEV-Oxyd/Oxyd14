@@ -227,6 +227,7 @@ namespace Content.Client.Gameplay
 
             EntityCoordinates coordinates = default;
             EntityUid? entityToClick = null;
+            inputSys.Log.Debug($"Got key change with viewport {args.Viewport}");
             if (args.Viewport is IViewportControl vp && kArgs.PointerLocation.IsValid)
             {
                 var mousePosWorld = vp.PixelToMap(kArgs.PointerLocation.Position);
@@ -250,6 +251,7 @@ namespace Content.Client.Gameplay
             {
                 coordinates = EntityCoordinates.Invalid;
             }
+            inputSys.Log.Debug($"Succesfully sent fullInput cmd");
 
             var message = new ClientFullInputCmdMessage(_timing.CurTick, _timing.TickFraction, funcId)
             {

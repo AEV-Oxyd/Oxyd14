@@ -1,3 +1,4 @@
+using Content.Client._Oxyd.Framework;
 using Content.Client.Gameplay;
 using Content.Client.Hands.Systems;
 using Content.Client.UserInterface.Controls;
@@ -21,7 +22,7 @@ public sealed class HandsUIController : UIController, IOnStateEntered<GameplaySt
 {
     [Dependency] private readonly IEntityManager _entities = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
-
+    [UISystemDependency] private readonly OxydMouseHandlingSystem _mouseHandle = default!;
     [UISystemDependency] private readonly HandsSystem _handsSystem = default!;
     [UISystemDependency] private readonly UseDelaySystem _useDelay = default!;
 
@@ -83,6 +84,13 @@ public sealed class HandsUIController : UIController, IOnStateEntered<GameplaySt
     {
         if (!_handsSystem.TryGetPlayerHands(out var hands))
             return;
+
+        if (_mouseHandle.blockTransmit)
+        {
+            args.Handle();
+            _mouseHandle.blockTransmit = false;
+            return;
+        }
 
         if (args.Function == EngineKeyFunctions.UIClick)
         {

@@ -1,6 +1,11 @@
 using System.Linq;
 using Content.Client.Gameplay;
 using Content.Client.Hands.Systems;
+using Content.Client.Interaction;
+using Content.Client.Construction;
+using Content.Client.Tabletop;
+using Content.Client.UserInterface;
+using Content.Client.UserInterface.Systems.Actions;
 using Content.Shared.Input;
 using Content.Shared.Interaction;
 using Robust.Client.GameObjects;
@@ -8,6 +13,10 @@ using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
 using Robust.Client.State;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controllers;
+using Robust.Client.UserInterface.Controls;
+using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Input;
 using Robust.Shared.Input.Binding;
 using Robust.Shared.Map;
@@ -85,33 +94,124 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
     [Dependency] private readonly TransformSystem _transformSystem = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly IStateManager _stateManager = default!;
+    [Dependency] private readonly IUserInterfaceManager _uiManager = default!;
+    [Dependency] private readonly IGameTiming _timing = default!;
     public bool mousedDown = false;
     public bool altDown = false;
+    // will stop the click event being replicated to  the normal SS14 keybindigns handler
+    // used to stop double-interactions when our own pipeline returns a true to block it
+    // can't really stop it from its proper place since its in engine
+    // accesed in HandsUIController
+    public bool blockTransmit = false;
     public EntityUid crossed = EntityUid.Invalid;
     /// <inheritdoc/>
     public override void Initialize()
     {
         CommandBinds.Builder
-            .Bind(
+            .BindBefore(
                 EngineKeyFunctions.Use,
-                new PointerStateInputCmdHandler(HandleMouseEnabled, HandleMouseDisabled, false)
+                new PointerStateInputCmdHandler(HandleMouseEnabled, HandleMouseDisabled, false),
+                typeof(SharedInteractionSystem),
+                typeof(ActionUIController),
+                typeof(DragDropSystem),
+                typeof(ConstructionSystem),
+                typeof(TabletopSystem)
             )
             .Bind(ContentKeyFunctions.AltInteractionMode, InputCmdHandler.FromDelegate(HandleAltEnabled, HandleAltDisabled, false, false))
             .Register<OxydMouseHandlingSystem>();
+
+        _inputManager.UIKeyBindStateChanged += OnUIKeyBindStateChanged;
+    }
+
+    public override void Shutdown()
+    {
+        base.Shutdown();
+        _inputManager.UIKeyBindStateChanged -= OnUIKeyBindStateChanged;
+    }
+
+    private bool OnUIKeyBindStateChanged(BoundKeyEventArgs args)
+    {
+        if (args.Function != EngineKeyFunctions.Use)
+            return false;
+
+        var control = _uiManager.MouseGetControl(args.PointerLocation);
+        var entity = FindEntityForControl(control, out var isViewport);
+
+        if (isViewport)
+            return false;
+
+        var session = _playerManager.LocalSession;
+        if (session == null)
+            return false;
+
+        var coords = _eyeManager.PixelToMap(args.PointerLocation.Position);
+        Log.Debug($"OnUiKey gave coords {coords}");
+
+        /*
+        if (coords.MapId == MapId.Nullspace && entity != null)
+        {
+            coords = _transformSystem.GetMapCoordinates(entity.Value);
+        }
+
+        if (coords.MapId == MapId.Nullspace && session.AttachedEntity != null)
+        {
+            coords = _transformSystem.GetMapCoordinates(session.AttachedEntity.Value);
+        }
+        */
+
+        if (coords.MapId == MapId.Nullspace)
+            return false;
+
+        var entCoords = _transformSystem.ToCoordinates(coords);
+        var blockval = false;
+        if (args.State == BoundKeyState.Down)
+        {
+            blockval = HandleMouseEnabled(session, entCoords, entity ?? EntityUid.Invalid);
+        }
+        else if (args.State == BoundKeyState.Up)
+        {
+            blockval = HandleMouseDisabled(session, entCoords, entity ?? EntityUid.Invalid);
+        }
+        Log.Debug($"BlockTransmit set to {blockval}");
+        blockTransmit = blockval;
+        return blockval;
+    }
+
+    private EntityUid? FindEntityForControl(Control? control, out bool isViewport)
+    {
+        isViewport = false;
+        if (control == null)
+            return null;
+
+        if (control is IViewportControl)
+        {
+            isViewport = true;
+            return null;
+        }
+
+        if (control is IEntityControl entityControl)
+        {
+            return entityControl.UiEntity;
+        }
+
+        if (control is SpriteView spriteView)
+        {
+            return spriteView.Entity;
+        }
+
+        return FindEntityForControl(control.Parent, out isViewport);
     }
 
     public void HandleAltEnabled(ICommonSession? session)
     {
         Log.Error($"Alt enabled");
         altDown = true;
-        return false;
     }
 
     public void HandleAltDisabled(ICommonSession? session)
     {
         Log.Error($"Alt disabled");
         altDown = false;
-        return false;
     }
 
     public bool HandleMouseEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
@@ -119,6 +219,8 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         if (session is null)
             return false;
         if (session.AttachedEntity is null)
+            return false;
+        if (!_timing.IsFirstTimePredicted)
             return false;
         Log.Debug($"Mouse enabled");
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
@@ -138,7 +240,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         ev.Execute();
         if (altDown)
         {
-            Log.Debug($"Raising alt click event");
+            //Log.Debug($"Raising alt click event");
             var evAlt = new SyncedEntityEventArgs<MouseAltClickEvent>()
             {
                 self = new MouseAltClickEvent()
@@ -179,10 +281,10 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             }
         };
         RaiseLocalEvent(active.Value, targetedEvent);
-        RaiseLocalEvent(uid, targetedEvent);
+        if(uid != active.Value)
+            RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        targetedEvent.Execute();
-        return false;
+        return targetedEvent.Execute();
     }
 
     public bool HandleMouseDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
@@ -190,6 +292,8 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         if (session is null)
             return false;
         if (session.AttachedEntity is null)
+            return false;
+        if (!_timing.IsFirstTimePredicted)
             return false;
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
@@ -222,10 +326,10 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             }
         };
         RaiseLocalEvent(active.Value, targetedEvent);
-        RaiseLocalEvent(uid, targetedEvent);
+        if(uid != active.Value)
+            RaiseLocalEvent(uid, targetedEvent);
         RaiseLocalEvent(session.AttachedEntity.Value, targetedEvent);
-        targetedEvent.Execute();
-        return false;
+        return targetedEvent.Execute();
     }
 
     public override void Update(float frameTime)
@@ -233,17 +337,41 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         base.Update(frameTime);
         if (_stateManager.CurrentState is not GameplayState gameplayState)
             return;
-        if (_playerManager.LocalEntity is null)
+        if (_playerManager.LocalEntity is not { } localEntity)
             return;
+
         var mouseScreenPos = _inputManager.MouseScreenPosition;
-        var mouseData = EnsureComp<OxydMouseDataComponent>(_playerManager.LocalEntity.Value);
+        var mouseData = EnsureComp<OxydMouseDataComponent>(localEntity);
         var mousePos = _eyeManager.PixelToMap(mouseScreenPos);
+        if (mousePos.MapId == MapId.Nullspace)
+        {
+            mousePos = _eyeManager.PixelToMap(mouseScreenPos.Position);
+        }
+
+        var hoveredControl = _uiManager.CurrentlyHovered;
+        var ent = FindEntityForControl(hoveredControl, out var isViewportUpdate);
+
+        if (mousePos.MapId == MapId.Nullspace && ent != null)
+        {
+            mousePos = _transformSystem.GetMapCoordinates(ent.Value);
+        }
+
+        if (mousePos.MapId == MapId.Nullspace)
+        {
+            mousePos = _transformSystem.GetMapCoordinates(localEntity);
+        }
+
         mouseData.mouseMap = mousePos;
         if (!mousedDown)
             return;
+
         var held = _handsSystem.GetActiveHandEntity();
-        var heldList = _handsSystem.EnumerateHeld(_playerManager.LocalEntity.Value).ToList();
-        var ent = gameplayState.GetClickedEntity(mousePos);
+        var heldList = _handsSystem.EnumerateHeld(localEntity).ToList();
+
+        if (isViewportUpdate)
+        {
+            ent = gameplayState.GetClickedEntity(mousePos);
+        }
         if (ent is not null)
         {
             mouseData.lastHovered = ent.Value;
@@ -253,7 +381,7 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         {
             self = new MouseCrossEvent()
             {
-                user = _playerManager.LocalEntity.Value,
+                user = localEntity,
                 clickCoords = mousePos,
                 holding = heldList,
             }

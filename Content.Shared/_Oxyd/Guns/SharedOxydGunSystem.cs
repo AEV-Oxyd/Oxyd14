@@ -28,6 +28,7 @@ using Content.Shared.Throwing;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
+using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
@@ -138,8 +139,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
         SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
-
+        SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentGetState>(OnExtensionGetState);
+        SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentHandleState>(OnExtensionHandleState);
     }
+
+
 
     public void OnEntInsertChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
@@ -164,6 +168,89 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         FillAmmo(ent.Comp, (ent.Owner, Comp<OxydGunComponent>(ent.Owner)), index, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
     }
 
+    private void OnExtensionGetState(Entity<OxydChamberExtensionComponent> ent, ref ComponentGetState args)
+    {
+        args.State = new OxydChamberExtensionComponentState(ent.Comp.extending);
+    }
+
+    private void OnExtensionHandleState(Entity<OxydChamberExtensionComponent> ent, ref ComponentHandleState args)
+    {
+        if (args.Current is not OxydChamberExtensionComponentState state)
+            return;
+
+        ent.Comp.extending = state.Extending.Select(x => x != null ? new List<NetEntity>(x) : null).ToList();
+        var c = CompOrNull<OxydAttachmentHolderComponent>(ent.Owner);
+        if (c is null)
+        {
+            Log.Error($"OxydChamberExtensionComponent on {ent} has no attachmentHolder!");
+            return;
+        }
+
+        foreach (var list in ent.Comp.extending)
+        {
+            if (list is null)
+                continue;
+            list.EnsureCapacity((int)c.mods.gunCapacityAdd);
+        }
+
+    }
+
+    public void updateExtension(OxydChamberExtensionComponent ext, Entity<OxydGunComponent> gun, CompoundedModifiers? mods)
+    {
+        mods ??= CompOrNull<OxydAttachmentHolderComponent>(gun.Owner)?.mods;
+        if (mods is null)
+            return;
+        var maxprovider = gun.Comp.InstanciatedFiremodes.Max(inp => inp.providerId)+1;
+        Log.Debug($"OxydGunSystem: Updating chamber extension with max provider ID {maxprovider}");
+        while (ext.extending.Count < maxprovider)
+        {
+            ext.extending.Add(null);
+        }
+        var providers = EntityManager.GetComponents<OxydGunProvidersComponent>(gun.Owner);
+        foreach (var prov in providers)
+        {
+            switch(prov)
+            {
+                case OxydGunAmmoChamberComponent chamb:
+                {
+                    foreach (var slot in chamb.bulletSlot)
+                        slot.Swap = false;
+                    break;
+                }
+            }
+        }
+        for (var i = 0; i < maxprovider; i++)
+        {
+            var current = ext.extending[i];
+            var targetSize = (int) mods.gunCapacityAdd;
+            if (current == null)
+            {
+                ext.extending[i] = new List<NetEntity>(targetSize);
+            }
+            else if (current.Capacity != targetSize)
+            {
+                var newList = new List<NetEntity>(targetSize);
+                var inserted = 0;
+                if (newList.Capacity > current.Capacity)
+                {
+                    newList.AddRange(current);
+                }
+                else
+                {
+                    newList.AddRange(current.GetRange(0, targetSize));
+                    foreach(var item in current.GetRange(targetSize, current.Capacity - targetSize))
+                    {
+                        _transformSystem.PlaceNextTo(GetEntity(item), gun.Owner);
+                        break;
+                    }
+                }
+                ext.extending[i] = newList;
+            }
+        }
+        FillAmmo(gun);
+        Dirty(gun.Owner, ext);
+    }
+
     public void onModifiersUpdated(Entity<OxydGunComponent> gun, ref ModifiersUpdatedEvent args)
     {
         foreach (var firemode in gun.Comp.InstanciatedFiremodes)
@@ -176,56 +263,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (args.mods.gunCapacityAdd > 0)
         {
             var ext = EnsureComp<OxydChamberExtensionComponent>(gun);
-            var maxprovider = gun.Comp.InstanciatedFiremodes.Max(inp => inp.providerId)+1;
-            Log.Debug($"OxydGunSystem: Updating chamber extension with max provider ID {maxprovider}");
-            while (ext.extending.Count < maxprovider)
-            {
-                ext.extending.Add(null);
-            }
-            var providers = EntityManager.GetComponents<OxydGunProvidersComponent>(gun.Owner);
-            foreach (var prov in providers)
-            {
-                switch(prov)
-                {
-                    case OxydGunAmmoChamberComponent chamb:
-                    {
-                        foreach (var slot in chamb.bulletSlot)
-                            slot.Swap = false;
-                        break;
-                    }
-                }
-            }
-
-
-            for (var i = 0; i < maxprovider; i++)
-            {
-                var current = ext.extending[i];
-                var targetSize = (int) args.mods.gunCapacityAdd;
-                if (current == null)
-                {
-                    ext.extending[i] = new List<NetEntity>(targetSize);
-                }
-                else if (current.Capacity != targetSize)
-                {
-                    var newList = new List<NetEntity>(targetSize);
-                    var inserted = 0;
-                    if (newList.Capacity > current.Capacity)
-                    {
-                        newList.AddRange(current);
-                    }
-                    else
-                    {
-                        newList.AddRange(current.GetRange(0, targetSize));
-                        foreach(var item in current.GetRange(targetSize, current.Capacity - targetSize))
-                        {
-                            _transformSystem.PlaceNextTo(GetEntity(item), gun.Owner);
-                            break;
-                        }
-                    }
-                    ext.extending[i] = newList;
-                }
-            }
-            FillAmmo(gun);
+            updateExtension(ext, gun, args.mods);
         }
     }
 
@@ -688,12 +726,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             case OxydGunAmmoChamberComponent provider:
                 var slot = provider.bulletSlot[frd.providerId];
+                // will cause a refill from EntEjectedMessage
                 if (_itemSlotsSystem.TryEject(gun, slot, null, out _))
                 {
                     _help.QueueDel(bullet);
-                    provider.realBullet[frd.providerId] = EntityUid.Invalid;
                 }
-                FillAmmo(gun, frd);
+
                 break;
             case OxydGunLaserProviderComponent provider:
                 break;
