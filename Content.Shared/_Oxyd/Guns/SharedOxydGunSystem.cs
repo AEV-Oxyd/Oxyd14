@@ -98,7 +98,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
     [Dependency] protected readonly ActionBlockerSystem _actionBlockerSystem = default!;
     [Dependency] protected readonly SharedHandsSystem _hands = default!;
-    [Dependency] protected readonly ItemSlotsSystem _slots = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -152,6 +151,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return;
         if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
             return;
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
+        var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
+        if (cont.Contains(args.Used))
+        {
+            args.Handled = true;
+            Log.Debug($"Stopped insertion");
+            return;
+        }
         var targets = _help.GetValidSlots(args.Used, (ent.Owner, null));
         if (targets.Count == 0)
             return;
@@ -161,7 +169,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (_itemSlotsSystem.CanInsert(ent.Owner, args.Used, null, slot, false))
                 return;
         }
-        var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
+
         foreach (var target in targets)
         {
             var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
@@ -173,15 +181,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             var targeting = extend.extending[targetIndex];
             if (targeting is null)
                 continue;
+            Log.Debug($"Capacity of target is {targeting.Capacity}, C {targeting.Count} at tick {_gameTiming.CurTick}");
             if (targeting.Count >= targeting.Capacity)
                 continue;
             if(!_hands.CanDrop(args.User, args.Used))
                 continue;
+            _hands.TryDrop(args.User, args.Used);
+            Log.Debug($"Dropped");
             if (TryInsertAmmo(extend, target.Item,
                     targetIndex,cont, true))
             {
+                Log.Debug($"Inserted");
                 args.Handled = true;
-                ent.Comp.realBullet[targetIndex] = EntityUid.Invalid;
+                DirtyEntity(args.User);
                 //RaiseNetworkEvent(new ChamberInsertionEvent(GetNetEntity(args.Used), GetNetEntity(ent), targetIndex));
                 return;
             }

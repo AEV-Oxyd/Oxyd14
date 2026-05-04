@@ -264,7 +264,7 @@ namespace Content.Shared.Containers.ItemSlots
             {
                 if (slot.Item != null)
                     _handsSystem.TryPickupAnyHand(args.User, slot.Item.Value, handsComp: hands);
-
+                
                 Insert(uid, slot, args.Used, args.User, excludeUserAudio: true);
 
                 if (slot.InsertSuccessPopup.HasValue)

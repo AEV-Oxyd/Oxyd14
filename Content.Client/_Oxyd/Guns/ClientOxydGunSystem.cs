@@ -70,51 +70,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
     }
 
-    public void OnTryInsertChamber(Entity<OxydGunAmmoChamberComponent> ent,ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
-    {
-        args.Register(1, (ev) =>
-        {
-            if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
-                return false;
-            if (!_actionBlockerSystem.CanUseHeldEntity(ev.self.user, ev.self.activeHeld))
-                return false;
-            if(!_actionBlockerSystem.CanInteract(ev.self.user, ent.Owner))
-                return false;
-            Log.Debug($"Received {ev.self.activeHeld} for chamber insertion on {ent}");
-            var targets = _help.GetValidSlots(ev.self.activeHeld, (ent.Owner, null));
-            var filleds = new List<ItemSlot>();
-            if (targets.Count == 0)
-                return false;
-            foreach (var target in targets)
-            {   // means we have a slot that will accept normally
-                if (!target.HasItem)
-                    return false;
-                filleds.Add(target);
-            }
-            foreach (var target in targets)
-            {
-                if (!target.HasItem)
-                    continue;
-                var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
-                if (targetIndex == -1)
-                {
-                    Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
-                    continue;
-                }
-
-                if (extend.extending[targetIndex] is not null && TryInsertAmmo(extend, (EntityUid?) ev.self.activeHeld,
-                        targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents), true))
-                {
-                    RaiseNetworkEvent(new ChamberInsertionEvent(GetNetEntity(ev.self.activeHeld), GetNetEntity(ent), targetIndex));
-                    return true;
-                }
-            }
-
-            return false;
-        });
-    }
-
-
     public void onChargeSet(SetGunChargeEvent ev)
     {
         var ent = GetEntity(ev.gun);
