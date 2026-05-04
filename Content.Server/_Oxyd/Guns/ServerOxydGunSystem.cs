@@ -171,7 +171,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     // validates the user's position to the gun entity
     public bool ValidateUserPosition(Entity<OxydGunComponent> gun, EntityUid user)
     {
-        if (HasComp<OxydHandheldGunComponent>(gun) && !_handsSystem.IsHolding(user, gun.Owner))
+        if (HasComp<OxydHandheldGunComponent>(gun) && !_hands.IsHolding(user, gun.Owner))
         {
             Log.Debug($"Entity {user} failed userPosition check! using gun {gun}");
             return false;

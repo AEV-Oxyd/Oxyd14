@@ -520,7 +520,7 @@ public partial class ServerOxydGunSystem
         if (TerminatingOrDeleted(inserting) || TerminatingOrDeleted(into) || TerminatingOrDeleted(user.Value))
             return;
 
-        if (!_handsSystem.IsHolding(user.Value, inserting, out _))
+        if (!_hands.IsHolding(user.Value, inserting, out _))
             return;
 
         if (!_actionBlockerSystem.CanUseHeldEntity(user.Value, inserting) || !_actionBlockerSystem.CanInteract(user.Value, into))

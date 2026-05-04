@@ -17,7 +17,7 @@ public abstract class GunChargeDecaySystem : EntitySystem
     public float getMultiplier(Entity<OxydGunChargeupComponent?> target)
     {
         var (uid, chargeComp) = target;
-        if (!Resolve(uid, ref chargeComp))
+        if (!Resolve(uid, ref chargeComp, false))
             return 1f;
         if (chargeComp.charge == 0 || chargeComp.maxCharge == 0)
             return 1f;

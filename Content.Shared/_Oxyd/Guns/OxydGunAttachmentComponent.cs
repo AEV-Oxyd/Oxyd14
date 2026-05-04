@@ -134,7 +134,7 @@ public sealed partial class SoundMod : OxydModifier, GunMod, ToolMod
 public sealed partial class SoundOverrideMod : OxydModifier, GunMod, ToolMod
 {
     [DataField]
-    public SoundSpecifier sound;
+    public SoundSpecifier sound = default!;
 
     public override void addToCompound(CompoundedModifiers target)
     {

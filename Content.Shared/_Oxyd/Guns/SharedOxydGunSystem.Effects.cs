@@ -60,7 +60,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         }
 
-        var holdings = _handsSystem.EnumerateHeld((shooter.Value, hands));
+        var holdings = _hands.EnumerateHeld((shooter.Value, hands));
         foreach (var thing in holdings)
         {
             if (gun.Owner == thing)

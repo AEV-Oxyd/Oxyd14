@@ -145,19 +145,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
             return false;
 
         var coords = _eyeManager.PixelToMap(args.PointerLocation.Position);
-        Log.Debug($"OnUiKey gave coords {coords}");
-
-        /*
-        if (coords.MapId == MapId.Nullspace && entity != null)
-        {
-            coords = _transformSystem.GetMapCoordinates(entity.Value);
-        }
-
-        if (coords.MapId == MapId.Nullspace && session.AttachedEntity != null)
-        {
-            coords = _transformSystem.GetMapCoordinates(session.AttachedEntity.Value);
-        }
-        */
 
         if (coords.MapId == MapId.Nullspace)
             return false;
@@ -172,7 +159,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         {
             blockval = HandleMouseDisabled(session, entCoords, entity ?? EntityUid.Invalid);
         }
-        Log.Debug($"BlockTransmit set to {blockval}");
         blockTransmit = blockval;
         return blockval;
     }
@@ -219,8 +205,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         if (session is null)
             return false;
         if (session.AttachedEntity is null)
-            return false;
-        if (!_timing.IsFirstTimePredicted)
             return false;
         Log.Debug($"Mouse enabled");
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
@@ -292,8 +276,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         if (session is null)
             return false;
         if (session.AttachedEntity is null)
-            return false;
-        if (!_timing.IsFirstTimePredicted)
             return false;
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;

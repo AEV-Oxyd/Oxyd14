@@ -1,6 +1,7 @@
 using System.Numerics;
 using Content.Client._Oxyd.Framework;
 using Content.Client.DoAfter;
+using Content.Client.Hands.Systems;
 using Content.Client.Items;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.ActionBlocker;
@@ -41,7 +42,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
-        SubscribeLocalEvent<OxydGunAmmoChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
+        //SubscribeLocalEvent<OxydGunAmmoChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
