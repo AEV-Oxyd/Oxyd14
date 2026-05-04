@@ -151,6 +151,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return;
         if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
             return;
+        if(_hands.TryDropIntoContainer(args.User, args.Used, _containerSystem.GetContainer(ent, oxydContents)))
+        {
+            args.Handled = true;
+            return;
+        }
         if (!_gameTiming.IsFirstTimePredicted)
             return;
         var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
