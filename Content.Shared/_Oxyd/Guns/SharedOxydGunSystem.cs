@@ -151,30 +151,24 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return;
         if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
             return;
-        if(_hands.TryDropIntoContainer(args.User, args.Used, _containerSystem.GetContainer(ent, oxydContents)))
-        {
-            args.Handled = true;
-            return;
-        }
         if (!_gameTiming.IsFirstTimePredicted)
             return;
         var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
-        if (cont.Contains(args.Used))
-        {
-            args.Handled = true;
-            Log.Debug($"Stopped insertion");
-            return;
-        }
         var targets = _help.GetValidSlots(args.Used, (ent.Owner, null));
         if (targets.Count == 0)
+        {
+            Log.Debug($"target count 0");
             return;
+        }
+
         // check if any slots will be valid , if so , don't hijack
         foreach (var slot in targets)
         {
-            if (_itemSlotsSystem.CanInsert(ent.Owner, args.Used, null, slot, false))
+            if (_itemSlotsSystem.CanInsert(ent.Owner, args.Used, args.User, slot, false))
                 return;
         }
-
+        args.Handled = true;
+        _hands.TryDropIntoContainer(args.User, args.Used, cont);
         foreach (var target in targets)
         {
             var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
@@ -182,26 +176,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             {
                 Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
                 continue;
+
             }
-            var targeting = extend.extending[targetIndex];
-            if (targeting is null)
+            Log.Debug($"Inserting at {targetIndex}");
+            var targ = extend!.extending[targetIndex];
+            if (targ is null)
                 continue;
-            Log.Debug($"Capacity of target is {targeting.Capacity}, C {targeting.Count} at tick {_gameTiming.CurTick}");
-            if (targeting.Count >= targeting.Capacity)
+            if (targ.Count >= targ.Capacity)
                 continue;
-            if(!_hands.CanDrop(args.User, args.Used))
-                continue;
-            _hands.TryDrop(args.User, args.Used);
-            Log.Debug($"Dropped");
-            if (TryInsertAmmo(extend, target.Item,
-                    targetIndex,cont, true))
+            targ.Insert(0, GetNetEntity(args.Used));
+            return;
+            /*
+            if (TryInsertAmmo(extend, args.Used, targetIndex, cont, true, args.User))
             {
-                Log.Debug($"Inserted");
                 args.Handled = true;
-                DirtyEntity(args.User);
-                //RaiseNetworkEvent(new ChamberInsertionEvent(GetNetEntity(args.Used), GetNetEntity(ent), targetIndex));
                 return;
             }
+            */
         }
     }
 
@@ -519,6 +510,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         return false;
     }
+    // USE INHAND VERSION for interactions , this is for internals
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid? bullet, int i, BaseContainer container, bool pushBack = false)
     {
         if (bullet is null)
@@ -538,6 +530,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
+    public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid bullet, int i, BaseContainer container, bool pushBack, EntityUid user)
+    {
+        var targ = extension!.extending[i];
+        if (targ is null)
+            return false;
+        if(targ.Count >= targ.Capacity)
+            return false;
+        if (bullet == EntityUid.Invalid)
+            return false;
+        if (!_hands.TryDropIntoContainer(user, bullet, container))
+            return false;
+        if(pushBack)
+            targ.Insert(0, GetNetEntity(bullet));
+        else
+            targ.Add(GetNetEntity(bullet));
+        return true;
+    }
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension,
         Entity<OxydMagazineComponent> magazine,
         int i,
