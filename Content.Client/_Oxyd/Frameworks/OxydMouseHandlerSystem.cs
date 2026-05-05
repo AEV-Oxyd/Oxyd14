@@ -98,11 +98,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
     [Dependency] private readonly IGameTiming _timing = default!;
     public bool mousedDown = false;
     public bool altDown = false;
-    // will stop the click event being replicated to  the normal SS14 keybindigns handler
-    // used to stop double-interactions when our own pipeline returns a true to block it
-    // can't really stop it from its proper place since its in engine
-    // accesed in HandsUIController
-    public bool blockTransmit = false;
     public EntityUid crossed = EntityUid.Invalid;
     /// <inheritdoc/>
     public override void Initialize()
@@ -159,7 +154,6 @@ public sealed class OxydMouseHandlingSystem : EntitySystem
         {
             blockval = HandleMouseDisabled(session, entCoords, entity ?? EntityUid.Invalid);
         }
-        blockTransmit = blockval;
         return blockval;
     }
 

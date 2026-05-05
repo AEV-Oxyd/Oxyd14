@@ -151,13 +151,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return;
         if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
             return;
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
         var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
         var targets = _help.GetValidSlots(args.Used, (ent.Owner, null));
         if (targets.Count == 0)
         {
-            Log.Debug($"target count 0");
             return;
         }
 
@@ -167,8 +164,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (_itemSlotsSystem.CanInsert(ent.Owner, args.Used, args.User, slot, false))
                 return;
         }
-        args.Handled = true;
-        _hands.TryDropIntoContainer(args.User, args.Used, cont);
         foreach (var target in targets)
         {
             var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
@@ -176,23 +171,22 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             {
                 Log.Error($"Entity {ent} had a bullet inserted for a chamber gun Slot without a linked Slot!");
                 continue;
+            }
 
+            var item = target.Item;
+            if (item is null || TerminatingOrDeleted(item))
+            {
+                Log.Error($"Slot had no item yet was returned as valid and did not return true on canInsert");
+                continue;
             }
             Log.Debug($"Inserting at {targetIndex}");
-            var targ = extend!.extending[targetIndex];
-            if (targ is null)
-                continue;
-            if (targ.Count >= targ.Capacity)
-                continue;
-            targ.Insert(0, GetNetEntity(args.Used));
-            return;
-            /*
-            if (TryInsertAmmo(extend, args.Used, targetIndex, cont, true, args.User))
+            // will enter chamber , and then be pulled when we push down the current bullet
+            TryInsertAmmo(extend,args.Used, targetIndex, cont, true, args.User);
+            args.Handled = true;
+            if(!TryInsertAmmo(extend, item, targetIndex, cont, true))
             {
-                args.Handled = true;
-                return;
+                Log.Debug($"Failed to insert {item} into chamber extension at index {targetIndex},  bullets {args.Used} is likely lost?");
             }
-            */
         }
     }
 
@@ -202,8 +196,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void OnEntInsertChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
         var target = args.Container;
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
@@ -213,8 +205,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void OnEntRemoveChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntRemovedFromContainerMessage args)
     {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
         var target = args.Container;
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
@@ -510,7 +500,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         return false;
     }
-    // USE INHAND VERSION for interactions , this is for internals
+    // USE INHAND VERSION for interactions , this is for internals, predicted
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid? bullet, int i, BaseContainer container, bool pushBack = false)
     {
         if (bullet is null)
@@ -523,10 +513,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (bullet == EntityUid.Invalid)
             return false;
         _containerSystem.Insert(bullet.Value, container, null, false);
+        var c = GetNetEntity(bullet.Value);
+        // prediction compatibility required hack
+        if (targ.Contains(c))
+            return true;
         if(pushBack)
-            targ.Insert(0, GetNetEntity(bullet.Value));
+            targ.Insert(0, c);
         else
-            targ.Add(GetNetEntity(bullet.Value));
+            targ.Add(c);
         return true;
     }
 
@@ -541,10 +535,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         if (!_hands.TryDropIntoContainer(user, bullet, container))
             return false;
+
+        var c = GetNetEntity(bullet);
+        // prediction compatibility required hack
+        if (targ.Contains(c))
+            return true;
         if(pushBack)
-            targ.Insert(0, GetNetEntity(bullet));
+            targ.Insert(0, c);
         else
-            targ.Add(GetNetEntity(bullet));
+            targ.Add(c);
         return true;
     }
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension,

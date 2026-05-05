@@ -85,12 +85,6 @@ public sealed class HandsUIController : UIController, IOnStateEntered<GameplaySt
         if (!_handsSystem.TryGetPlayerHands(out var hands))
             return;
 
-        if (_mouseHandle.blockTransmit)
-        {
-            args.Handle();
-            _mouseHandle.blockTransmit = false;
-            return;
-        }
 
         if (args.Function == EngineKeyFunctions.UIClick)
         {
