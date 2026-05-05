@@ -190,10 +190,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
-
-
-
-
     public void OnEntInsertChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
         var target = args.Container;
@@ -201,6 +197,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (index == -1)
             return;
         ent.Comp.realBullet[index] =  args.Entity;
+        Log.Debug($"Inserted {args.Entity} into chamber at index {index} at tick {_gameTiming.CurTick}");
     }
 
     public void OnEntRemoveChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntRemovedFromContainerMessage args)
@@ -209,6 +206,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
             return;
+        Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
         ent.Comp.realBullet[index] = EntityUid.Invalid;
         FillAmmo(ent.Comp, (ent.Owner, Comp<OxydGunComponent>(ent.Owner)), index, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
     }
