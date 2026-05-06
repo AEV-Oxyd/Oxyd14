@@ -108,6 +108,13 @@ public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoCha
     [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
 }
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydGunAmmoRevolvingChamberComponent : OxydGunAmmoChamberComponent
+{
+    [CheckForGunUpdate(true), ViewVariables]
+    public List<List<EntityUid>> revolvingSlots;
+}
 // acts as a buffer between magazines / loading if present
 [RegisterComponent, NetworkedComponent]
 public sealed partial class OxydChamberExtensionComponent : Component
