@@ -36,6 +36,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Exceptions;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -144,7 +145,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentGetState>(OnExtensionGetState);
         SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentHandleState>(OnExtensionHandleState);
     }
-
     public void OnTryInsertLate(Entity<OxydGunAmmoChamberComponent> ent,ref InteractUsingEvent args)
     {
         if (args.Handled)
@@ -164,6 +164,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (_itemSlotsSystem.CanInsert(ent.Owner, args.Used, args.User, slot, false))
                 return;
         }
+        ent.Comp.silenceAutoInsert = true;
         foreach (var target in targets)
         {
             var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
@@ -180,14 +181,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             }
             Log.Debug($"Inserting at {targetIndex}");
-            // will enter chamber , and then be pulled when we push down the current bullet
-            TryInsertAmmo(extend,args.Used, targetIndex, cont, true, args.User);
-            args.Handled = true;
-            if(!TryInsertAmmo(extend, item, targetIndex, cont, true))
-            {
-                Log.Debug($"Failed to insert {item} into chamber extension at index {targetIndex},  bullets {args.Used} is likely lost?");
-            }
+            // will enter chamber, leaving itemslot open
+            if (!TryInsertAmmo(extend, item, targetIndex, cont, true))
+                continue;
+            break;
         }
+        ent.Comp.silenceAutoInsert = false;
     }
 
     public void OnEntInsertChamber(Entity<OxydGunAmmoChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
@@ -195,6 +194,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var target = args.Container;
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
+            return;
+        if (!_gameTiming.IsFirstTimePredicted)
             return;
         ent.Comp.realBullet[index] =  args.Entity;
         Log.Debug($"Inserted {args.Entity} into chamber at index {index} at tick {_gameTiming.CurTick}");
@@ -206,8 +207,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
             return;
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
         ent.Comp.realBullet[index] = EntityUid.Invalid;
+        if (ent.Comp.silenceAutoInsert)
+            return;
         FillAmmo(ent.Comp, (ent.Owner, Comp<OxydGunComponent>(ent.Owner)), index, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
     }
 
@@ -506,14 +511,18 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var targ = extension!.extending[i];
         if (targ is null)
             return false;
-        if(targ.Count >= targ.Capacity)
-            return false;
         if (bullet == EntityUid.Invalid)
             return false;
+        // insertion hppened on predicted tick
+        if (targ.Count >= targ.Capacity)
+        {
+            if(!(targ.Contains(GetNetEntity(bullet.Value)) && !_gameTiming.IsFirstTimePredicted))
+                return false;
+        }
         _containerSystem.Insert(bullet.Value, container, null, false);
         var c = GetNetEntity(bullet.Value);
         // prediction compatibility required hack
-        if (targ.Contains(c))
+        if (!_gameTiming.IsFirstTimePredicted)
             return true;
         if(pushBack)
             targ.Insert(0, c);
@@ -536,7 +545,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         var c = GetNetEntity(bullet);
         // prediction compatibility required hack
-        if (targ.Contains(c))
+        if (!_gameTiming.IsFirstTimePredicted)
             return true;
         if(pushBack)
             targ.Insert(0, c);
@@ -580,8 +589,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (listRef.Count == 0)
             return false;
         bullet = GetEntity(listRef[0]);
-        listRef.RemoveAt(0);
         _containerSystem.Remove(bullet.Value, container);
+        if(_gameTiming.IsFirstTimePredicted)
+           listRef.RemoveAt(0);
         return true;
 
     }

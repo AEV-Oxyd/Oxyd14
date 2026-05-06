@@ -97,6 +97,9 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
     [ViewVariables, AutoNetworkedField]
     public List<EntityUid> realBullet = new List<EntityUid>();
 
+    [ViewVariables, AutoNetworkedField]
+    public bool silenceAutoInsert = false;
+
 
 }
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
