@@ -25,6 +25,7 @@ using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Power.EntitySystems;
 using Content.Shared.Random.Helpers;
+using Content.Shared.Stacks;
 using Content.Shared.Throwing;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
@@ -99,6 +100,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
     [Dependency] protected readonly ActionBlockerSystem _actionBlockerSystem = default!;
     [Dependency] protected readonly SharedHandsSystem _hands = default!;
+    [Dependency] protected readonly SharedStackSystem _stacks = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 
@@ -513,14 +515,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         if (bullet == EntityUid.Invalid)
             return false;
+        var c = GetNetEntity(bullet.Value);
         // insertion hppened on predicted tick
         if (targ.Count >= targ.Capacity)
         {
-            if(!(targ.Contains(GetNetEntity(bullet.Value)) && !_gameTiming.IsFirstTimePredicted))
+            if(!(targ.Contains(c) && !_gameTiming.IsFirstTimePredicted))
                 return false;
         }
         _containerSystem.Insert(bullet.Value, container, null, false);
-        var c = GetNetEntity(bullet.Value);
         // prediction compatibility required hack
         if (!_gameTiming.IsFirstTimePredicted)
             return true;
