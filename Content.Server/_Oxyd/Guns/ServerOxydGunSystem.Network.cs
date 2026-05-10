@@ -526,7 +526,7 @@ public partial class ServerOxydGunSystem
         if (!_actionBlockerSystem.CanUseHeldEntity(user.Value, inserting) || !_actionBlockerSystem.CanInteract(user.Value, into))
             return;
 
-        if (!TryComp<OxydGunAmmoChamberComponent>(into, out var chamber) || !TryComp<OxydChamberExtensionComponent>(into, out var extend))
+        if (!TryComp<OxydChamberComponent>(into, out var chamber) || !TryComp<OxydChamberExtensionComponent>(into, out var extend))
             return;
 
         if (ev.slotId < 0 || ev.slotId >= extend.extending.Count)

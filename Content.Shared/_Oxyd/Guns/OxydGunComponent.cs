@@ -87,7 +87,7 @@ public abstract partial class OxydGunProvidersComponent : Component
 };
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
+public partial class OxydChamberComponent : OxydGunProvidersComponent
 {
 
     [DataField("bulletSlot")]
@@ -96,31 +96,37 @@ public partial class OxydGunAmmoChamberComponent : OxydGunProvidersComponent
     // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
     [ViewVariables, AutoNetworkedField]
     public List<EntityUid> realBullet = new List<EntityUid>();
-
     [ViewVariables, AutoNetworkedField]
     public bool silenceAutoInsert = false;
 
 
 }
 [RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydGunAmmoMagazineChamberComponent : OxydGunAmmoChamberComponent
+public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
 {
     [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
 }
-
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydGunAmmoRevolvingChamberComponent : OxydGunAmmoChamberComponent
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
+public sealed partial class OxydRevolvingChamberComponent : OxydChamberComponent
 {
-    [CheckForGunUpdate(true), ViewVariables]
-    public List<List<EntityUid>> revolvingSlots;
+    public override bool SessionSpecific => true;
+    [NetSerializable, Serializable, DataDefinition]
+    public sealed partial class RevolvingData
+    {
+        public int index;
+        public int count;
+        public List<NetEntity> loaded = new();
+    }
+    [CheckForGunUpdate(true), ViewVariables, AutoNetworkedField]
+    public List<RevolvingData> revolvingSlots;
 }
 // acts as a buffer between magazines / loading if present
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydChamberExtensionComponent : Component
 {
     public override bool SessionSpecific => true;
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     // will be null for every firemode index present unless set
     //  array length defines how many extra bullet slots are given
     public List<List<NetEntity>?> extending = new();
