@@ -11,7 +11,7 @@
     state: semi
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
-  provider: OxydChamber
+  provider: OxydMagazineChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   effects:
@@ -29,6 +29,23 @@
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
   provider: OxydChamber
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectTryFireMouseDirection
+
+- type: gunFiremode
+  id: baseFiremodeRevolver
+  firerate: 10
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: semi
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  provider: OxydRevolvingChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   effects:
@@ -266,6 +283,51 @@
       - AttachmentOxydCapacitiy
 
 - type: entity
+  name: Oxyd Revolver
+  parent: BaseItem
+  id: WeaponOxydRevolver
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
+    layers:
+    - state: base
+      map: ["enum.GunVisualLayers.Base"]
+    - state: mag-0
+      map: ["enum.GunVisualLayers.Mag"]
+  - type: Item
+    size: Large
+  - type: OxydGun
+    firemodes:
+    - baseFiremodeRevolver
+  - type: OxydHandheldGun
+  - type: OxydRevolvingChamber
+    bulletSlot:
+    - name: Chamber
+      insertSound: null
+      ejectSound: null
+      priority: 0
+      whitelist:
+        components:
+        - OxydBullet
+    revolvingSlots:
+    - count: 6
+  - type: StaticPrice
+    price: 500
+  - type: RecoilHandler
+  - type: OxydAttachmentHolder
+    slots:
+    - Barrel
+    - Scope
+    - Internal
+    whitelist:
+      components:
+      - OxydAttachment
+  - type: OxydAttachmentSpawner
+    insert:
+    - AttachmentOxydCapacitiy
+
+- type: entity
   parent: BasicHitscan
   id: OxydHitscan
   name: oxyd debug laser ray
@@ -336,15 +398,12 @@
     size: Large
   - type: OxydMagazine
     capacity: 30
+  - type: OxydMagazineInitializer
+    initialBullets: magazineOxydTest
   - type: ContainerContainer
     containers:
       storagebase: !type:Container
         ents: []
-  - type: EntityTableContainerFill
-    containers:
-      storagebase:
-        id: BulletOxyd
-        amount: 30
 
 - type: entity
   name: Oxyd Barrel Attachemnt
@@ -384,11 +443,11 @@
      - !type:DamageMod
         addMod:
           types:
-            Heat: 250
+          Heat: 250
      - !type:DamageMod
         addMod:
           types:
-            Heat: 250
+          Heat: 250
 
 - type: entity
   name: Oxyd Capacity Attachment
@@ -407,6 +466,40 @@
     mods:
     - !type:WeaponCapacityMod
       capacityAdd: 8
+
+- type: entityList
+  id: magazineOxydTest
+  entities:
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
+  - BulletOxyd
 
 - type: entity
   id: ProjectileOxyd

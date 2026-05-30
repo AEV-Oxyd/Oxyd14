@@ -107,17 +107,72 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
     public List<ItemSlot> magazineSlot = new();
 }
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
-public sealed partial class OxydRevolvingChamberComponent : OxydChamberComponent
+public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent
 {
     public override bool SessionSpecific => true;
     [NetSerializable, Serializable, DataDefinition]
     public sealed partial class RevolvingData
     {
-        public int index;
-        public int count;
-        public List<NetEntity> loaded = new();
+        [ViewVariables]
+        public int index = 0;
+        [DataField]
+        public int count
+        {
+            get;
+            set
+            {
+                loaded = new NetEntity[value];
+                field = value;
+            }
+        }
+
+        [ViewVariables]
+        public NetEntity[] loaded;
+
+        public void increment()
+        {
+            index = (index + 1) % count;
+        }
+        // gets the next position
+        public int getIncrement()
+        {
+            return (index + 1) % count;
+        }
+
+        public int getIncrement(int i)
+        {
+            return (i+1) % count;
+        }
+        // returns -1 for no slots open
+        public int getFreeSpot()
+        {
+            if (seek() == NetEntity.Invalid)
+                return index;
+            int starting = index;
+            int cur = getIncrement(starting);
+            while (cur != starting)
+            {
+                if (loaded[cur] == NetEntity.Invalid)
+                    return cur;
+                cur = getIncrement(cur);
+            }
+
+            return -1;
+        }
+
+        public NetEntity get()
+        {
+            var tng = loaded[index];
+            increment();
+            return tng;
+        }
+
+        public NetEntity seek()
+        {
+            return loaded[index];
+        }
     }
-    [CheckForGunUpdate(true), ViewVariables, AutoNetworkedField]
+    [CheckForGunUpdate(true), DataField, AutoNetworkedField]
     public List<RevolvingData> revolvingSlots;
 }
 // acts as a buffer between magazines / loading if present

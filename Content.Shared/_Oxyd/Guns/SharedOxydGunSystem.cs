@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.ActionBlocker;
 using Content.Shared._Oxyd.Framework.RadialMenu;
+using Content.Shared.Abilities.Mime;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Coordinates;
 using Content.Shared.Damage;
@@ -144,30 +145,49 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
         SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
         SubscribeLocalEvent<OxydChamberExtensionComponent, AfterAutoHandleStateEvent>(OnExtensionHandleState);
-        SubscribeLocalEvent<OxydRevolvingChamberComponent, AfterAutoHandleStateEvent>(OnRevolvingChamberHandleState);
-        SubscribeLocalEvent<OxydRevolvingChamberComponent, InteractUsingEvent>(TryInsertRevolver, after: new []{typeof(ItemSlotsSystem)});
+        //SubscribeLocalEvent<OxydRevolvingChamberComponent, AfterAutoHandleStateEvent>(OnRevolvingChamberHandleState);
+        SubscribeLocalEvent<OxydRevolvingChamberComponent, InteractUsingEvent>(TryInsertRevolver, before: new []{typeof(ItemSlotsSystem)});
+        SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentInit>(onRevolverInit);
+    }
+
+    public void onRevolverInit(Entity<OxydRevolvingChamberComponent> ent, ref ComponentInit args)
+    {
+        if (TryComp<OxydChamberExtensionComponent>(ent, out var extension))
+        {
+            while (extension.extending.Count < ent.Comp.revolvingSlots.Count)
+            {
+                extension.extending.Add(null);
+            }
+        }
     }
 
     public void TryInsertRevolver(Entity<OxydRevolvingChamberComponent> ent, ref InteractUsingEvent args)
     {
         if (args.Handled)
             return;
-        foreach (var chamber in ent.Comp.revolvingSlots)
+        var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
+        for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
         {
-            if (chamber.count == chamber.loaded.Count)
-                continue;
+            var data = ent.Comp.revolvingSlots[i];
+            if (TryInsertAmmo(ent.Comp, args.Used, i, cont))
+            {
+                args.Handled = true;
+                return;
+            }
+        }
 
+        if (!TryComp(ent, out OxydChamberExtensionComponent? extend))
+            return;
+        for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
+        {
+            if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
+            {
+                args.Handled = true;
+                return;
+            }
         }
     }
 
-    public void OnRevolvingChamberHandleState(Entity<OxydRevolvingChamberComponent> ent,
-        ref AfterAutoHandleStateEvent args)
-    {
-        foreach (var provider in ent.Comp.revolvingSlots)
-        {
-            provider.loaded.EnsureCapacity(provider.count);
-        }
-    }
     public void OnTryInsertLate(Entity<OxydChamberComponent> ent,ref InteractUsingEvent args)
     {
         if (args.Handled)
@@ -466,22 +486,25 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
-    public void fillAmmo(OxydRevolvingChamberComponent revolving,
+    public bool FillAmmo(OxydRevolvingChamberComponent revolving,
         Entity<OxydGunComponent> gun,
         int i,
         BaseContainer container,
         OxydChamberExtensionComponent? extend = null)
     {
-        var item = revolving.bulletSlot[i].Item;
-        if (item is not null)
+        var data = revolving.revolvingSlots[i];
+        var item = data.seek();
+        if (!TerminatingOrDeleted(GetEntity(item)))
         {
-            return;
+            return false;
         }
 
         if (extend is not null && TryGetAmmo(extend, i, container, out var newBullet))
         {
-
+            data.loaded[data.index] = GetNetEntity(newBullet.Value);
+            return true;
         }
+        return false;
     }
 
     public bool FillAmmo(OxydChamberComponent chamber,
@@ -586,6 +609,29 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             targ.Add(c);
         return true;
     }
+
+    public bool TryInsertAmmo(OxydRevolvingChamberComponent revolving,
+        EntityUid bullet,
+        int i,
+        BaseContainer container)
+    {
+        var data = revolving.revolvingSlots[i];
+        if (data.loaded.Contains(GetNetEntity(bullet)) && !_gameTiming.IsFirstTimePredicted)
+        {
+            _containerSystem.Insert(bullet, container, null, false);
+            return true;
+        }
+
+        var indice = data.getFreeSpot();
+        if (indice == -1)
+        {
+            return false;
+        }
+        _containerSystem.Insert(bullet, container, null, false);
+        data.loaded[indice] = GetNetEntity(bullet);
+        return true;
+
+    }
     public bool TryInsertAmmo(OxydChamberExtensionComponent extension,
         Entity<OxydMagazineComponent> magazine,
         int i,
@@ -645,18 +691,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                     }
                     break;
                 }
+                case OxydRevolvingChamberComponent revolving:
+                {
+                    for (var i = 0; i < revolving.revolvingSlots.Count; i++)
+                    {
+                        FillAmmo(revolving, gun, i, container, extend);
+                    }
+                    break;
+                }
                 case OxydChamberComponent chamber:
                 {
                     for (var i = 0; i < chamber.bulletSlot.Count; i++)
                     {
-                        var item = chamber.bulletSlot[i].Item;
-                        if (item is not null)
-                            continue;
-                        if (extend is not null && TryGetAmmo(extend, i, container, out var newBullet))
-                        {
-                            if(_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
-                                chamber.realBullet[i] = newBullet.Value;
-                        }
+                        FillAmmo(chamber, gun, i, container, extend);
                     }
                     break;
                 }
@@ -677,14 +724,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 FillAmmo(magazines, gun, fireProto.providerId, cont,extens);
                 break;
             }
+            case OxydRevolvingChamberComponent revolving:
+            {
+                FillAmmo(revolving, gun, fireProto.providerId, cont,extens);
+                break;
+            }
             case OxydChamberComponent chamber:
             {
-                if (extens?.extending[fireProto.providerId] is not null && TryGetAmmo(extens, fireProto.providerId, cont, out var newBullet))
-                {
-                    if(_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[fireProto.providerId].ContainerSlot!))
-                        chamber.realBullet[fireProto.providerId] = newBullet.Value;
-                }
-
+                FillAmmo(chamber, gun, fireProto.providerId, cont,extens);
                 break;
             }
             case OxydGunLaserProviderComponent:
@@ -717,9 +764,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         OxydGunEffect effect,
         Entity<OxydGunComponent> gun,
         EntityUid? shooter);
-
-
-
 
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun, CompoundedModifiers mods,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
     {
@@ -792,6 +836,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
+            case OxydRevolvingChamberComponent provider:
+
+                ammo = GetEntity(provider.revolvingSlots[frd.providerId].seek());
+                if (TerminatingOrDeleted(ammo))
+                    return false;
+                projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
+                return ammo.Value != EntityUid.Invalid;
             // magazine uses the same handling
             case OxydChamberComponent provider:
                 ammo = provider.realBullet[frd.providerId];
@@ -822,6 +873,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         switch (frd.AmmoProviders)
         {
             // magazine also fits here
+            case OxydRevolvingChamberComponent provider:
+                return provider.revolvingSlots[frd.providerId].seek() != NetEntity.Invalid;
             case OxydChamberComponent provider:
                 return provider.realBullet[index] != EntityUid.Invalid;
             case OxydGunLaserProviderComponent provider:
@@ -837,6 +890,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var frd = gun.Comp.selectedFiremodePrototype;
         switch (frd.AmmoProviders)
         {
+            case OxydRevolvingChamberComponent provider:
+                var data = provider.revolvingSlots[frd.providerId];
+                _containerSystem.TryRemoveFromContainer(GetEntity(data.seek()), false);
+                data.loaded[data.index] = NetEntity.Invalid;
+                FillAmmo(provider, gun, frd.providerId, _containerSystem.GetContainer(gun, oxydContents), CompOrNull<OxydChamberExtensionComponent>(gun));
+                if (data.loaded[data.index] != NetEntity.Invalid)
+                    break;
+                data.increment();
+                break;
             case OxydChamberComponent provider:
                 var slot = provider.bulletSlot[frd.providerId];
                 // will cause a refill from EntEjectedMessage
