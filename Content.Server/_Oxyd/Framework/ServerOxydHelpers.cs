@@ -10,11 +10,11 @@ using Robust.Shared.Player;
 
 namespace Content.Server._Oxyd.Framework;
 
-public sealed class ServerOxydHelpers : EntitySystem
+public sealed partial  class ServerOxydHelpers : EntitySystem
 {
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly TransformSystem _transform = default!;
-    [Dependency] private readonly IConfigurationManager _config = default!;
+    [Dependency] private  IPlayerManager _playerManager = default!;
+    [Dependency] private  TransformSystem _transform = default!;
+    [Dependency] private  IConfigurationManager _config = default!;
 
 
     public List<ICommonSession> lookupPlayerSessions(MapId map, Box2Rotated box)

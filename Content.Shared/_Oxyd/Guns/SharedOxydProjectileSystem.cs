@@ -47,17 +47,17 @@ public sealed class DrawHitscanEvent : EntityEventArgs
 /// <summary>
 /// This handles...
 /// </summary>
-public abstract class SharedOxydProjectileSystem : EntitySystem
+public abstract partial class SharedOxydProjectileSystem : EntitySystem
 {
-    [Dependency] protected readonly IGameTiming _gameTiming = default!;
-    [Dependency] protected readonly SharedTransformSystem _transform = default!;
-    [Dependency] protected readonly SharedOxydGunSystem _Guns = default!;
-    [Dependency] protected readonly SharedPhysicsSystem _physics = default!;
-    [Dependency] protected readonly RayCastSystem _rayCastSystem = default!;
-    [Dependency] protected readonly INetManager _netmanager = default!;
-    [Dependency] protected readonly DamageableSystem _damage = default!;
-    [Dependency] protected readonly SharedOxydHelpers _help = default!;
-    //[Dependency] private readonly EntityManager _entityManager = default!;
+    [Dependency] protected  IGameTiming _gameTiming = default!;
+    [Dependency] protected  SharedTransformSystem _transform = default!;
+    [Dependency] protected  SharedOxydGunSystem _Guns = default!;
+    [Dependency] protected  SharedPhysicsSystem _physics = default!;
+    [Dependency] protected  RayCastSystem _rayCastSystem = default!;
+    [Dependency] protected  INetManager _netmanager = default!;
+    [Dependency] protected  DamageableSystem _damage = default!;
+    [Dependency] protected  SharedOxydHelpers _help = default!;
+    //[Dependency] private  EntityManager _entityManager = default!;
     public List<Entity<OxydProjectileComponent>> FireNextTick =  new List<Entity<OxydProjectileComponent>>();
     private float tickDelay = 0;
     // hitscans process 100m per tick

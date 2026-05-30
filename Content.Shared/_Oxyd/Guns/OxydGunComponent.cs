@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
-using Content.Shared.EntityList;
 using Robust.Shared.GameStates;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
@@ -207,10 +206,3 @@ public sealed partial class OxydChargeComponent : OxydGunProvidersComponent
     [DataField, AutoNetworkedField]
     public float charge = 0;
 }
-[RegisterComponent]
-public sealed partial class OxydMagazineInitializerComponent : Component
-{
-    [DataField]
-    public ProtoId<EntityListPrototype> initialBullets;
-}
-

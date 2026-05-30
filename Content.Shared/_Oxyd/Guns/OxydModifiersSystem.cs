@@ -88,21 +88,21 @@ public sealed partial class ModifiersUpdatedEvent : EntityEventArgs
 {
     public required CompoundedModifiers mods;
 }
-public sealed class OxydModifiersSystem : EntitySystem
+public sealed partial class OxydModifiersSystem : EntitySystem
 {
-    [Dependency] private readonly SharedContainerSystem _container = default!;
-    [Dependency] private readonly EntityWhitelistSystem _whitelist = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly MetaDataSystem _meta = default!;
-    [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
-    [Dependency] private readonly SharedToolSystem _tools = default!;
-    [Dependency] private readonly ISharedPlayerManager _player = default!;
-    [Dependency] private readonly SharedDoAfterSystem _after = default!;
-    [Dependency] private readonly INetManager _net = default!;
+    [Dependency] private  SharedContainerSystem _container = default!;
+    [Dependency] private  EntityWhitelistSystem _whitelist = default!;
+    [Dependency] private  SharedPopupSystem _popup = default!;
+    [Dependency] private  MetaDataSystem _meta = default!;
+    [Dependency] private  SharedAudioSystem _audio = default!;
+    [Dependency] private  SharedRadialMenuSystem _radials = default!;
+    [Dependency] private  SharedToolSystem _tools = default!;
+    [Dependency] private  ISharedPlayerManager _player = default!;
+    [Dependency] private  SharedDoAfterSystem _after = default!;
+    [Dependency] private  INetManager _net = default!;
 
     public const string cid = "oAtts";
-    private static readonly ProtoId<ToolQualityPrototype> ScrewingQuality = "Screwing";
+    private static  ProtoId<ToolQualityPrototype> ScrewingQuality = "Screwing";
     private EntityQuery<OxydAttachmentHolderComponent> oAttHoldQuery;
     /// <inheritdoc/>
 
