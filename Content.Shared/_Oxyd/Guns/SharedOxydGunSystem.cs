@@ -766,9 +766,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter);
 
-
-
-
     public Vector2 GetBulletInitialMovementDirection(Entity<OxydProjectileComponent> projectile, Entity<OxydGunComponent> gun, CompoundedModifiers mods,  MapCoordinates shootingFrom, MapCoordinates targetPos, EntityUid shooter)
     {
         var firemode = gun.Comp.selectedFiremodePrototype;
