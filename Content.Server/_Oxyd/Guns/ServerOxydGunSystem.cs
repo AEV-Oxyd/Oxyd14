@@ -9,6 +9,8 @@ using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
+using Content.Shared.Containers;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
@@ -57,7 +59,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
+        SubscribeLocalEvent<OxydMagazineComponent, MapInitEvent>(onMagazineInitialized, after: new []{typeof(ContainerFillSystem)});
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentInit>(onAddRecoil);
         SubscribeLocalEvent<OxydGunComponent, ComponentGetStateAttemptEvent>(onTryStateGun);
         SubscribeLocalEvent<OxydChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
@@ -197,7 +199,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
 
 
-    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref MapInitEvent args)
     {
         var cnt = _containerSystem.GetContainer(ent, oxydContents);
         foreach (var bullet in cnt.ContainedEntities)
