@@ -86,16 +86,16 @@ public class MouseAltClickedEvent
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class OxydMouseHandlingSystem : EntitySystem
+public sealed partial  class OxydMouseHandlingSystem : EntitySystem
 {
-    [Dependency] private readonly HandsSystem _handsSystem = default!;
-    [Dependency] private readonly IInputManager _inputManager = default!;
-    [Dependency] private readonly IEyeManager _eyeManager = default!;
-    [Dependency] private readonly TransformSystem _transformSystem = default!;
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly IStateManager _stateManager = default!;
-    [Dependency] private readonly IUserInterfaceManager _uiManager = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private  HandsSystem _handsSystem = default!;
+    [Dependency] private  IInputManager _inputManager = default!;
+    [Dependency] private  IEyeManager _eyeManager = default!;
+    [Dependency] private  TransformSystem _transformSystem = default!;
+    [Dependency] private  IPlayerManager _playerManager = default!;
+    [Dependency] private  IStateManager _stateManager = default!;
+    [Dependency] private  IUserInterfaceManager _uiManager = default!;
+    [Dependency] private  IGameTiming _timing = default!;
     public bool mousedDown = false;
     public bool altDown = false;
     public EntityUid crossed = EntityUid.Invalid;

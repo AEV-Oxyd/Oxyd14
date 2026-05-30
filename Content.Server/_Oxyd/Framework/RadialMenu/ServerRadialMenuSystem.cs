@@ -5,9 +5,9 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Framework.RadialMenu;
 
-public sealed class ServerRadialMenuSystem : SharedRadialMenuSystem
+public sealed partial  class ServerRadialMenuSystem : SharedRadialMenuSystem
 {
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     private readonly Dictionary<Guid, PendingRequest> _pending = new();
     private readonly Dictionary<ICommonSession, int> _playerRequestCount = new();

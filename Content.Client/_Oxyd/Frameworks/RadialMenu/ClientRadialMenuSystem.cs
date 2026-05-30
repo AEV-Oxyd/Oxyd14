@@ -8,11 +8,11 @@ using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Frameworks.RadialMenu;
 
-public sealed class ClientRadialMenuSystem : SharedRadialMenuSystem
+public sealed partial  class ClientRadialMenuSystem : SharedRadialMenuSystem
 {
-    [Dependency] private readonly IUserInterfaceManager _ui = default!;
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private  IUserInterfaceManager _ui = default!;
+    [Dependency] private  IPlayerManager _playerManager = default!;
+    [Dependency] private  IGameTiming _timing = default!;
 
     public override void Initialize()
     {

@@ -202,6 +202,6 @@ public partial class OxydAttachmentComponent : Component
     [DataField]
     public List<OxydModifier> mods = default!;
     [DataField]
-    public AttSlot Slot = default!;
+    public AttSlot Slot = AttSlot.Internal3;
 }
 

@@ -17,7 +17,6 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Coordinates;
 using Content.Shared.Damage;
 using Content.Shared.Disposal;
-using Content.Shared.EntityList;
 using Content.Shared.Hands;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
@@ -84,24 +83,24 @@ public partial class ChamberInsertionEvent : EntityEventArgs
 /// </summary>
 public abstract partial class SharedOxydGunSystem : EntitySystem
 {
-    [Dependency] protected readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly SharedOxydProjectileSystem _projectileSystem = default!;
-    [Dependency] private readonly ItemSlotsSystem _itemSlotsSystem = default!;
-    [Dependency] protected readonly IGameTiming _gameTiming = default!;
-    [Dependency] protected readonly INetManager _netManager = default!;
-    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-    [Dependency] protected readonly SharedContainerSystem _containerSystem = default!;
-    [Dependency] protected readonly IComponentFactory _factory = default!;
-    [Dependency] protected readonly SharedAudioSystem _audio = default!;
-    [Dependency] protected readonly GunChargeDecaySystem _charge = default!;
-    [Dependency] protected readonly SharedBatterySystem _battery = default!;
-    [Dependency] protected readonly SharedOxydHelpers _help = default!;
-    [Dependency] protected readonly ISharedPlayerManager _players = default!;
-    [Dependency] protected readonly OxydModifiersSystem _mods = default!;
-    [Dependency] private readonly SharedRadialMenuSystem _radials = default!;
-    [Dependency] protected readonly ActionBlockerSystem _actionBlockerSystem = default!;
-    [Dependency] protected readonly SharedHandsSystem _hands = default!;
-    [Dependency] protected readonly SharedStackSystem _stacks = default!;
+    [Dependency] protected  SharedTransformSystem _transformSystem = default!;
+    [Dependency] private  SharedOxydProjectileSystem _projectileSystem = default!;
+    [Dependency] private  ItemSlotsSystem _itemSlotsSystem = default!;
+    [Dependency] protected  IGameTiming _gameTiming = default!;
+    [Dependency] protected  INetManager _netManager = default!;
+    [Dependency] private  IPrototypeManager _prototypeManager = default!;
+    [Dependency] protected  SharedContainerSystem _containerSystem = default!;
+    [Dependency] protected  IComponentFactory _factory = default!;
+    [Dependency] protected  SharedAudioSystem _audio = default!;
+    [Dependency] protected  GunChargeDecaySystem _charge = default!;
+    [Dependency] protected  SharedBatterySystem _battery = default!;
+    [Dependency] protected  SharedOxydHelpers _help = default!;
+    [Dependency] protected  ISharedPlayerManager _players = default!;
+    [Dependency] protected  OxydModifiersSystem _mods = default!;
+    [Dependency] private  SharedRadialMenuSystem _radials = default!;
+    [Dependency] protected  ActionBlockerSystem _actionBlockerSystem = default!;
+    [Dependency] protected  SharedHandsSystem _hands = default!;
+    [Dependency] protected  SharedStackSystem _stacks = default!;
 
     private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
 

@@ -10,9 +10,9 @@ namespace Content.Client._Oxyd.Framework;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class OxydClientsidePleaseIgnoreSystem : EntitySystem
+public sealed partial  class OxydClientsidePleaseIgnoreSystem : EntitySystem
 {
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
+    [Dependency] private IPlayerManager _playerManager = default!;
     private EntityQuery<ClientsidePleaseIgnoreComponent> ignore;
     /// <inheritdoc/>
     public override void Initialize()

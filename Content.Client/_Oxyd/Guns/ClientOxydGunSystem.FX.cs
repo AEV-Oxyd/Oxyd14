@@ -16,8 +16,8 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// </summary>
 public partial class ClientOxydGunSystem
 {
-    [Dependency] private readonly AnimationPlayerSystem _animPlayer = default!;
-    [Dependency] private readonly SharedPointLightSystem _lightSystem = default!;
+    [Dependency] private  AnimationPlayerSystem _animPlayer = default!;
+    [Dependency] private  SharedPointLightSystem _lightSystem = default!;
 
     public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {

@@ -9,7 +9,8 @@ using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
-using Content.Shared.EntityList;
+using Content.Shared.Containers;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
@@ -38,10 +39,10 @@ namespace Content.Server._Oxyd.Guns;
 public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 {
 
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly ServerOxydProjectileSystem _oxydProjectileSystem = default!;
-    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private  IPlayerManager _playerManager = default!;
+    [Dependency] private  ServerOxydProjectileSystem _oxydProjectileSystem = default!;
+    [Dependency] private  IPrototypeManager _prototypeManager = default!;
+    [Dependency] private  BasicPhysicsPredictorSystem _predictor = default!;
 
     public static int MaxTicksIncosistencyBehind = OxydCvars.maxPastTicks.DefaultValue;
     public static int MaxTicksAhead = OxydCvars.maxFutureTicks.DefaultValue;
@@ -58,7 +59,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
+        SubscribeLocalEvent<OxydMagazineComponent, MapInitEvent>(onMagazineInitialized, after: new []{typeof(ContainerFillSystem)});
         SubscribeLocalEvent<RecoilHandlerComponent, ComponentInit>(onAddRecoil);
         SubscribeLocalEvent<OxydGunComponent, ComponentGetStateAttemptEvent>(onTryStateGun);
         SubscribeLocalEvent<OxydChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
@@ -198,18 +199,12 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
 
 
-    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref MapInitEvent args)
     {
-        if (!TryComp<OxydMagazineInitializerComponent>(ent.Owner, out var initi))
-            return;
         var cnt = _containerSystem.GetContainer(ent, oxydContents);
-        foreach (var bulletProto in _prototypeManager.Index<EntityListPrototype>(initi.initialBullets).GetEntities())
+        foreach (var bullet in cnt.ContainedEntities)
         {
-            var spawned = Spawn(bulletProto.ID, MapCoordinates.Nullspace);
-            ent.Comp.loadedBullets.Push(GetNetEntity(spawned));
-            _containerSystem.Insert(spawned, cnt);
-            if (ent.Comp.loadedBullets.Count > ent.Comp.maxBullets)
-                break;
+            ent.Comp.loadedBullets.Push(GetNetEntity(bullet));
         }
         Dirty(ent);
     }

@@ -5,9 +5,9 @@ namespace Content.Client._Oxyd.Framework;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientOxydHelpers : EntitySystem
+public sealed partial class ClientOxydHelpers : EntitySystem
 {
-    [Dependency] private readonly IClientGameTiming _gameTiming = default!;
+    [Dependency] private IClientGameTiming _gameTiming = default!;
 
     // returns how many ticks ahead we are simulating as the client
     public uint getPredTicks()

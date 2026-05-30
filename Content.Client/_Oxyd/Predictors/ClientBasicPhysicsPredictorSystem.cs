@@ -8,9 +8,9 @@ namespace Content.Client._Oxyd.Predictors;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientBasicPhysicsPredictorSystem : BasicPhysicsPredictorSystem
+public sealed partial  class ClientBasicPhysicsPredictorSystem : BasicPhysicsPredictorSystem
 {
-    [Dependency] private readonly IPlayerManager _lplayer = default!;
+    [Dependency] private  IPlayerManager _lplayer = default!;
     public override void Initialize()
     {
         base.Initialize();

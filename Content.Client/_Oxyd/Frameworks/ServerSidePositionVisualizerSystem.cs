@@ -27,15 +27,15 @@ public partial class TellMePosComponent : Component
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ServerSidePositionVisualizerSystem : EntitySystem
+public sealed partial class ServerSidePositionVisualizerSystem : EntitySystem
 {
-    [Dependency] private readonly SharedPhysicsSystem _physics = default!;
-    [Dependency] private readonly IOverlayManager _overlay = default!;
-    [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly IEyeManager _eye = default!;
-    [Dependency] private readonly IResourceCache _resourceCache = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly SpriteSystem _sprite = default!;
+    [Dependency] private  SharedPhysicsSystem _physics = default!;
+    [Dependency] private  IOverlayManager _overlay = default!;
+    [Dependency] private  SharedTransformSystem _transformSystem = default!;
+    [Dependency] private  IEyeManager _eye = default!;
+    [Dependency] private  IResourceCache _resourceCache = default!;
+    [Dependency] private  IGameTiming _timing = default!;
+    [Dependency] private  SpriteSystem _sprite = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
@@ -44,18 +44,18 @@ public sealed class ServerSidePositionVisualizerSystem : EntitySystem
 
     internal sealed class ShitDebugOverlay : Overlay
     {
-        private readonly IEntityManager _entityManager;
-        private readonly IGameTiming _gameTiming;
-        private readonly SharedTransformSystem _transformSystem = default!;
-        private readonly SharedPhysicsSystem _physicsSystem;
-        private readonly SpriteSystem _sprite = default!;
-        private readonly IEyeManager _eye = default!;
+        private  IEntityManager _entityManager;
+        private  IGameTiming _gameTiming;
+        private  SharedTransformSystem _transformSystem = default!;
+        private  SharedPhysicsSystem _physicsSystem;
+        private  SpriteSystem _sprite = default!;
+        private  IEyeManager _eye = default!;
 
         public override OverlaySpace Space => OverlaySpace.WorldSpace | OverlaySpace.ScreenSpace;
 
-        private static readonly Color JointColor = new(0.5f, 0.8f, 0.8f);
+        private static  Color JointColor = new(0.5f, 0.8f, 0.8f);
 
-        private readonly Font _font;
+        private  Font _font;
 
         public ShitDebugOverlay(IEntityManager entityManager, IResourceCache cache,
             SharedPhysicsSystem physicsSystem, IGameTiming timing, SharedTransformSystem tsf, SpriteSystem sprt, IEyeManager eye)

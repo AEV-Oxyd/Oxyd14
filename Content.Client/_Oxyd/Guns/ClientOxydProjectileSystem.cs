@@ -28,13 +28,13 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// </summary>
 public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
 {
-    [Dependency] private readonly ColorFlashEffectSystem _colorFlashEffect = default!;
-    [Dependency] private readonly FixClientsidePhysicsSystem _patcher = default!;
-    [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
-    [Dependency] private readonly SpriteSystem _sprite = default!;
-    [Dependency] private readonly AnimationPlayerSystem _animPlayer = default!;
+    [Dependency] private  ColorFlashEffectSystem _colorFlashEffect = default!;
+    [Dependency] private  FixClientsidePhysicsSystem _patcher = default!;
+    [Dependency] private  OxydClientsidePleaseIgnoreSystem _ignore = default!;
+    [Dependency] private  SpriteSystem _sprite = default!;
+    [Dependency] private  AnimationPlayerSystem _animPlayer = default!;
 
-    public static readonly EntProtoId HitscanProto = "HitscanEffect";
+    public static  EntProtoId HitscanProto = "HitscanEffect";
 
     public override void Initialize()
     {

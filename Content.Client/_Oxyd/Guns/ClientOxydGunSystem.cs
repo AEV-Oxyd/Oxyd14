@@ -31,8 +31,8 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// </summary>
 public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 {
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    [Dependency] private readonly SpriteSystem _spriteSystem = default!;
+    [Dependency] private  IPlayerManager _playerManager = default!;
+    [Dependency] private  SpriteSystem _spriteSystem = default!;
 
 
     /// <inheritdoc/>
