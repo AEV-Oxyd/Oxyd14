@@ -11,7 +11,7 @@
     state: semi
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
-  provider: OxydGunAmmoMagazineChamber
+  provider: OxydMagazineChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   effects:
@@ -28,7 +28,24 @@
     state: semi
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
-  provider: OxydGunAmmoChamber
+  provider: OxydChamber
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectTryFireMouseDirection
+
+- type: gunFiremode
+  id: baseFiremodeRevolver
+  firerate: 10
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: semi
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  provider: OxydRevolvingChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   effects:
@@ -45,7 +62,7 @@
     state: modecharge
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
-  provider: OxydGunAmmoMagazineChamber
+  provider: OxydMagazineChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   effects:
@@ -99,7 +116,7 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: burst
-  provider: OxydGunAmmoMagazineChamber
+  provider: OxydMagazineChamber
   providerId: 0
   addedInaccuracyMaximum: 0
   fireSound:
@@ -174,7 +191,7 @@
     - chargeFiremode
     - baseBurstLaserFiremode
   - type: OxydHandheldGun
-  - type: OxydGunAmmoMagazineChamber
+  - type: OxydMagazineChamber
     bulletSlot:
     - name: Chamber
       insertSound: null
@@ -241,7 +258,7 @@
     firemodes:
     - baseFiremodeChamber
   - type: OxydHandheldGun
-  - type: OxydGunAmmoChamber
+  - type: OxydChamber
     bulletSlot:
     - name: Chamber
       insertSound: null
@@ -264,6 +281,51 @@
   - type: OxydAttachmentSpawner
     insert:
       - AttachmentOxydCapacitiy
+
+- type: entity
+  name: Oxyd Revolver
+  parent: BaseItem
+  id: WeaponOxydRevolver
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
+    layers:
+    - state: base
+      map: ["enum.GunVisualLayers.Base"]
+    - state: mag-0
+      map: ["enum.GunVisualLayers.Mag"]
+  - type: Item
+    size: Large
+  - type: OxydGun
+    firemodes:
+    - baseFiremodeRevolver
+  - type: OxydHandheldGun
+  - type: OxydRevolvingChamber
+    bulletSlot:
+    - name: Chamber
+      insertSound: null
+      ejectSound: null
+      priority: 0
+      whitelist:
+        components:
+        - OxydBullet
+    revolvingSlots:
+    - count: 6
+  - type: StaticPrice
+    price: 500
+  - type: RecoilHandler
+  - type: OxydAttachmentHolder
+    slots:
+    - Barrel
+    - Scope
+    - Internal
+    whitelist:
+      components:
+      - OxydAttachment
+  - type: OxydAttachmentSpawner
+    insert:
+    - AttachmentOxydCapacitiy
 
 - type: entity
   parent: BasicHitscan
