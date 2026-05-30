@@ -48,12 +48,12 @@ public sealed partial class ForcePredictionComponent : Component
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class FixClientsidePhysicsSystem : VirtualController
+public sealed partial  class FixClientsidePhysicsSystem : VirtualController
 {
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly TransformSystem _transform = default!;
-    [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
-    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private  IGameTiming _timing = default!;
+    [Dependency] private  TransformSystem _transform = default!;
+    [Dependency] private  Robust.Client.Physics.PhysicsSystem _physics = default!;
+    [Dependency] private  BasicPhysicsPredictorSystem _predictor = default!;
 
     public override void Initialize()
     {

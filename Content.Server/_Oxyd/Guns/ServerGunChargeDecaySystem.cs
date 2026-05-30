@@ -6,7 +6,7 @@ namespace Content.Server._Oxyd.Guns;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ServerGunChargeDecaySystem : GunChargeDecaySystem
+public sealed partial class ServerGunChargeDecaySystem : GunChargeDecaySystem
 {
     public override void Update(float frameTime)
     {

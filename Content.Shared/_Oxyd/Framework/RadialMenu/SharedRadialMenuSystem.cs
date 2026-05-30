@@ -5,9 +5,9 @@ using Robust.Shared.Player;
 
 namespace Content.Shared._Oxyd.Framework.RadialMenu;
 
-public abstract class SharedRadialMenuSystem : EntitySystem
+public abstract partial  class SharedRadialMenuSystem : EntitySystem
 {
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     protected float Timer = 0f;
 

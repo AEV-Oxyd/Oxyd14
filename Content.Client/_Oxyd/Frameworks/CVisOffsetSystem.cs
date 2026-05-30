@@ -24,14 +24,14 @@ namespace Content.Client._Oxyd.Framework;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class CVisOffsetSystem : EntitySystem
+public sealed partial class CVisOffsetSystem : EntitySystem
 {
-    [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
-    [Dependency] private readonly IEyeManager _eye = default!;
-    [Dependency] private readonly SpriteSystem _sprite = default!;
-    [Dependency] private readonly OxydClientsidePleaseIgnoreSystem _ignore = default!;
-    [Dependency] private readonly BasicPhysicsPredictorSystem _predictor = default!;
-    [Dependency] private readonly ClientOxydHelpers _help = default!;
+    [Dependency] private  SharedTransformSystem _transformSystem = default!;
+    [Dependency] private  IEyeManager _eye = default!;
+    [Dependency] private  SpriteSystem _sprite = default!;
+    [Dependency] private  OxydClientsidePleaseIgnoreSystem _ignore = default!;
+    [Dependency] private  BasicPhysicsPredictorSystem _predictor = default!;
+    [Dependency] private  ClientOxydHelpers _help = default!;
 
     public Angle GetEffectiveWorldRotation(EntityUid uid)
     {

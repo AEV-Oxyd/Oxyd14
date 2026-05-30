@@ -398,12 +398,15 @@
     size: Large
   - type: OxydMagazine
     capacity: 30
-  - type: OxydMagazineInitializer
-    initialBullets: magazineOxydTest
   - type: ContainerContainer
     containers:
       storagebase: !type:Container
         ents: []
+  - type: EntityTableContainerFill
+    containers:
+      storagebase:
+        id: BulletOxyd
+        amount: 30
 
 - type: entity
   name: Oxyd Barrel Attachemnt
@@ -466,40 +469,6 @@
     mods:
     - !type:WeaponCapacityMod
       capacityAdd: 8
-
-- type: entityList
-  id: magazineOxydTest
-  entities:
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
-  - BulletOxyd
 
 - type: entity
   id: ProjectileOxyd

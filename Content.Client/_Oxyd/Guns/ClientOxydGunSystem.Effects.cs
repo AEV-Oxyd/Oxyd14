@@ -7,7 +7,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 
 public sealed partial class ClientOxydGunSystem
 {
-    [Dependency] private readonly OxydMouseHandlingSystem _mouseSys = default!;
+    [Dependency] private OxydMouseHandlingSystem _mouseSys = default!;
 
     public void BroadcastMouseStatus(Entity<OxydGunComponent> gun)
     {
