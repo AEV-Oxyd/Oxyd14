@@ -2,7 +2,9 @@ using System.Linq;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Robust.Shared.Containers;
+using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 
 namespace Content.Shared._Oxyd.Framework.Bundles;
 
@@ -15,6 +17,8 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] private SharedHandsSystem hands = default!;
     [Dependency] private SharedInteractionSystem interaction = default!;
     [Dependency] private IPrototypeManager prototypes = default!;
+    [Dependency] private INetManager network = default!;
+    private IRobustRandom random = new RobustRandom();
 
     public static readonly string storeKey = "storagebase";
     public static readonly ProtoId<BundleGroup> bundleProto = "BaseBundle";
@@ -76,6 +80,9 @@ public abstract partial class BundleSystem : EntitySystem
         if (!containers.Insert(ent.Owner, cont))
             return false;
         bundle.Comp.usedVolume += ent.Comp.volume;
+        bundle.Comp.containing.Add(GetNetEntity(ent.Owner));
+        if(!bundle.Comp.bundlePositions.ContainsKey(GetNetEntity(ent.Owner)))
+            bundle.Comp.bundlePositions.Add(GetNetEntity(ent.Owner), random.NextVector2(0.01f,0.2f));
         afterMerge(bundle);
         return true;
     }
@@ -85,13 +92,16 @@ public abstract partial class BundleSystem : EntitySystem
         var cont = containers.GetContainer(bundle.Owner, storeKey);
         containers.Remove(ent.Owner, cont);
         bundle.Comp.usedVolume -= ent.Comp.volume;
+        bundle.Comp.containing.Remove(GetNetEntity(ent.Owner));
     }
 
     public virtual void afterMerge(Entity<BundleComponent> bundle){}
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-        var bundle = PredictedSpawnNextToOrDrop(bundleProto, user);
+        if (network.IsClient)
+            return EntityUid.Invalid;
+        var bundle = SpawnNextToOrDrop(bundleProto, user);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
@@ -99,6 +109,7 @@ public abstract partial class BundleSystem : EntitySystem
             QueueDel(bundle);
             return EntityUid.Invalid;
         }
+        Dirty(bundle,comp);
         return bundle;
     }
 }

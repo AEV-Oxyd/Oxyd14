@@ -21,6 +21,8 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
 {
     [Dependency] private IPlayerManager player = default!;
     public const string LayerBase = "OXB_";
+
+
     /// <inheritdoc/>
     public override void Initialize()
     {
@@ -37,8 +39,6 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
             var netId = component.containing[i];
             var entId = GetEntity(netId);
             if (TerminatingOrDeleted(entId))
-                continue;
-            if (component.bundlePositions.ContainsKey(entId))
                 continue;
             if(!TryComp(entId, out SpriteComponent? sprite))
                 continue;
@@ -62,6 +62,8 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
      public sealed partial class BundleOverlay : Overlay, IEntityEventSubscriber
     {
 
+        public override OverlaySpace Space => OverlaySpace.WorldSpaceEntities;
+
         [Dependency] private IEntityManager _entMan = default!;
         [Dependency] private IPrototypeManager _prototypeManager = default!;
         [Dependency] private IConfigurationManager _configManager = default!;
@@ -70,7 +72,6 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
         public BundleOverlay()
         {
             IoCManager.InjectDependencies(this);
-            ZIndex = 101; // Should be drawn after the placement overlay so admins placing items near the singularity can tell where they're going.
 
         }
 
@@ -78,11 +79,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
 
         protected override bool BeforeDraw(in OverlayDrawArgs args)
         {
-            if (args.Viewport.Eye == null)
-                return false;
-            _count = 0;
-
-            return _count > 0;
+            return true;
         }
 
         protected override void Draw(in OverlayDrawArgs args)
@@ -97,6 +94,10 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
             {
                 foreach (var net in bundle.containing)
                 {
+                    var offset = Vector2.Zero;
+                    if (bundle.bundlePositions.ContainsKey(net))
+                        offset = bundle.bundlePositions[net];
+
                     var resolved = _entMan.GetEntity(net);
                     if (resolved == EntityUid.Invalid)
                         continue;
@@ -106,7 +107,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
                         args.WorldHandle,
                         Angle.Zero,
                         Angle.Zero,
-                        transform.WorldPosition);
+                        transform.WorldPosition+offset);
                 }
             }
         }
