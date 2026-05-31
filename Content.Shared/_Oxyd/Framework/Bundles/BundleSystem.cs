@@ -5,6 +5,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Timing;
 
 namespace Content.Shared._Oxyd.Framework.Bundles;
 
@@ -18,6 +19,7 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] private SharedInteractionSystem interaction = default!;
     [Dependency] private IPrototypeManager prototypes = default!;
     [Dependency] private INetManager network = default!;
+    [Dependency] private IGameTiming timing = default!;
     private IRobustRandom random = new RobustRandom();
 
     public static readonly string storeKey = "storagebase";
@@ -40,6 +42,7 @@ public abstract partial class BundleSystem : EntitySystem
     {
         if (ev.Target is null)
             return;
+
         var thing = ev.Target.Value;
         if (TryComp<BundleComponent>(thing, out var bundle))
         {
@@ -99,9 +102,9 @@ public abstract partial class BundleSystem : EntitySystem
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-        if (network.IsClient)
+        if (!timing.IsFirstTimePredicted)
             return EntityUid.Invalid;
-        var bundle = SpawnNextToOrDrop(bundleProto, user);
+        var bundle = PredictedSpawnNextToOrDrop(bundleProto, user);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
@@ -109,7 +112,7 @@ public abstract partial class BundleSystem : EntitySystem
             QueueDel(bundle);
             return EntityUid.Invalid;
         }
-        Dirty(bundle,comp);
+        //Dirty(bundle,comp);
         return bundle;
     }
 }
