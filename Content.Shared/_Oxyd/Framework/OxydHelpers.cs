@@ -42,10 +42,10 @@ public static class DamageHelpers
 
 public class SharedOxydHelpers : EntitySystem
 {
-    [Dependency] private readonly INetManager _netManager = default!;
-    [Dependency] private readonly SharedTransformSystem _transform = default!;
-    [Dependency] private readonly IConfigurationManager _config = default!;
-    [Dependency] private readonly EntityWhitelistSystem _whitelistSystem = default!;
+    [Dependency] private  INetManager _netManager = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private  IConfigurationManager _config = default!;
+    [Dependency] private  EntityWhitelistSystem _whitelistSystem = default!;
     public HashSet<EntityUid> queued = new HashSet<EntityUid>();
 
     public override void Initialize()

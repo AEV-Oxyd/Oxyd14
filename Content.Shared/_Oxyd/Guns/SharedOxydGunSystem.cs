@@ -97,7 +97,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected  SharedOxydHelpers _help = default!;
     [Dependency] protected  ISharedPlayerManager _players = default!;
     [Dependency] protected  OxydModifiersSystem _mods = default!;
-    [Dependency] private  SharedRadialMenuSystem _radials = default!;
     [Dependency] protected  ActionBlockerSystem _actionBlockerSystem = default!;
     [Dependency] protected  SharedHandsSystem _hands = default!;
     [Dependency] protected  SharedStackSystem _stacks = default!;

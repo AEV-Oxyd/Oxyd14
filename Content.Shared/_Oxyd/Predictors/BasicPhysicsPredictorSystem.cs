@@ -13,12 +13,12 @@ namespace Content.Shared._Oxyd.Predictors;
 /// <summary>
 /// This handles...
 /// </summary>
-public abstract class BasicPhysicsPredictorSystem : EntitySystem
+public abstract partial class BasicPhysicsPredictorSystem : EntitySystem
 {
-    [Dependency] private readonly SharedTransformSystem _transform = default!;
-    [Dependency] private readonly SharedPhysicsSystem _physics = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly RayCastSystem _raycast = default!;
+    [Dependency] private  SharedTransformSystem _transform = default!;
+    [Dependency] private  SharedPhysicsSystem _physics = default!;
+    [Dependency] private  IGameTiming _timing = default!;
+    [Dependency] private  RayCastSystem _raycast = default!;
 
     private EntityQuery<PhysicsComponent> phys;
     private EntityQuery<TransformComponent> transf;

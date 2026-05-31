@@ -2,3 +2,8 @@
   name: "bundle"
   id: BaseBundle
   parent: BaseItem
+
+- type: BundleGroup
+  id: BundleGroup
+  volume: 200
+  size: "small"

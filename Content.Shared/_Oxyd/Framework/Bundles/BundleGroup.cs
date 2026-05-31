@@ -6,7 +6,7 @@ namespace Content.Shared._Oxyd.Framework.Bundles;
 /// <summary>
 /// This is a prototype for...
 /// </summary>
-[Prototype()]
+[Prototype("BundleGroup")]
 public sealed partial class BundleGroup : IPrototype
 {
     /// <inheritdoc/>

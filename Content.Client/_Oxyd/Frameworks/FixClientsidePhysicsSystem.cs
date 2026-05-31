@@ -87,7 +87,7 @@ public sealed partial  class FixClientsidePhysicsSystem : VirtualController
         //    return;
 
         base.UpdateBeforeSolve(prediction, frameTime);
-        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        var qery = AllEntityQuery<FixClientsidePhysicsComponent>();
         while (qery.MoveNext(out var uid, out var comp))
         {
             var t = Transform(uid);

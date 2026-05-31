@@ -383,6 +383,9 @@
   - type: OxydBullet
     speed: 20
     projectileEntity: ProjectileOxyd
+  - type: Bundable
+    group: BundleGroup
+    volume: 5
 
 - type: entity
   name: Oxyd Magazine
