@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Numerics;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.CCVar;
@@ -21,6 +22,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
 {
     [Dependency] private IPlayerManager player = default!;
     public const string LayerBase = "OXB_";
+    public Queue<EntityUid> queued = new();
 
 
     /// <inheritdoc/>
@@ -32,6 +34,11 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
     protected override void OnAppearanceChange(EntityUid uid, BundleComponent component, ref AppearanceChangeEvent args)
     {
         base.OnAppearanceChange(uid, component, ref args);
+        queued.Enqueue(uid);
+    }
+
+    public void BakeLayers(Entity<SpriteComponent> source, Entity<SpriteComponent> target)
+    {
         if (!TryComp<SpriteComponent>(uid, out var selfSprite))
             return;
         for(var i = 0; i < component.containing.Count; i++)
@@ -57,6 +64,11 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
     public override void FrameUpdate(float frameTime)
     {
         base.FrameUpdate(frameTime);
+    }
+
+    public override void Update(float frameTime)
+    {
+
     }
 
      public sealed partial class BundleOverlay : Overlay, IEntityEventSubscriber
