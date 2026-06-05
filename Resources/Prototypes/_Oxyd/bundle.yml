@@ -10,8 +10,8 @@
 
 - type: entity
   suffix: inaprovaline
-  parent: PrefilledSyringe
-  id: SyringeInaprovaline
+  parent: SyringeInaprovaline
+  id: SyringeInaprovalineOxyd
   components:
   - type: Label
     currentLabel: reagent-name-inaprovaline
@@ -20,3 +20,6 @@
       reagents:
       - ReagentId: Inaprovaline
         Quantity: 15
+  - type: Bundable
+    group: BundleGroup
+    volume: 5
