@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using System.Numerics;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.CCVar;
@@ -18,11 +19,15 @@ namespace Content.Client._Oxyd.Framework.Bundle;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComponent>
+public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableComponent>
 {
     [Dependency] private IPlayerManager player = default!;
-    public const string LayerBase = "OXB_";
+    [Dependency] private ContainerSystem containers = default!;
+    [Dependency] private ClientOxydHelpers oxyd = default!;
+    public const string BakeIdentifier = "@";
+    public const string BakeEnder = "@";
     public Queue<EntityUid> queued = new();
+    public Queue<EntityUid> queuedThisTick = new();
 
 
     /// <inheritdoc/>
@@ -31,33 +36,55 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
         base.Initialize();
     }
 
-    protected override void OnAppearanceChange(EntityUid uid, BundleComponent component, ref AppearanceChangeEvent args)
+    protected override void OnAppearanceChange(EntityUid uid, BundableComponent component, ref AppearanceChangeEvent args)
     {
         base.OnAppearanceChange(uid, component, ref args);
-        queued.Enqueue(uid);
+        if(containers.TryGetContainingContainer(uid, out var container) && HasComp<BundleComponent>(container.Owner))
+            queuedThisTick.Enqueue(container.Owner);
     }
 
-    public void BakeLayers(Entity<SpriteComponent> source, Entity<SpriteComponent> target)
+    public void BakeLayers(Entity<SpriteComponent> source, Entity<SpriteComponent> target, Vector2 offset)
     {
-        if (!TryComp<SpriteComponent>(uid, out var selfSprite))
-            return;
-        for(var i = 0; i < component.containing.Count; i++)
+        var indice = target.Comp.AllLayers.Count();
+        for (var i = 0; i < source.Comp.AllLayers.Count(); i++)
         {
-            var netId = component.containing[i];
-            var entId = GetEntity(netId);
-            if (TerminatingOrDeleted(entId))
-                continue;
-            if(!TryComp(entId, out SpriteComponent? sprite))
-                continue;
-            if (sprite.BaseRSI is null)
-                continue;
-            var itemRsi = sprite.BaseRSI;
-            if (!SpriteSystem.LayerExists(uid, LayerBase + i))
+            var layer = source.Comp[i];
+            if (layer is SpriteComponent.Layer layerData)
             {
-                SpriteSystem.AddBlankLayer((uid, selfSprite), i);
+                var genKey = BakeIdentifier + source.Owner + i;
+                if (i == source.Comp.AllLayers.Count() - 1)
+                    genKey += BakeEnder;
+                var clone = SpriteSystem.AddBlankLayer((target.Owner, target.Comp), indice);
+                SpriteSystem.LayerMapSet((target.Owner, target.Comp), genKey, indice++);
+                SpriteSystem.LayerSetData((target.Owner, target.Comp), genKey, layerData.ToPrototypeData());
+                //clone.SetRsi(layer.Rsi);
+                SpriteSystem.LayerSetRsi((target.Owner, target.Comp), genKey, layer.ActualRsi, layer.RsiState);
+                SpriteSystem.LayerSetOffset((target.Owner, target.Comp), genKey, clone.Offset + offset);
             }
-            if (!SpriteSystem.TryGetLayer(uid, LayerBase + i, out var layer, false))
-                continue;
+        }
+    }
+
+    public void WipeBaked(Entity<SpriteComponent> source, Entity<SpriteComponent> target)
+    {
+        var i = 0;
+        var indexed = 0;
+        while (indexed++ < 1000)
+        {
+            var key = BakeIdentifier + source.Owner + i++;
+            if (SpriteSystem.TryGetLayer((target.Owner, target.Comp), key, out _, false))
+                SpriteSystem.RemoveLayer((target.Owner, target.Comp), key);
+            else
+            {
+                key += BakeEnder;
+                if (SpriteSystem.TryGetLayer((target.Owner, target.Comp), key, out _, false))
+                {
+                    SpriteSystem.RemoveLayer((target.Owner, target.Comp), key);
+                    break;
+                }
+                else
+                    Log.Error($"BundleVisualizer had a SpriteBakeWipe with no BakeEnder identification present , layers aren't being properly built/configured, key was {key}");
+            }
+
         }
     }
 
@@ -68,7 +95,26 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
 
     public override void Update(float frameTime)
     {
-
+        base.Update(frameTime);
+        while (queued.TryDequeue(out var thing))
+        {
+            if (!TryComp<BundleComponent>(thing, out var bundle))
+                continue;
+            if (!TryComp<SpriteComponent>(thing, out var selfsprite))
+                continue;
+            foreach (var net in bundle.containing)
+            {
+                var ent = GetEntity(net);
+                if (TerminatingOrDeleted(ent))
+                    continue;
+                if (!TryComp<SpriteComponent>(ent, out var sprite))
+                    continue;
+                WipeBaked((ent, sprite), (thing, selfsprite));
+                BakeLayers((ent, sprite), (thing, selfsprite), bundle.bundlePositions[net]);
+            }
+        }
+        while(queuedThisTick.TryDequeue(out var uid))
+            queued.Enqueue(uid);
     }
 
      public sealed partial class BundleOverlay : Overlay, IEntityEventSubscriber
@@ -91,7 +137,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundleComp
 
         protected override bool BeforeDraw(in OverlayDrawArgs args)
         {
-            return true;
+            return false;
         }
 
         protected override void Draw(in OverlayDrawArgs args)

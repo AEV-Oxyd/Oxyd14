@@ -102,9 +102,9 @@ public abstract partial class BundleSystem : EntitySystem
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-        if (!timing.IsFirstTimePredicted)
+        if (!network.IsServer)
             return EntityUid.Invalid;
-        var bundle = PredictedSpawnNextToOrDrop(bundleProto, user);
+        var bundle = SpawnNextToOrDrop(bundleProto, user);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))

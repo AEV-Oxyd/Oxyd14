@@ -8,10 +8,10 @@ namespace Content.Client._Oxyd.Framework.Bundle;
 /// </summary>
 public sealed class ClientBundleSystem : BundleSystem
 {
+    [Dependency] private BundleVisualiserSystem visualizer = default!;
 
     public override void afterMerge(Entity<BundleComponent> bundle)
     {
-        var sp = EnsureComp<SpriteComponent>(bundle);
-        var ap = EnsureComp<AppearanceComponent>(bundle);
+        visualizer.queuedThisTick.Enqueue(bundle.Owner);
     }
 }
