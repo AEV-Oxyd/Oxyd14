@@ -7,3 +7,16 @@
   id: BundleGroup
   volume: 200
   size: "small"
+
+- type: entity
+  suffix: inaprovaline
+  parent: PrefilledSyringe
+  id: SyringeInaprovaline
+  components:
+  - type: Label
+    currentLabel: reagent-name-inaprovaline
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Inaprovaline
+        Quantity: 15
