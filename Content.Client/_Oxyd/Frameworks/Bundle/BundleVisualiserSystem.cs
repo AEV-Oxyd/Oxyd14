@@ -55,11 +55,11 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 if (i == source.Comp.AllLayers.Count() - 1)
                     genKey += BakeEnder;
                 var clone = SpriteSystem.AddBlankLayer((target.Owner, target.Comp), indice);
-                SpriteSystem.LayerMapSet((target.Owner, target.Comp), genKey, indice++);
-                SpriteSystem.LayerSetData((target.Owner, target.Comp), genKey, layerData.ToPrototypeData());
+                SpriteSystem.LayerSetData((target.Owner, target.Comp),  indice, layerData.ToPrototypeData());
                 //clone.SetRsi(layer.Rsi);
-                SpriteSystem.LayerSetRsi((target.Owner, target.Comp), genKey, layer.ActualRsi, layer.RsiState);
-                SpriteSystem.LayerSetOffset((target.Owner, target.Comp), genKey, clone.Offset + offset);
+                SpriteSystem.LayerSetRsi((target.Owner, target.Comp), indice, layer.ActualRsi, layer.RsiState);
+                SpriteSystem.LayerSetOffset((target.Owner, target.Comp), indice, clone.Offset + offset);
+                SpriteSystem.LayerMapSet((target.Owner, target.Comp), genKey, indice++);
             }
         }
     }
