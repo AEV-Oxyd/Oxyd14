@@ -109,6 +109,9 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent
 {
+    // used to define what kind of bullets will fit in the gun . Won't actually be initialized!
+    [DataField("bulletSlot")]
+    public ItemSlot bulletSlot = new();
     public override bool SessionSpecific => true;
     [NetSerializable, Serializable, DataDefinition]
     public sealed partial class RevolvingData

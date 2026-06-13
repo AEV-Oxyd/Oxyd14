@@ -7,7 +7,7 @@ namespace Content.Shared._Oxyd.Framework.Bundles;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class BundleComponent : Component
 {
     public static readonly Vector2 unsetVector = new Vector2(float.NaN, float.NaN);

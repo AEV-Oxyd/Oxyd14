@@ -303,7 +303,7 @@
   - type: OxydHandheldGun
   - type: OxydRevolvingChamber
     bulletSlot:
-    - name: Chamber
+      name: Chamber
       insertSound: null
       ejectSound: null
       priority: 0

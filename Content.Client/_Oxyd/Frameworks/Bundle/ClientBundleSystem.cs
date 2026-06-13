@@ -12,6 +12,13 @@ public sealed class ClientBundleSystem : BundleSystem
 
     public override void afterMerge(Entity<BundleComponent> bundle)
     {
-        visualizer.queuedThisTick.Enqueue(bundle.Owner);
+        base.afterMerge(bundle);
+        visualizer.queuedThisTick.Enqueue(bundle);
+    }
+
+    public override void afterRemove(Entity<BundleComponent> bundle)
+    {
+        base.afterRemove(bundle);
+        visualizer.queuedThisTick.Enqueue(bundle);
     }
 }

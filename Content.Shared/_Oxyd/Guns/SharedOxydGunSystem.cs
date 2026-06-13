@@ -164,6 +164,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (args.Handled)
             return;
+        if (!_help.IsSlotValid(args.Used, ent.Comp.bulletSlot))
+            return;
         var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
         for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
         {

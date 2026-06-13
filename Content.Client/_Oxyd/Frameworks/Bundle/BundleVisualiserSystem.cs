@@ -26,6 +26,10 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
     [Dependency] private ClientOxydHelpers oxyd = default!;
     public const string BakeIdentifier = "@";
     public const string BakeEnder = "@";
+    /// <summary>
+    /// Refactor after engine PR gets merged if ever SPCR 2026
+    /// https://github.com/space-wizards/RobustToolbox/pull/6606
+    /// </summary>
     public Queue<EntityUid> queued = new();
     public Queue<EntityUid> queuedThisTick = new();
 
@@ -34,12 +38,20 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
     public override void Initialize()
     {
         base.Initialize();
+        SubscribeLocalEvent<BundleComponent, AfterAutoHandleStateEvent>(OnState);
     }
 
-    protected override void OnAppearanceChange(EntityUid uid, BundableComponent component, ref AppearanceChangeEvent args)
+    public void OnState(EntityUid uid, BundleComponent component, ref AfterAutoHandleStateEvent args)
+    {
+        queuedThisTick.Enqueue(uid);
+    }
+
+    protected override void OnAppearanceChange(EntityUid uid,
+        BundableComponent component,
+        ref AppearanceChangeEvent args)
     {
         base.OnAppearanceChange(uid, component, ref args);
-        if(containers.TryGetContainingContainer(uid, out var container) && HasComp<BundleComponent>(container.Owner))
+        if (containers.TryGetContainingContainer(uid, out var container) && HasComp<BundleComponent>(container.Owner))
             queuedThisTick.Enqueue(container.Owner);
     }
 
@@ -55,7 +67,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 if (i == source.Comp.AllLayers.Count() - 1)
                     genKey += BakeEnder;
                 var clone = SpriteSystem.AddBlankLayer((target.Owner, target.Comp), indice);
-                SpriteSystem.LayerSetData((target.Owner, target.Comp),  indice, layerData.ToPrototypeData());
+                SpriteSystem.LayerSetData((target.Owner, target.Comp), indice, layerData.ToPrototypeData());
                 //clone.SetRsi(layer.Rsi);
                 SpriteSystem.LayerSetRsi((target.Owner, target.Comp), indice, layer.ActualRsi, layer.RsiState);
                 SpriteSystem.LayerSetOffset((target.Owner, target.Comp), indice, clone.Offset + offset);
@@ -82,7 +94,8 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                     break;
                 }
                 else
-                    Log.Error($"BundleVisualizer had a SpriteBakeWipe with no BakeEnder identification present , layers aren't being properly built/configured, key was {key}");
+                    Log.Error(
+                        $"BundleVisualizer had a SpriteBakeWipe with no BakeEnder identification present , layers aren't being properly built/configured, key was {key}");
             }
 
         }
@@ -102,6 +115,9 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 continue;
             if (!TryComp<SpriteComponent>(thing, out var selfsprite))
                 continue;
+            var output = true;
+            while(output)
+                output = SpriteSystem.RemoveLayer((thing, selfsprite), 0);
             foreach (var net in bundle.containing)
             {
                 var ent = GetEntity(net);
@@ -109,66 +125,12 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                     continue;
                 if (!TryComp<SpriteComponent>(ent, out var sprite))
                     continue;
-                WipeBaked((ent, sprite), (thing, selfsprite));
+                //WipeBaked((ent, sprite), (thing, selfsprite));
                 BakeLayers((ent, sprite), (thing, selfsprite), bundle.bundlePositions[net]);
             }
         }
-        while(queuedThisTick.TryDequeue(out var uid))
+
+        while (queuedThisTick.TryDequeue(out var uid))
             queued.Enqueue(uid);
-    }
-
-     public sealed partial class BundleOverlay : Overlay, IEntityEventSubscriber
-    {
-
-        public override OverlaySpace Space => OverlaySpace.WorldSpaceEntities;
-
-        [Dependency] private IEntityManager _entMan = default!;
-        [Dependency] private IPrototypeManager _prototypeManager = default!;
-        [Dependency] private IConfigurationManager _configManager = default!;
-        private SpriteSystem? sprites;
-
-        public BundleOverlay()
-        {
-            IoCManager.InjectDependencies(this);
-
-        }
-
-        private int _count = 0;
-
-        protected override bool BeforeDraw(in OverlayDrawArgs args)
-        {
-            return false;
-        }
-
-        protected override void Draw(in OverlayDrawArgs args)
-        {
-            if (args.Viewport.Eye == null)
-                return;
-            if (sprites is null && !_entMan.TrySystem(out sprites))
-                return;
-            var q = _entMan.AllEntityQueryEnumerator<BundleComponent, SpriteComponent, TransformComponent>();
-            var sq = _entMan.GetEntityQuery<SpriteComponent>();
-            while (q.MoveNext(out var id, out var bundle, out var sprite, out var transform))
-            {
-                foreach (var net in bundle.containing)
-                {
-                    var offset = Vector2.Zero;
-                    if (bundle.bundlePositions.ContainsKey(net))
-                        offset = bundle.bundlePositions[net];
-
-                    var resolved = _entMan.GetEntity(net);
-                    if (resolved == EntityUid.Invalid)
-                        continue;
-                    if (!sq.TryComp(resolved, out var local))
-                        continue;
-                    sprites.RenderSprite((resolved, local),
-                        args.WorldHandle,
-                        Angle.Zero,
-                        Angle.Zero,
-                        transform.WorldPosition+offset);
-                }
-            }
-        }
-
     }
 }

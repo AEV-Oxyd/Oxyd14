@@ -115,11 +115,8 @@ public class SharedOxydHelpers : EntitySystem
 
         foreach (var (_, slot) in target.Comp.Slots)
         {
-            if (_whitelistSystem.IsWhitelistFail(slot.Whitelist, item) ||
-                _whitelistSystem.IsWhitelistPass(slot.Blacklist, item))
-            {
+            if (!IsSlotValid(item, slot))
                 continue;
-            }
 
             validSlots.Add(slot);
         }
@@ -127,11 +124,19 @@ public class SharedOxydHelpers : EntitySystem
         return validSlots.OrderByDescending(s => s.Priority).ToList();
     }
 
+    public bool IsSlotValid(EntityUid item, ItemSlot slot)
+    {
+        return !_whitelistSystem.IsWhitelistFail(slot.Whitelist, item) &&
+               !_whitelistSystem.IsWhitelistPass(slot.Blacklist, item);
+    }
+
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
         foreach (var uid in queued)
         {
+            if (TerminatingOrDeleted(uid))
+                continue;
             SetPaused(uid, true);
             _transform.DetachEntity(uid);
         }
