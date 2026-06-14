@@ -617,9 +617,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         BaseContainer container)
     {
         var data = revolving.revolvingSlots[i];
-        if (data.loaded.Contains(GetNetEntity(bullet)) && !_gameTiming.IsFirstTimePredicted)
+        if (data.loaded.Contains(GetNetEntity(bullet)))
         {
-            _containerSystem.Insert(bullet, container, null, false);
+            if(!_gameTiming.IsFirstTimePredicted)
+                _containerSystem.Insert(bullet, container, null, false);
             return true;
         }
 
