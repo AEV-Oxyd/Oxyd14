@@ -3,6 +3,7 @@ using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Robust.Shared.Containers;
+using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -154,9 +155,9 @@ public abstract partial class BundleSystem : EntitySystem
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-        if (!network.IsServer)
-            return EntityUid.Invalid;
-        var bundle = SpawnNextToOrDrop(bundleProto, user);
+
+        var bundle = PredictedSpawnAtPosition(bundleProto, new EntityCoordinates(user, 0, 0));
+        //var bundle = SpawnNextToOrDrop(bundleProto, user);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
