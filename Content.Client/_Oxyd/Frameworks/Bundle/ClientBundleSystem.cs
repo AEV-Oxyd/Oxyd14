@@ -1,6 +1,7 @@
 using Content.Shared._Oxyd.Framework.Bundles;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameStates;
+using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.Framework.Bundle;
 
@@ -38,13 +39,21 @@ public sealed class ClientBundleSystem : BundleSystem
         d ??= args.Current;
         if (d is BundleComponent.BundleState state)
         {
-            if (state.Checksum.Count < ent.Comp.checksum.Count)
+            var newcount = ent.Comp.checksum.Count - state.checkTrim;
+            var copy = new BundleComponent.BundleAct[newcount];
+            ent.Comp.checksum.CopyTo(copy, state.checkTrim);
+            Log.Debug($"Bundle sync, trim is {state.checkTrim}, counts are {ent.Comp.checksum.Count} vs {newcount}");
+            if (state.Checksum.Count < newcount)
             {
                 for (var i = 0; i < state.Checksum.Count; i++)
                 {
-                    if (state.Checksum[i].ent != ent.Comp.checksum[i].ent)
+                    if (state.Checksum[i].id != copy[i].id)
+                        goto applyMods;
+                    if (state.Checksum[i].entity != copy[i].entity)
                         goto applyMods;
                 }
+
+                ent.Comp.checksum = new List<BundleComponent.BundleAct>(copy);
                 Log.Debug($"blocked bundle {ent} with {state}");
                 return;
             }

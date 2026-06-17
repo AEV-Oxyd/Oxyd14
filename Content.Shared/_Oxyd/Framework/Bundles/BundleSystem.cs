@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
@@ -47,27 +48,25 @@ public abstract partial class BundleSystem : EntitySystem
             Group = ent.Comp.group,
             Containing = ent.Comp.containing,
             UsedVolume = ent.Comp.usedVolume,
-            Checksum = ent.Comp.checksum,
+            Checksum = new List<BundleComponent.BundleAct>(ent.Comp.checksum.TakeLast(20)),
+            checkTrim = Math.Max(ent.Comp.checksum.Count - 20,0),
             BundlePositions = ent.Comp.bundlePositions,
-            sentTick = ent.Comp.curTick,
         };
     }
 
-    public void handleRemove(EntityUid uid, BundleComponent component, EntRemovedFromContainerMessage args)
+    public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ)
     {
 
-        helpers.GetParentWithComp(uid, out Entity<HandsComponent>? user);
-        RemoveFromBundle((uid, component), (args.Entity, Comp<BundableComponent>(args.Entity)));
-        /*
-        if (user is not null && component.containing.Count == 1)
+        helpers.GetParentWithComp(own, out Entity<HandsComponent>? user);
+        RemoveFromBundle(own, targ);
+        if (user is not null && own.Comp.containing.Count == 1)
         {
-            var last = GetEntity(component.containing[0]);
-            RemoveFromBundle((uid, component), (last, Comp<BundableComponent>(last)));
-            if(hands.TryDrop((user.Value.Owner, user.Value.Comp), uid))
+            var last = GetEntity(own.Comp.containing[0]);
+            RemoveFromBundle(own, (last, Comp<BundableComponent>(last)));
+            if(hands.TryDrop((user.Value.Owner, user.Value.Comp), own.Owner))
                 hands.TryPickup(user.Value, last);
-            helpers.QueueDel(uid);
+            helpers.QueueDel(own.Owner);
         }
-        */
     }
 
     public void onStart(Entity<BundleComponent> ent, ref ComponentStartup args)
@@ -125,11 +124,9 @@ public abstract partial class BundleSystem : EntitySystem
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation))
             {
                 ev.Handled = true;
-                ent.Comp.lastUse = timing.CurTick;
-                helpers.GetParentWithComp(ev.User, out Entity<HandsComponent>? user);
-                ent.Comp.checksum.Add(new BundleComponent.UseAct(){ent = thing});
+                ent.Comp.checksum.Add(new BundleComponent.BundleAct(){entity = thing, id = 'R'});
+                handleRemove(ent, (resolved, Comp<BundableComponent>(resolved)));
                 RemoveFromBundle(ent, (resolved, Comp<BundableComponent>(resolved)));
-                ent.Comp.ignoreNext = true;
                 return;
             }
         }
@@ -167,6 +164,7 @@ public abstract partial class BundleSystem : EntitySystem
             Log.Error($"Tried to remove {ent} from {bundle} but it wasn't in it!");
             return;
         }
+        containers.Remove(ent.Owner, containers.GetContainer(bundle.Owner, storeKey));
         bundle.Comp.containing.Remove(GetNetEntity(ent.Owner));
         bundle.Comp.usedVolume -= ent.Comp.volume;
         afterRemove(bundle);
@@ -191,13 +189,4 @@ public abstract partial class BundleSystem : EntitySystem
         return bundle;
     }
 
-    public override void Update(float frameTime)
-    {
-        base.Update(frameTime);
-        var q = EntityQueryEnumerator<BundleComponent>();
-        while (q.MoveNext(out var uid, out var comp))
-        {
-            comp.curTick = timing.CurTick;
-        }
-    }
 }
