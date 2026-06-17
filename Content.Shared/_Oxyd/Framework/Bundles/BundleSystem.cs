@@ -2,7 +2,9 @@ using System.Linq;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
+using Content.Shared.Mind.Components;
 using Robust.Shared.Containers;
+using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
@@ -20,7 +22,7 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] private SharedHandsSystem hands = default!;
     [Dependency] private IPrototypeManager prototypes = default!;
     [Dependency] private INetManager network = default!;
-    [Dependency] private IGameTiming timing = default!;
+    [Dependency] protected IGameTiming timing = default!;
     [Dependency] private SharedOxydHelpers helpers = default!;
     [Dependency] private SharedInteractionSystem interact = default!;
     private IRobustRandom random = new RobustRandom();
@@ -33,8 +35,22 @@ public abstract partial class BundleSystem : EntitySystem
         SubscribeLocalEvent<BundleComponent, ComponentStartup>(onStart);
         SubscribeLocalEvent<BundableComponent, AfterInteractEvent>(onUse);
         SubscribeLocalEvent<BundleComponent, AfterInteractEvent>(onUseBundle);
-        SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
+        //SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
+        SubscribeLocalEvent<BundleComponent, ComponentGetState>(onGetState);
 
+    }
+
+    public void onGetState(Entity<BundleComponent> ent, ref ComponentGetState args)
+    {
+        args.State = new BundleComponent.BundleState()
+        {
+            Group = ent.Comp.group,
+            Containing = ent.Comp.containing,
+            UsedVolume = ent.Comp.usedVolume,
+            Checksum = ent.Comp.checksum,
+            BundlePositions = ent.Comp.bundlePositions,
+            sentTick = ent.Comp.curTick,
+        };
     }
 
     public void handleRemove(EntityUid uid, BundleComponent component, EntRemovedFromContainerMessage args)
@@ -42,6 +58,7 @@ public abstract partial class BundleSystem : EntitySystem
 
         helpers.GetParentWithComp(uid, out Entity<HandsComponent>? user);
         RemoveFromBundle((uid, component), (args.Entity, Comp<BundableComponent>(args.Entity)));
+        /*
         if (user is not null && component.containing.Count == 1)
         {
             var last = GetEntity(component.containing[0]);
@@ -50,6 +67,7 @@ public abstract partial class BundleSystem : EntitySystem
                 hands.TryPickup(user.Value, last);
             helpers.QueueDel(uid);
         }
+        */
     }
 
     public void onStart(Entity<BundleComponent> ent, ref ComponentStartup args)
@@ -103,9 +121,15 @@ public abstract partial class BundleSystem : EntitySystem
             var resolved = GetEntity(thing);
             if (TerminatingOrDeleted(resolved))
                 continue;
+            Log.Debug($"Trying to use {resolved} with {ev.Target.Value} on tick {timing.CurTick}");
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation))
             {
                 ev.Handled = true;
+                ent.Comp.lastUse = timing.CurTick;
+                helpers.GetParentWithComp(ev.User, out Entity<HandsComponent>? user);
+                ent.Comp.checksum.Add(new BundleComponent.UseAct(){ent = thing});
+                RemoveFromBundle(ent, (resolved, Comp<BundableComponent>(resolved)));
+                ent.Comp.ignoreNext = true;
                 return;
             }
         }
@@ -155,9 +179,7 @@ public abstract partial class BundleSystem : EntitySystem
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-
-        var bundle = PredictedSpawnAtPosition(bundleProto, new EntityCoordinates(user, 0, 0));
-        //var bundle = SpawnNextToOrDrop(bundleProto, user);
+        var bundle = SpawnNextToOrDrop(bundleProto, user);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
@@ -167,5 +189,15 @@ public abstract partial class BundleSystem : EntitySystem
         }
         //Dirty(bundle,comp);
         return bundle;
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        var q = EntityQueryEnumerator<BundleComponent>();
+        while (q.MoveNext(out var uid, out var comp))
+        {
+            comp.curTick = timing.CurTick;
+        }
     }
 }

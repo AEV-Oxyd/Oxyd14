@@ -38,14 +38,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<BundleComponent, AfterAutoHandleStateEvent>(OnState);
     }
-
-    public void OnState(EntityUid uid, BundleComponent component, ref AfterAutoHandleStateEvent args)
-    {
-        queuedThisTick.Enqueue(uid);
-    }
-
     protected override void OnAppearanceChange(EntityUid uid,
         BundableComponent component,
         ref AppearanceChangeEvent args)

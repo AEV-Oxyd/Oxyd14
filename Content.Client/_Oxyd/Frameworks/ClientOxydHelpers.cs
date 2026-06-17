@@ -16,7 +16,7 @@ public sealed partial class ClientOxydHelpers : EntitySystem
     // returns how many ticks ahead we are simulating as the client
     public uint getPredTicks()
     {
-        return _gameTiming.CurTick.Value - _gameTiming.LastRealTick.Value - 1;
+        return _gameTiming.CurTick.Value - _gameTiming.LastRealTick.Value;
     }
 
     /// <summary>
