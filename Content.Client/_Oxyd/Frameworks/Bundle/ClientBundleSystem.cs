@@ -39,50 +39,31 @@ public sealed class ClientBundleSystem : BundleSystem
         d ??= args.Current;
         if (d is BundleComponent.BundleState state)
         {
-            var newcount = ent.Comp.checksum.Count - state.checkTrim;
-            var copy = new BundleComponent.BundleAct[newcount];
-            ent.Comp.checksum.CopyTo(copy, state.checkTrim);
-            Log.Debug($"Bundle sync, trim is {state.checkTrim}, counts are {ent.Comp.checksum.Count} vs {newcount}");
-            if (state.Checksum.Count < newcount)
+            // server-side events or initial state . apply instantly!
+            if (state.Checksum.Count > ent.Comp.checksum.Count)
+                goto applyMods;
+            for (var j = ent.Comp.checksum.Count - 1; j > 0; j--)
             {
-                for (var i = 0; i < state.Checksum.Count; i++)
+                if (state.Checksum[^1].entity == ent.Comp.checksum[j].entity &&
+                    state.Checksum[^1].id == ent.Comp.checksum[j].id)
                 {
-                    if (state.Checksum[i].id != copy[i].id)
-                        goto applyMods;
-                    if (state.Checksum[i].entity != copy[i].entity)
-                        goto applyMods;
-                }
+                    var itercount = 1;
+                    while (++itercount <= state.Checksum.Count && --j >= 0)
+                    {
+                        var targ = state.Checksum[^itercount];
+                        var ex = ent.Comp.checksum[j];
+                        if (targ.entity != ex.entity)
+                            goto applyMods;
+                        if (targ.id != ex.id)
+                            goto applyMods;
+                    }
 
-                ent.Comp.checksum = new List<BundleComponent.BundleAct>(copy);
-                Log.Debug($"blocked bundle {ent} with {state}");
-                return;
-            }
-            // fast insertions , wait for reconcilation to be done after time passes
-            /*
-            Log.Debug($"Reconciling bundle {ent} with {state}, {ent.Comp.lastUse.Value} vs {state.sentTick.Value}");
-            if (ent.Comp.containing.Count < state.Containing.Count &&
-                ent.Comp.lastUse.Value - state.sentTick.Value < 30)
-            {
-                // inconsistent order means we have something new that should be applied immediately!
-                for (var i = 0; i < ent.Comp.containing.Count; i++)
-                {
-                    if (ent.Comp.containing[i] != state.Containing[i])
-                        goto applyMods;
+                    //Log.Debug($"blocked bundle {ent} with {state}");
+                    return;
                 }
+            }
 
-                Log.Debug($"blocked bundle {ent} with {state}");
-                return;
-            }
-            */
-            /*
-            if (ent.Comp.ignoreNext)
-            {
-                ent.Comp.ignoreNext = false;
-                Log.Debug($"Ignoring bundle {ent} with {state}");
-                return;
-            }
-            */
-            Log.Debug($"Reconciling bundle {ent} with {state.Containing.Count} items");
+            //Log.Debug($"Reconciling bundle {ent} with {state.Containing.Count} items");
             applyMods:
             ent.Comp.group = state.Group;
             ent.Comp.containing = state.Containing;

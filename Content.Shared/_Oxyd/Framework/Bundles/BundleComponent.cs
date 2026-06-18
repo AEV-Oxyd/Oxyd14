@@ -36,7 +36,6 @@ public sealed partial class BundleComponent : Component
         public List<NetEntity> Containing = new();
         public int UsedVolume;
         public List<BundleAct> Checksum = new();
-        public int checkTrim = 0;
         public Dictionary<NetEntity, Vector2> BundlePositions = new();
         public ProtoId<BundleGroup> Group;
     }

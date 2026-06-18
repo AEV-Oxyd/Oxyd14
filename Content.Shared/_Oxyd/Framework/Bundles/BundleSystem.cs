@@ -49,7 +49,6 @@ public abstract partial class BundleSystem : EntitySystem
             Containing = ent.Comp.containing,
             UsedVolume = ent.Comp.usedVolume,
             Checksum = new List<BundleComponent.BundleAct>(ent.Comp.checksum.TakeLast(20)),
-            checkTrim = Math.Max(ent.Comp.checksum.Count - 20,0),
             BundlePositions = ent.Comp.bundlePositions,
         };
     }
@@ -59,6 +58,7 @@ public abstract partial class BundleSystem : EntitySystem
 
         helpers.GetParentWithComp(own, out Entity<HandsComponent>? user);
         RemoveFromBundle(own, targ);
+
         if (user is not null && own.Comp.containing.Count == 1)
         {
             var last = GetEntity(own.Comp.containing[0]);
@@ -124,9 +124,7 @@ public abstract partial class BundleSystem : EntitySystem
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation))
             {
                 ev.Handled = true;
-                ent.Comp.checksum.Add(new BundleComponent.BundleAct(){entity = thing, id = 'R'});
                 handleRemove(ent, (resolved, Comp<BundableComponent>(resolved)));
-                RemoveFromBundle(ent, (resolved, Comp<BundableComponent>(resolved)));
                 return;
             }
         }
@@ -147,9 +145,14 @@ public abstract partial class BundleSystem : EntitySystem
             return false;
         if (!bundle.Comp.bundlePositions.ContainsKey(GetNetEntity(ent.Owner)))
         {
+            bundle.Comp.checksum.Add(new BundleComponent.BundleAct(){entity = GetNetEntity(ent.Owner), id = 'A'});
             bundle.Comp.usedVolume += ent.Comp.volume;
             bundle.Comp.containing.Add(GetNetEntity(ent.Owner));
             bundle.Comp.bundlePositions.Add(GetNetEntity(ent.Owner), random.NextVector2(0.01f, 0.2f));
+            if (bundle.Comp.checksum.Count > 50)
+            {
+                bundle.Comp.checksum = bundle.Comp.checksum.GetRange(20, bundle.Comp.checksum.Count);
+            }
         }
         afterMerge(bundle);
         Dirty(bundle, bundle.Comp);
@@ -165,6 +168,7 @@ public abstract partial class BundleSystem : EntitySystem
             return;
         }
         containers.Remove(ent.Owner, containers.GetContainer(bundle.Owner, storeKey));
+        bundle.Comp.checksum.Add(new BundleComponent.BundleAct(){entity = GetNetEntity(ent.Owner), id = 'R'});
         bundle.Comp.containing.Remove(GetNetEntity(ent.Owner));
         bundle.Comp.usedVolume -= ent.Comp.volume;
         afterRemove(bundle);

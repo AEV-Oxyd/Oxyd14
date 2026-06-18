@@ -108,7 +108,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 continue;
             if (!TryComp<SpriteComponent>(thing, out var selfsprite))
                 continue;
-            var output = true;
+            var output = SpriteSystem.RemoveLayer((thing, selfsprite), 0, false);
             while(output)
                 output = SpriteSystem.RemoveLayer((thing, selfsprite), 0);
             foreach (var net in bundle.containing)
