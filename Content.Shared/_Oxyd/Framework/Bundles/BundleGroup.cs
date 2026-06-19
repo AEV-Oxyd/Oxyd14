@@ -19,4 +19,7 @@ public sealed partial class BundleGroup : IPrototype
     [DataField]
     // size used for bundle in inventory
     public ProtoId<ItemSizePrototype> size = "normal";
+
+    [DataField("components")]
+    public ComponentRegistry components =  new ComponentRegistry();
 }

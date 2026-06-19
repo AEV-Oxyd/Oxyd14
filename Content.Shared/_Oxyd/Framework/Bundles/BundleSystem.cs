@@ -4,6 +4,7 @@ using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.Mind.Components;
+using Content.Shared.Throwing;
 using Robust.Shared.Containers;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
@@ -26,6 +27,7 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] protected IGameTiming timing = default!;
     [Dependency] private SharedOxydHelpers helpers = default!;
     [Dependency] private SharedInteractionSystem interact = default!;
+    [Dependency] protected ThrowingSystem throwing = default!;
     private IRobustRandom random = new RobustRandom();
 
     public static readonly string storeKey = "storagebase";
@@ -35,10 +37,27 @@ public abstract partial class BundleSystem : EntitySystem
     {
         SubscribeLocalEvent<BundleComponent, ComponentStartup>(onStart);
         SubscribeLocalEvent<BundableComponent, AfterInteractEvent>(onUse);
-        SubscribeLocalEvent<BundleComponent, AfterInteractEvent>(onUseBundle);
+        SubscribeLocalEvent<BundleGenericInteractionComponent, AfterInteractEvent>(onUseBundle);
+        SubscribeLocalEvent<BundleGenericInteractionComponent, ThrownEvent>(onThrowBundle);
         //SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
         SubscribeLocalEvent<BundleComponent, ComponentGetState>(onGetState);
 
+    }
+
+    public void onThrowBundle(Entity<BundleGenericInteractionComponent> ent, ThrownEvent ev)
+    {
+        var bundle = Comp<BundleComponent>(ent);
+        var cont = containers.GetContainer(ent, storeKey);
+        foreach (var thing in bundle.containing)
+        {
+            var resolve = GetEntity(thing);
+            if (TerminatingOrDeleted(resolve))
+                continue;
+            containers.Remove(resolve, cont, true, true, n);
+            throwing.TryThrow(resolve, );
+
+        }
+        helpers.QueueDel(ent);
     }
 
     public void onGetState(Entity<BundleComponent> ent, ref ComponentGetState args)
@@ -53,20 +72,21 @@ public abstract partial class BundleSystem : EntitySystem
         };
     }
 
-    public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ)
+    public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ, bool lastover = false)
     {
 
         helpers.GetParentWithComp(own, out Entity<HandsComponent>? user);
         RemoveFromBundle(own, targ);
 
-        if (user is not null && own.Comp.containing.Count == 1)
+        if (user is not null && own.Comp.containing.Count == 1 && !lastover)
         {
             var last = GetEntity(own.Comp.containing[0]);
             RemoveFromBundle(own, (last, Comp<BundableComponent>(last)));
             if(hands.TryDrop((user.Value.Owner, user.Value.Comp), own.Owner))
                 hands.TryPickup(user.Value, last);
-            helpers.QueueDel(own.Owner);
         }
+        if(own.Comp.containing.Count == 0)
+            helpers.QueueDel(own.Owner);
     }
 
     public void onStart(Entity<BundleComponent> ent, ref ComponentStartup args)
@@ -105,7 +125,7 @@ public abstract partial class BundleSystem : EntitySystem
         }
     }
 
-    public void onUseBundle(Entity<BundleComponent> ent, ref AfterInteractEvent ev)
+    public void onUseBundle(Entity<BundleGenericInteractionComponent> ent, ref AfterInteractEvent ev)
     {
         if (ev.Handled)
             return;
@@ -113,9 +133,18 @@ public abstract partial class BundleSystem : EntitySystem
             return;
         if (ev.Target is null)
             return;
-        if (HasComp<BundleComponent>(ev.Target.Value) || HasComp<BundableComponent>(ev.Target.Value))
+        if (HasComp<BundleComponent>(ev.Target.Value))
+        {
             return;
-        foreach (var thing in ent.Comp.containing)
+        }
+
+        if (HasComp<BundableComponent>(ev.Target.Value))
+        {
+            return;
+        }
+
+        var comp = Comp<BundleComponent>(ent);
+        foreach (var thing in comp.containing)
         {
             var resolved = GetEntity(thing);
             if (TerminatingOrDeleted(resolved))
@@ -124,7 +153,9 @@ public abstract partial class BundleSystem : EntitySystem
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation))
             {
                 ev.Handled = true;
-                handleRemove(ent, (resolved, Comp<BundableComponent>(resolved)));
+                var cont = containers.GetContainer(ent, storeKey);
+                if(!cont.Contains(resolved))
+                    handleRemove((ent, comp), (resolved, Comp<BundableComponent>(resolved)));
                 return;
             }
         }
@@ -181,7 +212,12 @@ public abstract partial class BundleSystem : EntitySystem
 
     public EntityUid CreateBundle(Entity<BundableComponent> ent, EntityUid user)
     {
-        var bundle = SpawnNextToOrDrop(bundleProto, user);
+        if (!prototypes.TryIndex<BundleGroup>(ent.Comp.group, out var indexed))
+        {
+            return EntityUid.Invalid;
+        }
+
+        var bundle = SpawnNextToOrDrop(bundleProto, user,null, indexed.components);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
@@ -189,6 +225,7 @@ public abstract partial class BundleSystem : EntitySystem
             QueueDel(bundle);
             return EntityUid.Invalid;
         }
+
         //Dirty(bundle,comp);
         return bundle;
     }
