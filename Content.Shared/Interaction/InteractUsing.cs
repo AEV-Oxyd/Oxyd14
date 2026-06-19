@@ -30,6 +30,11 @@ public sealed class InteractUsingEvent : HandledEntityEventArgs
     /// </summary>
     public EntityCoordinates ClickLocation { get; }
 
+    /// <summary>
+    ///  Oxyd added. Wheter to ignore if we can't drop the item from a hand.
+    /// </summary>
+    public bool DroppingOverride { get; set; } = false;
+
     public InteractUsingEvent(EntityUid user, EntityUid used, EntityUid target, EntityCoordinates clickLocation)
     {
         // Interact using should not have the same used and target.

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using System.Reflection.PortableExecutable;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
@@ -9,6 +10,8 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
+using Robust.Shared.Physics.Components;
+using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -27,7 +30,9 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] protected IGameTiming timing = default!;
     [Dependency] private SharedOxydHelpers helpers = default!;
     [Dependency] private SharedInteractionSystem interact = default!;
+    [Dependency] protected SharedTransformSystem transform = default!;
     [Dependency] protected ThrowingSystem throwing = default!;
+    [Dependency] protected SharedPhysicsSystem physics = default!;
     private IRobustRandom random = new RobustRandom();
 
     public static readonly string storeKey = "storagebase";
@@ -39,22 +44,40 @@ public abstract partial class BundleSystem : EntitySystem
         SubscribeLocalEvent<BundableComponent, AfterInteractEvent>(onUse);
         SubscribeLocalEvent<BundleGenericInteractionComponent, AfterInteractEvent>(onUseBundle);
         SubscribeLocalEvent<BundleGenericInteractionComponent, ThrownEvent>(onThrowBundle);
+        SubscribeLocalEvent<BundleGenericInteractionComponent, ComponentStartup>(initRandom);
         //SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
         SubscribeLocalEvent<BundleComponent, ComponentGetState>(onGetState);
 
     }
 
-    public void onThrowBundle(Entity<BundleGenericInteractionComponent> ent, ThrownEvent ev)
+    public void initRandom(Entity<BundleGenericInteractionComponent> ent, ref ComponentStartup ev)
     {
+        if (network.IsServer)
+        {
+            ent.Comp.throwRandom = new RobustRandom().Next();
+            Dirty(ent);
+        }
+    }
+    public void onThrowBundle(EntityUid ent, BundleGenericInteractionComponent comp, ThrownEvent ev)
+    {
+        Log.Debug($"Bundle thrown");
         var bundle = Comp<BundleComponent>(ent);
+        var rand = new RobustRandom();
+        rand.SetSeed(comp.throwRandom);
         var cont = containers.GetContainer(ent, storeKey);
-        foreach (var thing in bundle.containing)
+        var maxAngle = Angle.FromDegrees(20);
+        var copy = bundle.containing.ToList();
+        foreach (var thing in copy)
         {
             var resolve = GetEntity(thing);
             if (TerminatingOrDeleted(resolve))
                 continue;
-            containers.Remove(resolve, cont, true, true, n);
-            throwing.TryThrow(resolve, );
+            handleRemove((ent, bundle), (resolve, Comp<BundableComponent>(resolve)));
+            transform.SetWorldPosition(resolve, transform.GetWorldPosition(ent));
+            var vel = Comp<PhysicsComponent>(ev.Thrown).LinearVelocity;
+            var impulse = vel.Normalized() + maxAngle.ToVec() * (rand.NextFloat() - 0.5f) ;
+            //Log.Debug($"Throwing {resolve} with {vel} and {maxAngle},velG {vel.ToAngle()} , worldG {vel.ToWorldAngle()} , impulse is {impulse} , {impulse.ToWorldAngle()} {impulse.ToAngle()} ");
+            throwing.TryThrow(resolve, impulse);
 
         }
         helpers.QueueDel(ent);
@@ -71,13 +94,12 @@ public abstract partial class BundleSystem : EntitySystem
             BundlePositions = ent.Comp.bundlePositions,
         };
     }
-
     public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ, bool lastover = false)
     {
 
         helpers.GetParentWithComp(own, out Entity<HandsComponent>? user);
         RemoveFromBundle(own, targ);
-
+        /* unpredictable ,  due to no predicted spawn . Causes issues with the last item. SPCR 2026
         if (user is not null && own.Comp.containing.Count == 1 && !lastover)
         {
             var last = GetEntity(own.Comp.containing[0]);
@@ -85,8 +107,9 @@ public abstract partial class BundleSystem : EntitySystem
             if(hands.TryDrop((user.Value.Owner, user.Value.Comp), own.Owner))
                 hands.TryPickup(user.Value, last);
         }
+        */
         if(own.Comp.containing.Count == 0)
-            helpers.QueueDel(own.Owner);
+            helpers.QueueDel(own);
     }
 
     public void onStart(Entity<BundleComponent> ent, ref ComponentStartup args)
@@ -133,14 +156,30 @@ public abstract partial class BundleSystem : EntitySystem
             return;
         if (ev.Target is null)
             return;
-        if (HasComp<BundleComponent>(ev.Target.Value))
+        if (TryComp<BundleComponent>(ev.Target.Value, out var targbund))
         {
+            var copy = targbund.containing.ToList();
+            foreach (var thing in copy)
+            {
+                var resolved = GetEntity(thing);
+                if (TerminatingOrDeleted(resolved))
+                    continue;
+                handleRemove((ev.Target.Value, targbund), (resolved, Comp<BundableComponent>(resolved)));
+                if (!TryMerge((resolved, Comp<BundableComponent>(resolved)), (ent, Comp<BundleComponent>(ent))))
+                    break;
+                ev.Handled = true;
+            }
             return;
         }
 
         if (HasComp<BundableComponent>(ev.Target.Value))
         {
-            return;
+            if (TryMerge((ev.Target.Value, Comp<BundableComponent>(ev.Target.Value)),
+                    (ent, Comp<BundleComponent>(ent))))
+            {
+                ev.Handled = true;
+                return;
+            }
         }
 
         var comp = Comp<BundleComponent>(ent);
@@ -150,7 +189,7 @@ public abstract partial class BundleSystem : EntitySystem
             if (TerminatingOrDeleted(resolved))
                 continue;
             Log.Debug($"Trying to use {resolved} with {ev.Target.Value} on tick {timing.CurTick}");
-            if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation))
+            if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation, dropOverride: true))
             {
                 ev.Handled = true;
                 var cont = containers.GetContainer(ent, storeKey);
@@ -189,7 +228,6 @@ public abstract partial class BundleSystem : EntitySystem
         Dirty(bundle, bundle.Comp);
         return true;
     }
-    // doesn't do any container interactions!!
     public void RemoveFromBundle(Entity<BundleComponent> bundle, Entity<BundableComponent> ent)
     {
         Log.Debug($"Removing {ent} from {bundle}");
