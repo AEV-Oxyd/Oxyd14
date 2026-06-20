@@ -235,11 +235,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void OnEntInsertChamber(Entity<OxydChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         var target = args.Container;
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
-            return;
-        if (!_gameTiming.IsFirstTimePredicted)
             return;
         ent.Comp.realBullet[index] =  args.Entity;
         Log.Debug($"Inserted {args.Entity} into chamber at index {index} at tick {_gameTiming.CurTick}");
@@ -247,11 +247,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void OnEntRemoveChamber(Entity<OxydChamberComponent> ent, ref EntRemovedFromContainerMessage args)
     {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
         var target = args.Container;
         var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
         if (index == -1)
-            return;
-        if (!_gameTiming.IsFirstTimePredicted)
             return;
         Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
         ent.Comp.realBullet[index] = EntityUid.Invalid;
