@@ -173,6 +173,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (TryInsertAmmo(ent.Comp, args.Used, i, cont))
             {
                 args.Handled = true;
+                Log.Error($"Inserted {args.Used} into revolver at index {i}");
                 return;
             }
         }
