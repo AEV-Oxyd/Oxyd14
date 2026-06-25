@@ -137,6 +137,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
         SubscribeLocalEvent<OxydChamberComponent, ComponentInit>(onChamberInitialized);
         SubscribeLocalEvent<OxydMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
+        SubscribeLocalEvent<OxydMagazineChamberComponent, EntRemovedFromContainerMessage>(OnEntRemoveMag);
         SubscribeLocalEvent<OxydChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertChamber);
         SubscribeLocalEvent<OxydChamberComponent, EntRemovedFromContainerMessage>(OnEntRemoveChamber);
         SubscribeLocalEvent<OxydChamberComponent, InteractUsingEvent>(OnTryInsertLate, before: new []{typeof(ItemSlotsSystem)});
@@ -157,6 +158,22 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             {
                 extension.extending.Add(null);
             }
+        }
+    }
+
+    public void OnEntRemoveMag(Entity<OxydMagazineChamberComponent> ent, ref EntRemovedFromContainerMessage args)
+    {
+        if (!_gameTiming.IsFirstTimePredicted)
+            return;
+        if (!HasComp<OxydMagazineComponent>(args.Entity))
+        {
+            var target = args.Container;
+            var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
+            if (index == -1)
+                return;
+            Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
+            ent.Comp.realBullet[index] = EntityUid.Invalid;
+            return;
         }
     }
 
@@ -229,6 +246,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             // will enter chamber, leaving itemslot open
             if (!TryInsertAmmo(extend, item, targetIndex, cont, true))
                 continue;
+            Log.Debug($"Inserted at {targetIndex}");
             break;
         }
         ent.Comp.silenceAutoInsert = false;
@@ -387,7 +405,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (!_gameTiming.IsFirstTimePredicted)
             return;
         if (!HasComp<OxydMagazineComponent>(args.Entity))
+        {
+            OnEntInsertChamber((ent.Owner, (OxydChamberComponent) ent.Comp), ref args);
             return;
+        }
         var target = args.Container;
         var targetIndex = ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == target.ID);
         if (targetIndex == -1)
@@ -783,7 +804,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         RaiseLocalEvent(gun.Owner, ev);
         if(shooter != gun.Owner)
             RaiseLocalEvent(shooter, ev);
-        Log.Debug($"b: {ev.baseInaccuracy.Degrees}, a: {ev.addedInaccuracy.Degrees}");
+        //Log.Debug($"b: {ev.baseInaccuracy.Degrees}, a: {ev.addedInaccuracy.Degrees}");
         var inaccuracyDebuff = (ev.baseInaccuracy + rand.NextSingle() * ev.addedInaccuracy);
         inaccuracyDebuff *= rand.NextSingle() > 0.5f ? 1 : -1;
         //Log.Debug($"{inaccuracyDebuff.Degrees} shotCount of {gun.Comp.timesFired} at tick {_gameTiming.CurTick} , realTime {_gameTiming.RealTime}");
@@ -1002,14 +1023,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var aFireDelay = gunFiremodePrototype.fireDelay;
         var aTotalWait = gunFiremodePrototype.totalWait;
         var lastFireDelta = _gameTiming.CurTime - gunFiremodePrototype.nextFire - aTotalWait;
-        Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {aTotalWait}, gap {gunFiremodePrototype.firingGaps}");
+        //Log.Debug($"Last fire delta is {lastFireDelta}, totalWait {aTotalWait}, gap {gunFiremodePrototype.firingGaps}");
         gunFiremodePrototype.nextFire = _gameTiming.CurTime + aFireDelay;
         gun.Comp.firingTime += gunFiremodePrototype.fireDelay;
         //Log.Debug($"Fire Delta is {lastFireDelta}");
         if (lastFireDelta > aFireDelay && lastFireDelta < TimeSpan.FromMilliseconds(maxAcceptableFireGap) && gunFiremodePrototype.firingGaps < TimeSpan.FromMilliseconds(maxAcceptableFireGap))
         {
             gunFiremodePrototype.firingGaps += lastFireDelta - aFireDelay;
-            Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
+            //Log.Debug($"Accumulating firegap of {gunFiremodePrototype.firingGaps}");
         }
         gunFiremodePrototype.lastFiredTick = _gameTiming.CurTick;
         if (aFireDelay < _gameTiming.TickPeriod)
@@ -1174,7 +1195,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
-        Log.Debug($"Queued for active removal {gun.Owner}");
+        //Log.Debug($"Queued for active removal {gun.Owner}");
         checkActive.Add(new OxydFireDataWrap(fireProto, gun, shooter));
         gun.Comp.keepUpdating = false;
     }
@@ -1182,23 +1203,23 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public bool TryExecuteFiremodeCycle(GunFiremodePrototype firemodePrototype, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        Log.Debug($"Executing firecycle at {_gameTiming.CurTick}");
+        //Log.Debug($"Executing firecycle at {_gameTiming.CurTick}");
         if (gun.Comp.jammed)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
-            Log.Debug($"Interpret failed: jam");
+            //Log.Debug($"Interpret failed: jam");
             return false;
         }
 
         if (firemodePrototype.nextFire > _gameTiming.CurTime && _netManager.IsClient)
         {
-            Log.Debug($"Interpret failed: nextFire");
+            //Log.Debug($"Interpret failed: nextFire");
             return false;
         }
 
         if (firemodePrototype.lastInterpreted == _gameTiming.CurTick)
         {
-            Log.Debug($"Interpret failed: sameTick");
+            //Log.Debug($"Interpret failed: sameTick");
             return false;
         }
 

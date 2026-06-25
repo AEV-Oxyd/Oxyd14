@@ -60,9 +60,9 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 if (i == source.Comp.AllLayers.Count() - 1)
                     genKey += BakeEnder;
                 var clone = SpriteSystem.AddBlankLayer((target.Owner, target.Comp), indice);
+                SpriteSystem.LayerSetRsi((target.Owner, target.Comp), indice, layer.ActualRsi, layer.RsiState);
                 SpriteSystem.LayerSetData((target.Owner, target.Comp), indice, layerData.ToPrototypeData());
                 //clone.SetRsi(layer.Rsi);
-                SpriteSystem.LayerSetRsi((target.Owner, target.Comp), indice, layer.ActualRsi, layer.RsiState);
                 SpriteSystem.LayerSetOffset((target.Owner, target.Comp), indice, clone.Offset + offset);
                 SpriteSystem.LayerMapSet((target.Owner, target.Comp), genKey, indice++);
             }
@@ -77,13 +77,13 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
         {
             var key = BakeIdentifier + source.Owner + i++;
             if (SpriteSystem.TryGetLayer((target.Owner, target.Comp), key, out _, false))
-                SpriteSystem.RemoveLayer((target.Owner, target.Comp), key);
+                SpriteSystem.RemoveLayer((target.Owner, target.Comp), key, false);
             else
             {
                 key += BakeEnder;
                 if (SpriteSystem.TryGetLayer((target.Owner, target.Comp), key, out _, false))
                 {
-                    SpriteSystem.RemoveLayer((target.Owner, target.Comp), key);
+                    SpriteSystem.RemoveLayer((target.Owner, target.Comp), key, false);
                     break;
                 }
                 else
@@ -113,7 +113,7 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 var output = SpriteSystem.RemoveLayer((thing, selfsprite), 0, false);
                 while (output)
                 {
-                    output = SpriteSystem.RemoveLayer((thing, selfsprite), 0);
+                    output = SpriteSystem.RemoveLayer((thing, selfsprite), 0, false);
                 }
             }
 

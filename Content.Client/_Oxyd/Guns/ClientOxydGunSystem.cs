@@ -66,7 +66,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
         else
         {
-            Log.Debug($"Thrown but not reset weapon");
+            //Log.Debug($"Thrown but not reset weapon");
         }
     }
 
@@ -230,7 +230,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         gun.Comp.simulateAsTick = _gameTiming.CurTick;
         if (!firemode.Active)
         {
-            Log.Debug($"Sending new interpretation start message!");
+            //Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
@@ -245,7 +245,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
         {
-            Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
+            //Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
             _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
