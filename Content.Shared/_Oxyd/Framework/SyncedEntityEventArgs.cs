@@ -10,8 +10,6 @@ public sealed class SyncedEntityEventArgs<T> : EntityEventArgs
 
     public void Register(int priority, Func<SyncedEntityEventArgs<T>, bool> pred)
     {
-        if(preds.ContainsKey(priority))
-            throw new Exception("Priority already exists for SyncedEntityEventArgs, choose another number");
         preds.Add(priority, pred);
     }
 

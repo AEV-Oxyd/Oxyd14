@@ -97,7 +97,6 @@ public abstract partial class BundleSystem : EntitySystem
     public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ, bool lastover = false)
     {
 
-        helpers.GetParentWithComp(own, out Entity<HandsComponent>? user);
         RemoveFromBundle(own, targ);
         /* unpredictable ,  due to no predicted spawn . Causes issues with the last item. SPCR 2026
         if (user is not null && own.Comp.containing.Count == 1 && !lastover)
@@ -109,7 +108,8 @@ public abstract partial class BundleSystem : EntitySystem
         }
         */
         if(own.Comp.containing.Count == 0)
-            helpers.QueueDel(own);
+            PredictedQueueDel(own);
+            //helpers.QueueDel(own);
     }
 
     public void onStart(Entity<BundleComponent> ent, ref ComponentStartup args)
@@ -120,6 +120,8 @@ public abstract partial class BundleSystem : EntitySystem
     public void onUse(Entity<BundableComponent> ent, ref AfterInteractEvent ev)
     {
         if (ev.Target is null)
+            return;
+        if (!ev.CanReach)
             return;
         if (!timing.IsFirstTimePredicted)
             return;
@@ -152,10 +154,20 @@ public abstract partial class BundleSystem : EntitySystem
     {
         if (ev.Handled)
             return;
+        if (!ev.CanReach)
+            return;
         if (!timing.IsFirstTimePredicted)
             return;
         if (ev.Target is null)
             return;
+        var comp = Comp<BundleComponent>(ent);
+        // isFirstTimePredicted doesnt cover this case somehow gg SPCR 2026
+        if (comp.containing.Contains(GetNetEntity(ev.Target.Value)))
+        {
+            ev.Handled = true;
+            return;
+        }
+
         if (TryComp<BundleComponent>(ev.Target.Value, out var targbund))
         {
             var copy = targbund.containing.ToList();
@@ -181,22 +193,32 @@ public abstract partial class BundleSystem : EntitySystem
                 return;
             }
         }
-
-        var comp = Comp<BundleComponent>(ent);
+        var cont = containers.GetContainer(ent, storeKey);
         foreach (var thing in comp.containing)
         {
             var resolved = GetEntity(thing);
             if (TerminatingOrDeleted(resolved))
                 continue;
-            Log.Debug($"Trying to use {resolved} with {ev.Target.Value} on tick {timing.CurTick}");
+            var wasUsed = false;
+            Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation, dropOverride: true))
             {
+                wasUsed = true;
+                Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
                 ev.Handled = true;
-                var cont = containers.GetContainer(ent, storeKey);
-                if(!cont.Contains(resolved))
-                    handleRemove((ent, comp), (resolved, Comp<BundableComponent>(resolved)));
+            }
+
+            if (!cont.Contains(resolved))
+            {
+                handleRemove((ent, comp), (resolved, Comp<BundableComponent>(resolved)));
+                if (!wasUsed)
+                {
+                    Log.Debug($"--Used {resolved} but was not marked as used!");
+                }
+
                 return;
             }
+
         }
     }
 
@@ -255,6 +277,8 @@ public abstract partial class BundleSystem : EntitySystem
             return EntityUid.Invalid;
         }
 
+        if (!network.IsServer)
+            return EntityUid.Invalid;
         var bundle = SpawnNextToOrDrop(bundleProto, user,null, indexed.components);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
