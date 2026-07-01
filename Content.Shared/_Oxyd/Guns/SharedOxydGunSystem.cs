@@ -179,6 +179,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 return;
             Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
             ent.Comp.realBullet[index] = EntityUid.Invalid;
+            if(!ent.Comp.silenceAutoInsert)
+                FillAmmo(ent.Comp, (ent, Comp<OxydGunComponent>(ent)), index, _containerSystem.GetContainer(ent.Owner, oxydContents));
             return;
         }
     }
@@ -940,8 +942,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 var slot = provider.bulletSlot[frd.providerId];
                 provider.realBullet[frd.providerId] = EntityUid.Invalid;
                 _itemSlotsSystem.TryEject(gun, provider.bulletSlot[frd.providerId], null, out var _);
-
-
                 break;
             case OxydGunLaserProviderComponent provider:
                 break;
@@ -1050,10 +1050,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
-        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime >= aFireDelay * 2)
+        if (gunFiremodePrototype.SingleShot && gun.Comp.firingTime > aFireDelay)
             gun.Comp.firingTime = aFireDelay;
         while (gun.Comp.firingTime >= aFireDelay)
         {
+            Log.Debug($"Firing gun ---");
             if(!getProjectileLoaded(shooter, gun, mods, out var projectileNullable, out var used))
                 return projectiles;
             var shootSound = gunFiremodePrototype.fireSound;
