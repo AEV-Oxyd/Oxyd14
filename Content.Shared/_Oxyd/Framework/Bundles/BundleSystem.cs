@@ -4,6 +4,7 @@ using System.Reflection.PortableExecutable;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
+using Content.Shared.Interaction.Events;
 using Content.Shared.Mind.Components;
 using Content.Shared.Throwing;
 using Robust.Shared.Containers;
@@ -45,13 +46,13 @@ public abstract partial class BundleSystem : EntitySystem
         SubscribeLocalEvent<BundleGenericInteractionComponent, AfterInteractEvent>(onUseBundle);
         SubscribeLocalEvent<BundleGenericInteractionComponent, ThrownEvent>(onThrowBundle);
         SubscribeLocalEvent<BundleGenericInteractionComponent, ComponentStartup>(initRandom);
-        SubscribeLocalEvent<BundleGenericInteractionComponent, InteractHandEvent>(onHandInteract);
+        SubscribeLocalEvent<BundleGenericInteractionComponent, UseInHandEvent>(onHandInteract);
         //SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
         SubscribeLocalEvent<BundleComponent, ComponentGetState>(onGetState);
 
     }
 
-    public void onHandInteract(Entity<BundleGenericInteractionComponent> ent,ref  InteractHandEvent ev)
+    public void onHandInteract(Entity<BundleGenericInteractionComponent> ent,ref UseInHandEvent ev)
     {
         if (!timing.IsFirstTimePredicted)
             return;
@@ -63,6 +64,7 @@ public abstract partial class BundleSystem : EntitySystem
             return;
         handleRemove((ent,cmp), (uid, Comp<BundableComponent>(uid)));
         ev.Handled = true;
+        hands.SwapHands(ev.User);
         hands.TryPickup(ev.User, uid);
     }
 
