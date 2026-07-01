@@ -45,9 +45,25 @@ public abstract partial class BundleSystem : EntitySystem
         SubscribeLocalEvent<BundleGenericInteractionComponent, AfterInteractEvent>(onUseBundle);
         SubscribeLocalEvent<BundleGenericInteractionComponent, ThrownEvent>(onThrowBundle);
         SubscribeLocalEvent<BundleGenericInteractionComponent, ComponentStartup>(initRandom);
+        SubscribeLocalEvent<BundleGenericInteractionComponent, InteractHandEvent>(onHandInteract);
         //SubscribeLocalEvent<BundleComponent, EntRemovedFromContainerMessage>(handleRemove);
         SubscribeLocalEvent<BundleComponent, ComponentGetState>(onGetState);
 
+    }
+
+    public void onHandInteract(Entity<BundleGenericInteractionComponent> ent,ref  InteractHandEvent ev)
+    {
+        if (!timing.IsFirstTimePredicted)
+            return;
+        if (ev.Handled)
+            return;
+        var cmp = Comp<BundleComponent>(ent);
+        var uid = GetEntity(cmp.containing.FirstOrDefault());
+        if (TerminatingOrDeleted(uid))
+            return;
+        handleRemove((ent,cmp), (uid, Comp<BundableComponent>(uid)));
+        ev.Handled = true;
+        hands.TryPickup(ev.User, uid);
     }
 
     public void initRandom(Entity<BundleGenericInteractionComponent> ent, ref ComponentStartup ev)
@@ -94,7 +110,7 @@ public abstract partial class BundleSystem : EntitySystem
             BundlePositions = ent.Comp.bundlePositions,
         };
     }
-    public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ, bool lastover = false)
+    public void handleRemove(Entity<BundleComponent> own,Entity<BundableComponent> targ)
     {
 
         RemoveFromBundle(own, targ);
@@ -178,7 +194,11 @@ public abstract partial class BundleSystem : EntitySystem
                     continue;
                 handleRemove((ev.Target.Value, targbund), (resolved, Comp<BundableComponent>(resolved)));
                 if (!TryMerge((resolved, Comp<BundableComponent>(resolved)), (ent, Comp<BundleComponent>(ent))))
+                {
+                    TryMerge( (resolved, Comp<BundableComponent>(resolved)), (ev.Target.Value, targbund));
                     break;
+                }
+
                 ev.Handled = true;
             }
             return;
@@ -199,22 +219,24 @@ public abstract partial class BundleSystem : EntitySystem
             var resolved = GetEntity(thing);
             if (TerminatingOrDeleted(resolved))
                 continue;
-            var wasUsed = false;
-            Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
+            //var wasUsed = false;
+            //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
             if (interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation, dropOverride: true))
             {
-                wasUsed = true;
-                Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
+                //wasUsed = true;
+                //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
                 ev.Handled = true;
             }
 
             if (!cont.Contains(resolved))
             {
                 handleRemove((ent, comp), (resolved, Comp<BundableComponent>(resolved)));
+                /*
                 if (!wasUsed)
                 {
                     Log.Debug($"--Used {resolved} but was not marked as used!");
                 }
+                */
 
                 return;
             }
