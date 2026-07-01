@@ -14,9 +14,6 @@
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectCheckCuffed
-  - !type:GunEffectWait
-    waitPeriod: 0.2
-    stepBack: 4
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
     stepBack: 5
@@ -40,12 +37,9 @@
   - !type:GunEffectCheckAmmo
   - !type:GunEffectCheckHandheld
   - !type:GunEffectCheckCuffed
-  - !type:GunEffectWait
-    waitPeriod: 0.1
-    stepBack: 4
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatNextTickIfMouseHeld
-    stepBack: 5
+    stepBack: 6
     validDiff: 0.4
     hardWait: false
     maxMissed: 10
