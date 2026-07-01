@@ -1031,7 +1031,8 @@ namespace Content.Shared.Interaction
             EntityUid target,
             EntityCoordinates clickLocation,
             bool checkCanInteract = true,
-            bool checkCanUse = true)
+            bool checkCanUse = true,
+            bool dropOverride = false)
         {
             if (IsDeleted(user) || IsDeleted(used) || IsDeleted(target))
                 return false;
@@ -1052,7 +1053,7 @@ namespace Content.Shared.Interaction
 
             DebugTools.Assert(!IsDeleted(user) && !IsDeleted(used) && !IsDeleted(target));
             // all interactions should only happen when in range / unobstructed, so no range check is needed
-            var interactUsingEvent = new InteractUsingEvent(user, used, target, clickLocation);
+            var interactUsingEvent = new InteractUsingEvent(user, used, target, clickLocation){ DroppingOverride = dropOverride};
             RaiseLocalEvent(target, interactUsingEvent, true);
 
             var userInteractUsingEvent = new UserInteractUsingEvent(user, used, target, clickLocation);

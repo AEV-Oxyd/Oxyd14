@@ -255,7 +255,7 @@ namespace Content.Shared.Containers.ItemSlots
             }
 
             // Drop the held item onto the floor. Return if the user cannot drop.
-            if (!_handsSystem.TryDrop(args.User, args.Used))
+            if (!_handsSystem.TryDrop(args.User, args.Used) && !args.DroppingOverride)
                 return;
 
             slots.Sort(SortEmpty);
@@ -264,7 +264,7 @@ namespace Content.Shared.Containers.ItemSlots
             {
                 if (slot.Item != null)
                     _handsSystem.TryPickupAnyHand(args.User, slot.Item.Value, handsComp: hands);
-                
+
                 Insert(uid, slot, args.Used, args.User, excludeUserAudio: true);
 
                 if (slot.InsertSuccessPopup.HasValue)
@@ -885,6 +885,7 @@ namespace Content.Shared.Containers.ItemSlots
         {
             if (args.Current is not ItemSlotsComponentState state)
                 return;
+            Log.Debug($"Received server state");
 
             foreach (var (key, slot) in component.Slots)
             {

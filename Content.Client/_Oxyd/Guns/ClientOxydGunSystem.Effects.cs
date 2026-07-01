@@ -35,7 +35,7 @@ public sealed partial class ClientOxydGunSystem
             return false;
         }
 
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick},   real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
+        //Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick},   real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
         //Log.Debug($"Interpreting effect of type {effect}");
         switch (effect)
         {

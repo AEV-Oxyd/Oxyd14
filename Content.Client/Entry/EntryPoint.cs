@@ -1,3 +1,4 @@
+using Content.Client._Oxyd.Framework.Bundle;
 using Content.Client.Administration.Managers;
 using Content.Client.Changelog;
 using Content.Client.Chat.Managers;

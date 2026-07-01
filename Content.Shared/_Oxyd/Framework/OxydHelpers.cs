@@ -42,10 +42,10 @@ public static class DamageHelpers
 
 public class SharedOxydHelpers : EntitySystem
 {
-    [Dependency] private readonly INetManager _netManager = default!;
-    [Dependency] private readonly SharedTransformSystem _transform = default!;
-    [Dependency] private readonly IConfigurationManager _config = default!;
-    [Dependency] private readonly EntityWhitelistSystem _whitelistSystem = default!;
+    [Dependency] private  INetManager _netManager = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private  IConfigurationManager _config = default!;
+    [Dependency] private  EntityWhitelistSystem _whitelistSystem = default!;
     public HashSet<EntityUid> queued = new HashSet<EntityUid>();
 
     public override void Initialize()
@@ -110,21 +110,30 @@ public class SharedOxydHelpers : EntitySystem
     {
         var validSlots = new List<ItemSlot>();
 
-        if (!Resolve(target, ref target.Comp, false))
+        if (!Resolve(target, ref target.Comp, true))
             return validSlots;
 
         foreach (var (_, slot) in target.Comp.Slots)
         {
-            if (_whitelistSystem.IsWhitelistFail(slot.Whitelist, item) ||
-                _whitelistSystem.IsWhitelistPass(slot.Blacklist, item))
-            {
+            Log.Debug($"Validating slot {slot} for {item}");
+            if (!IsSlotValid(item, slot))
                 continue;
-            }
 
             validSlots.Add(slot);
         }
+        Log.Debug($"Found {validSlots.Count} valid slots for {item}");
 
         return validSlots.OrderByDescending(s => s.Priority).ToList();
+    }
+
+    public bool IsSlotValid(EntityUid item, ItemSlot slot)
+    {
+        var isvalid = true;
+        if(slot.Whitelist != null && !_whitelistSystem.IsWhitelistPass(slot.Whitelist, item))
+            isvalid = false;
+        if(slot.Blacklist != null && _whitelistSystem.IsWhitelistFail(slot.Blacklist, item))
+            isvalid = false;
+        return isvalid;
     }
 
     public override void Update(float frameTime)
@@ -132,6 +141,8 @@ public class SharedOxydHelpers : EntitySystem
         base.Update(frameTime);
         foreach (var uid in queued)
         {
+            if (TerminatingOrDeleted(uid))
+                continue;
             SetPaused(uid, true);
             _transform.DetachEntity(uid);
         }

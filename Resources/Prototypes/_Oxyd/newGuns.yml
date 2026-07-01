@@ -303,7 +303,7 @@
   - type: OxydHandheldGun
   - type: OxydRevolvingChamber
     bulletSlot:
-    - name: Chamber
+      name: Chamber
       insertSound: null
       ejectSound: null
       priority: 0
@@ -383,6 +383,9 @@
   - type: OxydBullet
     speed: 20
     projectileEntity: ProjectileOxyd
+  - type: Bundable
+    group: BundleGroup
+    volume: 5
 
 - type: entity
   name: Oxyd Magazine
