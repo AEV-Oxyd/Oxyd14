@@ -240,7 +240,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
         else
         {
-            firemode.ticksBehind += (int)(_gameTiming.CurTick.Value - firemode.lastInterpreted.Value) - 1;
+            firemode.ticksBehind += (int)(_gameTiming.CurTick.Value - firemode.lastInterpreted.Value ) - 1;
         }
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
@@ -252,6 +252,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 stoppedAt = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
+            firemode.ticksBehind = 0;
         }
     }
 

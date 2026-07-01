@@ -8,6 +8,7 @@
   - type: OxydGun
     firemodes:
     - fullAuto300
+    - fullAuto600
   - type: Sprite
     sprite: Oxyd/erisported/wintermute.rsi
     layers:
