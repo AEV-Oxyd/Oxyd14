@@ -10,7 +10,7 @@ public sealed class SyncedEntityEventArgs<T> : EntityEventArgs
 
     public void Register(int priority, Func<SyncedEntityEventArgs<T>, bool> pred)
     {
-        preds.Add(priority, pred);
+        preds[priority] = pred;
     }
 
     public bool Execute()

@@ -19,7 +19,7 @@ public partial class ServerOxydGunSystem
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
-        Log.Debug($"Extracting {variable}");
+        //Log.Debug($"Extracting {variable}");
         switch( variable)
         {
             case null:
@@ -35,7 +35,7 @@ public partial class ServerOxydGunSystem
             case ItemSlot slot:
                 if (slot.Item is null || slot.Item.Value == EntityUid.Invalid)
                     break;
-                Log.Debug($"got item Slot item {slot.Item.Value}");
+                //Log.Debug($"got item Slot item {slot.Item.Value}");
                 lst.Add(slot.Item.Value);
                 break;
         }
@@ -66,13 +66,13 @@ public partial class ServerOxydGunSystem
                 continue;
             fieldCheck:
                 var fieldValue = field.GetValue(comp);
-                Log.Debug($"Got field {field.Name} with value {fieldValue}");
+                //Log.Debug($"Got field {field.Name} with value {fieldValue}");
                 if (fieldValue is null)
                     continue;
                 if (indexed && fieldValue is IEnumerable enumerable)
                 {
                     fieldValue = enumerable.Cast<object?>().ToList()[firemode.shootingPosIndex];
-                    Log.Debug($"Is Indexed, casting got us {fieldValue} {fieldValue is IEnumerable}");
+                    //Log.Debug($"Is Indexed, casting got us {fieldValue} {fieldValue is IEnumerable}");
                 }
 
                 foreach (var thing in extractEntitities(fieldValue, null))
@@ -88,10 +88,10 @@ public partial class ServerOxydGunSystem
     {
         var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(target);
         dict.TryAdd(target, new List<IComponent>());
-        Log.Debug($"Verifying {target} at second level");
+        //Log.Debug($"Verifying {target} at second level");
         foreach(var comp in comps)
         {
-            Log.Debug($"Got component {comp}");
+            //Log.Debug($"Got component {comp}");
             dict[target].Add(comp);
             var targetType = comp.GetType();
             foreach (var field in targetType.GetAllFields())
@@ -105,7 +105,7 @@ public partial class ServerOxydGunSystem
                 continue;
                 fieldCheck:
                 var fieldValue = field.GetValue(comp);
-                Log.Debug($"Second level indexation got {fieldValue} {field.Name}");
+                //Log.Debug($"Second level indexation got {fieldValue} {field.Name}");
                 if (fieldValue is null)
                     continue;
                 foreach (var thing in extractEntitities(fieldValue, null))
@@ -117,7 +117,7 @@ public partial class ServerOxydGunSystem
     }
     public void onTryStateGun(Entity<OxydGunComponent> ent, ref ComponentGetStateAttemptEvent args)
     {
-        Log.Debug($"getstate {args.Player} {ent.Comp}");
+        //Log.Debug($"getstate {args.Player} {ent.Comp}");
         if (!TryComp<FiremodeStateHandlerComponent>(ent, out var state))
             return;
         // always give state to replay
@@ -125,7 +125,7 @@ public partial class ServerOxydGunSystem
             return;
         if (args.Player == state.shooterSession)
         {
-            Log.Debug($"canceled {args.Player} {ent.Comp}");
+            //Log.Debug($"canceled {args.Player} {ent.Comp}");
             return;
         }
 
@@ -133,7 +133,7 @@ public partial class ServerOxydGunSystem
 
     public void onTryStateGeneric(EntityUid target, IComponent comp, ref ComponentGetStateAttemptEvent args)
     {
-        Log.Debug($"getstate {args.Player} {comp}");
+        //Log.Debug($"getstate {args.Player} {comp}");
         if (!_help.GetParentWithComp<OxydGunComponent>(target, out var ent))
             return;
         if (comp.CreationTick.Value - _gameTiming.CurTick.Value == 0)
@@ -145,14 +145,14 @@ public partial class ServerOxydGunSystem
             return;
         if (args.Player == state.shooterSession)
         {
-            Log.Debug($"canceled {args.Player} {comp}");
+            //Log.Debug($"canceled {args.Player} {comp}");
             args.Cancelled = true;
             return;
         }
     }
     public void OnClientMouseInform(FiremodeMouseStatus ev)
     {
-        Log.Debug($"Received mouse network at {_gameTiming.RealTime}");
+        //Log.Debug($"Received mouse network at {_gameTiming.RealTime}");
         var player = _playerManager.GetSessionByChannel(ev.MsgChannel);
         if (player.AttachedEntity is null)
             return;
@@ -194,7 +194,7 @@ public partial class ServerOxydGunSystem
             {
                 if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i)
                     continue;
-                Log.Debug($"Succesfully mouse status applied to  step {i}, state {args.held}");
+                //Log.Debug($"Succesfully mouse status applied to  step {i}, state {args.held}");
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
                 cast.updateFromStep = args.fromStep;
@@ -397,7 +397,7 @@ public partial class ServerOxydGunSystem
         // this wont get to user since  the state is sessionSpecific handled, just everyone else
         Dirty(gun, gunComp);
         var dict = getInvolvedComponents((gun, gunComp));
-        Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
+        //Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
         foreach (var (target, components) in dict)
         {
             foreach(var comp in components)
@@ -506,6 +506,6 @@ public partial class ServerOxydGunSystem
         {
             _oxydProjectileSystem.SimulateExtraPhysicsTicks(projectiles, (int)tickDiff);
         }
-        Log.Debug("Fired Gun");
+        Log.Debug($"Fired Gun, {handler.executedFiringSteps[args.firemodeStep].Count}");
     }
 }

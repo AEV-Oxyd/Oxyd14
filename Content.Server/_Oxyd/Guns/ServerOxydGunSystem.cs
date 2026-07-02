@@ -138,7 +138,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(immediateStatus[currentImmediateIndex].TryDequeue(out var thing))
         {
-            Log.Debug($"Dequeqed {thing} at {_gameTiming.CurTime}");
+            //Log.Debug($"Dequeqed {thing} at {_gameTiming.CurTime}");
             switch (thing)
             {
                 case FiremodeMouseStatus ev:
@@ -278,9 +278,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         doStatusTick();
         foreach (var ent in checkActive)
         {
-            Log.Debug($"Running change on {ent.gun.Owner}");
+            Log.Debug($"Active tick on PRE {ent.gun.Owner}");
             if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
-                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
+                Log.Debug($"Active set for {ent.gun.Owner}, {ent.gun.Comp.keepUpdating}");
             if (ent.gun.Comp.keepUpdating)
             {
                 if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
@@ -308,9 +308,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         doMessageTick();
         foreach (var ent in checkActive)
         {
-            Log.Debug($"Running change on {ent.gun.Owner}");
+            Log.Debug($"Active tick on POST {ent.gun.Owner}");
             if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
-                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
+                Log.Debug($"Active set for {ent.gun.Owner}, {ent.gun.Comp.keepUpdating}");
             if (ent.gun.Comp.keepUpdating)
             {
                 if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))

@@ -149,7 +149,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     // dogshit - SPCR 2026
     private void OnExtensionHandleState(Entity<OxydChamberExtensionComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        Log.Debug($"Received state for {ent.Owner}");
+        //Log.Debug($"Received state for {ent.Owner}");
         var c = CompOrNull<OxydAttachmentHolderComponent>(ent.Owner);
         if (c is null)
         {
@@ -177,7 +177,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
             if (index == -1)
                 return;
-            Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
+            //Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
             ent.Comp.realBullet[index] = EntityUid.Invalid;
             if(!ent.Comp.silenceAutoInsert)
                 FillAmmo(ent.Comp, (ent, Comp<OxydGunComponent>(ent)), index, _containerSystem.GetContainer(ent.Owner, oxydContents));
@@ -198,7 +198,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             if (TryInsertAmmo(ent.Comp, args.Used, i, cont))
             {
                 args.Handled = true;
-                Log.Error($"Inserted {args.Used} into revolver at index {i}");
+                //Log.Error($"Inserted {args.Used} into revolver at index {i}");
                 return;
             }
         }
@@ -250,7 +250,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
                 continue;
             if (!TryInsertAmmo(extend, moving , key, cont, true))
                 continue;
-            Log.Debug($"Inserted {moving} into extension at index {key} succesfully, {args.Used} will now follow , tick {_gameTiming.CurTick}");
+            //Log.Debug($"Inserted {moving} into extension at index {key} succesfully, {args.Used} will now follow , tick {_gameTiming.CurTick}");
             if (target!.ContainerSlot!.ContainedEntity is not null)
             {
                 Log.Debug($"Failed to remove for extension!!!");
@@ -274,7 +274,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (index == -1)
             return;
         ent.Comp.realBullet[index] =  args.Entity;
-        Log.Debug($"Inserted {args.Entity} into chamber on tick {_gameTiming.CurTick}");
+        //Log.Debug($"Inserted {args.Entity} into chamber on tick {_gameTiming.CurTick}");
     }
 
     public void OnEntRemoveChamber(Entity<OxydChamberComponent> ent, ref EntRemovedFromContainerMessage args)
@@ -787,12 +787,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
              return null;
         var cnt = _containerSystem.GetContainer(mag, oxydContents);
         var ent = GetEntity(mag.Comp.loadedBullets.Pop());
-        if (ent == EntityUid.Invalid)
+        if (TerminatingOrDeleted(ent))
         {
             Log.Debug($"Invalid entity popped in cycle mag!");
             return null;
         }
-        _containerSystem.Remove(ent, cnt, true, true);
+        _containerSystem.Remove(ent, cnt, true, false);
         return ent;
     }
 
