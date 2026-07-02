@@ -41,10 +41,10 @@ public sealed partial class ServerOxydGunSystem
             case GunEffectTryFireMouseDirection e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
-            case GunEffectRepeatNextTick e:
+            case GunEffectRepeat e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
-            case GunEffectRepeatNextTickIfMouseHeld e:
+            case GunEffectRepeatMouseHeld e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckAmmo e:
@@ -67,7 +67,7 @@ public sealed partial class ServerOxydGunSystem
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
-        GunEffectRepeatNextTickIfMouseHeld effect,
+        GunEffectRepeatMouseHeld effect,
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
@@ -77,25 +77,14 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var firemode))
-        {
-            ResetFiremode(firemodePrototype, gun, shooter);
-            return false;
-        }
 
         // keep repeating until message from client comes
-        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff ||
-            effect.hardWait && effect.updateFromStep != firemodePrototype.currentStep)
+        if (effect.updateFromStep != firemodePrototype.currentStep)
         {
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
-            effect.missedTicks++;
-            if(effect.missedTicks > effect.maxMissed)
-                ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        firemode.catchupNeeded += effect.missedTicks;
         effect.receivedUpdate = TimeSpan.Zero;
-        effect.missedTicks = 0;
         if (!effect.mouseHeld)
         {
             RemoveActiveUpdating(firemodePrototype, gun, shooter);
@@ -103,14 +92,6 @@ public sealed partial class ServerOxydGunSystem
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
         firemodePrototype.currentStep -= effect.stepBack;
-        if (firemode.catchupNeeded > 0)
-        {
-            Log.Debug($"MouseHeld doing instant catchup");
-            firemode.catchupNeeded--;
-            firemodePrototype.currentStep--;
-            return true;
-        }
-
         return false;
     }
 
@@ -135,35 +116,18 @@ public sealed partial class ServerOxydGunSystem
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
             stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
         stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
-        Log.Debug($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}, gap {firemodePrototype.firingGaps}");
+        Log.Debug($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}");
         return true;
     }
 
-    public override bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public override bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeat effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
-        {
-            ResetFiremode(firemodePrototype, gun, shooter);
-            return false;
-        }
-        if (_gameTiming.CurTime.Ticks - effect.lastTrigger.Ticks> effect.triggerTimeout.Ticks)
-        {
-            effect.timesBack = 0;
-        }
-        effect.lastTrigger = _gameTiming.CurTime;
         if (effect.timesBack < effect.repeatCount)
         {
             effect.timesBack++;
             firemodePrototype.currentStep -= effect.stepBack;
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
-            if (stateComp.catchupNeeded > 0)
-            {
-                Log.Debug("Repeat effect doing instant catchup");
-                stateComp.catchupNeeded--;
-                firemodePrototype.currentStep--;
-                return true;
-            }
-            return false;
+            return true;
         }
         effect.timesBack = 0;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
@@ -177,47 +141,26 @@ public sealed partial class ServerOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        if (!TryComp<FiremodeStateHandlerComponent>(gun, out var stateComp))
+        if (effect.skip)
         {
-            ResetFiremode(firemodePrototype, gun, shooter);
-            return false;
-        }
-        if (effect.skipTick == _gameTiming.CurTick)
-        {
-            effect.skipTick = GameTick.First;
+            effect.skip = false;
             return true;
         }
         EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (stateComp.catchupNeeded > 0)
-        {
-            var maxCatch = Math.Min((int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod)+1, stateComp.catchupNeeded);
-            Log.Debug($"Catched up {maxCatch} ticks, total behind {stateComp.catchupNeeded}");
-            stateComp.catchupNeeded -= maxCatch;
-            effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
-        }
-        // end 1 tick earlier to ensure prediction doesnt miss due to networking
+        var needTime = effect.waitPeriod - effect.alreadyWaited;
+        var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
+        effect.alreadyWaited += usedBudget;
+        firemodePrototype.timeBudget -= usedBudget;
         if (effect.alreadyWaited < effect.waitPeriod)
         {
-            if (stateComp.ticksFoward < effect.fowardMax)
-            {
-                if (effect.alreadyWaited + _gameTiming.TickPeriod < effect.waitPeriod)
-                {
-                    return false;
-                }
-                stateComp.ticksFoward++;
-            }
-            else if (effect.alreadyWaited < effect.waitPeriod)
-                return false;
+            return false;
         }
-
-
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)
         {
             firemodePrototype.currentStep -= effect.stepBack;
-            effect.skipTick = _gameTiming.CurTick;
+            effect.skip = true;
         }
         return true;
     }

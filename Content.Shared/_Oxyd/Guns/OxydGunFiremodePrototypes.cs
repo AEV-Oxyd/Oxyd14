@@ -20,12 +20,6 @@ public sealed partial class GunFiremodePrototype : IPrototype
     // prevent changing fire modes whilst this is true.
     [ViewVariables]
     public bool Active = false;
-    // last interpret tick. To not run it multiuple times in the same.
-    [ViewVariables]
-    public GameTick lastInterpreted = GameTick.Zero;
-    // client-side variable, since ticks can be skipped
-    [ViewVariables]
-    public int ticksBehind = 0;
     [ViewVariables]
     public OxydGunProvidersComponent AmmoProviders = default!;
     // which ammo provider index we pull from(used to set the AmmoProvidersat init)
@@ -37,6 +31,17 @@ public sealed partial class GunFiremodePrototype : IPrototype
     [ViewVariables]
     public TimeSpan totalWait = TimeSpan.Zero;
 
+    [ViewVariables, NonSerialized]
+    public TimeSpan nextInterpret = TimeSpan.Zero;
+    [ViewVariables, NonSerialized]
+    // the time budget we receive ( = tickTime + losses due to networkng/ skipped ticks on client)
+    public TimeSpan timeBudget = TimeSpan.Zero;
+    // how much budget was spent so far in this tick
+    public TimeSpan spentBudget = TimeSpan.Zero;
+    [ViewVariables, NonSerialized]
+    public TimeSpan lastInterpret = TimeSpan.Zero;
+
+
     // SPRITE
     [DataField("icon", required: false)]
     public SpriteSpecifier icon = default!;
@@ -46,24 +51,6 @@ public sealed partial class GunFiremodePrototype : IPrototype
     public SoundSpecifier fireSound = default!;
 
     // GAME
-
-    // bullets per second
-    // bullet sets their own speed , gun can only influence it
-    [DataField("firerate")]
-    public int FireRate = 60;
-    [ViewVariables, NonSerialized]
-    public TimeSpan nextFire = TimeSpan.Zero;
-    [ViewVariables, NonSerialized]
-    public TimeSpan firingGaps = TimeSpan.Zero;
-    [ViewVariables, NonSerialized]
-    public GameTick lastFiredTick = default;
-
-    [DataField]
-    public bool SingleShot = true;
-
-    [ViewVariables]
-    public TimeSpan fireDelay => TimeSpan.FromSeconds(1f/FireRate);
-
     // firemodePrototype specific speed mult
     [DataField]
     public float SpeedMultiplier = 1;
@@ -113,9 +100,7 @@ public sealed partial class GunFiremodePrototype : IPrototype
         }
         providerComp = cleanClone.providerComp;
         providerId = cleanClone.providerId;
-        FireRate = (int)((cleanClone.FireRate + mods.firerateAdd) * mods.firerateMult);
         SpeedMultiplier = cleanClone.SpeedMultiplier * mods.speedMult;
-        SingleShot = cleanClone.SingleShot;
         baseInaccuracy = cleanClone.baseInaccuracy;
         addedInaccuracyMaximum = ( cleanClone.addedInaccuracyMaximum + mods.accuracyAdd ) * mods.accuracyMult;
         Effects.Clear();

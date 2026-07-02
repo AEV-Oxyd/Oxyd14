@@ -223,11 +223,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
 
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (firemode.nextFire > _gameTiming.CurTime)
+        if (firemode.nextInterpret > _gameTiming.CurTime)
             return;
-
-
-        gun.Comp.simulateAsTick = _gameTiming.CurTick;
         if (!firemode.Active)
         {
             //Log.Debug($"Sending new interpretation start message!");
@@ -237,10 +234,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 clientsideStartingStep = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
-        }
-        else
-        {
-            firemode.ticksBehind += (int)(_gameTiming.CurTick.Value - firemode.lastInterpreted.Value ) - 1;
         }
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
@@ -252,18 +245,17 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 stoppedAt = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
-            firemode.ticksBehind = 0;
         }
     }
 
     public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates, int shots)
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return null;
         if (!preFireChecks(gun))
             return null;
-        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates, shots);
 
     }
 

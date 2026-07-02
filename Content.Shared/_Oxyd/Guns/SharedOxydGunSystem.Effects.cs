@@ -29,7 +29,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (TryFireGunAt(gun,
                 gun.Owner,
                 gunCoords.Offset(_transformSystem.GetWorldRotation(gun).ToWorldVec()),
-                gunCoords) is null)
+                gunCoords, effect.shots) is null)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
@@ -90,13 +90,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
-    public virtual bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public virtual bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeat effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (_gameTiming.CurTime.Ticks - effect.lastTrigger.Ticks> effect.triggerTimeout.Ticks)
-        {
-            effect.timesBack = 0;
-        }
-        effect.lastTrigger = _gameTiming.CurTime;
         if (effect.timesBack < effect.repeatCount)
         {
             effect.timesBack++;
@@ -157,6 +152,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         RemComp<ActiveOxydGunChargeupComponent>(gun.Owner);
         return true;
     }
+
+
 
 
 

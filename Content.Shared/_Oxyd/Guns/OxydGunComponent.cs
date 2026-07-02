@@ -53,13 +53,6 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables, AutoNetworkedField]
     // used for randomization
     public uint timesFired = 0;
-    // How much actual firing time there is
-    // This depends on server tick period. A gun can accumulate
-    // extra firing time due to uneven ticks , this makes sure the
-    // firarate is always overall respected , even if it'd be lost due to
-    // ticks not being fast enough or varying network ping
-    [ViewVariables,  AutoNetworkedField]
-    public TimeSpan firingTime = TimeSpan.Zero;
 
     public Vector2 getShootingOffset()
     {

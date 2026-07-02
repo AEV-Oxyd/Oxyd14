@@ -317,11 +317,13 @@ public partial class ServerOxydGunSystem
             return;
         }
 
-        gunComp.jammed = false;
-        if (gunComp.selectedFiremodePrototype.nextFire == TimeSpan.Zero)
+        if (gunComp.selectedFiremodePrototype.Active)
         {
-            gunComp.selectedFiremodePrototype.nextFire = _gameTiming.CurTime - _gameTiming.TickPeriod;
+            Log.Error($"-555- Tried to start a interpret during an active firemode interp");
+            return;
         }
+
+        gunComp.jammed = false;
         // state desync - force update to client or something - SPCR 2025
         if (gunComp.selectedFiremodePrototype.currentStep != args.clientsideStartingStep)
         {
@@ -335,6 +337,7 @@ public partial class ServerOxydGunSystem
         c.shooterSession = player;
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
+        gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * (1 + tickDiff);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
@@ -391,9 +394,6 @@ public partial class ServerOxydGunSystem
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
         handler.ticksFoward = 0;
-        gunComp.selectedFiremodePrototype.firingGaps = TimeSpan.Zero;
-        gunComp.selectedFiremodePrototype.nextFire = TimeSpan.Zero;
-        gunComp.selectedFiremodePrototype.lastInterpreted = _gameTiming.CurTick - tickDiff;
         // this wont get to user since  the state is sessionSpecific handled, just everyone else
         Dirty(gun, gunComp);
         var dict = getInvolvedComponents((gun, gunComp));
@@ -465,8 +465,16 @@ public partial class ServerOxydGunSystem
             return;
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
         {
-            Log.Error($"-111- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            Log.Error($"-111- no fire step. step {args.firemodeStep} at {_gameTiming.RealTime}");
 
+            PunishChud((gun, gunComp));
+            return;
+        }
+
+        var s = gunComp.selectedFiremodePrototype.Effects[args.firemodeStep];
+        if (s is not OxydFiringGunEffect step)
+        {
+            Log.Error($"-222- not fire effect.  step {args.firemodeStep} at {_gameTiming.RealTime}");
             PunishChud((gun, gunComp));
             return;
         }
@@ -474,15 +482,15 @@ public partial class ServerOxydGunSystem
         if (!handler.executedFiringSteps[args.firemodeStep].TryDequeue(out var damageMult))
         {
             PunishChud((gun, gunComp));
-            Log.Error($"-222- a incercat sa duplice fire-events. Cheater? step {args.firemodeStep} la  {_gameTiming.RealTime}");
+            Log.Error($"-333- no fire queued. step {args.firemodeStep} at {_gameTiming.RealTime}");
             return;
         }
         gunComp.simulateAsTick = _gameTiming.CurTick - tickDiff;
-        var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom));
+        var projectiles = TryFireGunAt((gun, gunComp), handler.shooterEntity, _transformSystem.ToMapCoordinates(args.aimedPosition), _transformSystem.ToMapCoordinates(args.shotFrom), step.shots);
 
         if (projectiles is null)
         {
-            Log.Debug($"fara proiectil {_gameTiming.RealTime}");
+            Log.Debug($"-444- no projectile fired {_gameTiming.RealTime}");
             return;
         }
 

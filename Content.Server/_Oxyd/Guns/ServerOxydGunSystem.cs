@@ -242,31 +242,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     }
 
     public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates, int shots)
     {
         if (!preFireChecks(gun))
             return null;
-        var gfp = gun.Comp.selectedFiremodePrototype;
-        if (gfp.nextFire > _gameTiming.CurTime || gfp.lastFiredTick == _gameTiming.CurTick)
-        {
-            if (gfp.firingGaps < gfp.fireDelay)
-                return null;
-            // compensare lag
-            gfp.firingGaps -= gfp.fireDelay;
-            if (gfp.lastFiredTick == _gameTiming.CurTick)
-            {
-                Log.Debug("Same tick fire compensation");
-                gfp.nextFire = _gameTiming.CurTime;
-            }
-            else
-            {
-                Log.Debug("Firemode nextFire compensation");
-                gfp.nextFire = _gameTiming.CurTime;
-            }
-
-            Log.Error("Compensated succesfully");
-        }
-        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates, shots);
 
     }
 
@@ -302,6 +282,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         foreach (var active in query)
         {
             //Log.Error($"Handling active firemode cycle at {_gameTiming.RealTime}!");
+            active.FiremodePrototype.timeBudget += _gameTiming.TickPeriod;
             TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
