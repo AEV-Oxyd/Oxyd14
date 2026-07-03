@@ -137,15 +137,12 @@ public sealed partial class ClientOxydGunSystem
         }
         // this sometimes doesnt arrive in time which necessitates waits also implementing broadcast
         BroadcastMouseStatus(gun);
-        if (!_mouseSys.mousedDown)
+        if (_mouseSys.mousedDown)
         {
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
-            return true;
+            EnsureActiveUpdating(firemodePrototype, gun, shooter);
+            firemodePrototype.currentStep -= effect.stepBack;
         }
-
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        firemodePrototype.currentStep -= effect.stepBack;
-        return false;
+        return true;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)

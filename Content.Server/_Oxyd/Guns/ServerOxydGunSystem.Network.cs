@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Actions.Components;
@@ -192,9 +193,25 @@ public partial class ServerOxydGunSystem
             var effect = gunComp.selectedFiremodePrototype.Effects[i];
             if (effect is OxydMouseStatusGunEffect cast)
             {
-                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i && tickDiff > cast.tickDiff)
+                if (args.fromStep != i)
+                {
+                    Log.Debug($"Not same step!");
                     continue;
-                //Log.Debug($"Succesfully mouse status applied to  step {i}, state {args.held}");
+                }
+
+                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff)
+                {
+                    Log.Debug($"Had recent update");
+                    continue;
+                }
+
+                if (cast.tickDiff < tickDiff)
+                {
+                    Log.Debug($"Stored state had less tick diff");
+                    continue;
+                }
+
+                Log.Debug($"Succesfully mouse status step {i}, state {args.held}");
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
                 cast.updateFromStep = args.fromStep;

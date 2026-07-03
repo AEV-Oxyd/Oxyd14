@@ -79,20 +79,16 @@ public sealed partial class ServerOxydGunSystem
 
 
         // keep repeating until message from client comes
-        if (effect.updateFromStep != firemodePrototype.currentStep || _gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
+        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
         {
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
             return false;
         }
         effect.receivedUpdate = TimeSpan.Zero;
-        if (!effect.mouseHeld)
-        {
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
-            return true;
-        }
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        firemodePrototype.currentStep -= effect.stepBack;
-        return false;
+        if (effect.mouseHeld)
+            firemodePrototype.currentStep -= effect.stepBack;
+
+        return true;
     }
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
