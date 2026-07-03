@@ -77,6 +77,8 @@ public sealed partial class ClientOxydGunSystem
 
             case GunEffectResetCharge e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
+            case GunEffectStop e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(effect), $"Unknown OxydGunEffect type: {effect.GetType().Name}");
@@ -135,7 +137,7 @@ public sealed partial class ClientOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        if (firemodePrototype.mouseDown)
+        if (_mouseSys.mousedDown)
         {
             firemodePrototype.currentStep -= effect.stepBack;
         }
@@ -159,6 +161,7 @@ public sealed partial class ClientOxydGunSystem
         var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
         effect.alreadyWaited += usedBudget;
         firemodePrototype.timeBudget -= usedBudget;
+        Log.Debug($"consumed:{usedBudget.Milliseconds}ms,storing:{effect.alreadyWaited.Milliseconds}ms");
         if (effect.alreadyWaited < effect.waitPeriod)
             return false;
         effect.alreadyWaited = TimeSpan.Zero;

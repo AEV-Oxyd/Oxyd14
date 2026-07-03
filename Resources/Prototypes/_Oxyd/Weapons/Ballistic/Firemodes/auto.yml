@@ -20,6 +20,7 @@
   - !type:GunEffectRepeatMouseHeld
     stepBack: 6
     validDiff: 0.4
+  - !type:GunEffectStop
 
 - type: gunFiremode
   id: fullAuto600
@@ -43,4 +44,5 @@
   - !type:GunEffectRepeatMouseHeld
     stepBack: 6
     validDiff: 0.4
+  - !type:GunEffectStop
 

@@ -24,6 +24,12 @@ public partial class ServerOxydGunSystem
         gun.lastNetMouseUpdate = _gameTiming.CurTime;
         gun.stateCounter--;
     }
+
+    public void giveTickInterpTime(GunFiremodePrototype prot)
+    {
+        if (prot.lastInterpret < _gameTiming.CurTime)
+            prot.timeBudget += _gameTiming.TickPeriod.Add(TimeSpan.FromMilliseconds(5));
+    }
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
@@ -197,10 +203,7 @@ public partial class ServerOxydGunSystem
         updateMouseStat(gunComp, args.held);
 
         Log.Debug($"Immediate interpret ran!");
-        if (gunComp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
-        {
-            gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
-        }
+        giveTickInterpTime(gunComp.selectedFiremodePrototype);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
     }
 
@@ -324,7 +327,8 @@ public partial class ServerOxydGunSystem
         c.shooterSession = player;
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
-        gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * (1 + tickDiff);
+        giveTickInterpTime( gunComp.selectedFiremodePrototype);
+        gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
         updateMouseStat(gunComp, args.mouseHeld);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }

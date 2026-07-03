@@ -135,5 +135,8 @@ public sealed partial class GunEffectCheckCharge : OxydGunEffect
     public float max = float.PositiveInfinity;
 }
 
+[DataDefinition]
+public sealed partial class GunEffectStop : OxydGunEffect;
+
 
 

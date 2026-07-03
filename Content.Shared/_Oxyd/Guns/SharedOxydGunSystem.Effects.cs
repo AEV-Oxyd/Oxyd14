@@ -159,6 +159,12 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return true;
     }
 
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectStop effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        ResetFiremode(firemodePrototype, gun, shooter);
+        return false;
+    }
+
 
 
 

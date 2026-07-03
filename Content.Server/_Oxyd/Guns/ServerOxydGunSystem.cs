@@ -282,10 +282,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         foreach (var active in query)
         {
             //Log.Error($"Handling active firemode cycle at {_gameTiming.RealTime}!");
-            if (active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
-            {
-                active.FiremodePrototype.timeBudget += _gameTiming.TickPeriod;
-            }
+            giveTickInterpTime(active.FiremodePrototype);
             TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
             //Dirty(active.gun.Owner, active.gun.Comp);
         }

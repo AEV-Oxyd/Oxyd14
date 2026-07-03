@@ -58,6 +58,8 @@ public sealed partial class ServerOxydGunSystem
 
             case GunEffectResetCharge e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
+            case GunEffectStop e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
 
 
 
@@ -78,7 +80,9 @@ public sealed partial class ServerOxydGunSystem
         }
 
         if (firemodePrototype.mouseDown)
+        {
             firemodePrototype.currentStep -= effect.stepBack;
+        }
 
         return true;
     }
@@ -139,7 +143,7 @@ public sealed partial class ServerOxydGunSystem
         var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
         effect.alreadyWaited += usedBudget;
         firemodePrototype.timeBudget -= usedBudget;
-        Log.Debug($"Consumed {usedBudget.Milliseconds} ms");
+        Log.Debug($"consumed:{usedBudget.Milliseconds}ms,storing:{effect.alreadyWaited.Milliseconds}ms");
         if (effect.alreadyWaited < effect.waitPeriod)
         {
             return false;
