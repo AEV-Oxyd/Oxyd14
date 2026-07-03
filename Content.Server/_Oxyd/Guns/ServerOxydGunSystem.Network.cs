@@ -192,12 +192,13 @@ public partial class ServerOxydGunSystem
             var effect = gunComp.selectedFiremodePrototype.Effects[i];
             if (effect is OxydMouseStatusGunEffect cast)
             {
-                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i)
+                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff && args.fromStep != i && tickDiff > cast.tickDiff)
                     continue;
                 //Log.Debug($"Succesfully mouse status applied to  step {i}, state {args.held}");
                 cast.mouseHeld = args.held;
                 cast.receivedUpdate = _gameTiming.CurTime;
                 cast.updateFromStep = args.fromStep;
+                cast.tickDiff = tickDiff;
                 if (effect is OxydImmediateInterpret second && second.shouldInterpretImmediately())
                     immediateInterpret = true;
             }
@@ -206,6 +207,10 @@ public partial class ServerOxydGunSystem
         if (immediateInterpret)
         {
             Log.Debug($"Immediate interpret ran!");
+            if (gunComp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
+            {
+                gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
+            }
             TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
         /*
@@ -463,6 +468,12 @@ public partial class ServerOxydGunSystem
         }
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
+        if (tickDiff > 0)
+        {
+            Log.Debug($"Late fire event, catching up");
+            gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
+            TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
+        }
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
         {
             Log.Error($"-111- no fire step. step {args.firemodeStep} at {_gameTiming.RealTime}");

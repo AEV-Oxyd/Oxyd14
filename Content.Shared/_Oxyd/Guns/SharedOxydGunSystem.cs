@@ -1214,9 +1214,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         firemodePrototype.lastInterpret = _gameTiming.CurTime;
         while(firemodePrototype.timeBudget.Milliseconds > 0)
         {
-            //Log.Debug($"Interpreting step {firemodePrototype.currentStep} of {firemodePrototype.maxSteps} , step is {firemodePrototype.Effects[firemodePrototype.currentStep]} at tick {_gameTiming.CurTick}, time is {_gameTiming.CurTime}");
+            Log.Debug($"step:{firemodePrototype.Effects[firemodePrototype.currentStep]},index:{firemodePrototype.currentStep},time:{firemodePrototype.timeBudget.Milliseconds},tick: {_gameTiming.CurTick}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
+                Log.Debug($"cycle:{firemodePrototype.timeBudget.Milliseconds}");
                 break;
             }
             firemodePrototype.currentStep++;

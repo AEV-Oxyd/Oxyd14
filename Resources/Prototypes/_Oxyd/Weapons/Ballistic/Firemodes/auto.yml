@@ -1,6 +1,5 @@
 - type: gunFiremode
   id: fullAuto300
-  firerate: 100
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: auto
@@ -18,15 +17,12 @@
     waitPeriod: 0.2
     stepBack: 4
   - !type:GunEffectTryFireMouseDirection
-  - !type:GunEffectRepeatNextTickIfMouseHeld
-    stepBack: 5
+  - !type:GunEffectRepeatMouseHeld
+    stepBack: 6
     validDiff: 0.4
-    hardWait: false
-    maxMissed: 10
 
 - type: gunFiremode
   id: fullAuto600
-  firerate: 100
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: auto
@@ -44,9 +40,7 @@
     waitPeriod: 0.1
     stepBack: 4
   - !type:GunEffectTryFireMouseDirection
-  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectRepeatMouseHeld
     stepBack: 6
     validDiff: 0.4
-    hardWait: false
-    maxMissed: 10
 

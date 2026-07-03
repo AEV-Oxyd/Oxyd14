@@ -207,7 +207,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
                 return false;
             }
-
             DoInterpret((obj.Owner, gun), ev.self.user);
             return true;
         });
@@ -227,6 +226,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             return;
         if (!firemode.Active)
         {
+            firemode.timeBudget += _gameTiming.TickPeriod;
             //Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
@@ -234,6 +234,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 clientsideStartingStep = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
             });
+        }
+        else
+        {
+            firemode.timeBudget += _gameTiming.CurTime - firemode.lastInterpret - _gameTiming.TickPeriod;
         }
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
@@ -267,8 +271,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            if(active.shooter is not null)
+            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
+            {
+                active.gun.Comp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
                 DoInterpret(active.gun, active.shooter.Value);
+            }
         }
         foreach (var ent in checkActive)
         {

@@ -45,6 +45,8 @@ public abstract partial class OxydMouseStatusGunEffect : OxydGunEffect, OxydRese
     public bool mouseHeld = false;
     public TimeSpan receivedUpdate = TimeSpan.Zero;
     public TimeSpan validDiff = TimeSpan.FromMilliseconds(250);
+    // how many ticks behind the last message was , overrides existing
+    public uint tickDiff = 0;
     public int updateFromStep = 0;
 
     public void Reset()

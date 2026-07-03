@@ -16,6 +16,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         fire.currentStep = 0;
         fire.Active = false;
+        fire.timeBudget = TimeSpan.Zero;
         RemoveActiveUpdating(fire, gun, shooter);
         foreach (OxydGunEffect eff in fire.Effects)
         {

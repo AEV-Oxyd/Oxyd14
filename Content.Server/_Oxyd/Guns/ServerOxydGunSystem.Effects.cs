@@ -17,7 +17,7 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-        Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
+        //Log.Debug($"Interpreting {effect} at {_gameTiming.CurTick}, real {DateTime.UtcNow.ToString("HH:mm:ss.fffffff")}");
         switch (effect)
         {
             case GunEffectCheckHandheld e:
@@ -79,7 +79,7 @@ public sealed partial class ServerOxydGunSystem
 
 
         // keep repeating until message from client comes
-        if (effect.updateFromStep != firemodePrototype.currentStep)
+        if (effect.updateFromStep != firemodePrototype.currentStep || _gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
         {
             EnsureActiveUpdating(firemodePrototype, gun, shooter);
             return false;
