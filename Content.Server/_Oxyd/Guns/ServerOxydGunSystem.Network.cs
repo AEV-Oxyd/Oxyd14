@@ -17,6 +17,13 @@ namespace Content.Server._Oxyd.Guns;
 
 public partial class ServerOxydGunSystem
 {
+    public void updateMouseStat(OxydGunComponent gun, bool stat)
+    {
+        Log.Debug($"Mouse:{stat}");
+        gun.mouseDown = stat;
+        gun.lastNetMouseUpdate = _gameTiming.CurTime;
+        gun.stateCounter--;
+    }
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
@@ -177,7 +184,7 @@ public partial class ServerOxydGunSystem
 
     public void DoNetMessage(FiremodeMouseStatus args, uint tickDiff)
     {
-        Log.Debug($"Handling mouse status change at {_gameTiming.RealTime}, td {tickDiff}!");
+        Log.Debug($"Handling mouse status change at {_gameTiming.CurTime}, td {tickDiff}!");
         EntityUid gun = GetEntity(args.gun);
         if (TerminatingOrDeleted(gun))
             return;
@@ -187,56 +194,14 @@ public partial class ServerOxydGunSystem
             return;
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        var immediateInterpret = false;
-        for(var i = 0; i < gunComp.selectedFiremodePrototype.Effects.Count; i++)
+        updateMouseStat(gunComp, args.held);
+
+        Log.Debug($"Immediate interpret ran!");
+        if (gunComp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
         {
-            var effect = gunComp.selectedFiremodePrototype.Effects[i];
-            if (effect is OxydMouseStatusGunEffect cast)
-            {
-                if (args.fromStep != i)
-                {
-                    Log.Debug($"Not same step!");
-                    continue;
-                }
-
-                if (_gameTiming.CurTime - cast.receivedUpdate < cast.validDiff)
-                {
-                    Log.Debug($"Had recent update");
-                    continue;
-                }
-
-                if (cast.tickDiff < tickDiff)
-                {
-                    Log.Debug($"Stored state had less tick diff");
-                    continue;
-                }
-
-                Log.Debug($"Succesfully mouse status step {i}, state {args.held}");
-                cast.mouseHeld = args.held;
-                cast.receivedUpdate = _gameTiming.CurTime;
-                cast.updateFromStep = args.fromStep;
-                cast.tickDiff = tickDiff;
-                if (effect is OxydImmediateInterpret second && second.shouldInterpretImmediately())
-                    immediateInterpret = true;
-            }
+            gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
         }
-
-        if (immediateInterpret)
-        {
-            Log.Debug($"Immediate interpret ran!");
-            if (gunComp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
-            {
-                gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
-            }
-            TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
-        }
-        /*
-        // handle immediate ticking
-        if (tickDiff > 0)
-        {
-            TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
-        }
-        */
+        TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
     }
 
     public void OnClientFiremodeChange(FiremodeChangedEvent ev, EntitySessionEventArgs arg)
@@ -360,6 +325,7 @@ public partial class ServerOxydGunSystem
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
         gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * (1 + tickDiff);
+        updateMouseStat(gunComp, args.mouseHeld);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
 
@@ -409,6 +375,7 @@ public partial class ServerOxydGunSystem
         {
             Log.Error($"Sesiunea ------ are un state desync pe arma {gun}, {gunComp.selectedFiremodePrototype.currentStep} != {args.stoppedAt}");
         }
+        updateMouseStat(gunComp, args.mouseHeld);
         ResetFiremode(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         if(handler.executedFiringSteps.Values.Sum(t => t.Count) != 0)
             Log.Error($"Done Intrepret ended with a bullet never being fired!");

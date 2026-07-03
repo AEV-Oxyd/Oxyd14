@@ -77,15 +77,7 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-
-        // keep repeating until message from client comes
-        if (_gameTiming.CurTime - effect.receivedUpdate > effect.validDiff)
-        {
-            EnsureActiveUpdating(firemodePrototype, gun, shooter);
-            return false;
-        }
-        effect.receivedUpdate = TimeSpan.Zero;
-        if (effect.mouseHeld)
+        if (firemodePrototype.mouseDown)
             firemodePrototype.currentStep -= effect.stepBack;
 
         return true;
@@ -112,7 +104,7 @@ public sealed partial class ServerOxydGunSystem
         if (!stateComp.executedFiringSteps.ContainsKey(firemodePrototype.currentStep))
             stateComp.executedFiringSteps.Add(firemodePrototype.currentStep, new Queue<float>());
         stateComp.executedFiringSteps[firemodePrototype.currentStep].Enqueue(_charge.getMultiplier(gun.Owner));
-        Log.Debug($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}");
+        //Log.Debug($"Executat fireMouseDir effect la {_gameTiming.RealTime}, waiting {stateComp.executedFiringSteps[firemodePrototype.currentStep].Count}");
         return true;
     }
 
@@ -147,6 +139,7 @@ public sealed partial class ServerOxydGunSystem
         var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
         effect.alreadyWaited += usedBudget;
         firemodePrototype.timeBudget -= usedBudget;
+        Log.Debug($"Consumed {usedBudget.Milliseconds} ms");
         if (effect.alreadyWaited < effect.waitPeriod)
         {
             return false;

@@ -18,6 +18,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         fire.Active = false;
         fire.timeBudget = TimeSpan.Zero;
         RemoveActiveUpdating(fire, gun, shooter);
+        ResetEffs(fire);
+    }
+
+    public void ResetEffs(GunFiremodePrototype fire)
+    {
         foreach (OxydGunEffect eff in fire.Effects)
         {
             if(eff is OxydResetableEffect casted)

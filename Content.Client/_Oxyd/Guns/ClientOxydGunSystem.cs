@@ -233,11 +233,13 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 gun = GetNetEntity(gun),
                 clientsideStartingStep = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
+                mouseHeld = _mouseSys.mousedDown
             });
         }
         else
         {
             firemode.timeBudget += _gameTiming.CurTime - firemode.lastInterpret - _gameTiming.TickPeriod;
+            BroadcastMouseStatus(gun);
         }
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
@@ -248,6 +250,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 gun = GetNetEntity(gun),
                 stoppedAt = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
+                mouseHeld = _mouseSys.mousedDown
             });
         }
     }

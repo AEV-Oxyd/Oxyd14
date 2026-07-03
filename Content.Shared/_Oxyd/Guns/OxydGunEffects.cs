@@ -40,22 +40,6 @@ public interface OxydImmediateInterpret
 {
     public bool shouldInterpretImmediately();
 }
-public abstract partial class OxydMouseStatusGunEffect : OxydGunEffect, OxydResetableEffect
-{
-    public bool mouseHeld = false;
-    public TimeSpan receivedUpdate = TimeSpan.Zero;
-    public TimeSpan validDiff = TimeSpan.FromMilliseconds(250);
-    // how many ticks behind the last message was , overrides existing
-    public uint tickDiff = 0;
-    public int updateFromStep = 0;
-
-    public void Reset()
-    {
-        mouseHeld = false;
-        receivedUpdate = TimeSpan.Zero;
-        updateFromStep = 0;
-    }
-}
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;
 [DataDefinition]
@@ -117,7 +101,7 @@ public sealed partial class GunEffectRepeat : OxydGunEffect, OxydResetableEffect
 }
 
 [DataDefinition]
-public sealed partial class GunEffectRepeatMouseHeld : OxydMouseStatusGunEffect, OxydImmediateInterpret
+public sealed partial class GunEffectRepeatMouseHeld : OxydGunEffect, OxydImmediateInterpret
 {
     [DataField]
     public int stepBack = 0;

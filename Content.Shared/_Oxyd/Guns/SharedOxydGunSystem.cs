@@ -94,6 +94,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     protected const string configProto = "gunConfig";
 
+    public readonly TimeSpan forceWaitThreshold = TimeSpan.FromMilliseconds(125);
+
+
 
     // in milisecunde
     private const float maxAcceptableFireGap = 500;
@@ -1200,7 +1203,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (gun.Comp.jammed)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
-            //Log.Debug($"Interpret failed: jam");
+            Log.Debug($"Interpret failed: jam");
             return false;
         }
 
@@ -1210,8 +1213,22 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         }
 
-        firemodePrototype.Active = true;
+        if (_netManager.IsServer)
+        {
+            if (firemodePrototype.lastInterpret != _gameTiming.CurTime)
+            {
+                gun.Comp.stateCounter++;
+            }
+            // wait for network update at this stage
+            if (_gameTiming.CurTime - gun.Comp.lastNetMouseUpdate > forceWaitThreshold)
+            {
+                Log.Debug($"Interpret failed: force wait");
+                return true;
+            }
+        }
         firemodePrototype.lastInterpret = _gameTiming.CurTime;
+
+        firemodePrototype.Active = true;
         while(firemodePrototype.timeBudget.Milliseconds > 0)
         {
             Log.Debug($"step:{firemodePrototype.Effects[firemodePrototype.currentStep]},index:{firemodePrototype.currentStep},time:{firemodePrototype.timeBudget.Milliseconds},tick: {_gameTiming.CurTick}");
@@ -1222,12 +1239,16 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             }
             firemodePrototype.currentStep++;
             if (firemodePrototype.currentStep == firemodePrototype.maxSteps)
+            {
                 firemodePrototype.currentStep = 0;
+                ResetEffs(firemodePrototype);
+            }
         }
 
         if (firemodePrototype.currentStep == firemodePrototype.maxSteps)
         {
             firemodePrototype.currentStep = 0;
+            ResetEffs(firemodePrototype);
             firemodePrototype.Active = false;
         }
 

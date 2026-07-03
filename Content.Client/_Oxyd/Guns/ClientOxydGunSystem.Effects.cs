@@ -135,11 +135,8 @@ public sealed partial class ClientOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        // this sometimes doesnt arrive in time which necessitates waits also implementing broadcast
-        BroadcastMouseStatus(gun);
-        if (_mouseSys.mousedDown)
+        if (firemodePrototype.mouseDown)
         {
-            EnsureActiveUpdating(firemodePrototype, gun, shooter);
             firemodePrototype.currentStep -= effect.stepBack;
         }
         return true;
@@ -163,13 +160,7 @@ public sealed partial class ClientOxydGunSystem
         effect.alreadyWaited += usedBudget;
         firemodePrototype.timeBudget -= usedBudget;
         if (effect.alreadyWaited < effect.waitPeriod)
-        {
-            var left = effect.waitPeriod - effect.alreadyWaited;
-            if(left < _gameTiming.TickPeriod*5)
-                BroadcastMouseStatus(gun);
             return false;
-        }
-        BroadcastMouseStatus(gun);
         effect.alreadyWaited = TimeSpan.Zero;
         RemoveActiveUpdating(firemodePrototype, gun, shooter);
         if (effect.stepBack != 0)

@@ -14,12 +14,14 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
     public NetEntity gun;
     public int clientsideStartingStep = 0;
     public GameTick clientTick;
+    public bool mouseHeld = false;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
        gun = buffer.ReadNetEntity();
        clientsideStartingStep = buffer.ReadInt32();
        clientTick = buffer.ReadGameTick();
+       mouseHeld = buffer.ReadBoolean();
     }
 
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
@@ -27,6 +29,7 @@ public sealed class ClientSideInterpretingFiremode : NetMessage
         buffer.Write(gun);
         buffer.Write(clientsideStartingStep);
         buffer.Write(clientTick);
+        buffer.Write(mouseHeld);
     }
 }
 
@@ -96,12 +99,14 @@ public sealed class ClientSideDoneInterpretingFiremode : NetMessage
     public NetEntity gun;
     public int stoppedAt = 0;
     public GameTick clientTick;
+    public bool mouseHeld = false;
 
     public override void ReadFromBuffer(NetIncomingMessage buffer, IRobustSerializer serializer)
     {
         gun = buffer.ReadNetEntity();
         stoppedAt = buffer.ReadInt32();
         clientTick = buffer.ReadGameTick();
+        mouseHeld = buffer.ReadBoolean();
     }
 
     public override void WriteToBuffer(NetOutgoingMessage buffer, IRobustSerializer serializer)
@@ -109,6 +114,7 @@ public sealed class ClientSideDoneInterpretingFiremode : NetMessage
         buffer.Write(gun);
         buffer.Write(stoppedAt);
         buffer.Write(clientTick);
+        buffer.Write(mouseHeld);
     }
 }
 

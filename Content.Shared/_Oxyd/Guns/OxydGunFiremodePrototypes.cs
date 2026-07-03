@@ -41,6 +41,9 @@ public sealed partial class GunFiremodePrototype : IPrototype
     [ViewVariables, NonSerialized]
     public TimeSpan lastInterpret = TimeSpan.Zero;
 
+    [ViewVariables, NonSerialized]
+    public bool mouseDown = false;
+
 
     // SPRITE
     [DataField("icon", required: false)]

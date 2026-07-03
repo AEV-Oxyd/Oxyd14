@@ -54,6 +54,11 @@ public sealed partial class OxydGunComponent : Component
     // used for randomization
     public uint timesFired = 0;
 
+    public TimeSpan lastNetMouseUpdate = TimeSpan.Zero;
+    public bool mouseDown = false;
+    // how many states are we expecting/waiting to receive from the client?
+    public int stateCounter = 0;
+
     public Vector2 getShootingOffset()
     {
         if (selectedFiremodePrototype.shootingPosIndex == selectedFiremodePrototype.shootingPosOffsets.Count)
