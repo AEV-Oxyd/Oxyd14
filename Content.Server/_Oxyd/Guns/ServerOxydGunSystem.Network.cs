@@ -459,7 +459,7 @@ public partial class ServerOxydGunSystem
         if (tickDiff > 0)
         {
             Log.Debug($"Late fire event, catching up");
-            gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
+            //gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
             TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
