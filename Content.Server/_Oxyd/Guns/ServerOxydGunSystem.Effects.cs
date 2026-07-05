@@ -79,7 +79,7 @@ public sealed partial class ServerOxydGunSystem
             return false;
         }
 
-        if (firemodePrototype.mouseDown)
+        if (gun.Comp.mouseDown)
         {
             firemodePrototype.currentStep -= effect.stepBack;
         }
@@ -126,36 +126,5 @@ public sealed partial class ServerOxydGunSystem
         return true;
     }
 
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (gun.Comp.safety || !firemodePrototype.Active)
-        {
-            ResetFiremode(firemodePrototype, gun, shooter);
-            return false;
-        }
-        if (effect.skip)
-        {
-            effect.skip = false;
-            return true;
-        }
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        var needTime = effect.waitPeriod - effect.alreadyWaited;
-        var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
-        effect.alreadyWaited += usedBudget;
-        firemodePrototype.timeBudget -= usedBudget;
-        Log.Debug($"consumed:{usedBudget.Milliseconds}ms,storing:{effect.alreadyWaited.Milliseconds}ms");
-        if (effect.alreadyWaited < effect.waitPeriod)
-        {
-            return false;
-        }
-        effect.alreadyWaited = TimeSpan.Zero;
-        RemoveActiveUpdating(firemodePrototype, gun, shooter);
-        if (effect.stepBack != 0)
-        {
-            firemodePrototype.currentStep -= effect.stepBack;
-            effect.skip = true;
-        }
-        return true;
-    }
 
 }

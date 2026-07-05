@@ -25,11 +25,6 @@ public partial class ServerOxydGunSystem
         gun.stateCounter--;
     }
 
-    public void giveTickInterpTime(GunFiremodePrototype prot)
-    {
-        if (prot.lastInterpret < _gameTiming.CurTime)
-            prot.timeBudget += _gameTiming.TickPeriod.Add(TimeSpan.FromMilliseconds(5));
-    }
     public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
     {
         lst ??= new();
@@ -327,8 +322,8 @@ public partial class ServerOxydGunSystem
         c.shooterSession = player;
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
-        giveTickInterpTime( gunComp.selectedFiremodePrototype);
-        gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
+        gunComp.selectedFiremodePrototype.timeBudget = _gameTiming.TickPeriod *(1+ tickDiff);
+        gunComp.selectedFiremodePrototype.timeBudget += TimeSpan.FromMilliseconds(15);
         updateMouseStat(gunComp, args.mouseHeld);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
@@ -460,6 +455,7 @@ public partial class ServerOxydGunSystem
         {
             Log.Debug($"Late fire event, catching up");
             //gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
+            giveTickInterpTime(gunComp.selectedFiremodePrototype);
             TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
         }
         if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))

@@ -169,6 +169,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     }
 
+    public void giveTickInterpTime(GunFiremodePrototype prot)
+    {
+        prot.timeBudget += _gameTiming.CurTime - prot.lastInterpret;
+        Log.Debug($"Ran giveTickTime, was given {(_gameTiming.CurTime - prot.lastInterpret).Milliseconds}ms, total: {prot.timeBudget.Milliseconds}ms");
+        prot.lastInterpret = _gameTiming.CurTime;
+    }
+
 
     public void OnEntRemoveMag(Entity<OxydMagazineChamberComponent> ent, ref EntRemovedFromContainerMessage args)
     {
@@ -1171,12 +1178,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     public virtual HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
         MapCoordinates targetCoordinates, MapCoordinates firingCoordinates, int shotCount)
     {
-        var gfp = gun.Comp.selectedFiremodePrototype;
-        if (gfp.nextInterpret > _gameTiming.CurTime)
-        {
-            Log.Debug("Firemode not ready");
-            return null;
-        }
         return fireGun(shooter, gun, firingCoordinates, targetCoordinates, shotCount);
     }
 
@@ -1229,7 +1230,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             }
         }
         firemodePrototype.lastInterpret = _gameTiming.CurTime;
-
         firemodePrototype.Active = true;
         while(firemodePrototype.timeBudget.Milliseconds > 0)
         {

@@ -32,17 +32,12 @@ public sealed partial class GunFiremodePrototype : IPrototype
     public TimeSpan totalWait = TimeSpan.Zero;
 
     [ViewVariables, NonSerialized]
-    public TimeSpan nextInterpret = TimeSpan.Zero;
-    [ViewVariables, NonSerialized]
     // the time budget we receive ( = tickTime + losses due to networkng/ skipped ticks on client)
     public TimeSpan timeBudget = TimeSpan.Zero;
     // how much budget was spent so far in this tick
     public TimeSpan spentBudget = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     public TimeSpan lastInterpret = TimeSpan.Zero;
-
-    [ViewVariables, NonSerialized]
-    public bool mouseDown = false;
 
 
     // SPRITE

@@ -222,11 +222,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
 
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (firemode.nextInterpret > _gameTiming.CurTime)
+        if (firemode.lastInterpret == _gameTiming.CurTime)
             return;
         if (!firemode.Active)
         {
-            firemode.timeBudget += _gameTiming.TickPeriod;
+            firemode.timeBudget = _gameTiming.TickPeriod;
             //Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
@@ -238,7 +238,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
         else
         {
-            firemode.timeBudget += _gameTiming.CurTime - firemode.lastInterpret - _gameTiming.TickPeriod;
+            giveTickInterpTime(firemode);
             BroadcastMouseStatus(gun);
         }
 
@@ -276,7 +276,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         {
             if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
             {
-                active.gun.Comp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod;
                 DoInterpret(active.gun, active.shooter.Value);
             }
         }
