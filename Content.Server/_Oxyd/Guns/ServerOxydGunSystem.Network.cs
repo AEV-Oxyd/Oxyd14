@@ -322,8 +322,7 @@ public partial class ServerOxydGunSystem
         c.shooterSession = player;
         c.executedFiringSteps.Clear();
         c.catchupNeeded = (int)tickDiff;
-        gunComp.selectedFiremodePrototype.timeBudget = _gameTiming.TickPeriod *(1+ tickDiff);
-        gunComp.selectedFiremodePrototype.timeBudget += TimeSpan.FromMilliseconds(15);
+        gunComp.selectedFiremodePrototype.timeBudget = _gameTiming.TickPeriod *(1+ tickDiff) + TimeSpan.FromMilliseconds(25);
         updateMouseStat(gunComp, args.mouseHeld);
         TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), shooter);
     }
@@ -451,19 +450,20 @@ public partial class ServerOxydGunSystem
         }
         if (TerminatingOrDeleted(handler.shooterEntity))
             return;
-        if (tickDiff > 0)
+        giveTickInterpTime(gunComp.selectedFiremodePrototype);
+        TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
+        if (!handler.executedFiringSteps.TryGetValue(args.firemodeStep, out var queue) || queue.Count == 0)
         {
-            Log.Debug($"Late fire event, catching up");
-            //gunComp.selectedFiremodePrototype.timeBudget += _gameTiming.TickPeriod * tickDiff;
-            giveTickInterpTime(gunComp.selectedFiremodePrototype);
+            gunComp.selectedFiremodePrototype.timeBudget += TimeSpan.FromMilliseconds(10);
             TryExecuteFiremodeCycle(gunComp.selectedFiremodePrototype, (gun, gunComp), handler.shooterEntity);
-        }
-        if (!handler.executedFiringSteps.ContainsKey(args.firemodeStep))
-        {
-            Log.Error($"-111- no fire step. step {args.firemodeStep} at {_gameTiming.RealTime}");
+            Log.Debug($"-000- fire was given 10 ms");
+            if (!handler.executedFiringSteps.TryGetValue(args.firemodeStep, out var queue2) || queue2.Count == 0)
+            {
+                Log.Error($"-111- no fire step. step {args.firemodeStep} at {_gameTiming.RealTime}");
 
-            PunishChud((gun, gunComp));
-            return;
+                PunishChud((gun, gunComp));
+                return;
+            }
         }
 
         var s = gunComp.selectedFiremodePrototype.Effects[args.firemodeStep];

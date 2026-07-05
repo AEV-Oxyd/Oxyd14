@@ -171,7 +171,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void giveTickInterpTime(GunFiremodePrototype prot)
     {
-        prot.timeBudget += _gameTiming.CurTime - prot.lastInterpret;
+        var giving = _gameTiming.CurTime - prot.lastInterpret;
+        if(giving.Ticks > 0)
+            prot.timeBudget += giving;
         Log.Debug($"Ran giveTickTime, was given {(_gameTiming.CurTime - prot.lastInterpret).Milliseconds}ms, total: {prot.timeBudget.Milliseconds}ms");
         prot.lastInterpret = _gameTiming.CurTime;
     }
