@@ -139,6 +139,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentInit>(onRevolverInit);
     }
 
+    public abstract void doVisUpdate(EntityUid gun);
+
     public void onRevolverInit(Entity<OxydRevolvingChamberComponent> ent, ref ComponentInit args)
     {
         if (TryComp<OxydChamberExtensionComponent>(ent, out var extension))
@@ -183,6 +185,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return;
+        doVisUpdate(ent.Owner);
         if (!HasComp<OxydMagazineComponent>(args.Entity))
         {
             var target = args.Container;
@@ -417,6 +420,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         var target = args.Container;
         var targetIndex = ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == target.ID);
+        doVisUpdate(ent.Owner);
         if (targetIndex == -1)
         {
             Log.Error($"Entity {ent} had a mag inserted for a magazine Slot without a linked Slot!");

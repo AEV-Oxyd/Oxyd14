@@ -55,6 +55,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     private EntityQuery<PhysicsComponent> physQ;
     public int predictedTicks = OxydCvars.predictionTicks.DefaultValue;
 
+    public override void doVisUpdate(EntityUid gun)
+    {
+        return;
+    }
+
 
     public override void Initialize()
     {

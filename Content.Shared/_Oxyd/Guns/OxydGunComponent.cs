@@ -103,6 +103,11 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
 {
     [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
+
+    [DataField]
+    // wheter to draw mags above or below gun layer
+    public bool magAbove = false;
+
 }
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent
