@@ -47,7 +47,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         //SubscribeLocalEvent<OxydChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
-        SubscribeLocalEvent<OxydMagazineChamberComponent, GetInhandVisualsKeyEvent>(onGetInhandVisuals);
+        SubscribeLocalEvent<OxydHandheldGunComponent, GetInhandVisualsKeyEvent>(onGetInhandVisuals);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
