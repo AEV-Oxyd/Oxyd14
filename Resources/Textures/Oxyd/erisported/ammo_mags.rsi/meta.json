@@ -1,0 +1,1223 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "darts-5"
+    },
+    {
+      "name": "darts-4"
+    },
+    {
+      "name": "darts-3"
+    },
+    {
+      "name": "darts-2"
+    },
+    {
+      "name": "darts-1"
+    },
+    {
+      "name": "darts-0"
+    },
+    {
+      "name": "darts"
+    },
+    {
+      "name": "m12-0"
+    },
+    {
+      "name": "m12_l-0"
+    },
+    {
+      "name": "m12_r-0"
+    },
+    {
+      "name": "m12_hv-0"
+    },
+    {
+      "name": "m12_f-0"
+    },
+    {
+      "name": "m12_p-0"
+    },
+    {
+      "name": "m12_b-0"
+    },
+    {
+      "name": "m12_i-0"
+    },
+    {
+      "name": "m12_scrap-0"
+    },
+    {
+      "name": "m12_scrap_r-0"
+    },
+    {
+      "name": "m12_scrap_s-0"
+    },
+    {
+      "name": "m12_shell_scrap"
+    },
+    {
+      "name": "m12_shell_scrap_r"
+    },
+    {
+      "name": "m12_shell_scrap_s"
+    },
+    {
+      "name": "m12_shell_i"
+    },
+    {
+      "name": "m12_shell_b"
+    },
+    {
+      "name": "m12_shell_hv"
+    },
+    {
+      "name": "m12_shell_r"
+    },
+    {
+      "name": "m12_shell_l"
+    },
+    {
+      "name": "m12_shell_f"
+    },
+    {
+      "name": "m12_shell_p"
+    },
+    {
+      "name": "m12_short-0"
+    },
+    {
+      "name": "m12_short_l-0"
+    },
+    {
+      "name": "m12_short_r-0"
+    },
+    {
+      "name": "m12_short_hv-0"
+    },
+    {
+      "name": "m12_short_f-0"
+    },
+    {
+      "name": "m12_short_p-0"
+    },
+    {
+      "name": "m12_short_b-0"
+    },
+    {
+      "name": "m12_short_i-0"
+    },
+    {
+      "name": "m12_short_scrap-0"
+    },
+    {
+      "name": "m12_short_scrap_r-0"
+    },
+    {
+      "name": "m12_short_scrap_s-0"
+    },
+    {
+      "name": "m12_short_shell_scrap"
+    },
+    {
+      "name": "m12_short_shell_scrap_r"
+    },
+    {
+      "name": "m12_short_shell_scrap_s"
+    },
+    {
+      "name": "m12_short_shell_i"
+    },
+    {
+      "name": "m12_short_shell_b"
+    },
+    {
+      "name": "m12_short_shell_hv"
+    },
+    {
+      "name": "m12_short_shell_r"
+    },
+    {
+      "name": "m12_short_shell_l"
+    },
+    {
+      "name": "m12_short_shell_f"
+    },
+    {
+      "name": "m12_short_shell_p"
+    },
+    {
+      "name": "pistol_l-10"
+    },
+    {
+      "name": "pistol_l-8"
+    },
+    {
+      "name": "pistol_l-6"
+    },
+    {
+      "name": "pistol_l-4"
+    },
+    {
+      "name": "pistol_l-2"
+    },
+    {
+      "name": "pistol_l-0"
+    },
+    {
+      "name": "pistol_l"
+    },
+    {
+      "name": "pistol-10"
+    },
+    {
+      "name": "pistol-8"
+    },
+    {
+      "name": "pistol-6"
+    },
+    {
+      "name": "pistol-4"
+    },
+    {
+      "name": "pistol-2"
+    },
+    {
+      "name": "pistol-0"
+    },
+    {
+      "name": "pistol"
+    },
+    {
+      "name": "pistol_p-10"
+    },
+    {
+      "name": "pistol_p-8"
+    },
+    {
+      "name": "pistol_p-6"
+    },
+    {
+      "name": "pistol_p-4"
+    },
+    {
+      "name": "pistol_p-2"
+    },
+    {
+      "name": "pistol_p-0"
+    },
+    {
+      "name": "pistol_p"
+    },
+    {
+      "name": "pistol_hv-10"
+    },
+    {
+      "name": "pistol_hv-8"
+    },
+    {
+      "name": "pistol_hv-6"
+    },
+    {
+      "name": "pistol_hv-4"
+    },
+    {
+      "name": "pistol_hv-2"
+    },
+    {
+      "name": "pistol_hv-0"
+    },
+    {
+      "name": "pistol_hv"
+    },
+    {
+      "name": "pistol_r-10"
+    },
+    {
+      "name": "pistol_r-8"
+    },
+    {
+      "name": "pistol_r-6"
+    },
+    {
+      "name": "pistol_r-4"
+    },
+    {
+      "name": "pistol_r-2"
+    },
+    {
+      "name": "pistol_r-0"
+    },
+    {
+      "name": "pistol_r"
+    },
+    {
+      "name": "pistol_s-10"
+    },
+    {
+      "name": "pistol_s-8"
+    },
+    {
+      "name": "pistol_s-6"
+    },
+    {
+      "name": "pistol_s-4"
+    },
+    {
+      "name": "pistol_s-2"
+    },
+    {
+      "name": "pistol_s-0"
+    },
+    {
+      "name": "pistol_s"
+    },
+    {
+      "name": "hpistol_l-16"
+    },
+    {
+      "name": "hpistol_l-14"
+    },
+    {
+      "name": "hpistol_l-12"
+    },
+    {
+      "name": "hpistol_l-10"
+    },
+    {
+      "name": "hpistol_l-8"
+    },
+    {
+      "name": "hpistol_l-6"
+    },
+    {
+      "name": "hpistol_l-4"
+    },
+    {
+      "name": "hpistol_l-2"
+    },
+    {
+      "name": "hpistol_l-0"
+    },
+    {
+      "name": "hpistol_l"
+    },
+    {
+      "name": "hpistol-16"
+    },
+    {
+      "name": "hpistol-14"
+    },
+    {
+      "name": "hpistol-12"
+    },
+    {
+      "name": "hpistol-10"
+    },
+    {
+      "name": "hpistol-8"
+    },
+    {
+      "name": "hpistol-6"
+    },
+    {
+      "name": "hpistol-4"
+    },
+    {
+      "name": "hpistol-2"
+    },
+    {
+      "name": "hpistol-0"
+    },
+    {
+      "name": "hpistol"
+    },
+    {
+      "name": "hpistol_p-16"
+    },
+    {
+      "name": "hpistol_p-14"
+    },
+    {
+      "name": "hpistol_p-12"
+    },
+    {
+      "name": "hpistol_p-10"
+    },
+    {
+      "name": "hpistol_p-8"
+    },
+    {
+      "name": "hpistol_p-6"
+    },
+    {
+      "name": "hpistol_p-4"
+    },
+    {
+      "name": "hpistol_p-2"
+    },
+    {
+      "name": "hpistol_p-0"
+    },
+    {
+      "name": "hpistol_p"
+    },
+    {
+      "name": "hpistol_hv-16"
+    },
+    {
+      "name": "hpistol_hv-14"
+    },
+    {
+      "name": "hpistol_hv-12"
+    },
+    {
+      "name": "hpistol_hv-10"
+    },
+    {
+      "name": "hpistol_hv-8"
+    },
+    {
+      "name": "hpistol_hv-6"
+    },
+    {
+      "name": "hpistol_hv-4"
+    },
+    {
+      "name": "hpistol_hv-2"
+    },
+    {
+      "name": "hpistol_hv-0"
+    },
+    {
+      "name": "hpistol_hv"
+    },
+    {
+      "name": "hpistol_r-16"
+    },
+    {
+      "name": "hpistol_r-14"
+    },
+    {
+      "name": "hpistol_r-12"
+    },
+    {
+      "name": "hpistol_r-10"
+    },
+    {
+      "name": "hpistol_r-8"
+    },
+    {
+      "name": "hpistol_r-6"
+    },
+    {
+      "name": "hpistol_r-4"
+    },
+    {
+      "name": "hpistol_r-2"
+    },
+    {
+      "name": "hpistol_r-0"
+    },
+    {
+      "name": "hpistol_r"
+    },
+    {
+      "name": "smg_l-35"
+    },
+    {
+      "name": "smg_l-0"
+    },
+    {
+      "name": "smg_l"
+    },
+    {
+      "name": "smg-35"
+    },
+    {
+      "name": "smg-0"
+    },
+    {
+      "name": "smg"
+    },
+    {
+      "name": "smg_p-35"
+    },
+    {
+      "name": "smg_p-0"
+    },
+    {
+      "name": "smg_p"
+    },
+    {
+      "name": "smg_hv-35"
+    },
+    {
+      "name": "smg_hv-0"
+    },
+    {
+      "name": "smg_hv"
+    },
+    {
+      "name": "smg_r-35"
+    },
+    {
+      "name": "smg_r-0"
+    },
+    {
+      "name": "smg_r"
+    },
+    {
+      "name": "smg_s-35"
+    },
+    {
+      "name": "smg_s-0"
+    },
+    {
+      "name": "smg_s"
+    },
+    {
+      "name": "msmg_l-25"
+    },
+    {
+      "name": "msmg_l-0"
+    },
+    {
+      "name": "msmg_l"
+    },
+    {
+      "name": "msmg-25"
+    },
+    {
+      "name": "msmg-0"
+    },
+    {
+      "name": "msmg"
+    },
+    {
+      "name": "msmg_p-25"
+    },
+    {
+      "name": "msmg_p-0"
+    },
+    {
+      "name": "msmg_p"
+    },
+    {
+      "name": "msmg_hv-25"
+    },
+    {
+      "name": "msmg_hv-0"
+    },
+    {
+      "name": "msmg_hv"
+    },
+    {
+      "name": "msmg_r-25"
+    },
+    {
+      "name": "msmg_r-0"
+    },
+    {
+      "name": "msmg_r"
+    },
+    {
+      "name": "msmg_s-25"
+    },
+    {
+      "name": "msmg_s-0"
+    },
+    {
+      "name": "msmg_s"
+    },
+    {
+      "name": "magnum-10"
+    },
+    {
+      "name": "magnum-8"
+    },
+    {
+      "name": "magnum-6"
+    },
+    {
+      "name": "magnum-4"
+    },
+    {
+      "name": "magnum-2"
+    },
+    {
+      "name": "magnum-0"
+    },
+    {
+      "name": "magnum"
+    },
+    {
+      "name": "magnum_r-10"
+    },
+    {
+      "name": "magnum_r-8"
+    },
+    {
+      "name": "magnum_r-6"
+    },
+    {
+      "name": "magnum_r-4"
+    },
+    {
+      "name": "magnum_r-2"
+    },
+    {
+      "name": "magnum_r-0"
+    },
+    {
+      "name": "magnum_r"
+    },
+    {
+      "name": "magnum_p-10"
+    },
+    {
+      "name": "magnum_p-8"
+    },
+    {
+      "name": "magnum_p-6"
+    },
+    {
+      "name": "magnum_p-4"
+    },
+    {
+      "name": "magnum_p-2"
+    },
+    {
+      "name": "magnum_p-0"
+    },
+    {
+      "name": "magnum_p"
+    },
+    {
+      "name": "magnum_l-10"
+    },
+    {
+      "name": "magnum_l-8"
+    },
+    {
+      "name": "magnum_l-6"
+    },
+    {
+      "name": "magnum_l-4"
+    },
+    {
+      "name": "magnum_l-2"
+    },
+    {
+      "name": "magnum_l-0"
+    },
+    {
+      "name": "magnum_l"
+    },
+    {
+      "name": "magnum_hv-10"
+    },
+    {
+      "name": "magnum_hv-8"
+    },
+    {
+      "name": "magnum_hv-6"
+    },
+    {
+      "name": "magnum_hv-4"
+    },
+    {
+      "name": "magnum_hv-2"
+    },
+    {
+      "name": "magnum_hv-0"
+    },
+    {
+      "name": "magnum_hv"
+    },
+    {
+      "name": "magnum_s"
+    },
+    {
+      "name": "magnum_s-10"
+    },
+    {
+      "name": "magnum_s-8"
+    },
+    {
+      "name": "magnum_s-6"
+    },
+    {
+      "name": "magnum_s-4"
+    },
+    {
+      "name": "magnum_s-2"
+    },
+    {
+      "name": "magnum_s-0"
+    },
+    {
+      "name": "lrifle_box-50"
+    },
+    {
+      "name": "lrifle_box-40"
+    },
+    {
+      "name": "lrifle_box-30"
+    },
+    {
+      "name": "lrifle_box-20"
+    },
+    {
+      "name": "lrifle_box-10"
+    },
+    {
+      "name": "lrifle_box-0"
+    },
+    {
+      "name": "lrifle_box"
+    },
+    {
+      "name": "srifle-25"
+    },
+    {
+      "name": "srifle"
+    },
+    {
+      "name": "srifle-0"
+    },
+    {
+      "name": "srifle_r-25"
+    },
+    {
+      "name": "srifle_r"
+    },
+    {
+      "name": "srifle_r-0"
+    },
+    {
+      "name": "srifle_l-25"
+    },
+    {
+      "name": "srifle_l"
+    },
+    {
+      "name": "srifle_l-0"
+    },
+    {
+      "name": "srifle_hv-25"
+    },
+    {
+      "name": "srifle_hv"
+    },
+    {
+      "name": "srifle_hv-0"
+    },
+    {
+      "name": "srifle_s-25"
+    },
+    {
+      "name": "srifle_s"
+    },
+    {
+      "name": "srifle_s-0"
+    },
+    {
+      "name": "srifle_p-25"
+    },
+    {
+      "name": "srifle_p"
+    },
+    {
+      "name": "srifle_p-0"
+    },
+    {
+      "name": "10x24-99"
+    },
+    {
+      "name": "10x24-75"
+    },
+    {
+      "name": "10x24-50"
+    },
+    {
+      "name": "10x24-25"
+    },
+    {
+      "name": "10x24-0"
+    },
+    {
+      "name": "10x24"
+    },
+    {
+      "name": "ihclrifle_l-30"
+    },
+    {
+      "name": "ihclrifle_l-0"
+    },
+    {
+      "name": "ihclrifle_l"
+    },
+    {
+      "name": "ihclrifle-30"
+    },
+    {
+      "name": "ihclrifle-0"
+    },
+    {
+      "name": "ihclrifle"
+    },
+    {
+      "name": "ihclrifle_p-30"
+    },
+    {
+      "name": "ihclrifle_p-0"
+    },
+    {
+      "name": "ihclrifle_p"
+    },
+    {
+      "name": "ihclrifle_hv-30"
+    },
+    {
+      "name": "ihclrifle_hv-0"
+    },
+    {
+      "name": "ihclrifle_hv"
+    },
+    {
+      "name": "ihclrifle_r-30"
+    },
+    {
+      "name": "ihclrifle_r-0"
+    },
+    {
+      "name": "ihclrifle_r"
+    },
+    {
+      "name": "ihclrifle_s-30"
+    },
+    {
+      "name": "ihclrifle_s-0"
+    },
+    {
+      "name": "ihclrifle_s"
+    },
+    {
+      "name": "cspistol_l-10"
+    },
+    {
+      "name": "cspistol_l-8"
+    },
+    {
+      "name": "cspistol_l-6"
+    },
+    {
+      "name": "cspistol_l-4"
+    },
+    {
+      "name": "cspistol_l-2"
+    },
+    {
+      "name": "cspistol_l-0"
+    },
+    {
+      "name": "cspistol_l"
+    },
+    {
+      "name": "cspistol-10"
+    },
+    {
+      "name": "cspistol-8"
+    },
+    {
+      "name": "cspistol-6"
+    },
+    {
+      "name": "cspistol-4"
+    },
+    {
+      "name": "cspistol-2"
+    },
+    {
+      "name": "cspistol-0"
+    },
+    {
+      "name": "cspistol"
+    },
+    {
+      "name": "cspistol_p-10"
+    },
+    {
+      "name": "cspistol_p-8"
+    },
+    {
+      "name": "cspistol_p-6"
+    },
+    {
+      "name": "cspistol_p-4"
+    },
+    {
+      "name": "cspistol_p-2"
+    },
+    {
+      "name": "cspistol_p-0"
+    },
+    {
+      "name": "cspistol_p"
+    },
+    {
+      "name": "cspistol_hv-10"
+    },
+    {
+      "name": "cspistol_hv-8"
+    },
+    {
+      "name": "cspistol_hv-6"
+    },
+    {
+      "name": "cspistol_hv-4"
+    },
+    {
+      "name": "cspistol_hv-2"
+    },
+    {
+      "name": "cspistol_hv-0"
+    },
+    {
+      "name": "cspistol_hv"
+    },
+    {
+      "name": "cspistol_r-10"
+    },
+    {
+      "name": "cspistol_r-8"
+    },
+    {
+      "name": "cspistol_r-6"
+    },
+    {
+      "name": "cspistol_r-4"
+    },
+    {
+      "name": "cspistol_r-2"
+    },
+    {
+      "name": "cspistol_r-0"
+    },
+    {
+      "name": "cspistol_r"
+    },
+    {
+      "name": "cspistol_s-10"
+    },
+    {
+      "name": "cspistol_s-8"
+    },
+    {
+      "name": "cspistol_s-6"
+    },
+    {
+      "name": "cspistol_s-4"
+    },
+    {
+      "name": "cspistol_s-2"
+    },
+    {
+      "name": "cspistol_s-0"
+    },
+    {
+      "name": "cspistol_s"
+    },
+    {
+      "name": "lrifle_l-30"
+    },
+    {
+      "name": "lrifle_l-0"
+    },
+    {
+      "name": "lrifle_l"
+    },
+    {
+      "name": "lrifle-30"
+    },
+    {
+      "name": "lrifle-0"
+    },
+    {
+      "name": "lrifle"
+    },
+    {
+      "name": "lrifle_p-30"
+    },
+    {
+      "name": "lrifle_p-0"
+    },
+    {
+      "name": "lrifle_p"
+    },
+    {
+      "name": "lrifle_hv-30"
+    },
+    {
+      "name": "lrifle_hv-0"
+    },
+    {
+      "name": "lrifle_hv"
+    },
+    {
+      "name": "lrifle_r-30"
+    },
+    {
+      "name": "lrifle_r-0"
+    },
+    {
+      "name": "lrifle_r"
+    },
+    {
+      "name": "lrifle_s-30"
+    },
+    {
+      "name": "lrifle_s-0"
+    },
+    {
+      "name": "lrifle_s"
+    },
+    {
+      "name": "pk_box"
+    },
+    {
+      "name": "pk_box-80"
+    },
+    {
+      "name": "pk_box-79"
+    },
+    {
+      "name": "pk_box-50"
+    },
+    {
+      "name": "pk_box-30"
+    },
+    {
+      "name": "pk_box-15"
+    },
+    {
+      "name": "pk_box-0"
+    },
+    {
+      "name": "gyropistol-4"
+    },
+    {
+      "name": "gyropistol-0"
+    },
+    {
+      "name": "gyropistol"
+    },
+    {
+      "name": "maxim"
+    },
+    {
+      "name": "maxim-0"
+    },
+    {
+      "name": "maxim_l-96"
+    },
+    {
+      "name": "maxim_l-0"
+    },
+    {
+      "name": "maxim_p-96"
+    },
+    {
+      "name": "maxim_p-0"
+    },
+    {
+      "name": "maxim_r-96"
+    },
+    {
+      "name": "maxim_r-0"
+    },
+    {
+      "name": "maxim_hv-96"
+    },
+    {
+      "name": "maxim_hv-0"
+    },
+    {
+      "name": "maxim_s-96"
+    },
+    {
+      "name": "maxim_s-0"
+    },
+    {
+      "name": "srifle_long"
+    },
+    {
+      "name": "srifle_long-35"
+    },
+    {
+      "name": "srifle_long-0"
+    },
+    {
+      "name": "srifle_long_r-35"
+    },
+    {
+      "name": "srifle_long_r"
+    },
+    {
+      "name": "srifle_long_r-0"
+    },
+    {
+      "name": "srifle_long_l-35"
+    },
+    {
+      "name": "srifle_long_l"
+    },
+    {
+      "name": "srifle_long_l-0"
+    },
+    {
+      "name": "srifle_long_hv-35"
+    },
+    {
+      "name": "srifle_long_hv"
+    },
+    {
+      "name": "srifle_long_hv-0"
+    },
+    {
+      "name": "srifle_long_s-35"
+    },
+    {
+      "name": "srifle_long_s"
+    },
+    {
+      "name": "srifle_long_s-0"
+    },
+    {
+      "name": "srifle_long_p-35"
+    },
+    {
+      "name": "srifle_long_p"
+    },
+    {
+      "name": "srifle_long_p-0"
+    },
+    {
+      "name": "srifle_drum_p-60"
+    },
+    {
+      "name": "srifle_drum_p"
+    },
+    {
+      "name": "srifle_drum_p-0"
+    },
+    {
+      "name": "srifle_drum_s-60"
+    },
+    {
+      "name": "srifle_drum_s"
+    },
+    {
+      "name": "srifle_drum_s-0"
+    },
+    {
+      "name": "srifle_drum_hv-60"
+    },
+    {
+      "name": "srifle_drum_hv"
+    },
+    {
+      "name": "srifle_drum_hv-0"
+    },
+    {
+      "name": "srifle_drum_l-60"
+    },
+    {
+      "name": "srifle_drum_l"
+    },
+    {
+      "name": "srifle_drum_l-0"
+    },
+    {
+      "name": "srifle_drum_r-60"
+    },
+    {
+      "name": "srifle_drum_r"
+    },
+    {
+      "name": "srifle_drum_r-0"
+    },
+    {
+      "name": "srifle_drum-60"
+    },
+    {
+      "name": "srifle_drum"
+    },
+    {
+      "name": "srifle_drum-0"
+    },
+    {
+      "name": "lrifle_drum-45"
+    },
+    {
+      "name": "lrifle_drum"
+    },
+    {
+      "name": "lrifle_drum-0"
+    },
+    {
+      "name": "lrifle_drum_r-45"
+    },
+    {
+      "name": "lrifle_drum_r"
+    },
+    {
+      "name": "lrifle_drum_r-0"
+    },
+    {
+      "name": "lrifle_drum_l-45"
+    },
+    {
+      "name": "lrifle_drum_l"
+    },
+    {
+      "name": "lrifle_drum_l-0"
+    },
+    {
+      "name": "lrifle_drum_hv-45"
+    },
+    {
+      "name": "lrifle_drum_hv"
+    },
+    {
+      "name": "lrifle_drum_hv-0"
+    },
+    {
+      "name": "lrifle_drum_s-45"
+    },
+    {
+      "name": "lrifle_drum_s"
+    },
+    {
+      "name": "lrifle_drum_s-0"
+    },
+    {
+      "name": "lrifle_drum_p-45"
+    },
+    {
+      "name": "lrifle_drum_p"
+    },
+    {
+      "name": "lrifle_drum_p-0"
+    }
+  ]
+}

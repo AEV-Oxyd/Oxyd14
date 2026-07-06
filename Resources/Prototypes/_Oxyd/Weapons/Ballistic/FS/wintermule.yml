@@ -12,10 +12,14 @@
   - type: Sprite
     sprite: Oxyd/erisported/wintermute.rsi
     layers:
+    - map: ["enum.GVis.MagUnder"]
+      offset: 0.05 , -0.07
+      scale: 0.7 , 0.8
     - state: base
-      map: [ "enum.GunVisualLayers.Base" ]
+      map: ["enum.GVis.Gun"]
   - type: OxydHandheldGun
   - type: OxydMagazineChamber
+
     bulletSlot:
     - name: Chamber
       insertSound: null

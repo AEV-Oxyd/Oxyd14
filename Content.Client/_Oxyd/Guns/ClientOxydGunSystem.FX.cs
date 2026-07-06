@@ -6,6 +6,7 @@ using Content.Shared._Oxyd.Predictors;
 using Content.Shared.Sound;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
 using Robust.Shared.Animations;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Player;
@@ -65,7 +66,7 @@ public partial class ClientOxydGunSystem
         var spriteComp = Comp<SpriteComponent>(target.Owner);
         foreach (var key in Enum.GetValues<GVis>())
         {
-            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, true))
+            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, false))
             {
                 var i = spriteComp.AllLayers.Count();
                 var l = _spriteSystem.AddBlankLayer((target, spriteComp), i);
@@ -84,6 +85,10 @@ public partial class ClientOxydGunSystem
                 var magent = (EntityUid)magaz.ContainerSlot!.ContainedEntity!;
                 // maybe in the future full sprite baking? SPCR 2026
                 _spriteSystem.LayerSetRsi(target.Owner, i, _spriteSystem.LayerGetEffectiveRsi(magent, 0), _spriteSystem.LayerGetRsiState(magent, 0));
+            }
+            else
+            {
+                _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
             }
         }
     }

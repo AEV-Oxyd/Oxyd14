@@ -8,6 +8,7 @@ public enum GVis
 {
     None, // used for internal atts that dont have any renderin
     MagUnder,
+    Gun,
     MagAbove,
     BoltOpen,
     BoltClosed,
