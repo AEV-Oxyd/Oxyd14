@@ -57,11 +57,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<FiremodeMouseStatus>();
     }
 
-    public void onGetInhandVisuals(Entity<OxydMagazineChamberComponent> ent, ref GetInhandVisualsKeyEvent args)
+    public void onGetInhandVisuals(Entity<OxydHandheldGunComponent> ent, ref GetInhandVisualsKeyEvent args)
     {
-        if (ent.Comp.MagInhands)
+        if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
         {
-            if(ent.Comp.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
+            if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
                 args.suffix += "mag";
         }
     }
