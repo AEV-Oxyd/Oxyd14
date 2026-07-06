@@ -19,7 +19,6 @@
       map: ["enum.GVis.Gun"]
   - type: OxydHandheldGun
   - type: OxydMagazineChamber
-
     bulletSlot:
     - name: Chamber
       insertSound: null
@@ -36,3 +35,11 @@
       whitelist:
         components:
         - OxydMagazine
+        tags:
+        - Magazine20
+  - type: Clothing
+    quickEquip: false
+    slots:
+    - Back
+    - suitStorage
+  - type: Wieldable
