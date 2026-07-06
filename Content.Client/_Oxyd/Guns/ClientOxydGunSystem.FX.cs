@@ -1,5 +1,6 @@
 using System.Formats.Tar;
 using System.Linq;
+using Content.Client.Items.Systems;
 using Content.Client.Sound;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
@@ -21,6 +22,7 @@ public partial class ClientOxydGunSystem
 {
     [Dependency] private  AnimationPlayerSystem _animPlayer = default!;
     [Dependency] private  SharedPointLightSystem _lightSystem = default!;
+    [Dependency] private ItemSystem items = default!;
 
     public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
@@ -78,7 +80,7 @@ public partial class ClientOxydGunSystem
         if (magComp is not null)
         {
             var i = _spriteSystem.LayerMapGet(target.Owner, magComp.magAbove ? GVis.MagAbove : GVis.MagUnder);
-            _spriteSystem.LayerSetRsi(target.Owner, i, null, null);
+            _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
             var magaz = magComp.magazineSlot.FirstOrDefault();
             if (magaz is not null && magaz.HasItem)
             {
@@ -91,6 +93,8 @@ public partial class ClientOxydGunSystem
                 _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
             }
         }
+
+        items.VisualsChanged(target.Owner);
     }
 
 

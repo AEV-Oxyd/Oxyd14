@@ -19,6 +19,7 @@
       map: ["enum.GVis.Gun"]
   - type: OxydHandheldGun
   - type: OxydMagazineChamber
+    magInhands: true
     bulletSlot:
     - name: Chamber
       insertSound: null

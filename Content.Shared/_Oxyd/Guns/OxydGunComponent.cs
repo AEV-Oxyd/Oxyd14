@@ -108,6 +108,9 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
     // wheter to draw mags above or below gun layer
     public bool magAbove = false;
 
+    [DataField]
+    public bool MagInhands = false;
+
 }
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent

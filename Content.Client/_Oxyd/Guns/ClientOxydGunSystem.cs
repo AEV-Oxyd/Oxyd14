@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Numerics;
 using Content.Client._Oxyd.Framework;
 using Content.Client.DoAfter;
@@ -8,6 +9,7 @@ using Content.Shared.ActionBlocker;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityEffects.Effects;
+using Content.Shared.Hands;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Verbs;
@@ -45,6 +47,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         //SubscribeLocalEvent<OxydChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
+        SubscribeLocalEvent<OxydMagazineChamberComponent, GetInhandVisualsKeyEvent>(onGetInhandVisuals);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
@@ -52,6 +55,15 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
         _netManager.RegisterNetMessage<FiremodeMouseStatus>();
+    }
+
+    public void onGetInhandVisuals(Entity<OxydMagazineChamberComponent> ent, ref GetInhandVisualsKeyEvent args)
+    {
+        if (ent.Comp.MagInhands)
+        {
+            if(ent.Comp.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
+                args.suffix += "mag";
+        }
     }
 
     public void onDrop(Entity<OxydHandheldGunComponent> ent, ref DroppedEvent args)
