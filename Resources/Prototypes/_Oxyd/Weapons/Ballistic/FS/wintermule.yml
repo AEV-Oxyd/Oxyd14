@@ -1,0 +1,46 @@
+- type: entity
+  name: Wintermule
+  parent: WeaponOxydBallisticBase
+  id: Wintermule
+  description: A high end military grade assault rifle, designed as a modern ballistic infantry weapon. Primarily used by and produced for IH troops. Uses IH .20 Rifle magazines.
+    The design was made to be able to fit long magazine alongside the standard ones.
+  components:
+  - type: OxydGun
+    firemodes:
+    - fullAuto300
+    - fullAuto600
+  - type: Sprite
+    sprite: Oxyd/erisported/wintermute.rsi
+    layers:
+    - map: ["enum.GVis.MagUnder"]
+      offset: 0.05 , -0.07
+      scale: 0.7 , 0.8
+    - state: base
+      map: ["enum.GVis.Gun"]
+  - type: OxydHandheldGun
+  - type: OxydMagazineChamber
+    magInhands: true
+    bulletSlot:
+    - name: Chamber
+      insertSound: null
+      ejectSound: null
+      priority: 0
+      whitelist:
+        components:
+        - OxydBullet
+    magazineSlot:
+    - name: Magazine
+      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
+      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+      priority: 2
+      whitelist:
+        components:
+        - OxydMagazine
+        tags:
+        - Magazine20
+  - type: Clothing
+    quickEquip: false
+    slots:
+    - Back
+    - suitStorage
+  - type: Wieldable

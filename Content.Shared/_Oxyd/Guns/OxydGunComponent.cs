@@ -53,13 +53,11 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables, AutoNetworkedField]
     // used for randomization
     public uint timesFired = 0;
-    // How much actual firing time there is
-    // This depends on server tick period. A gun can accumulate
-    // extra firing time due to uneven ticks , this makes sure the
-    // firarate is always overall respected , even if it'd be lost due to
-    // ticks not being fast enough or varying network ping
-    [ViewVariables,  AutoNetworkedField]
-    public TimeSpan firingTime = TimeSpan.Zero;
+
+    public TimeSpan lastNetMouseUpdate = TimeSpan.Zero;
+    public bool mouseDown = false;
+    // how many states are we expecting/waiting to receive from the client?
+    public int stateCounter = 0;
 
     public Vector2 getShootingOffset()
     {
@@ -105,6 +103,14 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
 {
     [DataField("magazineSlot"), CheckForGunUpdate(true)]
     public List<ItemSlot> magazineSlot = new();
+
+    [DataField]
+    // wheter to draw mags above or below gun layer
+    public bool magAbove = false;
+
+    [DataField]
+    public bool MagInhands = false;
+
 }
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent

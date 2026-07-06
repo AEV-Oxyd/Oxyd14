@@ -1,0 +1,31 @@
+
+- type: Tag
+  id: Magazine20
+
+
+- type: entity
+  name: magazine (.20)
+  parent: BaseItem
+  id: Magazine20
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    noRot: false
+    sprite: Oxyd/erisported/ammo_mags.rsi
+    state: srifle
+  - type: Item
+    size: Small
+  - type: OxydMagazine
+    capacity: 30
+  - type: ContainerContainer
+    containers:
+      storagebase: !type:Container
+        ents: []
+  - type: EntityTableContainerFill
+    containers:
+      storagebase:
+        id: BulletOxyd
+        amount: 30
+  - type: Tag
+    tags:
+    - Magazine20

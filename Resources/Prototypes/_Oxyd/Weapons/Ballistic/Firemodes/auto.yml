@@ -1,0 +1,48 @@
+- type: gunFiremode
+  id: fullAuto300
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: auto
+  provider: OxydMagazineChamber
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectCheckCuffed
+  - !type:GunEffectWait
+    waitPeriod: 0.2
+    stepBack: 4
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatMouseHeld
+    stepBack: 6
+    validDiff: 0.4
+  - !type:GunEffectStop
+
+- type: gunFiremode
+  id: fullAuto600
+  icon:
+    sprite: /Textures/Oxyd/erisported/gunactions16.rsi
+    state: auto
+  provider: OxydMagazineChamber
+  providerId: 0
+  addedInaccuracyMaximum: 0
+  fireSound:
+    path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
+  effects:
+  - !type:GunEffectCheckConscious
+  - !type:GunEffectCheckAmmo
+  - !type:GunEffectCheckHandheld
+  - !type:GunEffectCheckCuffed
+  - !type:GunEffectWait
+    waitPeriod: 0.1
+    stepBack: 4
+  - !type:GunEffectTryFireMouseDirection
+  - !type:GunEffectRepeatMouseHeld
+    stepBack: 6
+    validDiff: 0.4
+  - !type:GunEffectStop
+

@@ -15,6 +15,12 @@ namespace Content.Shared.Hands
         public readonly EntityUid Uid;
     }
 
+    public sealed class GetInhandVisualsKeyEvent : EntityEventArgs
+    {
+        public string suffix = String.Empty;
+    }
+
+
     /// <summary>
     ///     Raised directed at an item that needs to update its in-hand sprites/layers.
     /// </summary>

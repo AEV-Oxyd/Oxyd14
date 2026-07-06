@@ -60,10 +60,10 @@ public sealed partial class ClientOxydGunSystem
             case GunEffectTryFireMouseDirection e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
-            case GunEffectRepeatNextTick e:
+            case GunEffectRepeat e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
-            case GunEffectRepeatNextTickIfMouseHeld e:
+            case GunEffectRepeatMouseHeld e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectCheckAmmo e:
@@ -76,6 +76,8 @@ public sealed partial class ClientOxydGunSystem
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             case GunEffectResetCharge e:
+                return InterpretStep(firemodePrototype, e, gun, shooter);
+            case GunEffectStop e:
                 return InterpretStep(firemodePrototype, e, gun, shooter);
 
             default:
@@ -102,7 +104,7 @@ public sealed partial class ClientOxydGunSystem
         }
 
 
-        var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos);
+        var returnedList = TryFireGunAt(gun, shooter.Value, mouseData.mouseMap, shootingPos, effect.shots);
         if (returnedList is null)
         {
             Log.Debug($"Fail la fire mouse direction");
@@ -126,7 +128,7 @@ public sealed partial class ClientOxydGunSystem
 
 
     public bool InterpretStep(GunFiremodePrototype firemodePrototype,
-        GunEffectRepeatNextTickIfMouseHeld effect,
+        GunEffectRepeatMouseHeld effect,
         Entity<OxydGunComponent> gun,
         EntityUid? shooter)
     {
@@ -135,62 +137,13 @@ public sealed partial class ClientOxydGunSystem
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
         }
-        // this sometimes doesnt arrive in time which necessitates waits also implementing broadcast
-        BroadcastMouseStatus(gun);
-        if (!_mouseSys.mousedDown)
-        {
-            RemoveActiveUpdating(firemodePrototype, gun, shooter);
-            return true;
-        }
-
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        firemodePrototype.currentStep -= effect.stepBack;
-        return false;
-    }
-
-    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
-    {
-        if (gun.Comp.safety)
-        {
-            ResetFiremode(firemodePrototype, gun, shooter);
-            return false;
-        }
-        if (effect.skipTick == _gameTiming.CurTick)
-        {
-            return true;
-        }
-
-        EnsureActiveUpdating(firemodePrototype, gun, shooter);
-        effect.alreadyWaited += _gameTiming.TickPeriod;
-        if (firemodePrototype.ticksBehind > 0 && effect.alreadyWaited < effect.waitPeriod)
-        {
-            var maxCatch = (int)((effect.waitPeriod - effect.alreadyWaited)/_gameTiming.TickPeriod);
-            maxCatch = Math.Min(maxCatch, firemodePrototype.ticksBehind);
-            effect.alreadyWaited += _gameTiming.TickPeriod * maxCatch;
-            Log.Debug($"Clientside waited and had behind {firemodePrototype.ticksBehind}, compensated {maxCatch}");
-            firemodePrototype.ticksBehind -= maxCatch;
-        }
-        if (effect.alreadyWaited < effect.waitPeriod)
-        {
-            if (effect.lastNetwork < _gameTiming.RealTime)
-            {
-                effect.lastNetwork = _gameTiming.RealTime + _gameTiming.TickPeriod * 2;
-                BroadcastMouseStatus(gun);
-            }
-            // need to spam it a bit for very short cycles
-            else if(effect.waitPeriod - effect.alreadyWaited < _gameTiming.TickPeriod * 3)
-                BroadcastMouseStatus(gun);
-
-            return false;
-        }
-        effect.alreadyWaited = TimeSpan.Zero;
-        RemoveActiveUpdating(firemodePrototype, gun, shooter);
-        if (effect.stepBack != 0)
+        if (_mouseSys.mousedDown)
         {
             firemodePrototype.currentStep -= effect.stepBack;
-            effect.skipTick = _gameTiming.CurTick;
         }
         return true;
     }
+
+
 
 }

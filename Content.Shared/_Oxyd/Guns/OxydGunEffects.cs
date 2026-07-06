@@ -19,13 +19,16 @@ public abstract partial class OxydGunEffect
     }
 }
 
+public abstract partial class OxydFiringGunEffect : OxydGunEffect
+{
+    [DataField]
+    public int shots = 1;
+
+}
+
 public interface OxydResetableEffect
 {
     public abstract void Reset();
-}
-public interface  OxydFiringGunEffect
-{
-
 }
 
 public interface OxydModdableEffect
@@ -36,13 +39,6 @@ public interface OxydModdableEffect
 public interface OxydImmediateInterpret
 {
     public bool shouldInterpretImmediately();
-}
-public abstract partial class OxydMouseStatusGunEffect : OxydGunEffect
-{
-    public bool mouseHeld = false;
-    public TimeSpan receivedUpdate = TimeSpan.Zero;
-    public TimeSpan validDiff = TimeSpan.FromSeconds(1);
-    public int updateFromStep = 0;
 }
 [DataDefinition]
 public sealed partial class GunEffectCheckHandheld : OxydGunEffect;
@@ -65,18 +61,17 @@ public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect, 
     public TimeSpan waitPeriod = TimeSpan.Zero;
     [ViewVariables]
     public TimeSpan alreadyWaited = TimeSpan.Zero;
+
     [ViewVariables]
-    public GameTick skipTick = GameTick.Zero;
+    public bool skip = false;
     [ViewVariables]
     public TimeSpan lastNetwork = TimeSpan.Zero;
 
-    [DataField]
-    public int fowardMax = 3;
 
     public void Reset()
     {
         alreadyWaited = TimeSpan.Zero;
-        skipTick = GameTick.Zero;
+        skip = false;
     }
 
     public void applyMods(CompoundedModifiers mods)
@@ -85,55 +80,35 @@ public sealed partial class GunEffectWait : OxydGunEffect, OxydResetableEffect, 
     }
 }
 [DataDefinition]
-public sealed partial class GunEffectTryFireGunDirection : OxydGunEffect,OxydFiringGunEffect;
+public sealed partial class GunEffectTryFireGunDirection : OxydFiringGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectTryFireMouseDirection: OxydGunEffect,OxydFiringGunEffect;
+public sealed partial class GunEffectTryFireMouseDirection: OxydFiringGunEffect;
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTick : OxydGunEffect, OxydResetableEffect
+public sealed partial class GunEffectRepeat : OxydGunEffect, OxydResetableEffect
 {
     [DataField]
     public int repeatCount = 1;
     [DataField]
     public int stepBack = 0;
-    [DataField]
-    public TimeSpan triggerTimeout = TimeSpan.FromSeconds(1000);
     [ViewVariables]
     public int timesBack = 0;
-    [ViewVariables]
-    public TimeSpan lastTrigger = TimeSpan.Zero;
 
     public void Reset()
     {
         timesBack = 0;
-        lastTrigger = TimeSpan.Zero;
     }
 
 }
 
 [DataDefinition]
-public sealed partial class GunEffectRepeatNextTickIfMouseHeld : OxydMouseStatusGunEffect, OxydResetableEffect, OxydImmediateInterpret
+public sealed partial class GunEffectRepeatMouseHeld : OxydGunEffect, OxydImmediateInterpret
 {
     [DataField]
     public int stepBack = 0;
 
-    [ViewVariables]
-    public int missedTicks = 0;
-
-    [DataField]
-    public int maxMissed = 5;
-
-    [DataField]
-    public bool hardWait = false;
-
     public bool shouldInterpretImmediately()
     {
-        return hardWait && missedTicks > 0;
-    }
-
-
-    public void Reset()
-    {
-        missedTicks = 0;
+        return true;
     }
 
 
@@ -159,4 +134,9 @@ public sealed partial class GunEffectCheckCharge : OxydGunEffect
     [DataField]
     public float max = float.PositiveInfinity;
 }
+
+[DataDefinition]
+public sealed partial class GunEffectStop : OxydGunEffect;
+
+
 

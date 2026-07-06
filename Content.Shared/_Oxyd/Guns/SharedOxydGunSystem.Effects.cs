@@ -16,7 +16,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         fire.currentStep = 0;
         fire.Active = false;
+        fire.timeBudget = TimeSpan.Zero;
         RemoveActiveUpdating(fire, gun, shooter);
+        ResetEffs(fire);
+    }
+
+    public void ResetEffs(GunFiremodePrototype fire)
+    {
         foreach (OxydGunEffect eff in fire.Effects)
         {
             if(eff is OxydResetableEffect casted)
@@ -29,7 +35,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (TryFireGunAt(gun,
                 gun.Owner,
                 gunCoords.Offset(_transformSystem.GetWorldRotation(gun).ToWorldVec()),
-                gunCoords) is null)
+                gunCoords, effect.shots) is null)
         {
             ResetFiremode(firemodePrototype, gun, shooter);
             return false;
@@ -90,13 +96,8 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
-    public virtual bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeatNextTick effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    public virtual bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectRepeat effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
     {
-        if (_gameTiming.CurTime.Ticks - effect.lastTrigger.Ticks> effect.triggerTimeout.Ticks)
-        {
-            effect.timesBack = 0;
-        }
-        effect.lastTrigger = _gameTiming.CurTime;
         if (effect.timesBack < effect.repeatCount)
         {
             effect.timesBack++;
@@ -155,6 +156,46 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         ccomp.charge = 0;
         ccomp.lastCharge = TimeSpan.Zero;
         RemComp<ActiveOxydGunChargeupComponent>(gun.Owner);
+        return true;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectStop effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        ResetFiremode(firemodePrototype, gun, shooter);
+        return false;
+    }
+
+    public bool InterpretStep(GunFiremodePrototype firemodePrototype, GunEffectWait effect, Entity<OxydGunComponent> gun, EntityUid? shooter)
+    {
+        if (gun.Comp.safety || !firemodePrototype.Active)
+        {
+            Log.Debug("wait cancel: safety-active");
+            ResetFiremode(firemodePrototype, gun, shooter);
+            return false;
+        }
+        if (effect.skip)
+        {
+            Log.Debug("wait cancel: skip");
+            effect.skip = false;
+            return true;
+        }
+        EnsureActiveUpdating(firemodePrototype, gun, shooter);
+        var needTime = effect.waitPeriod - effect.alreadyWaited;
+        var usedBudget = needTime < firemodePrototype.timeBudget ? needTime : firemodePrototype.timeBudget;
+        effect.alreadyWaited += usedBudget;
+        firemodePrototype.timeBudget -= usedBudget;
+        Log.Debug($"consumed:{usedBudget.Milliseconds}ms,storing:{effect.alreadyWaited.Milliseconds}ms");
+        if (effect.alreadyWaited < effect.waitPeriod)
+        {
+            return false;
+        }
+        effect.alreadyWaited = TimeSpan.Zero;
+        RemoveActiveUpdating(firemodePrototype, gun, shooter);
+        if (effect.stepBack != 0)
+        {
+            firemodePrototype.currentStep -= effect.stepBack;
+            effect.skip = true;
+        }
         return true;
     }
 

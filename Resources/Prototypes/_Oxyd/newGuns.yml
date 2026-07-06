@@ -5,7 +5,6 @@
 
 - type: gunFiremode
   id: baseFiremode
-  firerate: 10
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: semi
@@ -22,7 +21,6 @@
 
 - type: gunFiremode
   id: baseFiremodeChamber
-  firerate: 10
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: semi
@@ -39,7 +37,6 @@
 
 - type: gunFiremode
   id: baseFiremodeRevolver
-  firerate: 10
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: semi
@@ -56,7 +53,6 @@
 
 - type: gunFiremode
   id: chargeFiremode
-  firerate: 10
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: modecharge
@@ -74,17 +70,14 @@
   - !type:GunEffectCheckHandheld
   - !type:GunEffectModifyCharge
     addAmount: 0.2
-  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectRepeatMouseHeld
     stepBack: 5
     validDiff: 0.2
-    hardWait: true
-    maxMissed: 15
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectResetCharge
 
 - type: gunFiremode
   id: chargeHitscanFiremode
-  firerate: 10
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: modecharge
@@ -102,17 +95,14 @@
   - !type:GunEffectCheckHandheld
   - !type:GunEffectModifyCharge
     addAmount: 0.2
-  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectRepeatMouseHeld
     stepBack: 5
     validDiff: 0.2
-    hardWait: true
-    maxMissed: 15
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectResetCharge
 
 - type: gunFiremode
   id: baseBurstFiremode
-  firerate: 60
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: burst
@@ -129,19 +119,15 @@
     waitPeriod: 0.1
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
-  - !type:GunEffectRepeatNextTick
+  - !type:GunEffectRepeat
     repeatCount: 2
     stepBack: 5
-    triggerTimeout: 0.3
-  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectRepeatMouseHeld
     stepBack: 6
     validDiff: 0.1
-    hardWait: true
-    maxMissed: 15
 
 - type: gunFiremode
   id: baseBurstLaserFiremode
-  firerate: 60
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: burst
@@ -158,15 +144,12 @@
     waitPeriod: 0.1
     stepBack: 3
   - !type:GunEffectTryFireMouseDirection
-  - !type:GunEffectRepeatNextTick
+  - !type:GunEffectRepeat
     repeatCount: 2
     stepBack: 5
-    triggerTimeout: 0.3
-  - !type:GunEffectRepeatNextTickIfMouseHeld
+  - !type:GunEffectRepeatMouseHeld
     stepBack: 6
     validDiff: 0.1
-    hardWait: true
-    maxMissed: 15
 
 - type: entity
   name: Oxyd Gun

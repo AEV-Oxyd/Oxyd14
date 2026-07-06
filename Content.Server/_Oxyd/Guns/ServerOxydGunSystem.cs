@@ -55,6 +55,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     private EntityQuery<PhysicsComponent> physQ;
     public int predictedTicks = OxydCvars.predictionTicks.DefaultValue;
 
+    public override void doVisUpdate(EntityUid gun)
+    {
+        return;
+    }
+
 
     public override void Initialize()
     {
@@ -138,7 +143,7 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     {
         while(immediateStatus[currentImmediateIndex].TryDequeue(out var thing))
         {
-            Log.Debug($"Dequeqed {thing} at {_gameTiming.CurTime}");
+            //Log.Debug($"Dequeqed {thing} at {_gameTiming.CurTime}");
             switch (thing)
             {
                 case FiremodeMouseStatus ev:
@@ -242,31 +247,11 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     }
 
     public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates, int shots)
     {
         if (!preFireChecks(gun))
             return null;
-        var gfp = gun.Comp.selectedFiremodePrototype;
-        if (gfp.nextFire > _gameTiming.CurTime || gfp.lastFiredTick == _gameTiming.CurTick)
-        {
-            if (gfp.firingGaps < gfp.fireDelay)
-                return null;
-            // compensare lag
-            gfp.firingGaps -= gfp.fireDelay;
-            if (gfp.lastFiredTick == _gameTiming.CurTick)
-            {
-                Log.Debug("Same tick fire compensation");
-                gfp.nextFire = _gameTiming.CurTime;
-            }
-            else
-            {
-                Log.Debug("Firemode nextFire compensation");
-                gfp.nextFire = _gameTiming.CurTime;
-            }
-
-            Log.Error("Compensated succesfully");
-        }
-        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates, shots);
 
     }
 
@@ -278,9 +263,9 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         doStatusTick();
         foreach (var ent in checkActive)
         {
-            Log.Debug($"Running change on {ent.gun.Owner}");
+            Log.Debug($"Active tick on PRE {ent.gun.Owner}");
             if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
-                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
+                Log.Debug($"Active set for {ent.gun.Owner}, {ent.gun.Comp.keepUpdating}");
             if (ent.gun.Comp.keepUpdating)
             {
                 if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))
@@ -302,15 +287,16 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         foreach (var active in query)
         {
             //Log.Error($"Handling active firemode cycle at {_gameTiming.RealTime}!");
+            giveTickInterpTime(active.FiremodePrototype);
             TryExecuteFiremodeCycle(active.FiremodePrototype, active.gun, active.shooter);
             //Dirty(active.gun.Owner, active.gun.Comp);
         }
         doMessageTick();
         foreach (var ent in checkActive)
         {
-            Log.Debug($"Running change on {ent.gun.Owner}");
+            Log.Debug($"Active tick on POST {ent.gun.Owner}");
             if( HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun) != ent.gun.Comp.keepUpdating)
-                Log.Debug($"Updated firemode active on entity {ent.gun.Owner} , now is {ent.gun.Comp.keepUpdating}");
+                Log.Debug($"Active set for {ent.gun.Owner}, {ent.gun.Comp.keepUpdating}");
             if (ent.gun.Comp.keepUpdating)
             {
                 if (HasComp<OxydActiveFiremodeUpdatingComponent>(ent.gun))

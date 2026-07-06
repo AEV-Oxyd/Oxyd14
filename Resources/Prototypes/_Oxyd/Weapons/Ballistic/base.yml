@@ -1,0 +1,30 @@
+
+- type: entity
+  name: Oxyd Ballistic Weapon
+  parent: BaseItem
+  id: WeaponOxydBallisticBase
+  description: A rooty tooty point and shooty.
+  abstract: true
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
+    layers:
+    - state: base
+      map: ["enum.GunVisualLayers.Base"]
+    - state: mag-0
+      map: ["enum.GunVisualLayers.Mag"]
+  - type: Item
+    size: Large
+  - type: OxydGun # must have firemodes field set!
+  - type: OxydHandheldGun
+  # Must define a OxydAmmoProvider comp
+  - type: StaticPrice
+    price: 500
+  - type: RecoilHandler
+  - type: OxydAttachmentHolder
+    slots:
+    - Barrel
+    - Scope
+    whitelist:
+      components:
+      - OxydAttachment

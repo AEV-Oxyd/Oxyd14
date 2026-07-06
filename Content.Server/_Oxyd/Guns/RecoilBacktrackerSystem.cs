@@ -50,9 +50,9 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
         var tickDiff = _timing.CurTick.Value - args.fromTick.Value;
         if (tickDiff > 0 && ent.Comp.recoils.ContainsKey(args.fromTick.Value))
         {
-            Log.Debug($"Before with tick diff of {tickDiff}");
-            var outstf = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
-            Log.Debug($"{string.Join("", outstf)}");
+            //Log.Debug($"Before with tick diff of {tickDiff}");
+            //var outstf = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
+            //Log.Debug($"{string.Join("", outstf)}");
 
             var deltaDiff = ent.Comp.recoils[args.fromTick.Value] - args.currentRecoil;
 
@@ -72,9 +72,9 @@ public sealed class RecoilBacktrackerSystem : EntitySystem
                 ent.Comp.recoils[targetTick] += Math.Clamp(deltaDiff - recoilLoss, 0, recoilCom.maxRecoil);
                 tickDiff--;
             }
-            Log.Debug($"after");
-            var outstf2 = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
-            Log.Debug($"{string.Join("", outstf2)}");
+            //Log.Debug($"after");
+            //var outstf2 = ent.Comp.recoils.Select((key, value) => { return $"to {_timing.CurTick.Value - key.Key}:={key.Value} ";});
+            //Log.Debug($"{string.Join("", outstf2)}");
 
 
 

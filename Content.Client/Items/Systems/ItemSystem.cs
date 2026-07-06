@@ -54,6 +54,10 @@ public sealed partial class ItemSystem : SharedItemSystem
     private void OnGetVisuals(EntityUid uid, ItemComponent item, GetInhandVisualsEvent args)
     {
         var defaultKey = $"inhand-{args.Location.ToString().ToLowerInvariant()}";
+        var ev = new GetInhandVisualsKeyEvent(); // Oxyd Mod, support for inhand variations SPCR 2026
+        RaiseLocalEvent(uid, ev);
+        if(!String.IsNullOrEmpty(ev.suffix))
+            defaultKey += $"-{ev.suffix}";
 
         // try get explicit visuals
         if (!item.InhandVisuals.TryGetValue(args.Location, out var layers))

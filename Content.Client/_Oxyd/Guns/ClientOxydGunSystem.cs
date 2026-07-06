@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Numerics;
 using Content.Client._Oxyd.Framework;
 using Content.Client.DoAfter;
@@ -8,6 +9,7 @@ using Content.Shared.ActionBlocker;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
 using Content.Shared.EntityEffects.Effects;
+using Content.Shared.Hands;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Verbs;
@@ -45,6 +47,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         //SubscribeLocalEvent<OxydChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
+        SubscribeLocalEvent<OxydMagazineChamberComponent, GetInhandVisualsKeyEvent>(onGetInhandVisuals);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
@@ -52,6 +55,15 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
         _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
         _netManager.RegisterNetMessage<FiremodeMouseStatus>();
+    }
+
+    public void onGetInhandVisuals(Entity<OxydHandheldGunComponent> ent, ref GetInhandVisualsKeyEvent args)
+    {
+        if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
+        {
+            if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
+                args.suffix += "mag";
+        }
     }
 
     public void onDrop(Entity<OxydHandheldGunComponent> ent, ref DroppedEvent args)
@@ -207,7 +219,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");
                 return false;
             }
-
             DoInterpret((obj.Owner, gun), ev.self.user);
             return true;
         });
@@ -223,24 +234,24 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
 
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (firemode.nextFire > _gameTiming.CurTime)
+        if (firemode.lastInterpret == _gameTiming.CurTime)
             return;
-
-
-        gun.Comp.simulateAsTick = _gameTiming.CurTick;
         if (!firemode.Active)
         {
+            firemode.timeBudget = _gameTiming.TickPeriod;
             //Log.Debug($"Sending new interpretation start message!");
             _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 clientsideStartingStep = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
+                mouseHeld = _mouseSys.mousedDown
             });
         }
         else
         {
-            firemode.ticksBehind += (int)(_gameTiming.CurTick.Value - firemode.lastInterpreted.Value) - 1;
+            giveTickInterpTime(firemode);
+            BroadcastMouseStatus(gun);
         }
 
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
@@ -251,18 +262,19 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 gun = GetNetEntity(gun),
                 stoppedAt = firemode.currentStep,
                 clientTick = _gameTiming.CurTick,
+                mouseHeld = _mouseSys.mousedDown
             });
         }
     }
 
     public override HashSet<Entity<OxydProjectileComponent>>? TryFireGunAt(Entity<OxydGunComponent> gun, EntityUid shooter,
-        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates)
+        MapCoordinates targetCoordinates, MapCoordinates firingCoordinates, int shots)
     {
         if (!_gameTiming.IsFirstTimePredicted)
             return null;
         if (!preFireChecks(gun))
             return null;
-        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates);
+        return base.TryFireGunAt(gun, shooter, targetCoordinates, firingCoordinates, shots);
 
     }
 
@@ -274,8 +286,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            if(active.shooter is not null)
+            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
+            {
                 DoInterpret(active.gun, active.shooter.Value);
+            }
         }
         foreach (var ent in checkActive)
         {

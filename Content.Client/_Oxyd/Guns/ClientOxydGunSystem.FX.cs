@@ -1,9 +1,13 @@
+using System.Formats.Tar;
+using System.Linq;
+using Content.Client.Items.Systems;
 using Content.Client.Sound;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared._Oxyd.Predictors;
 using Content.Shared.Sound;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
 using Robust.Shared.Animations;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Player;
@@ -18,6 +22,7 @@ public partial class ClientOxydGunSystem
 {
     [Dependency] private  AnimationPlayerSystem _animPlayer = default!;
     [Dependency] private  SharedPointLightSystem _lightSystem = default!;
+    [Dependency] private ItemSystem items = default!;
 
     public void afterFireIndividual(Entity<OxydGunComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
@@ -53,16 +58,43 @@ public partial class ClientOxydGunSystem
 
     }
 
+    public override void doVisUpdate(EntityUid gun)
+    {
+        updateGunIcon((gun, Comp<OxydGunComponent>(gun)));
+    }
+
     public void updateGunIcon(Entity<OxydGunComponent> target)
     {
+        var spriteComp = Comp<SpriteComponent>(target.Owner);
         foreach (var key in Enum.GetValues<GVis>())
         {
-            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, true))
-                continue;
-            _spriteSystem.LayerSetVisible(target.Owner, layer,false);
-
-
+            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, false))
+            {
+                var i = spriteComp.AllLayers.Count();
+                var l = _spriteSystem.AddBlankLayer((target, spriteComp), i);
+                _spriteSystem.LayerMapSet(target.Owner, key, i);
+            }
         }
+
+        var magComp = CompOrNull<OxydMagazineChamberComponent>(target.Owner);
+        if (magComp is not null)
+        {
+            var i = _spriteSystem.LayerMapGet(target.Owner, magComp.magAbove ? GVis.MagAbove : GVis.MagUnder);
+            _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
+            var magaz = magComp.magazineSlot.FirstOrDefault();
+            if (magaz is not null && magaz.HasItem)
+            {
+                var magent = (EntityUid)magaz.ContainerSlot!.ContainedEntity!;
+                // maybe in the future full sprite baking? SPCR 2026
+                _spriteSystem.LayerSetRsi(target.Owner, i, _spriteSystem.LayerGetEffectiveRsi(magent, 0), _spriteSystem.LayerGetRsiState(magent, 0));
+            }
+            else
+            {
+                _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
+            }
+        }
+
+        items.VisualsChanged(target.Owner);
     }
 
 
