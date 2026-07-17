@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_voidsuit
+  name: voidsuit
+  description: A high-tech dark red space suit. Used for AI satellite maintenance.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_void_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

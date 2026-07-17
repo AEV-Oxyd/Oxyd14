@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_brown_tanker_helmet
+  name: brown tanker helmet
+  description: Protects the head from damage while you are in the exoskeleton.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/brown_tanker_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/brown_tanker_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

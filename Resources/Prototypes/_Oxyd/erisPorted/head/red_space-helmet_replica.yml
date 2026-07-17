@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_red_space-helmet_replica
+  name: red space-helmet replica
+  description: A plastic replica of a bloodthirsty mercenary's space helmet, you'll look just like a real murderous criminal operative in this! This is a toy, it is not made for use in space!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_space-helmet_replica.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_space-helmet_replica.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

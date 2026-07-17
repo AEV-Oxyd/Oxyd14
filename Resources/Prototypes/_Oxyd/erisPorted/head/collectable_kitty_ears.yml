@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_kitty_ears
+  name: collectable kitty ears
+  description: The fur feels... a bit too realistic.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_kitty_ears.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_kitty_ears.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

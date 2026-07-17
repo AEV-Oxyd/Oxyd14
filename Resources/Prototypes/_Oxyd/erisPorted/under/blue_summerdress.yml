@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_blue_summerdress
+  name: blue summerdress
+  description: A blue dress worn by mostly those of east asian descendance
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_summerdress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_summerdress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

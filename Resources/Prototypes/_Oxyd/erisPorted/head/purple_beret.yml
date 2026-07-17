@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_purple_beret
+  name: purple beret
+  description: A stylish, if purple, beret.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/purple_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/purple_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

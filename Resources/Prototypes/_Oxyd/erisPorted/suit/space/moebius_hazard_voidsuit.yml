@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_moebius_hazard_voidsuit
+  name: moebius hazard voidsuit
+  description: A moebius branded violet voidsuit that is capable of protecting its user against most hostile environment conditions, including anomalous particles. Integrated self-diagnostics system not included!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_hazard_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_hazard_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_moebius_hazard_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

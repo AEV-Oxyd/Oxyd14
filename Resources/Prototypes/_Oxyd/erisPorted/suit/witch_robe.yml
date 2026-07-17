@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_witch_robe
+  name: witch robe
+  description: Magic is all about the spell power, Ze!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/witch_robe.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/witch_robe.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

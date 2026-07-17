@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_Excelsior_armor
+  name: Excelsior armor
+  description: An ancient space suit design, remade with advanced materials. Provides good protection, especially against energy discharges, while remaining surprisingly flexible.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_Excelsior_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_generic_outfit
+  name: red generic outfit
+  description: A simple red shirt with black pants.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_generic_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_generic_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

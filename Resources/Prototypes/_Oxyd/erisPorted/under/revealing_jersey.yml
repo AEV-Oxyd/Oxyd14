@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_revealing_jersey
+  name: revealing jersey
+  description: For showing your devotion to god, or the opposite for that matter
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/revealing_jersey.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/revealing_jersey.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

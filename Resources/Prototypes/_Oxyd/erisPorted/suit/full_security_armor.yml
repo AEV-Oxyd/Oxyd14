@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_full_security_armor
+  name: full security armor
+  description: A tactical armor vest, but with shoulderpads and knee pads included to cover all parts of the body. Not designed for serious operations.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_security_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_security_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

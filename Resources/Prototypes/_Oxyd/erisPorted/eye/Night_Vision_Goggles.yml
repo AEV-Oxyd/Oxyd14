@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Night_Vision_Goggles
+  name: Night Vision Goggles
+  description: You can totally see in the dark now!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Night_Vision_Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Night_Vision_Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

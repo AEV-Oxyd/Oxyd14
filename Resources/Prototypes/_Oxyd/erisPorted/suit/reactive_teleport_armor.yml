@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_reactive_teleport_armor
+  name: reactive teleport armor
+  description: Someone separated our Research Director's head from their body!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/reactive_teleport_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/reactive_teleport_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

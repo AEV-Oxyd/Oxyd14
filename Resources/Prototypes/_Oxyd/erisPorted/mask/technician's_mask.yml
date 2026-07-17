@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_technician's_mask
+  name: technician's mask
+  description: A white mask with some strange drawings. Designed to hide the wearer's face
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/technician's_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/technician's_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

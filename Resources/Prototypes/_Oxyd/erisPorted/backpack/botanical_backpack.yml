@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_botanical_backpack
+  name: botanical backpack
+  description: A green backpack for plant related work.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/botanical_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/botanical_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

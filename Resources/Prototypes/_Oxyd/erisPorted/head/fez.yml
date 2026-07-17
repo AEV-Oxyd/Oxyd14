@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_fez
+  name: fez
+  description: You should wear a fez. Fezzes are cool.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fez.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fez.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

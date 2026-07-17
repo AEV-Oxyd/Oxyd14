@@ -1,0 +1,23 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_Custodian_helmet
+  name: Custodian helmet
+  description: Cleaning floors is more dangerous than it looks.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Custodian_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Custodian_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: Item
+    size: Normal
+

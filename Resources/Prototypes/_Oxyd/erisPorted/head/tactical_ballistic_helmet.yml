@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_tactical_ballistic_helmet
+  name: tactical ballistic helmet
+  description: A bulletproof security helmet that excels in protecting the wearer against traditional projectile weaponry and explosives to a minor extent. Comes with inbuilt nightvision HUD.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tactical_ballistic_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tactical_ballistic_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_gnome_outfit
+  name: gnome outfit
+  description: Against the gnome there is no reception, if there is no other gnomes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gnome_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gnome_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

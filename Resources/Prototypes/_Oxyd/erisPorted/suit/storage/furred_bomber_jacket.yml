@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_furred_bomber_jacket
+  name: furred bomber jacket
+  description: A thick, well-worn WW2 style leather bomber jacket, padded with warm fur. It's cold out in space!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/furred_bomber_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/furred_bomber_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

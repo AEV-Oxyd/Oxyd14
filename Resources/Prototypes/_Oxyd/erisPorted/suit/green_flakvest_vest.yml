@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_green_flakvest_vest
+  name: green flakvest vest
+  description: An armored vest that protects against high-velocity solid projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_flakvest_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_flakvest_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

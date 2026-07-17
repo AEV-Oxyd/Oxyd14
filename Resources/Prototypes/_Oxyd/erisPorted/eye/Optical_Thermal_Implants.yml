@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Optical_Thermal_Implants
+  name: Optical Thermal Implants
+  description: A set of implantable lenses designed to augment your vision
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Optical_Thermal_Implants.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Optical_Thermal_Implants.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

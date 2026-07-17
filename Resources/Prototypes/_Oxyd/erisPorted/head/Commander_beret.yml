@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Commander_beret
+  name: Commander beret
+  description: Grey beret with a Lieutenant's rank emblem. For officers that are more inclined towards style than safety.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Commander_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Commander_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

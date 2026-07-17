@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_riot_helmet
+  name: riot helmet
+  description: A helmet specifically designed to protect against close range attacks.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/riot_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/riot_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

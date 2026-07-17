@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_maska_helmet
+  name: maska helmet
+  description: "I do not know who I am, I don't know why I'm here. All I know is that I must kill."
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/maska_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/maska_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

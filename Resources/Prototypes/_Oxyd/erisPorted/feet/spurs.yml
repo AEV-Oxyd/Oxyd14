@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_spurs
+  name: spurs
+  description: A pair of leather boots with spurs. The way they jingle and jangle is quite enticing.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/spurs.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/spurs.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

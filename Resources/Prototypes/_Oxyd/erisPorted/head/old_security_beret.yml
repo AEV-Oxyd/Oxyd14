@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_old_security_beret
+  name: old security beret
+  description: A washed out and dusty corporate security beret from the long defunct "Securitech" company.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/old_security_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/old_security_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

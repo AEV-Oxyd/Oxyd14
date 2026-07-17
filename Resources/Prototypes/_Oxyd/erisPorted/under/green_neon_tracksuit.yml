@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_green_neon_tracksuit
+  name: green neon tracksuit
+  description: A tracksuit lined with green neon fibers. Slightly luminescent.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_neon_tracksuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_neon_tracksuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

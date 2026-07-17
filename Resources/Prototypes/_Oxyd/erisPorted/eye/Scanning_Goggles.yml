@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Scanning_Goggles
+  name: Scanning Goggles
+  description: A very oddly shaped pair of goggles with bits of wire poking out the sides. A soft humming sound emanates from it.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Scanning_Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Scanning_Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

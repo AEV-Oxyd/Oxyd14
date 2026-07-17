@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_swimsuit
+  name: red swimsuit
+  description: An oldfashioned red swimsuit.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_swimsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_swimsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

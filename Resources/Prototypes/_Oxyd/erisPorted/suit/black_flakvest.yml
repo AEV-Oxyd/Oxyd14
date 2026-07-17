@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_black_flakvest
+  name: black flakvest
+  description: An armored vest that protects against high-velocity solid projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_flakvest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_flakvest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

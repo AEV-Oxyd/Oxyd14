@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_tool_belt
+  name: tool belt
+  description: Can hold various tools.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tool_belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tool_belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

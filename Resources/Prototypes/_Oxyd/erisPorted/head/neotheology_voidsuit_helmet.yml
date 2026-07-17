@@ -1,0 +1,24 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_neotheology_voidsuit_helmet
+  name: neotheology voidsuit helmet
+  description: A voidsuit helmet designed by NeoTheology with a most holy mix of biomatter and inorganic matter.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/neotheology_voidsuit_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/neotheology_voidsuit_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

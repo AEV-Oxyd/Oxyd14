@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Oberth_Republic_beret
+  name: Oberth Republic beret
+  description: Brown beret with emblem. Material that it made of will protect against energy projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_steel_knuckle_dusters
+  name: steel knuckle dusters
+  description: More pain for them, less for you.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/steel_knuckle_dusters.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/steel_knuckle_dusters.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

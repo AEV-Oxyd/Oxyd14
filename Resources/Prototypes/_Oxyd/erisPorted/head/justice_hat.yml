@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_justice_hat
+  name: justice hat
+  description: fight for what's righteous!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/justice_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/justice_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_medical_satchel
+  name: medical satchel
+  description: A sterile satchel used in medical departments.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

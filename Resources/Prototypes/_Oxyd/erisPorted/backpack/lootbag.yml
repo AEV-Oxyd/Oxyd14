@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackDuffel
+  id: erisport_lootbag
+  name: lootbag
+  description: You wear this on your back and put items into it.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/lootbag.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/lootbag.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

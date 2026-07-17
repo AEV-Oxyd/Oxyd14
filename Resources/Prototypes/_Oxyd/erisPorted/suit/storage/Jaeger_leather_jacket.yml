@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Jaeger_leather_jacket
+  name: Jaeger leather jacket
+  description: A sturdy, synthetic leather jacket with a high collar. It is able to protect you from a knife slice or a bite, but don't expect too much. More importantly, it makes you look like a really bad boy or girl. This jacket has a Jaeger roach pictured on the back. Jaeger Roach rules!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Jaeger_leather_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Jaeger_leather_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_bio_hood
+  name: bio hood
+  description: A hood that protects the head and face from biological comtaminants.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bio_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bio_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

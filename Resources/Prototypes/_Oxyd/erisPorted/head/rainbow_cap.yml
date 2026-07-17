@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_rainbow_cap
+  name: rainbow cap
+  description: A flimsy cap in a bright rainbow of colors.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/rainbow_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/rainbow_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

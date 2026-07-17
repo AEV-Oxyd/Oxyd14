@@ -1,0 +1,25 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_heavy_operator_helmet
+  name: heavy operator helmet
+  description: Standard-issue Ironhammer helmet with a basic HUD and targeting system included.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/heavy_operator_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/heavy_operator_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

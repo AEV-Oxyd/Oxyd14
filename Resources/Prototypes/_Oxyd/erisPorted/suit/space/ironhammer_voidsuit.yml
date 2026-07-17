@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_ironhammer_voidsuit
+  name: ironhammer voidsuit
+  description: A bulky suit that protects against hazardous, low pressure environments. Sacrifices mobility for protection.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ironhammer_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ironhammer_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_ironhammer_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

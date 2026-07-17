@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Powered_Goggles
+  name: Powered Goggles
+  description: 
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Powered_Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Powered_Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

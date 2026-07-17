@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_red_jacket
+  name: red jacket
+  description: A red jacket designed for riding on a bike. Has a pill icon on the back.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_plague_doctor_mask
+  name: plague doctor mask
+  description: A modernised version of the classic design, this mask will not only filter out plasma but it can also be connected to an air supply.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/plague_doctor_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/plague_doctor_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

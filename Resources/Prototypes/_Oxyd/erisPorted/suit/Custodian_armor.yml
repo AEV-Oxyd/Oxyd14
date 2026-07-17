@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Custodian_armor
+  name: Custodian armor
+  description: Someone's gotta clean this mess.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Custodian_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Custodian_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

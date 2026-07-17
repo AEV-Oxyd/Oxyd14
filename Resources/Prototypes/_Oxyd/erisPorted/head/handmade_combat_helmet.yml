@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_handmade_combat_helmet
+  name: handmade combat helmet
+  description: It looks like it was made from a bucket and some steel. Uncomfortable and heavy but better than nothing.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/handmade_combat_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/handmade_combat_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_3D_glasses
+  name: 3D glasses
+  description: A long time ago, people used these glasses to makes images from screens threedimensional.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/3D_glasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/3D_glasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

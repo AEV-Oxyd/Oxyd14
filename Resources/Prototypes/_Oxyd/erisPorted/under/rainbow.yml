@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_rainbow
+  name: rainbow
+  description: rainbow
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/rainbow.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/rainbow.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

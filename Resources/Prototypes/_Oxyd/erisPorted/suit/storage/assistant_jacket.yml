@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_assistant_jacket
+  name: assistant jacket
+  description: Practical and comfortable jacket. It seems have a little protection from physical harm.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/assistant_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/assistant_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

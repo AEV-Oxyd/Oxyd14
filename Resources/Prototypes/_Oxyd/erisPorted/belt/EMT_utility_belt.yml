@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_EMT_utility_belt
+  name: EMT utility belt
+  description: A sturdy black webbing belt with attached pouches.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/EMT_utility_belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/EMT_utility_belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

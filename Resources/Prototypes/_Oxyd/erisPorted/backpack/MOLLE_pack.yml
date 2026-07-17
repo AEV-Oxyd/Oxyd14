@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_MOLLE_pack
+  name: MOLLE pack
+  description: Designed for planetary infantry, holds a lot of equipment.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/MOLLE_pack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/MOLLE_pack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

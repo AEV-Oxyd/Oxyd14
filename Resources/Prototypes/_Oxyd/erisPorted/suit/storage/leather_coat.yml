@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_leather_coat
+  name: leather coat
+  description: An old leather coat. Has probably seen things you wouldn't believe.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/leather_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/leather_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_mercenary_armor_vest
+  name: mercenary armor vest
+  description: A high-quality armor vest in a fetching tan. It is surprisingly flexible and light, even with the added webbing and armor plating.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/mercenary_armor_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/mercenary_armor_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

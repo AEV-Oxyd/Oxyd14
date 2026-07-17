@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_cybersuit
+  name: cybersuit
+  description: Jumpsuit favored by surveillance officers and VR gamers alike.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cybersuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cybersuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

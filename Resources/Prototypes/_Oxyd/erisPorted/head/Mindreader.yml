@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Mindreader
+  name: Mindreader
+  description: Extracts knowledge from the mentally broken wearer mind and writes it on papers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Mindreader.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Mindreader.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

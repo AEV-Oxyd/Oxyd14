@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_pink_tropical_shirt
+  name: pink tropical shirt
+  description: An Aster's Guild branded neosilk tropical shirt. This one makes you feel nostalgic.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/pink_tropical_shirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/pink_tropical_shirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

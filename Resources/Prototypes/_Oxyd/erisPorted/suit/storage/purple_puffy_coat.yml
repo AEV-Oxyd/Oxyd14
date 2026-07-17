@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_purple_puffy_coat
+  name: purple puffy coat
+  description: A stylish, shiny, very purple Aster's Guild branded puffer coat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/purple_puffy_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/purple_puffy_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

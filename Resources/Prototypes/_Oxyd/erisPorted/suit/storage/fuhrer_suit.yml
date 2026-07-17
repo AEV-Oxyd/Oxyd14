@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_fuhrer_suit
+  name: fuhrer suit
+  description: Now you can be the glorious leader of cockroaches!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fuhrer_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fuhrer_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

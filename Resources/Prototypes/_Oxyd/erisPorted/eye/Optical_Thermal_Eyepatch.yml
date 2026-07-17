@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Optical_Thermal_Eyepatch
+  name: Optical Thermal Eyepatch
+  description: An eyepatch with built-in thermal optics
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Optical_Thermal_Eyepatch.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Optical_Thermal_Eyepatch.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

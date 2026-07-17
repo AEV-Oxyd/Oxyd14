@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_old_guild_technician_jacket
+  name: old guild technician jacket
+  description: An older version of the guild tech coat, still used occasionally.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/old_guild_technician_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/old_guild_technician_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

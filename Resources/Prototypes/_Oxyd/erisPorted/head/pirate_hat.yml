@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_pirate_hat
+  name: pirate hat
+  description: Yarr.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/pirate_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/pirate_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

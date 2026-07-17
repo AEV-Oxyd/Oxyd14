@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_botanist's_jumpsuit
+  name: botanist's jumpsuit
+  description: A jumpsuit from the Bradhaanata Agroponics 'Farm Yourself' kit.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/botanist's_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/botanist's_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

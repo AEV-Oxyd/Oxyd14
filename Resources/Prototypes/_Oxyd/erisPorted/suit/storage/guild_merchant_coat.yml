@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_guild_merchant_coat
+  name: guild merchant coat
+  description: A grungy brown coat, perfect for a smuggler.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/guild_merchant_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/guild_merchant_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

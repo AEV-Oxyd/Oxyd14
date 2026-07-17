@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_brown_comfortable_clothing
+  name: brown comfortable clothing
+  description: A white satin shirt that can really catch the light and flare-cut trousers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/brown_comfortable_clothing.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/brown_comfortable_clothing.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

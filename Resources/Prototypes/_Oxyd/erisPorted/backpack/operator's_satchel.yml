@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_operator's_satchel
+  name: operator's satchel
+  description: Done in a complementing shade for IronHammer Security forces, for the itinerant military contractor.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/operator's_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/operator's_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_4-D_Glasses
+  name: 4-D Glasses
+  description: You can see in every dimension, and get four times the amount of headache!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/4-D_Glasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/4-D_Glasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

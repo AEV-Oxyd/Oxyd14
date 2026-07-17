@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ancient_Syndicate_beret
+  name: ancient Syndicate beret
+  description: An old beret, styled after one used by the Syndicate. Veterans and patriots love these.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ancient_Syndicate_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ancient_Syndicate_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

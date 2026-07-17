@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_festive_paper_hat
+  name: festive paper hat
+  description: A crappy paper hat that you are REQUIRED to wear.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/festive_paper_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/festive_paper_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Moebius_medical_cap
+  name: Moebius medical cap
+  description: Cap worn by moebius medical personnel, usually outside spacecraft.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Moebius_medical_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Moebius_medical_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

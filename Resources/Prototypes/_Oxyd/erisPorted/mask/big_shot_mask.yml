@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_big_shot_mask
+  name: big shot mask
+  description: A cheerful mask of a cartoonish salesman.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/big_shot_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/big_shot_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

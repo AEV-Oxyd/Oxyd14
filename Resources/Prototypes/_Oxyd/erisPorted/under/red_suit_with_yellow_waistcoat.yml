@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_suit_with_yellow_waistcoat
+  name: red suit with yellow waistcoat
+  description: I mean, don't you have to be funny to be a comedian?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_suit_with_yellow_waistcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_suit_with_yellow_waistcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

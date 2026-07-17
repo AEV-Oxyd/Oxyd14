@@ -1,0 +1,23 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_Acolyte_hood
+  name: Acolyte hood
+  description: Even the most devout deserve head protection.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Acolyte_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Acolyte_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: Item
+    size: Normal
+

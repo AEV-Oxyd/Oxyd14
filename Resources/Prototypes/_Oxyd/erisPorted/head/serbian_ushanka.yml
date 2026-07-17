@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_serbian_ushanka
+  name: serbian ushanka
+  description: Perfect for winter in Serbia, da?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/serbian_ushanka.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/serbian_ushanka.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

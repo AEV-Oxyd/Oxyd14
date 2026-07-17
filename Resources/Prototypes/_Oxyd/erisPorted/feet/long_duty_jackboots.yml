@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_long_duty_jackboots
+  name: long duty jackboots
+  description: A pair of slightly modified standard-issue jackboots. These reach up even higher.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/long_duty_jackboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/long_duty_jackboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

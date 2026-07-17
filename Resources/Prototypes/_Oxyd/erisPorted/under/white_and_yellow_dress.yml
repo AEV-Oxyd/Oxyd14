@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_white_and_yellow_dress
+  name: white and yellow dress
+  description: A white and yellow dress, quite stylish
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_and_yellow_dress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_and_yellow_dress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_wide_cowboy_hat
+  name: wide cowboy hat
+  description: To call this "wide" is an understatement.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/wide_cowboy_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/wide_cowboy_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

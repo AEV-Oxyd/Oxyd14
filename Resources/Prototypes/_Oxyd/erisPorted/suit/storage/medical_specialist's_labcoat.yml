@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_medical_specialist's_labcoat
+  name: medical specialist's labcoat
+  description: A suit that protects against minor chemical spills. This one has marks of Ironhammer Security.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_specialist's_labcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_specialist's_labcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

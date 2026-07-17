@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_medical_mask
+  name: medical mask
+  description: A close-fitting sterile mask that can be connected to an air supply.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

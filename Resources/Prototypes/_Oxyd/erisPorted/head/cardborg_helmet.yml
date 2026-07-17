@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_cardborg_helmet
+  name: cardborg helmet
+  description: A helmet made out of a box.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cardborg_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cardborg_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

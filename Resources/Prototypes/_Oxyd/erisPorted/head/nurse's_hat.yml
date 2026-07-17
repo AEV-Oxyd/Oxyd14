@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_nurse's_hat
+  name: nurse's hat
+  description: It allows quick identification of trained medical personnel.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/nurse's_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/nurse's_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

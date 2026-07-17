@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_patterned_pullover
+  name: patterned pullover
+  description: Brown pullover with indeterminable pattern.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/patterned_pullover.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/patterned_pullover.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_operator_armor
+  name: operator armor
+  description: An armored vest that protects against some damage. This one has been done in Ironhammer Security colors. Not designed for serious operations.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/operator_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/operator_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

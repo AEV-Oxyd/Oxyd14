@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_military_magboots
+  name: military magboots
+  description: Sturdy hiking boots with powerful magnetic soles. Useful in or out of a vessel.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/military_magboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/military_magboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_cake-hat
+  name: cake-hat
+  description: It's tasty looking!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cake-hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cake-hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

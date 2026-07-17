@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_SWAT_helmet
+  name: collectable SWAT helmet
+  description: Now you can be in the Deathsquad too!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_SWAT_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_SWAT_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

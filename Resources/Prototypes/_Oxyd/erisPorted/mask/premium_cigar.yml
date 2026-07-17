@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_premium_cigar
+  name: premium cigar
+  description: A brown roll of tobacco and... well, you're not quite sure. This thing's huge!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/premium_cigar.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/premium_cigar.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

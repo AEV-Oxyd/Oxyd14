@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_rabbit_ears
+  name: collectable rabbit ears
+  description: Not as lucky as the feet!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_rabbit_ears.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_rabbit_ears.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_grey_sport_backpack
+  name: grey sport backpack
+  description: A more comfortable version of an old boring backpack.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/grey_sport_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/grey_sport_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

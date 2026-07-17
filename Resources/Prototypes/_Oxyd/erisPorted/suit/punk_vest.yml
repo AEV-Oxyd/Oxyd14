@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_punk_vest
+  name: punk vest
+  description: A dark vest made out of light, breathable fabric. Feeling lucky, punk?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/punk_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/punk_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

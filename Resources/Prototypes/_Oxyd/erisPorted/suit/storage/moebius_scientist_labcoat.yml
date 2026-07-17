@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_moebius_scientist_labcoat
+  name: moebius scientist labcoat
+  description: A suit that protects against minor chemical spills. This one is used by scientists.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_scientist_labcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_scientist_labcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

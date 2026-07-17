@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_clown_wig_and_mask
+  name: clown wig and mask
+  description: A true prankster's facial attire. A clown is incomplete without their wig and mask.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/clown_wig_and_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/clown_wig_and_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_duty_jackboots
+  name: duty jackboots
+  description: A pair of slightly modified standard-issue jackboots. Not exactly more combat-ish, but may look better.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/duty_jackboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/duty_jackboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

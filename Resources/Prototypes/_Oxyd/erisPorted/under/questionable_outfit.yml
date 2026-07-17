@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_questionable_outfit
+  name: questionable outfit
+  description: Green suit, green pants and a green tie. Quite a riddle to solve.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/questionable_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/questionable_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

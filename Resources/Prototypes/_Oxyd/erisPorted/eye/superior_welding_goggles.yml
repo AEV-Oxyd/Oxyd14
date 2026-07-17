@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_superior_welding_goggles
+  name: superior welding goggles
+  description: Welding goggles made from more expensive materials, strangely smells like potatoes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/superior_welding_goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/superior_welding_goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

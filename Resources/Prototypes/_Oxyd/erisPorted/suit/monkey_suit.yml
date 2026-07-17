@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_monkey_suit
+  name: monkey suit
+  description: A suit that looks like a primate
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/monkey_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/monkey_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

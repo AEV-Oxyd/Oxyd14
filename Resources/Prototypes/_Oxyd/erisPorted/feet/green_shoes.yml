@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_green_shoes
+  name: green shoes
+  description: A pair of shoes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_welding_helmet
+  name: welding helmet
+  description: A head-mounted face cover designed to protect the wearer completely from space-arc eye.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/welding_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/welding_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

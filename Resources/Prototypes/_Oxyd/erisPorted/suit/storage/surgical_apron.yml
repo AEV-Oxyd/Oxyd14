@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_surgical_apron
+  name: surgical apron
+  description: Excellent blood collector.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/surgical_apron.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/surgical_apron.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

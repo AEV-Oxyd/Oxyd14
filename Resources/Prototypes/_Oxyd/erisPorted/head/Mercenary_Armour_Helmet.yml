@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Mercenary_Armour_Helmet
+  name: Mercenary Armour Helmet
+  description: A high-quality helmet in a fetching tan. Very durable
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Mercenary_Armour_Helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Mercenary_Armour_Helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

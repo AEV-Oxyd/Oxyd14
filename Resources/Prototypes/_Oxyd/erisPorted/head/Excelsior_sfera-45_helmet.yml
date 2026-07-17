@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Excelsior_sfera-45_helmet
+  name: Excelsior sfera-45 helmet
+  description: The most durable and heavy Excelsior helmet to date, for Haven's hardest battles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_sfera-45_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_sfera-45_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

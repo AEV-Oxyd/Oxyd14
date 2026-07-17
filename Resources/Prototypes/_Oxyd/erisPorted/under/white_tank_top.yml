@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_white_tank_top
+  name: white tank top
+  description: Beer stains not included.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_tank_top.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_tank_top.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

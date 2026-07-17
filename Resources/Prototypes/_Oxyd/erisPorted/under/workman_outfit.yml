@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_workman_outfit
+  name: workman outfit
+  description: The very image of a working man. Not that you're probably doing work.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/workman_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/workman_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

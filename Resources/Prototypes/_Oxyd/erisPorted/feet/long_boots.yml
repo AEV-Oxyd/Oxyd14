@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_long_boots
+  name: long boots
+  description: A pair of stylish vertically long boots.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/long_boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/long_boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

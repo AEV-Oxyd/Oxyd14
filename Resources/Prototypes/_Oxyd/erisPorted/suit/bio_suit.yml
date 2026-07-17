@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_bio_suit
+  name: bio suit
+  description: A suit that protects against biological contamination.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bio_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bio_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

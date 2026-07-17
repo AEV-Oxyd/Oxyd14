@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_witch_costume_wig
+  name: witch costume wig
+  description: Eeeee~heheheheheheh!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/witch_costume_wig.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/witch_costume_wig.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+

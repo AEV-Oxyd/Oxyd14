@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Excelsior_korund-sh-p_carapace
+  name: Excelsior korund-sh-p carapace
+  description: Super heavy, powered suit of communard armor. Can house a Zarya power cell to supply KULAK power gauntlet.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_korund-sh-p_carapace.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_korund-sh-p_carapace.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

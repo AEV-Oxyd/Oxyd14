@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_boxing_gloves
+  name: boxing gloves
+  description: Because you really needed another excuse to punch your crewmates.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/boxing_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/boxing_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

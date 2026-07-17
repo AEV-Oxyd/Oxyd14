@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_gas_mask
+  name: gas mask
+  description: A face-covering mask that can be connected to an air supply. Filters harmful gases and the smell of roaches from the air.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gas_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gas_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

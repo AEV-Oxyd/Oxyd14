@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_gray_summerdress
+  name: gray summerdress
+  description: Gray summerdress only worn by the bravest individuals in the cold of space.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gray_summerdress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gray_summerdress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

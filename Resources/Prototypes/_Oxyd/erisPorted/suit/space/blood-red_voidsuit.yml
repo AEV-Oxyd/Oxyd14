@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_blood-red_voidsuit
+  name: blood-red voidsuit
+  description: An advanced suit that protects against injuries during special operations. Surprisingly flexible. This version is additionally reinforced against melee attacks.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blood-red_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blood-red_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_blood-red_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

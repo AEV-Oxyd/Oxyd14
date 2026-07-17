@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_dark_comfortable_clothing
+  name: dark comfortable clothing
+  description: A tan shirt and brown pants that are rather basic.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/dark_comfortable_clothing.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/dark_comfortable_clothing.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

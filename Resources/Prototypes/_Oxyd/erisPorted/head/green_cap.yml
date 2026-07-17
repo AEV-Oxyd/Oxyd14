@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_green_cap
+  name: green cap
+  description: A baseball cap in a tasteless green color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

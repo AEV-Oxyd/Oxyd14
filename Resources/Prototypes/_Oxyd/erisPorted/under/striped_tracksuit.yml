@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_striped_tracksuit
+  name: striped tracksuit
+  description: A classic style for hoodlums and bandits.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/striped_tracksuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/striped_tracksuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

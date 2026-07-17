@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_Giggles_von_Honkerton
+  name: Giggles von Honkerton
+  description: A backpack made by Honk! Co.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Giggles_von_Honkerton.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Giggles_von_Honkerton.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

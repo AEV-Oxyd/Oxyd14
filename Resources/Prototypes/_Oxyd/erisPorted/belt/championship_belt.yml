@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_championship_belt
+  name: championship belt
+  description: Proves to the world that you are the strongest!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/championship_belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/championship_belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

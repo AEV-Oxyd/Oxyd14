@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_blue_sneakers
+  name: blue sneakers
+  description: A stylish, expensive pair of blue sneakers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_sneakers.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_sneakers.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

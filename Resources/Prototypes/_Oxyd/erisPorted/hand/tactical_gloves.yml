@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_tactical_gloves
+  name: tactical gloves
+  description: These tactical gloves are somewhat fire, shock and impact resistant.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tactical_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tactical_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

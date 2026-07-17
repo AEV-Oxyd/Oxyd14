@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_HUDSunglasses
+  name: HUDSunglasses
+  description: Sunglasses with a HUD.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/HUDSunglasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/HUDSunglasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

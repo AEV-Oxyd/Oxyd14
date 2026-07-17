@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_kampfer_suit
+  name: kampfer suit
+  description: How do you do, fellow roaches?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/kampfer_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/kampfer_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

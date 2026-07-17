@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Gunnery_Sergeant_jumpskirt
+  name: Gunnery Sergeant jumpskirt
+  description: It's made of a slightly sturdier material than standard jumpskirts, to allow for more robust protection. It has"Gunnery Sergeant" rank pins on the shoulders.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Gunnery_Sergeant_jumpskirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Gunnery_Sergeant_jumpskirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

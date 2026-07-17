@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_full_mercenary_armor_vest
+  name: full mercenary armor vest
+  description: A high-quality armor vest in a fetching tan. This one is webbed, and has kneepads and shoulderpads for extra coverage.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_mercenary_armor_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_mercenary_armor_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

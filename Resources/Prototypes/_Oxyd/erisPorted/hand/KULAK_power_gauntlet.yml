@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_KULAK_power_gauntlet
+  name: KULAK power gauntlet
+  description: A pair of heavy gloves with left one dedicated to offensive use of electric shock. Requires external power supply from korund-sh-p carapace, and is just flexible enough to pull Maxim's trigger.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/KULAK_power_gauntlet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/KULAK_power_gauntlet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Sergeant_beret
+  name: Sergeant beret
+  description: Red beret with a Sergeant's rank emblem. For Sergeants that are more inclined towards style than safety.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Sergeant_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Sergeant_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

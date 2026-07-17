@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_brown_shoes
+  name: brown shoes
+  description: A pair of shoes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/brown_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/brown_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

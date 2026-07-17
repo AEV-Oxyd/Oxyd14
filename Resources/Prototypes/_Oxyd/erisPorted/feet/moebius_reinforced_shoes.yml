@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_moebius_reinforced_shoes
+  name: moebius reinforced shoes
+  description: Slightly reinforced shoes for moebius medical personnel.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_reinforced_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_reinforced_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

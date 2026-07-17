@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_ironhammer_formal_uniform
+  name: ironhammer formal uniform
+  description: A navy blue suit. Often used by Ironhammer personnel, for shooting with style.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ironhammer_formal_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ironhammer_formal_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

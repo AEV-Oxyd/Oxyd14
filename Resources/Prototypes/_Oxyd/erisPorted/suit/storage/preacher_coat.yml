@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_preacher_coat
+  name: preacher coat
+  description: A snugly fitting, lightly armoured brown coat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/preacher_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/preacher_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

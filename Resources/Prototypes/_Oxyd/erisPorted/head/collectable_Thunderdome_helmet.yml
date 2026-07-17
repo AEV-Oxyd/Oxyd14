@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_Thunderdome_helmet
+  name: collectable Thunderdome helmet
+  description: Go Red! I mean Green! I mean Red! No Green!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_Thunderdome_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_Thunderdome_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

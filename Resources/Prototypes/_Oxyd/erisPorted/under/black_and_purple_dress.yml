@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_black_and_purple_dress
+  name: black and purple dress
+  description: A black and purple dress, quite stylish
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_and_purple_dress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_and_purple_dress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

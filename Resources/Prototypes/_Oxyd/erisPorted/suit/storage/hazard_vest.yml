@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_hazard_vest
+  name: hazard vest
+  description: A high-visibility vest used in work zones.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazard_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazard_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

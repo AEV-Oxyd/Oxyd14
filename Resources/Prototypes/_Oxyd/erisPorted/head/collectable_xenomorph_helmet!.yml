@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_xenomorph_helmet!
+  name: collectable xenomorph helmet!
+  description: Hiss hiss hiss!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_xenomorph_helmet!.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_xenomorph_helmet!.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

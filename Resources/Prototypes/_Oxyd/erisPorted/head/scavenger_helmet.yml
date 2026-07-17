@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_scavenger_helmet
+  name: scavenger helmet
+  description: A sturdy, handcrafted helmet. It's well balanced and sits low on your head, with padding on the inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/scavenger_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/scavenger_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_Excelsior_assault_boots
+  name: Excelsior assault boots
+  description: Heavily reinforced ankle boots for combat scenarios.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_assault_boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_assault_boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_white_cap
+  name: white cap
+  description: A baseball cap in a tasteless white color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

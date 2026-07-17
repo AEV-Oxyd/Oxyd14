@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_hazard_voidsuit
+  name: hazard voidsuit
+  description: A sleek orange voidsuit capable of protecting its user against most hostile environment conditions. Morphine not included!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazard_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazard_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_hazard_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

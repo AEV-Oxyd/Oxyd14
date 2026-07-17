@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_poncho
+  name: poncho
+  description: A simple, comfortable poncho.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/poncho.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/poncho.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

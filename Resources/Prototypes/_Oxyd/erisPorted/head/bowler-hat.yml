@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_bowler-hat
+  name: bowler-hat
+  description: Gentleman, elite aboard!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bowler-hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bowler-hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

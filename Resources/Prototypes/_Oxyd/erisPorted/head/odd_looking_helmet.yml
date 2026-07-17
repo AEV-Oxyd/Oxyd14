@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_odd_looking_helmet
+  name: odd looking helmet
+  description: A confusingly complex helmet. It is capable of protecting you so it's more useful than being a simple decoration.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/odd_looking_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/odd_looking_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

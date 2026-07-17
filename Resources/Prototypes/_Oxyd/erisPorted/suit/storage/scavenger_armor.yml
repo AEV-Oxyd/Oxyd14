@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_scavenger_armor
+  name: scavenger armor
+  description: A sturdy, rigged Scavenger armor. strong and sturdy as most vests. made fully from junk.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/scavenger_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/scavenger_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

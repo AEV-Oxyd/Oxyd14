@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_black_cap
+  name: black cap
+  description: A simple baseball cap in a tasteful black color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_radiation_hood
+  name: radiation hood
+  description: A hood with radiation protective properties.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/radiation_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/radiation_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

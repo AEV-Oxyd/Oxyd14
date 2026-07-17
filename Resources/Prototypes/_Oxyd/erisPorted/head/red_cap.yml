@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_red_cap
+  name: red cap
+  description: A baseball hat in a tasteful crimson color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

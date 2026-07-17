@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_pirate_coat
+  name: pirate coat
+  description: Yarr.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/pirate_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/pirate_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

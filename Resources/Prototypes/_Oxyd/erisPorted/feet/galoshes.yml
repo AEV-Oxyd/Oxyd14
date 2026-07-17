@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_galoshes
+  name: galoshes
+  description: Rubber boots with high traction. Prevents the wearer from slipping.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/galoshes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/galoshes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_gem-encrusted_voidsuit
+  name: gem-encrusted voidsuit
+  description: A bizarre gem-encrusted suit that radiates strange energy readings.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gem-encrusted_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gem-encrusted_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_gem-encrusted_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_purple_sneakers
+  name: purple sneakers
+  description: A stylish, expensive pair of purple sneakers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/purple_sneakers.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/purple_sneakers.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

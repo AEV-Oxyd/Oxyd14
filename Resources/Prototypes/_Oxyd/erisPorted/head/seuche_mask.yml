@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_seuche_mask
+  name: seuche mask
+  description: Now you can eat trash in style!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/seuche_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/seuche_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

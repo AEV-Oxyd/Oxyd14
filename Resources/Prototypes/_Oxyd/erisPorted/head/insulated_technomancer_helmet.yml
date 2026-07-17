@@ -1,0 +1,29 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_insulated_technomancer_helmet
+  name: insulated technomancer helmet
+  description: A piece of armor used in hostile work conditions to protect the head. Comes with a built-in flashlight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/insulated_technomancer_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/insulated_technomancer_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

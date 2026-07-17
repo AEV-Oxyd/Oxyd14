@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_cyborg_visor
+  name: cyborg visor
+  description: Beep boop
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyborg_visor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyborg_visor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

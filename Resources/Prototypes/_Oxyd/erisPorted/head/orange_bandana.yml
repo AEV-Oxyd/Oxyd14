@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_orange_bandana
+  name: orange bandana
+  description: An orange piece of cloth, worn on the head.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/orange_bandana.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/orange_bandana.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+

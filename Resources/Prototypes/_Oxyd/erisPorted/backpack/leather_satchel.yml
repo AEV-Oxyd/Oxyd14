@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_leather_satchel
+  name: leather satchel
+  description: A fancy satchel made with fine leather.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/leather_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/leather_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

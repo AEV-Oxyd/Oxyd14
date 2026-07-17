@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_latex_gloves
+  name: latex gloves
+  description: Sterile latex gloves.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/latex_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/latex_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

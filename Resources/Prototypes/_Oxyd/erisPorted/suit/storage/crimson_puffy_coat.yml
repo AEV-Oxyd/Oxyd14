@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_crimson_puffy_coat
+  name: crimson puffy coat
+  description: A stylish, shiny, crimson Aster's Guild branded puffer coat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/crimson_puffy_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/crimson_puffy_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

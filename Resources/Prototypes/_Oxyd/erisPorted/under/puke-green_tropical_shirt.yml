@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_puke-green_tropical_shirt
+  name: puke-green tropical shirt
+  description: An Aster's Guild branded neosilk tropical shirt. This one makes you look like puke.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/puke-green_tropical_shirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/puke-green_tropical_shirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

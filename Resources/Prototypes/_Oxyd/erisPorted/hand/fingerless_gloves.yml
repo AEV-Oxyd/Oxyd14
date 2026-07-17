@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_fingerless_gloves
+  name: fingerless gloves
+  description: Plain black gloves without fingertips for the hard working.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fingerless_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fingerless_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Ironhammer_Commander_Hat
+  name: Ironhammer Commander Hat
+  description: The hat of the Ironhammer Commander. For showing the enlisted who's in charge.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_Commander_Hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_Commander_Hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

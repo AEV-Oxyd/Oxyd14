@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Dermal_Armour_Patch
+  name: Dermal Armour Patch
+  description: You're not quite sure how you manage to take it on and off, but it implants nicely in your head.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Dermal_Armour_Patch.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Dermal_Armour_Patch.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

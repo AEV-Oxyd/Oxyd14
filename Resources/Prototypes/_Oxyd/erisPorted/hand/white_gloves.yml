@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_white_gloves
+  name: white gloves
+  description: These look pretty fancy.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

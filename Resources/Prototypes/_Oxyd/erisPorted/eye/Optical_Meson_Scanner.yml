@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Optical_Meson_Scanner
+  name: Optical Meson Scanner
+  description: It looks like a plain set of mesons, but on closer inspection, it seems to have a small dial inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Optical_Meson_Scanner.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Optical_Meson_Scanner.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

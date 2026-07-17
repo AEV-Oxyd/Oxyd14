@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_yellow_neon_tracksuit
+  name: yellow neon tracksuit
+  description: A tracksuit lined with yellow neon fibers. Slightly luminescent.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/yellow_neon_tracksuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/yellow_neon_tracksuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

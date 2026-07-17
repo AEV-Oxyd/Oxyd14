@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_altyn_helmet
+  name: altyn helmet
+  description: A titanium helmet of serbian origin. Still widely used despite being discontinued.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/altyn_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/altyn_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

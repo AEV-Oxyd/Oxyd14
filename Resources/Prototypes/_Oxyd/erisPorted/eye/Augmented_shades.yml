@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Augmented_shades
+  name: Augmented shades
+  description: Polarized bioneural eyewear, designed to augment your vision.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Augmented_shades.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Augmented_shades.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

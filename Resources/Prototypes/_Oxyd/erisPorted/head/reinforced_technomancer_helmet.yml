@@ -1,0 +1,29 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_reinforced_technomancer_helmet
+  name: reinforced technomancer helmet
+  description: Technomancer League's ballistic helmet. Comes with a built-in flashlight. The welder-proof visor hinders aim.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/reinforced_technomancer_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/reinforced_technomancer_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

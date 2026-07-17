@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_industrial_satchel
+  name: industrial satchel
+  description: A tough satchel with extra pockets.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/industrial_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/industrial_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

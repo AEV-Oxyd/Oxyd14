@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Black_Goggles
+  name: Black Goggles
+  description: A very oddly shaped pair of black goggles with bits of wire poking out the sides. This is the future!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Black_Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Black_Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

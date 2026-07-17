@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_Excelsior_helmet
+  name: Excelsior helmet
+  description: A deceptively well armored space helmet. Ancient design, but advanced manufacturing.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

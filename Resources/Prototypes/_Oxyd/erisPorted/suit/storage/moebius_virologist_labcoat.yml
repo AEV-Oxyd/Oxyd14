@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_moebius_virologist_labcoat
+  name: moebius virologist labcoat
+  description: A suit that protects against minor chemical spills. Offers slightly more protection against biohazards than the standard model. Has a green stripe on the shoulder.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_virologist_labcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_virologist_labcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

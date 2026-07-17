@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_black_gloves
+  name: black gloves
+  description: It looks like a pair of gloves, but it seems to have a small dial inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

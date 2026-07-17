@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_blue_neck_scarf
+  name: blue neck scarf
+  description: A blue neck scarf.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_neck_scarf.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_neck_scarf.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

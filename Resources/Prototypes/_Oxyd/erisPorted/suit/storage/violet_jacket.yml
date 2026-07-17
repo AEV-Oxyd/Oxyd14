@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_violet_jacket
+  name: violet jacket
+  description: Coat that you ride like lightning, and will crash with you like thunder.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/violet_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/violet_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

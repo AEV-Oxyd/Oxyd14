@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ultra_rare_hat
+  name: ultra rare hat
+  description: an ultra rare hat. It commands a certain respect.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ultra_rare_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ultra_rare_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

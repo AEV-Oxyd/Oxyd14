@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_blue_casual_suit
+  name: blue casual suit
+  description: An qqua colored casual suit for office workers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_casual_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_casual_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

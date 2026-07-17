@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_camo_pants
+  name: camo pants
+  description: Beige camo pants and a turtleneck.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/camo_pants.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/camo_pants.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_moebius_hazard_helmet
+  name: moebius hazard helmet
+  description: A moebius branded violet voidsuit helmet with a large visor that hides your face. Integrated heads-up display not included.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_hazard_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_hazard_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

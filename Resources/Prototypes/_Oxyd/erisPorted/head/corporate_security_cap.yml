@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_corporate_security_cap
+  name: corporate security cap
+  description: An old field cap for an ancient security corp. Popular fashion statement recently.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/corporate_security_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/corporate_security_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

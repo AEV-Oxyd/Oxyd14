@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_casual_suit
+  name: red casual suit
+  description: A salmon colored casual suit for office workers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_casual_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_casual_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

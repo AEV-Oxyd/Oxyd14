@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_full_bulletproof_suit
+  name: full bulletproof suit
+  description: A vest with hand and arm-guards attached that excels in protecting the wearer against high-velocity solid projectiles. This one has been done in Ironhammer Security colors.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_bulletproof_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_bulletproof_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

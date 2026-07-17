@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_red_designer_leather_gloves
+  name: red designer leather gloves
+  description: Fancy red leather gloves from a designer brand.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_designer_leather_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_designer_leather_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

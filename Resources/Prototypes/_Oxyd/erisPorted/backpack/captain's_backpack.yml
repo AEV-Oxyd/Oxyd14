@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_captain's_backpack
+  name: captain's backpack
+  description: A special backpack made exclusively for officers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/captain's_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/captain's_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+
