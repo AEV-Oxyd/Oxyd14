@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_exterminator_coat
+  name: exterminator coat
+  description: A stylish red leather coat. So stylish, in fact, that it makes you want to dance.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/exterminator_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/exterminator_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

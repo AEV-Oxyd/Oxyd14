@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_black_tailcoat
+  name: black tailcoat
+  description: A bold, yet conservative outfit; red slacks and almost Victorian style tailcoat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_tailcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_tailcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

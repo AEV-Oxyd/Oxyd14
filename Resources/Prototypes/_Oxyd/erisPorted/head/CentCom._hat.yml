@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_CentCom._hat
+  name: CentCom. hat
+  description: It's good to be emperor.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/CentCom._hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/CentCom._hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

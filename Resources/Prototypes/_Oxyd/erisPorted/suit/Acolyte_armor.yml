@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Acolyte_armor
+  name: Acolyte armor
+  description: Worn heavy, steadfast in the name of God.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Acolyte_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Acolyte_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

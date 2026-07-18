@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_plasteel_knuckle_dusters
+  name: plasteel knuckle dusters
+  description: More pain for them, now doubled.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/plasteel_knuckle_dusters.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/plasteel_knuckle_dusters.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

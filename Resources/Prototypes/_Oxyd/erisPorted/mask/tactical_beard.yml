@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_tactical_beard
+  name: tactical beard
+  description: The fancy looking beard.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tactical_beard.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tactical_beard.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_empty_corn_cob_pipe
+  name: empty corn cob pipe
+  description: A nicotine delivery system popularized by folksy backwoodsmen, kept popular in the modern age and beyond by space hipsters.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/empty_corn_cob_pipe.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/empty_corn_cob_pipe.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

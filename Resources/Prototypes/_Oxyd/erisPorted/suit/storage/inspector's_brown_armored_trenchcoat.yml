@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_inspector's_brown_armored_trenchcoat
+  name: inspector's brown armored trenchcoat
+  description: Brown armored trenchcoat, designed and created by Ironhammer Security. The coat is externally impact resistant - perfect for your next act of autodefenestration!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/inspector's_brown_armored_trenchcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/inspector's_brown_armored_trenchcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

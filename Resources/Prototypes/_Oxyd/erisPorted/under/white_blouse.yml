@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_white_blouse
+  name: white blouse
+  description: A white blouse with a red shirt underneath. You look like a hallway ornament with this.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_blouse.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_blouse.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

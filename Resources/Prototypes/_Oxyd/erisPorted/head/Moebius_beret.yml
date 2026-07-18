@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Moebius_beret
+  name: Moebius beret
+  description: A purple beret emblazioned with the Moebius Laboratories logo.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Moebius_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Moebius_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

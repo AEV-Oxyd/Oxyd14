@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_advanced_magboots
+  name: advanced magboots
+  description: Advanced magnetic boots that have a lighter magnetic pull, placing less burden on the wearer.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/advanced_magboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/advanced_magboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

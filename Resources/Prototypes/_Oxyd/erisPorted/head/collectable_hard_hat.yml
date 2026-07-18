@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_hard_hat
+  name: collectable hard hat
+  description: WARNING! Offers no real protection, or luminosity, but it is damn fancy!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_hard_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_hard_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

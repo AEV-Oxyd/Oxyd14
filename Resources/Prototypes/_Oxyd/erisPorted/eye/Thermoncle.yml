@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Thermoncle
+  name: Thermoncle
+  description: A monocle thermal.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Thermoncle.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Thermoncle.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

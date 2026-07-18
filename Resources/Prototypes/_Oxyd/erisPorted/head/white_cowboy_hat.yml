@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_white_cowboy_hat
+  name: white cowboy hat
+  description: There is no sun to cover your eyes from on a spaceship, but it doesn't mean this hat is not stylish.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_cowboy_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_cowboy_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

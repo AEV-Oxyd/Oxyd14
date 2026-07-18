@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_fake_moustache
+  name: fake moustache
+  description: Warning: moustache is fake.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fake_moustache.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fake_moustache.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

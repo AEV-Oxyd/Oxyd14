@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_NT_Medicus_Robes
+  name: NT Medicus Robes
+  description: Protective robes meant more to safeguard against disease, retrofit to also be spaceworthy. Has pockets for medical convenience.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/NT_Medicus_Robes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/NT_Medicus_Robes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

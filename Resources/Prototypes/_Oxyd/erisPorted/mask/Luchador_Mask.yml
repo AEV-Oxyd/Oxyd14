@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_Luchador_Mask
+  name: Luchador Mask
+  description: Worn by robust fighters, flying high to defeat their foes!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Luchador_Mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Luchador_Mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

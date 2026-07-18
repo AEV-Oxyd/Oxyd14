@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_brown_serbian_overcoat
+  name: brown serbian overcoat
+  description: A brown serbian overcoat with armor-weave and rank epaulettes
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/brown_serbian_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/brown_serbian_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Plague_doctor_suit
+  name: Plague doctor suit
+  description: It protected doctors from the Black Death, back then. You bet your arse it's gonna help you against viruses.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Plague_doctor_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Plague_doctor_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

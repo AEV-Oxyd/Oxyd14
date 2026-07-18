@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_charcoal_black_outfit
+  name: charcoal black outfit
+  description: Black suit, black pants and a black tie.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/charcoal_black_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/charcoal_black_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_preacher_hat
+  name: preacher hat
+  description: Useful for hiding disdainful eyes from the godless masses.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/preacher_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/preacher_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

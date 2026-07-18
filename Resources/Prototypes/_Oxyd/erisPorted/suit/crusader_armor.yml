@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_crusader_armor
+  name: crusader armor
+  description: God will protect those who defend his faith.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/crusader_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/crusader_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

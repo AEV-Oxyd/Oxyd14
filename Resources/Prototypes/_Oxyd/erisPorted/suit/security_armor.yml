@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_security_armor
+  name: security armor
+  description: An armored vest that protects against some damage. Not designed for serious operations.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/security_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/security_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

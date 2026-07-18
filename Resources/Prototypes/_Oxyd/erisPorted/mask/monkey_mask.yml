@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_monkey_mask
+  name: monkey mask
+  description: A mask used when acting as a monkey.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/monkey_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/monkey_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

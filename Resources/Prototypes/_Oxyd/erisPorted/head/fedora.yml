@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_fedora
+  name: fedora
+  description: A sharp, stylish hat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fedora.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fedora.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

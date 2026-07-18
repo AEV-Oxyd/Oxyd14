@@ -1,0 +1,25 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_full_ballistic_helmet
+  name: full ballistic helmet
+  description: Standard-issue Ironhammer ballistic helmet with a basic HUD included, covers the operator's entire face.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_ballistic_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_ballistic_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

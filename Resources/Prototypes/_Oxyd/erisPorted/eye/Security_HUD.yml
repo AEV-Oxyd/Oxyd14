@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Security_HUD
+  name: Security HUD
+  description: A heads-up display that scans the humans in view and provides accurate data about their ID status and security records.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Security_HUD.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Security_HUD.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

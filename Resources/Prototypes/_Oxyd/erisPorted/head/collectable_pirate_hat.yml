@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_pirate_hat
+  name: collectable pirate hat
+  description: You'd make a great Dread Syndie Roberts!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_pirate_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_pirate_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

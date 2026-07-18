@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_Snorkel
+  name: Snorkel
+  description: For the Swimming Savant.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Snorkel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Snorkel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

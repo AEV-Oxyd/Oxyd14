@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_beret
+  name: collectable beret
+  description: A Collectable red Beret. It smells faintly of Garlic.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

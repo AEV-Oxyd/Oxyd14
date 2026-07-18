@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_crusader_helmet
+  name: crusader helmet
+  description: May God guide you.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/crusader_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/crusader_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

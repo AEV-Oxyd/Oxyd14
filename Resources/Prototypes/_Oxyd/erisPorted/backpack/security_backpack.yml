@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_security_backpack
+  name: security backpack
+  description: A very robust backpack.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/security_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/security_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

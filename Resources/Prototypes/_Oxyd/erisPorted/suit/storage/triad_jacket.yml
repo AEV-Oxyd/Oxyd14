@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_triad_jacket
+  name: triad jacket
+  description: A well armoured trench coat. The label on the inside claims it comes from Hanza.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/triad_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/triad_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

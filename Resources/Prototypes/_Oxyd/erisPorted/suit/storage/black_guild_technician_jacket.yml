@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_black_guild_technician_jacket
+  name: black guild technician jacket
+  description: A black stylish jacket. Used by guild technicians.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_guild_technician_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_guild_technician_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Excelsior_HUD
+  name: Excelsior HUD
+  description: A heads-up display that scans the humans in view and provides accurate data about their opinion on communism.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_HUD.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_HUD.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

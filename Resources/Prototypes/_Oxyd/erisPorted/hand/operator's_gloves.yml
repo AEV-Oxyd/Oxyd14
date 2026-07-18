@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_operator's_gloves
+  name: operator's gloves
+  description: Padded security gloves.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/operator's_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/operator's_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

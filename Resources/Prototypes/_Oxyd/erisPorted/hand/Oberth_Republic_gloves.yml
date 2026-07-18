@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_Oberth_Republic_gloves
+  name: Oberth Republic gloves
+  description: Brown gloves.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

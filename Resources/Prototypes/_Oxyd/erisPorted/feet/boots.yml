@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_boots
+  name: boots
+  description: Magnetic boots, often used during extravehicular activity to ensure the user remains safely attached to the vehicle. They're large enough to be worn over other footwear.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

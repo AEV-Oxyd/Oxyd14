@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_red_feathered_beret
+  name: red feathered beret
+  description: Fit for artists, frenchmen, and eccentric military officers across the cosmos.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_feathered_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_feathered_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

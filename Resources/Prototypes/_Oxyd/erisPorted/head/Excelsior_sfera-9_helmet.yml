@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Excelsior_sfera-9_helmet
+  name: Excelsior sfera-9 helmet
+  description: The most common Excelsior combat helmet, offers decent enough protection for relative ease of production.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_sfera-9_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_sfera-9_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

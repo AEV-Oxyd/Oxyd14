@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ablative_helmet
+  name: ablative helmet
+  description: A ablative security helmet that excels in protecting the wearer against energy and laser projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ablative_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ablative_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

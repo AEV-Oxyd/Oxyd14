@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_radiation_suit
+  name: radiation suit
+  description: A suit that protects against radiation.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/radiation_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/radiation_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

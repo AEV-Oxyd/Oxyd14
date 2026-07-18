@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_reinforced_shoes
+  name: reinforced shoes
+  description: Slightly reinforced shoes. Optimal for your journey into a wonderful world of maintenance.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/reinforced_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/reinforced_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

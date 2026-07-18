@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_ash_grey_outfit
+  name: ash grey outfit
+  description: Grey suit, grey pants and a grey tie.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ash_grey_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ash_grey_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_formal_suit
+  name: formal suit
+  description: A very stylish black suit with a necktie. Must have for all crime-boys.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/formal_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/formal_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

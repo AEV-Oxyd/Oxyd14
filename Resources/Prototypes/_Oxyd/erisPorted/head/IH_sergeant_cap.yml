@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_IH_sergeant_cap
+  name: IH sergeant cap
+  description: A field cap for officers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/IH_sergeant_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/IH_sergeant_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

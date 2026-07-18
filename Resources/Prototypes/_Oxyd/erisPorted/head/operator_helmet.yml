@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_operator_helmet
+  name: operator helmet
+  description: Ironhammer Security gear. Protects the head from impacts, and the lack of a visor ensures an unhindered aim.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/operator_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/operator_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_ivory_white_outfit
+  name: ivory white outfit
+  description: White suit, white pants and a white tie.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ivory_white_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ivory_white_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

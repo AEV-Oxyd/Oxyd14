@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_guild_worker's_uniform
+  name: guild worker's uniform
+  description: A pair of jeans and turtleneck worn by the guild workers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/guild_worker's_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/guild_worker's_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

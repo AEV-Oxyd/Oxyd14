@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_green_military_cap
+  name: green military cap
+  description: A field cap in tasteful green color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_military_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_military_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

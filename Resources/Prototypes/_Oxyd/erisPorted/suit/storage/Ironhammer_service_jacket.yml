@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Ironhammer_service_jacket
+  name: Ironhammer service jacket
+  description: A blue service jacket with golden badges. Often worn in low threat areas, formal situations, or by veterans.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_service_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_service_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

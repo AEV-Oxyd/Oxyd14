@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Technomancer_orange_beret
+  name: Technomancer orange beret
+  description: A beret with the Technomancer League insignia emblazoned on it. For engineers that are more inclined towards style than safety.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Technomancer_orange_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Technomancer_orange_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

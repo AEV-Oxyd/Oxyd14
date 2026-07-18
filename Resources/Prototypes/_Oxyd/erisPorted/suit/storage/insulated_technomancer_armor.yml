@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_insulated_technomancer_armor
+  name: insulated technomancer armor
+  description: A set of armor insulated against heat and electrical shocks, shielded against radiation, and protected against blunt hits.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/insulated_technomancer_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/insulated_technomancer_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

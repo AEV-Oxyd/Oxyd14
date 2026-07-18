@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_lightred_jumpsuit
+  name: lightred jumpsuit
+  description: lightred
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/lightred_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/lightred_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

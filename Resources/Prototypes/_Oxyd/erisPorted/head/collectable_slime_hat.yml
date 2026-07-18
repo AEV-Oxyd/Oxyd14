@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_slime_hat
+  name: collectable slime hat
+  description: Just like a real Brain Slug!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_slime_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_slime_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

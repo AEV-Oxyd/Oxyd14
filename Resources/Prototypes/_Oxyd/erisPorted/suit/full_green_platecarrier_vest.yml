@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_full_green_platecarrier_vest
+  name: full green platecarrier vest
+  description: A vest built for protection against bullets and other high-velocity projectiles. This one has shoulderpads and kneepads for extra coverage.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_green_platecarrier_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_green_platecarrier_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Health_Scanner_HUD
+  name: Health Scanner HUD
+  description: A heads-up display that scans the humans in view and provides accurate data about their health status.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Health_Scanner_HUD.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Health_Scanner_HUD.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

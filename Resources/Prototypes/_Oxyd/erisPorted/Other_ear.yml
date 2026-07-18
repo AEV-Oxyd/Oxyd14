@@ -1,0 +1,19 @@
+- type: entity
+  parent: 
+  id: erisport_Other_ear
+  name: Other ear
+  description: 
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Other_ear.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Other_ear.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

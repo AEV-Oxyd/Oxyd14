@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_summerdress
+  name: red summerdress
+  description: A red dress worn mostly by those of east asian descendance.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_summerdress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_summerdress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

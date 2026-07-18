@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_yellow_gloves
+  name: yellow gloves
+  description: A pair of gloves, they don't look special in any way, but seems familiar.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/yellow_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/yellow_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

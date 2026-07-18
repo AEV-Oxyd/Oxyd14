@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_makeshift_chest_rig
+  name: makeshift chest rig
+  description: A makeshift chest rig made for carrying some stuff. Can carry four small items. Has little protective value..
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/makeshift_chest_rig.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/makeshift_chest_rig.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

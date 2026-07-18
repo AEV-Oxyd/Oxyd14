@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ancient_syndicate_cap
+  name: ancient syndicate cap
+  description: A corporate war style field cap. Popular among patriots and veterans nowadays.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ancient_syndicate_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ancient_syndicate_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

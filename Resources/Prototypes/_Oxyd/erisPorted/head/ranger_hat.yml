@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ranger_hat
+  name: ranger hat
+  description: A rather generic sergeant hat. On second look it's actually a ranger hat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ranger_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ranger_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_apron
+  name: apron
+  description: A basic yellow apron.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/apron.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/apron.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

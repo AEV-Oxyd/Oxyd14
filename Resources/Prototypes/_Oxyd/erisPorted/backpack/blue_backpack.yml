@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_blue_backpack
+  name: blue backpack
+  description: You wear this on your back and put items into it.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

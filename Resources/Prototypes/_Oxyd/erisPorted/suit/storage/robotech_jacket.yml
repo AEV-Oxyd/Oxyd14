@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_robotech_jacket
+  name: robotech jacket
+  description: Jacket for those who like to get dirty in a machine oil.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/robotech_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/robotech_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

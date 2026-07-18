@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_orange_jumpsuit
+  name: orange jumpsuit
+  description: It's standardised prisoner-wear. Its suit sensors are stuck in the "Fully On" position.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/orange_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/orange_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_medical_backpack
+  name: medical backpack
+  description: A backpack especially designed for use in a sterile environment.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

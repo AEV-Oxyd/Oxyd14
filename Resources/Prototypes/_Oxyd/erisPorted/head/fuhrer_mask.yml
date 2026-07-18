@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_fuhrer_mask
+  name: fuhrer mask
+  description: Now you can eat trash in style!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fuhrer_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fuhrer_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

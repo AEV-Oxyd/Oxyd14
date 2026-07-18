@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_officer_uniform
+  name: officer uniform
+  description: A dark uniform coat worn by Magnitka fleet officers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/officer_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/officer_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

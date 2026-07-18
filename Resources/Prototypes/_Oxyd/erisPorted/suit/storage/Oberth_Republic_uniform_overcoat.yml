@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Oberth_Republic_uniform_overcoat
+  name: Oberth Republic uniform overcoat
+  description: A black overcoat made out of special materials that will protect against energy projectiles. Probably surplus.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_uniform_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Oberth_Republic_uniform_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Type-34C_Semi-Enclosed_Headwear
+  name: Type-34C Semi-Enclosed Headwear
+  description: Civilian model of a popular helmet used by certain law enforcement agencies. It does not have any armor plating, but has a neo-laminated fabric lining.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Type-34C_Semi-Enclosed_Headwear.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Type-34C_Semi-Enclosed_Headwear.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

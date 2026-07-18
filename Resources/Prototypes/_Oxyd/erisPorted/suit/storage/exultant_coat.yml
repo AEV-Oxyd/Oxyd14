@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_exultant_coat
+  name: exultant coat
+  description: A sturdy and proud crimson coat. Lightly armored, with some protection against radiation.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/exultant_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/exultant_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_cyborg_boots
+  name: cyborg boots
+  description: Shoes for a cyborg costume
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyborg_boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyborg_boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

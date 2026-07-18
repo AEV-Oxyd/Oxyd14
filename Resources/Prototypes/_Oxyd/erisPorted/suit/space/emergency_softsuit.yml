@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_emergency_softsuit
+  name: emergency softsuit
+  description: A thin, ungainly softsuit colored in blaze orange for rescuers to easily locate, looks pretty fragile.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/emergency_softsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/emergency_softsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

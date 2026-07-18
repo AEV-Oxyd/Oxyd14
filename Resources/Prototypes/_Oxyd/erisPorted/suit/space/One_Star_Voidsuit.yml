@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_One_Star_Voidsuit
+  name: One Star Voidsuit
+  description: A One Star industrial voidsuit designed to be resistant to bluespace anomalies and all types of damage. Hundreds of thousands of these were produced in the dying days of One Star, but they failed to be enough to save its citizens. The sight of a skeleton lying dead in this voidsuit is not an uncommon sight in nullspace, often horrifically warped and damaged. The suit is incredibly light and appears to be made out of a special fibre and lightweight materials to allow movement of limbs in EVA while not sacrificing protection.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/One_Star_Voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/One_Star_Voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_One_Star_Voidsuit_Helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

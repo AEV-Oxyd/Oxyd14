@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Goggles
+  name: Goggles
+  description: Goggles made of plastic.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

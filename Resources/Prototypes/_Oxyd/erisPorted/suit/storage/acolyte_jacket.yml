@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_acolyte_jacket
+  name: acolyte jacket
+  description: A long jacket. Dark, stylish, and authoritarian.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/acolyte_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/acolyte_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

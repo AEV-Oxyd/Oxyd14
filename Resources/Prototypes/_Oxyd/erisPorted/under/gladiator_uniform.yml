@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_gladiator_uniform
+  name: gladiator uniform
+  description: Are you not entertained? Is that not why you are here?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gladiator_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gladiator_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

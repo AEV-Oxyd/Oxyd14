@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_cigarette
+  name: cigarette
+  description: A roll of tobacco and nicotine.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cigarette.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cigarette.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

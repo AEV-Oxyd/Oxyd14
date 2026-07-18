@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_white_jacket
+  name: white jacket
+  description: With the warmth of this jacket you feel like you're a real human being.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

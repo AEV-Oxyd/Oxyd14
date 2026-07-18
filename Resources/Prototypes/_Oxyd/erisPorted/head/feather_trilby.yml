@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_feather_trilby
+  name: feather trilby
+  description: A sharp, stylish hat with a feather.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/feather_trilby.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/feather_trilby.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

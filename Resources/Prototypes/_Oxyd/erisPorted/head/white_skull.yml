@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_white_skull
+  name: white skull
+  description: This is actually a white plastic skull, don't expect much protection.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/white_skull.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/white_skull.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_SCAF_suit
+  name: SCAF suit
+  description: A bulky antique suit of refurbished infantry armour, retrofitted with seals and coatings to make it EVA capable but also reducing mobility.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/SCAF_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/SCAF_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_SCAF_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

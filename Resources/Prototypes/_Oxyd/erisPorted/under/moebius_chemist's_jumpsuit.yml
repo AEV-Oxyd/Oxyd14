@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_moebius_chemist's_jumpsuit
+  name: moebius chemist's jumpsuit
+  description: It's made of a special fiber that gives special protection against biohazards. It has a chemist rank stripe on it.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_chemist's_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_chemist's_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

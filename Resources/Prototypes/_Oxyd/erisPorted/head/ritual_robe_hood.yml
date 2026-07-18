@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ritual_robe_hood
+  name: ritual robe hood
+  description: A hood to cover one's features while chanting hymns or holy sacrements.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ritual_robe_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ritual_robe_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

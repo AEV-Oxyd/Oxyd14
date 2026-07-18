@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_flat_cap
+  name: flat cap
+  description: A working man's cap.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/flat_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/flat_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_eyepatch
+  name: eyepatch
+  description: Yarr.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/eyepatch.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/eyepatch.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

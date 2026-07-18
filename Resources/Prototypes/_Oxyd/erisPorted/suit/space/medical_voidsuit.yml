@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_medical_voidsuit
+  name: medical voidsuit
+  description: A special suit that protects against hazardous, low pressure environments. Has minor radiation shielding.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_medical_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

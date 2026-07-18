@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_botanical_satchel
+  name: botanical satchel
+  description: A green satchel for plant related work.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/botanical_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/botanical_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

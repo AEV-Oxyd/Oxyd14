@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_rockerboy_outfit
+  name: rockerboy outfit
+  description: A padded vest with brown leather pants. Never stop fightin'
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/rockerboy_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/rockerboy_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

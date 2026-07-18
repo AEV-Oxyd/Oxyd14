@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_church_sports_vestment
+  name: church sports vestment
+  description: Smells like lilac.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/church_sports_vestment.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/church_sports_vestment.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_red_space_suit_replica
+  name: red space suit replica
+  description: A plastic replica of the syndicate space suit, you'll look just like a real murderous syndicate agent in this! This is a toy, it is not made for use in space!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_space_suit_replica.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_space_suit_replica.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

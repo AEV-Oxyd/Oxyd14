@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_sexy-clown_suit
+  name: sexy-clown suit
+  description: It makes you look HONKable!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/sexy-clown_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/sexy-clown_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_medical_scrubs
+  name: medical scrubs
+  description: It's made of a special fiber that provides minor protection against biohazards. This one is in baby blue.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/medical_scrubs.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/medical_scrubs.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

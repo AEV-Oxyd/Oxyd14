@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_welding_goggles
+  name: welding goggles
+  description: Protects the eyes from welders, approved by the mad scientist association.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/welding_goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/welding_goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

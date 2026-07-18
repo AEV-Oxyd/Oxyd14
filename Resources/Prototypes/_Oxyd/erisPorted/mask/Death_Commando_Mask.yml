@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_Death_Commando_Mask
+  name: Death Commando Mask
+  description: A face-covering mask that can be connected to an air supply. Filters harmful gases and the smell of roaches from the air.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Death_Commando_Mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Death_Commando_Mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

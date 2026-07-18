@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_green_Battle_Dress_Uniform
+  name: green Battle Dress Uniform
+  description: A tough, wear-resistant battle dress uniform in forest colors. Typically worn underneath armour
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_Battle_Dress_Uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_Battle_Dress_Uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_kilt
+  name: kilt
+  description: Includes shoes and plaid
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/kilt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/kilt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

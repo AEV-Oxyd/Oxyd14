@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_insulated_gloves
+  name: insulated gloves
+  description: These gloves will protect the wearer from electric shock.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/insulated_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/insulated_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

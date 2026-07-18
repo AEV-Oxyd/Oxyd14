@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Excelsior_gzhel-m_vest
+  name: Excelsior gzhel-m vest
+  description: Standard-issue Excelsior bullet-resistant vest with great balance of cost, weight, and protection.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_gzhel-m_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_gzhel-m_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

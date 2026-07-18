@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Complicated_Vest
+  name: Complicated Vest
+  description: The tubes don't even do anything.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Complicated_Vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Complicated_Vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_full_operator_armor
+  name: full operator armor
+  description: An armored vest painted in Ironhammer Security colors. This one has shoulderpads and knee pads included to protect all parts of the body.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_operator_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_operator_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

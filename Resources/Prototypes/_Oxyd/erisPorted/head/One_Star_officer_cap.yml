@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_One_Star_officer_cap
+  name: One Star officer cap
+  description: A fancy red and blue cap sporting the One Star insignia. It's made out of a strange material that feels like it could stop a bullet.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/One_Star_officer_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/One_Star_officer_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

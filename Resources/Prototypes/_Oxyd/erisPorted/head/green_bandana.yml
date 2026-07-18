@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_green_bandana
+  name: green bandana
+  description: A green bandana with some fine nanotech lining.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_bandana.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_bandana.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

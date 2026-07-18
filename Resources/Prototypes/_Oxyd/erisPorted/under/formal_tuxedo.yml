@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_formal_tuxedo
+  name: formal tuxedo
+  description: A spiffy tuxedo. Perfect for a ball, or just a fancy night out with the boys.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/formal_tuxedo.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/formal_tuxedo.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_webbed_operator_armor
+  name: webbed operator armor
+  description: An armored vest that protects against some damage. This one has been done in Ironhammer Security colors and has various pouches and straps attached.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/webbed_operator_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/webbed_operator_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

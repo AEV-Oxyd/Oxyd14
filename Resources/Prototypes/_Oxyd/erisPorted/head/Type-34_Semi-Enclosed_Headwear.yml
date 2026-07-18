@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Type-34_Semi-Enclosed_Headwear
+  name: Type-34 Semi-Enclosed Headwear
+  description: Armored helmet used by certain law enforcement agencies. It's hard to believe there's a human somewhere behind that.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Type-34_Semi-Enclosed_Headwear.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Type-34_Semi-Enclosed_Headwear.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

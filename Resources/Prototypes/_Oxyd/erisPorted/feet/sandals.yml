@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_sandals
+  name: sandals
+  description: A pair of rather plain, wooden sandals.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/sandals.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/sandals.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

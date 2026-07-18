@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_paper_hat
+  name: collectable paper hat
+  description: What looks like an ordinary paper hat, is actually a rare and valuable collector's edition paper hat. Keep away from water, fire and Librarians.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_paper_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_paper_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

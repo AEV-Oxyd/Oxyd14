@@ -1,0 +1,25 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_bulletproof_helmet
+  name: bulletproof helmet
+  description: A bulletproof helmet that excels in protecting the wearer against traditional projectile weaponry and explosives to a minor extent.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bulletproof_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bulletproof_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

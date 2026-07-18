@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_sensible_suit
+  name: sensible suit
+  description: It's very... sensible.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/sensible_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/sensible_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

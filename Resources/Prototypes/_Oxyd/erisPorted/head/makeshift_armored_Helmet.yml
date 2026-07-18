@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_makeshift_armored_Helmet
+  name: makeshift armored Helmet
+  description: A makeshift armored helmet you can see the glue holding it, just close enough to be airtight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/makeshift_armored_Helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/makeshift_armored_Helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_straight_jacket
+  name: straight jacket
+  description: A suit that completely restrains the wearer.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/straight_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/straight_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

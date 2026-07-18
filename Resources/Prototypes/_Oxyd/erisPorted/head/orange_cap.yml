@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_orange_cap
+  name: orange cap
+  description: A baseball cap in a bleak orange color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/orange_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/orange_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

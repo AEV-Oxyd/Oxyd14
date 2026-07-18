@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_bowler_hat
+  name: bowler hat
+  description: For the gentleman of distinction.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bowler_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bowler_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

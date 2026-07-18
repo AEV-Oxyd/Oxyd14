@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_schoolgirl_uniform
+  name: schoolgirl uniform
+  description: It's just like one of my Japanese animes!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/schoolgirl_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/schoolgirl_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

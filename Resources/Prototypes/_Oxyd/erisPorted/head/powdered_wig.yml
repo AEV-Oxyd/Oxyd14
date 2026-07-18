@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_powdered_wig
+  name: powdered wig
+  description: A powdered wig.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/powdered_wig.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/powdered_wig.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

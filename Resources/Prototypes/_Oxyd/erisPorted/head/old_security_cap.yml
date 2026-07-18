@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_old_security_cap
+  name: old security cap
+  description: A washed out red cap bearing logo of the long defunct "Securitech" company.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/old_security_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/old_security_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

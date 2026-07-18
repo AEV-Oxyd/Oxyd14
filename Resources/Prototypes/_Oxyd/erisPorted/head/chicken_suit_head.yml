@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_chicken_suit_head
+  name: chicken suit head
+  description: Bkaw!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/chicken_suit_head.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/chicken_suit_head.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

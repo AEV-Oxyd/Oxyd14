@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_red_sneakers
+  name: red sneakers
+  description: A stylish, expensive pair of red sneakers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_sneakers.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_sneakers.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

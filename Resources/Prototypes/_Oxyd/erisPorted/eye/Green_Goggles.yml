@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Green_Goggles
+  name: Green Goggles
+  description: A very oddly shaped pair of green goggles with bits of wire poking out the sides. This is the future!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Green_Goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Green_Goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

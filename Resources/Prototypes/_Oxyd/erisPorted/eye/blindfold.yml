@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_blindfold
+  name: blindfold
+  description: Covers the eyes, preventing sight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blindfold.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blindfold.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

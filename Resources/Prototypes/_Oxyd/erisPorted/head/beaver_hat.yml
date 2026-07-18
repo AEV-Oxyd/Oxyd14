@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_beaver_hat
+  name: beaver hat
+  description: Soft felt makes this hat both comfortable and elegant.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/beaver_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/beaver_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

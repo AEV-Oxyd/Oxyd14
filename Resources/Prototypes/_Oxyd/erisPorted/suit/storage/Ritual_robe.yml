@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Ritual_robe
+  name: Ritual robe
+  description: A robe to cover one's features while chanting hymns or holy sacrements. Has a couple pockets for trinkets.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ritual_robe.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ritual_robe.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

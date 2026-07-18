@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_tan_military_cap
+  name: tan military cap
+  description: A field cap in tasteful tan color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tan_military_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tan_military_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

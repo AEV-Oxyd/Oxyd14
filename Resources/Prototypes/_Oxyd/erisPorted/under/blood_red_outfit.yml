@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_blood_red_outfit
+  name: blood red outfit
+  description: Red suit, red pants and a red tie.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blood_red_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blood_red_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

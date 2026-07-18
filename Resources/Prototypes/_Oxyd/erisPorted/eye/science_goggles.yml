@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_science_goggles
+  name: science goggles
+  description: A pair of goggles with a science HUD. These can show you reagents within transparent containers and organoid information.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/science_goggles.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/science_goggles.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

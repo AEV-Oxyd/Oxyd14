@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_outdated_Technomancer_voidsuit
+  name: outdated Technomancer voidsuit
+  description: An outdated Technomancer voidsuit that is nearly identical in all properties to its newer version. Nevertheless this design was rejected in favour of more streamlined counterpart. Rumors claim there was a different reason to it, but we all stick to this one.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/outdated_Technomancer_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/outdated_Technomancer_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_outdated_Technomancer_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

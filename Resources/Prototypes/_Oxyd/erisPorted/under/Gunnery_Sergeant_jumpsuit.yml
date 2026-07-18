@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Gunnery_Sergeant_jumpsuit
+  name: Gunnery Sergeant jumpsuit
+  description: The uniform worn by Ironhammer Sergeants, the sight of it is often followed by shouting. It has"Gunnery Sergeant" rank pins on the shoulders.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Gunnery_Sergeant_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Gunnery_Sergeant_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

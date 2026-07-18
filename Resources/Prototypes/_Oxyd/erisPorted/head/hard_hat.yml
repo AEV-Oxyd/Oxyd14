@@ -1,0 +1,23 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_hard_hat
+  name: hard hat
+  description: A piece of headgear used in dangerous working conditions to protect the head. Comes with a built-in flashlight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hard_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hard_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: Item
+    size: Normal
+

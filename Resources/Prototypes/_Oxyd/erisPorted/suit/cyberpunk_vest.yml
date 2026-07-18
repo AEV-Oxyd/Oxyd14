@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_cyberpunk_vest
+  name: cyberpunk vest
+  description: A red vest with golden streaks. It's made out of tough materials, and can protect fairly well against bullets. Wake the fuck up, Samurai.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyberpunk_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyberpunk_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

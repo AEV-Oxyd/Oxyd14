@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_full_ablative_armor_vest
+  name: full ablative armor vest
+  description: A vest that excels in protecting the wearer against energy projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/full_ablative_armor_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/full_ablative_armor_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

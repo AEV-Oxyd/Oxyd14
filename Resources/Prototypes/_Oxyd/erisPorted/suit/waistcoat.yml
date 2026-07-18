@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_waistcoat
+  name: waistcoat
+  description: For some classy, murderous fun.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/waistcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/waistcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_cargo_cap
+  name: cargo cap
+  description: A peaked cap in a tasteless yellow color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cargo_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cargo_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

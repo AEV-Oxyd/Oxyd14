@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_sexy-clown_wig_and_mask
+  name: sexy-clown wig and mask
+  description: A feminine clown mask for the dabbling crossdressers or female entertainers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/sexy-clown_wig_and_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/sexy-clown_wig_and_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

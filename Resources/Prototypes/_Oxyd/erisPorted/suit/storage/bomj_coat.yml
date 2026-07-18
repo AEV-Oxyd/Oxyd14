@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_bomj_coat
+  name: bomj coat
+  description: A coat padded with synthetic insulation.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bomj_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bomj_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

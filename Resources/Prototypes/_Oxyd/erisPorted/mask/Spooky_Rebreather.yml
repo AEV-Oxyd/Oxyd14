@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_Spooky_Rebreather
+  name: Spooky Rebreather
+  description: Wearing this makes you feel awesome - seeing someone else wearing this makes them look like a loser.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Spooky_Rebreather.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Spooky_Rebreather.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

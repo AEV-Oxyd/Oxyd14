@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Thunderdome_helmet
+  name: Thunderdome helmet
+  description: <i>'Let the battle commence!'</i>
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Thunderdome_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Thunderdome_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

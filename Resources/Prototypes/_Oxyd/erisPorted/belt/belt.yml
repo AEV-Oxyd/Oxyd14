@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_belt
+  name: belt
+  description: Can hold various things.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

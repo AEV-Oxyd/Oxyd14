@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_One_Star_Voidsuit_Helmet
+  name: One Star Voidsuit Helmet
+  description: A lightweight bubble helmet providing unrestricted vision and protection from space with a light on top. The glass is plasma-reinforced and could easily stop a rifle round.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/One_Star_Voidsuit_Helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/One_Star_Voidsuit_Helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

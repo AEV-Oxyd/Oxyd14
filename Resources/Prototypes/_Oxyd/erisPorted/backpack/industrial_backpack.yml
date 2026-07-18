@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_industrial_backpack
+  name: industrial backpack
+  description: A tough backpack for the daily grind of ship life.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/industrial_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/industrial_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

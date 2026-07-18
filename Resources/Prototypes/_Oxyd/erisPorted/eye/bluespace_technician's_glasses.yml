@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_bluespace_technician's_glasses
+  name: bluespace technician's glasses
+  description: A pair of modified sunglasses. The word 'BST' is stamped on the side.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bluespace_technician's_glasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bluespace_technician's_glasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Green_Glasses
+  name: Green Glasses
+  description: Forest green glasses, like the kind you'd wear when hatching a nasty scheme.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Green_Glasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Green_Glasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

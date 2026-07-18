@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_lime_feathered_beret
+  name: lime feathered beret
+  description: A lime colored artist's beret, smells of citrus and pomp.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/lime_feathered_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/lime_feathered_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

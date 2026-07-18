@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_thermal_lenses
+  name: thermal lenses
+  description: Lenses for glasses, you can see red people through walls with them.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/thermal_lenses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/thermal_lenses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_Moebius_combat_voidsuit
+  name: Moebius combat voidsuit
+  description: A heavy space suit designed by Moebius personnel for work in hazardous environment without impairing mobility. Features several advanced layers of armor.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Moebius_combat_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Moebius_combat_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_Moebius_combat_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

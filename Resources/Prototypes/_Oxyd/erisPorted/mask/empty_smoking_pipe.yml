@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_empty_smoking_pipe
+  name: empty smoking pipe
+  description: A pipe, for smoking. Probably made of meershaum or something.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/empty_smoking_pipe.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/empty_smoking_pipe.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

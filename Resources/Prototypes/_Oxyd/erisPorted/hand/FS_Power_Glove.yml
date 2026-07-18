@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_FS_Power_Glove
+  name: FS Power Glove
+  description: Frozen Star solution for police operations. Punch criminals right in the face instead of prodding them with some feeble rod.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/FS_Power_Glove.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/FS_Power_Glove.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

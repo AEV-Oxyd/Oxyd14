@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_tactful_jacket
+  name: tactful jacket
+  description: A khaki-colored jacket so stylishly casual you might think it sports a tactical vest.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/tactful_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/tactful_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

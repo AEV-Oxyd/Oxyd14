@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_bluespace_technician's_gloves
+  name: bluespace technician's gloves
+  description: A pair of modified gloves. The letters 'BST' are stamped on the side.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bluespace_technician's_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bluespace_technician's_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+
+

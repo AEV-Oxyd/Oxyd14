@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_technomancer's_jumpsuit
+  name: technomancer's jumpsuit
+  description: A yellow jumpsuit worn by engineers. It has minor radiation shielding.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/technomancer's_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/technomancer's_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_golden_skull
+  name: golden skull
+  description: This is actually a skull made of gold! How the hell did this show up here?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/golden_skull.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/golden_skull.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

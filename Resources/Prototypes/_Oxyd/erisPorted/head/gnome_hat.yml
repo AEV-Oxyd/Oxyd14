@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_gnome_hat
+  name: gnome hat
+  description: Why do gnomes come out of our toilet? Maybe they're searching for money?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gnome_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gnome_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

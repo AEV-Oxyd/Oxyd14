@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_pirate_bandana
+  name: pirate bandana
+  description: Yarr.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/pirate_bandana.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/pirate_bandana.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+

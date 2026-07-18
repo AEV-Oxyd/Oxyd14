@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_first_officer's_hat
+  name: first officer's hat
+  description: A stylish hat that both protects you from enraged former-crewmembers and gives you a false sense of authority.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/first_officer's_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/first_officer's_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_hastur's_hood
+  name: hastur's hood
+  description: It's unspeakably stylish
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hastur's_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hastur's_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

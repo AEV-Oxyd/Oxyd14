@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_armor
+  name: armor
+  description: It appears to be a vest of standard armor, except this is embedded with a hidden holographic cloaker, allowing it to change it's appearance, but offering no protection.. It seems to have a small dial inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_old_security_uniform
+  name: old security uniform
+  description: A worn and dusty red security jumpsuit from the long defunct "Securitech". This uniform once signified authority but now it's just an ugly set of clothes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/old_security_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/old_security_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

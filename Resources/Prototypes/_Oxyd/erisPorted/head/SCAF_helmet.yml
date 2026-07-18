@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_SCAF_helmet
+  name: SCAF helmet
+  description: A thick airtight helmet designed for planetside warfare retrofitted with seals to act like normal space suit helmet.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/SCAF_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/SCAF_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

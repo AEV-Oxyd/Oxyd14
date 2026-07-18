@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_One_Star_officer_coat
+  name: One Star officer coat
+  description: A rare stylish red jacket worn by One Star officers. It seems to be extremly durable and is strangely warm to the touch.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/One_Star_officer_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/One_Star_officer_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

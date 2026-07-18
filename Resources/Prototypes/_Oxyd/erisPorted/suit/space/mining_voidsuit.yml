@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_mining_voidsuit
+  name: mining voidsuit
+  description: A special suit that protects against hazardous, low pressure environments. Has reinforced plating.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/mining_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/mining_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_mining_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

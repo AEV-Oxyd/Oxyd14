@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_parade_hat
+  name: parade hat
+  description: No one in a commanding position should be without a perfect, white hat of ultimate authority.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/parade_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/parade_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_Cohiba_Robusto_cigar
+  name: Cohiba Robusto cigar
+  description: There's little more you could want from a cigar.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Cohiba_Robusto_cigar.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Cohiba_Robusto_cigar.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

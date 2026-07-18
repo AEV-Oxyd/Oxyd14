@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Excelsior_beret
+  name: Excelsior beret
+  description: An armored white and orange beret, issued out to Haven's many conscripts
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

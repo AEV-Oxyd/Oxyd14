@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_red_laser_tag_armour
+  name: red laser tag armour
+  description: Reputed to go faster.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_laser_tag_armour.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_laser_tag_armour.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

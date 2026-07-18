@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackDuffel
+  id: erisport_grey_duffel_bag
+  name: grey duffel bag
+  description: You wear this on your back and put items into it.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/grey_duffel_bag.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/grey_duffel_bag.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

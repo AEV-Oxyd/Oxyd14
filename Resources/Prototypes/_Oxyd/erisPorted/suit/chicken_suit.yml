@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_chicken_suit
+  name: chicken suit
+  description: A suit made long ago by the ancient empire KFC.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/chicken_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/chicken_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

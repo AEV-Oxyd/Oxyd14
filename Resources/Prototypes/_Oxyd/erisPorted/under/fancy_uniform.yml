@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_fancy_uniform
+  name: fancy uniform
+  description: It looks like it was tailored for a monkey.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/fancy_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/fancy_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

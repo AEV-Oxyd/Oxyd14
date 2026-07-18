@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingMaskGas
+  id: erisport_mime_mask
+  name: mime mask
+  description: The traditional mime's mask. It has an eerie facial posture.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/mime_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/mime_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

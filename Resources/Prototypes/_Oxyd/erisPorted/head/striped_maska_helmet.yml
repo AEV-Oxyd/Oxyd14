@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_striped_maska_helmet
+  name: striped maska helmet
+  description: Someone has painted a Maska in the Gopnik style.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/striped_maska_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/striped_maska_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

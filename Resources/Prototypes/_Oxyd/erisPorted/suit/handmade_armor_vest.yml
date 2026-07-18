@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_handmade_armor_vest
+  name: handmade armor vest
+  description: An armored vest of dubious quality. Provides decent protection against physical damage, for a piece of crap.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/handmade_armor_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/handmade_armor_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

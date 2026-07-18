@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_reinforced_Technomancer_armor
+  name: reinforced Technomancer armor
+  description: Technomancer League's ballistic armor, less protective against industrial hazards but better in a fight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/reinforced_Technomancer_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/reinforced_Technomancer_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

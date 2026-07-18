@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_ushanka
+  name: ushanka
+  description: Perfect for winter in Siberia, da?
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ushanka.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ushanka.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_virological_backpack
+  name: virological backpack
+  description: A sterile backpack with virologist colours.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/virological_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/virological_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

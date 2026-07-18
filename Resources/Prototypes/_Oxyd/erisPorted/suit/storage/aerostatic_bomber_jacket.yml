@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_aerostatic_bomber_jacket
+  name: aerostatic bomber jacket
+  description: A red bomber jacket that looks like its seen better days.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/aerostatic_bomber_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/aerostatic_bomber_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Enforcer's_gray_overcoat
+  name: Enforcer's gray overcoat
+  description: A sleek overcoat made of neo-laminated fabric. Has a reasonably sized pocket on the inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Enforcer's_gray_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Enforcer's_gray_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

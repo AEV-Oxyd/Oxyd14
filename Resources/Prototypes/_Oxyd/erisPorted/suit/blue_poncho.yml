@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_blue_poncho
+  name: blue poncho
+  description: A simple, comfortable poncho in blue colors.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_poncho.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_poncho.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

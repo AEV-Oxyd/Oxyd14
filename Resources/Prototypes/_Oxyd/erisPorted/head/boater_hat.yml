@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_boater_hat
+  name: boater hat
+  description: The ultimate in summer fashion.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/boater_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/boater_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

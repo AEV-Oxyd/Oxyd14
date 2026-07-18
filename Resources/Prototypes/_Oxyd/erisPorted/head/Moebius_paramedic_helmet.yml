@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Moebius_paramedic_helmet
+  name: Moebius paramedic helmet
+  description: Seven minutes or a refund.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Moebius_paramedic_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Moebius_paramedic_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

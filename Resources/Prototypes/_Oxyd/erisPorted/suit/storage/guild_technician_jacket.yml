@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_guild_technician_jacket
+  name: guild technician jacket
+  description: An orange and grey jacket, a hybrid of a hazard vest and a proper jacket.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/guild_technician_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/guild_technician_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

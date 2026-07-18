@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Serbian_Commander_beret
+  name: Serbian Commander beret
+  description: A green beret that strikes discipline into even mercenaries.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Serbian_Commander_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Serbian_Commander_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_orange_satchel
+  name: orange satchel
+  description: A trendy looking satchel.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/orange_satchel.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/orange_satchel.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

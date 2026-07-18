@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_pyjamas
+  name: red pyjamas
+  description: Slightly old-fashioned sleepwear.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_pyjamas.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_pyjamas.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_preacher_vestments
+  name: preacher vestments
+  description: Ceremonial garb of NeoTheology preachers.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/preacher_vestments.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/preacher_vestments.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

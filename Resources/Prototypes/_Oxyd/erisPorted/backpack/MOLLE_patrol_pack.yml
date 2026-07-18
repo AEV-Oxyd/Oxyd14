@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpackSatchel
+  id: erisport_MOLLE_patrol_pack
+  name: MOLLE patrol pack
+  description: Designed for planetary infantry, this pack allows for quick access to equipment.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/MOLLE_patrol_pack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/MOLLE_patrol_pack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

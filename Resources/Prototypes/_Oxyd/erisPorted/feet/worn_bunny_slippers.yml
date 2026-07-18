@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_worn_bunny_slippers
+  name: worn bunny slippers
+  description: Fluffy...
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/worn_bunny_slippers.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/worn_bunny_slippers.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

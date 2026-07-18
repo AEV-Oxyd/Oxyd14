@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_blue_cap
+  name: blue cap
+  description: A baseball cap in a tasteless blue color.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/blue_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/blue_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

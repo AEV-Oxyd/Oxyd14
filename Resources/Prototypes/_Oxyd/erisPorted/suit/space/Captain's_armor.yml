@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_Captain's_armor
+  name: Captain's armor
+  description: A bulky, heavy-duty piece of exclusive corporate armor. YOU are in charge!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Captain's_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Captain's_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

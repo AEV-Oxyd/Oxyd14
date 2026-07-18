@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_green_platecarrier_vest
+  name: green platecarrier vest
+  description: A vest that excels in protecting the wearer against high-velocity solid projectiles.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/green_platecarrier_vest.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/green_platecarrier_vest.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

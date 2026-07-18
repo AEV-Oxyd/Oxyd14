@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_golden_knuckle_dusters
+  name: golden knuckle dusters
+  description: More pain for them, more style for you.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/golden_knuckle_dusters.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/golden_knuckle_dusters.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_neotheology_utility_belt
+  name: neotheology utility belt
+  description: Waist-held holy items.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/neotheology_utility_belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/neotheology_utility_belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

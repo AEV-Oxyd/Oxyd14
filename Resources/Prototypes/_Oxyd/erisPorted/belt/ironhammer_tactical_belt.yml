@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBeltBase
+  id: erisport_ironhammer_tactical_belt
+  name: ironhammer tactical belt
+  description: Can hold various military and security equipment.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ironhammer_tactical_belt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ironhammer_tactical_belt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

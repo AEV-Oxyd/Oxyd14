@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_seuche_suit
+  name: seuche suit
+  description: blattedin and compact smoke machine sold separately!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/seuche_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/seuche_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

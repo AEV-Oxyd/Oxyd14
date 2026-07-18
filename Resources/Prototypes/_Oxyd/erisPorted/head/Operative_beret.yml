@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_Operative_beret
+  name: Operative beret
+  description: A navy blue beret with an Operative's rank emblem. For operatives that are more inclined towards style than safety.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Operative_beret.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Operative_beret.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

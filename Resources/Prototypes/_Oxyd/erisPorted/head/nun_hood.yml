@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_nun_hood
+  name: nun hood
+  description: Maximum piety in this star system.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/nun_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/nun_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

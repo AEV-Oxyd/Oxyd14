@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_nun_robe
+  name: nun robe
+  description: Maximum piety in this star system.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/nun_robe.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/nun_robe.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

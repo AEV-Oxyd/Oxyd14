@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_heavy_operator_armor
+  name: heavy operator armor
+  description: A heavily armoured suit with extra padding to better protect against blunt trauma. Looks like it might impair movement.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/heavy_operator_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/heavy_operator_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

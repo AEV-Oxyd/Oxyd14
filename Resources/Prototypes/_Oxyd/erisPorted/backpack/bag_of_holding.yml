@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_bag_of_holding
+  name: bag of holding
+  description: A backpack that opens into a localized pocket of bluespace.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bag_of_holding.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bag_of_holding.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

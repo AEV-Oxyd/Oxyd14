@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_custodian's_jackboots
+  name: custodian's jackboots
+  description: Specially altered jackboots for NeoTheology custodians to prevent them from slipping.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/custodian's_jackboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/custodian's_jackboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_laborer's_overalls
+  name: laborer's overalls
+  description: A set of durable overalls for getting the job done.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/laborer's_overalls.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/laborer's_overalls.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

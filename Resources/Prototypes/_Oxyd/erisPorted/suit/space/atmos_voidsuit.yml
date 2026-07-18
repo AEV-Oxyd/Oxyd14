@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_atmos_voidsuit
+  name: atmos voidsuit
+  description: A special suit that protects against hazardous, low pressure environments. Has improved thermal protection and minor radiation shielding.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/atmos_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/atmos_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_atmospherics_voidsuit_helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

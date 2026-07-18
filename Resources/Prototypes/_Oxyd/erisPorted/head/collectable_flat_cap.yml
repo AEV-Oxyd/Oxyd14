@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_flat_cap
+  name: collectable flat cap
+  description: A Collectible farmer's Flat Cap!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_flat_cap.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_flat_cap.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

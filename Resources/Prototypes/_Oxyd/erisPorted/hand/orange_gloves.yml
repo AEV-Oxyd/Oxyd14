@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_orange_gloves
+  name: orange gloves
+  description: A pair of gloves, they don't look special in any way.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/orange_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/orange_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_heavy_armor
+  name: heavy armor
+  description: A heavily armored suit that protects against moderate damage.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/heavy_armor.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/heavy_armor.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

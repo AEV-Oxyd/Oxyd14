@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_nitrile_gloves
+  name: nitrile gloves
+  description: Sterile nitrile gloves.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/nitrile_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/nitrile_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

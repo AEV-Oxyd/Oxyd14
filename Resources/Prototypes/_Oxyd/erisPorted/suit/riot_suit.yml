@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_riot_suit
+  name: riot suit
+  description: A suit of armor with heavy padding to protect against melee attacks. Looks like it might impair movement.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/riot_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/riot_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Large
+

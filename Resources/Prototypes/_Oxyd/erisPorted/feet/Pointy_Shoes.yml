@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_Pointy_Shoes
+  name: Pointy Shoes
+  description: They're actually quite comfortable.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Pointy_Shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Pointy_Shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_charming_outfit
+  name: charming outfit
+  description: A red shirt with a black tie and black pants. Stylish enough to impress the devil.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/charming_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/charming_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

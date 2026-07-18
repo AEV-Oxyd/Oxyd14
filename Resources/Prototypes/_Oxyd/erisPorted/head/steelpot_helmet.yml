@@ -1,0 +1,22 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_steelpot_helmet
+  name: steelpot helmet
+  description: A titanium helmet of serbian origin. Still widely used despite being discontinued.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/steelpot_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/steelpot_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+  - type: Item
+    size: Normal
+

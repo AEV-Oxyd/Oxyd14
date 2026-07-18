@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_clown_suit
+  name: clown suit
+  description: <i>'HONK!'</i>
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/clown_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/clown_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_camera_MIU
+  name: camera MIU
+  description: Allows for direct mental connection to accessible camera networks.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/camera_MIU.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/camera_MIU.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

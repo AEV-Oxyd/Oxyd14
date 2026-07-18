@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_gold_bandana
+  name: gold bandana
+  description: A fine bandana with nanotech lining. Can be worn on the head or face.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/gold_bandana.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/gold_bandana.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+

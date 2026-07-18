@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_premium_Havanian_cigar
+  name: premium Havanian cigar
+  description: A cigar fit for only the best of the best.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/premium_Havanian_cigar.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/premium_Havanian_cigar.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

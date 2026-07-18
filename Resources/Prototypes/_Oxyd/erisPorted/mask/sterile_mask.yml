@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingMaskBase
+  id: erisport_sterile_mask
+  name: sterile mask
+  description: A sterile mask designed to help prevent the spread of diseases.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/sterile_mask.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/sterile_mask.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

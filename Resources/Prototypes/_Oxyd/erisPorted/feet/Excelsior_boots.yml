@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_Excelsior_boots
+  name: Excelsior boots
+  description: Robust, yet surprisingly posh boots; one and only design worn by comrades everywhere from Haven to null sector.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Excelsior_boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Excelsior_boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

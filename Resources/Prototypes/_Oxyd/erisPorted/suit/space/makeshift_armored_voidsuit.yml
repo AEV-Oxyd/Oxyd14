@@ -1,0 +1,23 @@
+- type: entity
+  parent: ClothingOuterEVASuitBaseToggleable
+  id: erisport_makeshift_armored_voidsuit
+  name: makeshift armored voidsuit
+  description: A makeshift armored voidsuit you can see the glue holding it, just close enough to be airtight.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/makeshift_armored_voidsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/makeshift_armored_voidsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: ToggleableClothing
+    clothingPrototype: erisport_makeshift_armored_Helmet
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

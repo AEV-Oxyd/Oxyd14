@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_disco_blazer
+  name: disco blazer
+  description: A green blazer that looks perfect for a disco party.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/disco_blazer.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/disco_blazer.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

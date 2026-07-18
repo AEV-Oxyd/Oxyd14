@@ -1,0 +1,23 @@
+- type: entity
+  parent: [ ClothingHeadBase , ClothingHeadLightBase]
+  id: erisport_Agrolyte_hood
+  name: Agrolyte hood
+  description: Don't want anything getting in your eyes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Agrolyte_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Agrolyte_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: Item
+    size: Normal
+

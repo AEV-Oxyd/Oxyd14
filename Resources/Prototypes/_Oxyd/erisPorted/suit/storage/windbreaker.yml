@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_windbreaker
+  name: windbreaker
+  description: A dark blue jacket with black highlights. You can't think of any reason why someone would need a windbreaker in space, but the jacket looks cool either way. As an added bonus, it looks fairly resistant to stains and caustic chemicals.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/windbreaker.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/windbreaker.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

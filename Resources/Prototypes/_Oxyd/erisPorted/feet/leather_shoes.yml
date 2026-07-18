@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_leather_shoes
+  name: leather shoes
+  description: A sturdy pair of leather shoes.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/leather_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/leather_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

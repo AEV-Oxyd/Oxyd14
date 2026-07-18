@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_church_vestments
+  name: church vestments
+  description: Smells like incense.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/church_vestments.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/church_vestments.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_silky_wedding_dress
+  name: silky wedding dress
+  description: A white wedding gown made from the finest silk.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/silky_wedding_dress.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/silky_wedding_dress.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

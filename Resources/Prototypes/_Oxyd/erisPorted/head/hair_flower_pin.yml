@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_hair_flower_pin
+  name: hair flower pin
+  description: Smells nice.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hair_flower_pin.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hair_flower_pin.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

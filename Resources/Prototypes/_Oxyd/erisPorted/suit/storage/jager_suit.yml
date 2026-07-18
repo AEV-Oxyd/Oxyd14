@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_jager_suit
+  name: jager suit
+  description: Feel the power of the jager!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/jager_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/jager_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

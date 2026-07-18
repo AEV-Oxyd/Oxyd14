@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_xenos_suit
+  name: xenos suit
+  description: A suit made out of chitinous alien hide.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/xenos_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/xenos_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

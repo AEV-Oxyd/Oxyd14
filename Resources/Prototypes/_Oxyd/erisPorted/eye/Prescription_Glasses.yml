@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingEyesBase
+  id: erisport_Prescription_Glasses
+  name: Prescription Glasses
+  description: Made by Nerd. Co.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Prescription_Glasses.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Prescription_Glasses.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_black_serbian_overcoat
+  name: black serbian overcoat
+  description: A black serbian overcoat with armor-weave and rank epaulettes
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/black_serbian_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/black_serbian_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

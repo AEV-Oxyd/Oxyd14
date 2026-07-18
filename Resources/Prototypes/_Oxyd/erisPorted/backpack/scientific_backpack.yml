@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingBackpack
+  id: erisport_scientific_backpack
+  name: scientific backpack
+  description: Useful for holding research materials.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/scientific_backpack.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/scientific_backpack.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Huge
+

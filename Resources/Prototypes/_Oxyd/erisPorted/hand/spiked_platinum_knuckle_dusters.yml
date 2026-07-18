@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_spiked_platinum_knuckle_dusters
+  name: spiked platinum knuckle dusters
+  description: Hurt like hell, and stylish as well.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/spiked_platinum_knuckle_dusters.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/spiked_platinum_knuckle_dusters.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

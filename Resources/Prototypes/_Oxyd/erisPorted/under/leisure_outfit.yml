@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_leisure_outfit
+  name: leisure outfit
+  description: A leisure outfit with brown jacket. Sometimes you just want to wear what is comfortable.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/leisure_outfit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/leisure_outfit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+
