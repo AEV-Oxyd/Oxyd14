@@ -1,0 +1,11 @@
+<ui1:StatPanel xmlns="https://spacestation14.io"
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+           xmlns:ui1="clr-namespace:Content.Client._Oxyd.UI"
+           VerticalExpand="False"
+           Orientation="Vertical"
+           VerticalAlignment="Top"
+           SeparationOverride="5"
+>
+    <BoxContainer Orientation="Horizontal" MinWidth="25" Name="StatMenus"/>
+    <BoxContainer Name="StatContent"></BoxContainer>
+</ui1:StatPanel>
