@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_captains_hat
+  name: collectable captain's hat
+  description: A Collectable Hat that'll make you look just like a real comdom!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_captains_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_captains_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

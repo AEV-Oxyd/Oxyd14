@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_crimson_hardsuit_boots
+  name: crimson hardsuit boots
+  description: It seems to be part of a crimson hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/crimson_hardsuit_boots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/crimson_hardsuit_boots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

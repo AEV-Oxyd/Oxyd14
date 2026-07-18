@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_collectable_police_officers_hat
+  name: collectable police officer's hat
+  description: A Collectable Police Officer's Hat. This hat emphasizes that you are THE LAW.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/collectable_police_officers_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/collectable_police_officers_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

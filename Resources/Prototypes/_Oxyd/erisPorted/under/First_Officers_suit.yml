@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_First_Officers_suit
+  name: First Officer's suit
+  description: A teal suit and yellow necktie. An authoritative yet tacky ensemble.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/First_Officers_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/First_Officers_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_technomancer_RIG_suit_insulated_gloves
+  name: technomancer RIG suit insulated gloves
+  description: It seems to be part of a technomancer suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_insulated_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_insulated_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

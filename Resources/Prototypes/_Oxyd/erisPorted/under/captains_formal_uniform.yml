@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_captains_formal_uniform
+  name: captain's formal uniform
+  description: A captain's formal-wear, for special occasions.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/captains_formal_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/captains_formal_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

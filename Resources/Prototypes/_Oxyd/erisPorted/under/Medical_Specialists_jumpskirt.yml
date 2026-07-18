@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Medical_Specialists_jumpskirt
+  name: Medical Specialist's jumpskirt
+  description: It's made of a slightly sturdier material than standard jumpskirts, to allow for robust protection. It has "Specialist" rank pins on the shoulders.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Medical_Specialists_jumpskirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Medical_Specialists_jumpskirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

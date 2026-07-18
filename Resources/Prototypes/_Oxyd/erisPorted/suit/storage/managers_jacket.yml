@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_managers_jacket
+  name: manager's jacket
+  description: A well tailored and rich jacket of the club manager
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/managers_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/managers_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

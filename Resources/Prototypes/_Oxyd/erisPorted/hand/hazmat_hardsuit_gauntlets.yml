@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_hazmat_hardsuit_gauntlets
+  name: hazmat hardsuit gauntlets
+  description: It seems to be part of a AMI control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazmat_hardsuit_gauntlets.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazmat_hardsuit_gauntlets.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_technomancer_RIG_suit_chestpiece
+  name: technomancer RIG suit chestpiece
+  description: It seems to be part of a technomancer suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_chestpiece.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_chestpiece.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

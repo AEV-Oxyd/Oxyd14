@@ -1,0 +1,23 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_Santas_hat
+  name: Santa's hat
+  description: Ho ho ho. Merrry X-mas!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Santas_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Santas_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: Item
+    size: Normal
+

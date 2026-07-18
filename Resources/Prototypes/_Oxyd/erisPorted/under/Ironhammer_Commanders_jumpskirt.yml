@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Ironhammer_Commanders_jumpskirt
+  name: Ironhammer Commander's jumpskirt
+  description: A jumpskirt worn by those few with the dedication to achieve the position of "Ironhammer Commander".
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_Commanders_jumpskirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_Commanders_jumpskirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

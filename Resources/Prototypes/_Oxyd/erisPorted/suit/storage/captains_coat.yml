@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_captains_coat
+  name: captain's coat
+  description: A very stylish black coat with fancy shoulder straps. Shows who the boss here.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/captains_coat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/captains_coat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

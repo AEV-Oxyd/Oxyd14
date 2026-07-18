@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_combat_hardsuit_helmet
+  name: combat hardsuit helmet
+  description: It seems to be part of a combat hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/combat_hardsuit_helmet.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/combat_hardsuit_helmet.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

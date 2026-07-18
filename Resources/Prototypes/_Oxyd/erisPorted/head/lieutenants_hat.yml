@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_lieutenants_hat
+  name: lieutenant's hat
+  description: A stylish peaked cap for the Lieutenant stationed onboard the Eris. Lucky bastard.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/lieutenants_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/lieutenants_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

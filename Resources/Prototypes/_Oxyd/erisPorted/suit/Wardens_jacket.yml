@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Wardens_jacket
+  name: Warden's jacket
+  description: An armoured jacket with an attached vest holding a badge and livery.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Wardens_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Wardens_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

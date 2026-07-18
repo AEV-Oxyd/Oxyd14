@@ -14,6 +14,12 @@
     - ClothMade
     - Recyclable
     - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
   - type: Item
     size: Normal
 

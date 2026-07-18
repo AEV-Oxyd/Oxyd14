@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_inspectors_suit
+  name: inspector's suit
+  description: Fancy dress shirt, slacks and tie. The fancy civilian clothes of an Ironhammer Inspector.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/inspectors_suit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/inspectors_suit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

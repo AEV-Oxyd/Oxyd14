@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_ominous_insulated_gloves
+  name: ominous insulated gloves
+  description: It seems to be part of a ominous suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ominous_insulated_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ominous_insulated_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

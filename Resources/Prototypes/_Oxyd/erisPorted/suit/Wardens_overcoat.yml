@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_Wardens_overcoat
+  name: Warden's overcoat
+  description: An IH warden's overcoat with a vest over it, most often used in Hansa prisons.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Wardens_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Wardens_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

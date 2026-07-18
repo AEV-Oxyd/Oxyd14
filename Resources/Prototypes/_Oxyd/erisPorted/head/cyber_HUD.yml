@@ -1,0 +1,18 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_cyber_HUD
+  name: cyber HUD
+  description: It seems to be part of a cybersuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyber_HUD.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyber_HUD.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IngestionBlocker
+

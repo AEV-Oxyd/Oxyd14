@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_chefs_hat
+  name: chef's hat
+  description: A hat used by chefs to keep hair out of your food. Judging by the food in the mess, they don't work.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/chefs_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/chefs_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

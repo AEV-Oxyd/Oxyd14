@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_stealth_hood
+  name: stealth hood
+  description: It seems to be part of a stealth suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/stealth_hood.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/stealth_hood.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+

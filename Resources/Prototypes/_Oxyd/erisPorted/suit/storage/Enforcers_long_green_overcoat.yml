@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Enforcers_long_green_overcoat
+  name: Enforcer's long green overcoat
+  description: A sleek long overcoat made of neo-laminated fabric. Has a reasonably sized pocket on the inside.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Enforcers_long_green_overcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Enforcers_long_green_overcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

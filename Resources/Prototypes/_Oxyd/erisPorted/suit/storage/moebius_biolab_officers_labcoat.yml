@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_moebius_biolab_officers_labcoat
+  name: moebius biolab officer's labcoat
+  description: Bluer than the standard model.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_biolab_officers_labcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_biolab_officers_labcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

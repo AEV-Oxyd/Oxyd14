@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Ironhammer_Operatives_turtleneck
+  name: Ironhammer Operative's turtleneck
+  description: Same as the standard Ironhammer uniform but with a sleek black military style sweater. Best used in cold environments
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_Operatives_turtleneck.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_Operatives_turtleneck.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

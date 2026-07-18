@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_captains_hat
+  name: captain's hat
+  description: It's good being the king.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/captains_hat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/captains_hat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

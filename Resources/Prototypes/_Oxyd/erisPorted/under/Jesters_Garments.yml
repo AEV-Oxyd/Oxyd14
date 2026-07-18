@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Jesters_Garments
+  name: Jester's Garments
+  description: The bright colors are almost distracting.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Jesters_Garments.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Jesters_Garments.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

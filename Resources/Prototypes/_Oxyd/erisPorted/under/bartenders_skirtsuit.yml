@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_bartenders_skirtsuit
+  name: bartender's skirtsuit
+  description: Expensive shirt and tie with a tailored skirt.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/bartenders_skirtsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/bartenders_skirtsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

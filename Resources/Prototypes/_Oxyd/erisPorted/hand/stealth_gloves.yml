@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_stealth_gloves
+  name: stealth gloves
+  description: It seems to be part of a stealth suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/stealth_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/stealth_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

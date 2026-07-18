@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_advanced_voidsuit_advanced_magboots
+  name: advanced voidsuit advanced magboots
+  description: It seems to be part of a advanced voidsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/advanced_voidsuit_advanced_magboots.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/advanced_voidsuit_advanced_magboots.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

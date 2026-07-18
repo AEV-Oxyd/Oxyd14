@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_moebius_psychologists_turtleneck
+  name: moebius psychologist's turtleneck
+  description: A turqouise turtleneck and a pair of dark blue slacks, belonging to a psychologist.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_psychologists_turtleneck.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_psychologists_turtleneck.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

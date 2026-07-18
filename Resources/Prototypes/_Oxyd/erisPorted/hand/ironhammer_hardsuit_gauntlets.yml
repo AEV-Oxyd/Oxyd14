@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_ironhammer_hardsuit_gauntlets
+  name: ironhammer hardsuit gauntlets
+  description: It seems to be part of a ironhammer hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ironhammer_hardsuit_gauntlets.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ironhammer_hardsuit_gauntlets.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

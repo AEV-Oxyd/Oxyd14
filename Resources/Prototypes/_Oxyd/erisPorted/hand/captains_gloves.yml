@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_captains_gloves
+  name: captain's gloves
+  description: Black gloves, with a nice gold trim. Swanky.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/captains_gloves.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/captains_gloves.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

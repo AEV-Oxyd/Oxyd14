@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_moebius_doctors_jumpsuit
+  name: moebius doctor's jumpsuit
+  description: It's made of a special fiber that provides minor protection against biohazards. It has a cross on the chest denoting that the wearer is trained medical personnel.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/moebius_doctors_jumpsuit.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/moebius_doctors_jumpsuit.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

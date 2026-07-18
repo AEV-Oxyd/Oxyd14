@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_red_pjs
+  name: red pj's
+  description: Sleepwear.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/red_pjs.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/red_pjs.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

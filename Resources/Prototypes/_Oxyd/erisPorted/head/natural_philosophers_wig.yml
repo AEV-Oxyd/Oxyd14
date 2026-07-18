@@ -1,0 +1,20 @@
+- type: entity
+  parent: ClothingHeadBase
+  id: erisport_natural_philosophers_wig
+  name: natural philosopher's wig
+  description: A stylish monstrosity unearthed from Earth's Renaissance period. With this most distinguish'd wig, you'll be ready for your next soiree!
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/natural_philosophers_wig.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/natural_philosophers_wig.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: HideLayerClothing
+    layers:
+      Hair: HEAD
+

@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_chefs_uniform
+  name: chef's uniform
+  description: An apron which is given only to the most <b>hardcore</b> chefs in space.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/chefs_uniform.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/chefs_uniform.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

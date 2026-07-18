@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_light_suit_shoes
+  name: light suit shoes
+  description: It seems to be part of a light suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/light_suit_shoes.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/light_suit_shoes.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

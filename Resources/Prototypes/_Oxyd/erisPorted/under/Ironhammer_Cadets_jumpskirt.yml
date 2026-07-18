@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingUniformBase
+  id: erisport_Ironhammer_Cadets_jumpskirt
+  name: Ironhammer Cadet's jumpskirt
+  description: A sailor's uniform used for cadets in training, though more frequently in acts of hazing.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_Cadets_jumpskirt.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_Cadets_jumpskirt.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+
