@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_ominous_suit_(Sealed)
+  name: ominous suit (Sealed)
+  description: It seems to be part of a ominous suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ominous_suit_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ominous_suit_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

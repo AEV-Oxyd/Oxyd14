@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_hazmat_hardsuit_boots_(Sealed)
+  name: hazmat hardsuit boots (Sealed)
+  description: It seems to be part of a AMI control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazmat_hardsuit_boots_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazmat_hardsuit_boots_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

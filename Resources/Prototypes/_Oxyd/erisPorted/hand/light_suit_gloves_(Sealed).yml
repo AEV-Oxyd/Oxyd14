@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_light_suit_gloves_(Sealed)
+  name: light suit gloves (Sealed)
+  description: It seems to be part of a light suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/light_suit_gloves_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/light_suit_gloves_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

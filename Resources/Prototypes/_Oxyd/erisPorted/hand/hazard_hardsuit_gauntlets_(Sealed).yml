@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_hazard_hardsuit_gauntlets_(Sealed)
+  name: hazard hardsuit gauntlets (Sealed)
+  description: It seems to be part of a hazard hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazard_hardsuit_gauntlets_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazard_hardsuit_gauntlets_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

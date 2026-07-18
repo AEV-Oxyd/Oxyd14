@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_advanced_voidsuit_insulated_gloves_(Sealed)
+  name: advanced voidsuit insulated gloves (Sealed)
+  description: It seems to be part of a advanced voidsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/advanced_voidsuit_insulated_gloves_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/advanced_voidsuit_insulated_gloves_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

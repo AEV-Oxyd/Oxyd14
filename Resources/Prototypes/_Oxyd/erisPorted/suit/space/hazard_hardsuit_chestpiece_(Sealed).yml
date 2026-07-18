@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterEVASuitBase
+  id: erisport_hazard_hardsuit_chestpiece_(Sealed)
+  name: hazard hardsuit chestpiece (Sealed)
+  description: It seems to be part of a hazard hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/hazard_hardsuit_chestpiece_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/hazard_hardsuit_chestpiece_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Large
+

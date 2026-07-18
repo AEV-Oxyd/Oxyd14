@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_technomancer_RIG_suit_advanced_magboots_(Sealed)
+  name: technomancer RIG suit advanced magboots (Sealed)
+  description: It seems to be part of a technomancer suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_advanced_magboots_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/technomancer_RIG_suit_advanced_magboots_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

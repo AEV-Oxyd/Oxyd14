@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingOuterStorageBase
+  id: erisport_Samurai_jacket
+  name: Samurai jacket
+  description: Authentic leather for an authentic punk.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Samurai_jacket.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Samurai_jacket.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

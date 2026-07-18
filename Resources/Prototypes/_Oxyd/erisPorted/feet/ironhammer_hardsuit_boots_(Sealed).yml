@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_ironhammer_hardsuit_boots_(Sealed)
+  name: ironhammer hardsuit boots (Sealed)
+  description: It seems to be part of a ironhammer hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/ironhammer_hardsuit_boots_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/ironhammer_hardsuit_boots_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

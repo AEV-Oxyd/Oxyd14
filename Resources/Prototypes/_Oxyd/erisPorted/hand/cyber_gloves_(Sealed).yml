@@ -1,0 +1,17 @@
+- type: entity
+  parent: ClothingHandsBase
+  id: erisport_cyber_gloves_(Sealed)
+  name: cyber gloves (Sealed)
+  description: It seems to be part of a cybersuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyber_gloves_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyber_gloves_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+

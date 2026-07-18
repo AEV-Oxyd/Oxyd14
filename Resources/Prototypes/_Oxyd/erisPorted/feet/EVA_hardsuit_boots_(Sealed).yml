@@ -1,0 +1,19 @@
+- type: entity
+  parent: ClothingShoesBase
+  id: erisport_EVA_hardsuit_boots_(Sealed)
+  name: EVA hardsuit boots (Sealed)
+  description: It seems to be part of a EVA suit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/EVA_hardsuit_boots_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/EVA_hardsuit_boots_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Item
+    size: Normal
+

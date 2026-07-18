@@ -1,0 +1,21 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_cyber_suit_(Sealed)
+  name: cyber suit (Sealed)
+  description: It seems to be part of a cybersuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/cyber_suit_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/cyber_suit_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: Item
+    size: Normal
+

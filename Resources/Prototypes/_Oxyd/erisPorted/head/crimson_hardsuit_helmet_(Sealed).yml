@@ -1,0 +1,26 @@
+- type: entity
+  parent: [ ClothingHeadHardsuitBase , ClothingHeadSuitWithLightBase]
+  id: erisport_crimson_hardsuit_helmet_(Sealed)
+  name: crimson hardsuit helmet (Sealed)
+  description: It seems to be part of a crimson hardsuit control module.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/crimson_hardsuit_helmet_(Sealed).rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/crimson_hardsuit_helmet_(Sealed).rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: PointLight
+    radius: 4
+    energy: 1
+    color: "#FFFFFF"
+  - type: IdentityBlocker
+    coverage: FULL
+  - type: IngestionBlocker
+  - type: Item
+    size: Normal
+
