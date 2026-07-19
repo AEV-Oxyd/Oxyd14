@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Client._Oxyd.UI;
 using Content.Client.CharacterInfo;
 using Content.Client.Gameplay;
 using Content.Client.Stylesheets;
@@ -33,6 +34,7 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
 
     [UISystemDependency] private readonly CharacterInfoSystem _characterInfo = default!;
     [UISystemDependency] private readonly SpriteSystem _sprite = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     public override void Initialize()
     {
@@ -53,6 +55,8 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
 
         _window.OnClose += DeactivateButton;
         _window.OnOpen += ActivateButton;
+
+        statPanel.addStatCatButton("IC", "Character Info", CharacterButtonPressed);
 
         CommandBinds.Builder
             .Bind(ContentKeyFunctions.OpenCharacterMenu,

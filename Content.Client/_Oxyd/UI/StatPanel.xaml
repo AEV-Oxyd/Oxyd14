@@ -1,11 +1,17 @@
 <ui1:StatPanel xmlns="https://spacestation14.io"
            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
            xmlns:ui1="clr-namespace:Content.Client._Oxyd.UI"
+           xmlns:graphics="clr-namespace:Robust.Client.Graphics;assembly=Robust.Client"
            VerticalExpand="False"
            Orientation="Vertical"
            VerticalAlignment="Top"
            SeparationOverride="5"
 >
-    <BoxContainer Orientation="Horizontal" MinWidth="25" Name="StatMenus"/>
-    <BoxContainer Name="StatContent"></BoxContainer>
+    <BoxContainer Orientation="Horizontal" MinWidth="500" Name="StatMenus" Access="Public"/>
+    <PanelContainer Name="SeparatedChatPanel" MinWidth="500" VerticalExpand="True" HorizontalExpand="True">
+        <PanelContainer.PanelOverride>
+            <graphics:StyleBoxFlat BackgroundColor="#35353B" />
+        </PanelContainer.PanelOverride>
+        <WrapContainer Name="StatContent" Access="Public"></WrapContainer>
+    </PanelContainer>
 </ui1:StatPanel>

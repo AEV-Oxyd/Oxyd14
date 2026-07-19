@@ -28,14 +28,13 @@
             </BoxContainer>
             <alerts:AlertsUI Name="Alerts" Access="Protected" />
         </LayoutContainer>
-        <PanelContainer Name="SeparatedChatPanel" MinWidth="300">
+        <PanelContainer Name="SeparatedChatPanel" MinWidth="500">
             <PanelContainer.PanelOverride>
                 <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
             </PanelContainer.PanelOverride>
 
             <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="10" Margin="10">
-                <menuBar:GameTopMenuBar Name="TopBar" HorizontalExpand="True" Access="Public" />
-                <ui:StatPanel Name="StatPanel" MinHeight="100"/>
+                <ui:StatPanel Name="StatPanel" MinHeight="300"/>
                 <chat:ChatBox StyleClasses="ChatOutput" VerticalExpand="True" HorizontalExpand="True" Name="Chat" Access="Protected" MinSize="0 0"/>
             </BoxContainer>
         </PanelContainer>

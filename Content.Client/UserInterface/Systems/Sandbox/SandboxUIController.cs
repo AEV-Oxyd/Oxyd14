@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Administration.Managers;
 using Content.Client.Gameplay;
 using Content.Client.Sandbox;
@@ -30,7 +31,9 @@ public sealed partial class SandboxUIController : UIController, IOnStateChanged<
     [Dependency] private IClientAdminManager _admin = default!;
     [Dependency] private IPlayerManager _player = default!;
 
+
     [UISystemDependency] private readonly SandboxSystem _sandbox = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private SandboxWindow? _window;
 
@@ -47,6 +50,12 @@ public sealed partial class SandboxUIController : UIController, IOnStateChanged<
         EnsureWindow();
 
         CheckSandboxVisibility();
+
+        if (_sandbox.SandboxAllowed)
+        {
+            statPanel.addStatCatButton("OOC", "Sandbox Menu", SandboxButtonPressed);
+        }
+
 
         _input.SetInputCommand(ContentKeyFunctions.OpenEntitySpawnWindow,
             InputCmdHandler.FromDelegate(_ =>
@@ -106,8 +115,11 @@ public sealed partial class SandboxUIController : UIController, IOnStateChanged<
         _window.OpenCentered();
         _window.Close();
 
-        _window.OnOpen += () => { SandboxButton!.Pressed = true; };
-        _window.OnClose += () => { SandboxButton!.Pressed = false; };
+        if (SandboxButton is not null)
+        {
+            _window.OnOpen += () => { SandboxButton!.Pressed = true; };
+            _window.OnClose += () => { SandboxButton!.Pressed = false; };
+        }
 
         _window.AiOverlayButton.OnPressed += args =>
         {

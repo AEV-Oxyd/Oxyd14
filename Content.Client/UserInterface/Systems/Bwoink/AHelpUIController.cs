@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Administration.Managers;
 using Content.Client.Administration.Systems;
 using Content.Client.Administration.UI.Bwoink;
@@ -40,6 +41,7 @@ public sealed partial class AHelpUIController: UIController, IOnSystemChanged<Bw
     [Dependency] private IUserInterfaceManager _uiManager = default!;
     [Dependency] private IInputManager _input = default!;
     [UISystemDependency] private readonly AudioSystem _audio = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private BwoinkSystem? _bwoinkSystem;
     private MenuButton? GameAHelpButton => UIManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()?.AHelpButton;
@@ -279,6 +281,7 @@ public sealed partial class AHelpUIController: UIController, IOnSystemChanged<Bw
                 UnreadAHelpRead();
             }
         }
+        statPanel.addStatCatButton("OOC", "Admin Help", AHelpButtonPressed);
     }
 
     public void OnStateExited(GameplayState state)

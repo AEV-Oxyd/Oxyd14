@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Actions;
 using Content.Client.Construction;
 using Content.Client.Gameplay;
@@ -50,6 +51,7 @@ public sealed partial class ActionUIController : UIController, IOnStateChanged<G
     [UISystemDependency] private readonly InteractionOutlineSystem? _interactionOutline = default;
     [UISystemDependency] private readonly TargetOutlineSystem? _targetOutline = default;
     [UISystemDependency] private readonly SpriteSystem _spriteSystem = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private ActionButtonContainer? _container;
     private readonly List<EntityUid?> _actions = new();
@@ -107,6 +109,8 @@ public sealed partial class ActionUIController : UIController, IOnStateChanged<G
             _actionsSystem.OnActionRemoved += OnActionRemoved;
             _actionsSystem.ActionsUpdated += OnActionsUpdated;
         }
+
+        statPanel.addStatCatButton("Actions", "Bind Actions", ActionButtonPressed);
 
         UpdateFilterLabel();
         QueueWindowUpdate();

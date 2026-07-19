@@ -55,10 +55,15 @@ namespace Content.Client.Construction.UI
 
         private bool CraftingAvailable
         {
-            get => _uiManager.GetActiveUIWidget<GameTopMenuBar>().CraftingButton.Visible;
+            get
+            {
+                if (_uiManager.GetActiveUIWidgetOrNull<GameTopMenuBar>() is GameTopMenuBar bar)
+                    return bar.CraftingButton.Visible;
+                return true;
+            }
             set
             {
-                _uiManager.GetActiveUIWidget<GameTopMenuBar>().CraftingButton.Visible = value;
+                _uiManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()?.CraftingButton.Visible = value;
                 if (!value)
                     _constructionView.Close();
             }
@@ -111,7 +116,7 @@ namespace Content.Client.Construction.UI
             _placementManager.PlacementChanged += OnPlacementChanged;
 
             _constructionView.OnClose +=
-                () => _uiManager.GetActiveUIWidget<GameTopMenuBar>().CraftingButton.Pressed = false;
+                () => _uiManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()?.CraftingButton.Pressed = false;
             _constructionView.ClearAllGhosts += (_, _) => _constructionSystem?.ClearAllGhosts();
             _constructionView.PopulateRecipes += OnViewPopulateRecipes;
             _constructionView.RecipeSelected +=
@@ -756,8 +761,8 @@ namespace Content.Client.Construction.UI
                 if (IsAtFront)
                 {
                     WindowOpen = false;
-                    _uiManager.GetActiveUIWidget<GameTopMenuBar>()
-                        .CraftingButton.SetClickPressed(false); // This does not call CraftingButtonToggled
+                    _uiManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()
+                        ?.CraftingButton.SetClickPressed(false); // This does not call CraftingButtonToggled
                 }
                 else
                     _constructionView.MoveToFront();
@@ -765,8 +770,8 @@ namespace Content.Client.Construction.UI
             else
             {
                 WindowOpen = true;
-                _uiManager.GetActiveUIWidget<GameTopMenuBar>()
-                    .CraftingButton.SetClickPressed(true); // This does not call CraftingButtonToggled
+                _uiManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()
+                    ?.CraftingButton.SetClickPressed(true); // This does not call CraftingButtonToggled
             }
         }
 

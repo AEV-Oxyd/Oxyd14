@@ -1,4 +1,5 @@
-﻿using Content.Client.Administration.Managers;
+﻿using Content.Client._Oxyd.UI;
+using Content.Client.Administration.Managers;
 using Content.Client.Administration.Systems;
 using Content.Client.Administration.UI;
 using Content.Client.Administration.UI.Tabs.ObjectsTab;
@@ -33,6 +34,7 @@ public sealed partial class AdminUIController : UIController,
     [Dependency] private IClientConsoleHost _conHost = default!;
     [Dependency] private IInputManager _input = default!;
     [Dependency] private VerbMenuUIController _verb = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private AdminMenuWindow? _window;
     private MenuButton? AdminButton => UIManager.GetActiveUIWidgetOrNull<MenuBar.Widgets.GameTopMenuBar>()?.AdminButton;
@@ -60,6 +62,8 @@ public sealed partial class AdminUIController : UIController,
     {
         EnsureWindow();
         AdminStatusUpdated();
+        if(_conGroups.CanAdminMenu())
+            statPanel.addStatCatButton("Admin", "Game Panel", AdminButtonPressed);
     }
 
     public void OnStateEntered(LobbyState state)
