@@ -1,3 +1,4 @@
+using Content.Server._Oxyd.Framework.JobsAndSpawning;
 using Content.Server.Access.Systems;
 using Content.Server.Humanoid;
 using Content.Server.Mind;
@@ -177,6 +178,8 @@ public sealed partial class StationSpawningSystem : SharedStationSpawningSystem
         {
             jobSpecial.AfterEquip(entity);
         }
+
+        RaiseLocalEvent(new JobAfterSpawnEvent(){ job = prototype, spawned = entity});
     }
 
     /// <summary>

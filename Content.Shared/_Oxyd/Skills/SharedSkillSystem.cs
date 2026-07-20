@@ -18,6 +18,7 @@ public abstract partial class SharedSkillSystem : EntitySystem
         base.Initialize();
         SubscribeLocalEvent<MobSkillComponent, ComponentInit>(OnInit);
         SubscribeLocalEvent<ToolComponent, OxydToolGetModifiersEvent>(OnToolUse);
+
     }
 
     private void OnToolUse(Entity<ToolComponent> ent, ref OxydToolGetModifiersEvent args)
