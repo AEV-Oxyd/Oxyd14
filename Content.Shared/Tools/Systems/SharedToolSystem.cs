@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Tools;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.DoAfter;
@@ -166,6 +167,9 @@ public abstract partial class SharedToolSystem : EntitySystem
             return false;
 
         var toolEvent = new ToolDoAfterEvent(fuel, doAfterEv, GetNetEntity(target));
+        var modsEvent = new OxydToolGetModifiersEvent() { delay = delay, target = target, user = user, qualities = toolQualitiesNeeded };
+        RaiseLocalEvent(tool, modsEvent);
+        delay = modsEvent.delay;
         var doAfterArgs = new DoAfterArgs(EntityManager, user, delay / toolComponent.SpeedModifier, toolEvent, tool, target: target, used: tool)
         {
             BreakOnDamage = true,

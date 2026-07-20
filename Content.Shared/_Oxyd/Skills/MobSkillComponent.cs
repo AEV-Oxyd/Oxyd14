@@ -11,4 +11,14 @@ public sealed partial class MobSkillComponent : Component
     /// </summary>
     [AutoNetworkedField, ViewVariables]
     public Dictionary<ProtoId<SkillPrototype>, int[]> skills = new();
+
+    public Dictionary<string, List<BuffData>> buffSources = new();
+
+    public class BuffData
+    {
+        public int amount = 0;
+        public TimeSpan expires = TimeSpan.MaxValue;
+        public ProtoId<SkillPrototype> skill;
+    }
+
 }

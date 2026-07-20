@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Skills;
 using Content.Shared.Access;
 using Content.Shared.Guidebook;
 using Content.Shared.Players.PlayTimeTracking;
@@ -149,6 +150,12 @@ public sealed partial class JobPrototype : IPrototype
     /// </summary>
     [DataField]
     public List<ProtoId<GuideEntryPrototype>>? Guides;
+
+    /// <summary>
+    /// Extra skill stats added to the player when choosing this job
+    /// </summary>
+    [DataField]
+    public Dictionary<ProtoId<SkillPrototype>, int> skillsBonuses = new();
 }
 
 /// <summary>
