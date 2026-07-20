@@ -1,3 +1,4 @@
+using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.UserInterface.Controls;
 using Content.Shared.Chat;
@@ -7,6 +8,7 @@ using Content.Shared.Speech;
 using Content.Shared.Whitelist;
 using JetBrains.Annotations;
 using Robust.Client.Player;
+using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input.Binding;
@@ -20,6 +22,7 @@ public sealed partial class EmotesUIController : UIController, IOnStateChanged<G
 {
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     [Dependency] private IPlayerManager _playerManager = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private MenuButton? EmotesButton => UIManager.GetActiveUIWidgetOrNull<MenuBar.Widgets.GameTopMenuBar>()?.EmotesButton;
     private SimpleRadialMenu? _menu;
@@ -41,6 +44,7 @@ public sealed partial class EmotesUIController : UIController, IOnStateChanged<G
             .Bind(ContentKeyFunctions.OpenEmotesMenu,
                 InputCmdHandler.FromDelegate(_ => ToggleEmotesMenu(false)))
             .Register<EmotesUIController>();
+        statPanel.addStatCatButton("IC", "Emote Menu", ActionButtonPressed);
     }
 
     public void OnStateExited(GameplayState state)

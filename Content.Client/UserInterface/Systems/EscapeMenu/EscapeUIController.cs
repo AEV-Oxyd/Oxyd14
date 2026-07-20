@@ -1,4 +1,5 @@
-﻿using Content.Client.FeedbackPopup;
+﻿using Content.Client._Oxyd.UI;
+using Content.Client.FeedbackPopup;
 using Content.Client.Gameplay;
 using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.Systems.Guidebook;
@@ -8,6 +9,7 @@ using JetBrains.Annotations;
 using Robust.Client.Console;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
+using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Configuration;
 using Robust.Shared.Input;
 using Robust.Shared.Input.Binding;
@@ -53,8 +55,8 @@ public sealed partial class EscapeUIController : UIController, IOnStateEntered<G
         EscapeButton.OnPressed += EscapeButtonOnOnPressed;
     }
 
-    private void ActivateButton() => EscapeButton!.SetClickPressed(true);
-    private void DeactivateButton() => EscapeButton!.SetClickPressed(false);
+    private void ActivateButton() => EscapeButton?.SetClickPressed(true);
+    private void DeactivateButton() => EscapeButton?.SetClickPressed(false);
 
     public void OnStateEntered(GameplayState state)
     {
@@ -152,12 +154,12 @@ public sealed partial class EscapeUIController : UIController, IOnStateEntered<G
         if (_escapeWindow.IsOpen)
         {
             CloseEscapeWindow();
-            EscapeButton!.Pressed = false;
+            EscapeButton?.Pressed = false;
         }
         else
         {
             _escapeWindow.OpenCentered();
-            EscapeButton!.Pressed = true;
+            EscapeButton?.Pressed = true;
         }
     }
 }

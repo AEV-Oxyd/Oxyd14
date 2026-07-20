@@ -9,5 +9,9 @@ public enum ScreenType
     /// <summary>
     ///     The classic SS13 user interface.
     /// </summary>
-    Separated
+    Separated,
+    /// <summary>
+    ///  Eris13 revamped style
+    /// </summary>
+    OxydStyle
 }

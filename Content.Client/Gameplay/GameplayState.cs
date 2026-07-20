@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Changelog;
 using Content.Client.Hands;
 using Content.Client.UserInterface.Controls;
@@ -126,6 +127,9 @@ namespace Content.Client.Gameplay
                     break;
                 case ScreenType.Separated:
                     _uiManager.LoadScreen<SeparatedChatGameScreen>();
+                    break;
+                case ScreenType.OxydStyle:
+                    _uiManager.LoadScreen<ErisUIGameScreen>();
                     break;
             }
 

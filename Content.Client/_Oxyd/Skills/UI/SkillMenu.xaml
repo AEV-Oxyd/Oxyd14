@@ -1,0 +1,5 @@
+<controls:SkillMenu
+    xmlns="https://spacestation14.io"
+    xmlns:controls="clr-namespace:Content.Client._Oxyd.Skills.UI">
+    
+</controls:SkillMenu>

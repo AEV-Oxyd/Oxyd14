@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.Guidebook;
 using Content.Client.Guidebook.Controls;
@@ -25,6 +26,7 @@ public sealed partial class GuidebookUIController : UIController, IOnStateEntere
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     [Dependency] private IConfigurationManager _configuration = default!;
     [Dependency] private JobRequirementsManager _jobRequirements = default!;
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
     private const int PlaytimeOpenGuidebook = 60;
 
@@ -39,6 +41,7 @@ public sealed partial class GuidebookUIController : UIController, IOnStateEntere
     public void OnStateEntered(GameplayState state)
     {
         HandleStateEntered(state);
+        statPanel.addStatCatButton("OOC", "Guidebook", GuidebookButtonOnPressed);
     }
 
     private void HandleStateEntered(State state)

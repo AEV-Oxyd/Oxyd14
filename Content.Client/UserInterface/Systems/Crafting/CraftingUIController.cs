@@ -1,7 +1,9 @@
+using Content.Client._Oxyd.UI;
 using Content.Client.Construction.UI;
 using Content.Client.Gameplay;
 using Content.Client.UserInterface.Controls;
 using JetBrains.Annotations;
+using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Utility;
@@ -11,6 +13,7 @@ namespace Content.Client.UserInterface.Systems.Crafting;
 [UsedImplicitly]
 public sealed class CraftingUIController : UIController, IOnStateChanged<GameplayState>
 {
+    [UISystemDependency] private StatusPanelSystem statPanel = default!;
     private ConstructionMenuPresenter? _presenter;
     private MenuButton? CraftingButton => UIManager.GetActiveUIWidgetOrNull<MenuBar.Widgets.GameTopMenuBar>()?.CraftingButton;
 
@@ -18,6 +21,7 @@ public sealed class CraftingUIController : UIController, IOnStateChanged<Gamepla
     {
         DebugTools.Assert(_presenter == null);
         _presenter = new ConstructionMenuPresenter();
+        statPanel.addStatCatButton("IC", "Craft item", ButtonToggled);
     }
 
     public void OnStateExited(GameplayState state)

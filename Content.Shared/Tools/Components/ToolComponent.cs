@@ -1,16 +1,19 @@
 using Content.Shared.Tools.Systems;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
 namespace Content.Shared.Tools.Components;
 
 [RegisterComponent, NetworkedComponent]
-[Access(typeof(SharedToolSystem))]
 public sealed partial class ToolComponent : Component
 {
     [DataField]
     public PrototypeFlags<ToolQualityPrototype> Qualities  = [];
+
+    [DataField] // Eris Port
+    public Dictionary<ProtoId<ToolQualityPrototype>, int> ToolLevels = new Dictionary<ProtoId<ToolQualityPrototype>, int>();
 
     /// <summary>
     ///     For tool interactions that have a delay before action this will modify the rate, time to wait is divided by this value
