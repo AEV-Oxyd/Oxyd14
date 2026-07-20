@@ -1,0 +1,34 @@
+- type: Skill
+  id: Rob
+  name: Robustness
+  description: Your knowledge & training in Close Quarters Combat
+
+- type: Skill
+  id: Vig
+  name: Vigilance
+  description: Defines your gun handling and situational awareness
+
+- type: Skill
+  id: Tgh
+  name: Toughness
+  description: Mental fortitude and your ability to stomach pain
+
+- type: Skill
+  id: Cog
+  name: Cognition
+  description: Observing, Learning, Postulating. There is a inherent order in this universe
+
+- type: Skill
+  id: Mec
+  name: Mechanical
+  description: Cogs & Gears, Shafts & Motors, Materials & Pressure.
+
+- type: Skill
+  id: Bio
+  name: Biology
+  description: Knowledge about the forces of life.
+
+
+
+
+

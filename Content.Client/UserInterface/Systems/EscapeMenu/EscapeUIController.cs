@@ -55,8 +55,8 @@ public sealed partial class EscapeUIController : UIController, IOnStateEntered<G
         EscapeButton.OnPressed += EscapeButtonOnOnPressed;
     }
 
-    private void ActivateButton() => EscapeButton!.SetClickPressed(true);
-    private void DeactivateButton() => EscapeButton!.SetClickPressed(false);
+    private void ActivateButton() => EscapeButton?.SetClickPressed(true);
+    private void DeactivateButton() => EscapeButton?.SetClickPressed(false);
 
     public void OnStateEntered(GameplayState state)
     {
@@ -154,12 +154,12 @@ public sealed partial class EscapeUIController : UIController, IOnStateEntered<G
         if (_escapeWindow.IsOpen)
         {
             CloseEscapeWindow();
-            EscapeButton!.Pressed = false;
+            EscapeButton?.Pressed = false;
         }
         else
         {
             _escapeWindow.OpenCentered();
-            EscapeButton!.Pressed = true;
+            EscapeButton?.Pressed = true;
         }
     }
 }

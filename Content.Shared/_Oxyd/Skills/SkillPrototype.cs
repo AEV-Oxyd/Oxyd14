@@ -3,7 +3,7 @@ using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Skills;
 
-[Prototype("skill")]
+[Prototype("Skill")]
 public sealed partial class SkillPrototype : IPrototype
 {
     /// <inheritdoc/>
@@ -12,9 +12,6 @@ public sealed partial class SkillPrototype : IPrototype
 
     [DataField]
     public string name = "generic skill";
-
-    [DataField]
-    public SpriteSpecifier icon = default!;
 
     [DataField]
     public string description = "a generic skill , it has no description because someone forgot to SET ONE!!!";
