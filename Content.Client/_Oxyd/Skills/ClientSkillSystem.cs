@@ -40,7 +40,9 @@ public sealed class ClientSkillSystem : SharedSkillSystem
             }
 
             var staty = new PanelContainer(){HorizontalExpand = true, VerticalExpand = true, MinWidth = 100};
+            staty.ToolTip = instance.description;
             var hb = new HBox(){MinWidth = 150};
+            hb.ToolTip = instance.description;
             staty.PanelOverride = new StyleBoxFlat(backgroundColor: new Color(36, 37, 53));
             staty.HorizontalExpand = true;
             hb.AddChild(new Label() { Text = instance.name, MinWidth = 125 });
@@ -53,9 +55,9 @@ public sealed class ClientSkillSystem : SharedSkillSystem
                     statString += $"+{values[1]}";
             }
             hb.AddChild(new Label() { Text = statString, MinWidth = 25 });
-            foreach (var lab in staty.Children)
+            foreach (var child in hb.Children)
             {
-                lab.ToolTip = instance.description;
+                child.ToolTip = instance.description;
             }
             staty.AddChild(hb);
             boxie.AddChild(staty);

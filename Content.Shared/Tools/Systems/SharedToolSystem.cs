@@ -11,6 +11,7 @@ using Content.Shared.Tools.Components;
 using JetBrains.Annotations;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Map;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
@@ -69,6 +70,7 @@ public abstract partial class SharedToolSystem : EntitySystem
 
         // Create a list to store tool quality names
         var toolQualities = new List<string>();
+        var toolStats = new List<string>();
 
         // Loop through tool qualities and add localized names to the list
         foreach (var toolQuality in ent.Comp.Qualities)
@@ -79,11 +81,20 @@ public abstract partial class SharedToolSystem : EntitySystem
             }
         }
 
+        foreach (var (key,stat) in ent.Comp.ToolLevels)
+        {
+            if (!ProtoMan.TryIndex<ToolQualityPrototype>(key, out var protoToolQuality))
+                continue;
+            toolStats.Add($"{Loc.GetString(protoToolQuality.Name)} : {stat}");
+        }
+
         // Combine the qualities into a single string and localize the final message
         var qualitiesString = string.Join(", ", toolQualities);
+        var statsString = string.Join("\n", toolStats);
 
         // Add the localized message to the FormattedMessage object
         message.AddMarkupPermissive(Loc.GetString("tool-component-qualities", ("qualities", qualitiesString)));
+        message.AddMarkupPermissive(statsString);
         args.PushMessage(message);
     }
 
