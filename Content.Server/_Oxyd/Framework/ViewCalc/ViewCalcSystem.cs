@@ -21,6 +21,7 @@ public sealed class ViewCalcSystem : EntitySystem
     /// <summary>
     /// TODO IF TOO HARD ON PERFORMANCE
     /// List of every ent in square AABB -> sort by angle(calculated from fixture) -> group by angle -> sort by distance -> raycast in order
+    /// Alternatively make a version for grid-based view, optimize heavily based off tiles instead
     /// Couldn't be arsed to optimize this the first time im writing it SPCR 2026
     /// </summary>
     /// <param name="point"></param>
@@ -28,8 +29,8 @@ public sealed class ViewCalcSystem : EntitySystem
     /// <returns></returns>
     public HashSet<EntityUid> GetEntsInView(MapCoordinates point, float range)
     {
-        HashSet<EntityUid> result = new();
-        entlook.GetEntitiesInRange<ViewRelevantComponent>(point, range, result);
+        HashSet<Entity<ViewRelevantComponent>> result = new();
+        entlook.GetEntitiesInRange<ViewRelevantComponent>(point, range, result, LookupFlags.Approximate);
         var filter = new QueryFilter()
         {
             Flags = QueryFlags.Static,
