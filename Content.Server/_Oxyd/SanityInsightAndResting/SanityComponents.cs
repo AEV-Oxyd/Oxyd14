@@ -28,6 +28,9 @@ public sealed partial class SanityComponent : Component
 
     [ViewVariables]
     public float Insight = 0f;
+
+    [ViewVariables]
+    public int RestAccumulated = 0;
 }
 
 [RegisterComponent]

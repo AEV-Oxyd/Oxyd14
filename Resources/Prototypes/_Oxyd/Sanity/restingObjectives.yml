@@ -1,0 +1,11 @@
+- type: weightedRandomEntity
+  id: RestObjectives
+  weights:
+
+- type: entity
+  abstract: true
+  parent: BaseObjective
+  id: BaseRestObjective
+  components:
+  - type: Objective
+  - type: ObjectiveEventOnComplete

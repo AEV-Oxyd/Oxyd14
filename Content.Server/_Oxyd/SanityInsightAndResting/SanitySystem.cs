@@ -1,5 +1,10 @@
+using Content.Server._Oxyd.Framework.Objectives;
 using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Server.Database.Migrations.Postgres;
+using Content.Server.Mind;
+using Content.Server.Mind.Toolshed;
+using Content.Server.Objectives;
+using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared.Mobs.Events;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
@@ -17,13 +22,31 @@ public enum SanityDamageSource : byte
 /// </summary>
 public sealed class SanitySystem : EntitySystem
 {
+    [Dependency] private ObjectivesSystem objectivesys = default!;
+    [Dependency] private MindSystem mindsys = default!;
     public EntityQuery<SanityInfluencerComponent> influenceQuery;
     /// <inheritdoc/>
     public override void Initialize()
     {
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
+        SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
+        SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
         influenceQuery = GetEntityQuery<SanityInfluencerComponent>();
+    }
+
+    private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void ObjectiveGiveInsight(Entity<ObjectiveGiveInsightComponent> ent, ref ObjectiveCompletedEvent args)
+    {
+        if (args.mind.Comp.OwnedEntity is EntityUid val)
+        {
+            if (TryComp<SanityComponent>(val, out var sanity))
+                GiveInsight((val, sanity), ent.Comp.amount);
+        }
     }
 
     private void OnInit(Entity<SanityComponent> ent, ref ComponentInit args)
@@ -79,13 +102,24 @@ public sealed class SanitySystem : EntitySystem
         }
         ent.Comp.Sanity = result;
         if(amount < 0)
-            GiveInsight(ent, -amount * mods[(int)SanIndex.damageToInsight]));
+            GiveInsight(ent, -amount * mods[(int)SanIndex.damageToInsight]);
         return amount;
     }
 
     public float GiveInsight(Entity<SanityComponent> ent, float amount)
     {
+        ent.Comp.Insight += amount;
+        if (ent.Comp.Insight > 100f)
+        {
+            ent.Comp.Insight = 0f;
+            ent.Comp.RestAccumulated++;
+            if (!mindsys.TryGetMind(ent.Owner, out var mindent, out var mindcomp))
+                return amount;
+            objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
 
+
+
+        }
     }
 }
 
