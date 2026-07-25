@@ -106,19 +106,16 @@ public sealed class SanitySystem : EntitySystem
         return amount;
     }
 
-    public float GiveInsight(Entity<SanityComponent> ent, float amount)
+    public void GiveInsight(Entity<SanityComponent> ent, float amount)
     {
         ent.Comp.Insight += amount;
-        if (ent.Comp.Insight > 100f)
+        while (ent.Comp.Insight > 100f)
         {
             ent.Comp.Insight = 0f;
             ent.Comp.RestAccumulated++;
             if (!mindsys.TryGetMind(ent.Owner, out var mindent, out var mindcomp))
-                return amount;
+                continue;
             objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
-
-
-
         }
     }
 }
