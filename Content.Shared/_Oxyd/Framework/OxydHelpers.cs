@@ -9,6 +9,7 @@ using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Whitelist;
 using Robust.Shared;
 using Robust.Shared.Configuration;
+using Robust.Shared.Containers;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
@@ -46,6 +47,7 @@ public class SharedOxydHelpers : EntitySystem
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private  IConfigurationManager _config = default!;
     [Dependency] private  EntityWhitelistSystem _whitelistSystem = default!;
+    [Dependency] private SharedContainerSystem containers = default!;
     public HashSet<EntityUid> queued = new HashSet<EntityUid>();
 
     public override void Initialize()
@@ -67,6 +69,25 @@ public class SharedOxydHelpers : EntitySystem
         }
         else
             EntityManager.QueueDeleteEntity(uid);
+    }
+
+    public HashSet<Entity<T>> GetChildrenWithComp<T>(EntityUid uid) where T : Component
+    {
+        var list = new HashSet<Entity<T>>();
+        var qery = GetEntityQuery<T>();
+        var containers = this.containers.GetContainingContainers(uid);
+        foreach (var storer in containers)
+        {
+            foreach (var entity in storer.ContainedEntities)
+            {
+                if (TerminatingOrDeleted(entity))
+                    continue;
+                if (qery.TryComp(entity, out var comp))
+                    list.Add((entity, comp));
+            }
+        }
+
+        return list;
     }
 
     public bool GetParentWithComp<T>(EntityUid uid,[NotNullWhen(true)] out Entity<T>? ent) where T : Component

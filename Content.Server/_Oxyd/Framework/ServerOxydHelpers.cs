@@ -10,7 +10,7 @@ using Robust.Shared.Player;
 
 namespace Content.Server._Oxyd.Framework;
 
-public sealed partial  class ServerOxydHelpers : EntitySystem
+public sealed partial  class ServerOxydHelpers : SharedOxydHelpers
 {
     [Dependency] private  IPlayerManager _playerManager = default!;
     [Dependency] private  TransformSystem _transform = default!;

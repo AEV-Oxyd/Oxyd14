@@ -1,3 +1,4 @@
+using Content.Server._Oxyd.Framework;
 using Content.Server._Oxyd.Framework.Objectives;
 using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Server.Database.Migrations.Postgres;
@@ -6,6 +7,7 @@ using Content.Server.Mind.Toolshed;
 using Content.Server.Objectives;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared.Mobs.Events;
+using Robust.Server.GameObjects;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
@@ -24,6 +26,8 @@ public sealed class SanitySystem : EntitySystem
 {
     [Dependency] private ObjectivesSystem objectivesys = default!;
     [Dependency] private MindSystem mindsys = default!;
+    [Dependency] private ServerOxydHelpers helpers = default!;
+    [Dependency] private UserInterfaceSystem uimanager = default!;
     public EntityQuery<SanityInfluencerComponent> influenceQuery;
     /// <inheritdoc/>
     public override void Initialize()
@@ -37,7 +41,12 @@ public sealed class SanitySystem : EntitySystem
 
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
     {
-        throw new NotImplementedException();
+        if (args.mind.Comp.OwnedEntity is EntityUid exist)
+        {
+            var oddities = helpers.GetChildrenWithComp<OddityComponent>(exist);
+            uimanager.OpenUi();
+
+        }
     }
 
     private void ObjectiveGiveInsight(Entity<ObjectiveGiveInsightComponent> ent, ref ObjectiveCompletedEvent args)
