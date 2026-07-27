@@ -1,3 +1,5 @@
+using Robust.Shared.GameStates;
+
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
 public enum SanIndex : int
@@ -7,29 +9,34 @@ public enum SanIndex : int
     damageCap = 2, // limit to how low this type of damage can bring sanity to
 
 }
+
+[Flags]
+public enum SanityDamageSource : byte
+{
+    Environmental = 0,
+    Witness = 1 << 0,
+    Actor = 1 << 1
+}
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(false, true)]
 public sealed partial class SanityComponent : Component
 {
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public float Sanity = 100f;
-    [DataField]
+    [DataField, AutoNetworkedField]
     public float MaxSanity = 100f;
-    [DataField]
+    [DataField, AutoNetworkedField]
     public float MinSanity = 0f;
 
     [DataField]
     public Dictionary<SanityDamageSource, float[]> modifiers = new();
 
-    [ViewVariables]
-    public float Rest = 0f;
-
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public float Insight = 0f;
 
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public int RestAccumulated = 0;
 }
 

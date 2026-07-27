@@ -11,13 +11,6 @@ using Robust.Server.GameObjects;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
-[Flags]
-public enum SanityDamageSource : byte
-{
-    Environmental = 0,
-    Witness = 1 << 0,
-    Actor = 1 << 1
-}
 
 /// <summary>
 /// This handles...
@@ -44,7 +37,6 @@ public sealed class SanitySystem : EntitySystem
         if (args.mind.Comp.OwnedEntity is EntityUid exist)
         {
             var oddities = helpers.GetChildrenWithComp<OddityComponent>(exist);
-            uimanager.OpenUi();
 
         }
     }

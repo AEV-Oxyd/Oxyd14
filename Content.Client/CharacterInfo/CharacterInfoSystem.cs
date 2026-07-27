@@ -37,11 +37,11 @@ public sealed partial class CharacterInfoSystem : EntitySystem
         OnCharacterUpdate?.Invoke(data);
     }
 
-    public List<Control> GetCharacterInfoControls(EntityUid uid)
+    public GetCharacterInfoControlsEvent GetCharacterInfoControls(EntityUid uid)
     {
         var ev = new GetCharacterInfoControlsEvent(uid);
         RaiseLocalEvent(uid, ref ev, true);
-        return ev.Controls;
+        return ev;
     }
 
     public readonly record struct CharacterData(
@@ -59,6 +59,8 @@ public sealed partial class CharacterInfoSystem : EntitySystem
     public readonly record struct GetCharacterInfoControlsEvent(EntityUid Entity)
     {
         public readonly List<Control> Controls = new();
+
+        public readonly Dictionary<string, Control> PanelControls = new();
 
         public readonly EntityUid Entity = Entity;
     }

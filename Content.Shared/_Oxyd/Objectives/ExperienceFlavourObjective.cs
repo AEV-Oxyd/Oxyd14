@@ -18,7 +18,7 @@ public sealed partial class ExperienceFlavourObjectiveComponent : Component
     [ViewVariables]
     public int experienced = 0;
 }
-
+[RegisterComponent]
 public sealed partial class ExperienceFlavourObjectiveTrackerComponent : Component
 {
     public List<Entity<ExperienceFlavourObjectiveComponent>> origin = new();

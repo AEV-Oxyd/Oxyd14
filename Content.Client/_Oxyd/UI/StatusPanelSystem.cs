@@ -1,11 +1,14 @@
 using System.Linq;
 using Content.Client.Gameplay;
 using Content.Client.Guidebook.Richtext;
+using Content.Shared.CCVar;
 using Robust.Client.Input;
 using Robust.Client.State;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
 using Robust.Client.UserInterface.Controls;
+using Robust.Shared;
+using Robust.Shared.Configuration;
 
 namespace Content.Client._Oxyd.UI;
 
@@ -24,13 +27,16 @@ public sealed class StatusPanelSystem : EntitySystem
 {
     [Dependency] private IUserInterfaceManager _uiManager = default!;
     [Dependency] private IStateManager _stateManager = default!;
-    private StatPanel panel = default!;
+    [Dependency] private IConfigurationManager configurationManager = default!;
+    private StatPanel? panel => _uiManager.GetActiveUIWidgetOrNull<StatPanel>();
     public Dictionary<string, BoxContainer> panelContent = new();
     public RadioOptions<string> buttons = new RadioOptions<string>(RadioOptionsLayout.Horizontal);
 
 
     public void resetStatusContent()
     {
+        if (panel is null)
+            return;
         panel.StatContent.RemoveAllChildren();
         panel.StatMenus.RemoveAllChildren();
         panel.StatMenus.AddChild(buttons);
@@ -38,6 +44,8 @@ public sealed class StatusPanelSystem : EntitySystem
 
     public void setContent(string key)
     {
+        if (panel is null)
+            return;
         panel.StatContent.RemoveAllChildren();
         panel.StatContent.AddChild(panelContent[key]);
     }
@@ -58,6 +66,7 @@ public sealed class StatusPanelSystem : EntitySystem
         {
             tryAdd(ev.name, ev.content);
         });
+        Subs.CVar(configurationManager, CCVars.UILayout, _ => resetStatusContent());
         buttons.FirstButtonStyle = "OpenBoth";
         buttons.LastButtonStyle = "OpenBoth";
         buttons.ButtonStyle = "OpenBoth";
@@ -152,7 +161,6 @@ public sealed class StatusPanelSystem : EntitySystem
     }
     public void OnStateEntered(GameplayState state)
     {
-        panel = _uiManager.GetActiveUIWidget<StatPanel>();
         var ev = new CollectStaticPanels(panelContent);
         RaiseLocalEvent(ev);
         resetStatusContent();
@@ -160,6 +168,6 @@ public sealed class StatusPanelSystem : EntitySystem
 
     public void OnStateExited(GameplayState state)
     {
-        panel = null!;
+
     }
 }
