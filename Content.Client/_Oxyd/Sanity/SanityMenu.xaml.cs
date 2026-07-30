@@ -10,6 +10,12 @@ public sealed partial class SanityMenu : Control
 {
     private SanityComponent targetComponent;
 
+    public SanityMenu()
+    {
+        targetComponent = new SanityComponent();
+        RobustXamlLoader.Load(this);
+    }
+
     public SanityMenu(SanityComponent cop)
     {
         targetComponent = cop;

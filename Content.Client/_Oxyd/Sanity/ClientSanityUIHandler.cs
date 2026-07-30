@@ -15,7 +15,7 @@ public sealed class ClientSanityUIHandler : EntitySystem
         SubscribeLocalEvent<CharacterInfoSystem.GetCharacterInfoControlsEvent>(OnGetCharacterInfoControls);
     }
 
-    private void OnGetCharacterInfoControls(CharacterInfoSystem.GetCharacterInfoControlsEvent ev)
+    private void OnGetCharacterInfoControls(ref CharacterInfoSystem.GetCharacterInfoControlsEvent ev)
     {
         if (!TryComp<SanityComponent>(ev.Entity, out var sanityComponent))
             return;

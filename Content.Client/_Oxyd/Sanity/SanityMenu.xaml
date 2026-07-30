@@ -3,12 +3,39 @@
     xmlns:controls="clr-namespace:Content.Client._Oxyd.Sanity">
     <VBox>
         <HBox>
-            <TextureRect SetWidth="100" SetHeight="100" TexturePath=""/>
+            <TextureRect SetWidth="100" SetHeight="100" TexturePath="/Textures/Oxyd/erisported/UI/sanity.png"/>
             <VBox>
                 <Label Text="Sanity"/>
-                <Label Text="Represents your character's mental wellbeing and happiness. Low sanity makes you susceptible to psionic phenomenons and breakdowns.
-                Raised by eating good food, drinking spirits, drugging yourself and smoking."/>
-                <ProgressBar/>
+                <Label Text="Represents your character's wellbeing.Low sanity makes you susceptible to breakdowns."/>
+                <Label Text="Raised by eating good food, drinking spirits, drugging yourself and smoking."/>
+                <ProgressBar Name="SanityBar" SetWidth="300" HorizontalAlignment="Left"/>
+            </VBox>
+        </HBox>
+        <HBox>
+            <TextureRect SetWidth="100" SetHeight="100" TexturePath="/Textures/Oxyd/erisported/UI/insight.png"/>
+            <VBox>
+                <Label Text="Insight"/>
+                <Label Text="Represents your learnings and observations from experience."/>
+                <Label Text="Raised by taking sanity damage"/>
+                <ProgressBar Name="InsightBar" SetWidth="300" HorizontalAlignment="Left" MinValue="0" MaxValue="100" Value="50"/>
+            </VBox>
+        </HBox>
+        <HBox>
+            <TextureRect SetWidth="100" SetHeight="100" TexturePath="/Textures/Oxyd/erisported/UI/style.png"/>
+            <VBox>
+                <Label Text="Style"/>
+                <Label Text="Represents how stylish your character is. Good clothes do more than make you look good"/>
+                <Label Text="Increases the amount of insight received. Raises your sanity thresholds"/>
+                <ProgressBar Name="StyleBar" SetWidth="300" HorizontalAlignment="Left"/>
+            </VBox>
+        </HBox>
+        <HBox>
+            <TextureRect SetWidth="100" SetHeight="100" TexturePath="/Textures/Oxyd/erisported/UI/desire.png"/>
+            <VBox>
+                <Label Text="Desire"/>
+                <Label Text="Once you gain insight you will need to fulfill a desire to cash in on it."/>
+                <Label Text="You currently have no desires"/>
+                <ProgressBar Name="DesireBar" SetWidth="300" HorizontalAlignment="Left"/>
             </VBox>
         </HBox>
     </VBox>
