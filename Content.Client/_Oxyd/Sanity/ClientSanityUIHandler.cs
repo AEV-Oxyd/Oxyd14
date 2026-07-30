@@ -19,7 +19,7 @@ public sealed class ClientSanityUIHandler : EntitySystem
     {
         if (!TryComp<SanityComponent>(ev.Entity, out var sanityComponent))
             return;
-        var cont = new BoxContainer();
+        var cont = new SanityMenu(sanityComponent);
         ev.PanelControls["Sanity"] = cont;
     }
 }

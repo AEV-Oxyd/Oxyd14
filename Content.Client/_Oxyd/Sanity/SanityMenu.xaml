@@ -1,0 +1,16 @@
+<controls:SanityMenu
+    xmlns="https://spacestation14.io"
+    xmlns:controls="clr-namespace:Content.Client._Oxyd.Sanity">
+    <VBox>
+        <HBox>
+            <TextureRect SetWidth="100" SetHeight="100" TexturePath=""/>
+            <VBox>
+                <Label Text="Sanity"/>
+                <Label Text="Represents your character's mental wellbeing and happiness. Low sanity makes you susceptible to psionic phenomenons and breakdowns.
+                Raised by eating good food, drinking spirits, drugging yourself and smoking."/>
+                <ProgressBar/>
+            </VBox>
+        </HBox>
+    </VBox>
+
+</controls:SanityMenu>
