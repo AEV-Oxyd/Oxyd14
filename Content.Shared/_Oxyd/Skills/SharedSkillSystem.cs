@@ -117,17 +117,12 @@ public abstract partial class SharedSkillSystem : EntitySystem
         var iter = EntityQueryEnumerator<MobSkillComponent>();
         foreach (var instance in iter)
         {
-            var targetId = new List<int>();
             var hadUpdate = false;
             foreach (var (_, buffs) in instance.Comp.buffSources)
             {
-                for(var i = 0 ; i < buffs.Count; i++)
-                    if(buffs[i].expires < timing.CurTime)
-                        targetId.Add(i);
-                hadUpdate = targetId.Count > 0;
-                foreach(var id in targetId)
-                    buffs.RemoveAt(id);
-                targetId.Clear();
+                var oldC = buffs.Count;
+                buffs.RemoveAll(buff => buff.expires < timing.CurTime);
+                hadUpdate = buffs.Count != oldC;
             }
             if(hadUpdate)
                 RecalculateBuffs(instance);

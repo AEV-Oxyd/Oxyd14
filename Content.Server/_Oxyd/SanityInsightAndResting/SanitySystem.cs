@@ -6,6 +6,7 @@ using Content.Server.Mind;
 using Content.Server.Mind.Toolshed;
 using Content.Server.Objectives;
 using Content.Shared._Oxyd.Framework.Objectives;
+using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mobs.Events;
 using Robust.Server.GameObjects;
 
@@ -21,15 +22,21 @@ public sealed class SanitySystem : EntitySystem
     [Dependency] private MindSystem mindsys = default!;
     [Dependency] private ServerOxydHelpers helpers = default!;
     [Dependency] private UserInterfaceSystem uimanager = default!;
-    public EntityQuery<SanityInfluencerComponent> influenceQuery;
+    public EntityQuery<InfluenceSanityOnViewComponent> influenceQuery;
     /// <inheritdoc/>
     public override void Initialize()
     {
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
+        SubscribeLocalEvent<InfluenceSanityOnMetabolizeComponent, SolutionChangedEvent>(OnMetabolize);
         SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
         SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
-        influenceQuery = GetEntityQuery<SanityInfluencerComponent>();
+        influenceQuery = GetEntityQuery<InfluenceSanityOnViewComponent>();
+    }
+
+    private void OnMetabolize(Entity<InfluenceSanityOnMetabolizeComponent> ent, ref SolutionChangedEvent args)
+    {
+        throw new NotImplementedException();
     }
 
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
@@ -52,7 +59,7 @@ public sealed class SanitySystem : EntitySystem
 
     private void OnInit(Entity<SanityComponent> ent, ref ComponentInit args)
     {
-        foreach (var f in Enum.GetValues<SanityDamageSource>())
+        foreach (var f in Enum.GetValues<SanitySource>())
         {
             if (ent.Comp.modifiers.ContainsKey(f))
                 continue;
@@ -64,8 +71,8 @@ public sealed class SanitySystem : EntitySystem
 
     private void onSanityTick(Entity<SanityComponent> ent, ref ViewTickEvent args)
     {
-        Dictionary<SanityDamageSource, float> affect = new(3);
-        foreach (var f in Enum.GetValues<SanityDamageSource>())
+        Dictionary<SanitySource, float> affect = new(3);
+        foreach (var f in Enum.GetValues<SanitySource>())
             affect[f] = 0;
         foreach (var entity in args.seen)
         {
@@ -74,13 +81,13 @@ public sealed class SanitySystem : EntitySystem
             affect[comp.sanityType] += comp.sanityDelta;
         }
 
-        foreach (var f in Enum.GetValues<SanityDamageSource>())
+        foreach (var f in Enum.GetValues<SanitySource>())
         {
             ApplySanityDamage(ent, f, affect[f]);
         }
     }
 
-    public float ApplySanityDamage(Entity<SanityComponent> ent, SanityDamageSource type, float amount)
+    public float ApplySanityDamage(Entity<SanityComponent> ent, SanitySource type, float amount)
     {
         var mods = ent.Comp.modifiers[type];
         amount *= mods[(int)SanIndex.deltaMult];

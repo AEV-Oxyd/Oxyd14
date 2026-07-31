@@ -20,6 +20,11 @@ public sealed partial class SanityMenu : Control
     {
         targetComponent = cop;
         RobustXamlLoader.Load(this);
+        SanityBar.MinValue = targetComponent.MinSanity;
+        SanityBar.MaxValue = targetComponent.MaxSanity;
+        SanityBar.Value = targetComponent.Sanity;
+        InsightBar.Value =  targetComponent.Insight;
     }
+
 }
 

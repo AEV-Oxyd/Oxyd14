@@ -11,11 +11,14 @@ public enum SanIndex : int
 }
 
 [Flags]
-public enum SanityDamageSource : byte
+public enum SanitySource : byte
 {
     Environmental = 0,
     Witness = 1 << 0,
-    Actor = 1 << 1
+    Actor = 1 << 1,
+    Chemical = 1 << 2,
+    Mental = 1 << 3,
+    Belief = 1 << 4
 }
 /// <summary>
 /// This is used for...
@@ -31,7 +34,7 @@ public sealed partial class SanityComponent : Component
     public float MinSanity = 0f;
 
     [DataField]
-    public Dictionary<SanityDamageSource, float[]> modifiers = new();
+    public Dictionary<SanitySource, float[]> modifiers = new();
 
     [ViewVariables, AutoNetworkedField]
     public float Insight = 0f;
@@ -40,12 +43,22 @@ public sealed partial class SanityComponent : Component
     public int RestAccumulated = 0;
 }
 
-[RegisterComponent]
-public sealed partial class SanityInfluencerComponent : Component
+public abstract partial class SanityInfluencerComponent : Component
 {
     [DataField]
     public float sanityDelta = 1f;
 
     [DataField]
-    public SanityDamageSource sanityType = SanityDamageSource.Environmental;
+    public SanitySource sanityType = SanitySource.Environmental;
 }
+
+[RegisterComponent]
+public sealed partial class InfluenceSanityOnViewComponent : SanityInfluencerComponent;
+
+[RegisterComponent]
+public sealed partial class InfluenceSanityOnTasteComponent : SanityInfluencerComponent;
+
+[RegisterComponent]
+public sealed partial class InfluenceSanityOnMetabolizeComponent : SanityInfluencerComponent;
+
+

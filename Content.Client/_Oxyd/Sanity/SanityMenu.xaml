@@ -17,7 +17,7 @@
                 <Label Text="Insight"/>
                 <Label Text="Represents your learnings and observations from experience."/>
                 <Label Text="Raised by taking sanity damage"/>
-                <ProgressBar Name="InsightBar" SetWidth="300" HorizontalAlignment="Left" MinValue="0" MaxValue="100" Value="50"/>
+                <ProgressBar Name="InsightBar" SetWidth="300" HorizontalAlignment="Left" MinValue="0" MaxValue="100"/>
             </VBox>
         </HBox>
         <HBox>
