@@ -1,0 +1,15 @@
+- type: entity
+  suffix: inaprovaline
+  parent: SyringeInaprovaline
+  id: SyringeInfluencing
+  components:
+  - type: Label
+    currentLabel: reagent-name-inaprovaline
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Inaprovaline
+        Quantity: 15
+  - type: InfluenceSanityOnView
+    sanityDelta: -0.05
+    sanityType: Environmental

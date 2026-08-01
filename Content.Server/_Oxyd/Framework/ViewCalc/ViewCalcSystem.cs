@@ -58,8 +58,10 @@ public sealed class ViewCalcSystem : EntitySystem
                 point.Position,
                 transform.GetWorldPosition(ent) - point.Position,
                 filter);
-            if (res.Results.First().Entity == ent.Owner || !res.Hit)
+            if (!res.Hit || res.Results.First().Entity == ent.Owner)
+            {
                 keepers.Add(ent);
+            }
         }
         return keepers;
     }
@@ -80,6 +82,7 @@ public sealed class ViewCalcSystem : EntitySystem
                 goto runUpdate;
             if (timing.CurTime - comp.lastTickTime > TimeSpan.FromSeconds(5))
                 goto runUpdate;
+            RaiseLocalEvent(new ViewTickEvent(){ seen = comp.lastSeen});
             continue;
             runUpdate:
             comp.lastTickTime = timing.CurTime;

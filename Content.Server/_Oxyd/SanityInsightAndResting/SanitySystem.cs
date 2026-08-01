@@ -28,9 +28,15 @@ public sealed class SanitySystem : EntitySystem
     {
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
+        SubscribeLocalEvent<InfluenceSanityOnViewComponent, ComponentInit>(onInfluencerInit);
         SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
         SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
         influenceQuery = GetEntityQuery<InfluenceSanityOnViewComponent>();
+    }
+
+    private void onInfluencerInit(Entity<InfluenceSanityOnViewComponent> ent, ref ComponentInit args)
+    {
+        EnsureComp<ViewRelevantComponent>(ent);
     }
 
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
@@ -58,8 +64,11 @@ public sealed class SanitySystem : EntitySystem
             if (ent.Comp.modifiers.ContainsKey(f))
                 continue;
             ent.Comp.modifiers[f] = new float[Enum.GetValues<SanIndex>().Length];
-
+            ent.Comp.modifiers[f][(int)SanIndex.damageToInsight] = 0.05f;
+            ent.Comp.modifiers[f][(int)SanIndex.deltaMult] = 1f;
         }
+
+        EnsureComp<ViewTickerComponent>(ent);
     }
 
 
@@ -79,6 +88,7 @@ public sealed class SanitySystem : EntitySystem
         {
             ApplySanityDelta(ent, f, affect[f]);
         }
+        DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.Sanity));
     }
 
     public float ApplySanityDelta(Entity<SanityComponent> ent, SanitySource type, float amount)
