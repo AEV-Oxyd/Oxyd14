@@ -66,5 +66,5 @@ public sealed partial class GiveSanityEffect : EntityEffectBase<GiveSanityEffect
     public float sanityDelta = 1f;
 
     [DataField]
-    public SanitySource sanityType = SanitySource.Environmental;
+    public SanitySource sanityType = SanitySource.Chemical;
 }

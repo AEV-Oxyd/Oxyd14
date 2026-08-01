@@ -283,6 +283,9 @@
   metabolisms:
     Bloodstream:
       effects:
+      - !type:GiveSanityEffect
+        sanityDelta: 2
+        sanityType: Chemical
       - !type:ModifyStatusEffect
         effectProto: StatusEffectSeeingRainbow
         type: Add

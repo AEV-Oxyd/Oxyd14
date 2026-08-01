@@ -8,6 +8,7 @@ using Content.Server.Objectives;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mobs.Events;
+using Content.Shared.Nutrition.EntitySystems;
 using Robust.Server.GameObjects;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
@@ -29,9 +30,18 @@ public sealed class SanitySystem : EntitySystem
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
         SubscribeLocalEvent<InfluenceSanityOnViewComponent, ComponentInit>(onInfluencerInit);
+        SubscribeLocalEvent<InfluenceSanityOnTasteComponent, FlavorProfileModificationEvent>(OnBite);
         SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
         SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
         influenceQuery = GetEntityQuery<InfluenceSanityOnViewComponent>();
+    }
+
+    private void OnBite(Entity<InfluenceSanityOnTasteComponent> ent, ref FlavorProfileModificationEvent args)
+    {
+        if (TryComp<SanityComponent>(args.User, out var hisComp))
+        {
+            ApplySanityDelta((args.User, hisComp), ent.Comp.sanityType, ent.Comp.sanityDelta);
+        }
     }
 
     private void onInfluencerInit(Entity<InfluenceSanityOnViewComponent> ent, ref ComponentInit args)
@@ -96,25 +106,30 @@ public sealed class SanitySystem : EntitySystem
         var mods = ent.Comp.modifiers[type];
         amount *= mods[(int)SanIndex.deltaMult];
         var result = ent.Comp.Sanity + amount;
-        if (ent.Comp.Sanity > mods[(int)SanIndex.damageCap] && result < mods[(int)SanIndex.damageCap])
+        if (amount < 0)
         {
-            amount = ent.Comp.Sanity - mods[(int)SanIndex.damageCap];
-            result = ent.Comp.Sanity + amount;
-        }
-        if (ent.Comp.Sanity > ent.Comp.MinSanity && result < ent.Comp.MinSanity)
-        {
-            amount = ent.Comp.Sanity - ent.Comp.MinSanity;
-            result = ent.Comp.Sanity + amount;
-        }
+            if (ent.Comp.Sanity >= mods[(int)SanIndex.damageCap] && result < mods[(int)SanIndex.damageCap])
+            {
+                amount = ent.Comp.Sanity - mods[(int)SanIndex.damageCap];
+                result = ent.Comp.Sanity + amount;
+            }
 
-        if (ent.Comp.Sanity < ent.Comp.MaxSanity && result > ent.Comp.MaxSanity)
+            if (ent.Comp.Sanity >= ent.Comp.MinSanity && result < ent.Comp.MinSanity)
+            {
+                amount = ent.Comp.Sanity - ent.Comp.MinSanity;
+                result = ent.Comp.Sanity + amount;
+            }
+            GiveInsight(ent, -amount * mods[(int)SanIndex.damageToInsight]);
+        }
+        else
         {
-            amount = ent.Comp.MaxSanity - ent.Comp.Sanity;
-            result = ent.Comp.Sanity + amount;
+            if (ent.Comp.Sanity <= ent.Comp.MaxSanity && result > ent.Comp.MaxSanity)
+            {
+                amount = ent.Comp.MaxSanity - ent.Comp.Sanity;
+                result = ent.Comp.Sanity + amount;
+            }
         }
         ent.Comp.Sanity = result;
-        if(amount < 0)
-            GiveInsight(ent, -amount * mods[(int)SanIndex.damageToInsight]);
         return amount;
     }
 

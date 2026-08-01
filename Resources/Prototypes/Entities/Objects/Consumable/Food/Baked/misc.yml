@@ -391,6 +391,9 @@
         Quantity: 10
       - ReagentId: Theobromine
         Quantity: 1
+  - type: InfluenceSanityOnTaste
+    sanityDelta: 10
+    sanityType: Chemical
 
 - type: entity
   name: waffles
