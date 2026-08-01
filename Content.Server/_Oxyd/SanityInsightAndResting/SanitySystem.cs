@@ -28,15 +28,9 @@ public sealed class SanitySystem : EntitySystem
     {
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<InfluenceSanityOnMetabolizeComponent, SolutionChangedEvent>(OnMetabolize);
         SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
         SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
         influenceQuery = GetEntityQuery<InfluenceSanityOnViewComponent>();
-    }
-
-    private void OnMetabolize(Entity<InfluenceSanityOnMetabolizeComponent> ent, ref SolutionChangedEvent args)
-    {
-        throw new NotImplementedException();
     }
 
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
@@ -83,11 +77,11 @@ public sealed class SanitySystem : EntitySystem
 
         foreach (var f in Enum.GetValues<SanitySource>())
         {
-            ApplySanityDamage(ent, f, affect[f]);
+            ApplySanityDelta(ent, f, affect[f]);
         }
     }
 
-    public float ApplySanityDamage(Entity<SanityComponent> ent, SanitySource type, float amount)
+    public float ApplySanityDelta(Entity<SanityComponent> ent, SanitySource type, float amount)
     {
         var mods = ent.Comp.modifiers[type];
         amount *= mods[(int)SanIndex.deltaMult];

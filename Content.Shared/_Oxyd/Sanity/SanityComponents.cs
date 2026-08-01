@@ -1,3 +1,4 @@
+using Content.Shared.EntityEffects;
 using Robust.Shared.GameStates;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
@@ -55,10 +56,15 @@ public abstract partial class SanityInfluencerComponent : Component
 [RegisterComponent]
 public sealed partial class InfluenceSanityOnViewComponent : SanityInfluencerComponent;
 
+// goes on the food
 [RegisterComponent]
 public sealed partial class InfluenceSanityOnTasteComponent : SanityInfluencerComponent;
 
-[RegisterComponent]
-public sealed partial class InfluenceSanityOnMetabolizeComponent : SanityInfluencerComponent;
+public sealed partial class GiveSanityEffect : EntityEffectBase<GiveSanityEffect>
+{
+    [DataField]
+    public float sanityDelta = 1f;
 
-
+    [DataField]
+    public SanitySource sanityType = SanitySource.Environmental;
+}
