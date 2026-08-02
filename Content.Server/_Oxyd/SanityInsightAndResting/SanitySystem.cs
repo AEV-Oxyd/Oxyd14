@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Server._Oxyd.Framework;
 using Content.Server._Oxyd.Framework.Objectives;
 using Content.Server._Oxyd.Framework.ViewCalc;
@@ -7,6 +8,7 @@ using Content.Server.Mind.Toolshed;
 using Content.Server.Objectives;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared.Chemistry.EntitySystems;
+using Content.Shared.Mind;
 using Content.Shared.Mobs.Events;
 using Content.Shared.Nutrition.EntitySystems;
 using Robust.Server.GameObjects;
@@ -51,6 +53,7 @@ public sealed class SanitySystem : EntitySystem
 
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
     {
+        Log.Fatal($"Triggered rest");
         if (args.mind.Comp.OwnedEntity is EntityUid exist)
         {
             var oddities = helpers.GetChildrenWithComp<OddityComponent>(exist);
@@ -98,7 +101,8 @@ public sealed class SanitySystem : EntitySystem
         {
             ApplySanityDelta(ent, f, affect[f]);
         }
-        DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.Sanity));
+
+
     }
 
     public float ApplySanityDelta(Entity<SanityComponent> ent, SanitySource type, float amount)
@@ -129,6 +133,8 @@ public sealed class SanitySystem : EntitySystem
                 result = ent.Comp.Sanity + amount;
             }
         }
+        if(ent.Comp.Sanity - result > 0.1f)
+            DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.Sanity));
         ent.Comp.Sanity = result;
         return amount;
     }
@@ -136,13 +142,40 @@ public sealed class SanitySystem : EntitySystem
     public void GiveInsight(Entity<SanityComponent> ent, float amount)
     {
         ent.Comp.Insight += amount;
+        DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.Insight));
         while (ent.Comp.Insight > 100f)
         {
             ent.Comp.Insight = 0f;
             ent.Comp.RestAccumulated++;
             if (!mindsys.TryGetMind(ent.Owner, out var mindent, out var mindcomp))
                 continue;
-            objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
+            var objective = objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
+            if (objective is EntityUid existing)
+            {
+                ent.Comp.desireProg[existing] = new Tuple<string, float>(MetaData(existing).EntityDescription, 0f);
+                DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.desireProg));
+            }
+        }
+    }
+
+    public void UpdateDesireData(Entity<SanityComponent> ent)
+    {
+        var mind = mindsys.GetMind(ent.Owner);
+        if (mind is EntityUid exist)
+        {
+            var mc = (exist, Comp<MindComponent>(ent.Owner));
+            foreach (var key in ent.Comp.desireProg.Keys.ToList())
+            {
+                if (TerminatingOrDeleted(key))
+                    ent.Comp.desireProg.Remove(key);
+            foreach (var (objId, data) in ent.Comp.desireProg)
+            {
+                var prog = objectivesys.GetProgress(objId, mc);
+                if (prog is null)
+                    continue;
+                ent.Comp.desireProg[objId].Item2 = prog;
+            }
+
         }
     }
 }

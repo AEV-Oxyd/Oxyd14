@@ -1,6 +1,16 @@
-- type: weightedRandomEntity
+- type: weightedRandom
   id: RestObjectives
   weights:
+    RestObjectivesFood: 1
+
+- type: weightedRandom
+  id: RestObjectivesFood
+  weights:
+    RestObjectiveExperienceTasteBread: 1
+
+- type: objectiveIssuer
+  id: MentalSelf
+  name: Desires
 
 - type: entity
   abstract: true
@@ -8,4 +18,20 @@
   id: BaseRestObjective
   components:
   - type: Objective
+    difficulty: 1
+    issuer: MentalSelf
   - type: ObjectiveEventOnComplete
+  - type: ObjectiveGiveRest
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteBread
+  name: You have a knack for Bread
+  description: Eat something that tastes like bread to gain rest experience.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - bread
+

@@ -3,6 +3,7 @@ using Content.Shared._Oxyd.Objectives;
 using Content.Shared.Body.Events;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
+using Content.Shared.Mind.Components;
 using Content.Shared.Nutrition;
 using Content.Shared.Nutrition.EntitySystems;
 using Content.Shared.Objectives.Components;
@@ -13,13 +14,13 @@ namespace Content.Server._Oxyd.Objectives;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class OxydObjectiveSystem : EntitySystem
+public sealed  partial class OxydObjectiveSystem : EntitySystem
 {
-    [Dependency] private FlavorProfileSystem flavours = default!;
 
     /// <inheritdoc/>
     public override void Initialize()
     {
+        base.Initialize();
         SubscribeLocalEvent<ExperienceFlavourObjectiveComponent, ObjectiveAfterAssignEvent>(AfterAssignExperience);
         SubscribeLocalEvent<ExperienceFlavourObjectiveComponent, ObjectiveGetProgressEvent>(OnRequestProgressFlavor);
         SubscribeLocalEvent<ExperienceFlavourObjectiveTrackerComponent, FlavorProfileModificationEvent>(OnFlavorIngest);
@@ -46,9 +47,9 @@ public sealed class OxydObjectiveSystem : EntitySystem
         }
     }
 
-    void OnRequestProgressFlavor(EntityUid uid, ExperienceFlavourObjectiveComponent component, ObjectiveGetProgressEvent args)
+    void OnRequestProgressFlavor(Entity<ExperienceFlavourObjectiveComponent> ent, ref ObjectiveGetProgressEvent args)
     {
-        args.Progress = (component.experienced+0.1f) / component.timesToExperience;
+        args.Progress = (ent.Comp.experienced+0.1f) / ent.Comp.timesToExperience;
     }
 
 

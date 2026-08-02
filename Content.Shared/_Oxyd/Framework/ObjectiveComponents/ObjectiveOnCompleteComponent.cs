@@ -13,11 +13,7 @@ public sealed partial class ObjectiveEventOnCompleteComponent : Component
 }
 
 [RegisterComponent]
-public sealed partial class ObjectiveGiveRestComponent : Component
-{
-    [DataField]
-    public float amount = 0;
-}
+public sealed partial class ObjectiveGiveRestComponent : Component;
 
 [RegisterComponent]
 public sealed partial class ObjectiveGiveInsightComponent : Component

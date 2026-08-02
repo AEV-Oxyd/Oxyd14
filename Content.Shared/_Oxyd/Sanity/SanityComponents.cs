@@ -27,7 +27,7 @@ public enum SanitySource : byte
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(false, true)]
 public sealed partial class SanityComponent : Component
 {
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public float Sanity = 100f;
     [DataField, AutoNetworkedField]
     public float MaxSanity = 100f;
@@ -37,12 +37,19 @@ public sealed partial class SanityComponent : Component
     [DataField]
     public Dictionary<SanitySource, float[]> modifiers = new();
 
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public float Insight = 0f;
 
-    [ViewVariables, AutoNetworkedField]
+    [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public int RestAccumulated = 0;
+
+    [AutoNetworkedField, ViewVariables]
+    public Dictionary<EntityUid,float> desireProg = new();
+
+    [AutoNetworkedField, ViewVariables]
+    public Dictionary<EntityUid, string> desireDesc = new();
 }
+
 
 public abstract partial class SanityInfluencerComponent : Component
 {

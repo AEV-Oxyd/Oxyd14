@@ -34,8 +34,8 @@
             <VBox>
                 <Label Text="Desire"/>
                 <Label Text="Once you gain insight you will need to fulfill a desire to cash in on it."/>
-                <Label Text="You currently have no desires"/>
-                <ProgressBar Name="DesireBar" SetWidth="300" HorizontalAlignment="Left"/>
+                <Label Name="DesireText"/>
+                <ProgressBar Name="DesireBar" SetWidth="300" HorizontalAlignment="Left" Visible="False"/>
             </VBox>
         </HBox>
     </VBox>
