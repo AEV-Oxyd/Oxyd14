@@ -1,17 +1,22 @@
 using System.Linq;
 using Content.Server._Oxyd.Framework;
 using Content.Server._Oxyd.Framework.Objectives;
+using Content.Server._Oxyd.Framework.RadialMenu;
 using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Server.Database.Migrations.Postgres;
 using Content.Server.Mind;
 using Content.Server.Mind.Toolshed;
 using Content.Server.Objectives;
+using Content.Server.Storage.EntitySystems;
 using Content.Shared._Oxyd.Framework.Objectives;
+using Content.Shared._Oxyd.Framework.RadialMenu;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mind;
 using Content.Shared.Mobs.Events;
 using Content.Shared.Nutrition.EntitySystems;
+using Robust.Server.Containers;
 using Robust.Server.GameObjects;
+using Robust.Server.Player;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
@@ -25,6 +30,9 @@ public sealed class SanitySystem : EntitySystem
     [Dependency] private MindSystem mindsys = default!;
     [Dependency] private ServerOxydHelpers helpers = default!;
     [Dependency] private UserInterfaceSystem uimanager = default!;
+    [Dependency] private ContainerSystem containers = default!;
+    [Dependency] private ServerRadialMenuSystem radials = default!;
+    [Dependency] private IPlayerManager players = default!;
     public EntityQuery<InfluenceSanityOnViewComponent> influenceQuery;
     /// <inheritdoc/>
     public override void Initialize()
@@ -54,11 +62,34 @@ public sealed class SanitySystem : EntitySystem
     private void ObjectiveGiveRest(Entity<ObjectiveGiveRestComponent> ent, ref ObjectiveCompletedEvent args)
     {
         Log.Fatal($"Triggered rest");
-        if (args.mind.Comp.OwnedEntity is EntityUid exist)
+        if (args.mind.Comp.OwnedEntity is EntityUid exist && TryComp<SanityComponent>(exist, out var sancomp))
         {
-            var oddities = helpers.GetChildrenWithComp<OddityComponent>(exist);
-
+            var c = ent.Comp;
+            FulfillRest((exist, sancomp), c.mod, c.baseG, c.topG);
         }
+    }
+    public void FulfillRest(Entity<SanityComponent> ent , float gainModifier, float baseGain, float topGain)
+    {
+        var c = ent.Comp;
+        if (c.RestAccumulated < 1)
+            return;
+        if(!players.TryGetSessionByEntity(ent, out var sesh))
+            return;
+        var rand = new Random();
+        var oddities = helpers.GetChildrenWithComp<OddityComponent>(ent);
+        List<RadialMenuOption> options = new();
+        foreach (var oddit in oddities)
+        {
+            var opt = new PrototypeRadialMenuOption()
+            {
+                Prototype = MetaData(oddit).EntityPrototype!.ID,
+            };
+            options.Add(opt);
+        }
+
+        radials.ShowRadial(sesh, );
+
+
     }
 
     private void ObjectiveGiveInsight(Entity<ObjectiveGiveInsightComponent> ent, ref ObjectiveCompletedEvent args)
@@ -66,7 +97,10 @@ public sealed class SanitySystem : EntitySystem
         if (args.mind.Comp.OwnedEntity is EntityUid val)
         {
             if (TryComp<SanityComponent>(val, out var sanity))
+            {
                 GiveInsight((val, sanity), ent.Comp.amount);
+            }
+
         }
     }
 
@@ -101,8 +135,7 @@ public sealed class SanitySystem : EntitySystem
         {
             ApplySanityDelta(ent, f, affect[f]);
         }
-
-
+        UpdateDesireData(ent);
     }
 
     public float ApplySanityDelta(Entity<SanityComponent> ent, SanitySource type, float amount)
@@ -139,6 +172,22 @@ public sealed class SanitySystem : EntitySystem
         return amount;
     }
 
+    public bool TryGiveRestObjective(Entity<SanityComponent> ent)
+    {
+        if (!mindsys.TryGetMind(ent.Owner, out var mindent, out var mindcomp))
+            return false;
+        if (!TerminatingOrDeleted(ent.Comp.desireId))
+            return false;
+        var objective = objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
+        if (objective is EntityUid existing)
+        {
+            ent.Comp.DesireProgress = 0f;
+            ent.Comp.DesireDescription = MetaData(existing).EntityDescription;
+            ent.Comp.desireId = existing;
+            DirtyFields(ent.Owner, ent.Comp, null, nameof(SanityComponent.DesireProgress), nameof(SanityComponent.DesireDescription));
+        }
+        return true;
+    }
     public void GiveInsight(Entity<SanityComponent> ent, float amount)
     {
         ent.Comp.Insight += amount;
@@ -147,35 +196,22 @@ public sealed class SanitySystem : EntitySystem
         {
             ent.Comp.Insight = 0f;
             ent.Comp.RestAccumulated++;
-            if (!mindsys.TryGetMind(ent.Owner, out var mindent, out var mindcomp))
-                continue;
-            var objective = objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
-            if (objective is EntityUid existing)
-            {
-                ent.Comp.desireProg[existing] = new Tuple<string, float>(MetaData(existing).EntityDescription, 0f);
-                DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.desireProg));
-            }
+            TryGiveRestObjective(ent);
         }
     }
 
     public void UpdateDesireData(Entity<SanityComponent> ent)
     {
+        if (TerminatingOrDeleted(ent.Comp.desireId))
+            return;
         var mind = mindsys.GetMind(ent.Owner);
         if (mind is EntityUid exist)
         {
-            var mc = (exist, Comp<MindComponent>(ent.Owner));
-            foreach (var key in ent.Comp.desireProg.Keys.ToList())
-            {
-                if (TerminatingOrDeleted(key))
-                    ent.Comp.desireProg.Remove(key);
-            foreach (var (objId, data) in ent.Comp.desireProg)
-            {
-                var prog = objectivesys.GetProgress(objId, mc);
-                if (prog is null)
-                    continue;
-                ent.Comp.desireProg[objId].Item2 = prog;
-            }
-
+            var prog = objectivesys.GetProgress(ent.Comp.desireId, (exist, Comp<MindComponent>(exist)));
+            if (prog is null)
+                return;
+            ent.Comp.DesireProgress = prog.Value;
+            DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.DesireProgress));
         }
     }
 }

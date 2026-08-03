@@ -43,11 +43,15 @@ public sealed partial class SanityComponent : Component
     [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public int RestAccumulated = 0;
 
-    [AutoNetworkedField, ViewVariables]
-    public Dictionary<EntityUid,float> desireProg = new();
+    [ViewVariables]
+    public EntityUid desireId = EntityUid.Invalid;
 
-    [AutoNetworkedField, ViewVariables]
-    public Dictionary<EntityUid, string> desireDesc = new();
+    [ViewVariables, AutoNetworkedField]
+    public float DesireProgress = 0f;
+
+    [ViewVariables, AutoNetworkedField]
+    public string DesireDescription = "";
+
 }
 
 

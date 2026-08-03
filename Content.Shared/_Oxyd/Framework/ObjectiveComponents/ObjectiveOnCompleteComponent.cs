@@ -13,7 +13,12 @@ public sealed partial class ObjectiveEventOnCompleteComponent : Component
 }
 
 [RegisterComponent]
-public sealed partial class ObjectiveGiveRestComponent : Component;
+public sealed partial class ObjectiveGiveRestComponent : Component
+{
+    public float mod = 1f;
+    public float baseG = 2;
+    public float topG = 10;
+}
 
 [RegisterComponent]
 public sealed partial class ObjectiveGiveInsightComponent : Component
