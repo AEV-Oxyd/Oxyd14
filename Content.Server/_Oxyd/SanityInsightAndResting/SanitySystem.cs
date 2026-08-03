@@ -3,6 +3,7 @@ using Content.Server._Oxyd.Framework;
 using Content.Server._Oxyd.Framework.Objectives;
 using Content.Server._Oxyd.Framework.RadialMenu;
 using Content.Server._Oxyd.Framework.ViewCalc;
+using Content.Server._Oxyd.Skill;
 using Content.Server.Database.Migrations.Postgres;
 using Content.Server.Mind;
 using Content.Server.Mind.Toolshed;
@@ -10,6 +11,7 @@ using Content.Server.Objectives;
 using Content.Server.Storage.EntitySystems;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared._Oxyd.Framework.RadialMenu;
+using Content.Shared._Oxyd.Skills;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mind;
 using Content.Shared.Mobs.Events;
@@ -17,6 +19,8 @@ using Content.Shared.Nutrition.EntitySystems;
 using Robust.Server.Containers;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Utility;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
@@ -33,6 +37,7 @@ public sealed class SanitySystem : EntitySystem
     [Dependency] private ContainerSystem containers = default!;
     [Dependency] private ServerRadialMenuSystem radials = default!;
     [Dependency] private IPlayerManager players = default!;
+    [Dependency] private ServerSkillSystem skills = default!;
     public EntityQuery<InfluenceSanityOnViewComponent> influenceQuery;
     /// <inheritdoc/>
     public override void Initialize()
@@ -65,18 +70,18 @@ public sealed class SanitySystem : EntitySystem
         if (args.mind.Comp.OwnedEntity is EntityUid exist && TryComp<SanityComponent>(exist, out var sancomp))
         {
             var c = ent.Comp;
+            sancomp.RestCompleted++;
             FulfillRest((exist, sancomp), c.mod, c.baseG, c.topG);
         }
     }
-    public void FulfillRest(Entity<SanityComponent> ent , float gainModifier, float baseGain, float topGain)
+    public void FulfillRest(Entity<SanityComponent> ent , float gainModifier, int baseGain,  int topGain)
     {
         var c = ent.Comp;
-        if (c.RestAccumulated < 1)
+        if (c.RestCompleted < 1)
             return;
         if(!players.TryGetSessionByEntity(ent, out var sesh))
             return;
-        var rand = new Random();
-        var oddities = helpers.GetChildrenWithComp<OddityComponent>(ent);
+        var oddities = helpers.GetChildrenWithComp<OddityComponent>(ent).ToList();
         List<RadialMenuOption> options = new();
         foreach (var oddit in oddities)
         {
@@ -86,10 +91,61 @@ public sealed class SanitySystem : EntitySystem
             };
             options.Add(opt);
         }
+        options.Add(new EntityRadialMenuOption(){Entity = GetNetEntity(ent),Tooltip = "Focus Internally"});
+        options.Add(new SpriteRadialMenuOption(){Sprite = new SpriteSpecifier.Texture())  , Tooltip = "Don't use focus"});
+        if(!c.currentlySelecting)
+            c.RestCompleted--;
+        c.currentlySelecting = true;
+        radials.ShowRadial(sesh, options, selection =>
+        {
+            if (selection.Index < 0 || selection.Index >= oddities.Count)
+            {
+                if(options[selection.Index] is EntityRadialMenuOption entChoice)
+                    UseInternalFocus(ent, ent, gainModifier, baseGain, topGain);
+                return;
+            }
+            UseOddity(ent, oddities[selection.Index], gainModifier);
+        }, ent, true, false );
+    }
 
-        radials.ShowRadial(sesh, );
+    public bool UseInternalFocus(Entity<SanityComponent> ent, EntityUid target, float gainMod = 1f, int baseGain = 1, int topGain = 10)
+    {
+        var c = ent.Comp;
+        if (!c.currentlySelecting)
+            return false;
+        if (!TryComp<MobSkillComponent>(ent, out var skcomp))
+            return false;
+        c.currentlySelecting = false;
+        var rand = new Random();
+        var dict = new Dictionary<ProtoId<SkillPrototype>, int>();
+        foreach (var skill in ProtoMan.EnumeratePrototypes<SkillPrototype>())
+        {
+            dict[skill] = (int)(rand.Next(baseGain, topGain) * gainMod);
+        }
+        skills.ModifySkills((ent, skcomp), dict);
+        RaiseLocalEvent(ent, new FocusedInternallyEvent(){skills = dict});
+        return true;
+    }
 
-
+    public bool UseOddity(Entity<SanityComponent> ent, EntityUid target, float gainMod = 1f)
+    {
+        var c = ent.Comp;
+        if (!c.currentlySelecting)
+            return false;
+        if (!TryComp<OddityComponent>(target, out var odcomp))
+            return false;
+        if (!TryComp<MobSkillComponent>(ent, out var skcomp))
+            return false;
+        c.currentlySelecting = false;
+        var giving = odcomp.giving;
+        if (gainMod != 1f)
+        {
+            giving = giving.ToDictionary();
+            giving.Values.Select(val => val * gainMod);
+        }
+        skills.ModifySkills((ent, skcomp), giving);
+        RaiseLocalEvent(target, new OddityUsedEvent(){user = ent});
+        return true;
     }
 
     private void ObjectiveGiveInsight(Entity<ObjectiveGiveInsightComponent> ent, ref ObjectiveCompletedEvent args)
@@ -195,8 +251,8 @@ public sealed class SanitySystem : EntitySystem
         while (ent.Comp.Insight > 100f)
         {
             ent.Comp.Insight = 0f;
-            ent.Comp.RestAccumulated++;
-            TryGiveRestObjective(ent);
+            if(!TryGiveRestObjective(ent))
+                ent.Comp.RestAccumulated++;
         }
     }
 

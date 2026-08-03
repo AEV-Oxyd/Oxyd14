@@ -21,6 +21,18 @@ public abstract partial class SharedSkillSystem : EntitySystem
 
     }
 
+    public void ModifySkill(Entity<MobSkillComponent> ent, ProtoId<SkillPrototype> skill, int amount)
+    {
+        ent.Comp.skills[skill][0] += amount;
+    }
+
+    public void ModifySkills(Entity<MobSkillComponent> ent, Dictionary<ProtoId<SkillPrototype>, int> skills)
+    {
+        foreach (var (skill, amount) in skills)
+        {
+            ent.Comp.skills[skill][0] += amount;
+        }
+    }
     private void OnToolUse(Entity<ToolComponent> ent, ref OxydToolGetModifiersEvent args)
     {
         if (!TryComp<MobSkillComponent>(args.user, out var skills))

@@ -24,9 +24,9 @@ public sealed partial class SanityMenu : Control
         SanityBar.MaxValue = targetComponent.MaxSanity;
         SanityBar.Value = targetComponent.Sanity;
         InsightBar.Value =  targetComponent.Insight;
-        if (cop.DesireText != "")
+        if (cop.DesireDescription != "")
         {
-            DesireText.Text = cop.DesireText;
+            DesireText.Text = cop.DesireDescription;
             DesireBar.Value = cop.DesireProgress;
         }
     }

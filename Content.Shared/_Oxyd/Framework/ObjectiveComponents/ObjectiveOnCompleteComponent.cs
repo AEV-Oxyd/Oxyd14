@@ -16,8 +16,8 @@ public sealed partial class ObjectiveEventOnCompleteComponent : Component
 public sealed partial class ObjectiveGiveRestComponent : Component
 {
     public float mod = 1f;
-    public float baseG = 2;
-    public float topG = 10;
+    public int baseG = 2;
+    public int topG = 10;
 }
 
 [RegisterComponent]

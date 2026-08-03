@@ -43,6 +43,7 @@ public sealed partial class SanityComponent : Component
     [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public int RestAccumulated = 0;
 
+
     [ViewVariables]
     public EntityUid desireId = EntityUid.Invalid;
 
@@ -51,6 +52,12 @@ public sealed partial class SanityComponent : Component
 
     [ViewVariables, AutoNetworkedField]
     public string DesireDescription = "";
+
+    [ViewVariables]
+    public bool currentlySelecting = false;
+
+    [ViewVariables]
+    public int RestCompleted = 0;
 
 }
 
