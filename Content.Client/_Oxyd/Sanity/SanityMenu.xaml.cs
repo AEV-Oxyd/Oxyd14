@@ -28,6 +28,7 @@ public sealed partial class SanityMenu : Control
         {
             DesireText.Text = cop.DesireDescription;
             DesireBar.Value = cop.DesireProgress;
+            DesireBar.Visible = true;
         }
     }
 

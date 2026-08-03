@@ -71,7 +71,9 @@ public sealed class SanitySystem : EntitySystem
         {
             var c = ent.Comp;
             sancomp.RestCompleted++;
+            sancomp.desireId = EntityUid.Invalid;
             FulfillRest((exist, sancomp), c.mod, c.baseG, c.topG);
+            TryGiveRestObjective((exist, sancomp));
         }
     }
     public void FulfillRest(Entity<SanityComponent> ent , float gainModifier, int baseGain,  int topGain)
@@ -92,7 +94,7 @@ public sealed class SanitySystem : EntitySystem
             options.Add(opt);
         }
         options.Add(new EntityRadialMenuOption(){Entity = GetNetEntity(ent),Tooltip = "Focus Internally"});
-        options.Add(new SpriteRadialMenuOption(){Sprite = new SpriteSpecifier.Texture())  , Tooltip = "Don't use focus"});
+        options.Add(new SpriteRadialMenuOption(){Sprite = new SpriteSpecifier.Texture(new ResPath("/Textures/Oxyd/erisported/gunactions16.rsi/safety0.png"))  , Tooltip = "Don't use focus"});
         if(!c.currentlySelecting)
             c.RestCompleted--;
         c.currentlySelecting = true;
@@ -105,7 +107,7 @@ public sealed class SanitySystem : EntitySystem
                 return;
             }
             UseOddity(ent, oddities[selection.Index], gainModifier);
-        }, ent, true, false );
+        }, ent, true, false, true );
     }
 
     public bool UseInternalFocus(Entity<SanityComponent> ent, EntityUid target, float gainMod = 1f, int baseGain = 1, int topGain = 10)
@@ -234,14 +236,18 @@ public sealed class SanitySystem : EntitySystem
             return false;
         if (!TerminatingOrDeleted(ent.Comp.desireId))
             return false;
+        ent.Comp.DesireDescription = "";
+        ent.Comp.DesireProgress = 0f;
+        if (ent.Comp.RestAccumulated < 1)
+            return false;
         var objective = objectivesys.GetRandomObjective(mindent, mindcomp, "RestObjectives", 9999);
         if (objective is EntityUid existing)
         {
-            ent.Comp.DesireProgress = 0f;
             ent.Comp.DesireDescription = MetaData(existing).EntityDescription;
             ent.Comp.desireId = existing;
-            DirtyFields(ent.Owner, ent.Comp, null, nameof(SanityComponent.DesireProgress), nameof(SanityComponent.DesireDescription));
+            ent.Comp.RestAccumulated--;
         }
+        DirtyFields(ent.Owner, ent.Comp, null, nameof(SanityComponent.DesireProgress), nameof(SanityComponent.DesireDescription));
         return true;
     }
     public void GiveInsight(Entity<SanityComponent> ent, float amount)
@@ -250,9 +256,9 @@ public sealed class SanitySystem : EntitySystem
         DirtyField(ent.Owner, ent.Comp, nameof(SanityComponent.Insight));
         while (ent.Comp.Insight > 100f)
         {
-            ent.Comp.Insight = 0f;
-            if(!TryGiveRestObjective(ent))
-                ent.Comp.RestAccumulated++;
+            ent.Comp.Insight -= 100f;
+            ent.Comp.RestAccumulated++;
+            TryGiveRestObjective(ent);
         }
     }
 

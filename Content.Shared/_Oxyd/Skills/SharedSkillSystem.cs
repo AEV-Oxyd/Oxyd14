@@ -24,6 +24,7 @@ public abstract partial class SharedSkillSystem : EntitySystem
     public void ModifySkill(Entity<MobSkillComponent> ent, ProtoId<SkillPrototype> skill, int amount)
     {
         ent.Comp.skills[skill][0] += amount;
+        Dirty(ent);
     }
 
     public void ModifySkills(Entity<MobSkillComponent> ent, Dictionary<ProtoId<SkillPrototype>, int> skills)
@@ -32,6 +33,7 @@ public abstract partial class SharedSkillSystem : EntitySystem
         {
             ent.Comp.skills[skill][0] += amount;
         }
+        Dirty(ent);
     }
     private void OnToolUse(Entity<ToolComponent> ent, ref OxydToolGetModifiersEvent args)
     {

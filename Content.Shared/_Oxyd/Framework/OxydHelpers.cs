@@ -73,17 +73,25 @@ public class SharedOxydHelpers : EntitySystem
 
     public HashSet<Entity<T>> GetChildrenWithComp<T>(EntityUid uid) where T : Component
     {
-        var list = new HashSet<Entity<T>>();
+        var list = new HashSet<Entity<T>>(8);
         var qery = GetEntityQuery<T>();
-        var containers = this.containers.GetContainingContainers(uid);
-        foreach (var storer in containers)
+        var cq = GetEntityQuery<ContainerManagerComponent>();
+        var targets = new Queue<EntityUid>(32);
+        targets.Enqueue(uid);
+        while (targets.TryDequeue(out var targetEnt))
         {
-            foreach (var entity in storer.ContainedEntities)
+            foreach (var storer in containers.GetAllContainers(targetEnt))
             {
-                if (TerminatingOrDeleted(entity))
-                    continue;
-                if (qery.TryComp(entity, out var comp))
-                    list.Add((entity, comp));
+
+                foreach (var entity in storer.ContainedEntities)
+                {
+                    if (TerminatingOrDeleted(entity))
+                        continue;
+                    if (qery.TryComp(entity, out var comp))
+                        list.Add((entity, comp));
+                    if(cq.HasComp(entity))
+                        targets.Enqueue(entity);
+                }
             }
         }
 

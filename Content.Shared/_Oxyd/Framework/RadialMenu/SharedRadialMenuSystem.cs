@@ -22,7 +22,7 @@ public abstract partial  class SharedRadialMenuSystem : EntitySystem
     /// <summary>
     /// Show a generic radial menu to <paramref name="player"/>.
     /// </summary>
-    public abstract void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null, bool server = true, bool client = true);
+    public abstract void ShowRadial(ICommonSession player, List<RadialMenuOption> options, Action<RadialBaseSelection> callback, EntityUid? target = null, bool server = true, bool client = true, bool forceChoice = false);
 
     /// <summary>
     /// Helper to show a radial menu with entity icons.
@@ -52,7 +52,7 @@ public abstract partial  class SharedRadialMenuSystem : EntitySystem
         }, target);
     }
 
-    protected abstract void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null);
+    protected abstract void OpenMenu(Guid requestId, List<RadialMenuOption> options, bool forceChoice = false, EntityUid? target = null);
 }
 
 [Serializable, NetSerializable]
@@ -105,6 +105,7 @@ public sealed class RadialMenuOpenEvent : EntityEventArgs
     public Guid RequestId;
     public List<RadialMenuOption> Options = new();
     public NetEntity? Target;
+    public bool ForceChoice = false;
 }
 
 /// <summary>

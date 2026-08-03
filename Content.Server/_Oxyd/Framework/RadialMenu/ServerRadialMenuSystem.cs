@@ -56,7 +56,8 @@ public sealed partial  class ServerRadialMenuSystem : SharedRadialMenuSystem
         Action<RadialBaseSelection> callback,
         EntityUid? target = null,
         bool server = true,
-        bool client = true)
+        bool client = true,
+        bool forceChoice = false)
     {
         if (!server)
             return;
@@ -75,7 +76,8 @@ public sealed partial  class ServerRadialMenuSystem : SharedRadialMenuSystem
         {
             RequestId = id,
             Options = options,
-            Target = GetNetEntity(target)
+            Target = GetNetEntity(target),
+            ForceChoice = forceChoice
         }, player);
     }
 
@@ -106,5 +108,5 @@ public sealed partial  class ServerRadialMenuSystem : SharedRadialMenuSystem
             _playerRequestCount[player] = count - 1;
     }
 
-    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null) { }
+    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, bool forceChoice = false, EntityUid? target = null) { }
 }
