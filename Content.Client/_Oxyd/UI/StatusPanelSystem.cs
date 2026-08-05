@@ -26,7 +26,7 @@ public record CollectStaticPanels(Dictionary<string, Control> content);
 
 // Raised on mindGotAdded. May also be raised at any point during gameplay. Will be targeted at the mindGotAddded entity and in some cases
 // also to another entity(with the target being the other entity for both raises) SPCR 2026
-public record CollectEntityPanels(EntityUid target, Dictionary<string, Control> panels, Dictionary<string, Control> adding);
+public record CollectEntityPanels(EntityUid target, Dictionary<string, Control> panels, Dictionary<string, List<Control>> adding);
 
 public record RemoveStatPanel(string name);
 
@@ -48,6 +48,7 @@ public sealed class StatusPanelSystem : EntitySystem
         panel.StatMenus.RemoveAllChildren();
         panel.StatMenus.AddChild(buttons);
     }
+
 
     public void refreshContent(string key)
     {
@@ -98,7 +99,8 @@ public sealed class StatusPanelSystem : EntitySystem
 
         foreach (var key in myEv.adding)
         {
-            tryAdd(key.Key, key.Value);
+            foreach(var elem in key.Value)
+                tryAdd(key.Key, elem);
         }
     }
     /// <inheritdoc/>

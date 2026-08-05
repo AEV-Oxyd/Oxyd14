@@ -1,5 +1,6 @@
 using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
@@ -10,3 +11,6 @@ public sealed class FocusedInternallyEvent : EntityEventArgs
 {
     public required Dictionary<ProtoId<SkillPrototype>, int> skills;
 }
+
+[Serializable, NetSerializable]
+public sealed class RequestInternalFocus : EntityEventArgs;

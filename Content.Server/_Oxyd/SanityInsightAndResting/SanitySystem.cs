@@ -16,6 +16,7 @@ using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mind;
 using Content.Shared.Mobs.Events;
 using Content.Shared.Nutrition.EntitySystems;
+using Content.Shared.Shuttles.Systems;
 using Robust.Server.Containers;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
@@ -76,7 +77,16 @@ public sealed class SanitySystem : EntitySystem
             TryGiveRestObjective((exist, sancomp));
         }
     }
-    public void FulfillRest(Entity<SanityComponent> ent , float gainModifier, int baseGain,  int topGain)
+    [SubscribeNetworkEvent]
+    public void HandleReq(RequestInternalFocus args, EntitySessionEventArgs sesh)
+    {
+        if (sesh.SenderSession.AttachedEntity is EntityUid exist)
+        {
+            if(TryComp<SanityComponent>(exist, out var sanity))
+                FulfillRest((exist, sanity), 0.75f);
+        }
+    }
+    public void FulfillRest(Entity<SanityComponent> ent , float gainModifier= 1f, int baseGain = 2,  int topGain = 6)
     {
         var c = ent.Comp;
         if (c.RestCompleted < 1)

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Robust.Client.GameObjects;
 using Robust.Client.Timing;
+using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using static Robust.Client.GameObjects.SpriteComponent;
@@ -16,6 +17,30 @@ public sealed partial class ClientOxydHelpers : EntitySystem
 {
     [Dependency] private IClientGameTiming _gameTiming = default!;
     [Dependency] private SpriteSystem _sprite = default!;
+
+    public static bool FindControl<T>(Control parent,string id, [NotNullWhen(true)] out T? found) where T : Control
+    {
+        found = null;
+
+        Queue<Control> checking =  new(16);
+        checking.Enqueue(parent);
+        while (checking.TryDequeue(out var c))
+        {
+            if (c.Name == id )
+            {
+                if (c is not T)
+                {
+                    return false;
+                }
+                found = (T)c;
+                return true;
+            }
+            if(c.ChildCount != 0)
+                checking.Enqueue(c);
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// dont use on types without a Equals function declared!!!! SPCR 2026
