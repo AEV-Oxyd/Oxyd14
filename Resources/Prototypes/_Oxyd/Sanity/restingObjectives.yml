@@ -1,12 +1,24 @@
 - type: weightedRandom
   id: RestObjectives
   weights:
-    RestObjectivesFood: 1
+    RestObjectivesDrugs: 1
 
 - type: weightedRandom
   id: RestObjectivesFood
   weights:
     RestObjectiveExperienceTasteBread: 1
+    RestObjectiveExperienceTasteSweet: 1
+    RestObjectiveExperienceTasteSalty: 1
+    RestObjectiveExperienceTasteSour: 1
+    RestObjectiveExperienceTasteBitter: 1
+    RestObjectiveExperienceTasteSpicy: 1
+    RestObjectiveExperienceTasteCheese: 1
+    RestObjectiveExperienceTasteSmokey: 1
+
+- type: weightedRandom
+  id: RestObjectivesDrugs
+  weights:
+    RestObjectiveMetabolizeReagentDrugs: 1
 
 - type: objectiveIssuer
   id: MentalSelf
@@ -27,11 +39,103 @@
 - type: entity
   parent: BaseRestObjective
   id: RestObjectiveExperienceTasteBread
-  name: You have a knack for Bread
-  description: Eat something that tastes like bread to gain rest experience.
+  name: BreadMuncher
+  description: You have a desire for something bready..
   components:
   - type: ExperienceFlavourObjective
     timesToExperience: 5
     flavours:
      - bread
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSweet
+  name: SweetMuncher
+  description: You have a desire for something sweet.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - sweet
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSalty
+  name: SaltMuncher
+  description: You have a desire for something salty.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - salty
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSour
+  name: SourMuncher
+  description: You have a desire for something sour.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - sour
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteBitter
+  name: BitterMuncher
+  description: You have a desire for something bitter.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - bitter
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSpicy
+  name: SpicyMuncher
+  description: You have a desire for something spicy.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 3
+    flavours:
+     - spicy
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteCheese
+  name: CheeseMuncher
+  description: You have a desire for something cheesy.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 3
+    flavours:
+     - cheesy
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentDrugs
+  name: DrugUser
+  description: You want to get high. Inject yourself with Space Drugs.
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - SpaceDrugs
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentMorphine
+  name: MorphineUser
+  description: You want to get high. Inject yourself with Morphine.
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - SpaceDrugs
+
+
 

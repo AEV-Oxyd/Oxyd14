@@ -902,7 +902,6 @@ namespace Content.Shared.Containers.ItemSlots
         {
             if (args.Current is not ItemSlotsComponentState state)
                 return;
-            Log.Debug($"Received server state");
 
             foreach (var (key, slot) in component.Slots)
             {

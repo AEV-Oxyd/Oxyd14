@@ -28,6 +28,13 @@ public sealed  partial class OxydObjectiveSystem : EntitySystem
         SubscribeLocalEvent<MetabolizeReagentObjectiveTrackerComponent, SolutionChangedEvent>(MetabolizeObjectiveHandle);
     }
 
+    [SubscribeLocalEvent]
+    void MetabolizeReagentGetProgress(Entity<MetabolizeReagentObjectiveComponent> ent,
+        ref ObjectiveGetProgressEvent args)
+    {
+        args.Progress = (ent.Comp.metabolized + 0.01f) / ent.Comp.metabolizeTimes;
+    }
+
     void AfterAssignMetabolize(Entity<MetabolizeReagentObjectiveComponent> ent,ref ObjectiveAfterAssignEvent args)
     {
         if (args.Mind.CurrentEntity is EntityUid valid)
@@ -42,8 +49,8 @@ public sealed  partial class OxydObjectiveSystem : EntitySystem
         var refCast = args.Solution.Comp.Solution;
         foreach (var target in ent.Comp.origin)
         {
-            if(target.Comp.reagents.Any(thing => refCast.ContainsPrototype(thing)))
-                target.Comp.metabolizeTimes++;
+            if (target.Comp.reagents.Any(thing => refCast.ContainsPrototype(thing)))
+                target.Comp.metabolized++;
         }
     }
 

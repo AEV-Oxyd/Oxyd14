@@ -29,7 +29,7 @@ namespace Content.Server._Oxyd.SanityInsightAndResting;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class SanitySystem : EntitySystem
+public sealed partial class SanitySystem : EntitySystem
 {
     [Dependency] private ObjectivesSystem objectivesys = default!;
     [Dependency] private MindSystem mindsys = default!;
@@ -43,6 +43,7 @@ public sealed class SanitySystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
+        base.Initialize();
         SubscribeLocalEvent<SanityComponent, ViewTickEvent>(onSanityTick);
         SubscribeLocalEvent<SanityComponent, ComponentInit>(OnInit);
         SubscribeLocalEvent<InfluenceSanityOnViewComponent, ComponentInit>(onInfluencerInit);

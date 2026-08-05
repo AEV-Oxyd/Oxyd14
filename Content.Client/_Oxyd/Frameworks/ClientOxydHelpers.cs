@@ -26,17 +26,22 @@ public sealed partial class ClientOxydHelpers : EntitySystem
         checking.Enqueue(parent);
         while (checking.TryDequeue(out var c))
         {
-            if (c.Name == id )
+            foreach (var child in c.Children)
             {
-                if (c is not T)
+                if (child.Name == id)
                 {
-                    return false;
+                    if (child is not T)
+                    {
+                        return false;
+                    }
+
+                    found = (T)child;
+                    return true;
                 }
-                found = (T)c;
-                return true;
+
+                if (child.ChildCount != 0)
+                    checking.Enqueue(child);
             }
-            if(c.ChildCount != 0)
-                checking.Enqueue(c);
         }
 
         return false;

@@ -11,6 +11,7 @@ using Robust.Client.UserInterface.Controllers;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared;
 using Robust.Shared.Configuration;
+using Robust.Shared.Player;
 
 namespace Content.Client._Oxyd.UI;
 
@@ -30,7 +31,7 @@ public record CollectEntityPanels(EntityUid target, Dictionary<string, Control> 
 
 public record RemoveStatPanel(string name);
 
-public sealed class StatusPanelSystem : EntitySystem
+public sealed partial class StatusPanelSystem : EntitySystem
 {
     [Dependency] private IUserInterfaceManager _uiManager = default!;
     [Dependency] private IStateManager _stateManager = default!;
@@ -80,9 +81,9 @@ public sealed class StatusPanelSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    public void onMindTransfer(Entity<MindContainerComponent> ent,ref MindAddedMessage ev)
+    public void onPlayerAttach(LocalPlayerAttachedEvent ev)
     {
-        TriggerPanelCollection(ent, null);
+        TriggerPanelCollection(ev.Entity, null);
     }
 
     public void TriggerPanelCollection(EntityUid owner, EntityUid? target)

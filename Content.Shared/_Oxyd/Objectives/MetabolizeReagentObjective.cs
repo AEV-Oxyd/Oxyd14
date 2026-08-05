@@ -9,8 +9,11 @@ namespace Content.Shared._Oxyd.Objectives;
 [RegisterComponent]
 public sealed partial class MetabolizeReagentObjectiveComponent : Component
 {
+    [DataField]
     public List<ProtoId<ReagentPrototype>> reagents;
+    [DataField]
     public int metabolizeTimes = 15;
+    [ViewVariables]
     public int metabolized = 0;
 }
 
