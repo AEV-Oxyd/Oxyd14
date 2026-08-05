@@ -11,7 +11,7 @@ namespace Content.Client._Oxyd.Sanity;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientSanityUIHandler : EntitySystem
+public sealed partial class ClientSanityUIHandler : EntitySystem
 {
     [Dependency] private StatusPanelSystem panels = default!;
     public const string focusInsightButtonId = "fins";
@@ -29,8 +29,9 @@ public sealed class ClientSanityUIHandler : EntitySystem
         ev.PanelControls["Sanity"] = cont;
     }
     [SubscribeLocalEvent]
-    private void OnPanelRequest(EntityUid id, SanityComponent component, CollectEntityPanels ev)
+    private void OnPanelRequest(Entity<SanityComponent> ent,ref CollectEntityPanels ev)
     {
+        Log.Debug("OnPanelRequest");
         if(ClientOxydHelpers.FindControl<Button>(panels.panelContent["IC"], focusInsightButtonId, out _))
         {
             return;

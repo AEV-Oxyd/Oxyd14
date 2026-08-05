@@ -78,14 +78,16 @@ public sealed class StatusPanelSystem : EntitySystem
         };
 
     }
+
     [SubscribeLocalEvent]
-    public void onMindTransfer(EntityUid uid, MindContainerComponent mind, MindAddedMessage ev)
+    public void onMindTransfer(Entity<MindContainerComponent> ent,ref MindAddedMessage ev)
     {
-        TriggerPanelCollection(uid, null);
+        TriggerPanelCollection(ent, null);
     }
 
     public void TriggerPanelCollection(EntityUid owner, EntityUid? target)
     {
+        Log.Debug($"Collectiong entity panels");
         var myEv = new CollectEntityPanels(owner, new(), new());
         RaiseLocalEvent(owner, myEv);
         if (target is EntityUid exist)
@@ -106,6 +108,7 @@ public sealed class StatusPanelSystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
+        base.Initialize();
         SubscribeLocalEvent<SetStatPanel>(ev =>
         {
             setContent(ev.name, ev.content);
@@ -119,6 +122,7 @@ public sealed class StatusPanelSystem : EntitySystem
         {
             tryAdd(ev.name, ev.content);
         });
+        InitButtons();
         Subs.CVar(configurationManager, CCVars.UILayout, _ => resetStatusContent());
         _stateManager.OnStateChanged += (ev =>
         {
@@ -206,7 +210,6 @@ public sealed class StatusPanelSystem : EntitySystem
     }
     public void OnStateEntered(GameplayState state)
     {
-        InitButtons();
         var ev = new CollectStaticPanels(panelContent);
         RaiseLocalEvent(ev);
         resetStatusContent();
@@ -215,6 +218,6 @@ public sealed class StatusPanelSystem : EntitySystem
     public void OnStateExited(GameplayState state)
     {
         panelContent.Clear();
-        buttons = null!;
+        buttons.Clear();
     }
 }

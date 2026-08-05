@@ -66,6 +66,8 @@ public abstract partial class SharedSkillSystem : EntitySystem
     {
         foreach (var instance in protoMan.EnumeratePrototypes<SkillPrototype>())
         {
+            if (ent.Comp.skills.ContainsKey(instance.ID))
+                continue;
             ent.Comp.skills.Add(instance.ID, new int[] { 0, 0 });
         }
         Dirty(ent);
