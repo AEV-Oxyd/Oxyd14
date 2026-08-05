@@ -11,7 +11,7 @@ namespace Content.Client._Oxyd.Sanity;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed partial class ClientSanityUIHandler : EntitySystem
+public partial class ClientSanityUIHandler : EntitySystem
 {
     [Dependency] private StatusPanelSystem panels = default!;
     public const string focusInsightButtonId = "fins";
