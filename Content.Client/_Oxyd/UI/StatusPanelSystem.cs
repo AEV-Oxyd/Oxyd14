@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Client.Gameplay;
 using Content.Client.Guidebook.Richtext;
 using Content.Shared.CCVar;
+using Content.Shared.Mind.Components;
 using Robust.Client.Input;
 using Robust.Client.State;
 using Robust.Client.UserInterface;
@@ -13,14 +15,19 @@ using Robust.Shared.Configuration;
 namespace Content.Client._Oxyd.UI;
 
 // set a stat panel's content (examine, dynamic stuff , etc). Dont use/raise in INIT!!
-public record SetStatPanel(string name, BoxContainer content);
+public record SetStatPanel(string name, Control content);
 
 //adds to a panel or creates it if it doesn't exist . Dont use/raise in INIT!!
 public record AddToPanel(string name, Control content);
 
-// called onEnter in gameplayState. ALl systems are initialized and all event subscribed by then.
+// called onEnter in gameplayState ALl systems are initialized and all event subscribed by then.
 // register to this on init to add to the panel!!(or init a empty one)
-public record CollectStaticPanels(Dictionary<string, BoxContainer> content);
+public record CollectStaticPanels(Dictionary<string, Control> content);
+
+// Raised on mindGotAdded. May also be raised at any point during gameplay. Will be targeted at the mindGotAddded entity and in some cases
+// also to another entity(with the target being the other entity for both raises) SPCR 2026
+public record CollectEntityPanels(EntityUid target, Dictionary<string, Control> panels, Dictionary<string, Control> adding);
+
 public record RemoveStatPanel(string name);
 
 public sealed class StatusPanelSystem : EntitySystem
@@ -29,8 +36,8 @@ public sealed class StatusPanelSystem : EntitySystem
     [Dependency] private IStateManager _stateManager = default!;
     [Dependency] private IConfigurationManager configurationManager = default!;
     private StatPanel? panel => _uiManager.GetActiveUIWidgetOrNull<StatPanel>();
-    public Dictionary<string, BoxContainer> panelContent = new();
-    public RadioOptions<string> buttons = new RadioOptions<string>(RadioOptionsLayout.Horizontal);
+    public Dictionary<string, Control> panelContent = new();
+    public RadioOptions<string> buttons = null!;
 
 
     public void resetStatusContent()
@@ -42,39 +49,75 @@ public sealed class StatusPanelSystem : EntitySystem
         panel.StatMenus.AddChild(buttons);
     }
 
-    public void setContent(string key)
+    public void refreshContent(string key)
     {
-        if (panel is null)
-            return;
-        panel.StatContent.RemoveAllChildren();
-        panel.StatContent.AddChild(panelContent[key]);
+        if (panel is StatPanel exist)
+        {
+            exist.StatContent.RemoveAllChildren();
+            exist.StatContent.AddChild(panelContent[key]);
+        }
     }
-    /// <inheritdoc/>
-    public override void Initialize()
+
+
+    public void setContent(string key, Control content)
     {
-        SubscribeLocalEvent<SetStatPanel>(ev =>
-        {
-            panelContent[ev.name] = ev.content;
-            setContent(ev.name);
-        });
-        SubscribeLocalEvent<RemoveStatPanel>(ev =>
-        {
-            panelContent.Remove(ev.name);
-            setContent(panelContent.Keys.First());
-        });
-        SubscribeLocalEvent<AddToPanel>(ev =>
-        {
-            tryAdd(ev.name, ev.content);
-        });
-        Subs.CVar(configurationManager, CCVars.UILayout, _ => resetStatusContent());
+        panelContent[key] = content;
+        refreshContent(key);
+    }
+    public void InitButtons()
+    {
+        buttons = new(RadioOptionsLayout.Horizontal);
         buttons.FirstButtonStyle = "OpenBoth";
         buttons.LastButtonStyle = "OpenBoth";
         buttons.ButtonStyle = "OpenBoth";
         buttons.OnItemSelected += (ev) =>
         {
             buttons.Select(ev.Id);
-            setContent(ev.Button.SelectedValue);
+            refreshContent(ev.Button.SelectedValue);
         };
+
+    }
+    [SubscribeLocalEvent]
+    public void onMindTransfer(EntityUid uid, MindContainerComponent mind, MindAddedMessage ev)
+    {
+        TriggerPanelCollection(uid, null);
+    }
+
+    public void TriggerPanelCollection(EntityUid owner, EntityUid? target)
+    {
+        var myEv = new CollectEntityPanels(owner, new(), new());
+        RaiseLocalEvent(owner, myEv);
+        if (target is EntityUid exist)
+        {
+            RaiseLocalEvent(exist, myEv);
+        }
+        foreach (var key in myEv.panels)
+        {
+            setContent(key.Key, key.Value);
+        }
+
+        foreach (var key in myEv.adding)
+        {
+            tryAdd(key.Key, key.Value);
+        }
+    }
+    /// <inheritdoc/>
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<SetStatPanel>(ev =>
+        {
+            setContent(ev.name, ev.content);
+        });
+        SubscribeLocalEvent<RemoveStatPanel>(ev =>
+        {
+            panelContent.Remove(ev.name);
+            refreshContent(panelContent.Keys.First());
+        });
+        SubscribeLocalEvent<AddToPanel>(ev =>
+        {
+            tryAdd(ev.name, ev.content);
+        });
+        Subs.CVar(configurationManager, CCVars.UILayout, _ => resetStatusContent());
         _stateManager.OnStateChanged += (ev =>
         {
             if (ev.NewState is GameplayState state)
@@ -161,6 +204,7 @@ public sealed class StatusPanelSystem : EntitySystem
     }
     public void OnStateEntered(GameplayState state)
     {
+        InitButtons();
         var ev = new CollectStaticPanels(panelContent);
         RaiseLocalEvent(ev);
         resetStatusContent();
@@ -168,6 +212,7 @@ public sealed class StatusPanelSystem : EntitySystem
 
     public void OnStateExited(GameplayState state)
     {
-
+        panelContent.Clear();
+        buttons = null!;
     }
 }
