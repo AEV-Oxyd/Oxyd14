@@ -1,5 +1,5 @@
-All code & assets included within folders marked as Oxyd, _Oxyd are all rights reserved . You may not use it without permission.
-Ported assets are put in folders which include the keyword Ported. Any exceptions to the rule above are mentioned through code comments, RSI credits or through a new license.txt in said folder
+All code & assets included in Oxyd or _Oxyd folders are to be assumed All Rights Reserved. They may not be used without permission. 
+Exceptions to the rule above are made clear through the Ported directories, a license.txt , a comment at the top of C# files, or RSI credits/licensing.
 
 Everything else is MIT Licensed.
 
