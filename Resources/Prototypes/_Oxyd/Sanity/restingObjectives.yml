@@ -128,14 +128,14 @@
 
 - type: entity
   parent: BaseRestObjective
-  id: RestObjectiveMetabolizeReagentMorphine
-  name: MorphineUser
-  description: You want to get high. Inject yourself with Morphine.
+  id: RestObjectiveMetabolizeReagentPsicodine
+  name: PsicodineUser
+  description: You want to get high. Inject yourself with Psicodine
   components:
   - type: MetabolizeReagentObjective
     metabolizeTimes: 10
     reagents:
-     - SpaceDrugs
+     - Psicodine
 
 
 
