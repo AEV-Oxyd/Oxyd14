@@ -9,7 +9,12 @@ namespace Content.Shared._Oxyd;
 [RegisterComponent]
 public sealed partial class LanguageKnowledgeComponent : Component
 {
-
+    [ViewVariables]
+    public ProtoId<LanguagePrototype> chosen;
+    [DataField]
+    public HashSet<ProtoId<LanguagePrototype>> understanding = new();
+    [DataField]
+    public HashSet<ProtoId<LanguagePrototype>> speaking = new();
 }
 
 [RegisterComponent]

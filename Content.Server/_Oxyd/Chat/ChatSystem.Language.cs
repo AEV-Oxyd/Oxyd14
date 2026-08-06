@@ -5,26 +5,84 @@ using Content.Shared._Oxyd;
 using Content.Shared.Chat;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Server.Chat.Systems;
 
 public record struct MessageBlock(string raw, string unspoken, ProtoId<LanguagePrototype> language);
 
-public sealed class MessageData(
+public sealed record MessageData(
+    EntityUid speaker,
+    ChatTransmitRange range,
+    InGameICChatType category,
     string raw,
     List<MessageBlock> messageBlocks,
-    HashSet<ProtoId<LanguagePrototype>> containedLanguages,
-    InGameICChatType category = InGameICChatType.Speak,
-    EntityUid? speaker = null);
+    List<ProtoId<LanguagePrototype>> containedLanguages,
+    Dictionary<int, string> builtMessages) // hash of concatenated language ID's -> message
+{
+
+    public static int hashFromList(List<ProtoId<LanguagePrototype>> list)
+    {
+        var hash = 0;
+        foreach (var lang in list)
+            hash = (hash * 397) ^ lang.Id.GetHashCode();
+        return hash;
+    }
+    public int GetLanguageHash(HashSet<ProtoId<LanguagePrototype>> validLanguages)
+    {
+        int hash = 0;
+        int hits = 0;
+        // we follow order of messageData block
+        foreach (var lang in containedLanguages)
+        {
+            if (!validLanguages.Contains(lang))
+                continue;
+            hash = (hash * 397) ^ lang.Id.GetHashCode();
+            if (++hits >= validLanguages.Count)
+                break;
+        }
+
+        return hash;
+    }
+
+    public string GetMessage(HashSet<ProtoId<LanguagePrototype>> validLanguages,out int key)
+    {
+
+        key = GetLanguageHash(validLanguages);
+        if (builtMessages.TryGetValue(key, out var msg))
+            return msg;
+        var sb = new StringBuilder();
+        foreach (var block in messageBlocks)
+        {
+            if (validLanguages.Contains(block.language))
+                sb.Append(block.raw);
+            else
+                sb.Append(block.unspoken);
+        }
+        builtMessages[key] = sb.ToString();
+        return sb.ToString();
+    }
+    
+    public string GetMessage(int key)
+    {
+        return builtMessages[key];
+    }
+}
 
 public sealed partial class ChatSystem
 {
     [Dependency] private IGameTiming timing = default!;
+    [Dependency] private EntityQuery<LanguageKnowledgeComponent> langquery = default!;
+
+    private RobustRandom random = new();
     private LanguageDataCoreComponent data => Single<LanguageDataCoreComponent>().Comp;
+
+    public ProtoId<LanguagePrototype> standardLanguage = "Universal";
     public void LanguageInitialize()
     {
-        var single = Spawn(null, MapCoordinates.Nullspace);
+        random.SetSeed(800853);
+        var single = EntityManager.Spawn("UnBroken");
         EnsureComp<LanguageDataCoreComponent>(single);
         LanguagePrototypesInitialize();
     }
@@ -61,19 +119,25 @@ public sealed partial class ChatSystem
         Log.Info($"Finished baking language caches at {timing.RealTime}");
     }
 
-    public MessageData BuildMessage(string message,
+    public MessageData BuildMessage(EntityUid speaker,
+        string message,
+        ChatTransmitRange range,
         InGameICChatType category,
         ProtoId<LanguagePrototype> defaultLang,
-        HashSet<ProtoId<LanguagePrototype>> validLanguages,
-        EntityUid? speaker = null)
+        HashSet<ProtoId<LanguagePrototype>> validLanguages)
     {
         var blocks = BuildLanguageBlocks(message, defaultLang, validLanguages);
-        HashSet<ProtoId<LanguagePrototype>> usedLangs = new();
+        List<ProtoId<LanguagePrototype>> usedLangs = new();
+        var stringBuilder = new StringBuilder(message.Length);
         foreach (var block in blocks)
         {
             usedLangs.Add(block.language);
+            stringBuilder.Append(block.raw);
         }
-        return new MessageData(message, blocks,usedLangs, category, speaker);
+        var dict = new Dictionary<int, string>();
+        var newRaw = stringBuilder.ToString();
+        dict[MessageData.hashFromList(usedLangs)] = newRaw;
+        return new MessageData(speaker,range, category, newRaw, blocks,usedLangs, dict);
     }
 
     /// <summary>
@@ -106,6 +170,7 @@ public sealed partial class ChatSystem
             {
                 block.unspoken = CreateNonSpeakerMessage(ss, defaultLang);
             }
+            ret.Add(block);
         }
         return ret;
     }
@@ -113,8 +178,7 @@ public sealed partial class ChatSystem
     public string generateWord(string original, ProtoId<LanguagePrototype> language)
     {
         var phonetics = ProtoMan.Index<LanguagePrototype>(language);
-        var rand = new Random();
-        var w =  rand.GetItems<string>(phonetics.GenerationGroups, (int)(original.Length * phonetics.lengthRatio)+1).Aggregate(String.Concat);
+        var w =  string.Concat(random.GetItems<string>(phonetics.GenerationGroups, (int)(original.Length * phonetics.lengthRatio)+1));
         data.wordMappingCache[language].Add(original, w);
         return w;
     }
@@ -141,7 +205,9 @@ public sealed partial class ChatSystem
         var build = new StringBuilder(message.Length);
         var splits = message.Split(' ');
         foreach (var indices in splits)
-            build.Append(getWord(message.Slice(indices.Start.Value, indices.End.Value), language));
+            build.Append(getWord(message.Slice(indices.Start.Value, indices.End.Value - indices.Start.Value),
+                language));
+
         return build.ToString();
     }
 
