@@ -43,8 +43,7 @@ public sealed partial class LanguagePrototype : IPrototype
 
     // if a word is not in the dictionary it will have a new word generated out of groups
     [DataField("phonetics")]
-    public string[] GenerationGroups;
-
+    public string[] GenerationGroups = new string[1];
 
     [DataField("lengthPhoneticsRatio")]
     public float lengthRatio = 0.5f;

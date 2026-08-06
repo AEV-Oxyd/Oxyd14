@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Linq;
 using System.Text;
+using Content.Server.GameTicking.Events;
 using Content.Shared._Oxyd;
 using Content.Shared.Chat;
 using Robust.Shared.Map;
@@ -79,13 +80,19 @@ public sealed partial class ChatSystem
     private LanguageDataCoreComponent data => Single<LanguageDataCoreComponent>().Comp;
 
     public ProtoId<LanguagePrototype> standardLanguage = "Universal";
-    public void LanguageInitialize()
+
+    [ViewVariables] public EntityUid core = EntityUid.Invalid; 
+    
+    [SubscribeLocalEvent]
+    public void LanguageInitialize(RoundStartingEvent ev)
     {
         random.SetSeed(800853);
-        var single = EntityManager.Spawn("UnBroken");
+        var single = Spawn();
+        core = single;
         EnsureComp<LanguageDataCoreComponent>(single);
         LanguagePrototypesInitialize();
     }
+    
 
     public void LanguagePrototypesInitialize()
     {
@@ -157,6 +164,10 @@ public sealed partial class ChatSystem
         {
             var ss = segment.AsSpan();
             var sliceEnd = ss.IndexOf(' ');
+            if (sliceEnd == -1)
+            {
+                sliceEnd = 0;
+            }
             var block = new MessageBlock(segment, string.Empty, defaultLang);
             if(spanLooker.TryGetValue(ss.Slice(0, sliceEnd), out var langId))
             {
