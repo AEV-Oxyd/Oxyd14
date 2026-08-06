@@ -22,7 +22,7 @@ public sealed partial  class ClientRadialMenuSystem : SharedRadialMenuSystem
 
     private void OnOpenRadial(RadialMenuOpenEvent ev)
     {
-        OpenMenu(ev.RequestId, ev.Options, GetEntity(ev.Target));
+        OpenMenu(ev.RequestId, ev.Options, ev.ForceChoice, GetEntity(ev.Target));
     }
 
     public override void ShowRadial(ICommonSession player,
@@ -30,21 +30,25 @@ public sealed partial  class ClientRadialMenuSystem : SharedRadialMenuSystem
         Action<RadialBaseSelection> callback,
         EntityUid? target = null,
         bool server = true,
-        bool client = true)
+        bool client = true,
+        bool forceChoice = false)
     {
         if (!client)
             return;
         if (player == _playerManager.LocalSession)
         {
-            OpenMenu(Guid.NewGuid(), options, target);
+            OpenMenu(Guid.NewGuid(), options, forceChoice, target);
         }
     }
 
-    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options, EntityUid? target = null)
+    protected override void OpenMenu(Guid requestId, List<RadialMenuOption> options,bool forceChoice = false, EntityUid? target = null)
     {
         if (!_timing.IsFirstTimePredicted)
             return;
         var menu = _ui.CreateWindow<SimpleRadialMenu>();
+        if(forceChoice)
+            menu.ForceChoices();
+
 
         if (target != null)
             menu.Track(target.Value);

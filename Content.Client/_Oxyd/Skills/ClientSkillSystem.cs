@@ -1,14 +1,17 @@
 using System.Reflection.Metadata.Ecma335;
 using Content.Client._Oxyd.UI;
 using Content.Client.CharacterInfo;
+using Content.Client.UserInterface.Systems.Character;
 using Content.Shared._Oxyd.Skills;
 using Robust.Client.GameStates;
 using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
+using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.Skills;
 
@@ -19,6 +22,7 @@ public sealed class ClientSkillSystem : SharedSkillSystem
 {
     [Dependency] private IPlayerManager playMan = default!;
     [Dependency] private StatusPanelSystem statPanel = default!;
+    [Dependency] private IUserInterfaceManager interfaceManager = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
@@ -38,11 +42,10 @@ public sealed class ClientSkillSystem : SharedSkillSystem
                 Log.Error($"Can't find skill {proto}!!!");
                 break;
             }
-
+            var tooltip = new Tooltip();
+            tooltip.SetMessage(FormattedMessage.FromUnformatted(instance.description));
             var staty = new PanelContainer(){HorizontalExpand = true, VerticalExpand = true, MinWidth = 100};
-            staty.ToolTip = instance.description;
             var hb = new HBox(){MinWidth = 150};
-            hb.ToolTip = instance.description;
             staty.PanelOverride = new StyleBoxFlat(backgroundColor: new Color(36, 37, 53));
             staty.HorizontalExpand = true;
             hb.AddChild(new Label() { Text = instance.name, MinWidth = 125 });
@@ -57,11 +60,13 @@ public sealed class ClientSkillSystem : SharedSkillSystem
             hb.AddChild(new Label() { Text = statString, MinWidth = 25 });
             foreach (var child in hb.Children)
             {
-                child.ToolTip = instance.description;
+                child.TooltipDelay = 0;
+                child.TooltipSupplier = _ => tooltip;
+                child.MouseFilter = Control.MouseFilterMode.Pass;
             }
             staty.AddChild(hb);
             boxie.AddChild(staty);
         }
-        ev.Controls.Add(boxie);
+        ev.PanelControls.Add("Skills", boxie);
     }
 }

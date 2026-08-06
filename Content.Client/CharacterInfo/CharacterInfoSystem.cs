@@ -1,7 +1,9 @@
-﻿using Content.Shared.CharacterInfo;
+using Content.Shared.CharacterInfo;
 using Content.Shared.Objectives;
+using Content.Shared.Roles;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
+using Robust.Shared.Prototypes;
 
 namespace Content.Client.CharacterInfo;
 
@@ -32,23 +34,23 @@ public sealed partial class CharacterInfoSystem : EntitySystem
     private void OnCharacterInfoEvent(CharacterInfoEvent msg, EntitySessionEventArgs args)
     {
         var entity = GetEntity(msg.NetEntity);
-        var data = new CharacterData(entity, msg.JobTitle, msg.Objectives, msg.Briefing, Name(entity));
+        var data = new CharacterData(entity, msg.Objectives, msg.Briefing, msg.Job, Name(entity));
 
         OnCharacterUpdate?.Invoke(data);
     }
 
-    public List<Control> GetCharacterInfoControls(EntityUid uid)
+    public GetCharacterInfoControlsEvent GetCharacterInfoControls(EntityUid uid)
     {
         var ev = new GetCharacterInfoControlsEvent(uid);
         RaiseLocalEvent(uid, ref ev, true);
-        return ev.Controls;
+        return ev;
     }
 
     public readonly record struct CharacterData(
         EntityUid Entity,
-        string Job,
         Dictionary<string, List<ObjectiveInfo>> Objectives,
         string? Briefing,
+        ProtoId<JobPrototype>? JobId,
         string EntityName
     );
 
@@ -59,6 +61,8 @@ public sealed partial class CharacterInfoSystem : EntitySystem
     public readonly record struct GetCharacterInfoControlsEvent(EntityUid Entity)
     {
         public readonly List<Control> Controls = new();
+
+        public readonly Dictionary<string, Control> PanelControls = new();
 
         public readonly EntityUid Entity = Entity;
     }

@@ -31,6 +31,12 @@ public sealed partial class SimpleRadialMenu : RadialMenu
     {
         _attachMenuToEntity = owner;
     }
+    // no more close buttons
+    public void ForceChoices()
+    {
+        MenuOuterAreaButton.MouseFilter = MouseFilterMode.Ignore;
+        ContextualButton.MouseFilter = MouseFilterMode.Ignore;
+    }
 
     public void SetButtons(IEnumerable<RadialMenuOptionBase> models, SimpleRadialMenuSettings? settings = null)
     {

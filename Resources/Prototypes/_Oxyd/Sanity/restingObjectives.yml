@@ -1,0 +1,389 @@
+- type: weightedRandom
+  id: RestObjectives
+  weights:
+    RestObjectivesDrugs: 1
+    RestObjectivesDrinks: 2
+    RestObjectivesFood: 3
+
+- type: weightedRandom
+  id: RestObjectivesFood
+  weights:
+    RestObjectiveExperienceTasteBread: 1
+    RestObjectiveExperienceTasteSweet: 2
+    RestObjectiveExperienceTasteSalty: 2
+    RestObjectiveExperienceTasteSour: 2
+    RestObjectiveExperienceTasteBitter: 2
+    RestObjectiveExperienceTasteSpicy: 1
+    RestObjectiveExperienceTasteCheese: 2
+    RestObjectiveExperienceTasteSmokey: 1
+
+- type: weightedRandom
+  id: RestObjectivesDrugs
+  weights:
+    RestObjectiveMetabolizeReagentDrugs: 1
+    RestObjectiveMetabolizeReagentPsicodine: 1
+    RestObjectiveMetabolizeReagentNicotine: 2
+    RestObjectiveMetabolizeReagentTHC: 1
+    RestObjectiveMetabolizeReagentEthanol: 2
+
+- type: weightedRandom
+  id: RestObjectivesDrinks
+  weights:
+    RestObjectiveDrinkCubaLibre: 1
+    RestObjectiveDrinkBloodyMary: 1
+    RestObjectiveDrinkAntiFreeze: 1
+    RestObjectiveDrinkChampagne: 1
+    RestObjectiveDrinkWine: 1
+    RestObjectiveDrinkIcedBeer: 1
+    RestObjectiveDrinkGinTonic: 1
+    RestObjectiveDrinkIrishCoffee: 1
+    RestObjectiveDrinkLongIslandIcedTea: 1
+    RestObjectiveDrinkMargarita: 1
+    RestObjectiveDrinkMojito: 1
+    RestObjectiveDrinkPinaColada: 1
+    RestObjectiveDrinkTequilaSunrise: 1
+    RestObjectiveDrinkThreeMileIsland: 1
+    RestObjectiveDrinkWhiskeyCola: 1
+    RestObjectiveDrinkWhiteRussian: 1
+    RestObjectiveDrinkEspressoMartini: 1
+
+- type: objectiveIssuer
+  id: MentalSelf
+  name: Desires
+
+- type: entity
+  abstract: true
+  parent: BaseObjective
+  id: BaseRestObjective
+  components:
+  - type: Objective
+    difficulty: 1
+    issuer: MentalSelf
+  - type: ObjectiveEventOnComplete
+  - type: ObjectiveGiveRest
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteBread
+  name: BreadMuncher
+  description: You have a desire for something bready..
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - bread
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSweet
+  name: SweetMuncher
+  description: You have a desire for something sweet.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - sweet
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSalty
+  name: SaltMuncher
+  description: You have a desire for something salty.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - salty
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSour
+  name: SourMuncher
+  description: You have a desire for something sour.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - sour
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteBitter
+  name: BitterMuncher
+  description: You have a desire for something bitter.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - bitter
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteSpicy
+  name: SpicyMuncher
+  description: You have a desire for something spicy.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 3
+    flavours:
+     - spicy
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveExperienceTasteCheese
+  name: CheeseMuncher
+  description: You have a desire for something cheesy.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 3
+    flavours:
+     - cheesy
+
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentDrugs
+  name: DrugUser
+  description: You want to get high. Inject yourself with Space Drugs.
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - SpaceDrugs
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentPsicodine
+  name: PsicodineUser
+  description: You want to get high. Inject yourself with Psicodine
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - Psicodine
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentNicotine
+  name: NicotineUser
+  description: You want to smoke some cigars..
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - Nicotine
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentTHC
+  name: THCUser
+  description: You want to get high. Smoke some marijuana.
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - THC
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveMetabolizeReagentEthanol
+  name: EthanolUser
+  description: You need a alcoholic drink..
+  components:
+  - type: MetabolizeReagentObjective
+    metabolizeTimes: 10
+    reagents:
+     - Ethanol
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkCubaLibre
+  name: CubaDrinker
+  description: You have a desire for a Cuba Libre cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - cubalibre
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkBloodyMary
+  name: BloodyMaryDrinker
+  description: You have a desire for a Bloody Mary cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - bloodymary
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkAntiFreeze
+  name: AntiFreezeDrinker
+  description: You have a desire for an Anti-Freeze cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - antifreeze
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkChampagne
+  name: ChampagneDrinker
+  description: You have a desire for some Champagne.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - champagne
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkWine
+  name: WineDrinker
+  description: You have a desire for some Wine.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - shittywine
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkIcedBeer
+  name: IcedBeerDrinker
+  description: You have a desire for some Iced Beer.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - icedbeer
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkGinTonic
+  name: GinTonicDrinker
+  description: You have a desire for a Gin Tonic cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - gintonic
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkIrishCoffee
+  name: IrishCoffeeDrinker
+  description: You have a desire for a Irish Coffee cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - irishcoffee
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkLongIslandIcedTea
+  name: LongIslandIcedTeaDrinker
+  description: You have a desire for a Long Island Iced Tea cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - longisland
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkMargarita
+  name: MargaritaDrinker
+  description: You have a desire for a Margarita cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - margarita
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkMojito
+  name: MojitoDrinker
+  description: You have a desire for a Mojito cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - mojito
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkPinaColada
+  name: PinaColadaDrinker
+  description: You have a desire for a Pina Colada cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - pinacolada
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkTequilaSunrise
+  name: TequilaSunriseDrinker
+  description: You have a desire for a Tequila Sunrise cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+     - tequilasunrise
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkThreeMileIsland
+  name: ThreeMileIslandDrinker
+  description: You have a desire for a Three Mile Island cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+      - threemileisland
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkWhiskeyCola
+  name: WhiskeyColaDrinker
+  description: You have a desire for a Whiskey Cola cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+      - whiskeycola
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkWhiteRussian
+  name: WhiteRussianDrinker
+  description: You have a desire for a White Russian cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+      - whiterussian
+
+- type: entity
+  parent: BaseRestObjective
+  id: RestObjectiveDrinkEspressoMartini
+  name: EspressoMartiniDrinker
+  description: You have a desire for a Espresso Martini cocktail.
+  components:
+  - type: ExperienceFlavourObjective
+    timesToExperience: 5
+    flavours:
+      - espressomartini
+
+
+
+

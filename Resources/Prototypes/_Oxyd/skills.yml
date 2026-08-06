@@ -11,7 +11,7 @@
 - type: Skill
   id: Tgh
   name: Toughness
-  description: Mental fortitude and your ability to stomach pain
+  description: Mental fortitude, coordination under pain
 
 - type: Skill
   id: Cog
@@ -21,12 +21,12 @@
 - type: Skill
   id: Mec
   name: Mechanical
-  description: Cogs & Gears, Shafts & Motors, Materials & Pressure.
+  description: Tool handling & knowledge of the physics of the material world.
 
 - type: Skill
   id: Bio
   name: Biology
-  description: Knowledge about the forces of life.
+  description: Surgical prowess and knowledge about the forces of life.
 
 
 

@@ -114,25 +114,8 @@ namespace Content.Client.Gameplay
 
         private void LoadMainScreen()
         {
-            var screenTypeString = _configurationManager.GetCVar(CCVars.UILayout);
-            if (!Enum.TryParse(screenTypeString, out ScreenType screenType))
-            {
-                screenType = default;
-            }
-
-            switch (screenType)
-            {
-                case ScreenType.Default:
-                    _uiManager.LoadScreen<DefaultGameScreen>();
-                    break;
-                case ScreenType.Separated:
-                    _uiManager.LoadScreen<SeparatedChatGameScreen>();
-                    break;
-                case ScreenType.OxydStyle:
-                    _uiManager.LoadScreen<ErisUIGameScreen>();
-                    break;
-            }
-
+            // Oxyd-Edit , force to only 1 UI layout. SPCR 2026
+            _uiManager.LoadScreen<ErisUIGameScreen>();
             _loadController.LoadScreen();
         }
 

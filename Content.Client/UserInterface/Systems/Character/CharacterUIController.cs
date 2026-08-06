@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Client._Oxyd.Framework;
 using Content.Client._Oxyd.UI;
 using Content.Client.CharacterInfo;
 using Content.Client.Gameplay;
@@ -36,11 +37,36 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
     [UISystemDependency] private readonly SpriteSystem _sprite = default!;
     [UISystemDependency] private StatusPanelSystem statPanel = default!;
 
+    public RadioOptions<string> panelButtons = new RadioOptions<string>(RadioOptionsLayout.Horizontal);
+
+    public Dictionary<string, Control> panels = new();
+
     public override void Initialize()
     {
         base.Initialize();
-
         SubscribeNetworkEvent<MindRoleTypeChangedEvent>(OnRoleTypeChanged);
+    }
+    // oxyd
+    public void setPanel(string key, Control content)
+    {
+        panels[key] = content;
+        // will be handled in init
+        if (_window is null)
+            return;
+
+        panelButtons.AddItem(key,key, _ =>
+        {
+            _window.CategoryContent.RemoveAllChildren();
+            _window.CategoryContent.AddChild(panels[key]);
+        });
+    }
+    // oxyd
+    public void removePanel(string key)
+    {
+        if (!ClientOxydHelpers.tryGetRadioOptionId(panelButtons, key, out var id))
+            return;
+        panels.Remove(key);
+        panelButtons.RemoveItem(id.Value);
     }
 
     private CharacterWindow? _window;
@@ -51,6 +77,15 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
         DebugTools.Assert(_window == null);
 
         _window = UIManager.CreateWindow<CharacterWindow>();
+        _window.CategoryButton.Children.Add(panelButtons);
+        foreach (var (key, content) in panels)
+        {
+            panelButtons.AddItem(key, key, _ =>
+            {
+                _window.CategoryContent.RemoveAllChildren();
+                _window.CategoryContent.AddChild(panels[key]);
+            });
+        }
         LayoutContainer.SetAnchorPreset(_window, LayoutContainer.LayoutPreset.CenterTop);
 
         _window.OnClose += DeactivateButton;
@@ -134,14 +169,14 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
             return;
         }
 
-        var (entity, job, objectives, briefing, entityName) = data;
+        var (entity, objectives, briefing, jobId, entityName) = data;
 
         _window.SpriteView.SetEntity(entity);
 
         UpdateRoleType();
-
+        var job = _prototypeManager.Index(jobId);
         _window.NameLabel.Text = entityName;
-        _window.SubText.Text = job;
+        _window.SubText.Text = job != null ? Loc.GetString(job.Name) : null;
         _window.Objectives.RemoveAllChildren();
         _window.ObjectivesLabel.Visible = objectives.Any();
 
@@ -194,13 +229,32 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
             _window.Objectives.AddChild(briefingControl);
         }
 
-        var controls = _characterInfo.GetCharacterInfoControls(entity);
-        foreach (var control in controls)
+        var info = _characterInfo.GetCharacterInfoControls(entity);
+        foreach (var control in info.Controls)
         {
             _window.Objectives.AddChild(control);
         }
 
-        _window.RolePlaceholder.Visible = briefing == null && !controls.Any() && !objectives.Any();
+        panelButtons.Clear();
+        foreach (var (key, content) in info.PanelControls)
+        {
+            setPanel(key, content);
+        }
+
+        if (!info.PanelControls.Any())
+        {
+            _window.MinWidth = 400;
+            _window.PanelSide.Visible = false;
+        }
+        else
+        {
+            _window.MinWidth = 1000;
+            _window.PanelSide.Visible = true;
+            _window.CategoryContent.RemoveAllChildren();
+            _window.CategoryContent.AddChild(panels[info.PanelControls.Keys.First()]);
+        }
+
+        _window.RolePlaceholder.Visible = briefing == null && !info.Controls.Any() && !objectives.Any();
     }
 
     private void OnRoleTypeChanged(MindRoleTypeChangedEvent ev, EntitySessionEventArgs _)

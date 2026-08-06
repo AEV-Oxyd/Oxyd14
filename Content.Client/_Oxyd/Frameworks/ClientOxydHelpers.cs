@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using Robust.Client.GameObjects;
 using Robust.Client.Timing;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using static Robust.Client.GameObjects.SpriteComponent;
 
@@ -8,10 +11,68 @@ namespace Content.Client._Oxyd.Framework;
 /// <summary>
 /// This handles...
 /// </summary>
+///
+
 public sealed partial class ClientOxydHelpers : EntitySystem
 {
     [Dependency] private IClientGameTiming _gameTiming = default!;
     [Dependency] private SpriteSystem _sprite = default!;
+
+    public static bool FindControl<T>(Control parent,string id, [NotNullWhen(true)] out T? found) where T : Control
+    {
+        found = null;
+
+        Queue<Control> checking =  new(16);
+        checking.Enqueue(parent);
+        while (checking.TryDequeue(out var c))
+        {
+            foreach (var child in c.Children)
+            {
+                if (child.Name == id)
+                {
+                    if (child is not T)
+                    {
+                        return false;
+                    }
+
+                    found = (T)child;
+                    return true;
+                }
+
+                if (child.ChildCount != 0)
+                    checking.Enqueue(child);
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// dont use on types without a Equals function declared!!!! SPCR 2026
+    /// </summary>
+    /// <param name="target"></param>
+    /// <param name="value"></param>
+    /// <param name="index"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public static bool tryGetRadioOptionId<T>(RadioOptions<T> target, T value,[NotNullWhen(true)] out int? index)
+    {
+        index = null;
+        for (int i = 0; i < target.ItemCount; i++)
+        {
+            if (target.GetItemMetadata(i) is RadioOptionButtonData<T> butt)
+            {
+                if (butt.Value is null)
+                    continue;
+                if (butt.Value.Equals(value))
+                {
+                    index = butt.Id;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     // returns how many ticks ahead we are simulating as the client
     public uint getPredTicks()
