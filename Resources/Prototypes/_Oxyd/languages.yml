@@ -14,3 +14,16 @@
   - ced
   - au
   - veo
+
+- type: language
+  id: Serbian
+  chatIdentifier: z
+  words:
+    hello: zdravo
+    goodbye: doviđenja
+    fuck: jebi
+  phonetics:
+    - akc
+    - bkz
+    - fez
+    - cuz

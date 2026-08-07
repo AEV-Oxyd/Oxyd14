@@ -5,3 +5,21 @@
   components:
     - type: Sanity
     - type: MobSkill
+    - type: LanguageKnowledge
+      speaking:
+        - Universal
+      understanding:
+        - Universal
+
+- type: entity
+  parent: MobHumanOxyd
+  id: MobHumanOxydZov
+  name: Human(Oxyd)(Zov)
+  components:
+    - type: LanguageKnowledge
+      speaking:
+        - Universal
+        - Serbian
+      understanding:
+        - Universal
+        - Serbian

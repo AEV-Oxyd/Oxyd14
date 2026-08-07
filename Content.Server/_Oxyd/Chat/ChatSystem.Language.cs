@@ -53,13 +53,14 @@ public sealed record MessageData(
         key = GetLanguageHash(validLanguages);
         if (builtMessages.TryGetValue(key, out var msg))
             return msg;
-        var sb = new StringBuilder();
+        var sb = new StringBuilder(128);
         foreach (var block in messageBlocks)
         {
             if (validLanguages.Contains(block.language))
                 sb.Append(block.raw);
             else
                 sb.Append(block.unspoken);
+            sb.Append(' ');
         }
         builtMessages[key] = sb.ToString();
         return sb.ToString();
@@ -155,32 +156,39 @@ public sealed partial class ChatSystem
     /// <returns></returns>
     public List<MessageBlock> BuildLanguageBlocks(string message, ProtoId<LanguagePrototype> defaultLang, HashSet<ProtoId<LanguagePrototype>> validLanguages)
     {
+        Log.Error($"Building language blocks for {message}");
         var ret = new List<MessageBlock>();
+        var mes = message.AsSpan();
         var spanLooker = data.keyMapping.GetAlternateLookup<ReadOnlySpan<char>>();
-        var idString = new StringBuilder(8);
         // whilest you might want to make this areadonly span we need the strings for the RAW msg in the blocks . SPCR 2026
-        var segmented = message.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var segmented = mes.Split(';');
         foreach (var segment in segmented)
         {
-            var ss = segment.AsSpan();
-            var sliceEnd = ss.IndexOf(' ');
+            var t = mes[segment];
+            Log.Error($"Segment {t}");
+            var sliceEnd = t.IndexOf(' ');
             if (sliceEnd == -1)
             {
                 sliceEnd = 0;
             }
-            var block = new MessageBlock(segment, string.Empty, defaultLang);
-            if(spanLooker.TryGetValue(ss.Slice(0, sliceEnd), out var langId))
+            var block = new MessageBlock(string.Empty, string.Empty, defaultLang);
+            var identitySlice = t[..sliceEnd];
+            if(spanLooker.TryGetValue(identitySlice, out var langId))
             {
                 if (validLanguages.Contains(langId))
                 {
                     block.language = langId;
                 }
-                block.unspoken = CreateNonSpeakerMessage(ss.Slice(sliceEnd), block.language);
+
+                block.raw = t[sliceEnd..].ToString();
+                block.unspoken = CreateNonSpeakerMessage(t[sliceEnd..], block.language);
             }
             else
             {
-                block.unspoken = CreateNonSpeakerMessage(ss, defaultLang);
+                block.raw = t.ToString();
+                block.unspoken = CreateNonSpeakerMessage(t, defaultLang);
             }
+            Log.Error($"Language marked as {block.language}");
             ret.Add(block);
         }
         return ret;
@@ -216,8 +224,10 @@ public sealed partial class ChatSystem
         var build = new StringBuilder(message.Length);
         var splits = message.Split(' ');
         foreach (var indices in splits)
-            build.Append(getWord(message.Slice(indices.Start.Value, indices.End.Value - indices.Start.Value),
-                language));
+        {
+            build.Append(getWord(message[indices], language));
+            build.Append(' ');
+        }
 
         return build.ToString();
     }

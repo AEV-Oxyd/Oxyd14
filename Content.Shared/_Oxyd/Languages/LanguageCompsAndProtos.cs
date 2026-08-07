@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd;
@@ -6,14 +7,14 @@ namespace Content.Shared._Oxyd;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class LanguageKnowledgeComponent : Component
 {
-    [ViewVariables]
-    public ProtoId<LanguagePrototype> chosen;
-    [DataField]
+    [ViewVariables, AutoNetworkedField]
+    public ProtoId<LanguagePrototype> chosen = "Universal";
+    [DataField, AutoNetworkedField]
     public HashSet<ProtoId<LanguagePrototype>> understanding = new();
-    [DataField]
+    [DataField, AutoNetworkedField]
     public HashSet<ProtoId<LanguagePrototype>> speaking = new();
 }
 

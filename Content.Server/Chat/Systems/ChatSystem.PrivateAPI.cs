@@ -81,7 +81,7 @@ public sealed partial class ChatSystem
                 }
             }
             var entHideChat = entRange == MessageRangeCheckResult.HideChat;
-            _chatManager.ChatMessageToOne(ChatChannel.Local, finalMessages[k][0], finalMessages[k][1], msg.speaker, entHideChat, session.Channel);
+            _chatManager.ChatMessageToOne(ChatChannel.Local, finalMessages[usingKey][0], finalMessages[usingKey][1], msg.speaker, entHideChat, session.Channel);
         }
 
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Local, message, finalMessages[k][1], GetNetEntity(msg.speaker), null, MessageRangeHideChatForReplay(msg.range)));
