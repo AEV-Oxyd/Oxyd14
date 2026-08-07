@@ -82,6 +82,8 @@ public sealed partial class ChatSystem
 
     public ProtoId<LanguagePrototype> standardLanguage = "Universal";
 
+    public char languageMarker = '=';
+
     [ViewVariables] public EntityUid core = EntityUid.Invalid; 
     
     [SubscribeLocalEvent]
@@ -156,16 +158,14 @@ public sealed partial class ChatSystem
     /// <returns></returns>
     public List<MessageBlock> BuildLanguageBlocks(string message, ProtoId<LanguagePrototype> defaultLang, HashSet<ProtoId<LanguagePrototype>> validLanguages)
     {
-        Log.Error($"Building language blocks for {message}");
         var ret = new List<MessageBlock>();
         var mes = message.AsSpan();
         var spanLooker = data.keyMapping.GetAlternateLookup<ReadOnlySpan<char>>();
         // whilest you might want to make this areadonly span we need the strings for the RAW msg in the blocks . SPCR 2026
-        var segmented = mes.Split(';');
+        var segmented = mes.Split(languageMarker);
         foreach (var segment in segmented)
         {
             var t = mes[segment];
-            Log.Error($"Segment {t}");
             var sliceEnd = t.IndexOf(' ');
             if (sliceEnd == -1)
             {
@@ -188,7 +188,6 @@ public sealed partial class ChatSystem
                 block.raw = t.ToString();
                 block.unspoken = CreateNonSpeakerMessage(t, defaultLang);
             }
-            Log.Error($"Language marked as {block.language}");
             ret.Add(block);
         }
         return ret;

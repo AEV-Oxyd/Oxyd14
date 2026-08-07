@@ -1,29 +1,6361 @@
+
+# languages are
+# Universal - u
+# Latin - l
+# Neohongo - c
+# TechnoRussian - r
+# Serbian - z
+# Jive - j
+
 - type: language
   id: Universal
   chatIdentifier: u
-  words:
-    the: cum
-    throw: arunca
-    and: si
-    came: a venit
-    to: la
-    dog: caine
+  lengthPhoneticsRatio: 0.4
   phonetics:
-  - b
-  - a
-  - ced
-  - au
-  - veo
+    - ab
+    - ac
+    - ad
+    - af
+    - ag
+    - aj
+    - ak
+    - al
+    - am
+    - an
+    - ap
+    - ar
+    - as
+    - at
+    - av
+    - aw
+    - ax
+    - ay
+    - az
+    - eb
+    - ec
+    - ed
+    - ef
+    - eg
+    - ej
+    - ek
+    - el
+    - em
+    - en
+    - ep
+    - er
+    - es
+    - et
+    - ev
+    - ew
+    - ex
+    - ey
+    - ez
+    - ib
+    - ic
+    - id
+    - if
+    - ig
+    - ij
+    - ik
+    - il
+    - im
+    - in
+    - ip
+    - ir
+    - is
+    - it
+    - iv
+    - iw
+    - ix
+    - iy
+    - iz
+    - ob
+    - oc
+    - od
+    - of
+    - og
+    - oj
+    - ok
+    - ol
+    - om
+    - on
+    - op
+    - or
+    - os
+    - ot
+    - ov
+    - ow
+    - ox
+    - oy
+    - oz
+    - ub
+    - uc
+    - ud
+    - uf
+    - ug
+    - uj
+    - uk
+    - ul
+    - um
+    - un
+    - up
+    - ur
+    - us
+    - ut
+    - uv
+    - uw
+    - ux
+    - uy
+    - uz
+  words:
+    a: zilvoro
+    about: krelmasto
+    above: plovindar
+    across: gromvesko
+    act: veskalor
+    active: lompastre
+    activity: xebronte
+    add: zelvarko
+    address: nolbustra
+    adult: grelfondo
+    after: jastiver
+    again: zofalir
+    against: twilgardo
+    age: demovira
+    ago: freptano
+    agree: krelvisto
+    air: vaxiloro
+    all: yornedra
+    allow: pelfonar
+    almost: zebrondo
+    along: crutivon
+    already: mipostre
+    also: jeltamo
+    although: fozindra
+    always: hwekstron
+    among: kweldor
+    amount: dreganto
+    ancient: plomestr
+    and: eshvano
+    anger: nurlivo
+    animal: blivandro
+    another: stelvora
+    answer: grunopar
+    any: trixendo
+    anyone: vofalir
+    anything: zelbanto
+    anyway: chabrino
+    appear: skitolor
+    apply: vrelmasto
+    approach: krefolir
+    area: dolfinar
+    arm: pligandro
+    army: ruskovar
+    around: swelvora
+    art: klaqonto
+    as: skorvino
+    ask: virdelar
+    at: nefanto
+    attack: gromvelo
+    attempt: faspolar
+    attend: jelkivar
+    attention: wivostro
+    authority: xornelar
+    avoid: blepindo
+    away: kletvoro
+    back: xedolvir
+    bad: zomestro
+    balance: trevando
+    ball: plonvira
+    bank: fluporex
+    bar: krebasto
+    base: zedolir
+    battle: crolvina
+    be: venvarko
+    bear: goklano
+    beat: moktaro
+    beautiful: plevistro
+    because: gafolir
+    become: tivandro
+    bed: zelvino
+    before: krezondo
+    begin: nubelar
+    behind: gwelvora
+    believe: jafindo
+    best: velmesto
+    better: kezolir
+    between: prilvasto
+    beyond: xevolir
+    big: doktaro
+    bill: snafondo
+    bind: jelpitar
+    bit: kritvino
+    black: qurvestro
+    block: frolindo
+    blood: qebolar
+    blow: slafvora
+    blue: mezvento
+    board: snabolar
+    boat: kropvino
+    body: temvando
+    book: gliparxa
+    born: venkolar
+    both: xilmesto
+    bottom: drexvina
+    bound: telkondo
+    break: skegolar
+    bring: lorbento
+    broad: tekmelo
+    brother: fraxvora
+    build: molkitar
+    burn: zorvino
+    bury: vepolir
+    bus: krasvina
+    business: gorpendro
+    but: netvoro
+    buy: plefindo
+    by: kipvina
+    call: voktaro
+    calm: zedolir
+    can: pirvasto
+    care: lomvora
+    carry: fudenta
+    case: krebasto
+    cat: moktaro
+    catch: prazvina
+    cause: nolvira
+    center: teskento
+    century: vekloro
+    certain: xolvira
+    chair: slomento
+    challenge: krefindo
+    chance: zosvora
+    change: zedolir
+    character: plobento
+    charge: tolindo
+    cheap: blefvora
+    check: lorpento
+    child: gromvira
+    choice: frupvora
+    choose: xelindo
+    church: wefvasto
+    circle: kromenta
+    city: zevolar
+    civil: tokvino
+    claim: felnito
+    class: kretvoro
+    clean: slubirta
+    clear: frelvora
+    climb: gorpexa
+    clock: xomenta
+    close: kelpisto
+    cloth: zleftor
+    cloud: nubexa
+    coast: krubvira
+    cold: zifando
+    collect: ploventa
+    color: xebvora
+    come: yelindo
+    command: korftar
+    comment: blakvo
+    commit: vroken
+    community: steblor
+    company: klovira
+    compare: freltar
+    compete: krilsto
+    competition: zweftor
+    complete: nolvirta
+    complex: torkesta
+    condition: gleffor
+    conduct: plubtar
+    conference: kromsto
+    confidence: vlektor
+    confirm: zornisto
+    conflict: grobenta
+    confuse: skibtor
+    connect: talfter
+    consider: kreftar
+    consist: leptor
+    constant: vokisto
+    construct: ziltar
+    contact: broptor
+    contain: gleptar
+    content: frolda
+    continue: zernta
+    contract: klogar
+    control: slirtor
+    conversation: zelbosta
+    copy: kriptar
+    corner: xebtor
+    correct: praftar
+    cost: voktor
+    could: plontar
+    country: zeftor
+    county: kradta
+    couple: xomtor
+    course: ketta
+    court: grolta
+    cover: plinta
+    create: mofta
+    crime: zafta
+    culture: kribta
+    current: svetta
+    cut: klifta
+    dad: nebtar
+    daily: zobtar
+    damage: gromta
+    danger: xalta
+    dark: vetta
+    date: lomta
+    daughter: zefta
+    day: krinta
+    dead: qulta
+    deal: plovta
+    dear: xekta
+    death: krefa
+    decide: zolta
+    decision: pramta
+    deep: zilta
+    define: krovta
+    degree: zekta
+    delay: fopta
+    deliver: grokta
+    demand: krepra
+    department: snovra
+    depend: krelra
+    describe: vekra
+    design: plobra
+    desire: kelpra
+    despite: frelra
+    destroy: zornra
+    detail: krebna
+    determine: vokna
+    develop: plegna
+    die: qixna
+    difference: zefna
+    different: kletna
+    difficult: xornna
+    dinner: vekna
+    direction: krofla
+    direct: krela
+    discover: bropla
+    discuss: zilpa
+    disease: krela
+    district: pefna
+    divide: kromna
+    do: kipna
+    doctor: xebna
+    document: fropla
+    dog: zefna
+    door: krobna
+    down: klerna
+    draw: vokna
+    dream: zelna
+    dress: klibna
+    drink: kropna
+    drive: plovna
+    drop: zefna
+    dry: xalna
+    due: krefna
+    during: kromna
+    each: grolna
+    early: zekna
+    earth: xebna
+    east: krelna
+    easy: plobna
+    eat: vekna
+    economy: krofna
+    edge: zilna
+    educate: plegna
+    effect: kromna
+    effort: krebna
+    egg: xomna
+    either: frelna
+    else: kletna
+    employ: vokna
+    enable: zornna
+    encounter: gromna
+    end: kipna
+    enemy: xebna
+    energy: plovna
+    engage: krelna
+    engine: krofna
+    enjoy: zelna
+    enough: kromna
+    ensure: plegna
+    enter: vekna
+    environment: xornna
+    equal: kletna
+    escape: frelna
+    even: zefna
+    evening: krobna
+    event: plobna
+    ever: krelna
+    every: grolna
+    everyone: xebna
+    evidence: kromna
+    exact: zilna
+    exam: plegna
+    example: vokna
+    except: krofna
+    exchange: zornna
+    executive: kletna
+    exist: frelna
+    expect: kromna
+    experience: xebna
+    expert: plovna
+    explain: krelna
+    express: grolna
+    extend: zefna
+    extreme: krobna
+    eye: vekna
+    face: kipna
+    fact: xomna
+    factor: zelna
+    fail: kromna
+    fair: plegna
+    fall: vokna
+    family: krofna
+    far: krelna
+    fast: grolna
+    father: xebna
+    fear: plovna
+    feel: zornna
+    fellow: kletna
+    female: frelna
+    field: kromna
+    fight: xornna
+    figure: krebna
+    fill: zilna
+    film: plegna
+    final: vekna
+    find: kipna
+    fine: xomna
+    finger: zelna
+    finish: kromna
+    fire: plegna
+    firm: vokna
+    first: krofna
+    fish: krelna
+    fit: grolna
+    five: xebna
+    floor: plovna
+    fly: zornna
+    focus: kletna
+    follow: frelna
+    food: kromna
+    foot: xornna
+    for: krebna
+    force: zilna
+    foreign: plegna
+    forget: vekna
+    form: kipna
+    former: xomna
+    forward: zelna
+    four: kromna
+    free: plegna
+    friend: vokna
+    from: krofna
+    front: krelna
+    full: grolna
+    fund: xebna
+    future: plovna
+    gain: zornna
+    game: kletna
+    garden: frelna
+    gas: kromna
+    gate: xornna
+    gather: krebna
+    general: zilna
+    get: plegna
+    girl: vekna
+    give: kipna
+    glad: xomna
+    go: zelna
+    goal: kromna
+    good: plegna
+    great: vokna
+    green: krofna
+    ground: krelna
+    group: grolna
+    grow: xebna
+    guy: plovna
+    hair: zornna
+    half: kletna
+    hand: frelna
+    happen: kromna
+    happy: xornna
+    hard: krebna
+    have: zilna
+    he: plegna
+    head: vekna
+    health: kipna
+    hear: xomna
+    heart: zelna
+    heat: kromna
+    heavy: plegna
+    help: vokna
+    here: krofna
+    herself: krelna
+    high: grolna
+    him: xebna
+    himself: plovna
+    his: zornna
+    history: kletna
+    hold: frelna
+    home: kromna
+    hope: xornna
+    horse: krebna
+    hospital: zilna
+    hot: plegna
+    hour: vekna
+    house: kipna
+    how: xomna
+    however: zelna
+    human: kromna
+    hundred: plegna
+    husband: vokna
+    idea: krofna
+    identify: krelna
+    if: grolna
+    image: xebna
+    imagine: plovna
+    impact: zornna
+    important: kletna
+    improve: frelna
+    in: kromna
+    include: xornna
+    increase: krebna
+    indeed: zilna
+    indicate: plegna
+    individual: vekna
+    industry: kipna
+    influence: xomna
+    information: zelna
+    initial: kromna
+    inside: plegna
+    instead: vokna
+    interest: krofna
+    international: krelna
+    interview: grolna
+    into: xebna
+    introduce: plovna
+    invest: zornna
+    involve: kletna
+    issue: frelna
+    it: kromna
+    its: xornna
+    itself: krebna
+    job: zilna
+    join: plegna
+    just: vekna
+    keep: kipna
+    key: xomna
+    kill: zelna
+    kind: kromna
+    know: plegna
+    lady: vokna
+    land: krofna
+    language: krelna
+    large: grolna
+    last: xebna
+    late: plovna
+    later: zornna
+    laugh: kletna
+    law: frelna
+    lay: kromna
+    lead: xornna
+    learn: krebna
+    leave: zilna
+    left: plegna
+    leg: vekna
+    less: kipna
+    let: xomna
+    level: zelna
+    life: kromna
+    light: plegna
+    like: vokna
+    line: krofna
+    list: krelna
+    listen: grolna
+    little: xebna
+    live: plovna
+    local: zornna
+    long: kletna
+    look: frelna
+    lose: kromna
+    lot: xornna
+    love: krebna
+    low: zilna
+    lunch: plegna
+    machine: vekna
+    main: kipna
+    major: xomna
+    make: zelna
+    man: kromna
+    manage: plegna
+    many: vokna
+    market: krofna
+    marriage: krelna
+    master: grolna
+    match: xebna
+    matter: plovna
+    may: zornna
+    maybe: kletna
+    me: frelna
+    mean: kromna
+    measure: xornna
+    media: krebna
+    medical: zilna
+    meet: plegna
+    meeting: vekna
+    member: kipna
+    memory: xomna
+    mention: zelna
+    message: kromna
+    method: plegna
+    middle: vokna
+    might: krofna
+    military: krelna
+    million: grolna
+    mind: xebna
+    minute: plovna
+    miss: zornna
+    model: kletna
+    modern: frelna
+    moment: kromna
+    money: xornna
+    month: krebna
+    moon: zilna
+    more: plegna
+    morning: vekna
+    most: kipna
+    mother: xomna
+    move: zelna
+    much: kromna
+    music: plegna
+    must: vokna
+    my: krofna
+    myself: krelna
+    name: grolna
+    national: xebna
+    natural: plovna
+    near: zornna
+    necessary: kletna
+    need: frelna
+    neither: kromna
+    network: xornna
+    never: krebna
+    new: zilna
+    news: plegna
+    next: vekna
+    nice: kipna
+    night: xomna
+    no: zelna
+    none: kromna
+    nor: plegna
+    north: vokna
+    not: krofna
+    nothing: krelna
+    notice: grolna
+    now: xebna
+    number: plovna
+    object: zornna
+    obtain: kletna
+    occur: frelna
+    of: kromna
+    off: xornna
+    offer: krebna
+    office: zilna
+    officer: plegna
+    often: vekna
+    oil: kipna
+    old: xomna
+    on: zelna
+    once: kromna
+    one: plegna
+    only: vokna
+    open: krofna
+    operation: krelna
+    opportunity: grolna
+    option: xebna
+    or: plovna
+    order: zornna
+    organization: kletna
+    other: frelna
+    our: kromna
+    ourselves: xornna
+    out: krebna
+    outside: zilna
+    over: plegna
+    own: vekna
+    pack: kipna
+    page: xomna
+    paint: zelna
+    paper: kromna
+    parent: plegna
+    park: vokna
+    part: krofna
+    participant: krelna
+    particular: grolna
+    partner: xebna
+    pass: plovna
+    past: zornna
+    path: kletna
+    patient: frelna
+    pay: kromna
+    peace: xornna
+    people: krebna
+    per: zilna
+    perfect: plegna
+    perform: vekna
+    perhaps: kipna
+    period: xomna
+    person: zelna
+    pick: kromna
+    picture: plegna
+    piece: vokna
+    place: krofna
+    plan: krelna
+    plant: grolna
+    play: xebna
+    please: plovna
+    pleasure: zornna
+    plus: kletna
+    point: frelna
+    police: kromna
+    policy: xornna
+    political: krebna
+    poor: zilna
+    position: plegna
+    positive: vekna
+    possible: kipna
+    post: xomna
+    pour: zelna
+    power: kromna
+    practice: plegna
+    present: vokna
+    president: krofna
+    press: krelna
+    pressure: grolna
+    pretty: xebna
+    prevent: plovna
+    price: zornna
+    primary: kletna
+    principle: frelna
+    priority: kromna
+    private: xornna
+    probably: krebna
+    problem: zilna
+    process: plegna
+    produce: vekna
+    product: kipna
+    professional: xomna
+    professor: zelna
+    program: kromna
+    project: plegna
+    property: vokna
+    propose: krofna
+    protect: krelna
+    prove: grolna
+    provide: xebna
+    public: plovna
+    pull: zornna
+    purpose: kletna
+    push: frelna
+    put: kromna
+    quality: xornna
+    question: krebna
+    quick: zilna
+    quit: plegna
+    quite: vekna
+    race: kipna
+    radio: xomna
+    raise: zelna
+    range: kromna
+    rate: plegna
+    rather: vokna
+    reach: krofna
+    read: krelna
+    ready: grolna
+    real: xebna
+    reality: plovna
+    realize: zornna
+    reason: kletna
+    receive: frelna
+    recent: kromna
+    record: xornna
+    red: krebna
+    reduce: zilna
+    reflect: plegna
+    region: vekna
+    relate: kipna
+    relationship: xomna
+    release: zelna
+    remain: kromna
+    remember: plegna
+    remove: vokna
+    report: krofna
+    represent: krelna
+    republic: grolna
+    require: xebna
+    research: plovna
+    respect: zornna
+    respond: kletna
+    rest: frelna
+    result: kromna
+    return: xornna
+    reveal: krebna
+    review: zilna
+    rich: plegna
+    ride: vekna
+    right: kipna
+    rise: xomna
+    risk: zelna
+    river: kromna
+    road: plegna
+    rock: vokna
+    role: krofna
+    room: krelna
+    rule: grolna
+    run: xebna
+    safe: plovna
+    same: zornna
+    save: kletna
+    say: frelna
+    scene: kromna
+    school: xornna
+    science: krebna
+    score: zilna
+    sea: plegna
+    search: vekna
+    season: kipna
+    seat: xomna
+    second: zelna
+    secret: kromna
+    section: plegna
+    see: vokna
+    seek: krofna
+    seem: krelna
+    self: grolna
+    sell: xebna
+    send: plovna
+    senior: zornna
+    sense: kletna
+    separate: frelna
+    serious: kromna
+    serve: xornna
+    service: krebna
+    set: zilna
+    settle: plegna
+    several: vekna
+    shake: kipna
+    shall: xomna
+    she: zelna
+    shoot: kromna
+    short: plegna
+    should: vokna
+    show: krofna
+    side: krelna
+    sign: grolna
+    sister: xebna
+    sit: plovna
+    site: zornna
+    situation: kletna
+    six: frelna
+    size: kromna
+    skill: xornna
+    sky: krebna
+    sleep: zilna
+    slightly: plegna
+    small: vekna
+    smile: kipna
+    so: xomna
+    social: zelna
+    society: kromna
+    soldier: plegna
+    some: vokna
+    someone: krofna
+    something: krelna
+    sometimes: grolna
+    son: xebna
+    song: plovna
+    soon: zornna
+    sorry: kletna
+    sort: frelna
+    sound: kromna
+    source: xornna
+    south: krebna
+    space: zilna
+    speak: plegna
+    special: vekna
+    specific: kipna
+    spend: xomna
+    spring: zelna
+    staff: kromna
+    stage: plegna
+    stand: vokna
+    standard: krofna
+    star: krelna
+    start: grolna
+    state: xebna
+    stay: plovna
+    step: zornna
+    stick: kletna
+    still: frelna
+    stock: kromna
+    stop: xornna
+    store: krebna
+    story: zilna
+    straight: plegna
+    strange: vekna
+    street: kipna
+    strength: xomna
+    strike: zelna
+    strong: kromna
+    student: plegna
+    study: vokna
+    stuff: krofna
+    style: krelna
+    subject: grolna
+    success: xebna
+    such: plovna
+    sudden: zornna
+    suffer: kletna
+    suggest: frelna
+    summer: kromna
+    sun: xornna
+    supply: krebna
+    support: zilna
+    sure: plegna
+    surprise: vekna
+    surround: kipna
+    survey: xomna
+    survive: zelna
+    suspect: kromna
+    swear: plegna
+    system: vokna
+    table: krofna
+    take: krelna
+    talk: grolna
+    task: xebna
+    tax: plovna
+    teach: zornna
+    team: kletna
+    tell: frelna
+    ten: kromna
+    tend: xornna
+    term: krebna
+    test: zilna
+    than: plegna
+    thank: vekna
+    that: kipna
+    the: xomna
+    their: zelna
+    themselves: kromna
+    then: plegna
+    there: vokna
+    these: krofna
+    they: krelna
+    thing: grolna
+    think: xebna
+    third: plovna
+    this: zornna
+    those: kletna
+    though: frelna
+    thought: kromna
+    thousand: xornna
+    threat: krebna
+    three: zilna
+    through: plegna
+    throughout: vekna
+    throw: kipna
+    thus: xomna
+    time: zelna
+    to: kromna
+    today: plegna
+    together: vokna
+    too: krofna
+    top: krelna
+    total: grolna
+    tough: xebna
+    toward: plovna
+    town: zornna
+    track: kletna
+    trade: frelna
+    traditional: kromna
+    traffic: xornna
+    train: krebna
+    travel: zilna
+    treat: plegna
+    treatment: vekna
+    tree: kipna
+    trial: xomna
+    trip: zelna
+    trouble: kromna
+    true: plegna
+    trust: vokna
+    truth: krofna
+    try: krelna
+    turn: grolna
+    two: xebna
+    type: plovna
+    under: zornna
+    understand: kletna
+    unit: frelna
+    until: kromna
+    up: xornna
+    upon: krebna
+    us: zilna
+    use: plegna
+    used: vekna
+    usually: kipna
+    value: xomna
+    various: zelna
+    version: kromna
+    very: plegna
+    view: vokna
+    visit: krofna
+    voice: krelna
+    vote: grolna
+    wait: xebna
+    walk: plovna
+    wall: zornna
+    want: kletna
+    war: frelna
+    watch: kromna
+    water: xornna
+    way: krebna
+    we: zilna
+    wear: plegna
+    week: vekna
+    weigh: kipna
+    well: xomna
+    west: zelna
+    what: kromna
+    whatever: plegna
+    when: vokna
+    where: krofna
+    whether: krelna
+    which: grolna
+    while: xebna
+    white: plovna
+    who: zornna
+    whole: kletna
+    whom: frelna
+    whose: kromna
+    why: xornna
+    wide: krebna
+    wife: zilna
+    will: plegna
+    win: vekna
+    wind: kipna
+    window: xomna
+    wish: zelna
+    with: kromna
+    within: plegna
+    without: vokna
+    woman: krofna
+    wonder: krelna
+    word: grolna
+    work: xebna
+    world: plovna
+    worry: zornna
+    would: kletna
+    write: frelna
+    wrong: kromna
+    year: xornna
+    yes: krebna
+    yet: zilna
+    you: plegna
+    young: vekna
+    your: kipna
+    yourself: xomna
+
+- type: language
+  id: Jive
+  chatIdentifier: j
+  lengthPhoneticsRatio: 0.4
+  phonetics:
+    - ba
+    - be
+    - bi
+    - bo
+    - bu
+    - ca
+    - ce
+    - ci
+    - co
+    - cu
+    - da
+    - de
+    - di
+    - do
+    - du
+    - fa
+    - fe
+    - fi
+    - fo
+    - fu
+    - ga
+    - ge
+    - gi
+    - go
+    - gu
+    - ha
+    - he
+    - hi
+    - ho
+    - hu
+    - ja
+    - je
+    - ji
+    - jo
+    - ju
+    - ka
+    - ke
+    - ki
+    - ko
+    - ku
+    - la
+    - le
+    - li
+    - lo
+    - lu
+    - ma
+    - me
+    - mi
+    - mo
+    - mu
+    - na
+    - ne
+    - ni
+    - no
+    - nu
+    - pa
+    - pe
+    - pi
+    - po
+    - pu
+    - ra
+    - re
+    - ri
+    - ro
+    - ru
+    - sa
+    - se
+    - si
+    - so
+    - su
+    - ta
+    - te
+    - ti
+    - to
+    - tu
+    - va
+    - ve
+    - vi
+    - vo
+    - vu
+    - wa
+    - we
+    - wi
+    - wo
+    - wu
+    - ya
+    - ye
+    - yi
+    - yo
+    - yu
+    - za
+    - ze
+    - zi
+    - zo
+    - zu
+    - zza
+    - zze
+    - zzi
+    - zzo
+    - zzu
+  words:
+    a: one
+    about: bout
+    above: up
+    across: cross
+    act: do
+    active: lively
+    activity: gig
+    add: drop
+    address: crib
+    adult: big'un
+    after: afta
+    again: gain'
+    against: gainst'
+    age: years
+    ago: back
+    agree: dig
+    air: breeze
+    all: ev'ry
+    allow: let
+    almost: mos'
+    along: long
+    already: ready
+    also: too
+    although: tho
+    always: all the time
+    among: mongst
+    amount: heap
+    ancient: old school
+    and: n
+    anger: mad
+    animal: beast
+    another: nother
+    answer: holler
+    any: any ol'
+    anyone: anybody
+    anything: any which thing
+    anyway: anyhow
+    appear: show
+    apply: lay
+    approach: creep
+    area: turf
+    arm: wing
+    army: crew
+    around: round
+    art: jive
+    as: like
+    ask: ax
+    at: near 'bout
+    attack: jump
+    attempt: try
+    attend: be there
+    attention: ear
+    authority: boss
+    avoid: duck
+    away: gone
+    back: spine
+    bad: wicked
+    balance: cool
+    ball: rock
+    bank: stash
+    bar: joint
+    base: foundation
+    battle: jam
+    be: exist
+    bear: carry
+    beat: slap
+    beautiful: fine
+    because: cause
+    become: get
+    bed: rack
+    before: fore
+    begin: start
+    behind: backside
+    believe: dig
+    best: baddest
+    better: mo' better
+    between: twixt
+    beyond: past
+    big: large
+    bill: tab
+    bind: tie
+    bit: piece
+    black: dark
+    block: stop
+    blood: gore
+    blow: gust
+    blue: azure
+    board: plank
+    boat: vessel
+    body: frame
+    book: tome
+    born: birthed
+    both: both of 'em
+    bottom: floor
+    bound: tied
+    break: bust
+    bring: tote
+    broad: wide
+    brother: bro
+    build: erect
+    burn: scorch
+    bury: inter
+    bus: ride
+    business: bidness
+    but: yet
+    buy: cop
+    by: via
+    call: holler
+    calm: chill
+    can: able
+    care: mind
+    carry: tote
+    case: instance
+    cat: feline
+    catch: snag
+    cause: reason
+    center: middle
+    century: hundred
+    certain: sho
+    chair: seat
+    challenge: test
+    chance: shot
+    change: switch
+    character: cat
+    charge: tab
+    cheap: cheapskate
+    check: peep
+    child: kid
+    choice: pick
+    choose: select
+    church: chapel
+    circle: ring
+    city: metro
+    civil: civic
+    claim: stake
+    class: grade
+    clean: spic
+    clear: crystal
+    climb: ascend
+    clock: ticker
+    close: shut
+    cloth: rag
+    cloud: mist
+    coast: shore
+    cold: chilly
+    collect: gather
+    color: hue
+    come: arrive
+    command: order
+    comment: remark
+    commit: do
+    community: hood
+    company: outfit
+    compare: liken
+    compete: jive
+    competition: jam
+    complete: done
+    complex: heavy
+    condition: shape
+    conduct: run
+    conference: meet
+    confidence: cool
+    confirm: cosign
+    conflict: beef
+    confuse: mess
+    connect: link
+    consider: check
+    consist: made of
+    constant: steady
+    construct: build
+    contact: hit
+    contain: hold
+    content: cool
+    continue: keep on
+    contract: deal
+    control: run
+    conversation: rap
+    copy: dupe
+    corner: nook
+    correct: right
+    cost: price
+    could: might
+    country: nation
+    county: parish
+    couple: pair
+    course: route
+    court: tribunal
+    cover: lid
+    create: make
+    crime: rap
+    culture: vibe
+    current: flow
+    cut: slice
+    dad: pops
+    daily: everyday
+    damage: harm
+    danger: peril
+    dark: dim
+    date: day
+    daughter: girl
+    day: sunup
+    dead: gone
+    deal: bargain
+    dear: precious
+    death: demise
+    decide: choose
+    decision: call
+    deep: profound
+    define: spell out
+    degree: level
+    delay: lag
+    deliver: bring
+    demand: require
+    department: bureau
+    depend: lean
+    describe: paint
+    design: pattern
+    desire: want
+    despite: notwithstanding
+    destroy: wreck
+    detail: nitty
+    determine: figure
+    develop: grow
+    die: expire
+    difference: diff
+    different: other
+    difficult: tough
+    dinner: supper
+    direction: way
+    direct: straight
+    discover: find
+    discuss: rap
+    disease: ailment
+    district: zone
+    divide: split
+    do: perform
+    doctor: doc
+    document: paper
+    dog: mutt
+    door: entrance
+    down: below
+    draw: sketch
+    dream: vision
+    dress: threads
+    drink: sip
+    drive: wheel
+    drop: fall
+    dry: arid
+    due: owing
+    during: while
+    each: every
+    early: ahead
+    earth: ground
+    east: orient
+    easy: simple
+    eat: chow
+    economy: scrilla
+    edge: rim
+    educate: school
+    effect: result
+    effort: elbow
+    egg: ovum
+    either: any
+    else: otherwise
+    employ: hire
+    enable: let
+    encounter: meet
+    end: finish
+    enemy: foe
+    energy: juice
+    engage: get down
+    engine: motor
+    enjoy: relish
+    enough: plenty
+    ensure: make sure
+    enter: step in
+    environment: scene
+    equal: same
+    escape: split
+    even: flat
+    evening: dusk
+    event: gig
+    ever: always
+    every: each
+    everyone: everybody
+    evidence: proof
+    exact: precise
+    exam: test
+    example: case
+    except: cept
+    exchange: swap
+    executive: big cat
+    exist: be
+    expect: look for
+    experience: vibe
+    expert: pro
+    explain: break down
+    express: put out
+    extend: stretch
+    extreme: radical
+    eye: peeper
+    face: mug
+    fact: truth
+    factor: element
+    fail: flop
+    fair: square
+    fall: tumble
+    family: fam
+    far: distant
+    fast: quick
+    father: pops
+    fear: dread
+    feel: sense
+    fellow: bro
+    female: sis
+    field: meadow
+    fight: scrap
+    figure: shape
+    fill: pack
+    film: flick
+    final: last
+    find: locate
+    fine: groovy
+    finger: digit
+    finish: end
+    fire: blaze
+    firm: solid
+    first: foremost
+    fish: fin
+    fit: suit
+    five: cinque
+    floor: deck
+    fly: soar
+    focus: center
+    follow: tail
+    food: grub
+    foot: paw
+    for: cause
+    force: clout
+    foreign: exotic
+    forget: blank
+    form: shape
+    former: prior
+    forward: ahead
+    four: quartet
+    free: loose
+    friend: buddy
+    from: out of
+    front: face
+    full: stuffed
+    fund: bankroll
+    future: tomorrow
+    gain: profit
+    game: sport
+    garden: yard
+    gas: fuel
+    gate: portal
+    gather: collect
+    general: broad
+    get: obtain
+    girl: chick
+    give: donate
+    glad: pleased
+    go: move
+    goal: target
+    good: groovy
+    great: fantastic
+    green: verdant
+    ground: dirt
+    group: crew
+    grow: sprout
+    guy: cat
+    hair: locks
+    half: moiety
+    hand: mitt
+    happen: occur
+    happy: glad
+    hard: rough
+    have: possess
+    he: dude
+    head: dome
+    health: fitness
+    hear: catch
+    heart: ticker
+    heat: warmth
+    heavy: weighty
+    help: assist
+    here: right here
+    herself: her own self
+    high: lofty
+    him: that cat
+    himself: his own self
+    his: his'n
+    history: past
+    hold: grip
+    home: crib
+    hope: aspiration
+    horse: nag
+    hospital: infirmary
+    hot: burning
+    hour: sixty
+    house: crib
+    how: how so
+    however: though
+    human: mortal
+    hundred: century
+    husband: old man
+    idea: notion
+    identify: peg
+    if: in case
+    image: likeness
+    imagine: picture
+    impact: wallop
+    important: key
+    improve: step up
+    in: inside
+    include: encompass
+    increase: jack up
+    indeed: sho
+    indicate: point
+    individual: cat
+    industry: biz
+    influence: juice
+    information: dope
+    initial: first
+    inside: within
+    instead: stead
+    interest: stake
+    international: worldwide
+    interview: rap
+    into: in
+    introduce: present
+    invest: lay down
+    involve: in
+    issue: matter
+    it: that
+    its: it's own
+    itself: it's self
+    job: gig
+    join: sign on
+    just: simply
+    keep: maintain
+    key: clue
+    kill: off
+    kind: sort
+    know: savvy
+    lady: dame
+    land: turf
+    language: lingo
+    large: big
+    last: final
+    late: tardy
+    later: soon
+    laugh: chuckle
+    law: statute
+    lay: place
+    lead: guide
+    learn: pick up
+    leave: split
+    left: port
+    leg: limb
+    less: minus
+    let: allow
+    level: plane
+    life: existence
+    light: glow
+    like: dig
+    line: row
+    list: roster
+    listen: hear
+    little: small
+    live: dwell
+    local: neighborhood
+    long: lengthy
+    look: gaze
+    lose: misplace
+    lot: load
+    love: adore
+    low: lower
+    lunch: grub
+    machine: contraption
+    main: primary
+    major: big league
+    make: construct
+    man: brotha
+    manage: steer
+    many: lots
+    market: mart
+    marriage: knot
+    master: boss
+    match: equal
+    matter: deal
+    may: can
+    maybe: perhaps
+    me: yours truly
+    mean: intend
+    measure: gauge
+    media: press
+    medical: healing
+    meet: connect
+    meeting: confab
+    member: constituent
+    memory: recall
+    mention: cite
+    message: word
+    method: approach
+    middle: center
+    might: could
+    military: army
+    million: megabucks
+    mind: brain
+    minute: second
+    miss: long for
+    model: template
+    modern: new wave
+    moment: jiffy
+    money: scratch
+    month: moon
+    moon: lunar
+    more: extra
+    morning: dawn
+    most: utmost
+    mother: momma
+    move: shift
+    much: ample
+    music: sounds
+    must: got to
+    my: mine
+    myself: my own self
+    name: handle
+    national: federal
+    natural: organic
+    near: close
+    necessary: required
+    need: requirement
+    neither: not either
+    network: grid
+    never: not ever
+    new: fresh
+    news: buzz
+    next: upcoming
+    nice: pleasant
+    night: darkness
+    no: negative
+    none: zip
+    nor: not
+    north: up
+    not: ain't
+    nothing: zilch
+    notice: observe
+    now: right now
+    number: digit
+    object: item
+    obtain: score
+    occur: go down
+    of: belongin' to
+    off: outta
+    offer: proposal
+    office: headquarters
+    officer: chief
+    often: frequently
+    oil: grease
+    old: ancient
+    on: atop
+    once: one time
+    one: single
+    only: sole
+    open: unbar
+    operation: op
+    opportunity: shot
+    option: choice
+    or: elsewise
+    order: command
+    organization: outfit
+    other: another
+    our: ours
+    ourselves: our own selves
+    out: exit
+    outside: out
+    over: above
+    own: personal
+    pack: bundle
+    page: leaf
+    paint: coat
+    paper: newsprint
+    parent: kin
+    park: garden
+    part: piece
+    participant: player
+    particular: specific
+    partner: sidekick
+    pass: hand
+    past: yester
+    path: trail
+    patient: case
+    pay: shell out
+    peace: serenity
+    people: folks
+    per: each
+    perfect: prime
+    perform: execute
+    perhaps: maybe
+    period: era
+    person: individual
+    pick: select
+    picture: image
+    piece: segment
+    place: spot
+    plan: scheme
+    plant: factory
+    play: jam
+    please: kindly
+    pleasure: joy
+    plus: and
+    point: idea
+    police: the man
+    policy: rules
+    political: governmental
+    poor: needy
+    position: slot
+    positive: sure
+    possible: feasible
+    post: mail
+    pour: decant
+    power: might
+    practice: drill
+    present: current
+    president: chief
+    press: squeeze
+    pressure: stress
+    pretty: attractive
+    prevent: block
+    price: cost
+    primary: main
+    principle: tenet
+    priority: precedence
+    private: personal
+    probably: likely
+    problem: issue
+    process: procedure
+    produce: yield
+    product: output
+    professional: pro
+    professor: prof
+    program: agenda
+    project: undertaking
+    property: goods
+    propose: suggest
+    protect: shield
+    prove: verify
+    provide: supply
+    public: communal
+    pull: tug
+    purpose: aim
+    push: shove
+    put: place
+    quality: caliber
+    question: query
+    quick: fast
+    quit: stop
+    quite: rather
+    race: ethnicity
+    radio: wireless
+    raise: lift
+    range: scope
+    rate: pace
+    rather: prefer
+    reach: attain
+    read: peruse
+    ready: prepared
+    real: true
+    reality: fact
+    realize: dig
+    reason: motive
+    receive: get
+    recent: fresh
+    record: log
+    red: crimson
+    reduce: cut
+    reflect: mirror
+    region: area
+    relate: connect
+    relationship: bond
+    release: free
+    remain: stay
+    remember: recall
+    remove: take off
+    report: account
+    represent: stand for
+    republic: state
+    require: demand
+    research: study
+    respect: esteem
+    respond: answer
+    rest: repose
+    result: outcome
+    return: come back
+    reveal: disclose
+    review: check
+    rich: wealthy
+    ride: drive
+    right: correct
+    rise: ascend
+    risk: hazard
+    river: stream
+    road: thoroughfare
+    rock: stone
+    role: part
+    room: chamber
+    rule: regulation
+    run: sprint
+    safe: secure
+    same: identical
+    save: preserve
+    say: speak
+    scene: setting
+    school: academy
+    science: knowledge
+    score: tally
+    sea: ocean
+    search: hunt
+    season: time
+    seat: place
+    second: subsequent
+    secret: confidential
+    section: segment
+    see: view
+    seek: search
+    seem: appear
+    self: ego
+    sell: peddle
+    send: dispatch
+    senior: elder
+    sense: feeling
+    separate: divide
+    serious: grave
+    serve: wait on
+    service: assistance
+    set: establish
+    settle: resolve
+    several: various
+    shake: vibrate
+    shall: will
+    she: her
+    shoot: fire
+    short: brief
+    should: ought
+    show: demonstrate
+    side: flank
+    sign: signal
+    sister: sis
+    sit: be seated
+    site: location
+    situation: scene
+    six: half dozen
+    size: magnitude
+    skill: expertise
+    sky: heavens
+    sleep: slumber
+    slightly: somewhat
+    small: tiny
+    smile: grin
+    so: accordingly
+    social: societal
+    society: community
+    soldier: warrior
+    some: a few
+    someone: somebody
+    something: a thing
+    sometimes: occasionally
+    son: boy
+    song: tune
+    soon: shortly
+    sorry: regretful
+    sort: kind
+    sound: noise
+    source: origin
+    south: down
+    space: room
+    speak: talk
+    special: exceptional
+    specific: particular
+    spend: expend
+    spring: season
+    staff: employees
+    stage: platform
+    stand: bear
+    standard: benchmark
+    star: celebrity
+    start: commence
+    state: condition
+    stay: remain
+    step: stride
+    stick: adhere
+    still: nevertheless
+    stock: inventory
+    stop: halt
+    store: shop
+    story: tale
+    straight: direct
+    strange: odd
+    street: thoroughfare
+    strength: might
+    strike: hit
+    strong: powerful
+    student: pupil
+    study: examine
+    stuff: items
+    style: flair
+    subject: topic
+    success: triumph
+    such: like that
+    sudden: abrupt
+    suffer: endure
+    suggest: propose
+    summer: summertime
+    sun: star
+    supply: provide
+    support: back up
+    sure: certain
+    surprise: astonish
+    surround: encircle
+    survey: poll
+    survive: live through
+    suspect: distrust
+    swear: vow
+    system: setup
+    table: board
+    take: seize
+    talk: speak
+    task: assignment
+    tax: levy
+    teach: instruct
+    team: squad
+    tell: relate
+    ten: decade
+    tend: incline
+    term: phrase
+    test: trial
+    than: compared to
+    thank: appreciate
+    that: yon
+    the: da
+    their: they-all's
+    themselves: their own selves
+    then: next
+    there: thar
+    these: these here
+    they: dem
+    thing: item
+    think: reckon
+    third: tertiary
+    this: dis
+    those: them
+    though: even if
+    thought: idea
+    thousand: grand
+    threat: menace
+    three: triad
+    through: thru
+    throughout: all over
+    throw: toss
+    thus: hence
+    time: clock
+    to: unto
+    today: now
+    together: jointly
+    too: also
+    top: summit
+    total: whole
+    tough: hard
+    toward: towards
+    town: municipality
+    track: trail
+    trade: commerce
+    traditional: customary
+    traffic: congestion
+    train: locomotive
+    travel: journey
+    treat: handle
+    treatment: care
+    tree: timber
+    trial: hearing
+    trip: excursion
+    trouble: difficulty
+    true: factual
+    trust: confidence
+    truth: veracity
+    try: attempt
+    turn: rotate
+    two: deuce
+    type: variety
+    under: below
+    understand: dig
+    unit: component
+    until: till
+    up: upward
+    upon: atop
+    us: we-all
+    use: utilize
+    used: accustomed
+    usually: generally
+    value: worth
+    various: assorted
+    version: edition
+    very: extremely
+    view: perspective
+    visit: drop by
+    voice: vocal
+    vote: ballot
+    wait: await
+    walk: stroll
+    wall: barrier
+    want: desire
+    war: conflict
+    watch: observe
+    water: H2O
+    way: path
+    we: our crew
+    wear: don
+    week: seven days
+    weigh: measure
+    well: fine
+    west: sunset
+    what: which thing
+    whatever: anything
+    when: as soon as
+    where: whereabouts
+    whether: if
+    which: what one
+    while: whilst
+    white: pale
+    who: who dat
+    whole: entire
+    whom: whomst
+    whose: belongin' to whom
+    why: reason
+    wide: broad
+    wife: old lady
+    will: shall
+    win: conquer
+    wind: breeze
+    window: pane
+    wish: desire
+    with: alongside
+    within: inside
+    without: minus
+    woman: lady
+    wonder: marvel
+    word: term
+    work: labor
+    world: globe
+    worry: fret
+    would: might
+    write: scribble
+    wrong: incorrect
+    year: annum
+    yes: yeah
+    yet: still
+    you: y'all
+    young: juvenile
+    your: yours
+    yourself: your own self
+
+- type: language
+  id: Latin
+  chatIdentifier: l
+  lengthPhoneticsRatio: 0.15
+  phonetics:
+    - ave
+    - age
+    - aqu
+    - ars
+    - atq
+    - aud
+    - ben
+    - bon
+    - cap
+    - civ
+    - cor
+    - cum
+    - cur
+    - dec
+    - deo
+    - dic
+    - dom
+    - dux
+    - ego
+    - erg
+    - est
+    - et
+    - fac
+    - fec
+    - fer
+    - fid
+    - fin
+    - for
+    - fra
+    - gen
+    - gra
+    - hab
+    - haec
+    - hoc
+    - hom
+    - ign
+    - in
+    - inter
+    - ius
+    - labor
+    - leg
+    - lex
+    - liber
+    - loc
+    - long
+    - lux
+    - mag
+    - mal
+    - man
+    - mater
+    - maxim
+    - me
+    - med
+    - mens
+    - miles
+    - min
+    - mor
+    - mort
+    - mult
+    - mund
+    - nat
+    - nav
+    - nec
+    - nih
+    - nob
+    - noc
+    - nomen
+    - non
+    - nov
+    - nox
+    - nunc
+    - omni
+    - opt
+    - or
+    - ordo
+    - pace
+    - par
+    - pars
+    - pater
+    - pax
+    - per
+    - plus
+    - poen
+    - pont
+    - popul
+    - por
+    - posse
+    - post
+    - pot
+    - prim
+    - pro
+    - pul
+    - qua
+    - quam
+    - qui
+    - quid
+    - quin
+    - quo
+    - quot
+    - ratio
+    - rect
+    - reg
+    - rel
+    - rem
+    - rex
+    - ris
+    - rum
+    - sac
+    - sal
+    - sap
+    - sat
+    - sc
+    - sci
+    - sed
+    - semp
+    - senat
+    - sent
+    - sequ
+    - serv
+    - si
+    - sic
+    - sign
+    - sil
+    - sim
+    - sol
+    - spec
+    - stat
+    - stel
+    - sti
+    - sub
+    - sum
+    - super
+    - sur
+    - tac
+    - tal
+    - tan
+    - teg
+    - temp
+    - tendo
+    - terra
+    - tim
+    - tra
+    - tres
+    - tri
+    - tu
+    - tum
+    - tur
+    - ultim
+    - umb
+    - un
+    - urb
+    - us
+    - ut
+    - val
+    - ve
+    - ven
+    - ver
+    - via
+    - vic
+    - vid
+    - vim
+    - vir
+    - vis
+    - vit
+    - viv
+    - voc
+    - vol
+    - vul
+    - vult
+  words:
+    a: unus
+    about: circa
+    above: supra
+    across: trans
+    act: actus
+    active: activus
+    activity: activitas
+    add: addere
+    address: inscriptio
+    adult: adultus
+    after: post
+    again: iterum
+    against: contra
+    age: aetas
+    ago: abhinc
+    agree: consentire
+    air: aer
+    all: omnis
+    allow: permittere
+    almost: paene
+    along: secundum
+    already: iam
+    also: etiam
+    although: quamquam
+    always: semper
+    among: inter
+    amount: quantitas
+    ancient: antiquus
+    and: et
+    anger: ira
+    animal: animal
+    another: alius
+    answer: responsum
+    any: ullus
+    anyone: quisquam
+    anything: aliquid
+    anyway: utcumque
+    appear: apparere
+    apply: applicare
+    approach: appropinquare
+    area: regio
+    arm: brachium
+    army: exercitus
+    around: circum
+    art: ars
+    as: sicut
+    ask: rogare
+    at: ad
+    attack: oppugnare
+    attempt: conari
+    attend: attendere
+    attention: attentio
+    authority: auctoritas
+    avoid: vitare
+    away: procul
+    back: retro
+    bad: malus
+    balance: libra
+    ball: pila
+    bank: ripa
+    bar: vectis
+    base: basis
+    battle: proelium
+    be: esse
+    bear: ferre
+    beat: verberare
+    beautiful: pulcher
+    because: quia
+    become: fieri
+    bed: lectus
+    before: ante
+    begin: incipere
+    behind: pone
+    believe: credere
+    best: optimus
+    better: melior
+    between: inter
+    beyond: ultra
+    big: magnus
+    bill: ratio
+    bind: ligare
+    bit: frustulum
+    black: niger
+    block: truncus
+    blood: sanguis
+    blow: flare
+    blue: caeruleus
+    board: tabula
+    boat: navis
+    body: corpus
+    book: liber
+    born: natus
+    both: ambo
+    bottom: fundus
+    bound: finis
+    break: frangere
+    bring: afferre
+    broad: latus
+    brother: frater
+    build: aedificare
+    burn: urere
+    bury: sepelire
+    bus: raeda
+    business: negotium
+    but: sed
+    buy: emere
+    by: per
+    call: vocare
+    calm: placidus
+    can: posse
+    care: cura
+    carry: portare
+    case: casus
+    cat: feles
+    catch: capere
+    cause: causa
+    center: centrum
+    century: saeculum
+    certain: certus
+    chair: sella
+    challenge: provocatio
+    chance: occasio
+    change: mutare
+    character: indoles
+    charge: onus
+    cheap: vilis
+    check: reprimere
+    child: puer
+    choice: electio
+    choose: eligere
+    church: ecclesia
+    circle: circulus
+    city: civitas
+    civil: civilis
+    claim: vindicare
+    class: classis
+    clean: mundus
+    clear: clarus
+    climb: scandere
+    clock: horologium
+    close: claudere
+    cloth: pannus
+    cloud: nubes
+    coast: ora
+    cold: frigidus
+    collect: colligere
+    color: color
+    come: venire
+    command: imperare
+    comment: commentum
+    commit: committere
+    community: communitas
+    company: societas
+    compare: comparare
+    compete: contendere
+    competition: certamen
+    complete: completus
+    complex: complexus
+    condition: condicio
+    conduct: ducere
+    conference: conventus
+    confidence: fiducia
+    confirm: confirmare
+    conflict: conflictus
+    confuse: confundere
+    connect: conectere
+    consider: considerare
+    consist: consistere
+    constant: constans
+    construct: construere
+    contact: contactus
+    contain: continere
+    content: contentus
+    continue: continuare
+    contract: contractus
+    control: imperium
+    conversation: colloquium
+    copy: exemplar
+    corner: angulus
+    correct: corrigere
+    cost: constare
+    could: poterat
+    country: patria
+    county: pagus
+    couple: copula
+    course: cursus
+    court: curia
+    cover: tegere
+    create: creare
+    crime: crimen
+    culture: cultura
+    current: currens
+    cut: secare
+    dad: pater
+    daily: cottidianus
+    damage: damnum
+    danger: periculum
+    dark: obscurus
+    date: dies
+    daughter: filia
+    day: dies
+    dead: mortuus
+    deal: negotiari
+    dear: carus
+    death: mors
+    decide: decernere
+    decision: decisio
+    deep: altus
+    define: definire
+    degree: gradus
+    delay: mora
+    deliver: tradere
+    demand: exigere
+    department: pars
+    depend: pendere
+    describe: describere
+    design: designare
+    desire: desiderium
+    despite: in spite
+    destroy: destruere
+    detail: singula
+    determine: determinare
+    develop: evolvere
+    die: mori
+    difference: differentia
+    different: diversus
+    difficult: difficilis
+    dinner: cena
+    direction: directio
+    direct: directus
+    discover: invenire
+    discuss: discutere
+    disease: morbus
+    district: regio
+    divide: dividere
+    do: facere
+    doctor: medicus
+    document: documentum
+    dog: canis
+    door: ianua
+    down: deorsum
+    draw: trahere
+    dream: somnium
+    dress: vestis
+    drink: bibere
+    drive: agere
+    drop: cadere
+    dry: siccus
+    due: debitus
+    during: durante
+    each: quisque
+    early: mane
+    earth: terra
+    east: oriens
+    easy: facilis
+    eat: edere
+    economy: oeconomia
+    edge: margo
+    educate: educare
+    effect: effectus
+    effort: conatus
+    egg: ovum
+    either: aut
+    else: aliter
+    employ: adhibere
+    enable: posse
+    encounter: obviam
+    end: finis
+    enemy: hostis
+    energy: energia
+    engage: occupare
+    engine: machina
+    enjoy: frui
+    enough: satis
+    ensure: curare
+    enter: intrare
+    environment: ambitus
+    equal: aequus
+    escape: effugere
+    even: etiam
+    evening: vesper
+    event: eventus
+    ever: umquam
+    every: omnis
+    everyone: omnes
+    evidence: evidentia
+    exact: exactus
+    exam: examen
+    example: exemplum
+    except: praeter
+    exchange: commutare
+    executive: exsecutivus
+    exist: existere
+    expect: expectare
+    experience: experientia
+    expert: peritus
+    explain: explicare
+    express: exprimere
+    extend: extendere
+    extreme: extremus
+    eye: oculus
+    face: facies
+    fact: factum
+    factor: factor
+    fail: deficere
+    fair: aequus
+    fall: cadere
+    family: familia
+    far: longe
+    fast: celer
+    father: pater
+    fear: timor
+    feel: sentire
+    fellow: socius
+    female: femina
+    field: ager
+    fight: pugnare
+    figure: figura
+    fill: implere
+    film: pellicula
+    final: ultimus
+    find: invenire
+    fine: bonus
+    finger: digitus
+    finish: finire
+    fire: ignis
+    firm: firmus
+    first: primus
+    fish: piscis
+    fit: aptus
+    five: quinque
+    floor: solum
+    fly: volare
+    focus: focus
+    follow: sequi
+    food: cibus
+    foot: pes
+    for: pro
+    force: vis
+    foreign: peregrinus
+    forget: oblivisci
+    form: forma
+    former: prior
+    forward: porro
+    four: quattuor
+    free: liber
+    friend: amicus
+    from: ex
+    front: frons
+    full: plenus
+    fund: pecunia
+    future: futurum
+    gain: lucrum
+    game: ludus
+    garden: hortus
+    gas: gasium
+    gate: porta
+    gather: congregare
+    general: generalis
+    get: obtinere
+    girl: puella
+    give: dare
+    glad: laetus
+    go: ire
+    goal: meta
+    good: bonus
+    great: magnus
+    green: viridis
+    ground: humus
+    group: grex
+    grow: crescere
+    guy: homo
+    hair: capillus
+    half: dimidium
+    hand: manus
+    happen: evenire
+    happy: felix
+    hard: difficilis
+    have: habere
+    he: ille
+    head: caput
+    health: sanitas
+    hear: audire
+    heart: cor
+    heat: calor
+    heavy: gravis
+    help: auxilium
+    here: hic
+    herself: ipsa
+    high: altus
+    him: eum
+    himself: se
+    his: eius
+    history: historia
+    hold: tenere
+    home: domus
+    hope: spes
+    horse: equus
+    hospital: valetudinarium
+    hot: calidus
+    hour: hora
+    house: aedes
+    how: quomodo
+    however: autem
+    human: humanus
+    hundred: centum
+    husband: maritus
+    idea: idea
+    identify: agnoscere
+    if: si
+    image: imago
+    imagine: imaginari
+    impact: ictus
+    important: gravis
+    improve: emendare
+    in: in
+    include: includere
+    increase: augere
+    indeed: vero
+    indicate: indicare
+    individual: singulus
+    industry: industria
+    influence: auctoritas
+    information: notitia
+    initial: primus
+    inside: intus
+    instead: potius
+    interest: studium
+    international: internationalis
+    interview: conloquium
+    into: in
+    introduce: introducere
+    invest: collocare
+    involve: implicare
+    issue: exitus
+    it: id
+    its: eius
+    itself: se
+    job: officium
+    join: iungere
+    just: iustus
+    keep: servare
+    key: clavis
+    kill: necare
+    kind: benignus
+    know: scire
+    lady: domina
+    land: terra
+    language: lingua
+    large: amplus
+    last: ultimus
+    late: serus
+    later: postea
+    laugh: ridere
+    law: lex
+    lay: ponere
+    lead: ducere
+    learn: discere
+    leave: relinquere
+    left: sinister
+    leg: crus
+    less: minor
+    let: permittere
+    level: planus
+    life: vita
+    light: lux
+    like: amare
+    line: linea
+    list: index
+    listen: audire
+    little: parvus
+    live: vivere
+    local: localis
+    long: longus
+    look: spectare
+    lose: amittere
+    lot: multum
+    love: amor
+    low: humilis
+    lunch: prandium
+    machine: machina
+    main: principalis
+    major: maior
+    make: facere
+    man: vir
+    manage: administrare
+    many: multi
+    market: forum
+    marriage: matrimonium
+    master: dominus
+    match: par
+    matter: materia
+    may: licet
+    maybe: fortasse
+    me: me
+    mean: significare
+    measure: metiri
+    media: media
+    medical: medicinalis
+    meet: occurrere
+    meeting: conventus
+    member: membrum
+    memory: memoria
+    mention: memorare
+    message: nuntius
+    method: methodus
+    middle: medius
+    might: fortasse
+    military: militaris
+    million: decies centena milia
+    mind: mens
+    minute: minutum
+    miss: desiderare
+    model: exemplar
+    modern: modernus
+    moment: momentum
+    money: pecunia
+    month: mensis
+    moon: luna
+    more: plus
+    morning: mane
+    most: plurimus
+    mother: mater
+    move: movere
+    much: multum
+    music: musica
+    must: debere
+    my: meus
+    myself: me
+    name: nomen
+    national: nationalis
+    natural: naturalis
+    near: prope
+    necessary: necessarius
+    need: necessitas
+    neither: neuter
+    network: rete
+    never: numquam
+    new: novus
+    news: nuntius
+    next: proximus
+    nice: lepidus
+    night: nox
+    no: non
+    none: nullus
+    nor: nec
+    north: septentrio
+    not: non
+    nothing: nihil
+    notice: animadvertere
+    now: nunc
+    number: numerus
+    object: obiectum
+    obtain: adipisci
+    occur: evenire
+    of: de
+    off: procul
+    offer: offerre
+    office: officium
+    officer: praefectus
+    often: saepe
+    oil: oleum
+    old: vetus
+    on: in
+    once: semel
+    one: unus
+    only: solus
+    open: aperire
+    operation: operatio
+    opportunity: facultas
+    option: optio
+    or: vel
+    order: ordo
+    organization: organizatio
+    other: alius
+    our: noster
+    ourselves: nos
+    out: extra
+    outside: foris
+    over: super
+    own: proprius
+    pack: sarcinare
+    page: pagina
+    paint: pingere
+    paper: charta
+    parent: parens
+    park: hortus
+    part: pars
+    participant: particeps
+    particular: peculiaris
+    partner: socius
+    pass: transire
+    past: praeteritus
+    path: via
+    patient: patiens
+    pay: solvere
+    peace: pax
+    people: populus
+    per: per
+    perfect: perfectus
+    perform: perficere
+    perhaps: fortasse
+    period: periodus
+    person: persona
+    pick: eligere
+    picture: pictura
+    piece: fragmentum
+    place: locus
+    plan: consilium
+    plant: planta
+    play: ludere
+    please: placere
+    pleasure: voluptas
+    plus: plus
+    point: punctum
+    police: vigiles
+    policy: consilium
+    political: politicus
+    poor: pauper
+    position: positio
+    positive: affirmativus
+    possible: possibilis
+    post: postis
+    pour: fundere
+    power: potentia
+    practice: praxis
+    present: praesens
+    president: praeses
+    press: premere
+    pressure: pressura
+    pretty: pulchellus
+    prevent: prohibere
+    price: pretium
+    primary: primarius
+    principle: principium
+    priority: prioritas
+    private: privatus
+    probably: probabiliter
+    problem: problema
+    process: processus
+    produce: producere
+    product: productum
+    professional: professionalis
+    professor: professor
+    program: programma
+    project: proiectum
+    property: proprietas
+    propose: proponere
+    protect: protegere
+    prove: probare
+    provide: providere
+    public: publicus
+    pull: trahere
+    purpose: propositum
+    push: propellere
+    put: ponere
+    quality: qualitas
+    question: quaestio
+    quick: celer
+    quit: desinere
+    quite: satis
+    race: gens
+    radio: radiophonia
+    raise: levare
+    range: orbis
+    rate: ratum
+    rather: potius
+    reach: pervenire
+    read: legere
+    ready: paratus
+    real: verus
+    reality: veritas
+    realize: cognoscere
+    reason: ratio
+    receive: accipere
+    recent: recens
+    record: recordari
+    red: ruber
+    reduce: reducere
+    reflect: reflectere
+    region: regio
+    relate: referre
+    relationship: relatio
+    release: liberare
+    remain: manere
+    remember: meminisse
+    remove: removere
+    report: referre
+    represent: repraesentare
+    republic: res publica
+    require: requirere
+    research: investigare
+    respect: respectus
+    respond: respondere
+    rest: quies
+    result: eventus
+    return: redire
+    reveal: revelare
+    review: recensere
+    rich: dives
+    ride: vehi
+    right: rectus
+    rise: surgere
+    risk: periculum
+    river: flumen
+    road: via
+    rock: saxum
+    role: munus
+    room: cubiculum
+    rule: regula
+    run: currere
+    safe: tutus
+    same: idem
+    save: servare
+    say: dicere
+    scene: scaena
+    school: schola
+    science: scientia
+    score: punctum
+    sea: mare
+    search: quaerere
+    season: tempus
+    seat: sedes
+    second: secundus
+    secret: secretum
+    section: sectio
+    see: videre
+    seek: petere
+    seem: videri
+    self: ego
+    sell: vendere
+    send: mittere
+    senior: senior
+    sense: sensus
+    separate: separare
+    serious: gravis
+    serve: servire
+    service: officium
+    set: ponere
+    settle: componere
+    several: plures
+    shake: agitare
+    shall: debere
+    she: illa
+    shoot: iaculari
+    short: brevis
+    should: debere
+    show: ostendere
+    side: latus
+    sign: signum
+    sister: soror
+    sit: sedere
+    site: locus
+    situation: situs
+    six: sex
+    size: magnitudo
+    skill: ars
+    sky: caelum
+    sleep: dormire
+    slightly: leviter
+    small: parvus
+    smile: risus
+    so: ita
+    social: socialis
+    society: societas
+    soldier: miles
+    some: aliquis
+    someone: aliquis
+    something: aliquid
+    sometimes: interdum
+    son: filius
+    song: carmen
+    soon: mox
+    sorry: paenitet
+    sort: genus
+    sound: sonus
+    source: fons
+    south: meridies
+    space: spatium
+    speak: loqui
+    special: specialis
+    specific: specificus
+    spend: expendere
+    spring: ver
+    staff: baculum
+    stage: scaena
+    stand: stare
+    standard: norma
+    star: stella
+    start: incipere
+    state: status
+    stay: manere
+    step: gradus
+    stick: haerere
+    still: adhuc
+    stock: stirps
+    stop: sistere
+    store: theca
+    story: fabula
+    straight: rectus
+    strange: alienus
+    street: via
+    strength: robur
+    strike: ferire
+    strong: fortis
+    student: discipulus
+    study: studium
+    stuff: materia
+    style: modus
+    subject: subiectum
+    success: successus
+    such: talis
+    sudden: subitus
+    suffer: pati
+    suggest: suggerere
+    summer: aestas
+    sun: sol
+    supply: suppeditare
+    support: sustinere
+    sure: certus
+    surprise: admiratio
+    surround: circumdare
+    survey: inspectio
+    survive: superstes
+    suspect: suspectus
+    swear: iurare
+    system: systema
+    table: mensa
+    take: capere
+    talk: loqui
+    task: negotium
+    tax: tributum
+    teach: docere
+    team: turma
+    tell: narrare
+    ten: decem
+    tend: tendere
+    term: terminus
+    test: probatio
+    than: quam
+    thank: gratias
+    that: ille
+    the: ille
+    their: eorum
+    themselves: se
+    then: tunc
+    there: ibi
+    these: hi
+    they: ei
+    thing: res
+    think: cogitare
+    third: tertius
+    this: hic
+    those: illi
+    though: quamquam
+    thought: cogitatio
+    thousand: mille
+    threat: minae
+    three: tres
+    through: per
+    throughout: per
+    throw: iacere
+    thus: ita
+    time: tempus
+    to: ad
+    today: hodie
+    together: simul
+    too: quoque
+    top: summus
+    total: totus
+    tough: durus
+    toward: versus
+    town: oppidum
+    track: vestigium
+    trade: mercatura
+    traditional: traditionalis
+    traffic: commercium
+    train: tramen
+    travel: iter
+    treat: tractare
+    treatment: curatio
+    tree: arbor
+    trial: iudicium
+    trip: iter
+    trouble: molestia
+    true: verus
+    trust: fiducia
+    truth: veritas
+    try: temptare
+    turn: vertere
+    two: duo
+    type: typus
+    under: sub
+    understand: intellegere
+    unit: unitas
+    until: donec
+    up: sursum
+    upon: super
+    us: nos
+    use: uti
+    used: usus
+    usually: plerumque
+    value: valor
+    various: varius
+    version: versio
+    very: valde
+    view: conspectus
+    visit: visitare
+    voice: vox
+    vote: suffragium
+    wait: expectare
+    walk: ambulare
+    wall: murus
+    want: velle
+    war: bellum
+    watch: spectare
+    water: aqua
+    way: via
+    we: nos
+    wear: gerere
+    week: hebdomas
+    weigh: ponderare
+    well: bene
+    west: occidens
+    what: quid
+    whatever: quidquid
+    when: quando
+    where: ubi
+    whether: utrum
+    which: qui
+    while: dum
+    white: albus
+    who: quis
+    whole: totus
+    whom: quem
+    whose: cuius
+    why: cur
+    wide: latus
+    wife: uxor
+    will: velle
+    win: vincere
+    wind: ventus
+    window: fenestra
+    wish: optare
+    with: cum
+    within: intra
+    without: sine
+    woman: mulier
+    wonder: mirari
+    word: verbum
+    work: opus
+    world: mundus
+    worry: cura
+    would: velle
+    write: scribere
+    wrong: iniuria
+    year: annus
+    yes: ita
+    yet: tamen
+    you: tu
+    young: iuvenis
+    your: tuus
+    yourself: tu
+
+- type: language
+  id: TechnoRussian
+  chatIdentifier: r
+  lengthPhoneticsRatio: 0.25
+  phonetics:
+    - зев
+    - кыл
+    - бракс
+    - дорн
+    - фект
+    - глот
+    - харн
+    - жент
+    - крез
+    - лорн
+    - мек
+    - неф
+    - олт
+    - плор
+    - кан
+    - рекс
+    - сып
+    - троф
+    - улкс
+    - вор
+    - выл
+    - ксен
+    - ёр
+    - зын
+    - аркс
+    - быт
+    - кром
+    - дрек
+    - эпкс
+    - фоз
+  words:
+    a: один
+    about: о
+    above: над
+    across: через
+    act: акт
+    active: активный
+    activity: активность
+    add: добавить
+    address: адрес
+    adult: взрослый
+    after: после
+    again: снова
+    against: против
+    age: возраст
+    ago: назад
+    agree: согласиться
+    air: воздух
+    all: все
+    allow: позволить
+    almost: почти
+    along: вдоль
+    already: уже
+    also: также
+    although: хотя
+    always: всегда
+    among: среди
+    amount: количество
+    ancient: древний
+    and: и
+    anger: гнев
+    animal: животное
+    another: другой
+    answer: ответ
+    any: любой
+    anyone: кто угодно
+    anything: что угодно
+    anyway: все равно
+    appear: появиться
+    apply: применить
+    approach: подход
+    area: область
+    arm: рука
+    army: армия
+    around: вокруг
+    art: искусство
+    as: как
+    ask: спросить
+    at: в
+    attack: атака
+    attempt: попытка
+    attend: посетить
+    attention: внимание
+    authority: власть
+    avoid: избежать
+    away: прочь
+    back: назад
+    bad: плохой
+    balance: баланс
+    ball: мяч
+    bank: банк
+    bar: бар
+    base: база
+    battle: битва
+    be: быть
+    bear: нести
+    beat: победить
+    beautiful: красивый
+    because: потому что
+    become: стать
+    bed: кровать
+    before: перед
+    begin: начать
+    behind: позади
+    believe: верить
+    best: лучший
+    better: лучше
+    between: между
+    beyond: за
+    big: большой
+    bill: счет
+    bind: связать
+    bit: немного
+    black: черный
+    block: блок
+    blood: кровь
+    blow: дуть
+    blue: синий
+    board: доска
+    boat: лодка
+    body: тело
+    book: книга
+    born: рожденный
+    both: оба
+    bottom: дно
+    bound: граница
+    break: ломать
+    bring: принести
+    broad: широкий
+    brother: брат
+    build: строить
+    burn: гореть
+    bury: хоронить
+    bus: автобус
+    business: дело
+    but: но
+    buy: купить
+    by: у
+    call: звать
+    calm: спокойный
+    can: мочь
+    care: забота
+    carry: носить
+    case: случай
+    cat: кот
+    catch: ловить
+    cause: причина
+    center: центр
+    century: век
+    certain: определенный
+    chair: стул
+    challenge: вызов
+    chance: шанс
+    change: изменение
+    character: характер
+    charge: заряд
+    cheap: дешевый
+    check: проверка
+    child: ребенок
+    choice: выбор
+    choose: выбрать
+    church: церковь
+    circle: круг
+    city: город
+    civil: гражданский
+    claim: утверждение
+    class: класс
+    clean: чистый
+    clear: ясный
+    climb: лезть
+    clock: часы
+    close: закрыть
+    cloth: ткань
+    cloud: облако
+    coast: берег
+    cold: холодный
+    collect: собрать
+    color: цвет
+    come: прийти
+    command: команда
+    comment: комментарий
+    commit: совершить
+    community: община
+    company: компания
+    compare: сравнить
+    compete: соревноваться
+    competition: соревнование
+    complete: полный
+    complex: сложный
+    condition: условие
+    conduct: провести
+    conference: конференция
+    confidence: уверенность
+    confirm: подтвердить
+    conflict: конфликт
+    confuse: сбить с толку
+    connect: соединить
+    consider: рассматривать
+    consist: состоять
+    constant: постоянный
+    construct: соорудить
+    contact: контакт
+    contain: содержать
+    content: содержание
+    continue: продолжить
+    contract: договор
+    control: контроль
+    conversation: разговор
+    copy: копия
+    corner: угол
+    correct: правильный
+    cost: стоимость
+    could: мог
+    country: страна
+    county: округ
+    couple: пара
+    course: курс
+    court: суд
+    cover: покрытие
+    create: создать
+    crime: преступление
+    culture: культура
+    current: текущий
+    cut: резать
+    dad: папа
+    daily: ежедневный
+    damage: вред
+    danger: опасность
+    dark: темный
+    date: дата
+    daughter: дочь
+    day: день
+    dead: мертвый
+    deal: сделка
+    dear: дорогой
+    death: смерть
+    decide: решить
+    decision: решение
+    deep: глубокий
+    define: определить
+    degree: степень
+    delay: задержка
+    deliver: доставить
+    demand: требование
+    department: отдел
+    depend: зависеть
+    describe: описать
+    design: дизайн
+    desire: желание
+    despite: несмотря на
+    destroy: уничтожить
+    detail: деталь
+    determine: определить
+    develop: развить
+    die: умереть
+    difference: различие
+    different: разный
+    difficult: трудный
+    dinner: ужин
+    direction: направление
+    direct: прямой
+    discover: открыть
+    discuss: обсудить
+    disease: болезнь
+    district: район
+    divide: разделить
+    do: делать
+    doctor: врач
+    document: документ
+    dog: собака
+    door: дверь
+    down: вниз
+    draw: рисовать
+    dream: мечта
+    dress: одежда
+    drink: пить
+    drive: вести
+    drop: упасть
+    dry: сухой
+    due: из-за
+    during: во время
+    each: каждый
+    early: рано
+    earth: земля
+    east: восток
+    easy: легкий
+    eat: есть
+    economy: экономика
+    edge: край
+    educate: обучать
+    effect: эффект
+    effort: усилие
+    egg: яйцо
+    either: либо
+    else: иначе
+    employ: нанять
+    enable: позволить
+    encounter: встреча
+    end: конец
+    enemy: враг
+    energy: энергия
+    engage: заниматься
+    engine: двигатель
+    enjoy: наслаждаться
+    enough: достаточно
+    ensure: обеспечить
+    enter: войти
+    environment: окружающая среда
+    equal: равный
+    escape: сбежать
+    even: даже
+    evening: вечер
+    event: событие
+    ever: когда-либо
+    every: каждый
+    everyone: все
+    evidence: доказательство
+    exact: точный
+    exam: экзамен
+    example: пример
+    except: кроме
+    exchange: обмен
+    executive: исполнительный
+    exist: существовать
+    expect: ожидать
+    experience: опыт
+    expert: эксперт
+    explain: объяснить
+    express: выразить
+    extend: продлить
+    extreme: экстремальный
+    eye: глаз
+    face: лицо
+    fact: факт
+    factor: фактор
+    fail: потерпеть неудачу
+    fair: справедливый
+    fall: падать
+    family: семья
+    far: далекий
+    fast: быстрый
+    father: отец
+    fear: страх
+    feel: чувствовать
+    fellow: товарищ
+    female: женский
+    field: поле
+    fight: борьба
+    figure: фигура
+    fill: заполнить
+    film: фильм
+    final: окончательный
+    find: найти
+    fine: хороший
+    finger: палец
+    finish: закончить
+    fire: огонь
+    firm: твердый
+    first: первый
+    fish: рыба
+    fit: подходить
+    five: пять
+    floor: пол
+    fly: летать
+    focus: фокус
+    follow: следовать
+    food: еда
+    foot: нога
+    for: для
+    force: сила
+    foreign: иностранный
+    forget: забыть
+    form: форма
+    former: бывший
+    forward: вперед
+    four: четыре
+    free: свободный
+    friend: друг
+    from: от
+    front: перед
+    full: полный
+    fund: фонд
+    future: будущее
+    gain: получить
+    game: игра
+    garden: сад
+    gas: газ
+    gate: ворота
+    gather: собрать
+    general: общий
+    get: получить
+    girl: девушка
+    give: дать
+    glad: рад
+    go: идти
+    goal: цель
+    good: хороший
+    great: великий
+    green: зеленый
+    ground: земля
+    group: группа
+    grow: расти
+    guy: парень
+    hair: волосы
+    half: половина
+    hand: рука
+    happen: случиться
+    happy: счастливый
+    hard: трудный
+    have: иметь
+    he: он
+    head: голова
+    health: здоровье
+    hear: слышать
+    heart: сердце
+    heat: тепло
+    heavy: тяжелый
+    help: помощь
+    here: здесь
+    herself: сама
+    high: высокий
+    him: ему
+    himself: сам
+    his: его
+    history: история
+    hold: держать
+    home: дом
+    hope: надежда
+    horse: лошадь
+    hospital: больница
+    hot: горячий
+    hour: час
+    house: дом
+    how: как
+    however: однако
+    human: человек
+    hundred: сто
+    husband: муж
+    idea: идея
+    identify: опознать
+    if: если
+    image: образ
+    imagine: представить
+    impact: влияние
+    important: важный
+    improve: улучшить
+    in: в
+    include: включить
+    increase: увеличить
+    indeed: действительно
+    indicate: указать
+    individual: личный
+    industry: промышленность
+    influence: влияние
+    information: информация
+    initial: начальный
+    inside: внутри
+    instead: вместо
+    interest: интерес
+    international: международный
+    interview: интервью
+    into: во
+    introduce: представить
+    invest: вложить
+    involve: вовлечь
+    issue: вопрос
+    it: это
+    its: его
+    itself: само
+    job: работа
+    join: присоединиться
+    just: только
+    keep: хранить
+    key: ключ
+    kill: убить
+    kind: добрый
+    know: знать
+    lady: леди
+    land: земля
+    language: язык
+    large: большой
+    last: последний
+    late: поздний
+    later: позже
+    laugh: смеяться
+    law: закон
+    lay: класть
+    lead: вести
+    learn: учить
+    leave: покинуть
+    left: левый
+    leg: нога
+    less: меньше
+    let: позволить
+    level: уровень
+    life: жизнь
+    light: свет
+    like: любить
+    line: линия
+    list: список
+    listen: слушать
+    little: маленький
+    live: жить
+    local: местный
+    long: длинный
+    look: смотреть
+    lose: потерять
+    lot: много
+    love: любовь
+    low: низкий
+    lunch: обед
+    machine: машина
+    main: основной
+    major: крупный
+    make: делать
+    man: мужчина
+    manage: управлять
+    many: много
+    market: рынок
+    marriage: брак
+    master: хозяин
+    match: соответствие
+    matter: дело
+    may: мочь
+    maybe: возможно
+    me: меня
+    mean: значить
+    measure: измерить
+    media: СМИ
+    medical: медицинский
+    meet: встретить
+    meeting: собрание
+    member: член
+    memory: память
+    mention: упомянуть
+    message: сообщение
+    method: метод
+    middle: середина
+    might: мог
+    military: военный
+    million: миллион
+    mind: ум
+    minute: минута
+    miss: скучать
+    model: модель
+    modern: современный
+    moment: момент
+    money: деньги
+    month: месяц
+    moon: луна
+    more: больше
+    morning: утро
+    most: наиболее
+    mother: мать
+    move: двигать
+    much: много
+    music: музыка
+    must: должен
+    my: мой
+    myself: сам
+    name: имя
+    national: национальный
+    natural: природный
+    near: близко
+    necessary: необходимый
+    need: нужда
+    neither: ни
+    network: сеть
+    never: никогда
+    new: новый
+    news: новости
+    next: следующий
+    nice: хороший
+    night: ночь
+    no: нет
+    none: никакой
+    nor: ни
+    north: север
+    not: не
+    nothing: ничего
+    notice: заметить
+    now: сейчас
+    number: номер
+    object: объект
+    obtain: получить
+    occur: произойти
+    of: из
+    off: выключено
+    offer: предложение
+    office: офис
+    officer: офицер
+    often: часто
+    oil: нефть
+    old: старый
+    on: на
+    once: однажды
+    one: один
+    only: только
+    open: открыть
+    operation: операция
+    opportunity: возможность
+    option: вариант
+    or: или
+    order: порядок
+    organization: организация
+    other: другой
+    our: наш
+    ourselves: сами
+    out: из
+    outside: снаружи
+    over: над
+    own: собственный
+    pack: паковать
+    page: страница
+    paint: красить
+    paper: бумага
+    parent: родитель
+    park: парк
+    part: часть
+    participant: участник
+    particular: особенный
+    partner: партнер
+    pass: пройти
+    past: прошлое
+    path: путь
+    patient: пациент
+    pay: платить
+    peace: мир
+    people: люди
+    per: за
+    perfect: идеальный
+    perform: выполнить
+    perhaps: возможно
+    period: период
+    person: личность
+    pick: выбрать
+    picture: картина
+    piece: кусок
+    place: место
+    plan: план
+    plant: завод
+    play: играть
+    please: пожалуйста
+    pleasure: удовольствие
+    plus: плюс
+    point: точка
+    police: полиция
+    policy: политика
+    political: политический
+    poor: бедный
+    position: позиция
+    positive: положительный
+    possible: возможный
+    post: почта
+    pour: лить
+    power: власть
+    practice: практика
+    present: настоящее
+    president: президент
+    press: нажимать
+    pressure: давление
+    pretty: красивый
+    prevent: предотвратить
+    price: цена
+    primary: главный
+    principle: принцип
+    priority: приоритет
+    private: частный
+    probably: вероятно
+    problem: проблема
+    process: процесс
+    produce: производить
+    product: продукт
+    professional: профессиональный
+    professor: профессор
+    program: программа
+    project: проект
+    property: собственность
+    propose: предложить
+    protect: защитить
+    prove: доказать
+    provide: обеспечить
+    public: общественный
+    pull: тянуть
+    purpose: цель
+    push: толкать
+    put: класть
+    quality: качество
+    question: вопрос
+    quick: быстрый
+    quit: уйти
+    quite: довольно
+    race: раса
+    radio: радио
+    raise: поднять
+    range: диапазон
+    rate: темп
+    rather: скорее
+    reach: достигнуть
+    read: читать
+    ready: готовый
+    real: реальный
+    reality: реальность
+    realize: понять
+    reason: причина
+    receive: получить
+    recent: недавний
+    record: запись
+    red: красный
+    reduce: сократить
+    reflect: отразить
+    region: регион
+    relate: относиться
+    relationship: отношение
+    release: освободить
+    remain: остаться
+    remember: помнить
+    remove: удалить
+    report: сообщение
+    represent: представить
+    republic: республика
+    require: требовать
+    research: исследование
+    respect: уважение
+    respond: ответить
+    rest: отдых
+    result: результат
+    return: вернуть
+    reveal: раскрыть
+    review: обзор
+    rich: богатый
+    ride: ехать
+    right: правильный
+    rise: подняться
+    risk: риск
+    river: река
+    road: дорога
+    rock: скала
+    role: роль
+    room: комната
+    rule: правило
+    run: бежать
+    safe: безопасный
+    same: одинаковый
+    save: сохранить
+    say: сказать
+    scene: сцена
+    school: школа
+    science: наука
+    score: счет
+    sea: море
+    search: поиск
+    season: сезон
+    seat: место
+    second: второй
+    secret: тайна
+    section: раздел
+    see: видеть
+    seek: искать
+    seem: казаться
+    self: само
+    sell: продать
+    send: отправить
+    senior: старший
+    sense: чувство
+    separate: отдельный
+    serious: серьезный
+    serve: служить
+    service: услуга
+    set: установить
+    settle: урегулировать
+    several: несколько
+    shake: трясти
+    shall: буду
+    she: она
+    shoot: стрелять
+    short: короткий
+    should: должен
+    show: показать
+    side: сторона
+    sign: знак
+    sister: сестра
+    sit: сидеть
+    site: место
+    situation: ситуация
+    six: шесть
+    size: размер
+    skill: навык
+    sky: небо
+    sleep: спать
+    slightly: немного
+    small: маленький
+    smile: улыбка
+    so: так
+    social: социальный
+    society: общество
+    soldier: солдат
+    some: некоторый
+    someone: кто-то
+    something: что-то
+    sometimes: иногда
+    son: сын
+    song: песня
+    soon: скоро
+    sorry: извините
+    sort: вид
+    sound: звук
+    source: источник
+    south: юг
+    space: пространство
+    speak: говорить
+    special: особый
+    specific: конкретный
+    spend: тратить
+    spring: весна
+    staff: персонал
+    stage: этап
+    stand: стоять
+    standard: стандарт
+    star: звезда
+    start: начать
+    state: государство
+    stay: остаться
+    step: шаг
+    stick: палка
+    still: все еще
+    stock: запас
+    stop: остановить
+    store: магазин
+    story: история
+    straight: прямой
+    strange: странный
+    street: улица
+    strength: сила
+    strike: удар
+    strong: сильный
+    student: студент
+    study: учиться
+    stuff: вещи
+    style: стиль
+    subject: предмет
+    success: успех
+    such: такой
+    sudden: внезапный
+    suffer: страдать
+    suggest: предложить
+    summer: лето
+    sun: солнце
+    supply: снабдить
+    support: поддержка
+    sure: уверенный
+    surprise: удивление
+    surround: окружить
+    survey: опрос
+    survive: выжить
+    suspect: подозревать
+    swear: клясться
+    system: система
+    table: стол
+    take: взять
+    talk: разговор
+    task: задача
+    tax: налог
+    teach: учить
+    team: команда
+    tell: рассказать
+    ten: десять
+    tend: склоняться
+    term: термин
+    test: тест
+    than: чем
+    thank: благодарить
+    that: тот
+    the: этот
+    their: их
+    themselves: они сами
+    then: затем
+    there: там
+    these: эти
+    they: они
+    thing: вещь
+    think: думать
+    third: третий
+    this: этот
+    those: те
+    though: хотя
+    thought: мысль
+    thousand: тысяча
+    threat: угроза
+    three: три
+    through: через
+    throughout: по
+    throw: бросить
+    thus: так
+    time: время
+    to: до
+    today: сегодня
+    together: вместе
+    too: слишком
+    top: верх
+    total: общий
+    tough: жесткий
+    toward: к
+    town: город
+    track: след
+    trade: торговля
+    traditional: традиционный
+    traffic: дорожное движение
+    train: поезд
+    travel: путешествовать
+    treat: лечить
+    treatment: лечение
+    tree: дерево
+    trial: судебный
+    trip: поездка
+    trouble: проблема
+    true: истинный
+    trust: доверие
+    truth: истина
+    try: попробовать
+    turn: повернуть
+    two: два
+    type: тип
+    under: под
+    understand: понять
+    unit: единица
+    until: до
+    up: вверх
+    upon: на
+    us: нас
+    use: использовать
+    used: использованный
+    usually: обычно
+    value: ценность
+    various: различные
+    version: версия
+    very: очень
+    view: взгляд
+    visit: посетить
+    voice: голос
+    vote: голос
+    wait: ждать
+    walk: ходить
+    wall: стена
+    want: хотеть
+    war: война
+    watch: смотреть
+    water: вода
+    way: путь
+    we: мы
+    wear: носить
+    week: неделя
+    weigh: весить
+    well: хорошо
+    west: запад
+    what: что
+    whatever: что бы
+    when: когда
+    where: где
+    whether: ли
+    which: который
+    while: время
+    white: белый
+    who: кто
+    whole: целый
+    whom: кого
+    whose: чей
+    why: почему
+    wide: широкий
+    wife: жена
+    will: буду
+    win: победить
+    wind: ветер
+    window: окно
+    wish: желание
+    with: с
+    within: внутри
+    without: без
+    woman: женщина
+    wonder: удивляться
+    word: слово
+    work: работа
+    world: мир
+    worry: беспокоиться
+    would: бы
+    write: писать
+    wrong: неправильный
+    year: год
+    yes: да
+    yet: еще
+    you: ты
+    young: молодой
+    your: твой
+    yourself: сам
 
 - type: language
   id: Serbian
   chatIdentifier: z
-  words:
-    hello: zdravo
-    goodbye: doviđenja
-    fuck: jebi
+  lengthPhoneticsRatio: 0.3
   phonetics:
     - akc
     - bkz
     - fez
     - cuz
+    - dza
+    - evo
+    - gav
+    - hnu
+    - ivo
+    - jel
+    - kra
+    - lom
+    - mip
+    - nux
+    - opr
+    - psk
+    - qrt
+    - rys
+    - sto
+    - trv
+    - uvo
+    - vat
+    - wok
+    - xel
+    - yod
+    - zup
+    - abl
+    - bic
+    - con
+    - der
+  words:
+    a: jedan
+    about: o
+    above: iznad
+    across: preko
+    act: čin
+    active: aktivan
+    activity: aktivnost
+    add: dodati
+    address: adresa
+    adult: odrastao
+    after: posle
+    again: ponovo
+    against: protiv
+    age: godine
+    ago: pre
+    agree: složiti se
+    air: vazduh
+    all: sve
+    allow: dozvoliti
+    almost: skoro
+    along: duž
+    already: već
+    also: takođe
+    although: iako
+    always: uvek
+    among: među
+    amount: količina
+    ancient: drevni
+    and: i
+    anger: bes
+    animal: životinja
+    another: drugi
+    answer: odgovor
+    any: bilo koji
+    anyone: bilo ko
+    anything: bilo šta
+    anyway: u svakom slučaju
+    appear: pojaviti se
+    apply: primeniti
+    approach: pristup
+    area: područje
+    arm: ruka
+    army: vojska
+    around: okolo
+    art: umetnost
+    as: kao
+    ask: pitati
+    at: na
+    attack: napad
+    attempt: pokušaj
+    attend: prisustvovati
+    attention: pažnja
+    authority: autoritet
+    avoid: izbeći
+    away: dalje
+    back: nazad
+    bad: loš
+    balance: balans
+    ball: lopta
+    bank: banka
+    bar: bar
+    base: osnova
+    battle: bitka
+    be: biti
+    bear: nositi
+    beat: pobediti
+    beautiful: lep
+    because: jer
+    become: postati
+    bed: krevet
+    before: pre
+    begin: početi
+    behind: iza
+    believe: verovati
+    best: najbolji
+    better: bolji
+    between: između
+    beyond: izvan
+    big: veliki
+    bill: račun
+    bind: vezati
+    bit: malo
+    black: crn
+    block: blok
+    blood: krv
+    blow: duvati
+    blue: plav
+    board: daska
+    boat: čamac
+    body: telo
+    book: knjiga
+    born: rođen
+    both: oba
+    bottom: dno
+    bound: granica
+    break: razbiti
+    bring: doneti
+    broad: širok
+    brother: brat
+    build: graditi
+    burn: goreti
+    bury: sahraniti
+    bus: autobus
+    business: posao
+    but: ali
+    buy: kupiti
+    by: od
+    call: zvati
+    calm: miran
+    can: moći
+    care: briga
+    carry: nositi
+    case: slučaj
+    cat: mačka
+    catch: uhvatiti
+    cause: uzrok
+    center: centar
+    century: vek
+    certain: siguran
+    chair: stolica
+    challenge: izazov
+    chance: šansa
+    change: promena
+    character: karakter
+    charge: naplata
+    cheap: jeftin
+    check: provera
+    child: dete
+    choice: izbor
+    choose: izabrati
+    church: crkva
+    circle: krug
+    city: grad
+    civil: građanski
+    claim: tvrdnja
+    class: klasa
+    clean: čist
+    clear: jasan
+    climb: penjati se
+    clock: sat
+    close: zatvoriti
+    cloth: tkanina
+    cloud: oblak
+    coast: obala
+    cold: hladan
+    collect: sakupiti
+    color: boja
+    come: doći
+    command: komanda
+    comment: komentar
+    commit: počiniti
+    community: zajednica
+    company: kompanija
+    compare: uporediti
+    compete: takmičiti se
+    competition: takmičenje
+    complete: kompletan
+    complex: složen
+    condition: uslov
+    conduct: sprovesti
+    conference: konferencija
+    confidence: poverenje
+    confirm: potvrditi
+    conflict: sukob
+    confuse: zbuniti
+    connect: povezati
+    consider: razmotriti
+    consist: sastojati se
+    constant: stalan
+    construct: izgraditi
+    contact: kontakt
+    contain: sadržati
+    content: sadržaj
+    continue: nastaviti
+    contract: ugovor
+    control: kontrola
+    conversation: razgovor
+    copy: kopija
+    corner: ugao
+    correct: tačan
+    cost: koštati
+    could: mogao
+    country: zemlja
+    county: okrug
+    couple: par
+    course: kurs
+    court: sud
+    cover: pokriti
+    create: stvoriti
+    crime: zločin
+    culture: kultura
+    current: trenutni
+    cut: seći
+    dad: tata
+    daily: dnevni
+    damage: šteta
+    danger: opasnost
+    dark: mrak
+    date: datum
+    daughter: ćerka
+    day: dan
+    dead: mrtav
+    deal: dogovor
+    dear: dragi
+    death: smrt
+    decide: odlučiti
+    decision: odluka
+    deep: dubok
+    define: definisati
+    degree: stepen
+    delay: kašnjenje
+    deliver: isporučiti
+    demand: zahtev
+    department: odeljenje
+    depend: zavisiti
+    describe: opisati
+    design: dizajn
+    desire: želja
+    despite: uprkos
+    destroy: uništiti
+    detail: detalj
+    determine: odrediti
+    develop: razviti
+    die: umreti
+    difference: razlika
+    different: drugačiji
+    difficult: težak
+    dinner: večera
+    direction: pravac
+    direct: direktan
+    discover: otkriti
+    discuss: razgovarati
+    disease: bolest
+    district: okrug
+    divide: podeliti
+    do: raditi
+    doctor: doktor
+    document: dokument
+    dog: pas
+    door: vrata
+    down: dole
+    draw: crtati
+    dream: san
+    dress: haljina
+    drink: piti
+    drive: voziti
+    drop: pasti
+    dry: suv
+    due: zbog
+    during: tokom
+    each: svaki
+    early: rano
+    earth: zemlja
+    east: istok
+    easy: lak
+    eat: jesti
+    economy: ekonomija
+    edge: ivica
+    educate: obrazovati
+    effect: efekat
+    effort: napor
+    egg: jaje
+    either: bilo
+    else: drugo
+    employ: zaposliti
+    enable: omogućiti
+    encounter: susret
+    end: kraj
+    enemy: neprijatelj
+    energy: energija
+    engage: angažovati
+    engine: motor
+    enjoy: uživati
+    enough: dovoljno
+    ensure: osigurati
+    enter: ući
+    environment: okruženje
+    equal: jednak
+    escape: pobegnuti
+    even: čak
+    evening: veče
+    event: događaj
+    ever: ikada
+    every: svaki
+    everyone: svako
+    evidence: dokaz
+    exact: tačan
+    exam: ispit
+    example: primer
+    except: osim
+    exchange: razmena
+    executive: izvršni
+    exist: postojati
+    expect: očekivati
+    experience: iskustvo
+    expert: stručnjak
+    explain: objasniti
+    express: izraziti
+    extend: produžiti
+    extreme: ekstreman
+    eye: oko
+    face: lice
+    fact: činjenica
+    factor: faktor
+    fail: propasti
+    fair: pravedan
+    fall: pasti
+    family: porodica
+    far: daleko
+    fast: brz
+    father: otac
+    fear: strah
+    feel: osećati
+    fellow: drug
+    female: ženski
+    field: polje
+    fight: borba
+    figure: broj
+    fill: puniti
+    film: film
+    final: konačan
+    find: naći
+    fine: dobar
+    finger: prst
+    finish: završiti
+    fire: vatra
+    firm: firma
+    first: prvi
+    fish: riba
+    fit: pristajati
+    five: pet
+    floor: pod
+    fly: leteti
+    focus: fokus
+    follow: pratiti
+    food: hrana
+    foot: stopalo
+    for: za
+    force: sila
+    foreign: strani
+    forget: zaboraviti
+    form: oblik
+    former: bivši
+    forward: napred
+    four: četiri
+    free: slobodan
+    friend: prijatelj
+    from: od
+    front: prednji
+    full: pun
+    fund: fond
+    future: budućnost
+    gain: dobiti
+    game: igra
+    garden: bašta
+    gas: gas
+    gate: kapija
+    gather: okupiti
+    general: opšti
+    get: dobiti
+    girl: devojka
+    give: dati
+    glad: zadovoljan
+    go: ići
+    goal: cilj
+    good: dobar
+    great: odličan
+    green: zelen
+    ground: zemlja
+    group: grupa
+    grow: rasti
+    guy: momak
+    hair: kosa
+    half: pola
+    hand: ruka
+    happen: dogoditi se
+    happy: srećan
+    hard: težak
+    have: imati
+    he: on
+    head: glava
+    health: zdravlje
+    hear: čuti
+    heart: srce
+    heat: toplota
+    heavy: težak
+    help: pomoć
+    here: ovde
+    herself: sama
+    high: visok
+    him: on
+    himself: sam
+    his: njegov
+    history: istorija
+    hold: držati
+    home: dom
+    hope: nada
+    horse: konj
+    hospital: bolnica
+    hot: vruć
+    hour: sat
+    house: kuća
+    how: kako
+    however: međutim
+    human: ljudski
+    hundred: sto
+    husband: muž
+    idea: ideja
+    identify: identifikovati
+    if: ako
+    image: slika
+    imagine: zamisliti
+    impact: uticaj
+    important: važan
+    improve: poboljšati
+    in: u
+    include: uključiti
+    increase: povećati
+    indeed: zaista
+    indicate: naznačiti
+    individual: pojedinac
+    industry: industrija
+    influence: uticaj
+    information: informacija
+    initial: početni
+    inside: unutra
+    instead: umesto
+    interest: interesovanje
+    international: međunarodni
+    interview: intervju
+    into: u
+    introduce: predstaviti
+    invest: ulagati
+    involve: uključivati
+    issue: pitanje
+    it: to
+    its: njegov
+    itself: samo
+    job: posao
+    join: pridružiti se
+    just: samo
+    keep: držati
+    key: ključ
+    kill: ubiti
+    kind: ljubazan
+    know: znati
+    lady: gospođa
+    land: zemlja
+    language: jezik
+    large: veliki
+    last: poslednji
+    late: kasno
+    later: kasnije
+    laugh: smejati se
+    law: zakon
+    lay: položiti
+    lead: voditi
+    learn: učiti
+    leave: napustiti
+    left: levo
+    leg: noga
+    less: manje
+    let: dozvoliti
+    level: nivo
+    life: život
+    light: svetlo
+    like: voleti
+    line: linija
+    list: lista
+    listen: slušati
+    little: mali
+    live: živeti
+    local: lokalni
+    long: dug
+    look: gledati
+    lose: izgubiti
+    lot: mnogo
+    love: ljubav
+    low: nizak
+    lunch: ručak
+    machine: mašina
+    main: glavni
+    major: glavni
+    make: napraviti
+    man: čovek
+    manage: upravljati
+    many: mnogo
+    market: tržište
+    marriage: brak
+    master: majstor
+    match: meč
+    matter: stvar
+    may: moći
+    maybe: možda
+    me: mene
+    mean: značiti
+    measure: meriti
+    media: mediji
+    medical: medicinski
+    meet: sresti
+    meeting: sastanak
+    member: član
+    memory: sećanje
+    mention: pomenuti
+    message: poruka
+    method: metoda
+    middle: sredina
+    might: možda
+    military: vojni
+    million: milion
+    mind: um
+    minute: minut
+    miss: propustiti
+    model: model
+    modern: moderan
+    moment: trenutak
+    money: novac
+    month: mesec
+    moon: mesec
+    more: više
+    morning: jutro
+    most: najviše
+    mother: majka
+    move: pomeriti
+    much: mnogo
+    music: muzika
+    must: morati
+    my: moj
+    myself: sam
+    name: ime
+    national: nacionalni
+    natural: prirodan
+    near: blizu
+    necessary: neophodan
+    need: potreba
+    neither: nijedan
+    network: mreža
+    never: nikada
+    new: nov
+    news: vesti
+    next: sledeći
+    nice: lep
+    night: noć
+    no: ne
+    none: nijedan
+    nor: niti
+    north: sever
+    not: ne
+    nothing: ništa
+    notice: primetiti
+    now: sada
+    number: broj
+    object: objekat
+    obtain: dobiti
+    occur: dogoditi se
+    of: od
+    off: isključeno
+    offer: ponuda
+    office: kancelarija
+    officer: oficir
+    often: često
+    oil: ulje
+    old: star
+    on: na
+    once: jednom
+    one: jedan
+    only: samo
+    open: otvoriti
+    operation: operacija
+    opportunity: prilika
+    option: opcija
+    or: ili
+    order: red
+    organization: organizacija
+    other: drugi
+    our: naš
+    ourselves: sami
+    out: napolje
+    outside: spolja
+    over: preko
+    own: sopstveni
+    pack: pakovati
+    page: strana
+    paint: bojiti
+    paper: papir
+    parent: roditelj
+    park: park
+    part: deo
+    participant: učesnik
+    particular: poseban
+    partner: partner
+    pass: proći
+    past: prošlost
+    path: put
+    patient: pacijent
+    pay: platiti
+    peace: mir
+    people: ljudi
+    per: po
+    perfect: savršen
+    perform: izvesti
+    perhaps: možda
+    period: period
+    person: osoba
+    pick: izabrati
+    picture: slika
+    piece: komad
+    place: mesto
+    plan: plan
+    plant: biljka
+    play: igrati
+    please: molim
+    pleasure: zadovoljstvo
+    plus: plus
+    point: tačka
+    police: policija
+    policy: politika
+    political: politički
+    poor: siromašan
+    position: pozicija
+    positive: pozitivan
+    possible: moguć
+    post: pošta
+    pour: sipati
+    power: moć
+    practice: praksa
+    present: sadašnjost
+    president: predsednik
+    press: pritisnuti
+    pressure: pritisak
+    pretty: prilično
+    prevent: sprečiti
+    price: cena
+    primary: primarni
+    principle: princip
+    priority: prioritet
+    private: privatni
+    probably: verovatno
+    problem: problem
+    process: proces
+    produce: proizvesti
+    product: proizvod
+    professional: profesionalni
+    professor: profesor
+    program: program
+    project: projekat
+    property: imovina
+    propose: predložiti
+    protect: zaštititi
+    prove: dokazati
+    provide: pružiti
+    public: javni
+    pull: povući
+    purpose: svrha
+    push: gurnuti
+    put: staviti
+    quality: kvalitet
+    question: pitanje
+    quick: brz
+    quit: napustiti
+    quite: prilično
+    race: rasa
+    radio: radio
+    raise: podići
+    range: opseg
+    rate: stopa
+    rather: radije
+    reach: dostići
+    read: čitati
+    ready: spreman
+    real: stvaran
+    reality: stvarnost
+    realize: shvatiti
+    reason: razlog
+    receive: primiti
+    recent: skori
+    record: zapis
+    red: crven
+    reduce: smanjiti
+    reflect: odraziti
+    region: region
+    relate: odnositi se
+    relationship: odnos
+    release: osloboditi
+    remain: ostati
+    remember: zapamtiti
+    remove: ukloniti
+    report: izveštaj
+    represent: predstavljati
+    republic: republika
+    require: zahtevati
+    research: istraživanje
+    respect: poštovanje
+    respond: odgovoriti
+    rest: odmor
+    result: rezultat
+    return: vratiti
+    reveal: otkriti
+    review: pregled
+    rich: bogat
+    ride: voziti
+    right: desno
+    rise: porasti
+    risk: rizik
+    river: reka
+    road: put
+    rock: stena
+    role: uloga
+    room: soba
+    rule: pravilo
+    run: trčati
+    safe: bezbedan
+    same: isti
+    save: sačuvati
+    say: reći
+    scene: scena
+    school: škola
+    science: nauka
+    score: rezultat
+    sea: more
+    search: pretraga
+    season: sezona
+    seat: sedište
+    second: drugi
+    secret: tajna
+    section: odeljak
+    see: videti
+    seek: tražiti
+    seem: činiti se
+    self: ja
+    sell: prodati
+    send: poslati
+    senior: stariji
+    sense: osećaj
+    separate: odvojiti
+    serious: ozbiljan
+    serve: služiti
+    service: usluga
+    set: postaviti
+    settle: rešiti
+    several: nekoliko
+    shake: tresti
+    shall: trebati
+    she: ona
+    shoot: pucati
+    short: kratak
+    should: trebati
+    show: pokazati
+    side: strana
+    sign: znak
+    sister: sestra
+    sit: sedeti
+    site: lokacija
+    situation: situacija
+    six: šest
+    size: veličina
+    skill: veština
+    sky: nebo
+    sleep: spavati
+    slightly: malo
+    small: mali
+    smile: osmeh
+    so: tako
+    social: socijalni
+    society: društvo
+    soldier: vojnik
+    some: neki
+    someone: neko
+    something: nešto
+    sometimes: ponekad
+    son: sin
+    song: pesma
+    soon: uskoro
+    sorry: izvini
+    sort: vrsta
+    sound: zvuk
+    source: izvor
+    south: jug
+    space: prostor
+    speak: govoriti
+    special: poseban
+    specific: specifičan
+    spend: potrošiti
+    spring: proleće
+    staff: osoblje
+    stage: pozornica
+    stand: stajati
+    standard: standard
+    star: zvezda
+    start: početi
+    state: država
+    stay: ostati
+    step: korak
+    stick: štap
+    still: još
+    stock: zaliha
+    stop: zaustaviti
+    store: prodavnica
+    story: priča
+    straight: pravo
+    strange: čudan
+    street: ulica
+    strength: snaga
+    strike: udariti
+    strong: jak
+    student: student
+    study: studija
+    stuff: stvar
+    style: stil
+    subject: predmet
+    success: uspeh
+    such: takav
+    sudden: iznenadan
+    suffer: patiti
+    suggest: predložiti
+    summer: leto
+    sun: sunce
+    supply: snabdevati
+    support: podrška
+    sure: siguran
+    surprise: iznenađenje
+    surround: okružiti
+    survey: anketa
+    survive: preživeti
+    suspect: sumnjati
+    swear: zakleti se
+    system: sistem
+    table: sto
+    take: uzeti
+    talk: razgovarati
+    task: zadatak
+    tax: porez
+    teach: učiti
+    team: tim
+    tell: reći
+    ten: deset
+    tend: težiti
+    term: termin
+    test: test
+    than: od
+    thank: zahvaliti
+    that: taj
+    the: taj
+    their: njihov
+    themselves: oni
+    then: onda
+    there: tamo
+    these: ovi
+    they: oni
+    thing: stvar
+    think: misliti
+    third: treći
+    this: ovaj
+    those: oni
+    though: iako
+    thought: misao
+    thousand: hiljada
+    threat: pretnja
+    three: tri
+    through: kroz
+    throughout: širom
+    throw: baciti
+    thus: dakle
+    time: vreme
+    to: do
+    today: danas
+    together: zajedno
+    too: previše
+    top: vrh
+    total: ukupan
+    tough: težak
+    toward: prema
+    town: grad
+    track: trag
+    trade: trgovina
+    traditional: tradicionalan
+    traffic: saobraćaj
+    train: voz
+    travel: putovati
+    treat: tretirati
+    treatment: tretman
+    tree: drvo
+    trial: suđenje
+    trip: put
+    trouble: nevolja
+    true: istinit
+    trust: poverenje
+    truth: istina
+    try: pokušati
+    turn: okrenuti
+    two: dva
+    type: vrsta
+    under: ispod
+    understand: razumeti
+    unit: jedinica
+    until: dok
+    up: gore
+    upon: na
+    us: mi
+    use: upotreba
+    used: korišćen
+    usually: obično
+    value: vrednost
+    various: razni
+    version: verzija
+    very: veoma
+    view: pogled
+    visit: posetiti
+    voice: glas
+    vote: glasati
+    wait: čekati
+    walk: hodati
+    wall: zid
+    want: želeti
+    war: rat
+    watch: gledati
+    water: voda
+    way: način
+    we: mi
+    wear: nositi
+    week: nedelja
+    weigh: težiti
+    well: dobro
+    west: zapad
+    what: šta
+    whatever: šta god
+    when: kada
+    where: gde
+    whether: da li
+    which: koji
+    while: dok
+    white: beo
+    who: ko
+    whole: ceo
+    whom: koga
+    whose: čiji
+    why: zašto
+    wide: širok
+    wife: supruga
+    will: želeti
+    win: pobediti
+    wind: vetar
+    window: prozor
+    wish: želja
+    with: sa
+    within: unutar
+    without: bez
+    woman: žena
+    wonder: pitati se
+    word: reč
+    work: rad
+    world: svet
+    worry: brinuti
+    would: bi
+    write: pisati
+    wrong: pogrešan
+    year: godina
+    yes: da
+    yet: još
+    you: ti
+    young: mlad
+    your: tvoj
+    yourself: ti
+
+- type: language
+  id: Neohongo
+  chatIdentifier: c
+  lengthPhoneticsRatio: 0.3
+  phonetics:
+    - wo
+    - ni
+    - ta
+    - de
+    - le
+    - shi
+    - bu
+    - zai
+    - you
+    - zhe
+    - na
+    - ye
+    - dou
+    - ai
+    - hao
+    - duo
+    - shuo
+    - kan
+    - ting
+    - xiang
+    - jiu
+    - lai
+    - qu
+    - zhi
+    - dao
+    - gei
+    - yong
+    - neng
+    - hui
+    - ran
+  words:
+    a: yi ge
+    about: guan yu
+    above: shang mian
+    across: heng kua
+    act: xing dong
+    active: ji ji
+    activity: huo dong
+    add: zeng jia
+    address: di zhi
+    adult: cheng ren
+    after: zhi hou
+    again: zai ci
+    against: fan dui
+    age: nian ling
+    ago: yi qian
+    agree: tong yi
+    air: kong qi
+    all: suo you
+    allow: yun xu
+    almost: ji hu
+    along: yan zhe
+    already: yi jing
+    also: ye
+    although: jin guan
+    always: zong shi
+    among: zai…zhi zhong
+    amount: shu liang
+    ancient: gu lao
+    and: he
+    anger: fen nu
+    animal: dong wu
+    another: ling yi ge
+    answer: hui da
+    any: ren he
+    anyone: ren he ren
+    anything: ren he shi
+    anyway: fan zheng
+    appear: chu xian
+    apply: shen qing
+    approach: fang fa
+    area: di qu
+    arm: shou bi
+    army: jun dui
+    around: wei rao
+    art: yi shu
+    as: zuo wei
+    ask: wen
+    at: zai
+    attack: gong ji
+    attempt: chang shi
+    attend: can jia
+    attention: zhu yi li
+    authority: quan wei
+    avoid: bi mian
+    away: li kai
+    back: hou mian
+    bad: huai
+    balance: ping heng
+    ball: qiu
+    bank: yin hang
+    bar: jiu ba
+    base: ji chu
+    battle: zhan dou
+    be: shi
+    bear: ren shou
+    beat: da bai
+    beautiful: mei li
+    because: yin wei
+    become: cheng wei
+    bed: chuang
+    before: zhi qian
+    begin: kai shi
+    behind: zai…hou mian
+    believe: xiang xin
+    best: zui hao
+    better: geng hao
+    between: zai…zhi jian
+    beyond: chao yue
+    big: da
+    bill: zhang dan
+    bind: bang ding
+    bit: yi dian
+    black: hei se
+    block: kuai
+    blood: xue ye
+    blow: chui
+    blue: lan se
+    board: ban
+    boat: chuan
+    body: shen ti
+    book: shu
+    born: chu sheng
+    both: liang zhe
+    bottom: di bu
+    bound: bian jie
+    break: da po
+    bring: dai lai
+    broad: kuan kuo
+    brother: xiong di
+    build: jian zao
+    burn: ran shao
+    bury: mai zang
+    bus: gong jiao che
+    business: shang ye
+    but: dan shi
+    buy: mai
+    by: tong guo
+    call: da dian hua
+    calm: leng jing
+    can: neng
+    care: guan xin
+    carry: xie dai
+    case: qing kuang
+    cat: mao
+    catch: zhua zhu
+    cause: dao zhi
+    center: zhong xin
+    century: shi ji
+    certain: que ding
+    chair: yi zi
+    challenge: tiao zhan
+    chance: ji hui
+    change: gai bian
+    character: xing ge
+    charge: shou fei
+    cheap: bian yi
+    check: jian cha
+    child: hai zi
+    choice: xuan ze
+    choose: xuan ze
+    church: jiao tang
+    circle: yuan quan
+    city: cheng shi
+    civil: gong min
+    claim: sheng cheng
+    class: ban ji
+    clean: gan jing
+    clear: qing chu
+    climb: pa
+    clock: shi zhong
+    close: guan bi
+    cloth: bu
+    cloud: yun
+    coast: hai an
+    cold: leng
+    collect: shou ji
+    color: yan se
+    come: lai
+    command: ming ling
+    comment: ping lun
+    commit: fan
+    community: she qu
+    company: gong si
+    compare: bi jiao
+    compete: jing zheng
+    competition: jing zheng
+    complete: wan cheng
+    complex: fu za
+    condition: tiao jian
+    conduct: jin xing
+    conference: hui yi
+    confidence: xin xin
+    confirm: que ren
+    conflict: chong tu
+    confuse: kun huo
+    connect: lian jie
+    consider: kao lv
+    consist: you…zu cheng
+    constant: bu bian
+    construct: jian zao
+    contact: lian xi
+    contain: bao han
+    content: nei rong
+    continue: ji xu
+    contract: he tong
+    control: kong zhi
+    conversation: dui hua
+    copy: fu zhi
+    corner: jiao luo
+    correct: zheng que
+    cost: hua fei
+    could: ke yi
+    country: guo jia
+    county: xian
+    couple: yi dui
+    course: ke cheng
+    court: fa ting
+    cover: fu gai
+    create: chuang zao
+    crime: fan zui
+    culture: wen hua
+    current: dang qian
+    cut: qie
+    dad: ba ba
+    daily: mei tian
+    damage: sun hai
+    danger: wei xian
+    dark: hei an
+    date: ri qi
+    daughter: nv er
+    day: tian
+    dead: si wang
+    deal: jiao yi
+    dear: qin ai de
+    death: si wang
+    decide: jue ding
+    decision: jue ding
+    deep: shen
+    define: ding yi
+    degree: xue wei
+    delay: yan chi
+    deliver: di song
+    demand: yao qiu
+    department: bu men
+    depend: yi lai
+    describe: miao shu
+    design: she ji
+    desire: yuan wang
+    despite: jin guan
+    destroy: po huai
+    detail: xi jie
+    determine: jue ding
+    develop: fa zhan
+    die: si
+    difference: bu tong
+    different: bu tong de
+    difficult: kun nan
+    dinner: wan can
+    direction: fang xiang
+    direct: zhi jie
+    discover: fa xian
+    discuss: tao lun
+    disease: ji bing
+    district: qu
+    divide: hua fen
+    do: zuo
+    doctor: yi sheng
+    document: wen jian
+    dog: gou
+    door: men
+    down: xiang xia
+    draw: hua
+    dream: meng xiang
+    dress: lian yi qun
+    drink: he
+    drive: kai che
+    drop: diao luo
+    dry: gan
+    due: you yu
+    during: zai…qi jian
+    each: mei ge
+    early: zao
+    earth: di qiu
+    east: dong
+    easy: rong yi
+    eat: chi
+    economy: jing ji
+    edge: bian yuan
+    educate: jiao yu
+    effect: xiao guo
+    effort: nu li
+    egg: dan
+    either: liang zhe zhi yi
+    else: qi ta
+    employ: gu yong
+    enable: shi neng
+    encounter: yu dao
+    end: jie shu
+    enemy: di ren
+    energy: neng liang
+    engage: cong shi
+    engine: yin qing
+    enjoy: xiang shou
+    enough: zu gou
+    ensure: que bao
+    enter: jin ru
+    environment: huan jing
+    equal: ping deng
+    escape: tao pao
+    even: shen zhi
+    evening: wan shang
+    event: shi jian
+    ever: ceng jing
+    every: mei ge
+    everyone: mei ge ren
+    evidence: zheng ju
+    exact: que qie
+    exam: kao shi
+    example: li zi
+    except: chu le
+    exchange: jiao huan
+    executive: zhi xing
+    exist: cun zai
+    expect: qi wang
+    experience: jing yan
+    expert: zhuan jia
+    explain: jie shi
+    express: biao da
+    extend: yan shen
+    extreme: ji duan
+    eye: yan jing
+    face: lian
+    fact: shi shi
+    factor: yin su
+    fail: shi bai
+    fair: gong ping
+    fall: diao
+    family: jia ting
+    far: yuan
+    fast: kuai
+    father: fu qin
+    fear: hai pa
+    feel: gan jue
+    fellow: tong ban
+    female: nv xing
+    field: ling yu
+    fight: zhan dou
+    figure: shu zi
+    fill: tian chong
+    film: dian ying
+    final: zui zhong
+    find: zhao dao
+    fine: hao de
+    finger: shou zhi
+    finish: wan cheng
+    fire: huo
+    firm: gong si
+    first: di yi
+    fish: yu
+    fit: shi he
+    five: wu
+    floor: di ban
+    fly: fei
+    focus: jiao dian
+    follow: gen sui
+    food: shi wu
+    foot: jiao
+    for: wei le
+    force: li liang
+    foreign: wai guo
+    forget: wang ji
+    form: xing shi
+    former: yi qian de
+    forward: xiang qian
+    four: si
+    free: zi you
+    friend: peng you
+    from: cong
+    front: qian mian
+    full: man
+    fund: ji jin
+    future: wei lai
+    gain: huo de
+    game: you xi
+    garden: hua yuan
+    gas: qi ti
+    gate: men
+    gather: ju ji
+    general: yi ban
+    get: de dao
+    girl: nv hai
+    give: gei
+    glad: gao xing
+    go: qu
+    goal: mu biao
+    good: hao
+    great: wei da
+    green: lv se
+    ground: di mian
+    group: zu
+    grow: sheng zhang
+    guy: jia huo
+    hair: tou fa
+    half: yi ban
+    hand: shou
+    happen: fa sheng
+    happy: kuai le
+    hard: kun nan
+    have: you
+    he: ta
+    head: tou
+    health: jian kang
+    hear: ting dao
+    heart: xin zang
+    heat: re
+    heavy: zhong
+    help: bang zhu
+    here: zhe li
+    herself: ta zi ji
+    high: gao
+    him: ta
+    himself: ta zi ji
+    his: ta de
+    history: li shi
+    hold: chi you
+    home: jia
+    hope: xi wang
+    horse: ma
+    hospital: yi yuan
+    hot: re
+    hour: xiao shi
+    house: fang zi
+    how: ru he
+    however: ran er
+    human: ren lei
+    hundred: bai
+    husband: zhang fu
+    idea: xiang fa
+    identify: shi bie
+    if: ru guo
+    image: tu xiang
+    imagine: xiang xiang
+    impact: ying xiang
+    important: zhong yao
+    improve: gai shan
+    in: zai…li
+    include: bao kuo
+    increase: zeng jia
+    indeed: que shi
+    indicate: biao ming
+    individual: ge ren
+    industry: gong ye
+    influence: ying xiang
+    information: xin xi
+    initial: zui chu
+    inside: nei bu
+    instead: dai ti
+    interest: xing qu
+    international: guo ji
+    interview: mian shi
+    into: jin ru
+    introduce: jie shao
+    invest: tou zi
+    involve: she ji
+    issue: wen ti
+    it: ta
+    its: ta de
+    itself: ta zi ji
+    job: gong zuo
+    join: jia ru
+    just: gang gang
+    keep: bao chi
+    key: yao shi
+    kill: sha
+    kind: shan liang
+    know: zhi dao
+    lady: nv shi
+    land: tu di
+    language: yu yan
+    large: da
+    last: zui hou
+    late: wan
+    later: yi hou
+    laugh: xiao
+    law: fa lv
+    lay: fang zhi
+    lead: ling dao
+    learn: xue xi
+    leave: li kai
+    left: zuo
+    leg: tui
+    less: geng shao
+    let: rang
+    level: shui ping
+    life: sheng huo
+    light: guang
+    like: xi huan
+    line: xian
+    list: lie biao
+    listen: ting
+    little: xiao
+    live: ju zhu
+    local: dang di
+    long: chang
+    look: kan
+    lose: shi qu
+    lot: hen duo
+    love: ai
+    low: di
+    lunch: wu can
+    machine: ji qi
+    main: zhu yao
+    major: zhuan ye
+    make: zhi zuo
+    man: nan ren
+    manage: guan li
+    many: xu duo
+    market: shi chang
+    marriage: hun yin
+    master: zhang wo
+    match: pi pei
+    matter: shi qing
+    may: ke yi
+    maybe: ye xu
+    me: wo
+    mean: yi si
+    measure: ce liang
+    media: mei ti
+    medical: yi liao
+    meet: jian mian
+    meeting: hui yi
+    member: cheng yuan
+    memory: ji yi
+    mention: ti dao
+    message: xin xi
+    method: fang fa
+    middle: zhong jian
+    might: ke neng
+    military: jun shi
+    million: bai wan
+    mind: tou nao
+    minute: fen zhong
+    miss: xiang nian
+    model: mo xing
+    modern: xian dai
+    moment: shi ke
+    money: qian
+    month: yue
+    moon: yue liang
+    more: geng duo
+    morning: zao shang
+    most: zui duo
+    mother: mu qin
+    move: yi dong
+    much: xu duo
+    music: yin yue
+    must: bi xu
+    my: wo de
+    myself: wo zi ji
+    name: ming zi
+    national: guo jia
+    natural: zi ran
+    near: kao jin
+    necessary: bi yao
+    need: xu yao
+    neither: liang zhe dou bu
+    network: wang luo
+    never: cong bu
+    new: xin
+    news: xin wen
+    next: xia yi ge
+    nice: hao
+    night: wan shang
+    no: bu
+    none: mei you yi ge
+    nor: ye bu
+    north: bei
+    not: bu shi
+    nothing: mei you shen me
+    notice: zhu yi
+    now: xian zai
+    number: shu zi
+    object: wu ti
+    obtain: huo de
+    occur: fa sheng
+    of: de
+    off: guan bi
+    offer: ti gong
+    office: ban gong shi
+    officer: guan yuan
+    often: jing chang
+    oil: you
+    old: jiu
+    on: zai…shang
+    once: yi ci
+    one: yi
+    only: jin jin
+    open: da kai
+    operation: cao zuo
+    opportunity: ji hui
+    option: xuan xiang
+    or: huo zhe
+    order: ming ling
+    organization: zu zhi
+    other: qi ta
+    our: wo men de
+    ourselves: wo men zi ji
+    out: chu qu
+    outside: wai bu
+    over: zai…shang mian
+    own: zi ji de
+    pack: bao
+    page: ye
+    paint: hua
+    paper: zhi
+    parent: fu mu
+    park: gong yuan
+    part: bu fen
+    participant: can yu zhe
+    particular: te bie
+    partner: he zuo huo ban
+    pass: tong guo
+    past: guo qu
+    path: lu jing
+    patient: bing ren
+    pay: zhi fu
+    peace: he ping
+    people: ren men
+    per: mei
+    perfect: wan mei
+    perform: zhi xing
+    perhaps: ye xu
+    period: shi qi
+    person: ren
+    pick: tiao xuan
+    picture: tu pian
+    piece: kuai
+    place: di fang
+    plan: ji hua
+    plant: zhi wu
+    play: wan
+    please: qing
+    pleasure: yu kuai
+    plus: jia shang
+    point: dian
+    police: jing cha
+    policy: zheng ce
+    political: zheng zhi
+    poor: pin qiong
+    position: wei zhi
+    positive: ji ji
+    possible: ke neng
+    post: you zheng
+    pour: dao
+    power: li liang
+    practice: shi jian
+    present: xian zai
+    president: zong tong
+    press: an
+    pressure: ya li
+    pretty: xiang dang
+    prevent: fang zhi
+    price: jia ge
+    primary: zhu yao
+    principle: yuan ze
+    priority: you xian
+    private: si ren
+    probably: ke neng
+    problem: wen ti
+    process: guo cheng
+    produce: sheng chan
+    product: chan pin
+    professional: zhuan ye
+    professor: jiao shou
+    program: cheng xu
+    project: xiang mu
+    property: cai chan
+    propose: ti yi
+    protect: bao hu
+    prove: zheng ming
+    provide: ti gong
+    public: gong gong
+    pull: la
+    purpose: mu di
+    push: tui
+    put: fang
+    quality: zhi liang
+    question: wen ti
+    quick: kuai
+    quit: tui chu
+    quite: xiang dang
+    race: zhong zu
+    radio: shou yin ji
+    raise: ti gao
+    range: fan wei
+    rate: bi lv
+    rather: ning yuan
+    reach: dao da
+    read: yue du
+    ready: zhun bei hao
+    real: zhen shi
+    reality: xian shi
+    realize: yi shi dao
+    reason: yuan yin
+    receive: shou dao
+    recent: zui jin
+    record: ji lu
+    red: hong se
+    reduce: jian shao
+    reflect: fan ying
+    region: di qu
+    relate: you guan
+    relationship: guan xi
+    release: shi fang
+    remain: bao chi
+    remember: ji zhu
+    remove: yi chu
+    report: bao gao
+    represent: dai biao
+    republic: gong he guo
+    require: yao qiu
+    research: yan jiu
+    respect: zun zhong
+    respond: hui ying
+    rest: xiu xi
+    result: jie guo
+    return: fan hui
+    reveal: jie shi
+    review: shen cha
+    rich: fu you
+    ride: qi
+    right: dui
+    rise: sheng qi
+    risk: feng xian
+    river: he liu
+    road: dao lu
+    rock: yan shi
+    role: jue se
+    room: fang jian
+    rule: gui ze
+    run: pao
+    safe: an quan
+    same: xiang tong
+    save: bao cun
+    say: shuo
+    scene: chang jing
+    school: xue xiao
+    science: ke xue
+    score: de fen
+    sea: hai
+    search: sou suo
+    season: ji jie
+    seat: zuo wei
+    second: di er
+    secret: mi mi
+    section: bu fen
+    see: kan
+    seek: xun zhao
+    seem: si hu
+    self: zi wo
+    sell: mai
+    send: fa song
+    senior: gao ji
+    sense: gan jue
+    separate: fen kai
+    serious: yan zhong
+    serve: fu wu
+    service: fu wu
+    set: she zhi
+    settle: jie jue
+    several: ji ge
+    shake: yao huang
+    shall: jiang
+    she: ta
+    shoot: she ji
+    short: duan
+    should: ying gai
+    show: zhan shi
+    side: ce
+    sign: biao zhi
+    sister: jie mei
+    sit: zuo
+    site: di dian
+    situation: qing kuang
+    six: liu
+    size: da xiao
+    skill: ji neng
+    sky: tian kong
+    sleep: shui jiao
+    slightly: shao wei
+    small: xiao
+    smile: wei xiao
+    so: suo yi
+    social: she hui
+    society: she hui
+    soldier: shi bing
+    some: yi xie
+    someone: mou ren
+    something: mou wu
+    sometimes: you shi
+    son: er zi
+    song: ge qu
+    soon: hen kuai
+    sorry: dui bu qi
+    sort: zhong lei
+    sound: sheng yin
+    source: lai yuan
+    south: nan
+    space: kong jian
+    speak: shuo
+    special: te bie
+    specific: ju ti
+    spend: hua fei
+    spring: chun tian
+    staff: yuan gong
+    stage: wu tai
+    stand: zhan li
+    standard: biao zhun
+    star: xing xing
+    start: kai shi
+    state: zhou
+    stay: ting liu
+    step: bu zhou
+    stick: nian tie
+    still: reng ran
+    stock: gu piao
+    stop: ting zhi
+    store: shang dian
+    story: gu shi
+    straight: zhi
+    strange: qi guai
+    street: jie dao
+    strength: li liang
+    strike: ba gong
+    strong: qiang zhuang
+    student: xue sheng
+    study: xue xi
+    stuff: dong xi
+    style: feng ge
+    subject: zhu ti
+    success: cheng gong
+    such: zhe yang de
+    sudden: tu ran
+    suffer: zao shou
+    suggest: jian yi
+    summer: xia tian
+    sun: tai yang
+    supply: gong ying
+    support: zhi chi
+    sure: ken ding
+    surprise: jing ya
+    surround: wei rao
+    survey: diao cha
+    survive: xing cun
+    suspect: huai yi
+    swear: fa shi
+    system: xi tong
+    table: zhuo zi
+    take: na
+    talk: tan hua
+    task: ren wu
+    tax: shui
+    teach: jiao
+    team: tuan dui
+    tell: gao su
+    ten: shi
+    tend: qing xiang
+    term: xue qi
+    test: ce shi
+    than: bi
+    thank: gan xie
+    that: na ge
+    the: zhe ge
+    their: ta men de
+    themselves: ta men zi ji
+    then: ran hou
+    there: na li
+    these: zhe xie
+    they: ta men
+    thing: shi qing
+    think: ren wei
+    third: di san
+    this: zhe ge
+    those: na xie
+    though: sui ran
+    thought: si xiang
+    thousand: qian
+    threat: wei xie
+    three: san
+    through: chuan guo
+    throughout: guan chuan
+    throw: reng
+    thus: yin ci
+    time: shi jian
+    to: dao
+    today: jin tian
+    together: yi qi
+    too: tai
+    top: ding bu
+    total: zong shu
+    tough: jian ren
+    toward: chao
+    town: cheng zhen
+    track: gui dao
+    trade: mao yi
+    traditional: chuan tong
+    traffic: jiao tong
+    train: huo che
+    travel: lv xing
+    treat: dui dai
+    treatment: zhi liao
+    tree: shu
+    trial: shen pan
+    trip: lv xing
+    trouble: ma fan
+    true: zhen de
+    trust: xin ren
+    truth: zhen xiang
+    try: chang shi
+    turn: zhuan dong
+    two: er
+    type: lei xing
+    under: zai…xia mian
+    understand: li jie
+    unit: dan wei
+    until: zhi dao
+    up: xiang shang
+    upon: zai…shang
+    us: wo men
+    use: shi yong
+    usually: tong chang
+    value: jia zhi
+    various: ge zhong
+    version: ban ben
+    very: fei chang
+    view: shi ye
+    visit: can guan
+    voice: sheng yin
+    vote: tou piao
+    wait: deng dai
+    walk: zou lu
+    wall: qiang
+    want: xiang yao
+    war: zhan zheng
+    watch: guan kan
+    water: shui
+    way: fang shi
+    we: wo men
+    wear: chuan
+    week: xing qi
+    weigh: cheng zhong
+    well: hao
+    west: xi
+    what: shen me
+    whatever: wu lun shen me
+    when: he shi
+    where: na li
+    whether: shi fou
+    which: na ge
+    while: dang
+    white: bai se
+    who: shui
+    whole: zheng ge
+    whom: shui
+    whose: shui de
+    why: wei shen me
+    wide: kuan
+    wife: qi zi
+    will: jiang
+    win: ying
+    wind: feng
+    window: chuang hu
+    wish: xi wang
+    with: he
+    within: zai…nei
+    without: mei you
+    woman: nv ren
+    wonder: xiang zhi dao
+    word: dan ci
+    work: gong zuo
+    world: shi jie
+    worry: dan xin
+    would: hui
+    write: xie
+    wrong: cuo wu
+    year: nian
+    yes: shi
+    yet: hai
+    you: ni
+    young: nian qing
+    your: ni de
+    yourself: ni zi ji
+    allowed: yun xu
+    appeared: chu xian
+    asked: wen
+    ate: chi
+    became: cheng wei
+    began: kai shi
+    believed: xiang xin
+    blew: chui
+    broke: da po
+    brought: dai lai
+    built: jian zao
+    bought: mai
+    called: da dian hua
+    carried: xie dai
+    caught: zhua zhu
+    chose: xuan ze
+    came: lai
+    dealt: jiao yi
+    decided: jue ding
+    described: miao shu
+    developed: fa zhan
+    did: zuo
+    died: si
+    discovered: fa xian
+    discussed: tao lun
+    drew: hua
+    drank: he
+    drove: kai che
+    dropped: diao luo
+    fell: diao
+    felt: gan jue
+    fought: zhan dou
+    found: zhao dao
+    flew: fei
+    forgot: wang ji
+    gave: gei
+    got: de dao
+    went: qu
+    grew: sheng zhang
+    had: you
+    heard: ting dao
+    held: chi you
+    kept: bao chi
+    knew: zhi dao
+    laid: fang zhi
+    led: ling dao
+    lost: shi qu
+    made: zhi zuo
+    meant: yi si
+    met: jian mian
+    paid: zhi fu
+    rode: qi
+    rang: xiang
+    rose: sheng qi
+    ran: pao
+    said: shuo
+    saw: kan jian
+    sought: xun zhao
+    sold: mai
+    sent: fa song
+    shook: yao huang
+    shot: she ji
+    showed: zhan shi
+    sang: chang ge
+    sat: zuo
+    slept: shui jiao
+    spoke: shuo
+    spent: hua fei
+    stood: zhan li
+    struck: ba gong
+    swore: fa shi
+    took: na
+    taught: jiao
+    told: gao su
+    threw: reng
+    understood: li jie
+    woke: xing lai
+    wore: chuan
+    won: ying
+    wrote: xie

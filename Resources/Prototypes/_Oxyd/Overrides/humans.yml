@@ -23,3 +23,30 @@
       understanding:
         - Universal
         - Serbian
+
+- type: entity
+  parent: MobHumanOxyd
+  id: MobHumanOxydChinese
+  name: Human(Oxyd)(China)
+  components:
+    - type: LanguageKnowledge
+      speaking:
+        - Universal
+        - Neohongo
+      understanding:
+        - Universal
+        - Neohongo
+
+- type: entity
+  parent: MobHumanOxyd
+  id: MobHumanOxydRussian
+  name: Human(Oxyd)(Russian)
+  components:
+    - type: LanguageKnowledge
+      speaking:
+        - Universal
+        - TechnoRussian
+      understanding:
+        - Universal
+        - TechnoRussian
+
