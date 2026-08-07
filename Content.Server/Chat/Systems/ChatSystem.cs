@@ -4,6 +4,7 @@ using Content.Server.Administration.Managers;
 using Content.Server.Chat.Managers;
 using Content.Server.GameTicking;
 using Content.Server.Station.Systems;
+using Content.Shared._Oxyd;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Administration;
 using Content.Shared.CCVar;
@@ -19,6 +20,7 @@ using Robust.Shared.Audio.Systems;
 using Robust.Shared.Configuration;
 using Robust.Shared.Console;
 using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Replays;
 
@@ -209,24 +211,33 @@ public sealed partial class ChatSystem : SharedChatSystem
         if (string.IsNullOrEmpty(message))
             return;
 
+        var defaultLanguage = standardLanguage;
+        var validLanguages = new HashSet<ProtoId<LanguagePrototype>>(){defaultLanguage};
+        if (langquery.TryComp(source, out var langs))
+        {
+            defaultLanguage = langs.chosen;
+            validLanguages = langs.understanding;
+        }
         // This message may have a radio prefix, and should then be whispered to the resolved radio channel
         if (checkRadioPrefix)
         {
             if (TryProcessRadioMessage(source, message, out var modMessage, out var channel))
             {
-                SendEntityWhisper(source, modMessage, range, channel, nameOverride, hideLog, ignoreActionBlocker);
+                var l = BuildMessage(source, modMessage, range, desiredType, defaultLanguage, validLanguages);
+                SendEntityWhisper(l, channel, nameOverride, hideLog, ignoreActionBlocker);
                 return;
             }
         }
-
+        /// this is shit but so is the entire chat system , refactor in future if problematic SPCR 2026
+        var msg = BuildMessage(source, message, range, desiredType, defaultLanguage, validLanguages);
         // Otherwise, send whatever type.
         switch (desiredType)
-        {
+        { 
             case InGameICChatType.Speak:
-                SendEntitySpeak(source, message, range, nameOverride, hideLog, ignoreActionBlocker);
+                SendEntitySpeak(msg, nameOverride, hideLog, ignoreActionBlocker);
                 break;
             case InGameICChatType.Whisper:
-                SendEntityWhisper(source, message, range, null, nameOverride, hideLog, ignoreActionBlocker);
+                SendEntityWhisper(msg, null, nameOverride, hideLog, ignoreActionBlocker);
                 break;
             case InGameICChatType.Emote:
                 SendEntityEmote(source, message, range, nameOverride, hideLog: hideLog, ignoreActionBlocker: ignoreActionBlocker);
