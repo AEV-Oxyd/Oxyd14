@@ -1,5 +1,6 @@
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Skills;
 
@@ -12,13 +13,16 @@ public sealed partial class  MobSkillComponent : Component
     [AutoNetworkedField, ViewVariables]
     public Dictionary<ProtoId<SkillPrototype>, int[]> skills = new();
 
-    public Dictionary<string, List<BuffData>> buffSources = new();
+    [ViewVariables]
+    public Dictionary<ProtoId<SkillPrototype>, Dictionary<string,List<BuffData>>> buffSources = new();
 
+    [Serializable,NetSerializable]
     public class BuffData
     {
+        [ViewVariables]
         public int amount = 0;
+        [ViewVariables]
         public TimeSpan expires = TimeSpan.MaxValue;
-        public ProtoId<SkillPrototype> skill;
     }
 }
 

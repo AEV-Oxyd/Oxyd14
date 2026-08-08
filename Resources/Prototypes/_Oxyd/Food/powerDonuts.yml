@@ -1,0 +1,80 @@
+- type: entity
+  parent: FoodDonutBase
+  id: FoodDonutBuffer
+  name: Debug Item Call Dev Retard If Seen
+  components:
+    - type: SkillOnEat
+      duration: 900
+      buffId: donut
+      
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterBrown
+  name: Brown masterpiece donut
+  description: A near-chocolate taste you will never forget. A robust flavor for the strong.
+  components:
+    - type: Sprite
+      state: choc 
+    - type: SkillOnEat
+      skills:
+        Rob: 15
+        
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterYellow
+  name: Yellow masterpiece donut
+  description: A sour citrus flavor you will never forget. The first choice of mechanics.
+  components:
+    - type: Sprite
+      state: yellow
+    - type: SkillOnEat
+      skills:
+        Mec: 15
+        
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterPurple
+  name: Purple masterpiece donut
+  description: A sickeningly sweet grape flavor you will never forget. An intellectual's favorite.
+  components:
+    - type: Sprite
+      state: purple
+    - type: SkillOnEat
+      skills:
+        Cog: 15
+        
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterGreen
+  name: Green masterpiece donut
+  description: A spearmint scalpel that cuts through the tongue. You will never forget the flavor. Perfect for the busy doctor..
+  components:
+    - type: Sprite
+      state: green
+    - type: SkillOnEat
+      skills:
+        Bio: 15
+
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterBlue
+  name: Blue masterpiece donut
+  description: A tart blueberry taste you will never forget. A go-to choice for the vigilant watchman.
+  components:
+    - type: Sprite
+      state: blue
+    - type: SkillOnEat
+      skills:
+        Vig: 15
+
+- type: entity
+  parent: FoodDonutBuffer
+  id: DonutMasterCream
+  name: Cream masterpiece donut
+  description: A classic donut flavor you will never forget. Specifically panders to tough people.
+  components:
+    - type: Sprite
+      state: beige
+    - type: SkillOnEat
+      skills:
+        Tgh: 15
