@@ -4,7 +4,7 @@ using Robust.Shared.Prototypes;
 namespace Content.Shared._Oxyd.Skills;
 
 [RegisterComponent, NetworkedComponent,AutoGenerateComponentState]
-public sealed partial class MobSkillComponent : Component
+public sealed partial class  MobSkillComponent : Component
 {
     /// <summary>
     /// Skill Prototype -> int[0 = base stat, 1 = boost amount]
@@ -20,5 +20,15 @@ public sealed partial class MobSkillComponent : Component
         public TimeSpan expires = TimeSpan.MaxValue;
         public ProtoId<SkillPrototype> skill;
     }
+}
 
+[RegisterComponent]
+public sealed partial class SkillOnEatComponent : Component
+{
+    [DataField]
+    public Dictionary<ProtoId<SkillPrototype>, int> skills = new();
+    [DataField]
+    public TimeSpan duration = TimeSpan.MaxValue;
+    [DataField] 
+    public string buffId = "";
 }
