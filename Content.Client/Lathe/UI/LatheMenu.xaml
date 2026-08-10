@@ -21,10 +21,9 @@
                 VerticalExpand="True"
                 HorizontalExpand="True"
                 SeparationOverride="5">
-                <BoxContainer Orientation="Horizontal"
-                    HorizontalExpand="True">
+                <BoxContainer Orientation="Horizontal" HorizontalExpand="True">
                     <Label Name="DiskName" Text="No Disk Loaded"/>
-                    <Label Text="Uses:" MinWidth="20">
+                    <Label Text="Uses:" MinWidth="20" Align="Right"/>
                     <Label Name="DiskUses" Text="N/A" MinWidth="80"/>
                 </BoxContainer>
                 <BoxContainer Orientation="Horizontal"

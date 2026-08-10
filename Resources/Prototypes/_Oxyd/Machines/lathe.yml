@@ -1,0 +1,16 @@
+- type: entity
+  id: OxydLathe
+  parent: Autolathe
+  name: autolathe
+  description: It produces basic items using metal and glass. Has the ability to process blueprints to print new recipes.
+  components:
+    - type: Lathe
+      idleState: icon
+      runningState: building
+      unlitIdleState: unlit
+      unlitRunningState: unlit-building
+      diskSlot:
+        whitelist:
+          components:
+            - DigitalDataHolder
+      staticPacks: []

@@ -1,5 +1,6 @@
 using Content.Shared.Research.Prototypes;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd;
 
@@ -12,7 +13,7 @@ public enum ProgramType
     
 }
 
-[ImplicitDataDefinitionForInheritors]
+[ImplicitDataDefinitionForInheritors, Serializable, NetSerializable]
 public partial class DigitalData
 {
     [DataField]
@@ -23,6 +24,7 @@ public partial class DigitalData
     public ProgramType ftype = ProgramType.Text;
 }
 
+[Serializable, NetSerializable]
 public partial class DigitalDataExecutable : DigitalData
 {
     [DataField]
@@ -33,13 +35,13 @@ public partial class DigitalDataExecutable : DigitalData
     public Enum uiKey = null!;
     public Dictionary<string, object> data = new();
 }
-
+[Serializable, NetSerializable]
 public partial class DigitalDataText : DigitalData
 {
     [DataField]
     public string text = "";
 }
-
+[Serializable, NetSerializable]
 public partial class DigitalDataLathe : DigitalData
 {
     [DataField]
