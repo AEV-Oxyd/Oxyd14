@@ -12,29 +12,39 @@ public enum ProgramType
     
 }
 
-public class DigitalData
+[ImplicitDataDefinitionForInheritors]
+public partial class DigitalData
 {
+    [DataField]
     public float size = 1f;
+    [DataField]
     public string name = "Program";
+    [DataField]
     public ProgramType ftype = ProgramType.Text;
 }
 
-public class DigitalDataExecutable : DigitalData
+public partial class DigitalDataExecutable : DigitalData
 {
+    [DataField]
     public float ramuse = 1f;
+    [DataField]
     public float cpuuse = 1f;
+    
     public Enum uiKey = null!;
     public Dictionary<string, object> data = new();
 }
 
-public class DigitalDataText : DigitalData
+public partial class DigitalDataText : DigitalData
 {
+    [DataField]
     public string text = "";
 }
 
-public class DigitalDataLathe : DigitalData
+public partial class DigitalDataLathe : DigitalData
 {
+    [DataField]
     public int? uses = null;
+    [DataField]
     public HashSet<ProtoId<LatheRecipePrototype>> recipes = new();
 }
 

@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": null,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "red"
+    },
+    {
+      "name": "yellow"
+    },
+    {
+      "name": "blue"
+    },
+    {
+      "name": "purple"
+    },
+    {
+      "name": "green"
+    },
+    {
+      "name": "black"
+    },
+    {
+      "name": "ironhammer"
+    },
+    {
+      "name": "technomancers"
+    },
+    {
+      "name": "excelsior"
+    },
+    {
+      "name": "neotheology"
+    },
+    {
+      "name": "frozenstar"
+    },
+    {
+      "name": "guild"
+    },
+    {
+      "name": "moebius"
+    },
+    {
+      "name": "onestar"
+    },
+    {
+      "name": "nuclear",
+      "delays": [
+        [
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-red",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-yellow",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-blue",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-purple",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-green",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-black",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "data-white",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "serbian"
+    },
+    {
+      "name": "omg"
+    }
+  ]
+}

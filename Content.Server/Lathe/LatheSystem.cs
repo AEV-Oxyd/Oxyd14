@@ -200,7 +200,7 @@ namespace Content.Server.Lathe
             {
                 if (file is DigitalDataLathe recipe)
                 {
-                    returning.Concat(recipe.recipes);
+                    returning = returning.Concat(recipe.recipes).ToHashSet();
                 }
             }
 
@@ -213,7 +213,7 @@ namespace Content.Server.Lathe
             AddRecipesFromPacks(ev.Recipes, component.StaticPacks);
             if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<DigitalDataHolderComponent>(loaded, out var dataComp))
             {
-                ev.Recipes.Concat(GetDiskRecipes(dataComp));
+                ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(dataComp)).ToHashSet();
             }
             RaiseLocalEvent(uid, ev);
             return ev.Recipes.ToList();
