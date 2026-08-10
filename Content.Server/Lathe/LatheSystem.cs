@@ -350,6 +350,19 @@ namespace Content.Server.Lathe
                 producing = node.Value.Recipe;
 
             var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing);
+            // todo add selector for multi-file on file util expansion? SPCR 2026
+            if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<DigitalDataHolderComponent>(validDisk, out var dataComp))
+            {
+                foreach (var file in dataComp.getFileByData<DigitalDataLathe>())
+                {
+                    state.diskName = file.name;
+                    if (file.uses is not null)
+                    {
+                        state.uses = file.uses.Value;
+                    }
+                    break;
+                }
+            }
             _uiSys.SetUiState(uid, LatheUiKey.Key, state);
         }
 
@@ -514,6 +527,23 @@ namespace Content.Server.Lathe
         private void RefundCurrentRecipe(EntityUid uid, LatheComponent lathe)
         {
             ProtoMan.Resolve(lathe.CurrentRecipe, out var recipe);
+            // This is shit and lets people move license points to one disk if they share a recipe.
+            // Im too lazy to fix it and disks are not meant to share recipes in general tho. SPCR 2026
+            // if its too big of a issue just keep track of which  DiskEntity was used for Each Recipe!!!
+            if (recipe!.pointUsage != 0)
+            {
+                if (lathe.diskSlot?.Item is EntityUid existing && !TerminatingOrDeleted(existing) && TryComp<DigitalDataHolderComponent>(existing, out var data))
+                {
+                    foreach (var file in data.getFileByData<DigitalDataLathe>())
+                    {
+                        if (file.recipes.Contains(recipe.ID))
+                        {
+                            file.uses += recipe.pointUsage;
+                            break;
+                        }
+                    }
+                }
+            }
 
             foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
                 _materialStorage.TryChangeMaterialAmount(uid, mat, amount);

@@ -36,6 +36,16 @@ public sealed partial class RecipeControl : Control
     public void SetRecipe(LatheRecipePrototype recipe)
     {
         RecipeName.Text = _latheSystem.GetRecipeName(recipe);
+        if (recipe.pointUsage != 0)
+        {
+            DRMCost.Text = $"L-COST:{recipe.pointUsage.ToString()}";
+            DRMCost.Visible = true;
+        }
+        else
+        {
+            DRMCost.Visible = false;
+        }
+
         _recipeId = recipe.ID;
     }
 

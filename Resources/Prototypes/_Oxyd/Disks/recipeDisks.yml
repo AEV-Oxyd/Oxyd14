@@ -9,6 +9,7 @@
     - type: DigitalDataHolder
       files:
         - !type:DigitalDataLathe
+          name: "Placeholder Recipe File Name"
           uses: 15
           recipes:
             - DRMCuffs
