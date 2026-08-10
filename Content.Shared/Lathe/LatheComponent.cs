@@ -1,4 +1,5 @@
 using Content.Shared.Construction.Prototypes;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Lathe.Prototypes;
 using Content.Shared.Research.Prototypes;
 using Robust.Shared.Audio;
@@ -69,6 +70,12 @@ namespace Content.Shared.Lathe
         /// </summary>
         [ViewVariables]
         public ProtoId<LatheRecipePrototype>? CurrentRecipe;
+
+        /// <summary>
+        ///  Oxyd edit - recipe disks.
+        /// </summary>
+        /// <returns></returns>
+        [DataField(required: false)] public ItemSlot? diskSlot = null;
 
         #region MachineUpgrading
         /// <summary>
