@@ -5,10 +5,8 @@ namespace Content.Shared;
 /// </summary>
 public sealed class OxydPredContainerSystem : EntitySystem
 {
-    public 
-
     public byte GenerateActionChecksum(EntityUid entity, OxydContainerAction action)
     {
-        return (byte)(entity.GetHashCode() + action.GetHashCode());
+        return (byte)(entity.GetHashCode() + action);
     }
 }
