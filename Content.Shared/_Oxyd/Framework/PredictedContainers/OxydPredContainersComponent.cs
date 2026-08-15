@@ -1,6 +1,20 @@
 using Robust.Shared.GameStates;
+using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 
 namespace Content.Shared;
+
+[Serializable, NetSerializable]
+public sealed partial class PredContState : IComponentState
+{
+    public Dictionary<string, ContWrap> containers = new();
+}
+[Serializable, NetSerializable]
+public struct ContWrap
+{
+    public OxydContainer c;
+    public byte s;
+}
 
 /// <summary>
 /// This is a predicted container storage
@@ -10,13 +24,15 @@ public sealed partial class OxydPredContComponent : Component
 {
     public Dictionary<string, OxydContainer> containers = new();
 }
-
+[Serializable, NetSerializable]
 public class OxydContainer
 {
-    public string key = string.Empty;
+    [NonSerialized] public string key = string.Empty;
     public int? capacityLimit = 0;
-    public List<EntityUid> contained = new();
-    public List<Byte> checksums = new(4);
+    public List<NetEntity> netContained = new();
+    [NonSerialized] public List<EntityUid> contained = new();
+    [NonSerialized] public List<Byte> checksums = new(4);
+    [NonSerialized] public GameTick lastChange = new();
 
     public static byte createHash(EntityUid ent, OxydContainerAction act)
     {
@@ -44,22 +60,24 @@ public class OxydContainer
         }
     }
 
-    public void insert(EntityUid ent)
+    public void insert(EntityUid ent, NetEntity netEnt)
     {
         if (!contained.Contains(ent))
         {
             contained.Add(ent);
+            netContained.Add(netEnt);
             checksums.Add(createHash(ent, OxydContainerAction.Add));
             if(checksums.Count > 20)
                 checksums = checksums.GetRange(10, checksums.Count);
         }
     }
 
-    public void remove(EntityUid ent)
+    public void remove(EntityUid ent, NetEntity netEnt)
     {
         if (contained.Contains(ent))
         {
             contained.Remove(ent);
+            netContained.Remove(netEnt);
             checksums.Add(createHash(ent, OxydContainerAction.Remove));
             if(checksums.Count > 20)
                 checksums = checksums.GetRange(10, checksums.Count);
