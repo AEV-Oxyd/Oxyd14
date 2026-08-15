@@ -3,17 +3,41 @@ using Robust.Shared.GameStates;
 namespace Content.Shared;
 
 /// <summary>
-/// This is used for...
+/// This is a predicted container storage
 /// </summary>
 [RegisterComponent, NetworkedComponent]
-public sealed partial class OxydPredContainersComponent : Component
+public sealed partial class OxydPredContComponent : Component
 {
-    public List<EntityUid> containing = new List<EntityUid>();
-    // client stores each checksum, server only sends its latest one. SPCR 2026
-    // state reset is done if server's checksum is not present at all.
-    public byte[] checksum = new byte[16];
+    public Dictionary<string, OxydContainer> containers = new();
 }
 
+public class OxydContainer
+{
+    public string key = string.Empty;
+    public int? capacityLimit = 0;
+    public List<EntityUid> contained = new();
+    public byte[] checksums = new byte[16];
+
+    public static byte createHash(EntityUid ent, OxydContainerAction act)
+    {
+        return (byte)(ent.GetHashCode() + act);
+    }
+    public bool canPredictedInsert(EntityUid ent)
+    {
+        if (contained.Contains(ent))
+            return true;
+        return false;
+    }
+
+    public bool canInsert(EntityUid ent)
+    {
+        if (contained.Contains(ent))
+            return false;
+        if (capacityLimit is not null && contained.Count >= capacityLimit)
+            return false;
+        return true;
+    }
+}
 public enum OxydContainerAction
 {
     Add = 5823,
@@ -24,15 +48,10 @@ public enum OxydContainerAction
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContInserted(EntityUid uid, Entity<OxydPredContainersComponent> container);
+public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> container);
 /// <summary>
 ///  removed on non-predicted tick
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContRemoved(EntityUid uid, Entity<OxydPredContainersComponent> container);
-/// <summary>
-/// a state reset was triggered due to mismatching checksums. rebuild everything!
-/// </summary>
-/// <param name="container"></param>
-public record PredContStateReset(Entity<OxydPredContainersComponent> container);
+public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container);
