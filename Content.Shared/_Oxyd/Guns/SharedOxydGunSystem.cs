@@ -228,13 +228,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         if (!TryComp(ent, out OxydChamberExtensionComponent? extend))
             return;
-        for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
+        if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
         {
-            if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
-            {
-                args.Handled = true;
-                return;
-            }
+            args.Handled = true;
+            return;
         }
     }
 

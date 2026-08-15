@@ -16,26 +16,54 @@ public class OxydContainer
     public string key = string.Empty;
     public int? capacityLimit = 0;
     public List<EntityUid> contained = new();
-    public byte[] checksums = new byte[16];
+    public List<Byte> checksums = new(4);
 
     public static byte createHash(EntityUid ent, OxydContainerAction act)
     {
         return (byte)(ent.GetHashCode() + act);
     }
-    public bool canPredictedInsert(EntityUid ent)
+    public bool canInsert(EntityUid ent, bool prediction = false)
     {
         if (contained.Contains(ent))
-            return true;
-        return false;
-    }
-
-    public bool canInsert(EntityUid ent)
-    {
-        if (contained.Contains(ent))
-            return false;
+            return prediction;
         if (capacityLimit is not null && contained.Count >= capacityLimit)
             return false;
         return true;
+    }
+
+    public bool canRemove(EntityUid ent, bool prediction = false)
+    {
+        if (prediction)
+        {
+            var h = createHash(ent, OxydContainerAction.Remove);
+            return checksums.Contains(h);
+        }
+        else
+        {
+            return contained.Contains(ent);
+        }
+    }
+
+    public void insert(EntityUid ent)
+    {
+        if (!contained.Contains(ent))
+        {
+            contained.Add(ent);
+            checksums.Add(createHash(ent, OxydContainerAction.Add));
+            if(checksums.Count > 20)
+                checksums = checksums.GetRange(10, checksums.Count);
+        }
+    }
+
+    public void remove(EntityUid ent)
+    {
+        if (contained.Contains(ent))
+        {
+            contained.Remove(ent);
+            checksums.Add(createHash(ent, OxydContainerAction.Remove));
+            if(checksums.Count > 20)
+                checksums = checksums.GetRange(10, checksums.Count);
+        }
     }
 }
 public enum OxydContainerAction
