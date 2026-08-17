@@ -29,10 +29,10 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    public void GetState(EntityUid uid, OxydPredContComponent comp, ComponentGetState args)
+    public void GetState(Entity<OxydPredContComponent> ent, ref ComponentGetState args)
     {
         var state = new PredContState();
-        foreach (var (key, content) in comp.containers)
+        foreach (var (key, content) in ent.Comp.containers)
         {
             state.containers[key] = new ContWrap()
             {
@@ -40,37 +40,38 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
                 s = content.checksums.Last()
             };
         }
+        args.State = state;
     }
 
     [SubscribeLocalEvent]
-    public void HandleState(EntityUid uid, OxydPredContComponent comp, ComponentHandleState args)
+    public void HandleState(Entity<OxydPredContComponent> ent,ref ComponentHandleState args)
     {
         if (args.Current is not PredContState state)
             return;
         Dictionary<string, OxydContainer> resetted = new();
         foreach (var (key, content) in state.containers)
         {
-            if (comp.containers.TryGetValue(key, out var old))
+            if (ent.Comp.containers.TryGetValue(key, out var old))
             {
                 if (old.checksums.Contains(content.s) && (gametime.CurTick.Value - old.lastChange.Value) < 30)
                     continue;
             }
             content.c.key = key;
             content.c.checksums.Add(content.s);
-            comp.containers[key] = content.c;
+            ent.Comp.containers[key] = content.c;
             foreach (var id in content.c.netContained)
             {
-                var ent = GetEntity(id);
-                if (TerminatingOrDeleted(ent))
+                var thing = GetEntity(id);
+                if (TerminatingOrDeleted(thing))
                     continue;
-                content.c.contained.Add(ent);
+                content.c.contained.Add(thing);
             }
             resetted[key] = content.c;
         }
 
         if (resetted.Count > 0)
         {
-            RaiseLocalEvent(uid, new PredContStateReset((uid, comp), resetted));
+            RaiseLocalEvent(ent, new PredContStateReset(ent, resetted));
         }
     }
     
@@ -108,6 +109,7 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
             return false;
         if(!container.canInsert(target, prediction.Value))
             return false;
+        Log.Info($"--Inserting {target} into {uid} from {key}");
         var mirror = containers.GetContainer(uid, key, sc);
         if (hands.IsHeld(target, out var user))
         {
@@ -147,7 +149,7 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
         {
             containers.Remove(target, mirror);
         }
-
+        Log.Info($"--Removing {target} from {uid} from {key}");
         container.remove(target, GetNetEntity(target));
         if (!prediction.Value)
         {
