@@ -22,17 +22,17 @@ public struct ContWrap
 [RegisterComponent, NetworkedComponent]
 public sealed partial class OxydPredContComponent : Component
 {
-    public Dictionary<string, OxydContainer> containers = new();
+    [ViewVariables]public Dictionary<string, OxydContainer> containers = new();
 }
 [Serializable, NetSerializable]
 public class OxydContainer
 {
-    [NonSerialized] public string key = string.Empty;
-    public int? capacityLimit = 0;
-    public List<NetEntity> netContained = new();
-    [NonSerialized] public List<EntityUid> contained = new();
-    [NonSerialized] public List<Byte> checksums = new(4);
-    [NonSerialized] public GameTick lastChange = new();
+    [NonSerialized, ViewVariables] public string key = string.Empty;
+    [ViewVariables] public int? capacityLimit = 0;
+    [ViewVariables] public List<NetEntity> netContained = new();
+    [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
+    [NonSerialized, ViewVariables] public List<Byte> checksums = new(4);
+    [NonSerialized, ViewVariables] public GameTick lastChange = new();
 
     public static byte createHash(EntityUid ent, OxydContainerAction act)
     {
@@ -101,3 +101,10 @@ public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> cont
 /// <param name="uid"></param>
 /// <param name="container"></param>
 public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container);
+/// <summary>
+/// Handled state and we had a reset due to mismatch between server-client , rebuild everything associated.
+/// </summary>
+/// <param name="container"></param>
+/// <param name="resetted"></param>
+
+public record PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);

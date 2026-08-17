@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using System.Numerics;
+using Content.Shared;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.CCVar;
 using Content.Shared.Singularity.Components;
@@ -21,9 +22,8 @@ namespace Content.Client._Oxyd.Framework.Bundle;
 /// </summary>
 public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableComponent>
 {
-    [Dependency] private IPlayerManager player = default!;
     [Dependency] private ContainerSystem containers = default!;
-    [Dependency] private ClientOxydHelpers oxyd = default!;
+    [Dependency] private OxydPredContainerSystem predCont = default!;
     public const string BakeIdentifier = "@";
     public const string BakeEnder = "@";
     /// <summary>
@@ -117,15 +117,16 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                 }
             }
 
-            foreach (var net in bundle.containing)
+            if (!predCont.GetContainer(thing, BundleSystem.storeKey, out var cont))
+                continue;
+            foreach (var ent in cont.contained)
             {
-                var ent = GetEntity(net);
                 if (TerminatingOrDeleted(ent))
                     continue;
                 if (!TryComp<SpriteComponent>(ent, out var sprite))
                     continue;
                 //WipeBaked((ent, sprite), (thing, selfsprite));
-                BakeLayers((ent, sprite), (thing, selfsprite), bundle.bundlePositions[net]);
+                BakeLayers((ent, sprite), (thing, selfsprite), bundle.bundlePositions[ent].pos);
             }
         }
 

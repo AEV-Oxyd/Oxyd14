@@ -18,6 +18,17 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
     [Dependency] private SharedHandsSystem hands = default!;
 
     [SubscribeLocalEvent]
+    public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
+    {
+        if (!gametime.IsFirstTimePredicted)
+            return;
+        if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont))
+        {
+            removeEntity(uid, baseCont.ID, args.Entity, false);
+        }
+    }
+
+    [SubscribeLocalEvent]
     public void GetState(EntityUid uid, OxydPredContComponent comp, ComponentGetState args)
     {
         var state = new PredContState();
@@ -36,6 +47,7 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
     {
         if (args.Current is not PredContState state)
             return;
+        Dictionary<string, OxydContainer> resetted = new();
         foreach (var (key, content) in state.containers)
         {
             if (comp.containers.TryGetValue(key, out var old))
@@ -53,6 +65,12 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
                     continue;
                 content.c.contained.Add(ent);
             }
+            resetted[key] = content.c;
+        }
+
+        if (resetted.Count > 0)
+        {
+            RaiseLocalEvent(uid, new PredContStateReset((uid, comp), resetted));
         }
     }
     
@@ -79,15 +97,16 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
         return false;
     }
 
-    public bool insertEntity(EntityUid uid, string key, EntityUid target, bool prediction = false)
+    public bool insertEntity(EntityUid uid, string key, EntityUid target, bool? prediction = null)
     {
         var sc = cmq.CompOrNull(uid);
         var oc = opcq.CompOrNull(uid);
         if (sc is null || oc is null)
             return false;
+        prediction ??= !gametime.IsFirstTimePredicted;
         if (!GetContainer(uid, key, out var container))
             return false;
-        if(!container.canInsert(target, prediction))
+        if(!container.canInsert(target, prediction.Value))
             return false;
         var mirror = containers.GetContainer(uid, key, sc);
         if (hands.IsHeld(target, out var user))
@@ -97,7 +116,7 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
         else
             containers.Insert(target, mirror);
         container.insert(target, GetNetEntity(target));
-        if (!prediction)
+        if (!prediction.Value)
         {
             var ev = new PredContInserted(target, (uid, oc));
             RaiseLocalEvent(target, ev);
@@ -108,15 +127,16 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
     }
     
 
-    public bool removeEntity(EntityUid uid, string key, EntityUid target, bool prediction = false, EntityUid? insertionTarget = null)
+    public bool removeEntity(EntityUid uid, string key, EntityUid target, bool? prediction = null, EntityUid? insertionTarget = null)
     {
         var sc = cmq.CompOrNull(uid);
         var oc = opcq.CompOrNull(uid);
+        prediction ??= !gametime.IsFirstTimePredicted;
         if (sc is null || oc is null)
             return false;
         if (!GetContainer(uid, key, out var container))
             return false;
-        if (!container.canRemove(target, prediction))
+        if (!container.canRemove(target, prediction.Value))
             return false;
         var mirror = containers.GetContainer(uid, key, sc);
         if (insertionTarget is not null)
@@ -129,7 +149,7 @@ public sealed partial class OxydPredContainerSystem : EntitySystem
         }
 
         container.remove(target, GetNetEntity(target));
-        if (!prediction)
+        if (!prediction.Value)
         {
             var ev = new PredContRemoved(target, (uid, oc));
             RaiseLocalEvent(target, ev);
