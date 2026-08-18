@@ -77,7 +77,7 @@ public abstract partial class SharedToolSystem : EntitySystem
         // Loop through tool qualities and add localized names to the list
         foreach (var toolQuality in ent.Comp.Qualities)
         {
-            if (ProtoMan.TryIndex<ToolQualityPrototype>(toolQuality ?? string.Empty, out var protoToolQuality))
+            if (ProtoMan.TryIndex<ToolQualityPrototype>(toolQuality , out var protoToolQuality))
             {
                 toolQualities.Add(Loc.GetString(protoToolQuality.Name));
             }
@@ -193,7 +193,7 @@ public abstract partial class SharedToolSystem : EntitySystem
             examineText = Loc.GetString("tool-component-doafter-examine", ("quality", qualitiesText));
 
         var toolEvent = new ToolDoAfterEvent(fuel, doAfterEv, GetNetEntity(target));
-        var modsEvent = new OxydToolGetModifiersEvent() { delay = delay, target = target, user = user, qualities = toolQualitiesNeeded };
+        var modsEvent = new OxydToolGetModifiersEvent() { delay = delay, target = target, user = user, qualities = toolQualitiesNeeded.Select(x => x.Id) };
         RaiseLocalEvent(tool, modsEvent);
         delay = modsEvent.delay;
         var doAfterArgs = new DoAfterArgs(EntityManager, user, delay / toolComponent.SpeedModifier, toolEvent, tool, target: target, used: tool)
