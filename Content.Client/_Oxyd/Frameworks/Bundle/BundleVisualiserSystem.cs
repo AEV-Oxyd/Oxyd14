@@ -125,6 +125,8 @@ public sealed partial class BundleVisualiserSystem : VisualizerSystem<BundableCo
                     continue;
                 if (!TryComp<SpriteComponent>(ent, out var sprite))
                     continue;
+                if (!bundle.bundlePositions.ContainsKey(ent))
+                    continue;
                 //WipeBaked((ent, sprite), (thing, selfsprite));
                 BakeLayers((ent, sprite), (thing, selfsprite), bundle.bundlePositions[ent].pos);
             }

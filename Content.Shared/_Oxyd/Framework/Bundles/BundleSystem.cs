@@ -217,7 +217,7 @@ public abstract partial class BundleSystem : EntitySystem
 
         if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
             return;
-        foreach (var thing in cont.contained)
+        foreach (var thing in cont.contained.ToList())
         {
             if (TerminatingOrDeleted(thing))
                 continue;

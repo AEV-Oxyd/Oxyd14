@@ -13,7 +13,7 @@ public sealed partial class PredContState : IComponentState
 public struct ContWrap
 {
     public OxydContainer c;
-    public byte s;
+    public byte? s;
 }
 
 /// <summary>

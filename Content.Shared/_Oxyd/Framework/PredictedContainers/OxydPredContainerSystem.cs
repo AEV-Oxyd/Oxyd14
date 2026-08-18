@@ -37,7 +37,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             state.containers[key] = new ContWrap()
             {
                 c = content,
-                s = content.checksums.Last()
+                s = content.checksums.LastOrDefault()
             };
         }
         args.State = state;
@@ -51,13 +51,17 @@ public partial class OxydPredContainerSystem : EntitySystem
         Dictionary<string, OxydContainer> resetted = new();
         foreach (var (key, content) in state.containers)
         {
-            if (ent.Comp.containers.TryGetValue(key, out var old))
+            
+            if (content.s is not null && ent.Comp.containers.TryGetValue(key, out var old))
             {
-                if (old.checksums.Contains(content.s) && (gametime.CurTick.Value - old.lastChange.Value) < 30)
+                if (old.checksums.Contains(content.s.Value) && (gametime.CurTick.Value - old.lastChange.Value) < 30)
                     continue;
             }
             content.c.key = key;
-            content.c.checksums.Add(content.s);
+            content.c.checksums = new();
+            content.c.contained = new();
+            if(content.s is not null)
+                content.c.checksums.Add(content.s.Value);
             ent.Comp.containers[key] = content.c;
             foreach (var id in content.c.netContained)
             {
@@ -120,6 +124,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         container.insert(target, GetNetEntity(target));
         if (!prediction.Value)
         {
+            Log.Debug($"Raising insert event {target} into {uid} from {key} prediction");
             var ev = new PredContInserted(target, (uid, oc));
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);

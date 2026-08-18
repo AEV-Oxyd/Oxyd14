@@ -8,7 +8,7 @@ namespace Content.Shared._Oxyd.Framework.Bundles;
 /// <summary>
 /// This is used for...
 /// </summary>
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class BundleComponent : Component
 {
     [Serializable, NetSerializable]
@@ -19,7 +19,7 @@ public sealed partial class BundleComponent : Component
     }
     [ViewVariables]
     public ProtoId<BundleGroup> group = "BundleGroup";
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public int usedVolume = 0;
     [ViewVariables]
     public Dictionary<EntityUid, BundleEntData> bundlePositions = new();
