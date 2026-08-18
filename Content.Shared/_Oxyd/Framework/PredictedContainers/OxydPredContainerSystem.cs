@@ -9,7 +9,7 @@ using Robust.Shared.Timing;
 namespace Content.Shared;
 
 
-public sealed partial class OxydPredContainerSystem : EntitySystem
+public partial class OxydPredContainerSystem : EntitySystem
 {
     [Dependency] private EntityQuery<OxydPredContComponent> opcq = default!;
     [Dependency] private EntityQuery<ContainerManagerComponent> cmq = default!;
