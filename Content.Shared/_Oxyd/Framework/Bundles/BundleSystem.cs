@@ -34,7 +34,6 @@ public abstract partial class BundleSystem : EntitySystem
     [Dependency] private SharedInteractionSystem interact = default!;
     [Dependency] protected SharedTransformSystem transform = default!;
     [Dependency] protected ThrowingSystem throwing = default!;
-    [Dependency] protected SharedPhysicsSystem physics = default!;
     [Dependency] protected OxydPredContainerSystem predcontainers = default!;
     private IRobustRandom random = new RobustRandom();
 
@@ -61,7 +60,10 @@ public abstract partial class BundleSystem : EntitySystem
         comp.bundlePositions.Remove(args.uid);
         comp.usedVolume -= bundable.volume;
         afterRemove((uid, comp));
-        Dirty(uid,comp);
+        if(predcontainers.GetContainer(uid, storeKey, out var cont) && cont.contained.Count == 0)
+            helpers.QueueDel(uid);
+        else
+            Dirty(uid,comp);
     }
     [SubscribeLocalEvent]
     public void OnInsert(EntityUid uid, BundleComponent comp, PredContInserted args)
@@ -228,6 +230,7 @@ public abstract partial class BundleSystem : EntitySystem
                 //wasUsed = true;
                 //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
                 ev.Handled = true;
+                break;
             }
             
         }
