@@ -268,10 +268,9 @@ public abstract partial class BundleSystem : EntitySystem
         {
             return EntityUid.Invalid;
         }
-
-        if (!network.IsServer)
+        if(!network.IsServer)
             return EntityUid.Invalid;
-        var bundle = SpawnNextToOrDrop(bundleProto, user,null, indexed.components);
+        var bundle = SpawnNextToOrDrop(bundleProto, user, null, indexed.components);
         var comp = EnsureComp<BundleComponent>(bundle);
         comp.group = ent.Comp.group;
         if (!TryMerge(ent, (bundle, comp)))
@@ -279,7 +278,6 @@ public abstract partial class BundleSystem : EntitySystem
             QueueDel(bundle);
             return EntityUid.Invalid;
         }
-
         //Dirty(bundle,comp);
         return bundle;
     }

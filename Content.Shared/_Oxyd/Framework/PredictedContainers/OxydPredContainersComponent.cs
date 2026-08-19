@@ -13,7 +13,7 @@ public sealed partial class PredContState : IComponentState
 public struct ContWrap
 {
     public OxydContainer c;
-    public byte? s;
+    public short? s;
 }
 
 /// <summary>
@@ -31,12 +31,12 @@ public class OxydContainer
     [ViewVariables] public int? capacityLimit = 0;
     [ViewVariables] public List<NetEntity> netContained = new();
     [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
-    [NonSerialized, ViewVariables] public List<Byte> checksums = new(4);
+    [NonSerialized, ViewVariables] public List<short> checksums = new(4);
     [NonSerialized, ViewVariables] public GameTick lastChange = new();
 
-    public static byte createHash(EntityUid ent, OxydContainerAction act)
+    public static short createHash(NetEntity ent, OxydContainerAction act)
     {
-        return (byte)(ent.GetHashCode() + act);
+        return (short)(ent.GetHashCode() + act);
     }
     public bool canInsert(EntityUid ent, bool prediction = false)
     {
@@ -47,11 +47,11 @@ public class OxydContainer
         return true;
     }
 
-    public bool canRemove(EntityUid ent, bool prediction = false)
+    public bool canRemove(EntityUid ent, NetEntity net, bool prediction = false)
     {
         if (prediction)
         {
-            var h = createHash(ent, OxydContainerAction.Remove);
+            var h = createHash(net, OxydContainerAction.Remove);
             return checksums.Contains(h);
         }
         else
@@ -66,7 +66,7 @@ public class OxydContainer
         {
             contained.Add(ent);
             netContained.Add(netEnt);
-            checksums.Add(createHash(ent, OxydContainerAction.Add));
+            checksums.Add(createHash(netEnt, OxydContainerAction.Add));
             if(checksums.Count > 20)
                 checksums = checksums.GetRange(10, checksums.Count);
         }
@@ -78,7 +78,7 @@ public class OxydContainer
         {
             contained.Remove(ent);
             netContained.Remove(netEnt);
-            checksums.Add(createHash(ent, OxydContainerAction.Remove));
+            checksums.Add(createHash(netEnt, OxydContainerAction.Remove));
             if(checksums.Count > 20)
                 checksums = checksums.GetRange(10, checksums.Count);
         }

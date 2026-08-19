@@ -52,10 +52,9 @@ public partial class OxydPredContainerSystem : EntitySystem
         foreach (var (key, content) in state.containers)
         {
             
-            if (content.s is not null && ent.Comp.containers.TryGetValue(key, out var old))
+            if (content.s is not null && ent.Comp.containers.TryGetValue(key, out var old) && old.checksums.Contains(content.s.Value))
             {
-                if (old.checksums.Contains(content.s.Value) && (gametime.CurTick.Value - old.lastChange.Value) < 30)
-                    continue;
+                continue;
             }
             content.c.key = key;
             content.c.checksums = new();
@@ -75,11 +74,12 @@ public partial class OxydPredContainerSystem : EntitySystem
 
         if (resetted.Count > 0)
         {
+            Log.Debug($"Resetting {resetted.Count} containers");
             RaiseLocalEvent(ent, new PredContStateReset(ent, resetted));
         }
     }
     
-    public OxydContainer CreateContainer(EntityUid entity, string key, int? capacity)
+    public OxydContainer CreateContainer(EntityUid entity, string key, int? capacity = null)
     {
         var cont = new OxydContainer();
         cont.key = key;
@@ -113,7 +113,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             return false;
         if(!container.canInsert(target, prediction.Value))
             return false;
-        Log.Info($"--Inserting {target} into {uid} from {key}");
+        //Log.Info($"--Inserting {target} into {uid} from {key}");
         var mirror = containers.GetContainer(uid, key, sc);
         if (hands.IsHeld(target, out var user))
         {
@@ -121,10 +121,14 @@ public partial class OxydPredContainerSystem : EntitySystem
         }
         else
             containers.Insert(target, mirror);
+        Log.Info($"Inserted {target} into {uid} from {key}");
+        var count = container.contained.Count;
         container.insert(target, GetNetEntity(target));
+        if(count != container.contained.Capacity)
+            container.lastChange = gametime.CurTick;
         if (!prediction.Value)
         {
-            Log.Debug($"Raising insert event {target} into {uid} from {key} prediction");
+            Log.Info($"Raising insert event {target} into {uid} from {key} prediction");
             var ev = new PredContInserted(target, (uid, oc));
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);
@@ -143,7 +147,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             return false;
         if (!GetContainer(uid, key, out var container))
             return false;
-        if (!container.canRemove(target, prediction.Value))
+        if (!container.canRemove(target, GetNetEntity(target),prediction.Value))
             return false;
         var mirror = containers.GetContainer(uid, key, sc);
         if (insertionTarget is not null)
@@ -155,12 +159,16 @@ public partial class OxydPredContainerSystem : EntitySystem
             containers.Remove(target, mirror);
         }
         Log.Info($"--Removing {target} from {uid} from {key}");
+        var count = container.contained.Count;
         container.remove(target, GetNetEntity(target));
+        if(count != container.contained.Capacity)
+            container.lastChange = gametime.CurTick;
         if (!prediction.Value)
         {
             var ev = new PredContRemoved(target, (uid, oc));
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);
+            Log.Info($"Raising remove event {target} from {uid} from {key} prediction");
         }
         Dirty(uid, oc);
         return true;   

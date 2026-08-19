@@ -110,8 +110,15 @@ public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
 
     [DataField]
     public bool MagInhands = false;
+}
+
+[RegisterComponent,NetworkedComponent]
+public sealed partial class OxydPredictedGunStorageComponent : OxydGunProvidersComponent
+{
+    [DataField] public List<string> storeKeys = new() {"base"};
 
 }
+
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent
 {

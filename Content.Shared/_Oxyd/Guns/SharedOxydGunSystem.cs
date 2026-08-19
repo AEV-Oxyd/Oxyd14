@@ -120,6 +120,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public override void Initialize()
     {
+        base.Initialize();
         InitRecoil();
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
