@@ -23,5 +23,8 @@ public sealed partial class BundleComponent : Component
     public int usedVolume = 0;
     [ViewVariables]
     public Dictionary<EntityUid, BundleEntData> bundlePositions = new();
-
+    /// <summary>
+    /// Holds currently predicting insertions in the order of inserting
+    /// </summary>
+    [NonSerialized, ViewVariables] public Dictionary<GameTick,Queue<EntityUid>> predictionInsertions = new(4);
 }

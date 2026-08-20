@@ -186,7 +186,6 @@ public abstract partial class BundleSystem : EntitySystem
         if (ev.Target is null)
             return;
         var comp = Comp<BundleComponent>(ent);
-
         if (TryComp<BundleComponent>(ev.Target.Value, out var targbund))
         {
             if (!predcontainers.GetContainer(ev.Target.Value, storeKey, out var targcont))
@@ -217,22 +216,38 @@ public abstract partial class BundleSystem : EntitySystem
             }
         }
 
-        if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
-            return;
-        foreach (var thing in cont.contained.ToList())
+        var currentTick = timing.CurTick;
+        if (timing.IsFirstTimePredicted)
         {
-            if (TerminatingOrDeleted(thing))
-                continue;
-            //var wasUsed = false;
-            //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
-            if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
+            if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
+                return;
+            foreach (var thing in cont.contained.ToList())
             {
-                //wasUsed = true;
-                //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
-                ev.Handled = true;
-                break;
+                if (TerminatingOrDeleted(thing))
+                    continue;
+                //var wasUsed = false;
+                //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
+                if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
+                {
+                    if(!comp.predictionInsertions.ContainsKey(timing.CurTick))
+                        comp.predictionInsertions.Add(timing.CurTick, new Queue<EntityUid>());
+                    comp.predictionInsertions[timing.CurTick].Enqueue(thing);
+                    //wasUsed = true;
+                    //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
+                    ev.Handled = true;
+                    break;
+                }
             }
-            
+        }
+        else
+        {
+            if(comp.predictionInsertions.TryGetValue(currentTick, out var queue) && queue.TryDequeue(out var insertin))
+            {
+                if(interact.InteractUsing(ev.User, insertin, ev.Target.Value, ev.ClickLocation, dropOverride: true))
+                    queue.Enqueue(insertin);
+                else
+                    Log.Debug($"Failed to reinsert predicted entity {insertin} into {ev.Target.Value} from bundle {ent.Owner}");
+            }
         }
     }
 

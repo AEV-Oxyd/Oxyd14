@@ -121,7 +121,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         }
         else
             containers.Insert(target, mirror);
-        Log.Info($"Inserted {target} into {uid} from {key}");
+        Log.Info($"Inserted {target} into {uid} from {key} on tick {gametime.CurTick}, is pred {gametime.IsFirstTimePredicted}");
         var count = container.contained.Count;
         container.insert(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
