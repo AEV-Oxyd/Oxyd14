@@ -1,0 +1,7 @@
+- type: latheRecipe
+  parent: BaseToolRecipe
+  id: DRMCuffs
+  result: Handcuffs
+  pointUsage: 2
+  materials:
+    Steel: 300

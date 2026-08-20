@@ -120,6 +120,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public override void Initialize()
     {
+        base.Initialize();
         InitRecoil();
         SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
         SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
@@ -174,6 +175,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     public void giveTickInterpTime(GunFiremodePrototype prot)
     {
         var giving = _gameTiming.CurTime - prot.lastInterpret;
+        // we reset and give 1 tick only
+        if (giving / _gameTiming.TickPeriod > 10)
+        {
+            prot.lastInterpret = _gameTiming.CurTime;
+            prot.timeBudget = _gameTiming.TickPeriod;
+            return;
+        }
+
         if(giving.Ticks > 0)
             prot.timeBudget += giving;
         Log.Debug($"Ran giveTickTime, was given {(_gameTiming.CurTime - prot.lastInterpret).Milliseconds}ms, total: {prot.timeBudget.Milliseconds}ms");
@@ -220,13 +229,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         if (!TryComp(ent, out OxydChamberExtensionComponent? extend))
             return;
-        for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
+        if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
         {
-            if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
-            {
-                args.Handled = true;
-                return;
-            }
+            args.Handled = true;
+            return;
         }
     }
 

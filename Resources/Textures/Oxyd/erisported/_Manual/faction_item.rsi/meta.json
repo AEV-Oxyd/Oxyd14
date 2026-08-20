@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": "https://github.com/discordia-space/CEV-Eris",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "nt_sword_truth"
+    },
+    {
+      "name": "biosyphon",
+      "delays": [
+        [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": ""
+    },
+    {
+      "name": "enricher"
+    },
+    {
+      "name": "von-krabin"
+    },
+    {
+      "name": "nt_pedestal0"
+    },
+    {
+      "name": "nt_pedestal1"
+    },
+    {
+      "name": "last_shelter"
+    },
+    {
+      "name": "techno_tribalism"
+    },
+    {
+      "name": "complicator"
+    },
+    {
+      "name": "maneki_neko"
+    },
+    {
+      "name": "atomic_distillery"
+    },
+    {
+      "name": "random_radio",
+      "delays": [
+        [
+          0.4,
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "nt_sword_old"
+    },
+    {
+      "name": "nt_pedestal0_old"
+    },
+    {
+      "name": "nt_pedestal1_old"
+    }
+  ]
+}

@@ -13,6 +13,7 @@
                 MinSize="32 32"
                 />
             <Label Name="RecipeName" HorizontalExpand="True" />
+            <Label Name="DRMCost" Align="Right" Visible="False"/>
         </BoxContainer>
     </Button>
 </Control>

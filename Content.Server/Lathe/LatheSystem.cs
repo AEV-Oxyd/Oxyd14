@@ -9,10 +9,12 @@ using Content.Server.Popups;
 using Content.Server.Power.EntitySystems;
 using Content.Server.Radio.EntitySystems;
 using Content.Server.Stack;
+using Content.Shared._Oxyd;
 using Content.Shared.Atmos;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Chemistry.Reagent;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.UserInterface;
 using Content.Shared.Database;
 using Content.Shared.Emag.Systems;
@@ -28,6 +30,7 @@ using JetBrains.Annotations;
 using Robust.Server.Containers;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Containers;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -52,7 +55,7 @@ namespace Content.Server.Lathe
         [Dependency] private StackSystem _stack = default!;
         [Dependency] private TransformSystem _transform = default!;
         [Dependency] private RadioSystem _radio = default!;
-
+        [Dependency] private ItemSlotsSystem itemslots = default!;
         /// <summary>
         /// Per-tick cache
         /// </summary>
@@ -79,6 +82,38 @@ namespace Content.Server.Lathe
             SubscribeLocalEvent<TechnologyDatabaseComponent, LatheGetRecipesEvent>(OnGetRecipes);
             SubscribeLocalEvent<EmagLatheRecipesComponent, LatheGetRecipesEvent>(GetEmagLatheRecipes);
             SubscribeLocalEvent<LatheHeatProducingComponent, LatheStartPrintingEvent>(OnHeatStartPrinting);
+        }
+        
+        [SubscribeLocalEvent]
+        public void OnInsert(EntityUid ent, LatheComponent comp, EntInsertedIntoContainerMessage ev)
+        {
+            if (comp.diskSlot is ItemSlot real)
+            {
+                if (ev.Container is ContainerSlot verified)
+                {
+                    if (verified.ID != real.ID)
+                        return;
+                    if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
+                        return;
+                    UpdateUserInterfaceState(ent, comp);
+                }
+            }
+        }
+        
+        [SubscribeLocalEvent]
+        public void OnRemove(EntityUid ent, LatheComponent comp, EntRemovedFromContainerMessage ev)
+        {
+            if (comp.diskSlot is ItemSlot real)
+            {
+                if (ev.Container is ContainerSlot verified)
+                {
+                    if (verified.ID != real.ID)
+                        return;
+                    if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
+                        return;
+                    UpdateUserInterfaceState(ent, comp);
+                }
+            }
         }
         public override void Update(float frameTime)
         {
@@ -158,10 +193,28 @@ namespace Content.Server.Lathe
             return true;
         }
 
+        public HashSet<ProtoId<LatheRecipePrototype>> GetDiskRecipes(DigitalDataHolderComponent data)
+        {
+            HashSet<ProtoId<LatheRecipePrototype>> returning = new();
+            foreach (var file in data.files)
+            {
+                if (file is DigitalDataLathe recipe)
+                {
+                    returning = returning.Concat(recipe.recipes).ToHashSet();
+                }
+            }
+
+            return returning;
+        }
+
         public List<ProtoId<LatheRecipePrototype>> GetAvailableRecipes(EntityUid uid, LatheComponent component, bool getUnavailable = false)
         {
             var ev = new LatheGetRecipesEvent((uid, component), getUnavailable);
             AddRecipesFromPacks(ev.Recipes, component.StaticPacks);
+            if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<DigitalDataHolderComponent>(loaded, out var dataComp))
+            {
+                ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(dataComp)).ToHashSet();
+            }
             RaiseLocalEvent(uid, ev);
             return ev.Recipes.ToList();
         }
@@ -174,9 +227,27 @@ namespace Content.Server.Lathe
             if (quantity <= 0)
                 return false;
             quantity = int.Min(quantity, MaxItemsPerRequest);
-
             if (!CanProduce(uid, recipe, quantity, component))
                 return false;
+            if (recipe.pointUsage != 0)
+            {
+                var usage = recipe.pointUsage * quantity;
+                if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<DigitalDataHolderComponent>(loaded, out var data))
+                {
+                    foreach (var file in data.files)
+                    {
+                        if (file is DigitalDataLathe latheData && latheData.recipes.Contains(recipe.ID))
+                        {
+                            if (latheData.uses < usage)
+                                return false;
+                            latheData.uses -= usage;
+                        }
+                    }
+                }
+                else
+                    return false;
+            
+            }
 
             foreach (var (mat, amount) in GetAdjustedAmount(component, recipe))
                 _materialStorage.TryChangeMaterialAmount(uid, mat, -amount * quantity);
@@ -279,6 +350,19 @@ namespace Content.Server.Lathe
                 producing = node.Value.Recipe;
 
             var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing);
+            // todo add selector for multi-file on file util expansion? SPCR 2026
+            if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<DigitalDataHolderComponent>(validDisk, out var dataComp))
+            {
+                foreach (var file in dataComp.getFileByData<DigitalDataLathe>())
+                {
+                    state.diskName = file.name;
+                    if (file.uses is not null)
+                    {
+                        state.uses = file.uses.Value;
+                    }
+                    break;
+                }
+            }
             _uiSys.SetUiState(uid, LatheUiKey.Key, state);
         }
 
@@ -336,6 +420,8 @@ namespace Content.Server.Lathe
         {
             _appearance.SetData(uid, LatheVisuals.IsInserting, false);
             _appearance.SetData(uid, LatheVisuals.IsRunning, false);
+            if(component.diskSlot is not null)
+                itemslots.AddItemSlot(uid, diskSlot, component.diskSlot);
 
             _materialStorage.UpdateMaterialWhitelist(uid);
         }
@@ -441,6 +527,23 @@ namespace Content.Server.Lathe
         private void RefundCurrentRecipe(EntityUid uid, LatheComponent lathe)
         {
             ProtoMan.Resolve(lathe.CurrentRecipe, out var recipe);
+            // This is shit and lets people move license points to one disk if they share a recipe.
+            // Im too lazy to fix it and disks are not meant to share recipes in general tho. SPCR 2026
+            // if its too big of a issue just keep track of which  DiskEntity was used for Each Recipe!!!
+            if (recipe!.pointUsage != 0)
+            {
+                if (lathe.diskSlot?.Item is EntityUid existing && !TerminatingOrDeleted(existing) && TryComp<DigitalDataHolderComponent>(existing, out var data))
+                {
+                    foreach (var file in data.getFileByData<DigitalDataLathe>())
+                    {
+                        if (file.recipes.Contains(recipe.ID))
+                        {
+                            file.uses += recipe.pointUsage;
+                            break;
+                        }
+                    }
+                }
+            }
 
             foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
                 _materialStorage.TryChangeMaterialAmount(uid, mat, amount);

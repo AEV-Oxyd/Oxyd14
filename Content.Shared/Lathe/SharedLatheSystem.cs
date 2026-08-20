@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Content.Shared._Oxyd;
 using Content.Shared.Emag.Systems;
 using Content.Shared.Examine;
 using Content.Shared.Lathe.Prototypes;
@@ -22,6 +23,10 @@ public abstract partial class SharedLatheSystem : EntitySystem
 
     public readonly Dictionary<string, List<LatheRecipePrototype>> InverseRecipes = new();
     public const int MaxItemsPerRequest = 10_000;
+    
+            
+    public const string diskSlot = "disk";
+
 
     public override void Initialize()
     {
@@ -88,7 +93,6 @@ public abstract partial class SharedLatheSystem : EntitySystem
             return false;
         if (amount <= 0)
             return false;
-
         foreach (var (material, needed) in recipe.Materials)
         {
             var adjustedAmount = AdjustMaterial(needed, recipe.ApplyMaterialDiscount, component.MaterialUseMultiplier);

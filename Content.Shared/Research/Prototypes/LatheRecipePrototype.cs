@@ -60,6 +60,18 @@ namespace Content.Shared.Research.Prototypes
         /// </summary>
         [DataField]
         public Dictionary<ProtoId<MaterialPrototype>, int> Materials = new();
+        
+        /// <summary>
+        /// Reagents needed to make  this recipe OXYD edit 
+        /// </summary>
+        [DataField]
+        public Dictionary<ProtoId<ReagentPrototype>, int> Reagents = new();
+
+        /// <summary>
+        /// Point usage for DRM locked Disks
+        /// </summary>
+        [DataField(required: false)] public int pointUsage = 0;
+        
 
         [DataField]
         public bool ApplyMaterialDiscount = true;

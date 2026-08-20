@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "license": null,
+  "copyright": "https://github.com/discordia-space/CEV-Eris",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "plant-1"
+    },
+    {
+      "name": "plant-10"
+    },
+    {
+      "name": "plant-09"
+    },
+    {
+      "name": "plant-15"
+    },
+    {
+      "name": "plant-13"
+    },
+    {
+      "name": "plant-xmas",
+      "delays": [
+        [
+          0.8,
+          0.8,
+          0.8
+        ]
+      ]
+    },
+    {
+      "name": "emaged"
+    },
+    {
+      "name": "emagged2-blue",
+      "directions": 4,
+      "delays": [
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "emagged2-orange",
+      "directions": 4,
+      "delays": [
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ],
+        [
+          0.6,
+          0.4,
+          0.6,
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "holopot"
+    }
+  ]
+}

@@ -90,6 +90,18 @@ public sealed partial class LatheMenu : FancyWindow
         MaterialsList.SetOwner(Entity);
     }
 
+    public void UpdateDisk(string name, int uses)
+    {
+        if (name == string.Empty)
+        {
+            DiskName.Text = "No disk loaded";
+            DiskUses.Text = "N/A";
+            return;
+        }
+        DiskName.Text = name;
+        DiskUses.Text = $"L-POINTS:{uses}";
+    }
+
     /// <summary>
     /// Populates the list of all the recipes
     /// </summary>

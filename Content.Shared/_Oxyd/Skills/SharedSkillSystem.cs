@@ -11,15 +11,8 @@ namespace Content.Shared._Oxyd.Skills;
 
 public abstract partial class SharedSkillSystem : EntitySystem
 {
-    [Dependency] protected IPrototypeManager protoMan = default!;
     [Dependency] protected IGameTiming timing = default!;
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<MobSkillComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<ToolComponent, OxydToolGetModifiersEvent>(OnToolUse);
-
-    }
+    [Dependency] protected EntityQuery<MobSkillComponent> sq = default!;
 
     public void ModifySkill(Entity<MobSkillComponent> ent, ProtoId<SkillPrototype> skill, int amount)
     {
@@ -35,12 +28,14 @@ public abstract partial class SharedSkillSystem : EntitySystem
         }
         Dirty(ent);
     }
+    
+    [SubscribeLocalEvent]
     private void OnToolUse(Entity<ToolComponent> ent, ref OxydToolGetModifiersEvent args)
     {
         if (!TryComp<MobSkillComponent>(args.user, out var skills))
             return;
         Dictionary<SkillPrototype, int> relevant = new();
-        foreach (var instance in protoMan.EnumeratePrototypes<SkillPrototype>())
+        foreach (var instance in ProtoMan.EnumeratePrototypes<SkillPrototype>())
         {
             foreach (var qual in args.qualities)
             {
@@ -61,10 +56,10 @@ public abstract partial class SharedSkillSystem : EntitySystem
             args.delay -= effect;
         }
     }
-
+    [SubscribeLocalEvent]
     private void OnInit(Entity<MobSkillComponent> ent, ref ComponentInit args)
     {
-        foreach (var instance in protoMan.EnumeratePrototypes<SkillPrototype>())
+        foreach (var instance in ProtoMan.EnumeratePrototypes<SkillPrototype>())
         {
             if (ent.Comp.skills.ContainsKey(instance.ID))
                 continue;
@@ -73,55 +68,76 @@ public abstract partial class SharedSkillSystem : EntitySystem
         Dirty(ent);
     }
 
-    public MobSkillComponent.BuffData AddBuff(Entity<MobSkillComponent> ent, string id, int amount,ProtoId<SkillPrototype> skill, TimeSpan? expires)
+    public MobSkillComponent.BuffData AddBuff(Entity<MobSkillComponent> ent, string id, int amount,ProtoId<SkillPrototype> skill, TimeSpan? expires = null)
     {
-        if (!ent.Comp.buffSources.ContainsKey(id))
-            ent.Comp.buffSources[id] = new List<MobSkillComponent.BuffData>();
-        var buff = new MobSkillComponent.BuffData() { amount = amount, expires = expires is null ? TimeSpan.MaxValue : expires.Value, skill = skill };
-        ent.Comp.buffSources[id].Add(buff);
+        if(expires is not null)
+            expires += timing.CurTime;
+        if (!ent.Comp.buffSources.ContainsKey(skill))
+            ent.Comp.buffSources[skill] = new();
+        if(!ent.Comp.buffSources[skill].ContainsKey(id))
+            ent.Comp.buffSources[skill][id] = new();
+        var buff = new MobSkillComponent.BuffData() { amount = amount, expires = expires is null ? TimeSpan.MaxValue : expires.Value };
+        ent.Comp.buffSources[skill][id].Add(buff);
         RecalculateBuffs(ent);
         return buff;
     }
 
     public MobSkillComponent.BuffData SetUniqueBuff(Entity<MobSkillComponent> ent, string id, int amount,ProtoId<SkillPrototype> skill, TimeSpan? expires)
     {
-        if (!ent.Comp.buffSources.ContainsKey(id))
-            ent.Comp.buffSources[id] = new List<MobSkillComponent.BuffData>();
-        ent.Comp.buffSources[id].Clear();
-        var buff = new MobSkillComponent.BuffData() { amount = amount, expires = expires is null ? TimeSpan.MaxValue : expires.Value, skill = skill };
-        ent.Comp.buffSources[id].Add(buff);
+        if(expires is not null)
+            expires += timing.CurTime;
+        if (!ent.Comp.buffSources.ContainsKey(skill))
+            ent.Comp.buffSources[skill] = new();
+        if(!ent.Comp.buffSources[skill].ContainsKey(id))
+            ent.Comp.buffSources[skill][id] = new();
+        else if(ent.Comp.buffSources[skill][id].Count == 1)
+        {
+            var old = ent.Comp.buffSources[skill][id][0];
+            if (old.amount == amount)
+            {
+                old.expires = expires ?? TimeSpan.MaxValue;
+            }
+            return old;
+        }
+        ent.Comp.buffSources[skill][id].Clear();
+        var buff = new MobSkillComponent.BuffData() { amount = amount, expires = expires ?? TimeSpan.MaxValue};
+        ent.Comp.buffSources[skill][id].Add(buff);
         RecalculateBuffs(ent);
         return buff;
     }
 
-    public void RemoveBuffs(Entity<MobSkillComponent> ent, string id)
+    public void RemoveBuffs(Entity<MobSkillComponent> ent, ProtoId<SkillPrototype> proto, string id)
     {
-        if (!ent.Comp.buffSources.ContainsKey(id))
+        if (!ent.Comp.buffSources.ContainsKey(proto))
             return;
-        ent.Comp.buffSources[id].Clear();
+        if (!ent.Comp.buffSources[proto].ContainsKey(id))
+            return;
+        ent.Comp.buffSources[proto][id].Clear();
         RecalculateBuffs(ent);
     }
 
-    public void RemoveBuff(Entity<MobSkillComponent> ent,string id,  MobSkillComponent.BuffData target)
+    public void RemoveBuff(Entity<MobSkillComponent> ent,ProtoId<SkillPrototype>proto, string id, MobSkillComponent.BuffData target)
     {
-        if (!ent.Comp.buffSources.ContainsKey(id))
+        if (!ent.Comp.buffSources.ContainsKey(proto))
             return;
-        ent.Comp.buffSources[id].Remove(target);
-
+        if (!ent.Comp.buffSources[proto].ContainsKey(id))
+            return;
+        ent.Comp.buffSources[proto][id].Remove(target);
     }
 
     public void RecalculateBuffs(Entity<MobSkillComponent> ent)
     {
-        foreach (var instance in protoMan.EnumeratePrototypes<SkillPrototype>())
+        foreach (var instance in ProtoMan.EnumeratePrototypes<SkillPrototype>())
         {
             var arrayRef = ent.Comp.skills[instance.ID];
             arrayRef[1] = 0;
+            if (!ent.Comp.buffSources.ContainsKey(instance.ID))
+                continue;
             // slop iteration but this is gonna be low N anyway SPCR 2026
-            foreach (var source in ent.Comp.buffSources[instance.ID])
+            foreach (var (buffId, affects) in ent.Comp.buffSources[instance.ID])
             {
-                if (source.skill != instance.ID)
-                    continue;
-                arrayRef[1] += source.amount;
+                foreach(var source in affects)
+                    arrayRef[1] += source.amount;
             }
         }
         Dirty(ent);
@@ -136,9 +152,13 @@ public abstract partial class SharedSkillSystem : EntitySystem
             var hadUpdate = false;
             foreach (var (_, buffs) in instance.Comp.buffSources)
             {
-                var oldC = buffs.Count;
-                buffs.RemoveAll(buff => buff.expires < timing.CurTime);
-                hadUpdate = buffs.Count != oldC;
+                foreach (var (key, data) in buffs)
+                {
+                    var oldC = data.Count;
+                    data.RemoveAll(buff => buff.expires < timing.CurTime);
+                    hadUpdate |= data.Count != oldC;
+                }
+                
             }
             if(hadUpdate)
                 RecalculateBuffs(instance);

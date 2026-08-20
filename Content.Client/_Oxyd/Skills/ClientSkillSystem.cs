@@ -37,7 +37,7 @@ public sealed class ClientSkillSystem : SharedSkillSystem
         var boxie = new VBox();
         foreach (var (proto, values) in skill.skills)
         {
-            if (!protoMan.TryIndex<SkillPrototype>(proto, out var instance))
+            if (!ProtoMan.TryIndex<SkillPrototype>(proto, out var instance))
             {
                 Log.Error($"Can't find skill {proto}!!!");
                 break;

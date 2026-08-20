@@ -10,7 +10,7 @@ namespace Content.Shared.Tools.Components;
 public sealed partial class ToolComponent : Component
 {
     [DataField]
-    public PrototypeFlags<ToolQualityPrototype> Qualities  = [];
+    public HashSet<ProtoId<ToolQualityPrototype>> Qualities  = [];
 
     [DataField] // Eris Port
     public Dictionary<ProtoId<ToolQualityPrototype>, int> ToolLevels = new Dictionary<ProtoId<ToolQualityPrototype>, int>();
