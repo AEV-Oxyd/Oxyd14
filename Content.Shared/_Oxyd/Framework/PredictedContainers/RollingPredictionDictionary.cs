@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Robust.Shared.Timing;
 
@@ -7,32 +8,28 @@ namespace Content.Shared;
 
 public sealed class RollingPredictionDictionary<T>
 {
-    // MAXIMUM NUMBER OF TICKS BEHIND THAT CAN BE PREDICTED.
-    // If you mess this up you'll lose prediction data and have
-    // mispredicted ticks or errors
-    public const int maxOffset = 25;
-    public int indexTick = 0;
-
-    public FrozenDictionary<int, Queue<T>> data;
+    [ViewVariables]
+    SortedDictionary<int, T> dict = new();
+    [ViewVariables]
+    public int limit = 25;
     
-    public RollingPredictionDictionary()
+    public void Insert(int tick, T value)
     {
-        Dictionary<int, Queue<T>> creat = new();
-        for (var i = 0; i < maxOffset; i++)
+        dict.Add(tick, value);
+        while (dict.Count > limit)
         {
-            creat[i] = new Queue<T>();
+            dict.Remove(dict.Keys.First());
         }
-        data = creat.ToFrozenDictionary();
     }
 
-    public void Insert(GameTick tick, T value)
+    public bool Get(int tick, [NotNullWhen(true)] out T? value)
     {
-        var tv = (int)tick.Value;
-        var calcDiff = tv - indexTick;
-        if (calcDiff > maxOffset)
+        value = default(T);
+        if(dict.TryGetValue(tick, out var val))
         {
-            
+            value = val!;
+            return true;
         }
-        data[tv % maxOffset].Enqueue(value);
+        return false;
     }
 }

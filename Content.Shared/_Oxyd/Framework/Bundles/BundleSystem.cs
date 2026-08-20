@@ -61,7 +61,7 @@ public abstract partial class BundleSystem : EntitySystem
         comp.usedVolume -= bundable.volume;
         afterRemove((uid, comp));
         if(predcontainers.GetContainer(uid, storeKey, out var cont) && cont.contained.Count == 0)
-            helpers.QueueDel(uid);
+            PredictedDel(uid);
         else
             Dirty(uid,comp);
     }
@@ -216,7 +216,7 @@ public abstract partial class BundleSystem : EntitySystem
             }
         }
 
-        var currentTick = timing.CurTick;
+        var currentTick = (int)timing.CurTick.Value;
         if (timing.IsFirstTimePredicted)
         {
             if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
@@ -229,9 +229,15 @@ public abstract partial class BundleSystem : EntitySystem
                 //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
                 if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
                 {
-                    if(!comp.predictionInsertions.ContainsKey(timing.CurTick))
-                        comp.predictionInsertions.Add(timing.CurTick, new Queue<EntityUid>());
-                    comp.predictionInsertions[timing.CurTick].Enqueue(thing);
+                    if(comp.predictionInsertions.Get(currentTick, out var que))
+                        que.Enqueue(thing);
+                    else
+                    {
+                        var q = new Queue<EntityUid>();
+                        q.Enqueue(thing);
+                        comp.predictionInsertions.Insert(currentTick, q);
+                    }
+                    
                     //wasUsed = true;
                     //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
                     ev.Handled = true;
@@ -241,7 +247,7 @@ public abstract partial class BundleSystem : EntitySystem
         }
         else
         {
-            if(comp.predictionInsertions.TryGetValue(currentTick, out var queue) && queue.TryDequeue(out var insertin))
+            if(comp.predictionInsertions.Get(currentTick, out var queue) && queue.TryDequeue(out var insertin))
             {
                 if(interact.InteractUsing(ev.User, insertin, ev.Target.Value, ev.ClickLocation, dropOverride: true))
                     queue.Enqueue(insertin);
