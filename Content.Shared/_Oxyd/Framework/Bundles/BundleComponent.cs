@@ -27,5 +27,5 @@ public sealed partial class BundleComponent : Component
     /// <summary>
     /// Holds currently predicting insertions in the order of inserting
     /// </summary>
-    [NonSerialized, ViewVariables] public RollingPredictionDictionary<Queue<EntityUid>> predictionInsertions = new();
+    [NonSerialized, ViewVariables] public CyclingDictionary<Queue<EntityUid>> predictionInsertions = new();
 }

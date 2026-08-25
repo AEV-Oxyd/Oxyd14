@@ -1,43 +1,24 @@
-
-
-using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using System.Dynamic;
-using System.Formats.Tar;
 using System.Linq;
 using System.Numerics;
-using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.InteropServices;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared.ActionBlocker;
-using Content.Shared._Oxyd.Framework.RadialMenu;
-using Content.Shared.Abilities.Mime;
 using Content.Shared.Containers.ItemSlots;
-using Content.Shared.Coordinates;
-using Content.Shared.Damage;
-using Content.Shared.Disposal;
-using Content.Shared.Hands;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
-using Content.Shared.Inventory.Events;
 using Content.Shared.Power;
 using Content.Shared.Power.Components;
 using Content.Shared.Power.EntitySystems;
 using Content.Shared.Random.Helpers;
 using Content.Shared.Stacks;
-using Content.Shared.Throwing;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
-using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
-using Robust.Shared.Serialization;
-using Robust.Shared.Serialization.Manager.Exceptions;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -82,24 +63,18 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [Dependency] protected  SharedOxydHelpers _help = default!;
     [Dependency] protected  ISharedPlayerManager _players = default!;
     [Dependency] protected  OxydModifiersSystem _mods = default!;
-    [Dependency] protected  ActionBlockerSystem _actionBlockerSystem = default!;
     [Dependency] protected  SharedHandsSystem _hands = default!;
-    [Dependency] protected  SharedStackSystem _stacks = default!;
+    [Dependency] protected OxydPredContainerSystem conts = default!;
 
-    private const string ammoChamberContainerName = "Oxyd_Ammo_Chamber";
-
-    private const string magazineContainerName = "Oxyd_Magazine";
+    private const string chamberStoreKey = "Chamber";
+    private const string magazineStoreKey = "Magazine";
+    private const string revolverStoreKey = "Revolver";
 
     protected const string oxydContents = "storagebase";
 
     protected const string configProto = "gunConfig";
 
-    public readonly TimeSpan forceWaitThreshold = TimeSpan.FromMilliseconds(125);
-
-
-
-    // in milisecunde
-    private const float maxAcceptableFireGap = 500;
+    public static readonly TimeSpan forceWaitThreshold = TimeSpan.FromMilliseconds(125);
 
     protected HashSet<OxydFireDataWrap> checkActive = new();
 
@@ -134,43 +109,11 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
         SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
         SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
-        SubscribeLocalEvent<OxydChamberExtensionComponent, AfterAutoHandleStateEvent>(OnExtensionHandleState);
-        //SubscribeLocalEvent<OxydRevolvingChamberComponent, AfterAutoHandleStateEvent>(OnRevolvingChamberHandleState);
-        //SubscribeLocalEvent<OxydRevolvingChamberComponent, InteractUsingEvent>(TryInsertRevolver, before: new []{typeof(ItemSlotsSystem)});
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentInit>(onRevolverInit);
     }
 
     public abstract void doVisUpdate(EntityUid gun);
-
-    public void onRevolverInit(Entity<OxydRevolvingChamberComponent> ent, ref ComponentInit args)
-    {
-        if (TryComp<OxydChamberExtensionComponent>(ent, out var extension))
-        {
-            while (extension.extending.Count < ent.Comp.revolvingSlots.Count)
-            {
-                extension.extending.Add(null);
-            }
-        }
-    }
-    // dogshit - SPCR 2026
-    private void OnExtensionHandleState(Entity<OxydChamberExtensionComponent> ent, ref AfterAutoHandleStateEvent args)
-    {
-        //Log.Debug($"Received state for {ent.Owner}");
-        var c = CompOrNull<OxydAttachmentHolderComponent>(ent.Owner);
-        if (c is null)
-        {
-            Log.Error($"OxydChamberExtensionComponent on {ent} has no attachmentHolder!");
-            return;
-        }
-
-        foreach (var list in ent.Comp.extending)
-        {
-            if (list is null)
-                continue;
-            list.EnsureCapacity((int)c.mods.gunCapacityAdd);
-        }
-
-    }
+    
 
     public void giveTickInterpTime(GunFiremodePrototype prot)
     {
@@ -190,183 +133,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
 
-    public void OnEntRemoveMag(Entity<OxydMagazineChamberComponent> ent, ref EntRemovedFromContainerMessage args)
-    {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        doVisUpdate(ent.Owner);
-        if (!HasComp<OxydMagazineComponent>(args.Entity))
-        {
-            var target = args.Container;
-            var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
-            if (index == -1)
-                return;
-            //Log.Debug($"Removed {args.Entity} from chamber at index {index} at tick {_gameTiming.CurTick}");
-            ent.Comp.realBullet[index] = EntityUid.Invalid;
-            if(!ent.Comp.silenceAutoInsert)
-                FillAmmo(ent.Comp, (ent, Comp<OxydGunComponent>(ent)), index, _containerSystem.GetContainer(ent.Owner, oxydContents));
-            return;
-        }
-    }
-
-    public void TryInsertRevolver(Entity<OxydRevolvingChamberComponent> ent, ref InteractUsingEvent args)
-    {
-        if (args.Handled)
-            return;
-        if (!_help.IsSlotValid(args.Used, ent.Comp.bulletSlot))
-            return;
-        var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
-        for (var i = 0; i < ent.Comp.revolvingSlots.Count; i++)
-        {
-            var data = ent.Comp.revolvingSlots[i];
-            if (TryInsertAmmo(ent.Comp, args.Used, i, cont))
-            {
-                args.Handled = true;
-                //Log.Error($"Inserted {args.Used} into revolver at index {i}");
-                return;
-            }
-        }
-
-        if (!TryComp(ent, out OxydChamberExtensionComponent? extend))
-            return;
-        if (TryInsertAmmo(extend, (EntityUid?)args.Used, 0, cont, false))
-        {
-            args.Handled = true;
-            return;
-        }
-    }
-
-    public void OnTryInsertLate(Entity<OxydChamberComponent> ent,ref InteractUsingEvent args)
-    {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        if (args.Handled)
-            return;
-        if (!TryComp<OxydChamberExtensionComponent>(ent, out var extend))
-            return;
-        var cont = _containerSystem.GetContainer(ent.Owner, oxydContents);
-        var targets = _help.GetValidSlots(args.Used, (ent.Owner, null));
-        if (targets.Count == 0)
-        {
-            return;
-        }
-        Dictionary<int, ItemSlot> slotMap = new Dictionary<int, ItemSlot>();
-        foreach (var target in targets)
-        {
-            var targetIndex = ent.Comp.bulletSlot.FindIndex(inp => inp == target);
-            if (targetIndex == -1)
-            {
-                continue;
-            }
-            // slot is empty and a insertion must happen
-            if (ent.Comp.realBullet[targetIndex] == EntityUid.Invalid)
-                return;
-            slotMap[targetIndex] = target;
-        }
-        ent.Comp.silenceAutoInsert = true;
-        foreach (var (key,target) in slotMap)
-        {
-            EntityUid? moving = ent.Comp.realBullet[key];
-            if(TerminatingOrDeleted(moving))
-                continue;
-            if (!TryInsertAmmo(extend, moving , key, cont, true))
-                continue;
-            //Log.Debug($"Inserted {moving} into extension at index {key} succesfully, {args.Used} will now follow , tick {_gameTiming.CurTick}");
-            if (target!.ContainerSlot!.ContainedEntity is not null)
-            {
-                Log.Debug($"Failed to remove for extension!!!");
-                // Im tired of prediction boss - SPCR 2026
-                _itemSlotsSystem.TryEject(ent, target, null, out var removed);
-            }
-            Log.Debug($"!!! now containing {ent.Comp.realBullet[key]}, slot reports {target!.ContainerSlot!.ContainedEntity}");
-
-            //_itemSlotsSystem.TryEject(ent, target, null, out var removed);
-            break;
-        }
-        ent.Comp.silenceAutoInsert = false;
-    }
-
-    public void OnEntInsertChamber(Entity<OxydChamberComponent> ent, ref EntInsertedIntoContainerMessage args)
-    {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        var target = args.Container;
-        var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
-        if (index == -1)
-            return;
-        ent.Comp.realBullet[index] =  args.Entity;
-        //Log.Debug($"Inserted {args.Entity} into chamber on tick {_gameTiming.CurTick}");
-    }
-
-    public void OnEntRemoveChamber(Entity<OxydChamberComponent> ent, ref EntRemovedFromContainerMessage args)
-    {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        var target = args.Container;
-        var index = ent.Comp.bulletSlot.FindIndex(check => target == check.ContainerSlot);
-        if (index == -1)
-            return;
-        Log.Debug($"Removed {args.Entity} from chamber");
-        ent.Comp.realBullet[index] = EntityUid.Invalid;
-        if (ent.Comp.silenceAutoInsert)
-            return;
-        FillAmmo(ent.Comp, (ent.Owner, Comp<OxydGunComponent>(ent.Owner)), index, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
-    }
-
-    public void updateExtension(OxydChamberExtensionComponent ext, Entity<OxydGunComponent> gun, CompoundedModifiers? mods)
-    {
-        mods ??= CompOrNull<OxydAttachmentHolderComponent>(gun.Owner)?.mods;
-        if (mods is null)
-            return;
-        var maxprovider = gun.Comp.InstanciatedFiremodes.Max(inp => inp.providerId)+1;
-        Log.Debug($"OxydGunSystem: Updating chamber extension with max provider ID {maxprovider}");
-        while (ext.extending.Count < maxprovider)
-        {
-            ext.extending.Add(null);
-        }
-        var providers = AllComps<OxydGunProvidersComponent>(gun.Owner);
-        foreach (var prov in providers)
-        {
-            switch(prov)
-            {
-                case OxydChamberComponent chamb:
-                {
-                    foreach (var slot in chamb.bulletSlot)
-                        slot.Swap = false;
-                    break;
-                }
-            }
-        }
-        for (var i = 0; i < maxprovider; i++)
-        {
-            var current = ext.extending[i];
-            var targetSize = (int) mods.gunCapacityAdd;
-            if (current == null)
-            {
-                ext.extending[i] = new List<NetEntity>(targetSize);
-            }
-            else if (current.Capacity != targetSize)
-            {
-                var newList = new List<NetEntity>(targetSize);
-                if (newList.Capacity > current.Capacity)
-                {
-                    newList.AddRange(current);
-                }
-                else
-                {
-                    newList.AddRange(current.GetRange(0, targetSize));
-                    foreach(var item in current.GetRange(targetSize, current.Capacity - targetSize))
-                    {
-                        _transformSystem.PlaceNextTo(GetEntity(item), gun.Owner);
-                        break;
-                    }
-                }
-                ext.extending[i] = newList;
-            }
-        }
-        FillAmmo(gun);
-        Dirty(gun.Owner, ext);
-    }
 
     public void onModifiersUpdated(Entity<OxydGunComponent> gun, ref ModifiersUpdatedEvent args)
     {
@@ -412,28 +178,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         ent.Comp.charge = args.CurrentCharge;
     }
-
-    public void OnEntInsertMag(Entity<OxydMagazineChamberComponent> ent,
-        ref EntInsertedIntoContainerMessage args)
-    {
-        if (!_gameTiming.IsFirstTimePredicted)
-            return;
-        if (!HasComp<OxydMagazineComponent>(args.Entity))
-        {
-            OnEntInsertChamber((ent.Owner, (OxydChamberComponent) ent.Comp), ref args);
-            return;
-        }
-        var target = args.Container;
-        var targetIndex = ent.Comp.magazineSlot.FindIndex(itemSlot => itemSlot.ContainerSlot!.ID == target.ID);
-        doVisUpdate(ent.Owner);
-        if (targetIndex == -1)
-        {
-            Log.Error($"Entity {ent} had a mag inserted for a magazine Slot without a linked Slot!");
-            return;
-        }
-        FillAmmo(ent.Comp, (ent, Comp<OxydGunComponent>(ent)), targetIndex, _containerSystem.GetContainer(ent.Owner, oxydContents), CompOrNull<OxydChamberExtensionComponent>(ent));
-    }
-
+    
     public bool TryDoFiremodeSwitch(Entity<OxydGunComponent> gun, EntityUid initiator)
     {
         if (gun.Comp.selectedFiremodePrototype.Active)
@@ -452,371 +197,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         Log.Debug($"Switched safety to  {gun.Comp.safety}");
         return true;
     }
-
-    public void onMagazineChamberInit(Entity<OxydMagazineChamberComponent> ent, ref ComponentInit args)
-    {
-        var index = 0;
-        while(index < ent.Comp.bulletSlot.Count)
-        {
-            _itemSlotsSystem.AddItemSlot(ent.Owner, $"{ammoChamberContainerName}{index}", ent.Comp.bulletSlot[index]);
-            _itemSlotsSystem.AddItemSlot(ent.Owner, $"{magazineContainerName}{index}", ent.Comp.magazineSlot[index]);
-            ent.Comp.realBullet.Add(EntityUid.Invalid);
-            index++;
-        }
-
-        if (TryComp<OxydChamberExtensionComponent>(ent, out var extension))
-        {
-            while (extension.extending.Count < ent.Comp.bulletSlot.Count)
-            {
-                extension.extending.Add(null);
-            }
-        }
-    }
-    public void onChamberInitialized(Entity<OxydChamberComponent> chamber, ref ComponentInit args)
-    {
-        var index = 0;
-        while (index < chamber.Comp.bulletSlot.Count)
-        {
-            _itemSlotsSystem.AddItemSlot(chamber.Owner, ammoChamberContainerName, chamber.Comp.bulletSlot[index]);
-            chamber.Comp.realBullet.Add(EntityUid.Invalid);
-            index++;
-        }
-
-        if (TryComp<OxydChamberExtensionComponent>(chamber, out var extension))
-        {
-            while (extension.extending.Count < chamber.Comp.bulletSlot.Count)
-            {
-                extension.extending.Add(null);
-            }
-        }
-    }
-
-    public void FillAmmo(OxydMagazineChamberComponent magazines,Entity<OxydGunComponent> gun, int i, BaseContainer container, OxydChamberExtensionComponent? extend = null)
-    {
-        var slot = magazines.magazineSlot[i];
-        var item = slot.Item;
-        // pull from extension
-        if (item is null)
-        {
-            FillAmmo((OxydChamberComponent)magazines, gun, i, container, extend);
-            return;
-        }
-        if (!TryComp<OxydMagazineComponent>(slot.Item, out var magComp))
-            return;
-        var mag = (item.Value, magComp);
-        if (extend is not null)
-        {
-            // fill buffer
-            TryInsertAmmo(extend, mag, i, container);
-            if(FillAmmo((OxydChamberComponent)magazines, gun, i, container, extend))
-                TryInsertAmmo(extend,  mag, i, container);
-        }
-        else
-        {
-            var bull = TryGetMagBullet(i, mag);
-            // pull from buffer
-            if (bull is null)
-            {
-                FillAmmo((OxydChamberComponent)magazines, gun, i, container, extend);
-                return;
-            }
-            FillAmmo((OxydChamberComponent)magazines, gun, i, container, bull.Value, extend);
-        }
-    }
-
-    public bool FillAmmo(OxydRevolvingChamberComponent revolving,
-        Entity<OxydGunComponent> gun,
-        int i,
-        BaseContainer container,
-        OxydChamberExtensionComponent? extend = null)
-    {
-        var data = revolving.revolvingSlots[i];
-        var item = data.seek();
-        if (!TerminatingOrDeleted(GetEntity(item)))
-        {
-            return false;
-        }
-
-        if (extend is not null && TryGetAmmo(extend, i, container, out var newBullet))
-        {
-            data.loaded[data.index] = GetNetEntity(newBullet.Value);
-            return true;
-        }
-        return false;
-    }
-
-    public bool FillAmmo(OxydChamberComponent chamber,
-        Entity<OxydGunComponent> gun,
-        int i,
-        BaseContainer container,
-        OxydChamberExtensionComponent? extend = null)
-    {
-        var item = chamber.bulletSlot[i].Item;
-        if (item is not null)
-            return false;
-        if (extend is not null && TryGetAmmo(extend, i, container, out var newBullet))
-        {
-            if (_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
-            {
-                chamber.realBullet[i] = newBullet.Value;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public bool FillAmmo(OxydChamberComponent chamber,
-        Entity<OxydGunComponent> gun,
-        int i,
-        BaseContainer container,
-        EntityUid bullet,
-        OxydChamberExtensionComponent? extend = null)
-    {
-        var item = chamber.bulletSlot[i].Item;
-        if (item is not null)
-            return false;
-        if (extend is not null)
-        {
-            if (TryGetAmmo(extend, i, container, out var newBullet))
-            {
-                if (_containerSystem.InsertOrDrop(newBullet.Value, chamber.bulletSlot[i].ContainerSlot!))
-                {
-                    chamber.realBullet[i] = newBullet.Value;
-                }
-
-                if (!TryInsertAmmo(extend, newBullet, i, container))
-                    return false;
-                return true;
-            }
-        }
-        if (_containerSystem.InsertOrDrop(bullet, chamber.bulletSlot[i].ContainerSlot!))
-        {
-            chamber.realBullet[i] = bullet;
-            return true;
-        }
-
-        return false;
-    }
-    // USE INHAND VERSION for interactions , this is for internals, predicted
-    public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid? bullet, int i, BaseContainer container, bool pushBack = false)
-    {
-        Log.Debug($"Attempting extension insert for {bullet}");
-        if (bullet is null)
-        {
-            Log.Debug($"Extension insert for {bullet} null bullet!");
-            return false;
-        }
-
-        var targ = extension!.extending[i];
-        if (targ is null)
-        {
-            Log.Debug($"Extension insert for {bullet} null target!");
-            return false;
-        }
-
-        if (bullet == EntityUid.Invalid)
-        {
-            Log.Debug($"Extension insert for {bullet} invalid bullet!");
-            return false;
-        }
-
-        var c = GetNetEntity(bullet.Value);
-        if (targ.Contains(c))
-        {
-            if(!_gameTiming.IsFirstTimePredicted)
-                _containerSystem.Insert(bullet.Value, container, null, true);
-            Log.Debug($"Extension insert for {bullet} target already contains!");
-            return true;
-        }
-        if (targ.Count >= targ.Capacity)
-        {
-            Log.Debug($"Extension insert for {bullet} target full!");
-            return false;
-        }
-        _containerSystem.Insert(bullet.Value, container, null, true);
-        Log.Debug($"Inserted {bullet} into extension!");
-        // prediction compatibility required hack
-        if (!_gameTiming.IsFirstTimePredicted)
-            return true;
-        if(pushBack)
-            targ.Insert(0, c);
-        else
-            targ.Add(c);
-        return true;
-    }
-
-    public bool TryInsertAmmo(OxydChamberExtensionComponent extension, EntityUid bullet, int i, BaseContainer container, bool pushBack, EntityUid user)
-    {
-        var targ = extension!.extending[i];
-        if (targ is null)
-            return false;
-        if(targ.Count >= targ.Capacity)
-            return false;
-        if (bullet == EntityUid.Invalid)
-            return false;
-        if (!_hands.TryDropIntoContainer(user, bullet, container))
-            return false;
-
-        var c = GetNetEntity(bullet);
-        // prediction compatibility required hack
-        if (!_gameTiming.IsFirstTimePredicted)
-            return true;
-        if(pushBack)
-            targ.Insert(0, c);
-        else
-            targ.Add(c);
-        return true;
-    }
-
-    public bool TryInsertAmmo(OxydRevolvingChamberComponent revolving,
-        EntityUid bullet,
-        int i,
-        BaseContainer container)
-    {
-        var data = revolving.revolvingSlots[i];
-        if (data.loaded.Contains(GetNetEntity(bullet)))
-        {
-            if(!_gameTiming.IsFirstTimePredicted)
-                _containerSystem.Insert(bullet, container, null, false);
-            return true;
-        }
-
-        var indice = data.getFreeSpot();
-        if (indice == -1)
-        {
-            return false;
-        }
-        _containerSystem.Insert(bullet, container, null, false);
-        data.loaded[indice] = GetNetEntity(bullet);
-        Log.Debug($"Inserted {bullet} into revolving chamber slot {i}");
-        return true;
-
-    }
-    public bool TryInsertAmmo(OxydChamberExtensionComponent extension,
-        Entity<OxydMagazineComponent> magazine,
-        int i,
-        BaseContainer container,
-        bool pushBack = false)
-    {
-        if (magazine.Comp.loadedBullets.Count == 0)
-            return false;
-        var targ = extension!.extending[i];
-        if (targ is null)
-            return false;
-        if(targ.Count >= targ.Capacity)
-            return false;
-        while (targ.Count < targ.Capacity)
-        {
-            var bullet = TryGetMagBullet(i, magazine);
-            if (bullet is null)
-                break;
-            _containerSystem.Insert(bullet.Value, container, null, false);
-            if(pushBack)
-                targ.Insert(0, GetNetEntity(bullet.Value));
-            else
-                targ.Add(GetNetEntity(bullet.Value));
-        }
-        return true;
-    }
-
-    public bool TryGetAmmo(OxydChamberExtensionComponent extension, int i ,BaseContainer container, [NotNullWhen(true)] out EntityUid? bullet)
-    {
-        bullet = null;
-        var listRef = extension?.extending[i];
-        if (listRef is null)
-            return false;
-        if (listRef.Count == 0)
-            return false;
-        bullet = GetEntity(listRef[0]);
-        _containerSystem.Remove(bullet.Value, container);
-        if(_gameTiming.IsFirstTimePredicted)
-           listRef.RemoveAt(0);
-        return true;
-
-    }
-    public void FillAmmo(Entity<OxydGunComponent> gun)
-    {
-        var comps = AllComps<OxydGunProvidersComponent>(gun);
-        var extend = CompOrNull<OxydChamberExtensionComponent>(gun);
-        var container = _containerSystem.GetContainer(gun.Owner, oxydContents);
-        foreach (var comp in comps)
-        {
-            switch (comp)
-            {
-                case OxydMagazineChamberComponent magazines:
-                {
-                    for (var i = 0; i < magazines.magazineSlot.Count; i++)
-                    {
-                        FillAmmo(magazines, gun, i, container,extend);
-                    }
-                    break;
-                }
-                case OxydRevolvingChamberComponent revolving:
-                {
-                    for (var i = 0; i < revolving.revolvingSlots.Count; i++)
-                    {
-                        FillAmmo(revolving, gun, i, container, extend);
-                    }
-                    break;
-                }
-                case OxydChamberComponent chamber:
-                {
-                    for (var i = 0; i < chamber.bulletSlot.Count; i++)
-                    {
-                        FillAmmo(chamber, gun, i, container, extend);
-                    }
-                    break;
-                }
-
-            }
-        }
-    }
-
-    public void FillAmmo(Entity<OxydGunComponent> gun,  GunFiremodePrototype fireProto)
-    {
-        var targ = fireProto.AmmoProviders;
-        var cont = _containerSystem.GetContainer(gun.Owner, oxydContents);
-        var extens = CompOrNull<OxydChamberExtensionComponent>(gun);
-        switch (targ)
-        {
-            case OxydMagazineChamberComponent magazines:
-            {
-                FillAmmo(magazines, gun, fireProto.providerId, cont,extens);
-                break;
-            }
-            case OxydRevolvingChamberComponent revolving:
-            {
-                FillAmmo(revolving, gun, fireProto.providerId, cont,extens);
-                break;
-            }
-            case OxydChamberComponent chamber:
-            {
-                FillAmmo(chamber, gun, fireProto.providerId, cont,extens);
-                break;
-            }
-            case OxydGunLaserProviderComponent:
-                break;
-            default:
-                Log.Error($"Unimplemented case in fillAmmo, type {targ} for fireProto");
-                break;
-
-        }
-    }
-    public EntityUid? TryGetMagBullet(int index, Entity<OxydMagazineComponent> mag)
-    {
-        if (mag.Comp.loadedBullets.Count == 0)
-             return null;
-        var cnt = _containerSystem.GetContainer(mag, oxydContents);
-        var ent = GetEntity(mag.Comp.loadedBullets.Pop());
-        if (TerminatingOrDeleted(ent))
-        {
-            Log.Debug($"Invalid entity popped in cycle mag!");
-            return null;
-        }
-        _containerSystem.Remove(ent, cnt, true, false);
-        return ent;
-    }
-
+    
 
 
     public abstract bool InterpretStep(
@@ -897,19 +278,10 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         switch (frd.AmmoProviders)
         {
             case OxydRevolvingChamberComponent provider:
-
-                ammo = GetEntity(provider.revolvingSlots[frd.providerId].seek());
-                if (TerminatingOrDeleted(ammo))
-                    return false;
-                projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
-                return ammo.Value != EntityUid.Invalid;
+                break;
             // magazine uses the same handling
             case OxydChamberComponent provider:
-                ammo = provider.realBullet[frd.providerId];
-                if (TerminatingOrDeleted(ammo))
-                    return false;
-                projectile = Comp<OxydBulletComponent>(ammo.Value).projectileEntity;
-                return ammo.Value != EntityUid.Invalid;
+                break;
             case OxydGunLaserProviderComponent provider:
                 projectile = provider.laserProto[frd.providerId].laser;
                 if (tryDischargeAmount(gun.Owner, provider.laserProto[frd.providerId].cost, out var used))

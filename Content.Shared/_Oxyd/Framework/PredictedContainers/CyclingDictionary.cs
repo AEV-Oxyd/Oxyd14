@@ -6,12 +6,10 @@ using Robust.Shared.Timing;
 
 namespace Content.Shared;
 
-public sealed class RollingPredictionDictionary<T>
+public sealed class CyclingDictionary<T>
 {
-    [ViewVariables]
-    SortedDictionary<int, T> dict = new();
-    [ViewVariables]
-    public int limit = 25;
+    [ViewVariables] SortedDictionary<int, T> dict = new();
+    [ViewVariables] public int limit = 25;
     
     public void Insert(int tick, T value)
     {
@@ -31,5 +29,17 @@ public sealed class RollingPredictionDictionary<T>
             return true;
         }
         return false;
+    }
+
+    public T this[int index]
+    {
+        get => dict[index];
+        set
+        {
+            if (dict.ContainsKey(index))
+                dict[index] = value;
+            else
+                Insert(index, value);
+        }
     }
 }

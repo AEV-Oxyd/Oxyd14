@@ -17,6 +17,20 @@ public partial class OxydPredContainerSystem : EntitySystem
     [Dependency] private IGameTiming gametime = default!;
     [Dependency] private SharedHandsSystem hands = default!;
 
+    /// <summary>
+    ///  How many checksums are networked, each checksum is a SHORT(2 bytes)
+    /// </summary>
+    public const int StateTrack = 8;
+    /// <summary>
+    /// If a state was sent recently , this is the limit used.
+    /// </summary>
+    public const int ImmediateStateTrack = 2;
+    
+    /// <summary>
+    ///  If last state's delta to current time is below this , use immediate state track count.
+    /// </summary>
+    public static readonly TimeSpan ImmediateTime = TimeSpan.FromMilliseconds(122);
+
     [SubscribeLocalEvent]
     public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
     {
@@ -30,14 +44,27 @@ public partial class OxydPredContainerSystem : EntitySystem
     public void GetState(Entity<OxydPredContComponent> ent, ref ComponentGetState args)
     {
         var state = new PredContState();
+        var usingLimit = StateTrack;
+        if(gametime.RealTime - ent.Comp.lastState < ImmediateTime)
+            usingLimit = ImmediateStateTrack;
         foreach (var (key, content) in ent.Comp.containers)
         {
+            List<short> itemList = new();
+            int i = 0;
+            while (i++ < usingLimit)
+            {
+                if (i > content.checksums.Count)
+                    break;
+                itemList.Add(content.checksums[^i]);
+            }
+
             state.containers[key] = new ContWrap()
             {
                 c = content,
-                s = content.checksums.LastOrDefault()
+                s = itemList,
             };
         }
+        ent.Comp.lastState = gametime.RealTime;
         args.State = state;
     }
 
@@ -50,15 +77,14 @@ public partial class OxydPredContainerSystem : EntitySystem
         foreach (var (key, content) in state.containers)
         {
             
-            if (content.s is not null && ent.Comp.containers.TryGetValue(key, out var old) && old.checksums.Contains(content.s.Value))
+            if (ent.Comp.containers.TryGetValue(key, out var old) && (content.s.All(old.checksums.Contains) || old.capacityLimit != content.c.capacityLimit))
             {
                 continue;
             }
             content.c.key = key;
             content.c.checksums = new();
             content.c.contained = new();
-            if(content.s is not null)
-                content.c.checksums.Add(content.s.Value);
+            content.c.checksums = content.s;
             ent.Comp.containers[key] = content.c;
             foreach (var id in content.c.netContained)
             {

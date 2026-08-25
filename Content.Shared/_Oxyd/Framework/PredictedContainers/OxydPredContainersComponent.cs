@@ -12,8 +12,8 @@ public sealed partial class PredContState : IComponentState
 [Serializable, NetSerializable]
 public struct ContWrap
 {
-    public OxydContainer c;
-    public short? s;
+    public required OxydContainer c;
+    public required List<short> s;
 }
 
 /// <summary>
@@ -22,7 +22,8 @@ public struct ContWrap
 [RegisterComponent, NetworkedComponent]
 public sealed partial class OxydPredContComponent : Component
 {
-    [ViewVariables]public Dictionary<string, OxydContainer> containers = new();
+    [ViewVariables] public Dictionary<string, OxydContainer> containers = new();
+    [ViewVariables] public TimeSpan lastState = new();
 }
 [Serializable, NetSerializable]
 public class OxydContainer
