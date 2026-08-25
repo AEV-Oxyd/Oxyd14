@@ -61,7 +61,7 @@ public abstract partial class BundleSystem : EntitySystem
         comp.usedVolume -= bundable.volume;
         afterRemove((uid, comp));
         if(predcontainers.GetContainer(uid, storeKey, out var cont) && cont.contained.Count == 0)
-            PredictedDel(uid);
+            PredictedQueueDel(uid);
         else
             Dirty(uid,comp);
     }

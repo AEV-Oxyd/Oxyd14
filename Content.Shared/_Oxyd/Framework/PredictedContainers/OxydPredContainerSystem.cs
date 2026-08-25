@@ -126,7 +126,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         container.insert(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
-        if (!prediction.Value)
+        if (!prediction.Value && !TerminatingOrDeleted(target))
         {
             Log.Info($"Raising insert event {target} into {uid} from {key} prediction");
             var ev = new PredContInserted(target, (uid, oc));
