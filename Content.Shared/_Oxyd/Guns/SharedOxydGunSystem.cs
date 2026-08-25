@@ -324,7 +324,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             ext.extending.Add(null);
         }
-        var providers = EntityManager.GetComponents<OxydGunProvidersComponent>(gun.Owner);
+        var providers = AllComps<OxydGunProvidersComponent>(gun.Owner);
         foreach (var prov in providers)
         {
             switch(prov)
@@ -348,7 +348,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             else if (current.Capacity != targetSize)
             {
                 var newList = new List<NetEntity>(targetSize);
-                var inserted = 0;
                 if (newList.Capacity > current.Capacity)
                 {
                     newList.AddRange(current);
@@ -737,7 +736,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
     public void FillAmmo(Entity<OxydGunComponent> gun)
     {
-        var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(gun);
+        var comps = AllComps<OxydGunProvidersComponent>(gun);
         var extend = CompOrNull<OxydChamberExtensionComponent>(gun);
         var container = _containerSystem.GetContainer(gun.Owner, oxydContents);
         foreach (var comp in comps)

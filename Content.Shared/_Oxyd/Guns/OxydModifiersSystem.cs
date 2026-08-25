@@ -139,7 +139,7 @@ public sealed partial class OxydModifiersSystem : EntitySystem
             return;
         foreach (var id in ent.Comp.insert)
         {
-            var entId = EntityManager.SpawnNextToOrDrop(id, ent.Owner);
+            var entId = SpawnNextToOrDrop(id, ent.Owner);
             if (TerminatingOrDeleted(entId))
             {
                 Log.Error($"Invalid entity {entId} in OxydAttachmentSpawnerComponent {ent}!");

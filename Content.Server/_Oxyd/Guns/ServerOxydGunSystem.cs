@@ -234,13 +234,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             state.shooterSession = null;
         }
         Dirty(target);
-        foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(target.Owner))
+        foreach(var comp in AllComps<OxydGunProvidersComponent>(target.Owner))
             Dirty(target.Owner, comp);
         foreach (var container in _containerSystem.GetAllContainers(target))
         {
             foreach (var ent in container.ContainedEntities)
             {
-                foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(ent))
+                foreach(var comp in AllComps<OxydGunProvidersComponent>(ent))
                     Dirty(ent, comp);
             }
         }

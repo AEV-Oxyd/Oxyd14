@@ -41,7 +41,7 @@ public static class DamageHelpers
 }
 
 
-public class SharedOxydHelpers : EntitySystem
+public partial class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private  INetManager _netManager = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
@@ -68,7 +68,7 @@ public class SharedOxydHelpers : EntitySystem
             queued.Add(uid);
         }
         else
-            EntityManager.QueueDeleteEntity(uid);
+            QueueDel(uid);
     }
 
     public HashSet<Entity<T>> GetChildrenWithComp<T>(EntityUid uid) where T : Component

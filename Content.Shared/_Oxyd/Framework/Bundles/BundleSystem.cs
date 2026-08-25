@@ -57,9 +57,12 @@ public abstract partial class BundleSystem : EntitySystem
     {
         if (!TryComp<BundableComponent>(args.uid, out var bundable))
             return;
-        comp.bundlePositions.Remove(args.uid);
-        comp.usedVolume -= bundable.volume;
-        afterRemove((uid, comp));
+        if (args.realChange)
+        {
+            comp.bundlePositions.Remove(args.uid);
+            comp.usedVolume -= bundable.volume;
+            afterRemove((uid, comp));
+        }
         if(predcontainers.GetContainer(uid, storeKey, out var cont) && cont.contained.Count == 0)
             PredictedQueueDel(uid);
         else
@@ -69,6 +72,8 @@ public abstract partial class BundleSystem : EntitySystem
     public void OnInsert(EntityUid uid, BundleComponent comp, PredContInserted args)
     {
         if (!TryComp<BundableComponent>(args.uid, out var bundable))
+            return;
+        if (!args.realChange)
             return;
         comp.bundlePositions.Add(args.uid, new BundleComponent.BundleEntData(){ pos = Vector2.Zero, storeAngle = Angle.Zero});
         comp.usedVolume += bundable.volume;

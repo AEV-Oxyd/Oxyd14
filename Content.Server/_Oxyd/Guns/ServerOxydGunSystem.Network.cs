@@ -95,7 +95,7 @@ public partial class ServerOxydGunSystem
 
     public void getInvolvedComponents(EntityUid target, Dictionary<EntityUid, List<IComponent>> dict)
     {
-        var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(target);
+        var comps = AllComps<OxydGunProvidersComponent>(target);
         dict.TryAdd(target, new List<IComponent>());
         //Log.Debug($"Verifying {target} at second level");
         foreach(var comp in comps)

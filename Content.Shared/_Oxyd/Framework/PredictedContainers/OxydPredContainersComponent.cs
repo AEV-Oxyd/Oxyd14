@@ -94,17 +94,19 @@ public enum OxydContainerAction
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> container);
+public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> container, bool realChange = true);
+
 /// <summary>
 ///  removed on non-predicted tick
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container);
+public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container, bool realChange = true);
 /// <summary>
 /// Handled state and we had a reset due to mismatch between server-client , rebuild everything associated.
 /// </summary>
 /// <param name="container"></param>
 /// <param name="resetted"></param>
+///
 
 public record PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);

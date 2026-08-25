@@ -20,11 +20,9 @@ public partial class OxydPredContainerSystem : EntitySystem
     [SubscribeLocalEvent]
     public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
     {
-        if (!gametime.IsFirstTimePredicted)
-            return;
         if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont))
         {
-            removeEntity(uid, baseCont.ID, args.Entity, false);
+            removeEntity(uid, baseCont.ID, args.Entity);
         }
     }
 
@@ -126,10 +124,10 @@ public partial class OxydPredContainerSystem : EntitySystem
         container.insert(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
-        if (!prediction.Value && !TerminatingOrDeleted(target))
+        if (!TerminatingOrDeleted(target))
         {
             Log.Info($"Raising insert event {target} into {uid} from {key} prediction");
-            var ev = new PredContInserted(target, (uid, oc));
+            var ev = new PredContInserted(target, (uid, oc), realChange: !prediction.Value);
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);
         }
@@ -163,13 +161,11 @@ public partial class OxydPredContainerSystem : EntitySystem
         container.remove(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
-        if (!prediction.Value)
-        {
-            var ev = new PredContRemoved(target, (uid, oc));
-            RaiseLocalEvent(target, ev);
-            RaiseLocalEvent(uid, ev);
-            Log.Info($"Raising remove event {target} from {uid} from {key} prediction");
-        }
+        var ev = new PredContRemoved(target, (uid, oc), realChange: !prediction.Value);
+        RaiseLocalEvent(target, ev);
+        RaiseLocalEvent(uid, ev);
+        Log.Info($"Raising remove event {target} from {uid} from {key} prediction");
+    
         Dirty(uid, oc);
         return true;   
     }
