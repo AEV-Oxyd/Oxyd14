@@ -8,10 +8,10 @@ namespace Content.Shared;
 
 public sealed class CyclingDictionary<T>
 {
-    [ViewVariables] SortedDictionary<int, T> dict = new();
-    [ViewVariables] public int limit = 25;
+    [ViewVariables] SortedDictionary<uint, T> dict = new();
+    [ViewVariables] public uint limit = 25;
     
-    public void Insert(int tick, T value)
+    public void Insert(uint tick, T value)
     {
         dict.Add(tick, value);
         while (dict.Count > limit)
@@ -20,7 +20,7 @@ public sealed class CyclingDictionary<T>
         }
     }
 
-    public bool Get(int tick, [NotNullWhen(true)] out T? value)
+    public bool Get(uint tick, [NotNullWhen(true)] out T? value)
     {
         value = default(T);
         if(dict.TryGetValue(tick, out var val))
@@ -31,7 +31,7 @@ public sealed class CyclingDictionary<T>
         return false;
     }
 
-    public T this[int index]
+    public T this[uint index]
     {
         get => dict[index];
         set

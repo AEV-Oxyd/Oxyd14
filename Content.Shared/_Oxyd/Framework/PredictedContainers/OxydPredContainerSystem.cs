@@ -195,4 +195,58 @@ public partial class OxydPredContainerSystem : EntitySystem
         Dirty(uid, oc);
         return true;   
     }
+    /// <summary>
+    /// Stores a entity's insertion/removal for future actions/simulated ticks
+    /// </summary>
+    /// <param name="container"></param>
+    /// <param name="target"></param>
+    public void StorePredictAct(EntityUid uid, string key, EntityUid target)
+    {
+        if (GetContainer(uid, key, out var container))
+        {
+            StorePredictAct(container, target);
+        }
+    }
+    /// <summary>
+    /// Stores a entity's insertion/removal for future actions/simulated ticks
+    /// </summary>
+    /// <param name="container"></param>
+    /// <param name="target"></param>
+    public void StorePredictAct(OxydContainer container, EntityUid target)
+    {
+        if (!container.predictions.Get(gametime.CurTick.Value, out var pred))
+            container.predictions[gametime.CurTick.Value] = new Queue<EntityUid>();
+        container.predictions[gametime.CurTick.Value].Enqueue(target);
+    }
+    
+    public EntityUid ConsumePredictAct(EntityUid uid, string key)
+    {
+        if (GetContainer(uid, key, out var container))
+        {
+            return ConsumePredictAct(container);
+        }
+        return EntityUid.Invalid;
+    }
+    
+    /// <summary>
+    /// Grabs the entity meant to be acted upon at this moment.
+    /// If this is not returning what you're expecting, your order is off in simulated ticks
+    /// or the game might not be raising events in the same order SPCR 2026
+    /// </summary>
+    /// <param name="container"></param>
+    /// <returns></returns>
+    public EntityUid ConsumePredictAct(OxydContainer container)
+    {
+        if (!container.predictions.Get(gametime.CurTick.Value, out var que))
+            return EntityUid.Invalid;
+        if (!que.TryDequeue(out var uid))
+        {
+            Log.Error($"Predicted container, {container.key} has returned no entity for ConsumePredictAct at tick {gametime.CurTick}");
+            que.Enqueue(uid);
+            return EntityUid.Invalid;
+        }
+
+        return uid;
+    }
+    
 }

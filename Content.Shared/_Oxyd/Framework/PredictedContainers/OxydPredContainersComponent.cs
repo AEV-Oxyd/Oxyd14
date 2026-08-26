@@ -34,6 +34,7 @@ public class OxydContainer
     [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
     [NonSerialized, ViewVariables] public List<short> checksums = new(4);
     [NonSerialized, ViewVariables] public GameTick lastChange = new();
+    [NonSerialized, ViewVariables] public CyclingDictionary<Queue<EntityUid>> predictions = new();
 
     public static short createHash(NetEntity ent, OxydContainerAction act)
     {

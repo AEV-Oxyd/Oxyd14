@@ -222,10 +222,10 @@ public abstract partial class BundleSystem : EntitySystem
         }
 
         var currentTick = (int)timing.CurTick.Value;
+        if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
+            return;
         if (timing.IsFirstTimePredicted)
         {
-            if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
-                return;
             foreach (var thing in cont.contained.ToList())
             {
                 if (TerminatingOrDeleted(thing))
@@ -234,14 +234,7 @@ public abstract partial class BundleSystem : EntitySystem
                 //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
                 if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
                 {
-                    if(comp.predictionInsertions.Get(currentTick, out var que))
-                        que.Enqueue(thing);
-                    else
-                    {
-                        var q = new Queue<EntityUid>();
-                        q.Enqueue(thing);
-                        comp.predictionInsertions.Insert(currentTick, q);
-                    }
+                    predcontainers.StorePredictAct(cont, thing);
                     
                     //wasUsed = true;
                     //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
@@ -252,13 +245,7 @@ public abstract partial class BundleSystem : EntitySystem
         }
         else
         {
-            if(comp.predictionInsertions.Get(currentTick, out var queue) && queue.TryDequeue(out var insertin))
-            {
-                if(interact.InteractUsing(ev.User, insertin, ev.Target.Value, ev.ClickLocation, dropOverride: true))
-                    queue.Enqueue(insertin);
-                else
-                    Log.Debug($"Failed to reinsert predicted entity {insertin} into {ev.Target.Value} from bundle {ent.Owner}");
-            }
+            interact.InteractUsing(ev.User, predcontainers.ConsumePredictAct(cont), ev.Target.Value, ev.ClickLocation, dropOverride: true)
         }
     }
 
