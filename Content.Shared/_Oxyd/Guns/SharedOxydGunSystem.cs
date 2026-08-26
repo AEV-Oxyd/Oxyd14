@@ -91,27 +91,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
         return laser ? prot.jammedLaser : prot.jammedBallistic;
     }
-
-
-    public override void Initialize()
-    {
-        base.Initialize();
-        InitRecoil();
-        SubscribeLocalEvent<OxydGunComponent, ComponentInit>(onGunInitialized);
-        SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentInit>(onMagazineChamberInit);
-        SubscribeLocalEvent<OxydChamberComponent, ComponentInit>(onChamberInitialized);
-        SubscribeLocalEvent<OxydMagazineChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertMag);
-        SubscribeLocalEvent<OxydMagazineChamberComponent, EntRemovedFromContainerMessage>(OnEntRemoveMag);
-        SubscribeLocalEvent<OxydChamberComponent, EntInsertedIntoContainerMessage>(OnEntInsertChamber);
-        SubscribeLocalEvent<OxydChamberComponent, EntRemovedFromContainerMessage>(OnEntRemoveChamber);
-        SubscribeLocalEvent<OxydChamberComponent, InteractUsingEvent>(OnTryInsertLate, before: new []{typeof(ItemSlotsSystem)});
-        SubscribeLocalEvent<OxydRevolvingChamberComponent, InteractUsingEvent>(TryInsertRevolver, before: new []{typeof(ItemSlotsSystem)});
-        SubscribeLocalEvent<OxydChargeComponent, ComponentInit>(onChargeInit);
-        SubscribeLocalEvent<OxydChargeComponent, ChargeChangedEvent>(onBatteryCharge);
-        SubscribeLocalEvent<OxydGunComponent, ModifiersUpdatedEvent>(onModifiersUpdated);
-        SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentInit>(onRevolverInit);
-    }
-
+    
     public abstract void doVisUpdate(EntityUid gun);
     
 
@@ -133,7 +113,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
 
-
+    [SubscribeLocalEvent]
     public void onModifiersUpdated(Entity<OxydGunComponent> gun, ref ModifiersUpdatedEvent args)
     {
         foreach (var firemode in gun.Comp.InstanciatedFiremodes)
@@ -150,7 +130,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
     }
 
-
+    [SubscribeLocalEvent]
     public void onChargeInit(Entity<OxydChargeComponent> ent, ref ComponentInit args)
     {
         if (!TryComp<BatteryComponent>(ent, out var bat))
@@ -160,7 +140,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         }
         ent.Comp.charge = bat.StartingCharge;
     }
-
+    [SubscribeLocalEvent]
     public void onBatteryCharge(Entity<OxydChargeComponent> ent, ref ChargeChangedEvent args)
     {
         // cancel update to battery if client-side and active
@@ -496,7 +476,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         mapOffset *= radius;
         return map.Offset(mapOffset);
     }
-
+    [SubscribeLocalEvent]
     public void onGunInitialized(Entity<OxydGunComponent> gun, ref ComponentInit args)
     {
 
