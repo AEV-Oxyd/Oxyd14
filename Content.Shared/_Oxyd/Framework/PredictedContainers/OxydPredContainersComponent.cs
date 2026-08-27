@@ -29,7 +29,7 @@ public sealed partial class OxydPredContComponent : Component
 public class OxydContainer
 {
     [NonSerialized, ViewVariables] public string key = string.Empty;
-    [ViewVariables] public int? capacityLimit = 0;
+    [ViewVariables] public uint? capacityLimit = 0;
     [ViewVariables] public List<NetEntity> netContained = new();
     [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
     [NonSerialized, ViewVariables] public List<short> checksums = new(4);

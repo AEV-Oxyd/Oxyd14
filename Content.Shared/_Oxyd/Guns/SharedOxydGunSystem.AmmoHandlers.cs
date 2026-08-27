@@ -7,25 +7,53 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public abstract partial class SharedOxydGunSystem
 {
-    [Dependency] private OxydPredContainerSystem predconts = default!;
-    
     [SubscribeLocalEvent]
-    private void InitHandler(EntityUid id, OxydPredictedGunStorageComponent comp, ComponentInit ev)
+    public void ChamberInit(Entity<OxydChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
+    [SubscribeLocalEvent]
+    public void MagazineInit(Entity<OxydMagazineChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
+    [SubscribeLocalEvent]
+    public void RevolverInit(Entity<OxydRevolvingChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
+
+    public void InitializeMappings(EntityUid uid, Dictionary<string, ChamberData> data)
     {
-        foreach (var cont in comp.storeKeys)
+        foreach (var (key, values) in data)
         {
-            predconts.CreateContainer(id, cont, null);
+            values.store = $"{key}-{chamberStoreKey}";
+            conts.CreateContainer(uid, values.store, values.capacity);
         }
     }
-
-    [SubscribeLocalEvent([typeof(ItemSlotsSystem)])]
-    private void OnInt(EntityUid id, OxydPredictedGunStorageComponent comp, InteractUsingEvent ev)
+    
+    public void InitializeMappings(EntityUid uid, Dictionary<string, MagazineData> data)
     {
-        if (ev.Handled)
-            return;
-        if (HasComp<BundleComponent>(ev.Used))
-            return;
-        ev.Handled = predconts.insertEntity(id, comp.storeKeys[0], ev.Used);
+        foreach (var (key, values) in data)
+        {
+            values.store = $"{key}-{magazineStoreKey}-{chamberStoreKey}";
+            conts.CreateContainer(uid, values.store, values.capacity);
+            values.magstore = $"{key}-{magazineStoreKey}";
+            conts.CreateContainer(uid, values.magstore, 1);
+        }
     }
     
+    public void InitializeMappings(EntityUid uid, Dictionary<string, RevolverData> data)
+    {
+        foreach (var (key, values) in data)
+        {
+            values.store = $"{key}-{revolverStoreKey}";
+            conts.CreateContainer(uid, values.store, values.roundLimit);
+        }
+    }
+    // revolver
+    
+
+    public void RevolverHasAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunHasAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        
+    }
+    public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunGetAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+    }
 }

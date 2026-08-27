@@ -245,7 +245,7 @@ public abstract partial class BundleSystem : EntitySystem
         }
         else
         {
-            interact.InteractUsing(ev.User, predcontainers.ConsumePredictAct(cont), ev.Target.Value, ev.ClickLocation, dropOverride: true)
+            interact.InteractUsing(ev.User, predcontainers.ConsumePredictAct(cont), ev.Target.Value, ev.ClickLocation, dropOverride: true);
         }
     }
 

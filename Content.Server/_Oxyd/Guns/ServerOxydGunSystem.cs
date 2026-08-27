@@ -70,7 +70,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
-        SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);

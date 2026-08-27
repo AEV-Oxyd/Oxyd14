@@ -103,7 +103,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         }
     }
     
-    public OxydContainer CreateContainer(EntityUid entity, string key, int? capacity = null)
+    public OxydContainer CreateContainer(EntityUid entity, string key, uint? capacity = null)
     {
         var cont = new OxydContainer();
         cont.key = key;
@@ -124,6 +124,27 @@ public partial class OxydPredContainerSystem : EntitySystem
                 return true;
         }
         return false;
+    }
+
+    public void SetContainerCapacity(EntityUid uid, string key, uint? capacity = null)
+    {
+        if (!GetContainer(uid, key, out var cont))
+            return;
+        if (capacity is null)
+        {
+            cont.capacityLimit = null;
+            return;
+        }
+
+        if (cont.capacityLimit is not null && cont.capacityLimit > capacity)
+        {
+            for (var i = 1; i <= cont.capacityLimit - capacity; i++)
+            {
+                removeEntity(uid, key, cont.contained.Last(), false);
+            }
+        }
+
+        cont.capacityLimit = capacity;
     }
 
     public bool insertEntity(EntityUid uid, string key, EntityUid target, bool? prediction = null)

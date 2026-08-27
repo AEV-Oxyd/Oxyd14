@@ -2,6 +2,7 @@ using System.IO;
 using Lidgren.Network;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
@@ -171,4 +172,45 @@ public sealed class GunCompareFired : EntityEventArgs
 {
     public int firedCount;
     public NetEntity target;
+}
+
+public struct GunHasAmmoEvent
+{
+    public string providerId;
+    public bool hasAmmo;
+    
+    public GunHasAmmoEvent(string id)
+    {
+        this.providerId = id;
+        hasAmmo = false;
+    }
+}
+
+public struct GunGetAmmoEvent
+{
+    public string providerId;
+    public EntityUid ammo;
+    public EntProtoId projectile;
+
+    public GunGetAmmoEvent(string id)
+    {
+        providerId = id;
+        ammo = EntityUid.Invalid;
+        projectile = default;
+    }
+}
+
+public struct GunAfterUseAmmoEvent
+{
+    public string providerId;
+    public EntityUid ammo;
+    public EntityUid projectile;
+
+    public GunAfterUseAmmoEvent(string id, EntityUid ammo, EntityUid projectile)
+    {
+        providerId = id;
+        this.ammo = ammo;
+        this.projectile = projectile;
+    }
+    
 }

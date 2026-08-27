@@ -60,7 +60,7 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float workspeedMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
-    public float gunCapacityAdd = 0;
+    public int gunCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
         // unimplemented
     public float toolCapacityAdd = 0;

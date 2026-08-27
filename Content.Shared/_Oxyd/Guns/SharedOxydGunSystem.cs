@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
@@ -69,6 +70,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     private const string chamberStoreKey = "Chamber";
     private const string magazineStoreKey = "Magazine";
     private const string revolverStoreKey = "Revolver";
+    public static readonly List<string> AllAmmoStoreKeys = new List<string>() { chamberStoreKey, magazineStoreKey, revolverStoreKey };
 
     protected const string oxydContents = "storagebase";
 
@@ -123,10 +125,15 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (_netManager.IsClient)
             return;
 
-        if (args.mods.gunCapacityAdd > 0)
+        foreach (var key in AllAmmoStoreKeys)
         {
-            var ext = EnsureComp<OxydChamberExtensionComponent>(gun);
-            updateExtension(ext, gun, args.mods);
+            if (!conts.GetContainer(gun, key, out var cont))
+                continue;
+            if (cont.capacityLimit is null)
+                continue;
+            if (!gun.Comp.originalCapacityCounts.ContainsKey(key))
+                gun.Comp.originalCapacityCounts[key] = cont.capacityLimit.Value;
+            conts.SetContainerCapacity(gun, key, (uint)(gun.Comp.originalCapacityCounts[key] + args.mods.gunCapacityAdd));
         }
     }
 
@@ -248,80 +255,31 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         return false;
     }
 
-    public bool tryGetProviderAmmo(Entity<OxydGunComponent> gun,
+    public bool tryGetProviderAmmo(Entity<OxydGunComponent> gun, string key,
         [NotNullWhen(true)] out EntProtoId? projectile,
         [NotNullWhen(true)] out EntityUid? ammo)
     {
         ammo  = null;
         projectile = null;
-        var frd = gun.Comp.selectedFiremodePrototype;
-        switch (frd.AmmoProviders)
-        {
-            case OxydRevolvingChamberComponent provider:
-                break;
-            // magazine uses the same handling
-            case OxydChamberComponent provider:
-                break;
-            case OxydGunLaserProviderComponent provider:
-                projectile = provider.laserProto[frd.providerId].laser;
-                if (tryDischargeAmount(gun.Owner, provider.laserProto[frd.providerId].cost, out var used))
-                {
-                    ammo = used;
-                }
-
-                if (ammo is null)
-                    return false;
-                return ammo.Value != EntityUid.Invalid;
-            default:
-                Log.Error($"Unimplemented ammoProvider in getProviderAmmo,  type {frd.AmmoProviders}");
-                projectile = null;
-                return false;
-        }
+        var ev = new GunGetAmmoEvent(key);
+        RaiseLocalEvent(gun, ev);
+        if (TerminatingOrDeleted(ev.ammo))
+            return false;
+        projectile = ev.projectile;
+        ammo = ev.ammo;
+        return true;
     }
 
-    public bool hasProviderAmmo(Entity<OxydGunComponent> gun, int index)
+    public bool hasProviderAmmo(Entity<OxydGunComponent> gun, string key)
     {
-        var frd = gun.Comp.selectedFiremodePrototype;
-        switch (frd.AmmoProviders)
-        {
-            // magazine also fits here
-            case OxydRevolvingChamberComponent provider:
-                return provider.revolvingSlots[frd.providerId].seek() != NetEntity.Invalid;
-            case OxydChamberComponent provider:
-                return provider.realBullet[index] != EntityUid.Invalid;
-            case OxydGunLaserProviderComponent provider:
-                return hasDischargeAmount(gun.Owner, provider.laserProto[index].cost);
-            default:
-                Log.Error($"Unimplemented hasProviderAmmo case ,  type {frd.AmmoProviders}");
-                return false;
-        }
+        var ev = new GunHasAmmoEvent(key);
+        RaiseLocalEvent(gun, ev);
+        return ev.hasAmmo;
     }
 
-    public void afterProviderAmmo(Entity<OxydGunComponent> gun, EntityUid bullet)
+    public void afterProviderAmmo(Entity<OxydGunComponent> gun, string key, EntityUid ammo,  EntityUid projectile)
     {
-        var frd = gun.Comp.selectedFiremodePrototype;
-        switch (frd.AmmoProviders)
-        {
-            case OxydRevolvingChamberComponent provider:
-                var data = provider.revolvingSlots[frd.providerId];
-                _containerSystem.TryRemoveFromContainer(GetEntity(data.seek()), false);
-                data.loaded[data.index] = NetEntity.Invalid;
-                FillAmmo(provider, gun, frd.providerId, _containerSystem.GetContainer(gun, oxydContents), CompOrNull<OxydChamberExtensionComponent>(gun));
-                if (data.loaded[data.index] != NetEntity.Invalid)
-                    break;
-                data.increment();
-                break;
-            case OxydChamberComponent provider:
-                var slot = provider.bulletSlot[frd.providerId];
-                provider.realBullet[frd.providerId] = EntityUid.Invalid;
-                _itemSlotsSystem.TryEject(gun, provider.bulletSlot[frd.providerId], null, out var _);
-                break;
-            case OxydGunLaserProviderComponent provider:
-                break;
-            default:
-                Log.Error($"Unimplemented afterProviderAmmo case ,  type {frd.AmmoProviders}");
-                break;
-        }
+        RaiseLocalEvent(gun, new GunAfterUseAmmoEvent(key, ammo, projectile));
     }
 
     public void applyMods(Entity<OxydProjectileComponent> projectile, CompoundedModifiers mods)
@@ -356,13 +314,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     }
 
 
-    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun,CompoundedModifiers mods,
+    public bool getProjectileLoaded(EntityUid shooter, Entity<OxydGunComponent> gun, GunFiremodePrototype firemode,CompoundedModifiers mods,
         [NotNullWhen(true)] out Entity<OxydProjectileComponent>? outputComp,
         [NotNullWhen(true)] out EntityUid? used)
     {
         outputComp = null;
         used = null;
-        if (!tryGetProviderAmmo(gun, out var proj, out var ammoEnt))
+        if (!tryGetProviderAmmo(gun, firemode.providerId, out var proj, out var ammoEnt))
             return false;
         EntityUid projectile = Spawn(proj.ToString(), MapCoordinates.Nullspace);
         var projectileComp = EnsureComp<OxydProjectileComponent>(projectile);
@@ -410,7 +368,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         while (shots-- > 0)
         {
             Log.Debug($"Firing gun ---");
-            if(!getProjectileLoaded(shooter, gun, mods, out var projectileNullable, out var used))
+            if(!getProjectileLoaded(shooter, gun,gunFiremodePrototype, mods, out var projectileNullable, out var used))
                 return projectiles;
             var shootSound = gunFiremodePrototype.fireSound;
             var shootEv = new GunBeforeFireIndividualProjectileEvent()
@@ -443,7 +401,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             RaiseLocalEvent(gun.Owner, afterEv);
             if(shooter != gun.Owner)
                 RaiseLocalEvent(shooter, afterEv);
-            afterProviderAmmo(gun, used.Value);
+            afterProviderAmmo(gun,gunFiremodePrototype.providerId, used.Value, projectile.Owner);
         }
 
         RaiseLocalEvent(gun.Owner, new GunFiredEvent()
@@ -479,25 +437,25 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     [SubscribeLocalEvent]
     public void onGunInitialized(Entity<OxydGunComponent> gun, ref ComponentInit args)
     {
-
-
+        var providers = AllComps<BaseGunProvider>(gun).ToList();
         foreach (var proto in gun.Comp.firemodes)
         {
             var newFiremode = _prototypeManager.Index<GunFiremodePrototype>(proto).createCopy();
             newFiremode.Initialize();
-            if (!_factory.TryGetRegistration(newFiremode.providerComp, out var registration))
+            var valid = false;
+            foreach (var provider in providers)
             {
-                Log.Debug($"Invalid ammoprovider component {newFiremode.providerComp} for firemode prototype {proto}");
+                if (provider.getKeys().Contains(newFiremode.providerId))
+                {
+                    valid = true;
+                    break;
+                }
+            }
+            if(!valid)
+            {
+                Log.Debug($"Missing provider for id: {newFiremode.providerId} for firemode prototype: {proto} on gun prototype id: {MetaData(gun).EntityPrototype?.ID}");
                 continue;
             }
-
-            if (!EntityManager.TryGetComponent(gun.Owner, registration, out var providerComp))
-            {
-                Log.Debug($"Gun Prototype {MetaData(gun.Owner).EntityPrototype} did not have the required providerComp {newFiremode.providerComp} forfiremode proto {proto}");
-                continue;
-            }
-
-            newFiremode.AmmoProviders = (OxydGunProvidersComponent)providerComp;
 
             gun.Comp.InstanciatedFiremodes.Add(newFiremode);
 
@@ -581,10 +539,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
         if (_netManager.IsServer)
         {
-            if (firemodePrototype.lastInterpret != _gameTiming.CurTime)
-            {
-                gun.Comp.stateCounter++;
-            }
             // wait for network update at this stage
             if (_gameTiming.CurTime - gun.Comp.lastNetMouseUpdate > forceWaitThreshold)
             {
