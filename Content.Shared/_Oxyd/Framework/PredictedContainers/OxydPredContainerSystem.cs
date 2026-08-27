@@ -140,40 +140,50 @@ public partial class OxydPredContainerSystem : EntitySystem
         {
             for (var i = 1; i <= cont.capacityLimit - capacity; i++)
             {
-                removeEntity(uid, key, cont.contained.Last(), false);
+                var buf = cont.contained.Last();
+                removeEntity(uid, key, ref buf, false);
             }
         }
 
         cont.capacityLimit = capacity;
     }
+    public bool insertEntity(EntityUid uid, string key,ref EntityUid target, bool? prediction = null, bool handlePredict = false, int? targetIndex = null)
+    {
+        if (!GetContainer(uid, key, out var container))
+            return false;
+        return insertEntity(uid, container, ref target, prediction, handlePredict, targetIndex);
+        
+    }
 
-    public bool insertEntity(EntityUid uid, string key, EntityUid target, bool? prediction = null)
+    public bool insertEntity(EntityUid uid, OxydContainer container,ref EntityUid target, bool? prediction = null, bool handlePredict = false, int? targetIndex = null)
     {
         var sc = cmq.CompOrNull(uid);
         var oc = opcq.CompOrNull(uid);
         if (sc is null || oc is null)
             return false;
         prediction ??= !gametime.IsFirstTimePredicted;
-        if (!GetContainer(uid, key, out var container))
-            return false;
+        if(handlePredict && prediction.Value)
+            target = ConsumePredictAct(container);
         if(!container.canInsert(target, prediction.Value))
             return false;
         //Log.Info($"--Inserting {target} into {uid} from {key}");
-        var mirror = containers.GetContainer(uid, key, sc);
+        var mirror = containers.GetContainer(uid, container.key, sc);
         if (hands.IsHeld(target, out var user))
         {
             hands.TryDropIntoContainer((user.Value, null), target, mirror, false);
         }
         else
             containers.Insert(target, mirror);
-        Log.Info($"Inserted {target} into {uid} from {key} on tick {gametime.CurTick}, is pred {gametime.IsFirstTimePredicted}");
+        Log.Info($"Inserted {target} into {uid} from {container.key} on tick {gametime.CurTick}, is pred {gametime.IsFirstTimePredicted}");
         var count = container.contained.Count;
         container.insert(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
         if (!TerminatingOrDeleted(target))
         {
-            Log.Info($"Raising insert event {target} into {uid} from {key} prediction");
+            if (handlePredict && !prediction.Value)
+                StorePredictAct(container, target);
+            Log.Info($"Raising insert event {target} into {uid} from {container.key} prediction");
             var ev = new PredContInserted(target, (uid, oc), realChange: !prediction.Value);
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);
@@ -183,18 +193,27 @@ public partial class OxydPredContainerSystem : EntitySystem
     }
     
 
-    public bool removeEntity(EntityUid uid, string key, EntityUid target, bool? prediction = null, EntityUid? insertionTarget = null)
+    public bool removeEntity(EntityUid uid, string key, ref EntityUid target, bool? prediction = null, EntityUid? insertionTarget = null, bool handlePredict = false)
+    {
+        if (!GetContainer(uid, key, out var container))
+            return false;
+        return removeEntity(uid, container,ref target, prediction, insertionTarget, handlePredict);
+    }
+
+    public bool removeEntity(EntityUid uid, OxydContainer container,ref EntityUid target, bool? prediction = null, EntityUid? insertionTarget = null, bool handlePredict = false)
     {
         var sc = cmq.CompOrNull(uid);
         var oc = opcq.CompOrNull(uid);
         prediction ??= !gametime.IsFirstTimePredicted;
+        if (handlePredict && prediction.Value)
+        {
+            target = ConsumePredictAct(container);
+        }
         if (sc is null || oc is null)
-            return false;
-        if (!GetContainer(uid, key, out var container))
             return false;
         if (!container.canRemove(target, GetNetEntity(target),prediction.Value))
             return false;
-        var mirror = containers.GetContainer(uid, key, sc);
+        var mirror = containers.GetContainer(uid, container.key, sc);
         if (insertionTarget is not null)
         {
             containers.Insert(insertionTarget.Value, mirror);
@@ -203,7 +222,9 @@ public partial class OxydPredContainerSystem : EntitySystem
         {
             containers.Remove(target, mirror);
         }
-        Log.Info($"--Removing {target} from {uid} from {key}");
+        if(handlePredict && !prediction.Value)
+            StorePredictAct(container, target);
+        Log.Info($"--Removing {target} from {uid} from {container.key}");
         var count = container.contained.Count;
         container.remove(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
@@ -211,7 +232,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         var ev = new PredContRemoved(target, (uid, oc), realChange: !prediction.Value);
         RaiseLocalEvent(target, ev);
         RaiseLocalEvent(uid, ev);
-        Log.Info($"Raising remove event {target} from {uid} from {key} prediction");
+        Log.Info($"Raising remove event {target} from {uid} from {container.key} prediction");
     
         Dirty(uid, oc);
         return true;   

@@ -157,7 +157,7 @@ public partial class RevolverData
     [ViewVariables] public string store = string.Empty;
     [DataField] public uint roundLimit = 0;
     [DataField] public EntityWhitelist whitelist = new();
-    [DataField] public uint index = 0;
+    [DataField] public int index = 0;
 }
 
 [RegisterComponent, NetworkedComponent]

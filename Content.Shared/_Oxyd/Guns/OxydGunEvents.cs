@@ -186,17 +186,33 @@ public struct GunHasAmmoEvent
     }
 }
 
+public struct GunTryLoadAmmoEvent
+{
+    public EntityUid ammo;
+    public bool handled;
+    public bool prediction;
+    
+    public GunTryLoadAmmoEvent(EntityUid ammo, bool pred)
+    {
+        this.ammo = ammo;
+        handled = false;
+        prediction = pred;
+    }
+}
+
 public struct GunGetAmmoEvent
 {
     public string providerId;
     public EntityUid ammo;
     public EntProtoId projectile;
+    public bool prediction;
 
-    public GunGetAmmoEvent(string id)
+    public GunGetAmmoEvent(string id, bool prediction = false)
     {
         providerId = id;
         ammo = EntityUid.Invalid;
         projectile = default;
+        this.prediction = prediction;
     }
 }
 

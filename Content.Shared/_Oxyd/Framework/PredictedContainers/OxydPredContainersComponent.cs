@@ -62,11 +62,19 @@ public class OxydContainer
         }
     }
 
-    public void insert(EntityUid ent, NetEntity netEnt)
+    public void insert(EntityUid ent, NetEntity netEnt, int? index = null)
     {
         if (!contained.Contains(ent))
         {
-            contained.Add(ent);
+            if (index is not null)
+            {
+                contained.Insert(index.Value, ent);
+            }
+            else
+            {
+                contained.Add(ent);
+            }
+
             netContained.Add(netEnt);
             checksums.Add(createHash(netEnt, OxydContainerAction.Add));
             if(checksums.Count > 20)

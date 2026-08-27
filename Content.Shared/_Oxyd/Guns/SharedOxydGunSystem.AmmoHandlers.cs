@@ -2,11 +2,14 @@
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
+using Content.Shared.Whitelist;
+using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public abstract partial class SharedOxydGunSystem
 {
+    [Dependency] protected EntityWhitelistSystem whitelist = default!;
     [SubscribeLocalEvent]
     public void ChamberInit(Entity<OxydChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
     [SubscribeLocalEvent]
@@ -34,6 +37,8 @@ public abstract partial class SharedOxydGunSystem
         }
     }
     
+    // revolver
+    
     public void InitializeMappings(EntityUid uid, Dictionary<string, RevolverData> data)
     {
         foreach (var (key, values) in data)
@@ -42,18 +47,49 @@ public abstract partial class SharedOxydGunSystem
             conts.CreateContainer(uid, values.store, values.roundLimit);
         }
     }
-    // revolver
-    
-
+    [SubscribeLocalEvent]
+    public void RevolverLoadAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunTryLoadAmmoEvent args)
+    {
+        if (args.handled)
+            return;
+        foreach (var provider in gun.Comp.providers.Values)
+        {
+            if (!whitelist.IsWhitelistPass(provider.whitelist, args.ammo))
+                continue;
+            if (!conts.insertEntity(gun, provider.store, args.ammo, null, args.prediction, provider.ind))
+                continue;
+            args.handled = true;
+            return;
+        }
+    }
+    [SubscribeLocalEvent]
     public void RevolverHasAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunHasAmmoEvent args)
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
             return;
-        
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        args.hasAmmo = cont.contained.TryGetValue(data.index, out _);
     }
+    [SubscribeLocalEvent]
     public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunGetAmmoEvent args)
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
             return;
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        EntityUid target = EntityUid.Invalid;
+        if (_gameTiming.IsFirstTimePredicted)
+        {
+            if (!cont.contained.TryGetValue(data.index++, out target))
+                return;
+        }
+        else if (!args.prediction)
+            return;
+        conts.removeEntity(gun, cont, ref target, null, null, args.prediction);
+        if (!TryComp<OxydBulletComponent>(target, out var bullet))
+            return;
+        args.ammo = target;
+        args.projectile = bullet.projectileEntity;
     }
 }
