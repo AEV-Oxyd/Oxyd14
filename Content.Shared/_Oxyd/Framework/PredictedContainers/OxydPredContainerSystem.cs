@@ -29,14 +29,15 @@ public partial class OxydPredContainerSystem : EntitySystem
     /// <summary>
     ///  If last state's delta to current time is below this , use immediate state track count.
     /// </summary>
-    public static readonly TimeSpan ImmediateTime = TimeSpan.FromMilliseconds(122);
+    public static readonly TimeSpan ImmediateTime = TimeSpan.FromMilliseconds(88);
 
     [SubscribeLocalEvent]
     public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
     {
         if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont))
         {
-            removeEntity(uid, baseCont.ID, args.Entity);
+            var cpy = args.Entity;
+            removeEntity(uid, baseCont.ID, ref cpy, handlePredict: false);
         }
     }
 
@@ -103,7 +104,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         }
     }
     
-    public OxydContainer CreateContainer(EntityUid entity, string key, uint? capacity = null)
+    public OxydContainer CreateContainer(EntityUid entity, string key, int? capacity = null)
     {
         var cont = new OxydContainer();
         cont.key = key;
@@ -126,7 +127,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         return false;
     }
 
-    public void SetContainerCapacity(EntityUid uid, string key, uint? capacity = null)
+    public void SetContainerCapacity(EntityUid uid, string key, int? capacity = null)
     {
         if (!GetContainer(uid, key, out var cont))
             return;
@@ -184,7 +185,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             if (handlePredict && !prediction.Value)
                 StorePredictAct(container, target);
             Log.Info($"Raising insert event {target} into {uid} from {container.key} prediction");
-            var ev = new PredContInserted(target, (uid, oc), realChange: !prediction.Value);
+            var ev = new PredContInserted(target, (uid, oc), container , !prediction.Value);
             RaiseLocalEvent(target, ev);
             RaiseLocalEvent(uid, ev);
         }
@@ -229,7 +230,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         container.remove(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
-        var ev = new PredContRemoved(target, (uid, oc), realChange: !prediction.Value);
+        var ev = new PredContRemoved(target, (uid, oc),container, !prediction.Value);
         RaiseLocalEvent(target, ev);
         RaiseLocalEvent(uid, ev);
         Log.Info($"Raising remove event {target} from {uid} from {container.key} prediction");

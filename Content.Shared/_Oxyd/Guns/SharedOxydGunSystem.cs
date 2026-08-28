@@ -122,19 +122,6 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         {
             firemode.ApplyMods(args.mods);
         }
-        if (_netManager.IsClient)
-            return;
-
-        foreach (var key in AllAmmoStoreKeys)
-        {
-            if (!conts.GetContainer(gun, key, out var cont))
-                continue;
-            if (cont.capacityLimit is null)
-                continue;
-            if (!gun.Comp.originalCapacityCounts.ContainsKey(key))
-                gun.Comp.originalCapacityCounts[key] = cont.capacityLimit.Value;
-            conts.SetContainerCapacity(gun, key, (uint)(gun.Comp.originalCapacityCounts[key] + args.mods.gunCapacityAdd));
-        }
     }
 
     [SubscribeLocalEvent]

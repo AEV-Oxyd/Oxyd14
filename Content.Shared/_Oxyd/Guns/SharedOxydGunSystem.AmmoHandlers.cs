@@ -44,9 +44,74 @@ public abstract partial class SharedOxydGunSystem
         foreach (var (key, values) in data)
         {
             values.store = $"{key}-{revolverStoreKey}";
-            conts.CreateContainer(uid, values.store, values.roundLimit);
+            conts.CreateContainer(uid, values.store, values.capacity);
         }
     }
+    
+    [SubscribeLocalEvent]
+    public void RevolverApplyMods(Entity<OxydRevolvingChamberComponent> gun, ref ModifiersUpdatedEvent args)
+    {
+        if (_netManager.IsClient)
+            return;
+        if (args.mods.gunCapacityAdd > 0)
+        {
+            foreach (var provider in gun.Comp.providers.Values)
+            {
+                provider.capacity += args.mods.gunCapacityAdd;
+                Array.Resize(ref provider.loaded, provider.capacity);
+            }
+        }
+    }
+    
+    [SubscribeLocalEvent]
+    public void RevolverContInsert(Entity<OxydRevolvingChamberComponent> gun, ref PredContInserted args)
+    {
+        if (!args.realChange)
+            return;
+        if (!args.container.key.Contains(revolverStoreKey))
+            return;
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (data.store != args.container.key)
+                continue;
+            var index = data.index;
+            var iterationLimit = data.capacity;
+            var iters = 0;
+            while (iters++ < iterationLimit )
+            {
+                if (TerminatingOrDeleted(data.loaded[index]))
+                {
+                    data.loaded[index] = args.uid;
+                    break;
+                }
+                index++;
+                if (index >= data.capacity)
+                    index = 0;
+            }
+
+            break;
+        }
+    }
+
+    [SubscribeLocalEvent]
+    public void RevolverContRemove(Entity<OxydRevolvingChamberComponent> gun, ref PredContRemoved args)
+    {
+        if (!args.realChange)
+            return;
+        if (!args.container.key.Contains(revolverStoreKey))
+            return;
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (data.store != args.container.key)
+                continue;
+            var index = data.loaded.IndexOf(args.uid);
+            if (index == -1)
+                break;
+            data.loaded[index] = EntityUid.Invalid;
+            break;
+        }
+    }
+    
     [SubscribeLocalEvent]
     public void RevolverLoadAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunTryLoadAmmoEvent args)
     {
@@ -56,12 +121,13 @@ public abstract partial class SharedOxydGunSystem
         {
             if (!whitelist.IsWhitelistPass(provider.whitelist, args.ammo))
                 continue;
-            if (!conts.insertEntity(gun, provider.store, args.ammo, null, args.prediction, provider.ind))
-                continue;
-            args.handled = true;
-            return;
+            var ammoCopy = args.ammo;
+            args.handled = conts.insertEntity(gun.Owner, provider.store, ref ammoCopy, null, args.prediction);
+            if(args.handled)
+                return;
         }
     }
+    
     [SubscribeLocalEvent]
     public void RevolverHasAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunHasAmmoEvent args)
     {
@@ -69,8 +135,9 @@ public abstract partial class SharedOxydGunSystem
             return;
         if (!conts.GetContainer(gun, data.store, out var cont))
             return;
-        args.hasAmmo = cont.contained.TryGetValue(data.index, out _);
+        args.hasAmmo = !TerminatingOrDeleted(data.loaded[data.index]);
     }
+    
     [SubscribeLocalEvent]
     public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunGetAmmoEvent args)
     {

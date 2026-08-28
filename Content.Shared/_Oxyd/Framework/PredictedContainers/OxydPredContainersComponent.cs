@@ -29,7 +29,7 @@ public sealed partial class OxydPredContComponent : Component
 public class OxydContainer
 {
     [NonSerialized, ViewVariables] public string key = string.Empty;
-    [ViewVariables] public uint? capacityLimit = 0;
+    [ViewVariables] public int? capacityLimit = 0;
     [ViewVariables] public List<NetEntity> netContained = new();
     [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
     [NonSerialized, ViewVariables] public List<short> checksums = new(4);
@@ -104,14 +104,14 @@ public enum OxydContainerAction
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> container, bool realChange = true);
+public record struct PredContInserted(EntityUid uid, Entity<OxydPredContComponent> holder, OxydContainer container, bool realChange = true);
 
 /// <summary>
 ///  removed on non-predicted tick
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container, bool realChange = true);
+public record struct PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> holder, OxydContainer container,  bool realChange = true);
 /// <summary>
 /// Handled state and we had a reset due to mismatch between server-client , rebuild everything associated.
 /// </summary>
@@ -119,4 +119,4 @@ public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> conta
 /// <param name="resetted"></param>
 ///
 
-public record PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);
+public record struct PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);

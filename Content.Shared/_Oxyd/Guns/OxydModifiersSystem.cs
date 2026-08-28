@@ -84,7 +84,7 @@ public sealed partial class RemoveAttachmentEvent : DoAfterEvent
 }
 
 [Serializable, NetSerializable]
-public sealed partial class ModifiersUpdatedEvent : EntityEventArgs
+public record struct ModifiersUpdatedEvent
 {
     public required CompoundedModifiers mods;
 }

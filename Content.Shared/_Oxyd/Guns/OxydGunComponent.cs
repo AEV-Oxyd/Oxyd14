@@ -127,7 +127,8 @@ public partial class ChamberData
     [DataField] public COM operatingMode = COM.None;
     [ViewVariables] public bool state = false; // used by bolties
     [DataField] public bool pushback = false; // Default is Queue-based, if true, Stack-based
-    [DataField] public uint capacity = 1;
+    [DataField] public int capacity = 1;
+    [DataField] public int basecapacity = 1;
     [DataField] public EntityWhitelist whitelist = new();
 }
 
@@ -155,9 +156,12 @@ public sealed partial class OxydMagazineChamberComponent : OxydGunProvidersCompo
 public partial class RevolverData
 {
     [ViewVariables] public string store = string.Empty;
-    [DataField] public uint roundLimit = 0;
-    [DataField] public EntityWhitelist whitelist = new();
+    // array for keeping track of actually loaded bullets.
+    [ViewVariables] public EntityUid[] loaded = Array.Empty<EntityUid>();
     [DataField] public int index = 0;
+    [DataField] public int capacity = 0;
+    [DataField] public int basecapacity = 1;
+    [DataField] public EntityWhitelist whitelist = new();
 }
 
 [RegisterComponent, NetworkedComponent]
