@@ -110,12 +110,12 @@ public abstract partial class OxydGunProvidersComponent<T> : BaseGunProvider
 
     public override List<string> getKeys() => providers.Keys.ToList();
 
-    public OxydProviderState<T> ComponentGetState()
+    public virtual OxydProviderState<T> ComponentGetState()
     {
         return new OxydProviderState<T> { data = providers };
     }
 
-    public void ComponentApplyState(OxydProviderState<T> state)
+    public virtual void ComponentApplyState(OxydProviderState<T> state)
     {
         providers = state.data;
     }
@@ -157,7 +157,7 @@ public partial class RevolverData
 {
     [ViewVariables] public string store = string.Empty;
     // array for keeping track of actually loaded bullets.
-    [ViewVariables] public EntityUid[] loaded = Array.Empty<EntityUid>();
+    [ViewVariables, NonSerialized] public EntityUid[] loaded = Array.Empty<EntityUid>();
     [DataField] public int index = 0;
     [DataField] public int capacity = 0;
     [DataField] public int basecapacity = 1;

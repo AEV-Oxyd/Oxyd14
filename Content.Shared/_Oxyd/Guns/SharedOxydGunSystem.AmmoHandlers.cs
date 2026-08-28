@@ -137,7 +137,7 @@ public abstract partial class SharedOxydGunSystem
             return;
         args.hasAmmo = !TerminatingOrDeleted(data.loaded[data.index]);
     }
-    
+
     [SubscribeLocalEvent]
     public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunGetAmmoEvent args)
     {
@@ -148,15 +148,27 @@ public abstract partial class SharedOxydGunSystem
         EntityUid target = EntityUid.Invalid;
         if (_gameTiming.IsFirstTimePredicted)
         {
-            if (!cont.contained.TryGetValue(data.index++, out target))
+            if (!cont.contained.TryGetValue(data.index, out target))
                 return;
         }
         else if (!args.prediction)
             return;
+
         conts.removeEntity(gun, cont, ref target, null, null, args.prediction);
         if (!TryComp<OxydBulletComponent>(target, out var bullet))
             return;
         args.ammo = target;
         args.projectile = bullet.projectileEntity;
+    }
+    
+
+    [SubscribeLocalEvent]
+    public void RevolverAfterUse(Entity<OxydRevolvingChamberComponent> gun, ref GunAfterUseAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        data.index++;
+        if(data.index >= data.capacity)
+            data.index = 0;
     }
 }

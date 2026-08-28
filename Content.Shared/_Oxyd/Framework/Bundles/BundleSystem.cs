@@ -256,14 +256,16 @@ public abstract partial class BundleSystem : EntitySystem
             return false;
         var proto = prototypes.Index<BundleGroup>(bundle.Comp.group);
         if (ent.Comp.volume + bundle.Comp.usedVolume >= proto.volume)
-            return false; 
-        if (!predcontainers.insertEntity(bundle, storeKey, ent))
+            return false;
+        var targ = ent.Owner;
+        if (!predcontainers.insertEntity(bundle, storeKey, ref targ))
             return false;
         return true;
     }
     public void RemoveFromBundle(Entity<BundleComponent> bundle, Entity<BundableComponent> ent)
     {
-        if (!predcontainers.removeEntity(bundle, storeKey, ent))
+        var cpy = ent.Owner;
+        if (!predcontainers.removeEntity(bundle, storeKey, ref cpy))
             return;
         Log.Debug($"Removing {ent} from {bundle}");
         bundle.Comp.usedVolume -= ent.Comp.volume;
