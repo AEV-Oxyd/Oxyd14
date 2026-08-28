@@ -3,6 +3,7 @@ using System.Linq;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
+using Content.Shared.Weapons.Ranged.Components;
 using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 using Robust.Shared.Player;
@@ -94,12 +95,6 @@ public sealed partial class OxydActiveFiremodeUpdatingComponent : Component
 [RegisterComponent]
 public sealed partial class OxydHandheldGunComponent : Component;
 
-[Serializable, NetSerializable]
-public sealed class OxydProviderState<T> : ComponentState
-{
-    public Dictionary<string, T> data = new();
-}
-
 public abstract partial class BaseGunProvider : Component
 {
     public abstract List<string> getKeys();
@@ -110,15 +105,6 @@ public abstract partial class OxydGunProvidersComponent<T> : BaseGunProvider
 
     public override List<string> getKeys() => providers.Keys.ToList();
 
-    public virtual OxydProviderState<T> ComponentGetState()
-    {
-        return new OxydProviderState<T> { data = providers };
-    }
-
-    public virtual void ComponentApplyState(OxydProviderState<T> state)
-    {
-        providers = state.data;
-    }
 };
 [Serializable, NetSerializable, DataDefinition]
 public partial class ChamberData
@@ -162,6 +148,19 @@ public partial class RevolverData
     [DataField] public int capacity = 0;
     [DataField] public int basecapacity = 1;
     [DataField] public EntityWhitelist whitelist = new();
+}
+
+[Serializable, NetSerializable, DataDefinition]
+public partial class RevolverNetworkData
+{
+    public required RevolverData data;
+    public NetEntity[] loadedNet = Array.Empty<NetEntity>();
+}
+
+[Serializable, NetSerializable, DataDefinition]
+public partial class RevolverDataState : IgnorableComponentState
+{
+    public Dictionary<string, RevolverNetworkData> providers = new();
 }
 
 [RegisterComponent, NetworkedComponent]

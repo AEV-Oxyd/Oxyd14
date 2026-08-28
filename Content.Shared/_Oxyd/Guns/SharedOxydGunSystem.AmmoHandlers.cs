@@ -1,8 +1,10 @@
 
+using System.Linq;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
 using Content.Shared.Whitelist;
+using Robust.Shared.GameStates;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.OxydGunSystem;
@@ -47,6 +49,64 @@ public abstract partial class SharedOxydGunSystem
             conts.CreateContainer(uid, values.store, values.capacity);
         }
     }
+
+    public NetEntity FindActionActor(Entity<OxydGunComponent> gun)
+    {
+        if(!gun.Comp.selectedFiremodePrototype.Active)
+            return NetEntity.Invalid;
+        foreach (var data in checkActive)
+        {
+            // should probably store a reference of active shooter on the firemode? SPCR 2026
+            if (data.firemode != gun.Comp.selectedFiremodePrototype)
+                continue;
+            if (data.shooter is null)
+                continue;
+            return GetNetEntity(data.shooter.Value);
+        }
+
+        return NetEntity.Invalid;
+
+    }
+
+    [SubscribeLocalEvent]
+    public void RevolverGetState(Entity<OxydRevolvingChamberComponent> gun, ref ComponentGetState args)
+    {
+        var dict = new Dictionary<string, RevolverNetworkData>();
+        foreach (var (key, data) in gun.Comp.providers)
+        {
+            dict[key] = new RevolverNetworkData()
+            {
+                data = data,
+                loadedNet = data.loaded.Select(ent => GetNetEntity(ent)).ToArray()
+            };
+        }
+        var state = new RevolverDataState(){ providers = dict }; 
+        
+        state.ignore = FindActionActor((gun, Comp<OxydGunComponent>(gun)));
+    }
+
+    [SubscribeLocalEvent]
+    public void RevolverApplyState(Entity<OxydRevolvingChamberComponent> gun, ref ComponentHandleState args)
+    {
+        if (_help.shouldIgnoreState(args.Current))
+            return;
+        if (args.Current is RevolverDataState state)
+        {
+            foreach (var (key, data) in state.providers)
+            {
+                gun.Comp.providers[key] = data.data;
+                Array.Resize(ref data.data.loaded, data.data.capacity);
+                Array.Fill(data.data.loaded, EntityUid.Invalid);
+                for(var i = 0; i < data.loadedNet.Length; i++)
+                {
+                    var ent = GetEntity(data.loadedNet[i]);
+                    if (TerminatingOrDeleted(ent))
+                        continue;
+                    data.data.loaded[i] = ent;
+                }
+            }
+        }
+    }
     
     [SubscribeLocalEvent]
     public void RevolverApplyMods(Entity<OxydRevolvingChamberComponent> gun, ref ModifiersUpdatedEvent args)
@@ -59,6 +119,7 @@ public abstract partial class SharedOxydGunSystem
             {
                 provider.capacity += args.mods.gunCapacityAdd;
                 Array.Resize(ref provider.loaded, provider.capacity);
+                Array.Fill(provider.loaded, EntityUid.Invalid);
             }
         }
     }

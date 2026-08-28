@@ -73,7 +73,7 @@ public partial class SharedOxydHelpers : EntitySystem
             QueueDel(uid);
     }
 
-    public bool shouldIgnoreState(IComponentState state)
+    public bool shouldIgnoreState(IComponentState? state)
     {
         if (state is IgnorableComponentState cast && playman.LocalEntity is EntityUid real && cast.ignore == GetNetEntity(real))
             return true;

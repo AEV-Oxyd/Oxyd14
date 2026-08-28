@@ -1,6 +1,9 @@
+using Robust.Shared.Serialization;
+
 namespace Content.Shared;
 
-public sealed partial class IgnorableComponentState : IComponentState
+[Serializable, NetSerializable]
+public partial class IgnorableComponentState : IComponentState
 {
     /// <summary>
     ///  The application of this state should be ignored if the controlled
