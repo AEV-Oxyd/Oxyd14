@@ -378,9 +378,10 @@
   name: reinforced wall
   components:
   - type: Sprite
-    sprite: Structures/Walls/solid.rsi
+    sprite: Oxyd/erisported/walls.rsi
+    state: reinf_over0
   - type: Icon
-    sprite: Structures/Walls/solid.rsi
+    sprite: Oxyd/erisported/walls.rsi
     state: rgeneric
   - type: Construction
     graph: Girder
@@ -400,6 +401,7 @@
   - type: IconSmooth
     key: walls
     base: reinf_over
+    mode: CardinalFlags
   - type: Appearance
   - type: GenericVisualizer
     visuals:
@@ -436,6 +438,10 @@
   components:
   - type: Sprite
     sprite: Structures/Walls/solid_rust.rsi
+    # Hidden layer so inherited parent state: reinf_over0 is not drawn under Corners.
+    layers:
+    - state: rgeneric
+      visible: false
   - type: Icon
     sprite: Structures/Walls/solid_rust.rsi
     state: rgeneric
@@ -445,6 +451,7 @@
   - type: IconSmooth
     key: walls
     base: reinf_over
+    mode: Corners
   # Rusted walls should be made weaker through a damage mod status effect.
 
 - type: entity
@@ -666,13 +673,14 @@
   name: solid wall
   components:
   - type: Sprite
-    sprite: Structures/Walls/solid.rsi
+    sprite: Oxyd/erisported/walls.rsi
+    state: solid0
   - type: WallReplacementMarker
   - type: Construction
     graph: Girder
     node: wall
   - type: Icon
-    sprite: Structures/Walls/solid.rsi
+    sprite: Oxyd/erisported/walls.rsi
   - type: RCDDeconstructable
     cost: 6
     delay: 8
@@ -693,6 +701,7 @@
   - type: IconSmooth
     key: walls
     base: solid
+    mode: CardinalFlags
 
 - type: entity
   parent: [ WallDiagonalBase, StructureHealthWall ]
@@ -721,6 +730,10 @@
   components:
   - type: Sprite
     sprite: Structures/Walls/solid_rust.rsi
+    # Hidden layer so inherited parent state: solid0 is not drawn under Corners.
+    layers:
+    - state: full
+      visible: false
   - type: Icon
     sprite: Structures/Walls/solid_rust.rsi
     state: full
@@ -730,6 +743,7 @@
   - type: IconSmooth
     key: walls
     base: solid
+    mode: Corners
   # Rusted walls should be made weaker through a damage mod status effect.
 
 - type: entity
