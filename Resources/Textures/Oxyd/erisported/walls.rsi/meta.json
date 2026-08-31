@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Hull states taken from CEV-Eris icons/walls.dmi (https://github.com/discordia-space/CEV-Eris). reinf_construct frames from Structures/Walls/solid.rsi by rye-rice (GitHub) and 20nypercent, modified by AftrLite (GitHub).",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "full"
+    },
+    {
+      "name": "solid0"
+    },
+    {
+      "name": "solid1"
+    },
+    {
+      "name": "solid2"
+    },
+    {
+      "name": "solid3"
+    },
+    {
+      "name": "solid4"
+    },
+    {
+      "name": "solid5"
+    },
+    {
+      "name": "solid6"
+    },
+    {
+      "name": "solid7"
+    },
+    {
+      "name": "solid8"
+    },
+    {
+      "name": "solid9"
+    },
+    {
+      "name": "solid10"
+    },
+    {
+      "name": "solid11"
+    },
+    {
+      "name": "solid12"
+    },
+    {
+      "name": "solid13"
+    },
+    {
+      "name": "solid14"
+    },
+    {
+      "name": "solid15"
+    },
+    {
+      "name": "reinf_construct-0"
+    },
+    {
+      "name": "reinf_construct-1"
+    },
+    {
+      "name": "reinf_construct-2"
+    },
+    {
+      "name": "reinf_construct-3"
+    },
+    {
+      "name": "reinf_construct-4"
+    },
+    {
+      "name": "reinf_construct-5"
+    },
+    {
+      "name": "reinf_over0"
+    },
+    {
+      "name": "reinf_over1"
+    },
+    {
+      "name": "reinf_over2"
+    },
+    {
+      "name": "reinf_over3"
+    },
+    {
+      "name": "reinf_over4"
+    },
+    {
+      "name": "reinf_over5"
+    },
+    {
+      "name": "reinf_over6"
+    },
+    {
+      "name": "reinf_over7"
+    },
+    {
+      "name": "reinf_over8"
+    },
+    {
+      "name": "reinf_over9"
+    },
+    {
+      "name": "reinf_over10"
+    },
+    {
+      "name": "reinf_over11"
+    },
+    {
+      "name": "reinf_over12"
+    },
+    {
+      "name": "reinf_over13"
+    },
+    {
+      "name": "reinf_over14"
+    },
+    {
+      "name": "reinf_over15"
+    },
+    {
+      "name": "rgeneric"
+    }
+  ]
+}

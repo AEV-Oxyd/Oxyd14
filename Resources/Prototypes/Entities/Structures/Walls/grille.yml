@@ -24,7 +24,7 @@
   - type: Rotatable
   - type: Sprite
     drawdepth: Walls
-    sprite: Structures/Walls/grille-new.rsi
+    sprite: Oxyd/erisported/grilles.rsi
     layers:
     - state: full
     - state: electrified
@@ -33,7 +33,7 @@
       shader: unshaded
       visible: false
   - type: Icon
-    sprite: Structures/Walls/grille-new.rsi
+    sprite: Oxyd/erisported/grilles.rsi
     state: full
   - type: PlacementReplacement
     key: grilles
@@ -41,6 +41,7 @@
     index: 0
     key: walls
     base: grille
+    mode: CardinalFlags
   - type: Electrified
     requirePower: true
     noWindowInTile: true
@@ -149,10 +150,10 @@
   components:
   - type: Sprite
     drawdepth: Walls
-    sprite: Structures/Walls/grille-new.rsi
+    sprite: Oxyd/erisported/grilles.rsi
     state: broken
   - type: Icon
-    sprite: Structures/Walls/grille-new.rsi
+    sprite: Oxyd/erisported/grilles.rsi
     state: broken
   - type: RCDDeconstructable
     cost: 6

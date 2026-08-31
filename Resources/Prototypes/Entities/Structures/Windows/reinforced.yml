@@ -4,9 +4,10 @@
   name: reinforced window
   components:
   - type: Sprite
-    sprite: Structures/Windows/window-base-reinf.rsi
+    sprite: Oxyd/erisported/windows/reinf.rsi
+    state: rwindow0
   - type: Icon
-    sprite: Structures/Windows/window-base-reinf.rsi
+    sprite: Oxyd/erisported/windows/reinf.rsi
     state: full
   - type: Repairable
     fuelCost: 10
@@ -32,7 +33,9 @@
             min: 1
             max: 2
   - type: IconSmooth
+    key: walls
     base: rwindow
+    mode: CardinalFlags
   - type: Construction
     graph: Window
     node: reinforcedWindow
@@ -50,10 +53,10 @@
   name: directional reinforced window
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: reinforced_window
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: reinforced_window
   - type: Construction
     graph: WindowDirectional
@@ -94,10 +97,10 @@
   suffix: Corner
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: reinforced_window_corner
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: reinforced_window_corner
   - type: Fixtures
     fixtures:

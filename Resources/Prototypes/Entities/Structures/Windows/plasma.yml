@@ -4,9 +4,10 @@
   parent: [BaseDeltaPressurePlasma, BaseWindowStructure, BaseRCDResistant, StructureHealthBarrier]
   components:
   - type: Sprite
-    sprite: Structures/Windows/window-plasma.rsi
+    sprite: Oxyd/erisported/windows/plasma.rsi
+    state: pwindow0
   - type: Icon
-    sprite: Structures/Windows/window-plasma.rsi
+    sprite: Oxyd/erisported/windows/plasma.rsi
     state: full
   - type: Damageable
     damageModifierSet: GlassPlasmaMod
@@ -25,7 +26,9 @@
             min: 1
             max: 2
   - type: IconSmooth
+    key: walls
     base: pwindow
+    mode: CardinalFlags
   - type: Construction
     graph: Window
     node: plasmaWindow
@@ -48,10 +51,10 @@
   description: Don't smudge up the glass down there.
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: plasma_window
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: plasma_window
   - type: Construction
     graph: WindowDirectional
@@ -90,10 +93,10 @@
   suffix: Corner
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: plasma_window_corner
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: plasma_window_corner
   - type: Fixtures
     fixtures:

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Grille states taken from CEV-Eris icons/obj/structures.dmi (https://github.com/discordia-space/CEV-Eris).",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "full"
+    },
+    {
+      "name": "broken"
+    },
+    {
+      "name": "grille0"
+    },
+    {
+      "name": "grille1"
+    },
+    {
+      "name": "grille2"
+    },
+    {
+      "name": "grille3"
+    },
+    {
+      "name": "grille4"
+    },
+    {
+      "name": "grille5"
+    },
+    {
+      "name": "grille6"
+    },
+    {
+      "name": "grille7"
+    },
+    {
+      "name": "grille8"
+    },
+    {
+      "name": "grille9"
+    },
+    {
+      "name": "grille10"
+    },
+    {
+      "name": "grille11"
+    },
+    {
+      "name": "grille12"
+    },
+    {
+      "name": "grille13"
+    },
+    {
+      "name": "grille14"
+    },
+    {
+      "name": "grille15"
+    }
+  ]
+}
