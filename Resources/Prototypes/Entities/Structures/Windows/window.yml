@@ -24,9 +24,9 @@
     - ForceFixRotations
     - Window
   - type: Sprite
-    sprite: Structures/Windows/window-base.rsi
+    sprite: Oxyd/erisported/windows/glass.rsi
   - type: Icon
-    sprite: Structures/Windows/window-base.rsi
+    sprite: Oxyd/erisported/windows/glass.rsi
     state: full
   - type: Physics
     bodyType: Static
@@ -50,6 +50,7 @@
   - type: IconSmooth
     key: walls
     base: window
+    mode: CardinalFlags
   - type: PlacementReplacement
     key: walls
   - type: InteractionPopup
@@ -76,9 +77,10 @@
   id: Window
   components:
   - type: Sprite
-    sprite: Structures/Windows/window-base.rsi
+    sprite: Oxyd/erisported/windows/glass.rsi
+    state: window0
   - type: Icon
-    sprite: Structures/Windows/window-base.rsi
+    sprite: Oxyd/erisported/windows/glass.rsi
     state: full
   - type: Damageable
     damageModifierSet: GlassMod
@@ -103,11 +105,15 @@
   name: tinted window
   components:
   - type: Sprite
-    sprite: Structures/Windows/window-tinted.rsi
+    sprite: Oxyd/erisported/windows/tinted.rsi
+    state: twindow0
   - type: Icon
-    sprite: Structures/Windows/window-tinted.rsi
+    sprite: Oxyd/erisported/windows/tinted.rsi
+    state: full
   - type: IconSmooth
+    key: walls
     base: twindow
+    mode: CardinalFlags
   - type: Construction
     graph: Window
     node: tintedWindow
@@ -194,10 +200,10 @@
   id: WindowDirectional
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: window
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: window
   - type: Damageable
     damageModifierSet: GlassMod
@@ -222,10 +228,10 @@
   suffix: Corner
   components:
   - type: Sprite
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: window_corner
   - type: Icon
-    sprite: Structures/Windows/directional.rsi
+    sprite: Oxyd/erisported/windows/directional.rsi
     state: window_corner
   - type: Fixtures
     fixtures:

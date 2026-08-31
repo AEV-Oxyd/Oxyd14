@@ -6,7 +6,11 @@
   components:
   - type: Sprite
     sprite: Structures/Windows/exo-resin.rsi
+    state: full
   - type: Icon
     sprite: Structures/Windows/exo-resin.rsi
+    state: full
   - type: IconSmooth
+    key: walls
     base: xwindow
+    mode: Corners
