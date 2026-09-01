@@ -173,7 +173,7 @@ public sealed class GunCompareFired : EntityEventArgs
     public int firedCount;
     public NetEntity target;
 }
-
+[ByRefEvent]
 public struct GunHasAmmoEvent
 {
     public string providerId;
@@ -185,7 +185,7 @@ public struct GunHasAmmoEvent
         hasAmmo = false;
     }
 }
-
+[ByRefEvent]
 public struct GunTryLoadAmmoEvent
 {
     public EntityUid ammo;
@@ -199,7 +199,7 @@ public struct GunTryLoadAmmoEvent
         prediction = pred;
     }
 }
-
+[ByRefEvent]
 public struct GunGetAmmoEvent
 {
     public string providerId;
@@ -215,7 +215,7 @@ public struct GunGetAmmoEvent
         this.prediction = prediction;
     }
 }
-
+[ByRefEvent]
 public struct GunAfterUseAmmoEvent
 {
     public string providerId;

@@ -23,7 +23,7 @@ public abstract partial class SharedOxydGunSystem
         if (TerminatingOrDeleted(args.Used))
             return;
         var ev = new GunTryLoadAmmoEvent(args.Used, true);
-        RaiseLocalEvent(gun, ev);
+        RaiseLocalEvent(gun,ref ev);
         args.Handled = ev.handled;
     }
     

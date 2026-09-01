@@ -249,7 +249,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         ammo  = null;
         projectile = null;
         var ev = new GunGetAmmoEvent(key);
-        RaiseLocalEvent(gun, ev);
+        RaiseLocalEvent(gun, ref ev);
         if (TerminatingOrDeleted(ev.ammo))
             return false;
         projectile = ev.projectile;
@@ -260,13 +260,14 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     public bool hasProviderAmmo(Entity<OxydGunComponent> gun, string key)
     {
         var ev = new GunHasAmmoEvent(key);
-        RaiseLocalEvent(gun, ev);
+        RaiseLocalEvent(gun, ref ev);
         return ev.hasAmmo;
     }
 
     public void afterProviderAmmo(Entity<OxydGunComponent> gun, string key, EntityUid ammo,  EntityUid projectile)
     {
-        RaiseLocalEvent(gun, new GunAfterUseAmmoEvent(key, ammo, projectile));
+        var ev = new GunAfterUseAmmoEvent(key, ammo, projectile);
+        RaiseLocalEvent(gun,ref ev);
     }
 
     public void applyMods(Entity<OxydProjectileComponent> projectile, CompoundedModifiers mods)

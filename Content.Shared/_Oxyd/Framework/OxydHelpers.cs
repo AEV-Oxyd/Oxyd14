@@ -65,6 +65,7 @@ public partial class SharedOxydHelpers : EntitySystem
 
     public void QueueDel(EntityUid uid)
     {
+        Log.Error($"Queuing {uid} for deletion");
         if (_netManager.IsClient)
         {
             queued.Add(uid);

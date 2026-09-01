@@ -167,7 +167,9 @@ public partial class OxydPredContainerSystem : EntitySystem
         {
             var orig = target;
             target = ConsumePredictAct(container);
-            Log.Info($"Handling predict, original {orig} , new {target}");
+            Log.Info($"Handling predict, original {orig} , new {target} on tick {gametime.CurTick}, is pred {!gametime.IsFirstTimePredicted}");
+            if (TerminatingOrDeleted(target))
+                return false;
         }
 
         if(!container.canInsert(target, prediction.Value))
