@@ -220,8 +220,7 @@ public abstract partial class BundleSystem : EntitySystem
                 return;
             }
         }
-
-        var currentTick = (int)timing.CurTick.Value;
+        var tick = timing.CurTick.Value;
         if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
             return;
         if (timing.IsFirstTimePredicted)
@@ -234,18 +233,23 @@ public abstract partial class BundleSystem : EntitySystem
                 //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
                 if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
                 {
-                    predcontainers.StorePredictAct(cont, thing);
-                    
+                    if (!comp.predictions.Get(tick, out var theque))
+                    {
+                        comp.predictions.Insert(tick, new Queue<EntityUid>());
+                    }
+                    comp.predictions[tick].Enqueue(thing);
                     //wasUsed = true;
-                    //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
+                    Log.Debug($"--Used {thing} on {ev.Target.Value} from bundle {ent.Owner}");
                     ev.Handled = true;
                     break;
                 }
             }
         }
-        else
+        else if(comp.predictions.Get(tick, out var theque) && theque.TryDequeue(out var resolved))
         {
-            interact.InteractUsing(ev.User, predcontainers.ConsumePredictAct(cont), ev.Target.Value, ev.ClickLocation, dropOverride: true);
+            interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation, dropOverride: true);
+            theque.Enqueue(resolved);
+            ev.Handled = true;
         }
     }
 

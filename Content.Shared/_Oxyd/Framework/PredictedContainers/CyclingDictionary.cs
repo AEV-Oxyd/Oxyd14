@@ -31,6 +31,7 @@ public sealed class CyclingDictionary<T>
         return false;
     }
 
+
     public T this[uint index]
     {
         get => dict[index];

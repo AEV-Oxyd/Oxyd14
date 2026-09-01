@@ -163,8 +163,13 @@ public partial class OxydPredContainerSystem : EntitySystem
         if (sc is null || oc is null)
             return false;
         prediction ??= !gametime.IsFirstTimePredicted;
-        if(handlePredict && prediction.Value)
+        if (handlePredict && prediction.Value)
+        {
+            var orig = target;
             target = ConsumePredictAct(container);
+            Log.Info($"Handling predict, original {orig} , new {target}");
+        }
+
         if(!container.canInsert(target, prediction.Value))
             return false;
         //Log.Info($"--Inserting {target} into {uid} from {key}");
@@ -175,7 +180,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         }
         else
             containers.Insert(target, mirror);
-        Log.Info($"Inserted {target} into {uid} from {container.key} on tick {gametime.CurTick}, is pred {gametime.IsFirstTimePredicted}");
+        Log.Info($"Inserted {target} into {uid} from {container.key} on tick {gametime.CurTick}, is pred {!gametime.IsFirstTimePredicted}");
         var count = container.contained.Count;
         container.insert(target, GetNetEntity(target));
         if(count != container.contained.Capacity)
@@ -285,9 +290,9 @@ public partial class OxydPredContainerSystem : EntitySystem
         if (!que.TryDequeue(out var uid))
         {
             Log.Error($"Predicted container, {container.key} has returned no entity for ConsumePredictAct at tick {gametime.CurTick}");
-            que.Enqueue(uid);
             return EntityUid.Invalid;
         }
+        que.Enqueue(uid);
 
         return uid;
     }

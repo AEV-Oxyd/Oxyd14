@@ -12,6 +12,21 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 public abstract partial class SharedOxydGunSystem
 {
     [Dependency] protected EntityWhitelistSystem whitelist = default!;
+
+    [SubscribeLocalEvent]
+    public void OnAttack(Entity<OxydGunComponent> gun, ref InteractUsingEvent args)
+    {
+        if (args.Handled)
+            return;
+        if (!HasComp<OxydBulletComponent>(args.Used))
+            return;
+        if (TerminatingOrDeleted(args.Used))
+            return;
+        var ev = new GunTryLoadAmmoEvent(args.Used, true);
+        RaiseLocalEvent(gun, ev);
+        args.Handled = ev.handled;
+    }
+    
     [SubscribeLocalEvent]
     public void ChamberInit(Entity<OxydChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
     [SubscribeLocalEvent]
@@ -45,8 +60,11 @@ public abstract partial class SharedOxydGunSystem
     {
         foreach (var (key, values) in data)
         {
+            values.capacity = values.basecapacity;
             values.store = $"{key}-{revolverStoreKey}";
             conts.CreateContainer(uid, values.store, values.capacity);
+            Array.Resize(ref values.loaded, values.capacity);
+            Array.Fill(values.loaded, EntityUid.Invalid);
         }
     }
 
@@ -184,6 +202,7 @@ public abstract partial class SharedOxydGunSystem
                 continue;
             var ammoCopy = args.ammo;
             args.handled = conts.insertEntity(gun.Owner, provider.store, ref ammoCopy, null, args.prediction);
+            Log.Debug($"Checked provider, returned {args.handled}");
             if(args.handled)
                 return;
         }

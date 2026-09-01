@@ -10,6 +10,4 @@ public partial class IgnorableComponentState : IComponentState
     /// entity clientside is this! SPCR 2026
     /// </summary>
     public NetEntity ignore = NetEntity.Invalid;
-    
-    public IgnorableComponentState(NetEntity ignore) { this.ignore = ignore;}
 }

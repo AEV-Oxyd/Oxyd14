@@ -23,4 +23,7 @@ public sealed partial class BundleComponent : Component
     public int usedVolume = 0;
     [ViewVariables]
     public Dictionary<EntityUid, BundleEntData> bundlePositions = new();
+    [ViewVariables]
+    // needed because we need acces to the ticks on which it actually happened for OUR bundle as the interactor
+    public CyclingDictionary<Queue<EntityUid>> predictions = new();
 }
