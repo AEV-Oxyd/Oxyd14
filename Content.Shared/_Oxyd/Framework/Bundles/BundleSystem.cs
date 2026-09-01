@@ -57,11 +57,14 @@ public abstract partial class BundleSystem : EntitySystem
     {
         if (!TryComp<BundableComponent>(args.uid, out var bundable))
             return;
-        comp.bundlePositions.Remove(args.uid);
-        comp.usedVolume -= bundable.volume;
-        afterRemove((uid, comp));
+        if (args.realChange)
+        {
+            comp.bundlePositions.Remove(args.uid);
+            comp.usedVolume -= bundable.volume;
+            afterRemove((uid, comp));
+        }
         if(predcontainers.GetContainer(uid, storeKey, out var cont) && cont.contained.Count == 0)
-            PredictedDel(uid);
+            PredictedQueueDel(uid);
         else
             Dirty(uid,comp);
     }
@@ -69,6 +72,8 @@ public abstract partial class BundleSystem : EntitySystem
     public void OnInsert(EntityUid uid, BundleComponent comp, PredContInserted args)
     {
         if (!TryComp<BundableComponent>(args.uid, out var bundable))
+            return;
+        if (!args.realChange)
             return;
         comp.bundlePositions.Add(args.uid, new BundleComponent.BundleEntData(){ pos = Vector2.Zero, storeAngle = Angle.Zero});
         comp.usedVolume += bundable.volume;
@@ -215,12 +220,11 @@ public abstract partial class BundleSystem : EntitySystem
                 return;
             }
         }
-
-        var currentTick = (int)timing.CurTick.Value;
+        var tick = timing.CurTick.Value;
+        if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
+            return;
         if (timing.IsFirstTimePredicted)
         {
-            if (!predcontainers.GetContainer(ent.Owner, storeKey, out var cont))
-                return;
             foreach (var thing in cont.contained.ToList())
             {
                 if (TerminatingOrDeleted(thing))
@@ -229,31 +233,23 @@ public abstract partial class BundleSystem : EntitySystem
                 //Log.Debug($"--Using {resolved} on {ev.Target.Value} from bundle {ent.Owner},  tick {timing.CurTick}");
                 if (interact.InteractUsing(ev.User, thing, ev.Target.Value, ev.ClickLocation, dropOverride: true))
                 {
-                    if(comp.predictionInsertions.Get(currentTick, out var que))
-                        que.Enqueue(thing);
-                    else
+                    if (!comp.predictions.Get(tick, out var theque))
                     {
-                        var q = new Queue<EntityUid>();
-                        q.Enqueue(thing);
-                        comp.predictionInsertions.Insert(currentTick, q);
+                        comp.predictions.Insert(tick, new Queue<EntityUid>());
                     }
-                    
+                    comp.predictions[tick].Enqueue(thing);
                     //wasUsed = true;
-                    //Log.Debug($"--Used {resolved} on {ev.Target.Value} from bundle {ent.Owner}");
+                    Log.Debug($"--Used {thing} on {ev.Target.Value} from bundle {ent.Owner}");
                     ev.Handled = true;
                     break;
                 }
             }
         }
-        else
+        else if(comp.predictions.Get(tick, out var theque) && theque.TryDequeue(out var resolved))
         {
-            if(comp.predictionInsertions.Get(currentTick, out var queue) && queue.TryDequeue(out var insertin))
-            {
-                if(interact.InteractUsing(ev.User, insertin, ev.Target.Value, ev.ClickLocation, dropOverride: true))
-                    queue.Enqueue(insertin);
-                else
-                    Log.Debug($"Failed to reinsert predicted entity {insertin} into {ev.Target.Value} from bundle {ent.Owner}");
-            }
+            interact.InteractUsing(ev.User, resolved, ev.Target.Value, ev.ClickLocation, dropOverride: true);
+            theque.Enqueue(resolved);
+            ev.Handled = true;
         }
     }
 
@@ -264,14 +260,16 @@ public abstract partial class BundleSystem : EntitySystem
             return false;
         var proto = prototypes.Index<BundleGroup>(bundle.Comp.group);
         if (ent.Comp.volume + bundle.Comp.usedVolume >= proto.volume)
-            return false; 
-        if (!predcontainers.insertEntity(bundle, storeKey, ent))
+            return false;
+        var targ = ent.Owner;
+        if (!predcontainers.insertEntity(bundle, storeKey, ref targ))
             return false;
         return true;
     }
     public void RemoveFromBundle(Entity<BundleComponent> bundle, Entity<BundableComponent> ent)
     {
-        if (!predcontainers.removeEntity(bundle, storeKey, ent))
+        var cpy = ent.Owner;
+        if (!predcontainers.removeEntity(bundle, storeKey, ref cpy))
             return;
         Log.Debug($"Removing {ent} from {bundle}");
         bundle.Comp.usedVolume -= ent.Comp.volume;

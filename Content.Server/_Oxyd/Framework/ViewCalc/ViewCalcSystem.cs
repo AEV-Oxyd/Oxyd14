@@ -18,13 +18,11 @@ public class ViewTickEvent : EntityEventArgs
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ViewCalcSystem : EntitySystem
+public sealed partial class ViewCalcSystem : EntitySystem
 {
-    [Dependency] private FixtureSystem fixtures = default!;
     [Dependency] private RayCastSystem raycaster = default!;
     [Dependency] private TransformSystem transform = default!;
     [Dependency] private EntityLookupSystem entlook = default!;
-    [Dependency] private SharedBroadphaseSystem broadphase = default!;
     [Dependency] private IGameTiming timing = default!;
     public float passed = 0;
     public EntityQueryEnumerator<ViewTickerComponent> tickerEnum = default!;

@@ -14,6 +14,7 @@ using Robust.Shared.Map.Components;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -41,9 +42,10 @@ public static class DamageHelpers
 }
 
 
-public class SharedOxydHelpers : EntitySystem
+public partial class SharedOxydHelpers : EntitySystem
 {
     [Dependency] private  INetManager _netManager = default!;
+    [Dependency] private ISharedPlayerManager playman = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private  IConfigurationManager _config = default!;
     [Dependency] private  EntityWhitelistSystem _whitelistSystem = default!;
@@ -63,12 +65,46 @@ public class SharedOxydHelpers : EntitySystem
 
     public void QueueDel(EntityUid uid)
     {
+        Log.Error($"Queuing {uid} for deletion");
         if (_netManager.IsClient)
         {
             queued.Add(uid);
         }
         else
-            EntityManager.QueueDeleteEntity(uid);
+            QueueDel(uid);
+    }
+
+    public bool shouldIgnoreState(IComponentState? state)
+    {
+        if (state is IgnorableComponentState cast && playman.LocalEntity is EntityUid real && cast.ignore == GetNetEntity(real))
+            return true;
+        return false;
+    }
+    public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
+    {
+        lst ??= new();
+        //Log.Debug($"Extracting {variable}");
+        switch( variable)
+        {
+            case null:
+                break;
+            case EntityUid c:
+                if(c != EntityUid.Invalid)
+                    lst.Add(c);
+                break;
+            case IEnumerable array:
+                foreach(var thing in array)
+                    extractEntitities(thing, lst);
+                break;
+            case ItemSlot slot:
+                if (slot.Item is null || slot.Item.Value == EntityUid.Invalid)
+                    break;
+                //Log.Debug($"got item Slot item {slot.Item.Value}");
+                lst.Add(slot.Item.Value);
+                break;
+        }
+
+        return lst;
     }
 
     public HashSet<Entity<T>> GetChildrenWithComp<T>(EntityUid uid) where T : Component

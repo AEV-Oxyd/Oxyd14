@@ -10,7 +10,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 
 public abstract partial class SharedOxydGunSystem : EntitySystem
 {
-    [Dependency] private readonly SharedCuffableSystem _cuff = default!;
+    [Dependency] private SharedCuffableSystem _cuff = default!;
 
     public void ResetFiremode(GunFiremodePrototype fire, Entity<OxydGunComponent> gun, EntityUid? shooter )
     {

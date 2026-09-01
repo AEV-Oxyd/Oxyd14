@@ -60,7 +60,7 @@ public sealed class CompoundedModifiers
     [ViewVariables(VVAccess.ReadWrite)]
     public float workspeedMult = 1;
     [ViewVariables(VVAccess.ReadWrite)]
-    public float gunCapacityAdd = 0;
+    public int gunCapacityAdd = 0;
     [ViewVariables(VVAccess.ReadWrite)]
         // unimplemented
     public float toolCapacityAdd = 0;
@@ -84,7 +84,7 @@ public sealed partial class RemoveAttachmentEvent : DoAfterEvent
 }
 
 [Serializable, NetSerializable]
-public sealed partial class ModifiersUpdatedEvent : EntityEventArgs
+public record struct ModifiersUpdatedEvent
 {
     public required CompoundedModifiers mods;
 }
@@ -139,7 +139,7 @@ public sealed partial class OxydModifiersSystem : EntitySystem
             return;
         foreach (var id in ent.Comp.insert)
         {
-            var entId = EntityManager.SpawnNextToOrDrop(id, ent.Owner);
+            var entId = SpawnNextToOrDrop(id, ent.Owner);
             if (TerminatingOrDeleted(entId))
             {
                 Log.Error($"Invalid entity {entId} in OxydAttachmentSpawnerComponent {ent}!");

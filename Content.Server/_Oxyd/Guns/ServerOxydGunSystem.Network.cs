@@ -22,108 +22,9 @@ public partial class ServerOxydGunSystem
         Log.Debug($"Mouse:{stat}");
         gun.mouseDown = stat;
         gun.lastNetMouseUpdate = _gameTiming.CurTime;
-        gun.stateCounter--;
     }
-
-    public List<EntityUid> extractEntitities(object? variable, List<EntityUid>? lst)
-    {
-        lst ??= new();
-        //Log.Debug($"Extracting {variable}");
-        switch( variable)
-        {
-            case null:
-                break;
-            case EntityUid c:
-                if(c != EntityUid.Invalid)
-                    lst.Add(c);
-                break;
-            case IEnumerable array:
-                foreach(var thing in array)
-                    extractEntitities(thing, lst);
-                break;
-            case ItemSlot slot:
-                if (slot.Item is null || slot.Item.Value == EntityUid.Invalid)
-                    break;
-                //Log.Debug($"got item Slot item {slot.Item.Value}");
-                lst.Add(slot.Item.Value);
-                break;
-        }
-
-        return lst;
-    }
-    public Dictionary<EntityUid, List<IComponent>> getInvolvedComponents(Entity<OxydGunComponent> gun)
-    {
-        var dict = new Dictionary<EntityUid, List<IComponent>>();
-        var firemode = gun.Comp.selectedFiremodePrototype;
-        if (!_factory.TryGetRegistration(firemode.providerComp, out var registration))
-            return dict;
-        if (EntityManager.TryGetComponent(gun.Owner, registration, out var comp))
-        {
-            var targetType = comp.GetType();
-            dict.Add(gun.Owner, new List<IComponent>() {comp});
-            foreach (var field in targetType.GetAllFields())
-            {
-                var indexed = false;
-                foreach (var data in field.CustomAttributes)
-                {
-                    if (data.AttributeType != typeof(CheckForGunUpdateAttribute))
-                        continue;
-                    if(data.ConstructorArguments.Count == 1 && data.ConstructorArguments[0].Value is bool truth)
-                        indexed = truth;
-                    goto fieldCheck;
-                }
-                continue;
-            fieldCheck:
-                var fieldValue = field.GetValue(comp);
-                //Log.Debug($"Got field {field.Name} with value {fieldValue}");
-                if (fieldValue is null)
-                    continue;
-                if (indexed && fieldValue is IEnumerable enumerable)
-                {
-                    fieldValue = enumerable.Cast<object?>().ToList()[firemode.shootingPosIndex];
-                    //Log.Debug($"Is Indexed, casting got us {fieldValue} {fieldValue is IEnumerable}");
-                }
-
-                foreach (var thing in extractEntitities(fieldValue, null))
-                {
-                    getInvolvedComponents(thing, dict);
-                }
-            }
-        }
-        return dict;
-    }
-
-    public void getInvolvedComponents(EntityUid target, Dictionary<EntityUid, List<IComponent>> dict)
-    {
-        var comps = EntityManager.GetComponents<OxydGunProvidersComponent>(target);
-        dict.TryAdd(target, new List<IComponent>());
-        //Log.Debug($"Verifying {target} at second level");
-        foreach(var comp in comps)
-        {
-            //Log.Debug($"Got component {comp}");
-            dict[target].Add(comp);
-            var targetType = comp.GetType();
-            foreach (var field in targetType.GetAllFields())
-            {
-                foreach (var data in field.CustomAttributes)
-                {
-                    if (data.AttributeType != typeof(CheckForGunUpdateAttribute))
-                        continue;
-                    goto fieldCheck;
-                }
-                continue;
-                fieldCheck:
-                var fieldValue = field.GetValue(comp);
-                //Log.Debug($"Second level indexation got {fieldValue} {field.Name}");
-                if (fieldValue is null)
-                    continue;
-                foreach (var thing in extractEntitities(fieldValue, null))
-                {
-                    getInvolvedComponents(thing, dict);
-                }
-            }
-        }
-    }
+    
+   
     public void onTryStateGun(Entity<OxydGunComponent> ent, ref ComponentGetStateAttemptEvent args)
     {
         //Log.Debug($"getstate {args.Player} {ent.Comp}");
@@ -381,15 +282,7 @@ public partial class ServerOxydGunSystem
         handler.shooterEntity = EntityUid.Invalid;
         handler.catchupNeeded = 0;
         handler.ticksFoward = 0;
-        // this wont get to user since  the state is sessionSpecific handled, just everyone else
         Dirty(gun, gunComp);
-        var dict = getInvolvedComponents((gun, gunComp));
-        //Log.Debug($"Involved returned {dict.Keys.Count} targets with {dict.Values.Sum(x => x.Count)} components");
-        foreach (var (target, components) in dict)
-        {
-            foreach(var comp in components)
-                Dirty(target, comp);
-        }
         RaiseNetworkEvent(new GunCompareFired(){firedCount = (int)gunComp.timesFired, target = args.gun});
     }
 

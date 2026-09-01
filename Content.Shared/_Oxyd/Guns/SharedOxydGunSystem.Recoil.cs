@@ -5,14 +5,7 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 /// </summary>
 public partial class SharedOxydGunSystem : EntitySystem
 {
-    public void InitRecoil()
-    {
-        SubscribeLocalEvent<RecoilHandlerComponent, ComponentStartup>(onStart);
-        SubscribeLocalEvent<RecoilHandlerComponent, RecoilChangedEvent>(onChange);
-        SubscribeLocalEvent<RecoilHandlerComponent, GunAfterFireIndividualProjectileEvent>(onFireGun);
-        SubscribeLocalEvent<RecoilHandlerComponent, GunGetInaccuracyEvent>(OnRequestRecoil);
-    }
-
+    [SubscribeLocalEvent]
     public void onStart(Entity<RecoilHandlerComponent> ent, ref ComponentStartup args)
     {
         EnsureComp<ActiveRecoilHandlerComponent>(ent);
@@ -22,18 +15,20 @@ public partial class SharedOxydGunSystem : EntitySystem
         return (curRecoil + 1) / maxRecoil * maxDev/2;
     }
 
+    [SubscribeLocalEvent]
     public void OnRequestRecoil(Entity<RecoilHandlerComponent> ent, ref GunGetInaccuracyEvent args)
     {
         if(_gameTiming.CurTick.Value - args.simTick.Value == 0)
             args.addedInaccuracy += getRecoilDeviation(ent.Comp.currentRecoil, ent.Comp.maxRecoil, ent.Comp.maxDeviation);
     }
 
+    [SubscribeLocalEvent]
     public void onChange(Entity<RecoilHandlerComponent> ent, ref RecoilChangedEvent args)
     {
         ent.Comp.currentRecoil = Math.Clamp(args.currentRecoil, 0, ent.Comp.maxRecoil);
     }
 
-
+    [SubscribeLocalEvent]
     public void onFireGun(Entity<RecoilHandlerComponent> ent, ref GunAfterFireIndividualProjectileEvent args)
     {
         if (!TryComp<OxydBulletOnFireRecoilComponent>(args.projectile, out var rec))

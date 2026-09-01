@@ -12,8 +12,8 @@ public sealed partial class PredContState : IComponentState
 [Serializable, NetSerializable]
 public struct ContWrap
 {
-    public OxydContainer c;
-    public short? s;
+    public required OxydContainer c;
+    public required List<short> s;
 }
 
 /// <summary>
@@ -22,7 +22,8 @@ public struct ContWrap
 [RegisterComponent, NetworkedComponent]
 public sealed partial class OxydPredContComponent : Component
 {
-    [ViewVariables]public Dictionary<string, OxydContainer> containers = new();
+    [ViewVariables] public Dictionary<string, OxydContainer> containers = new();
+    [ViewVariables] public TimeSpan lastState = new();
 }
 [Serializable, NetSerializable]
 public class OxydContainer
@@ -33,6 +34,7 @@ public class OxydContainer
     [NonSerialized, ViewVariables] public List<EntityUid> contained = new();
     [NonSerialized, ViewVariables] public List<short> checksums = new(4);
     [NonSerialized, ViewVariables] public GameTick lastChange = new();
+    [NonSerialized, ViewVariables] public CyclingDictionary<Queue<EntityUid>> predictions = new();
 
     public static short createHash(NetEntity ent, OxydContainerAction act)
     {
@@ -60,11 +62,19 @@ public class OxydContainer
         }
     }
 
-    public void insert(EntityUid ent, NetEntity netEnt)
+    public void insert(EntityUid ent, NetEntity netEnt, int? index = null)
     {
         if (!contained.Contains(ent))
         {
-            contained.Add(ent);
+            if (index is not null)
+            {
+                contained.Insert(index.Value, ent);
+            }
+            else
+            {
+                contained.Add(ent);
+            }
+
             netContained.Add(netEnt);
             checksums.Add(createHash(netEnt, OxydContainerAction.Add));
             if(checksums.Count > 20)
@@ -94,17 +104,19 @@ public enum OxydContainerAction
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContInserted(EntityUid uid, Entity<OxydPredContComponent> container);
+public record struct PredContInserted(EntityUid uid, Entity<OxydPredContComponent> holder, OxydContainer container, bool realChange = true);
+
 /// <summary>
 ///  removed on non-predicted tick
 /// </summary>
 /// <param name="uid"></param>
 /// <param name="container"></param>
-public record PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> container);
+public record struct PredContRemoved(EntityUid uid, Entity<OxydPredContComponent> holder, OxydContainer container,  bool realChange = true);
 /// <summary>
 /// Handled state and we had a reset due to mismatch between server-client , rebuild everything associated.
 /// </summary>
 /// <param name="container"></param>
 /// <param name="resetted"></param>
+///
 
-public record PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);
+public record struct PredContStateReset(Entity<OxydPredContComponent> container, Dictionary<string, OxydContainer> resetted);

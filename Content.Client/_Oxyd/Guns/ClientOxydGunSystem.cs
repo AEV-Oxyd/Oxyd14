@@ -61,8 +61,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
         {
+            /*
             if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
                 args.suffix += "mag";
+                */
         }
     }
 
