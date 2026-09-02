@@ -140,6 +140,7 @@ public abstract partial class SharedOxydGunSystem
                 Array.Fill(provider.loaded, EntityUid.Invalid);
             }
         }
+        Dirty(gun);
     }
     
     [SubscribeLocalEvent]
@@ -228,7 +229,10 @@ public abstract partial class SharedOxydGunSystem
         EntityUid target = EntityUid.Invalid;
         if (_gameTiming.IsFirstTimePredicted)
         {
-            if (!cont.contained.TryGetValue(data.index, out target))
+            var o = data.index++;
+            if(data.index >= data.capacity)
+                data.index = 0;
+            if (!cont.contained.TryGetValue(o, out target))
                 return;
         }
         else if (!args.prediction)
@@ -241,14 +245,5 @@ public abstract partial class SharedOxydGunSystem
         args.projectile = bullet.projectileEntity;
     }
     
-
-    [SubscribeLocalEvent]
-    public void RevolverAfterUse(Entity<OxydRevolvingChamberComponent> gun, ref GunAfterUseAmmoEvent args)
-    {
-        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
-            return;
-        data.index++;
-        if(data.index >= data.capacity)
-            data.index = 0;
-    }
+    
 }

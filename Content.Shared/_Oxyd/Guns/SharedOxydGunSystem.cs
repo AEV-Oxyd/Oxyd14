@@ -353,20 +353,26 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         param.Pitch += mods.soundPitch;
         HashSet<Entity<OxydProjectileComponent>> projectiles = new();
         var sameTickCounter = 0;
+        var gbfev = new GunBeforeFireIndividualProjectileEvent()
+        {
+            simTick = gun.Comp.simulateAsTick
+        };
+        var gafev =  new GunAfterFireIndividualProjectileEvent()
+        {
+            simTick = gun.Comp.simulateAsTick
+        };
         while (shots-- > 0)
         {
             Log.Debug($"Firing gun ---");
-            if(!getProjectileLoaded(shooter, gun,gunFiremodePrototype, mods, out var projectileNullable, out var used))
-                return projectiles;
-            var shootSound = gunFiremodePrototype.fireSound;
-            var shootEv = new GunBeforeFireIndividualProjectileEvent()
+            if (!getProjectileLoaded(shooter, gun, gunFiremodePrototype, mods, out var projectileNullable, out var used))
             {
-                projectile = projectileNullable.Value,
-                simTick = gun.Comp.simulateAsTick
-            };
-            RaiseLocalEvent(gun.Owner, shootEv);
+                continue;
+            }
+            var shootSound = gunFiremodePrototype.fireSound;
+            gbfev.projectile = projectileNullable.Value;
+            RaiseLocalEvent(gun.Owner, gbfev);
             if(shooter != gun.Owner)
-                RaiseLocalEvent(shooter, shootEv);
+                RaiseLocalEvent(shooter, gbfev);
             Entity<OxydProjectileComponent> projectile = projectileNullable.Value;
             projectile.Comp.initialMovement *= gunFiremodePrototype.SpeedMultiplier;
             projectile.Comp.initialMovement *= GetBulletInitialMovementDirection(projectile, gun, mods, shootingFrom, targetPos, shooter);
@@ -377,21 +383,19 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             _projectileSystem.queueProjectile(projectile);
             gun.Comp.timesFired++;
             sameTickCounter++;
-            var afterEv = new GunAfterFireIndividualProjectileEvent()
-            {
-                projectile = projectileNullable.Value,
-                simTick = gun.Comp.simulateAsTick
-            };
+            gafev.projectile = projectile;
             var filter = Filter.Pvs(gun, _help.getRangeToPvsMultiplier(25f + mods.soundRange));
             if (_netManager.IsServer)
                 filter.RemoveWhereAttachedEntity(play => play == shooter);
             _audio.PlayEntity(_audio.ResolveSound(shootSound), filter, gun.Owner, true, param.WithPlayOffset((float)gunFiremodePrototype.spentBudget.TotalSeconds));
-            RaiseLocalEvent(gun.Owner, afterEv);
+            RaiseLocalEvent(gun.Owner, gafev);
             if(shooter != gun.Owner)
-                RaiseLocalEvent(shooter, afterEv);
+                RaiseLocalEvent(shooter, gafev);
             afterProviderAmmo(gun,gunFiremodePrototype.providerId, used.Value, projectile.Owner);
         }
 
+        if (sameTickCounter == 0)
+            return projectiles;
         RaiseLocalEvent(gun.Owner, new GunFiredEvent()
         {
             projectiles = projectiles,

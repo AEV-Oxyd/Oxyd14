@@ -71,7 +71,7 @@ public partial class SharedOxydHelpers : EntitySystem
             queued.Add(uid);
         }
         else
-            QueueDel(uid);
+            EntityManager.QueueDeleteEntity(uid);
     }
 
     public bool shouldIgnoreState(IComponentState? state)

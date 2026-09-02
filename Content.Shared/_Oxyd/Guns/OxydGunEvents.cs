@@ -143,20 +143,20 @@ public sealed class GunSafetyChangedEvent : EntityEventArgs
 
 public sealed  class GunFiredEvent : EntityEventArgs
 {
-    public required HashSet<Entity<OxydProjectileComponent>> projectiles;
+    public HashSet<Entity<OxydProjectileComponent>> projectiles = new();
 
     public GameTick simTick;
 }
 
 public sealed class GunBeforeFireIndividualProjectileEvent : EntityEventArgs
 {
-    public required Entity<OxydProjectileComponent> projectile;
+    public Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
 public sealed class GunAfterFireIndividualProjectileEvent : EntityEventArgs
 {
-    public required Entity<OxydProjectileComponent> projectile;
+    public Entity<OxydProjectileComponent> projectile;
     public GameTick simTick;
 }
 
@@ -173,6 +173,31 @@ public sealed class GunCompareFired : EntityEventArgs
     public int firedCount;
     public NetEntity target;
 }
+
+[ByRefEvent]
+public struct GunFireResultEvent
+{
+    public string providerId;
+    public bool fired = false;
+    
+    public GunFireResultEvent(string id, bool succes)
+    {
+        this.providerId = id;
+        fired = succes;
+    }
+}
+
+[ByRefEvent]
+public struct GunFailedFireEvent
+{
+    public string providerId;
+    
+    public GunFailedFireEvent(string id)
+    {
+        this.providerId = id;
+    }
+}
+
 [ByRefEvent]
 public struct GunHasAmmoEvent
 {
@@ -215,6 +240,9 @@ public struct GunGetAmmoEvent
         this.prediction = prediction;
     }
 }
+/// <summary>
+///  ammo/projectile can be null/ invalid
+/// </summary>
 [ByRefEvent]
 public struct GunAfterUseAmmoEvent
 {
