@@ -85,6 +85,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             content.c.key = key;
             content.c.checksums = new();
             content.c.contained = new();
+            content.c.predictions = new();
             content.c.checksums = content.s;
             ent.Comp.containers[key] = content.c;
             foreach (var id in content.c.netContained)

@@ -248,7 +248,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
     {
         ammo  = null;
         projectile = null;
-        var ev = new GunGetAmmoEvent(key);
+        var ev = new GunTryGetAmmoEvent(key);
         RaiseLocalEvent(gun, ref ev);
         if (TerminatingOrDeleted(ev.ammo))
             return false;
@@ -553,6 +553,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             {
                 firemodePrototype.currentStep = 0;
                 ResetEffs(firemodePrototype);
+                break;
             }
         }
 

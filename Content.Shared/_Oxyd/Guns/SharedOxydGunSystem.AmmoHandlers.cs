@@ -216,11 +216,11 @@ public abstract partial class SharedOxydGunSystem
             return;
         if (!conts.GetContainer(gun, data.store, out var cont))
             return;
-        args.hasAmmo = !TerminatingOrDeleted(data.loaded[data.index]);
+        args.hasAmmo = cont.contained.Count != 0;
     }
 
     [SubscribeLocalEvent]
-    public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunGetAmmoEvent args)
+    public void RevolverGetAmmo(Entity<OxydRevolvingChamberComponent> gun, ref GunTryGetAmmoEvent args)
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
             return;
@@ -232,6 +232,7 @@ public abstract partial class SharedOxydGunSystem
             var o = data.index++;
             if(data.index >= data.capacity)
                 data.index = 0;
+            Log.Warning($"Index now {data.index}");
             if (!cont.contained.TryGetValue(o, out target))
                 return;
         }

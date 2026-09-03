@@ -225,14 +225,14 @@ public struct GunTryLoadAmmoEvent
     }
 }
 [ByRefEvent]
-public struct GunGetAmmoEvent
+public struct GunTryGetAmmoEvent
 {
     public string providerId;
     public EntityUid ammo;
     public EntProtoId projectile;
     public bool prediction;
 
-    public GunGetAmmoEvent(string id, bool prediction = false)
+    public GunTryGetAmmoEvent(string id, bool prediction = false)
     {
         providerId = id;
         ammo = EntityUid.Invalid;

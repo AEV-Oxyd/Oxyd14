@@ -78,7 +78,7 @@ public class OxydContainer
             netContained.Add(netEnt);
             checksums.Add(createHash(netEnt, OxydContainerAction.Add));
             if(checksums.Count > 20)
-                checksums = checksums.GetRange(10, checksums.Count);
+                checksums = checksums = checksums.GetRange(checksums.Count-10, 10);
         }
     }
 
