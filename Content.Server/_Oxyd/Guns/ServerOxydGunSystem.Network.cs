@@ -144,7 +144,7 @@ public partial class ServerOxydGunSystem
         if (ev.newState != gcomp.safety)
         {
             Log.Error($"State desync on switching firearm safety of gun {gun} , by player {switcher}");
-            DirtyEntity(gun);
+            Dirty(gun, gcomp);
         }
     }
 

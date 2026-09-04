@@ -243,8 +243,8 @@ public abstract partial class SharedOxydGunSystem
             var o = data.index++;
             if(data.index >= data.capacity)
                 data.index = 0;
-            Log.Warning($"Index now {data.index}");
-            if (!cont.contained.TryGetValue(o, out target))
+            Log.Warning($"Index now {data.index}, {o}");
+            if (!data.loaded.TryGetValue(o, out target))
                 return;
         }
         else if (!args.prediction)
