@@ -76,7 +76,7 @@ public partial class SharedOxydHelpers : EntitySystem
 
     public bool shouldIgnoreState(IComponentState? state)
     {
-        if (state is IgnorableComponentState cast && playman.LocalEntity is EntityUid real && cast.ignore == GetNetEntity(real))
+        if (state is IgnorableComponentState cast && playman.LocalEntity is EntityUid real && cast.ignore == GetNetEntity(real) && !TerminatingOrDeleted(real))
             return true;
         return false;
     }

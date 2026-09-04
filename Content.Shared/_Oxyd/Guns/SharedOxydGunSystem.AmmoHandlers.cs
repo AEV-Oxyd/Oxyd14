@@ -60,7 +60,8 @@ public abstract partial class SharedOxydGunSystem
     {
         foreach (var (key, values) in data)
         {
-            values.capacity = values.basecapacity;
+            if (values.capacity == 0)
+                values.capacity = values.basecapacity;
             values.store = $"{key}-{revolverStoreKey}";
             conts.CreateContainer(uid, values.store, values.capacity);
             Array.Resize(ref values.loaded, values.capacity);
@@ -89,6 +90,8 @@ public abstract partial class SharedOxydGunSystem
     [SubscribeLocalEvent]
     public void RevolverGetState(Entity<OxydRevolvingChamberComponent> gun, ref ComponentGetState args)
     {
+        if (_netManager.IsClient)
+            return;
         var dict = new Dictionary<string, RevolverNetworkData>();
         foreach (var (key, data) in gun.Comp.providers)
         {
@@ -98,7 +101,9 @@ public abstract partial class SharedOxydGunSystem
                 loadedNet = data.loaded.Select(ent => GetNetEntity(ent)).ToArray()
             };
         }
-        var state = new RevolverDataState(){ providers = dict }; 
+        var state = new RevolverDataState(){ providers = dict };
+        args.State = state;
+        Log.Info($"Acquired revolver state, {state.providers.Count} providers, {state.providers.Sum(x => x.Value.loadedNet.Length)} loaded");
         
         state.ignore = FindActionActor((gun, Comp<OxydGunComponent>(gun)));
     }
@@ -108,12 +113,14 @@ public abstract partial class SharedOxydGunSystem
     {
         if (_help.shouldIgnoreState(args.Current))
             return;
+        // C# Hellbug where doing gun.comp.providers[key] apparently never materialized any change!!
+        var dictRef = gun.Comp.providers;
         if (args.Current is RevolverDataState state)
         {
             foreach (var (key, data) in state.providers)
             {
-                gun.Comp.providers[key] = data.data;
-                Array.Resize(ref data.data.loaded, data.data.capacity);
+                dictRef[key] = data.data;
+                data.data.loaded = new EntityUid[data.data.capacity];
                 Array.Fill(data.data.loaded, EntityUid.Invalid);
                 for(var i = 0; i < data.loadedNet.Length; i++)
                 {
@@ -122,6 +129,7 @@ public abstract partial class SharedOxydGunSystem
                         continue;
                     data.data.loaded[i] = ent;
                 }
+                Log.Warning($"Applied revolver state with {data.data.capacity} , key is now {gun.Comp.providers[key].capacity} for {key}");
             }
         }
     }
@@ -136,11 +144,14 @@ public abstract partial class SharedOxydGunSystem
             foreach (var provider in gun.Comp.providers.Values)
             {
                 provider.capacity += args.mods.gunCapacityAdd;
+                conts.SetContainerCapacity(gun, provider.store, provider.capacity);
                 Array.Resize(ref provider.loaded, provider.capacity);
                 Array.Fill(provider.loaded, EntityUid.Invalid);
             }
+            Log.Warning($"Applying mods on revolver");
+            Dirty(gun);
         }
-        Dirty(gun);
+        
     }
     
     [SubscribeLocalEvent]

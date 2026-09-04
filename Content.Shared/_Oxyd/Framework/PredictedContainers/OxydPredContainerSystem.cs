@@ -34,7 +34,7 @@ public partial class OxydPredContainerSystem : EntitySystem
     [SubscribeLocalEvent]
     public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
     {
-        if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont))
+        if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont) && cont.contained.Contains(args.Entity))
         {
             var cpy = args.Entity;
             removeEntity(uid, baseCont.ID, ref cpy, handlePredict: false);
@@ -169,9 +169,9 @@ public partial class OxydPredContainerSystem : EntitySystem
             var orig = target;
             target = ConsumePredictAct(container);
             Log.Info($"Handling predict, original {orig} , new {target} on tick {gametime.CurTick}, is pred {!gametime.IsFirstTimePredicted}");
-            if (TerminatingOrDeleted(target))
-                return false;
         }
+        if (TerminatingOrDeleted(target))
+            return false;
 
         if(!container.canInsert(target, prediction.Value))
             return false;
@@ -219,6 +219,8 @@ public partial class OxydPredContainerSystem : EntitySystem
             target = ConsumePredictAct(container);
         }
         if (sc is null || oc is null)
+            return false;
+        if (TerminatingOrDeleted(target))
             return false;
         if (!container.canRemove(target, GetNetEntity(target),prediction.Value))
             return false;
