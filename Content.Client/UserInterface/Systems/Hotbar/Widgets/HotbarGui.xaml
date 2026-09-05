@@ -5,7 +5,7 @@
     xmlns:widgets="clr-namespace:Content.Client.UserInterface.Systems.Hotbar.Widgets"
     Name="HotbarInterface"
     VerticalExpand="True"
-    VerticalAlignment="Bottom"
+    VerticalAlignment="Top"
     Orientation="Vertical"
     HorizontalAlignment="Center">
     <BoxContainer Orientation="Vertical">

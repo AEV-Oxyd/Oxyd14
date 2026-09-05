@@ -16,27 +16,30 @@
     VerticalExpand="False"
     VerticalAlignment="Bottom"
     HorizontalAlignment="Center">
-    <SplitContainer Name="ScreenContainer" HorizontalExpand="True" VerticalExpand="True" SplitWidth="0" StretchDirection="TopLeft">
-        <LayoutContainer Name="ViewportContainer" HorizontalExpand="True" VerticalExpand="True">
-            <controls:MainViewport Name="MainViewport"/>
-            <widgets:GhostGui Name="Ghost" Access="Protected" />
-            <inventory:InventoryGui Name="Inventory" Access="Protected"/>
-            <hotbar:HotbarGui Name="Hotbar" Access="Protected"/>
-            <BoxContainer Name="TopLeftContainer" Orientation="Vertical">
+    <VBox>
+        <HBox MinHeight="980">
+            <VBox MinWidth="435" VerticalExpand="True" Name="LeftSplit">
                 <actions:ActionsBar Name="Actions" Access="Protected" />
+                <alerts:AlertsUI Name="Alerts" Access="Protected" />
                 <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
-            </BoxContainer>
-            <alerts:AlertsUI Name="Alerts" Access="Protected" />
-        </LayoutContainer>
-        <PanelContainer Name="SeparatedChatPanel" MinWidth="500">
-            <PanelContainer.PanelOverride>
-                <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
-            </PanelContainer.PanelOverride>
-
-            <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="10" Margin="10">
-                <ui:StatPanel Name="StatPanel" MinHeight="300"/>
-                <chat:ChatBox StyleClasses="ChatOutput" VerticalExpand="True" HorizontalExpand="True" Name="Chat" Access="Protected" MinSize="0 0"/>
-            </BoxContainer>
-        </PanelContainer>
-    </SplitContainer>
+                <inventory:InventoryGui Name="Inventory" Access="Protected"/>
+            </VBox>
+            <VBox MinWidth="980" MinHeight="980" Name="ViewportContainer">
+                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True"/>
+            </VBox>
+            <PanelContainer Name="SeparatedChatPanel" MinWidth="435">
+                <PanelContainer.PanelOverride>
+                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
+                </PanelContainer.PanelOverride>
+                <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="10" Margin="10">
+                    <ui:StatPanel Name="StatPanel" MinHeight="300"/>
+                    <chat:ChatBox StyleClasses="ChatOutput" VerticalExpand="True" HorizontalExpand="True" Name="Chat" Access="Protected" MinSize="0 0"/>
+                </BoxContainer>
+            </PanelContainer>
+        </HBox>
+        <HBox MinHeight="100" MinWidth="1920" HorizontalAlignment="Center" VerticalAlignment="Top">
+            <widgets:GhostGui Name="Ghost" Access="Protected" />
+            <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+        </HBox>
+    </VBox>
 </ui:ErisUIGameScreen>

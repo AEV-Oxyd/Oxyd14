@@ -21,32 +21,18 @@ public sealed partial class ErisUIGameScreen : InGameScreen
         RobustXamlLoader.Load(this);
 
         AutoscaleMaxResolution = new Vector2i(1080, 770);
-
-        SetAnchorPreset(ScreenContainer, LayoutPreset.Wide);
-        SetAnchorPreset(ViewportContainer, LayoutPreset.Wide);
-        SetAnchorPreset(MainViewport, LayoutPreset.Wide);
-        SetAnchorAndMarginPreset(Inventory, LayoutPreset.BottomLeft, margin: 5);
-        SetAnchorAndMarginPreset(TopLeftContainer, LayoutPreset.TopLeft, margin: 10);
-        SetAnchorAndMarginPreset(Ghost, LayoutPreset.BottomWide, margin: 80);
-        SetAnchorAndMarginPreset(Hotbar, LayoutPreset.BottomWide, margin: 5);
-        SetAnchorAndMarginPreset(Alerts, LayoutPreset.CenterRight, margin: 10);
-
-        ScreenContainer.OnSplitResizeFinished += () =>
-            OnChatResized?.Invoke(new Vector2(ScreenContainer.SplitFraction, 0));
-
-        ViewportContainer.OnResized += ResizeActionContainer;
+        
     }
 
     private void ResizeActionContainer()
     {
-        float indent = 20;
-        Actions.ActionsContainer.MaxGridWidth = ViewportContainer.Size.X - indent;
+        Actions.ActionsContainer.MaxGridWidth = LeftSplit.MinWidth;
     }
 
     public override ChatBox ChatBox => GetWidget<ChatBox>()!;
 
     public override void SetChatSize(Vector2 size)
     {
-        ScreenContainer.ResizeMode = SplitContainer.SplitResizeMode.RespectChildrenMinSize;
+        //ScreenContainer.ResizeMode = SplitContainer.SplitResizeMode.RespectChildrenMinSize;
     }
 }
