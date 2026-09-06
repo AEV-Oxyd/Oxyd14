@@ -32,7 +32,7 @@ from eris_cardinal_bake import TILE, write_rsi
 from eris_dmi import frame, parse_dmi
 
 ERIS_FLOORING = Path("/Users/russellrozario/Desktop/SS13-14/CEV-Eris/icons/turf/flooring")
-OXYD = Path("/Users/russellrozario/Desktop/SS13-14/Oxyd14")
+OXYD = Path(__file__).resolve().parents[1]
 OUT_TEX = OXYD / "Resources/Textures/Oxyd/erisported"
 OUT_YAML = OXYD / "Resources/Prototypes/_Oxyd/Decals/tile_borders.yml"
 
@@ -56,6 +56,7 @@ OLD_PIECE_STATES = (
 # Inner corners: plating/under/hull explicit; steel/white/dark/techmaint inherit
 # TURF_HAS_INNER_CORNERS from /decl/flooring/tiling.
 FLOOR_MAP: list[tuple[str, str, str, bool]] = [
+    # --- foundation 19 (do not modify / do not re-bake unless intentional) ---
     ("tiles_steel", "tiles_steel.dmi", "tiles", True),
     ("steel_gray_perforated", "tiles_steel.dmi", "gray_perforated", True),
     ("steel_gray_platform", "tiles_steel.dmi", "gray_platform", True),
@@ -75,6 +76,48 @@ FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
     ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
     ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
+    # --- PR C mapper-only ZERO/WEAK (append; leave A strong retargets alone) ---
+    # Derelict (has_inner=False — edges dirs=8, no _corners)
+    ("derelict1", "derelict.dmi", "derelict1", False),
+    ("derelict2", "derelict.dmi", "derelict2", False),
+    ("derelict3", "derelict.dmi", "derelict3", False),
+    ("derelict4", "derelict.dmi", "derelict4", False),
+    # Steel
+    ("steel_danger", "tiles_steel.dmi", "danger", True),
+    ("steel_cyancorner", "tiles_steel.dmi", "cyancorner", True),
+    ("steel_violetcorener", "tiles_steel.dmi", "violetcorener", True),
+    ("steel_brown_platform", "tiles_steel.dmi", "brown_platform", True),
+    ("steel_panels", "tiles_steel.dmi", "panels", True),
+    ("steel_brown_perforated", "tiles_steel.dmi", "brown_perforated", True),
+    ("steel_bar_dance", "tiles_steel.dmi", "bar_dance", True),
+    ("steel_bar_light", "tiles_steel.dmi", "bar_light", True),
+    # White
+    ("white_danger", "tiles_white.dmi", "danger", True),
+    ("white_cyancorner", "tiles_white.dmi", "cyancorner", True),
+    ("white_violetcorener", "tiles_white.dmi", "violetcorener", True),
+    ("white_brown_platform", "tiles_white.dmi", "brown_platform", True),
+    ("white_panels", "tiles_white.dmi", "panels", True),
+    ("white_techfloor", "tiles_white.dmi", "techfloor", True),
+    ("white_techfloor_grid", "tiles_white.dmi", "techfloor_grid", True),
+    ("white_gray_perforated", "tiles_white.dmi", "gray_perforated", True),
+    ("white_cargo", "tiles_white.dmi", "cargo", True),
+    ("white_gray_platform", "tiles_white.dmi", "gray_platform", True),
+    ("white_bluecorner", "tiles_white.dmi", "bluecorner", True),
+    ("white_orangecorner", "tiles_white.dmi", "orangecorner", True),
+    ("white_monofloor", "tiles_white.dmi", "monofloor", True),
+    # Dark
+    ("dark_danger", "tiles_dark.dmi", "danger", True),
+    ("dark_cyancorner", "tiles_dark.dmi", "cyancorner", True),
+    ("dark_violetcorener", "tiles_dark.dmi", "violetcorener", True),
+    ("dark_brown_platform", "tiles_dark.dmi", "brown_platform", True),
+    ("dark_panels", "tiles_dark.dmi", "panels", True),
+    ("dark_techfloor_grid", "tiles_dark.dmi", "techfloor_grid", True),
+    ("dark_brown_perforated", "tiles_dark.dmi", "brown_perforated", True),
+    ("dark_gray_perforated", "tiles_dark.dmi", "gray_perforated", True),
+    ("dark_cargo", "tiles_dark.dmi", "cargo", True),
+    ("dark_bluecorner", "tiles_dark.dmi", "bluecorner", True),
+    ("dark_orangecorner", "tiles_dark.dmi", "orangecorner", True),
+    ("dark_monofloor", "tiles_dark.dmi", "monofloor", True),
 ]
 
 
@@ -168,6 +211,19 @@ def clear_rsi_pngs(rsi_dir: Path) -> None:
         p.unlink()
 
 
+def ensure_fill(tiles: dict, icon_base: str, stem: str) -> None:
+    """Write {stem}_base.png from DMI icon_base frame 0 if missing. Never overwrite."""
+    base_png = OUT_TEX / f"{stem}_base.png"
+    if base_png.is_file():
+        return
+    if icon_base not in tiles:
+        raise KeyError(f"missing fill state {icon_base!r} for stem {stem}")
+    img = frame(tiles, icon_base, 0)
+    base_png.parent.mkdir(parents=True, exist_ok=True)
+    img.save(base_png)
+    print(f"fill: wrote {base_png.name}")
+
+
 def bake_floor(
     stem: str,
     dmi_name: str,
@@ -188,6 +244,8 @@ def bake_floor(
     if has_inner and (corners not in tiles or tiles[corners]["dirs"] != 8):
         raise KeyError(f"{dmi_name}: missing dirs=8 state {corners!r}")
 
+    ensure_fill(tiles, icon_base, stem)
+
     rsi_dir = OUT_TEX / f"{stem}.rsi"
     files: dict[str, Image.Image] = {}
     states: list[dict] = []
@@ -199,15 +257,11 @@ def bake_floor(
     clear_rsi_pngs(rsi_dir)
     write_rsi(rsi_dir, files, states, COPYRIGHT)
 
-    # Leave sibling fill alone.
-    base_png = OUT_TEX / f"{stem}_base.png"
-    if not base_png.is_file():
-        print(f"WARNING: missing fill {base_png.name}")
-
     return len(files)
 
 
 def generate_yaml(stems: list[str], masks: list[int]) -> None:
+    """Full rewrite — kept for reference; prefer append_yaml for PR C+."""
     lines = [
         "# Server-generated floor rims. Not mapper-placeable; stripped from map YAML.",
         "# States are rotation-canonical adjacency masks (hex, no 0x): \"00\"..\"fe\".",
@@ -236,17 +290,70 @@ def generate_yaml(stems: list[str], masks: list[int]) -> None:
     OUT_YAML.write_text("\n".join(lines))
 
 
+def yaml_has_stem(text: str, stem: str) -> bool:
+    """True if tile_borders.yml already contains this stem's section."""
+    if f"# {stem}.rsi" in text:
+        return True
+    if f"id: TileBorder-{stem}-00" in text:
+        return True
+    return False
+
+
+def append_yaml(stems: list[str], masks: list[int]) -> list[str]:
+    """Append # {stem}.rsi sections for stems not already present. Never deletes."""
+    if not OUT_YAML.is_file():
+        raise FileNotFoundError(f"missing {OUT_YAML}; cannot append without existing YAML")
+    text = OUT_YAML.read_text()
+    # Ensure trailing newline before append
+    if text and not text.endswith("\n"):
+        text += "\n"
+
+    added: list[str] = []
+    chunks: list[str] = []
+    for stem in stems:
+        if yaml_has_stem(text, stem):
+            print(f"yaml: skip existing {stem}")
+            continue
+        lines = [f"# {stem}.rsi"]
+        for mask in masks:
+            st = state_name(mask)
+            lines.append("- type: decal")
+            lines.append("  parent: TileBorderBase")
+            lines.append(f"  id: TileBorder-{stem}-{st}")
+            lines.append("  sprite:")
+            lines.append(f"    sprite: Oxyd/erisported/{stem}.rsi")
+            lines.append(f"    state: {st}")
+            lines.append("")
+        chunks.append("\n".join(lines))
+        added.append(stem)
+
+    if chunks:
+        with OUT_YAML.open("a", encoding="utf-8") as f:
+            if not text.endswith("\n\n") and not text.endswith("\n"):
+                f.write("\n")
+            elif not text.endswith("\n"):
+                f.write("\n")
+            for chunk in chunks:
+                f.write(chunk)
+                if not chunk.endswith("\n"):
+                    f.write("\n")
+        print(f"yaml: appended {len(added)} stems -> {OUT_YAML}")
+    else:
+        print("yaml: nothing to append")
+    return added
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--only",
         nargs="*",
-        help="Bake only these RSI stems (default: all 19)",
+        help="Bake only these RSI stems (default: all FLOOR_MAP)",
     )
     parser.add_argument(
         "--skip-yaml",
         action="store_true",
-        help="Do not regenerate tile_borders.yml",
+        help="Do not append tile_borders.yml",
     )
     args = parser.parse_args()
 
@@ -271,11 +378,14 @@ def main() -> None:
         print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
 
     if not args.skip_yaml:
-        # YAML always lists all wired stems (full FLOOR_MAP), using canonical masks.
-        generate_yaml([row[0] for row in FLOOR_MAP], masks)
-        print(f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} stems x {len(masks)} states)")
+        # APPEND-ONLY: never rewrite whole tile_borders.yml.
+        # When --only: append just those stems; when all: append any missing from FLOOR_MAP.
+        yaml_stems = [row[0] for row in selected]
+        appended = append_yaml(yaml_stems, masks)
+        print(f"yaml append-only: requested={len(yaml_stems)} added={len(appended)}")
 
     print(f"canonical_masks={len(masks)} names={state_name(masks[0])}..{state_name(masks[-1])}")
+    print(f"OXYD={OXYD}")
 
 
 if __name__ == "__main__":
