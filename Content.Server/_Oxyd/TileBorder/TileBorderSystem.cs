@@ -36,18 +36,15 @@ public sealed partial class TileBorderSystem : EntitySystem
     {
         base.Initialize();
         RebuildIndex();
-        SubscribeLocalEvent<GridInitializeEvent>(OnGridInit);
-        SubscribeLocalEvent<TileChangedEvent>(OnTileChanged);
-        SubscribeLocalEvent<PostGridSplitEvent>(OnGridSplit);
-        SubscribeLocalEvent<GridRemovalEvent>(OnGridRemoved);
-        SubscribeLocalEvent<PrototypesReloadedEventArgs>(OnPrototypesReloaded);
     }
 
+    [SubscribeLocalEvent]
     private void OnGridInit(GridInitializeEvent ev)
     {
         RebuildGrid(ev.EntityUid, ev.Grid);
     }
 
+    [SubscribeLocalEvent]
     private void OnTileChanged(ref TileChangedEvent args)
     {
         var grid = args.Entity.Owner;
@@ -66,6 +63,7 @@ public sealed partial class TileBorderSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnGridSplit(ref PostGridSplitEvent ev)
     {
         if (_gridQuery.TryComp(ev.OldGrid, out var oldGrid))
@@ -75,11 +73,7 @@ public sealed partial class TileBorderSystem : EntitySystem
             RebuildGrid(ev.Grid, grid);
     }
 
-    private void OnGridRemoved(GridRemovalEvent ev)
-    {
-        // No dirty sets to clear; DecalSystem owns decal storage on the removed grid.
-    }
-
+    [SubscribeLocalEvent]
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs args)
     {
         if (!args.WasModified<ContentTileDefinition>() && !args.WasModified<DecalPrototype>())
