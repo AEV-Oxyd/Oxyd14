@@ -8,40 +8,211 @@
   },
   "states": [
     {
-      "name": "n"
+      "name": "00"
     },
     {
-      "name": "s"
+      "name": "01"
     },
     {
-      "name": "e"
+      "name": "02"
     },
     {
-      "name": "w"
+      "name": "03"
     },
     {
-      "name": "out-ne"
+      "name": "05"
     },
     {
-      "name": "out-nw"
+      "name": "06"
     },
     {
-      "name": "out-se"
+      "name": "07"
     },
     {
-      "name": "out-sw"
+      "name": "09"
     },
     {
-      "name": "in-ne"
+      "name": "0a"
     },
     {
-      "name": "in-nw"
+      "name": "0b"
     },
     {
-      "name": "in-se"
+      "name": "0d"
     },
     {
-      "name": "in-sw"
+      "name": "0e"
+    },
+    {
+      "name": "0f"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "1a"
+    },
+    {
+      "name": "1b"
+    },
+    {
+      "name": "1d"
+    },
+    {
+      "name": "1e"
+    },
+    {
+      "name": "1f"
+    },
+    {
+      "name": "22"
+    },
+    {
+      "name": "23"
+    },
+    {
+      "name": "25"
+    },
+    {
+      "name": "26"
+    },
+    {
+      "name": "27"
+    },
+    {
+      "name": "29"
+    },
+    {
+      "name": "2a"
+    },
+    {
+      "name": "2b"
+    },
+    {
+      "name": "2d"
+    },
+    {
+      "name": "2e"
+    },
+    {
+      "name": "2f"
+    },
+    {
+      "name": "33"
+    },
+    {
+      "name": "35"
+    },
+    {
+      "name": "36"
+    },
+    {
+      "name": "37"
+    },
+    {
+      "name": "39"
+    },
+    {
+      "name": "3a"
+    },
+    {
+      "name": "3b"
+    },
+    {
+      "name": "3d"
+    },
+    {
+      "name": "3e"
+    },
+    {
+      "name": "3f"
+    },
+    {
+      "name": "55"
+    },
+    {
+      "name": "56"
+    },
+    {
+      "name": "57"
+    },
+    {
+      "name": "5a"
+    },
+    {
+      "name": "5b"
+    },
+    {
+      "name": "5e"
+    },
+    {
+      "name": "5f"
+    },
+    {
+      "name": "66"
+    },
+    {
+      "name": "67"
+    },
+    {
+      "name": "6a"
+    },
+    {
+      "name": "6b"
+    },
+    {
+      "name": "6e"
+    },
+    {
+      "name": "6f"
+    },
+    {
+      "name": "77"
+    },
+    {
+      "name": "7a"
+    },
+    {
+      "name": "7b"
+    },
+    {
+      "name": "7e"
+    },
+    {
+      "name": "7f"
+    },
+    {
+      "name": "aa"
+    },
+    {
+      "name": "ab"
+    },
+    {
+      "name": "af"
+    },
+    {
+      "name": "bb"
+    },
+    {
+      "name": "bf"
     }
   ]
 }
