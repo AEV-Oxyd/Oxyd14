@@ -22,8 +22,9 @@
 - type: tile
   id: FloorGrass
   name: tiles-planet-grass-floor
-  sprite: /Textures/Tiles/Grass/grass.png
-  variants: 6
+  sprite: /Textures/Oxyd/erisported/grass_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/grass.rsi
   baseTurf: FloorDirt
   footstepSounds:
     collection: FootstepGrass

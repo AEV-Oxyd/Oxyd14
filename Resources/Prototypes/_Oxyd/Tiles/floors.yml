@@ -55,3 +55,25 @@
   variants: 1
   borderSprites: /Textures/Oxyd/erisported/techmaint_panels.rsi
   itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorTechMaintCargo
+  parent: BaseStationTile
+  name: tiles-techmaint-cargo
+  sprite: /Textures/Oxyd/erisported/techmaint_cargo_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint_cargo.rsi
+  footstepSounds:
+    collection: FootstepHull
+  itemDrop: FloorTileItemSteelMaint
+
+- type: tile
+  id: FloorTechMaintPerforated
+  parent: BaseStationTile
+  name: tiles-techmaint-perforated
+  sprite: /Textures/Oxyd/erisported/techmaint_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint_perforated.rsi
+  footstepSounds:
+    collection: FootstepHull
+  itemDrop: FloorTileItemSteelMaint
