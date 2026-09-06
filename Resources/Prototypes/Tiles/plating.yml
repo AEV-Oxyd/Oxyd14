@@ -70,7 +70,10 @@
 - type: tile
   id: Lattice
   name: tiles-lattice
-  sprite: /Textures/Tiles/lattice.png
+  sprite: /Textures/Oxyd/erisported/lattices_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/lattices.rsi
+  borderGroup: Lattice
   baseTurf: Space
   isSubfloor: true
   deconstructTools: [ Cutting ]
@@ -82,4 +85,3 @@
   itemDrop: PartRodMetal1
   heatCapacity: 10000
   mass: 200
-  variants: 3
