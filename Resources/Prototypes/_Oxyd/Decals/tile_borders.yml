@@ -9205,6 +9205,7 @@
   sprite:
     sprite: Oxyd/erisported/techmaint_panels.rsi
     state: bf
+
 # derelict1.rsi
 - type: decal
   parent: TileBorderBase

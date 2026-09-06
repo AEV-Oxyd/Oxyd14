@@ -329,9 +329,10 @@ def append_yaml(stems: list[str], masks: list[int]) -> list[str]:
 
     if chunks:
         with OUT_YAML.open("a", encoding="utf-8") as f:
-            if not text.endswith("\n\n") and not text.endswith("\n"):
+            # Ensure a blank line separator from prior content.
+            if not text.endswith("\n"):
                 f.write("\n")
-            elif not text.endswith("\n"):
+            if not text.endswith("\n\n"):
                 f.write("\n")
             for chunk in chunks:
                 f.write(chunk)
