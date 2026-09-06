@@ -26,6 +26,7 @@ public enum SlotFlags
     LEGS = 1 << 13,
     FEET = 1 << 14,
     SUITSTORAGE = 1 << 15,
+    DEPENDANTRENDER = 1<<16, // if dependencies not fulfilled do not render
     All = ~NONE,
 
     WITHOUT_POCKET = All & ~POCKET

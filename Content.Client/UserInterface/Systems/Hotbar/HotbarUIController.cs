@@ -70,7 +70,7 @@ public sealed class HotbarUIController : UIController
             container.SlotGroup = container.SlotGroup;
         }
 
-        _inventory?.RegisterInventoryBarContainer(inventory.InventoryHotbar);
+        //_inventory?.RegisterInventoryBarContainer(inventory.InventoryHotbar);
     }
 
     private static IEnumerable<ItemSlotButtonContainer> GetAllItemSlotContainers(Control gui)

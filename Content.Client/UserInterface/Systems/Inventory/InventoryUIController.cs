@@ -12,6 +12,7 @@ using Content.Client.UserInterface.Systems.Inventory.Windows;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Hands.Components;
 using Content.Shared.Input;
+using Content.Shared.Inventory;
 using Content.Shared.Inventory.VirtualItem;
 using Content.Shared.Storage;
 using Robust.Client.GameObjects;
@@ -60,6 +61,16 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
 
         if (UIManager.GetActiveUIWidgetOrNull<InventoryGui>() is { } inventoryGui)
             RegisterInventoryButton(inventoryGui.InventoryButton);
+    }
+
+    private bool ShouldRender(SlotDefinition slotDef)
+    {
+        if (_playerUid is null || slotDef.DependsOn is null)
+            return true;
+        if ((slotDef.SlotFlags & SlotFlags.DEPENDANTRENDER) == SlotFlags.NONE)
+            return true;
+        Log.Info($"ShouldRender: {slotDef.Name} , {_inventorySystem.HasDependenciesFulfilled(_playerUid.Value, slotDef)}");
+        return _inventorySystem.HasDependenciesFulfilled(_playerUid.Value, slotDef);
     }
 
     public void OnStateEntered(GameplayState state)
@@ -148,6 +159,8 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
                 button = CreateSlotButton(data);
                 container.TryAddButton(button);
             }
+
+            button.Visible = ShouldRender(data.SlotDef);
 
             var showStorage = _entities.HasComponent<StorageComponent>(data.HeldEntity);
             var update = new SlotSpriteUpdate(data.HeldEntity, data.SlotGroup, data.SlotName, showStorage);

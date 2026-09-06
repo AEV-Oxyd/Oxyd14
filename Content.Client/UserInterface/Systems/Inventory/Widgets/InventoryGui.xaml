@@ -13,7 +13,7 @@
         <controls:SlotButton
             Name="InventoryButton"
             Access="Public"
-            Visible="False"
+            Visible="True"
             VerticalAlignment="Bottom"
             HorizontalExpand="False"
             VerticalExpand="False"
@@ -21,7 +21,7 @@
         <inventory:ItemSlotButtonContainer
             Name="InventoryHotbar"
             Access="Public"
-            Visible="False"
+            Visible="True"
             MaxColumns="3"
             SlotGroup="Default"
             ExpandBackwards="True"

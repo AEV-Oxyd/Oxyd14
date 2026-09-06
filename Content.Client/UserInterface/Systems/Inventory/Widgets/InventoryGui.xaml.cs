@@ -11,8 +11,8 @@ public sealed partial class InventoryGui : UIWidget
     {
         RobustXamlLoader.Load(this);
 
-        var inventoryUIController = UserInterfaceManager.GetUIController<InventoryUIController>();
-        inventoryUIController.RegisterInventoryBarContainer(InventoryHotbar);
+        //var inventoryUIController = UserInterfaceManager.GetUIController<InventoryUIController>();
+        //inventoryUIController.RegisterInventoryBarContainer(InventoryHotbar);
 
         LayoutContainer.SetGrowVertical(this, LayoutContainer.GrowDirection.Begin);
     }
