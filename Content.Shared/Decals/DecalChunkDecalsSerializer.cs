@@ -9,6 +9,7 @@ using Robust.Shared.Serialization.Markdown.Value;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Generic;
 using Robust.Shared.Serialization.TypeSerializers.Interfaces;
+using Content.Shared._Oxyd.TileBorder;
 using Robust.Shared.Utility;
 
 namespace Content.Shared.Decals;
@@ -68,6 +69,10 @@ public sealed partial class DecalChunkDecalsSerializer : ITypeSerializer<Diction
 
         foreach (var (id, decal) in value)
         {
+            // Runtime floor rims are regenerated from tiles; do not persist them in maps.
+            if (TileBorderDecals.IsGenerated(decal.Id))
+                continue;
+
             var data = new DecalData(decal);
             groups.GetOrNew(data).Add((id, decal.Coordinates));
         }
