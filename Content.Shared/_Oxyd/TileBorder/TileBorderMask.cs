@@ -5,23 +5,11 @@ namespace Content.Shared._Oxyd.TileBorder;
 /// <summary>
 /// 8-neighbour rim selection for tiles that set <see cref="ContentTileDefinition.BorderSprites"/>.
 /// Bit i is set when the neighbour in <see cref="Direction"/> i shares the origin group.
+/// Mask bits follow Direction: S=0, SE=1, E=2, NE=3, N=4, NW=5, W=6, SW=7.
 /// </summary>
 public static class TileBorderMask
 {
     public const byte InteriorMask = 0xFF;
-
-    public const string North = "n";
-    public const string South = "s";
-    public const string East = "e";
-    public const string West = "w";
-    public const string OutNorthEast = "out-ne";
-    public const string OutNorthWest = "out-nw";
-    public const string OutSouthEast = "out-se";
-    public const string OutSouthWest = "out-sw";
-    public const string InNorthEast = "in-ne";
-    public const string InNorthWest = "in-nw";
-    public const string InSouthEast = "in-se";
-    public const string InSouthWest = "in-sw";
 
     public static bool IsInterior(byte mask) => mask == InteriorMask;
 
@@ -52,49 +40,36 @@ public static class TileBorderMask
     }
 
     /// <summary>
-    /// Appends RSI state names in draw order: cardinals, then outer corners, then inner corners.
+    /// Rotate neighbour-link bits 90° clockwise: bit i moves to bit (i - 2) mod 8.
     /// </summary>
-    public static void AppendLayers(byte mask, List<string> states)
+    public static byte RotateClockwise(byte mask)
     {
-        var n = Linked(mask, Direction.North);
-        var s = Linked(mask, Direction.South);
-        var e = Linked(mask, Direction.East);
-        var w = Linked(mask, Direction.West);
-        var ne = Linked(mask, Direction.NorthEast);
-        var nw = Linked(mask, Direction.NorthWest);
-        var se = Linked(mask, Direction.SouthEast);
-        var sw = Linked(mask, Direction.SouthWest);
-
-        if (!n)
-            states.Add(North);
-        if (!s)
-            states.Add(South);
-        if (!e)
-            states.Add(East);
-        if (!w)
-            states.Add(West);
-
-        if (!n && !e)
-            states.Add(OutNorthEast);
-        if (!n && !w)
-            states.Add(OutNorthWest);
-        if (!s && !e)
-            states.Add(OutSouthEast);
-        if (!s && !w)
-            states.Add(OutSouthWest);
-
-        if (n && e && !ne)
-            states.Add(InNorthEast);
-        if (n && w && !nw)
-            states.Add(InNorthWest);
-        if (s && e && !se)
-            states.Add(InSouthEast);
-        if (s && w && !sw)
-            states.Add(InSouthWest);
+        return (byte) ((mask >> 2) | (mask << 6));
     }
 
-    private static bool Linked(byte mask, Direction dir)
+    /// <summary>
+    /// Among the four clockwise 90° rotations of <paramref name="mask"/>, pick the numerically
+    /// smallest as the canonical bake key. <paramref name="cwTurns"/> is how many CW turns from
+    /// the original mask to that canonical (0..3), used as Decal.Angle = cwTurns * 90°.
+    /// </summary>
+    public static byte Canonicalize(byte mask, out int cwTurns)
     {
-        return (mask & (1 << (int) dir)) != 0;
+        var best = mask;
+        var bestTurns = 0;
+        var current = mask;
+
+        for (var turns = 0; turns < 4; turns++)
+        {
+            if (current < best)
+            {
+                best = current;
+                bestTurns = turns;
+            }
+
+            current = RotateClockwise(current);
+        }
+
+        cwTurns = bestTurns;
+        return best;
     }
 }

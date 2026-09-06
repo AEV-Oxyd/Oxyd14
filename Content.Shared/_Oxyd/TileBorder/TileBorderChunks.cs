@@ -1,11 +1,11 @@
-using System.Numerics;
 using Robust.Shared.Map.Components;
 
 namespace Content.Shared._Oxyd.TileBorder;
 
 /// <summary>
-/// Tile indexing for floor rims: chunk lookup for decal storage and per-tile rebuild scoping.
-/// A tile's rim depends on its 8 neighbours, so a change rebuilds only that tile and its neighbours.
+/// Pure math helpers for floor-rim rebuild scoping.
+/// A tile's rim depends on its 8 neighbours, so a change rebuilds that tile and its neighbours.
+/// Not used for DecalChunk / chunk-entity access — DecalSystem owns storage.
 /// </summary>
 public static class TileBorderChunks
 {
