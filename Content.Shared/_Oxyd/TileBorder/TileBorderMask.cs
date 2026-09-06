@@ -1,4 +1,5 @@
 using Content.Shared.Maps;
+using Robust.Shared.Maths;
 
 namespace Content.Shared._Oxyd.TileBorder;
 
@@ -12,6 +13,25 @@ public static class TileBorderMask
     public const byte InteriorMask = 0xFF;
 
     public static bool IsInterior(byte mask) => mask == InteriorMask;
+
+    /// <summary>
+    /// Eris-style cardinal connection mask: N=1, S=2, E=4, W=8 (BYOND cardinals).
+    /// Diagonals in <paramref name="mask"/> are ignored.
+    /// </summary>
+    public static byte CardinalDirSum(byte mask)
+    {
+        byte sum = 0;
+        // Direction enum: S=0, E=2, N=4, W=6
+        if ((mask & (1 << (int) Direction.North)) != 0)
+            sum |= 1;
+        if ((mask & (1 << (int) Direction.South)) != 0)
+            sum |= 2;
+        if ((mask & (1 << (int) Direction.East)) != 0)
+            sum |= 4;
+        if ((mask & (1 << (int) Direction.West)) != 0)
+            sum |= 8;
+        return sum;
+    }
 
     public static string ResolveGroup(string id, string? borderGroup)
     {

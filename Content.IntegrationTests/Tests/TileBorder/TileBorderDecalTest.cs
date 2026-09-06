@@ -187,6 +187,88 @@ public sealed class TileBorderDecalTest : GameTest
         });
     }
 
+    [Test]
+    public async Task LatticeIsSpace_EmitsTileBorderOnFreshPlace()
+    {
+        // Evidence: IsSpace exception lets TileBorder-lattices-* persist on Lattice.
+        var pair = Pair;
+        var server = pair.Server;
+        var map = await pair.CreateTestMap(initialized: true);
+        var grid = map.Grid;
+
+        await server.WaitPost(() =>
+        {
+            var tiles = server.ResolveDependency<ITileDefinitionManager>();
+            var maps = server.System<SharedMapSystem>();
+            var lattice = new Tile(tiles["Lattice"].TileId);
+
+            maps.SetTile(grid.Owner, grid.Comp, new Vector2i(1, 1), lattice);
+            maps.SetTile(grid.Owner, grid.Comp, new Vector2i(2, 1), lattice);
+        });
+
+        await server.WaitAssertion(() =>
+        {
+            var decals = server.System<DecalSystem>();
+            var tiles = server.ResolveDependency<ITileDefinitionManager>();
+            var def = (ContentTileDefinition) tiles["Lattice"];
+            Assert.That(def.MapAtmosphere, Is.True);
+            Assert.That(def.BorderRotate, Is.False);
+
+            var left = GeneratedAt(decals, grid.Owner, new Vector2i(1, 1));
+            var right = GeneratedAt(decals, grid.Owner, new Vector2i(2, 1));
+            Assert.That(left, Does.Contain("TileBorder-lattices-04"),
+                $"left expected E-connected 04, got [{string.Join(',', left)}]");
+            Assert.That(right, Does.Contain("TileBorder-lattices-08"),
+                $"right expected W-connected 08, got [{string.Join(',', right)}]");
+
+            Assert.That(decals.TryAddDecal(
+                "TileBorder-lattices-00",
+                new EntityCoordinates(grid.Owner, new Vector2(5, 5)),
+                out _,
+                zIndex: TileBorderDecals.ZIndex,
+                cleanable: false), Is.True);
+
+            // Empty tile at (5,5) is space — ordinary decal must still fail.
+            Assert.That(decals.TryAddDecal(
+                "WoodTrimThinBox",
+                new EntityCoordinates(grid.Owner, new Vector2(5, 5)),
+                out _,
+                zIndex: 0,
+                cleanable: false), Is.False);
+        });
+    }
+
+
+    [Test]
+    public async Task LatticeLinksTowardNonSpaceFloor()
+    {
+        // Eris parity: lattice dir_sum includes non-space solid neighbours.
+        var pair = Pair;
+        var server = pair.Server;
+        var map = await pair.CreateTestMap(initialized: true);
+        var grid = map.Grid;
+
+        await server.WaitPost(() =>
+        {
+            var tiles = server.ResolveDependency<ITileDefinitionManager>();
+            var maps = server.System<SharedMapSystem>();
+            var lattice = new Tile(tiles["Lattice"].TileId);
+            var steel = new Tile(tiles["FloorSteel"].TileId);
+
+            maps.SetTile(grid.Owner, grid.Comp, new Vector2i(1, 1), lattice);
+            maps.SetTile(grid.Owner, grid.Comp, new Vector2i(2, 1), steel);
+        });
+
+        await server.WaitAssertion(() =>
+        {
+            var decals = server.System<DecalSystem>();
+            var left = GeneratedAt(decals, grid.Owner, new Vector2i(1, 1));
+            // Lattice west of FloorSteel → E bit set → dir_sum 04
+            Assert.That(left, Does.Contain("TileBorder-lattices-04"),
+                $"lattice next to FloorSteel expected E-link 04, got [{string.Join(',', left)}]");
+        });
+    }
+
     private static string[] GeneratedAt(DecalSystem decals, EntityUid grid, Vector2i tile)
     {
         var origin = new Vector2(tile.X, tile.Y);

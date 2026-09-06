@@ -47,6 +47,13 @@ public sealed partial class ContentTileDefinition : IPrototype, IInheritingProto
     /// </summary>
     [DataField] public ResPath? BorderSprites { get; private set; }
 
+    /// <summary>
+    /// When true (default), rim art is rotation-canonical and oriented with Decal.Angle.
+    /// When false (e.g. Eris lattices), bake states are absolute cardinal patterns — use
+    /// cardinal dir_sum as the state key and leave Angle at zero.
+    /// </summary>
+    [DataField] public bool BorderRotate { get; private set; } = true;
+
     [DataField("isSubfloor")] public bool IsSubFloor { get; private set; }
 
     [DataField]

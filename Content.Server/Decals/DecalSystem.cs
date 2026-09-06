@@ -127,8 +127,12 @@ public sealed partial class DecalSystem : SharedDecalSystem
             var tilePos = (Vector2) change.GridIndices;
             var bounds = new Box2(tilePos, tilePos + Vector2.One);
 
-            foreach (var (id, _) in GetDecalsIntersecting(args.Entity, bounds))
+            foreach (var (id, decal) in GetDecalsIntersecting(args.Entity, bounds))
             {
+                // Lattice is isSpace but still needs TileBorder connection frames.
+                if (TileBorderDecals.IsGenerated(decal.Id))
+                    continue;
+
                 toDelete.Add(id);
             }
         }
@@ -224,7 +228,10 @@ public sealed partial class DecalSystem : SharedDecalSystem
         if (gridId == null || !_gridQuery.TryComp(gridId.Value, out var grid))
             return false;
 
-        if (_turf.IsSpace(_mapSystem.GetTileRef(gridId.Value, grid, coordinates)))
+        // Allow server-authored TileBorder frames on isSpace tiles (e.g. Lattice).
+        // Ordinary crayon/map decals stay blocked on space.
+        if (_turf.IsSpace(_mapSystem.GetTileRef(gridId.Value, grid, coordinates))
+            && !TileBorderDecals.IsGenerated(decal.Id))
             return false;
 
         var chunk = GetOrCreateDecalChunk(gridId.Value, decal.Coordinates);
