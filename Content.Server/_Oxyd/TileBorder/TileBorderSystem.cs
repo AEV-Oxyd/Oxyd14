@@ -42,12 +42,14 @@ public sealed partial class TileBorderSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnGridInit(GridInitializeEvent ev)
     {
+        EnsureIndex();
         RebuildGrid(ev.EntityUid, ev.Grid);
     }
 
     [SubscribeLocalEvent]
     private void OnTileChanged(ref TileChangedEvent args)
     {
+        EnsureIndex();
         var grid = args.Entity.Owner;
         if (!_gridQuery.TryComp(grid, out var gridComp))
             return;
@@ -79,6 +81,7 @@ public sealed partial class TileBorderSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnGridSplit(ref PostGridSplitEvent ev)
     {
+        EnsureIndex();
         if (_gridQuery.TryComp(ev.OldGrid, out var oldGrid))
             RebuildGrid(ev.OldGrid, oldGrid);
 
@@ -115,7 +118,18 @@ public sealed partial class TileBorderSystem : EntitySystem
     }
 
     /// <summary>
-    /// RebuildIndex ONLY from Initialize and PrototypesReloaded — never from Update.
+    /// Tile definitions / decal prototypes can register after system Initialize (e.g. the
+    /// integration-test harness), which would otherwise leave the rim caches permanently
+    /// empty and skip every emission silently. Rebuild the index lazily on first use.
+    /// </summary>
+    private void EnsureIndex()
+    {
+        if (_byTypeId.Count == 0)
+            RebuildIndex();
+    }
+
+    /// <summary>
+    /// RebuildIndex ONLY from Initialize, PrototypesReloaded and EnsureIndex — never from Update.
     /// </summary>
     private void RebuildIndex()
     {
@@ -184,9 +198,11 @@ public sealed partial class TileBorderSystem : EntitySystem
         }
         else
         {
-            // Absolute cardinal art (Eris lattices): full-tile frames, no Decal.Angle.
-            // Always emit dir_sum 00–0f (including 0x0F). Requires DecalSystem to allow
-            // TileBorder-* on isSpace tiles (Lattice).
+            // Absolute cardinal art (Eris lattices): the frame IS the tile art over a
+            // transparent fill, so every dir_sum 00..0f is emitted — isolated (00:
+            // capped square), partial connections (01..0e) and interiors (0f: full
+            // mesh) each render their own state. No Decal.Angle rotation. Requires
+            // DecalSystem to allow TileBorder-* on isSpace tiles (Lattice).
             stateKey = TileBorderMask.CardinalDirSum(mask);
             rotation = Angle.Zero;
         }

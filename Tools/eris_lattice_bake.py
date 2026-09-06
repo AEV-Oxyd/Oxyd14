@@ -6,8 +6,12 @@ Eris picks icon_state = "lattice[dir_sum]" from BYOND cardinals only (N=1 S=2 E=
 
 These frames are absolute cardinal patterns — they must NOT be rotated via Decal.Angle.
 Runtime (BorderRotate: false) uses TileBorderMask.CardinalDirSum(mask) as the state key
-(00..0f) with Angle zero and ALWAYS emits a decal (including 0x0F).
-Requires DecalSystem TileBorder-* allowlist on isSpace (Lattice). Fill is lattices_base.png.
+(00..0f) with Angle zero and emits the frame on EVERY lattice tile: the frames are the
+sole per-tile art, drawn over an empty (transparent) tile fill so open sides show space.
+State 0f (lattice15 == lattice0) is the full Eris mesh square for interior tiles; state 00
+is a bespoke isolated frame — lattice0 trimmed ~5px from every edge so an unconnected
+lattice reads as a capped square instead of the interlocking mesh.
+Requires DecalSystem TileBorder-* allowlist on isSpace (Lattice). Fill is transparent.
 """
 
 from __future__ import annotations
@@ -44,6 +48,24 @@ def lattice_frame(tiles: dict, dir_sum: int) -> Image.Image:
     return frame(tiles, name, DIR_S if st["dirs"] == 4 else 0, 0).copy()
 
 
+def isolated_frame(tiles: dict) -> Image.Image:
+    """State 00: lattice0 (the full mesh square) trimmed 5px on every side.
+
+    Eris renders an isolated lattice as the full interlocking mesh (lattice0 ==
+    lattice15), which reads as 'connected everywhere'. Trimming the outer struts
+    leaves the same Eris art as a self-contained capped square whose bars never
+    touch a tile edge.
+    """
+    st = tiles["lattice0"]
+    im = frame(tiles, "lattice0", DIR_S if st["dirs"] == 4 else 0, 0).copy()
+    p = im.load()
+    for y in range(32):
+        for x in range(32):
+            if x < 5 or x > 26 or y < 5 or y > 26:
+                p[x, y] = (0, 0, 0, 0)
+    return im
+
+
 def clear_rsi_pngs(rsi_dir: Path) -> None:
     if not rsi_dir.is_dir():
         return
@@ -57,15 +79,16 @@ def bake_lattices(tiles: dict) -> int:
     states: list[dict] = []
     for dir_sum in range(16):
         name = state_name(dir_sum)
-        files[name] = lattice_frame(tiles, dir_sum)
+        files[name] = isolated_frame(tiles) if dir_sum == 0 else lattice_frame(tiles, dir_sum)
         states.append({"name": name})
 
     clear_rsi_pngs(rsi_dir)
     write_rsi(rsi_dir, files, states, COPYRIGHT)
 
     OUT_TEX.mkdir(parents=True, exist_ok=True)
-    base = frame(tiles, "lattice-simple", DIR_S, 0).copy()
-    base.save(OUT_TEX / f"{STEM}_base.png")
+    # Tile fill is fully transparent: every lattice frame is self-contained art
+    # (states 00..0f), and its holes must read as empty space, not a second mesh.
+    Image.new("RGBA", (32, 32), (0, 0, 0, 0)).save(OUT_TEX / f"{STEM}_base.png")
     return len(files)
 
 
