@@ -12,7 +12,10 @@
   id: Plating
   parent: BasePlating
   name: tiles-plating
-  sprite: /Textures/Tiles/plating.png
+  sprite: /Textures/Oxyd/erisported/plating_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/plating.rsi
+  borderGroup: Plating
 
 - type: tile
   id: PlatingDamaged
@@ -41,7 +44,10 @@
   id: FloorHullReinforced
   parent: BasePlating
   name: tiles-hull-reinforced
-  sprite: /Textures/Tiles/hull_reinforced.png
+  sprite: /Textures/Oxyd/erisported/hullcenter_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/hullcenter.rsi
+  borderGroup: Hull
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemSteel

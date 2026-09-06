@@ -234,13 +234,18 @@ public sealed partial class ChatSystem
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
-        data.unbakedTime += TimeSpan.FromSeconds(frameTime);
-        if (data.unbakedTime > TimeSpan.FromMinutes(5))
+        // Core is spawned on RoundStartingEvent; lobby and integration tests have none.
+        if (!TrySingle<LanguageDataCoreComponent>(out var ent))
+            return;
+
+        var coreData = ent.Value.Comp;
+        coreData.unbakedTime += TimeSpan.FromSeconds(frameTime);
+        if (coreData.unbakedTime > TimeSpan.FromMinutes(5))
         {
-            var count = data.wordMappingCache.Values.Sum(x => x.Count);
+            var count = coreData.wordMappingCache.Values.Sum(x => x.Count);
             if (count > 100)
                 LanguageCachesBake(count);
-            data.unbakedTime = TimeSpan.Zero;
+            coreData.unbakedTime = TimeSpan.Zero;
         }
     }
 }

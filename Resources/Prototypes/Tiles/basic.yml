@@ -3,28 +3,36 @@
   id: FloorSteel
   parent: BaseStationTile
   name: tiles-steel-floor
-  sprite: /Textures/Tiles/Basic/Gray/gray.png
+  sprite: /Textures/Oxyd/erisported/tiles_steel_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/tiles_steel.rsi
   itemDrop: FloorTileItemSteel
 
 - type: tile
   id: FloorSteelMini
   parent: BaseStationTile
   name: tiles-steel-floor-mini
-  sprite: /Textures/Tiles/Basic/Gray/gray-mini.png
+  sprite: /Textures/Oxyd/erisported/steel_gray_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_gray_perforated.rsi
   itemDrop: FloorTileItemSteelMini
 
 - type: tile
   id: FloorSteelPavement
   parent: BaseStationTile
   name: tiles-steel-floor-pavement
-  sprite: /Textures/Tiles/Basic/Gray/gray-pavement.png
+  sprite: /Textures/Oxyd/erisported/steel_gray_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_gray_platform.rsi
   itemDrop: FloorTileItemSteelPavement
 
 - type: tile
   id: FloorSteelPavementVertical
   parent: BaseStationTile
   name: tiles-steel-floor-pavement-vertical
-  sprite: /Textures/Tiles/Basic/Gray/gray-pavement-vertical.png
+  sprite: /Textures/Oxyd/erisported/steel_cargo_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_cargo.rsi
   itemDrop: FloorTileItemSteelPavementVertical
 
 - type: tile
@@ -52,7 +60,9 @@
   id: FloorTechMaint2
   parent: BaseStationTile
   name: tiles-techmaint2-floor
-  sprite: /Textures/Tiles/Basic/Gray/gray-maint.png
+  sprite: /Textures/Oxyd/erisported/techmaint_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint.rsi
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemSteelMaint
@@ -77,7 +87,9 @@
   id: FloorWhite
   parent: BaseStationTile
   name: tiles-white-floor
-  sprite: /Textures/Tiles/Basic/White/white.png
+  sprite: /Textures/Oxyd/erisported/tiles_white_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/tiles_white.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemWhite
@@ -86,7 +98,9 @@
   id: FloorWhiteMini
   parent: BaseStationTile
   name: tiles-white-floor-mini
-  sprite: /Textures/Tiles/Basic/White/white-mini.png
+  sprite: /Textures/Oxyd/erisported/white_brown_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_brown_perforated.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemWhiteMini
@@ -155,7 +169,9 @@
   id: FloorDark
   parent: BaseStationTile
   name: tiles-dark-floor
-  sprite: /Textures/Tiles/Basic/Dark/dark.png
+  sprite: /Textures/Oxyd/erisported/tiles_dark_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/tiles_dark.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemDark
@@ -187,7 +203,9 @@
   id: FloorDarkPavement
   parent: BaseStationTile
   name: tiles-dark-floor-pavement
-  sprite: /Textures/Tiles/Basic/Dark/dark-pavement.png
+  sprite: /Textures/Oxyd/erisported/dark_gray_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_gray_platform.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemDarkPavement
@@ -232,7 +250,9 @@
   id: FloorTechMaintDark
   parent: BaseStationTile
   name: tiles-techmaint-floor-dark
-  sprite: /Textures/Tiles/Basic/Dark/dark-maint.png
+  sprite: /Textures/Oxyd/erisported/dark_techfloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_techfloor.rsi
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemTechmaintDark
