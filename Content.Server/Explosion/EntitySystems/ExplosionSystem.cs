@@ -73,11 +73,6 @@ public sealed partial class ExplosionSystem : SharedExplosionSystem
 
     public const int MaxExplosionAudioRange = 30;
 
-    /// <summary>
-    ///     True while tile damage from an explosion is being processed.
-    /// </summary>
-    public bool IsProcessing => _activeExplosion != null;
-
     public override void Initialize()
     {
         base.Initialize();
