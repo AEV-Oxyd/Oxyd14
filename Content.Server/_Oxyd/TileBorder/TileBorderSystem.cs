@@ -23,6 +23,7 @@ public sealed partial class TileBorderSystem : EntitySystem
     [Dependency] private ITileDefinitionManager _tiles = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
+    [Dependency] private TurfSystem _turf = default!;
 
     private FrozenDictionary<int, ContentTileDefinition> _byTypeId = FrozenDictionary<int, ContentTileDefinition>.Empty;
     private FrozenDictionary<int, string> _groupByTypeId = FrozenDictionary<int, string>.Empty;
@@ -158,7 +159,16 @@ public sealed partial class TileBorderSystem : EntitySystem
             if (!_map.TryGetTile(gridComp, neighbour, out var other) || other.IsEmpty)
                 return null;
 
-            return _groupByTypeId.TryGetValue(other.TypeId, out var otherGroup) ? otherGroup : null;
+            // Same borderGroup always links (floors and lattices).
+            if (_groupByTypeId.TryGetValue(other.TypeId, out var otherGroup) && otherGroup == group)
+                return group;
+
+            // Eris parity (lattice.dm): lattice also links toward non-space solid tiles.
+            // Floor-rim (BorderRotate) path stays same-group-only.
+            if (!def.BorderRotate && !_turf.IsSpace(other))
+                return group;
+
+            return null;
         });
 
         byte stateKey;
