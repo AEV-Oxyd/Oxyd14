@@ -56,7 +56,50 @@ OLD_PIECE_STATES = (
 # stem -> (dmi filename under icons/turf/flooring, icon_base, has_inner_corners)
 # Inner corners: plating/under/hull explicit; steel/white/dark/techmaint inherit
 # TURF_HAS_INNER_CORNERS from /decl/flooring/tiling.
-FLOOR_MAP: list[tuple[str, str, str, bool]] = [
+FLOOR_MAP: list[tuple[str, str, str, bool]
+# --- PR C mapper-only ZERO/WEAK (append; leave A strong retargets alone) ---
+    # Derelict (has_inner=False — edges dirs=8, no _corners)
+    ("derelict1", "derelict.dmi", "derelict1", False),
+    ("derelict2", "derelict.dmi", "derelict2", False),
+    ("derelict3", "derelict.dmi", "derelict3", False),
+    ("derelict4", "derelict.dmi", "derelict4", False),
+    # Steel
+    ("steel_danger", "tiles_steel.dmi", "danger", True),
+    ("steel_cyancorner", "tiles_steel.dmi", "cyancorner", True),
+    ("steel_violetcorener", "tiles_steel.dmi", "violetcorener", True),
+    ("steel_brown_platform", "tiles_steel.dmi", "brown_platform", True),
+    ("steel_panels", "tiles_steel.dmi", "panels", True),
+    ("steel_brown_perforated", "tiles_steel.dmi", "brown_perforated", True),
+    ("steel_bar_dance", "tiles_steel.dmi", "bar_dance", True),
+    ("steel_bar_light", "tiles_steel.dmi", "bar_light", True),
+    # White
+    ("white_danger", "tiles_white.dmi", "danger", True),
+    ("white_cyancorner", "tiles_white.dmi", "cyancorner", True),
+    ("white_violetcorener", "tiles_white.dmi", "violetcorener", True),
+    ("white_brown_platform", "tiles_white.dmi", "brown_platform", True),
+    ("white_panels", "tiles_white.dmi", "panels", True),
+    ("white_techfloor", "tiles_white.dmi", "techfloor", True),
+    ("white_techfloor_grid", "tiles_white.dmi", "techfloor_grid", True),
+    ("white_gray_perforated", "tiles_white.dmi", "gray_perforated", True),
+    ("white_cargo", "tiles_white.dmi", "cargo", True),
+    ("white_gray_platform", "tiles_white.dmi", "gray_platform", True),
+    ("white_bluecorner", "tiles_white.dmi", "bluecorner", True),
+    ("white_orangecorner", "tiles_white.dmi", "orangecorner", True),
+    ("white_monofloor", "tiles_white.dmi", "monofloor", True),
+    # Dark
+    ("dark_danger", "tiles_dark.dmi", "danger", True),
+    ("dark_cyancorner", "tiles_dark.dmi", "cyancorner", True),
+    ("dark_violetcorener", "tiles_dark.dmi", "violetcorener", True),
+    ("dark_brown_platform", "tiles_dark.dmi", "brown_platform", True),
+    ("dark_panels", "tiles_dark.dmi", "panels", True),
+    ("dark_techfloor_grid", "tiles_dark.dmi", "techfloor_grid", True),
+    ("dark_brown_perforated", "tiles_dark.dmi", "brown_perforated", True),
+    ("dark_gray_perforated", "tiles_dark.dmi", "gray_perforated", True),
+    ("dark_cargo", "tiles_dark.dmi", "cargo", True),
+    ("dark_bluecorner", "tiles_dark.dmi", "bluecorner", True),
+    ("dark_orangecorner", "tiles_dark.dmi", "orangecorner", True),
+    ("dark_monofloor", "tiles_dark.dmi", "monofloor", True),
+] = [
     ("tiles_steel", "tiles_steel.dmi", "tiles", True),
     ("steel_gray_perforated", "tiles_steel.dmi", "gray_perforated", True),
     ("steel_gray_platform", "tiles_steel.dmi", "gray_platform", True),
