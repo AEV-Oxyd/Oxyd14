@@ -3,7 +3,6 @@ using System.Linq;
 using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.Server.Decals;
-using Content.Server._Oxyd.TileBorder;
 using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Decals;
 using Content.Shared.Maps;
@@ -25,7 +24,7 @@ public sealed class TileBorderDecalTest : GameTest
     public override PoolSettings PoolSettings => new() { Connected = false };
 
     [Test]
-    public async Task PrototypesExistForEveryBorderSpriteState()
+    public async Task PrototypesExistForEveryCanonicalMask()
     {
         var server = Pair.Server;
         await server.WaitAssertion(() =>
@@ -38,9 +37,9 @@ public sealed class TileBorderDecalTest : GameTest
                 if (def is not ContentTileDefinition content || content.BorderSprites == null)
                     continue;
 
-                foreach (var state in TileBorderDecals.States)
+                foreach (var mask in TileBorderDecals.AllCanonicalMasks)
                 {
-                    var id = TileBorderDecals.PrototypeId(content.BorderSprites.Value, state);
+                    var id = TileBorderDecals.PrototypeId(content.BorderSprites.Value, mask);
                     Assert.That(protos.TryIndex<DecalPrototype>(id, out _), $"Missing decal prototype {id}");
                 }
             }
@@ -48,13 +47,14 @@ public sealed class TileBorderDecalTest : GameTest
     }
 
     [Test]
-    public async Task InteriorSkips_EdgeEmitsCardinal_IsolatedEmitsFullRim()
+    public async Task InteriorSkips_EdgeEmitsCanonical_IsolatedEmitsZero()
     {
         var pair = Pair;
         var server = pair.Server;
         var map = await pair.CreateTestMap(initialized: true);
         var grid = map.Grid;
 
+        // Event-immediate: TileChanged rebuilds without Update.
         await server.WaitPost(() =>
         {
             var tiles = server.ResolveDependency<ITileDefinitionManager>();
@@ -77,8 +77,6 @@ public sealed class TileBorderDecalTest : GameTest
                     maps.SetTile(grid.Owner, grid.Comp, new Vector2i(x, y), steel);
                 }
             }
-
-            server.System<TileBorderSystem>().Update(0f);
         });
 
         await server.WaitAssertion(() =>
@@ -87,8 +85,9 @@ public sealed class TileBorderDecalTest : GameTest
             var center = GeneratedAt(decals, grid.Owner, new Vector2i(2, 2));
             Assert.That(center, Is.Empty, "Interior steel tile must have no rim decals");
 
+            // North edge of 3x3 steel: mask 0xC7 → canonical 0x1f (3 CW turns)
             var northEdge = GeneratedAt(decals, grid.Owner, new Vector2i(2, 3));
-            Assert.That(northEdge, Is.EqualTo(new[] { "TileBorder-tiles_steel-n" }));
+            Assert.That(northEdge, Is.EqualTo(new[] { "TileBorder-tiles_steel-1f" }));
         });
     }
 
@@ -122,21 +121,20 @@ public sealed class TileBorderDecalTest : GameTest
                 zIndex: 0,
                 cleanable: false));
 
-            server.System<TileBorderSystem>().Update(0f);
-
             maps.SetTile(grid.Owner, grid.Comp, new Vector2i(1, 1), new Tile(tiles["FloorWhite"].TileId));
-            server.System<TileBorderSystem>().Update(0f);
         });
 
         await server.WaitAssertion(() =>
         {
             var decals = server.System<DecalSystem>();
+            // Isolated white (all 8 neighbours other group): mask 0 → tiles_white-00
             var center = GeneratedAt(decals, grid.Owner, new Vector2i(1, 1));
-            Assert.That(center, Does.Contain("TileBorder-tiles_white-n"));
-            Assert.That(center, Does.Not.Contain("TileBorder-tiles_steel-n"));
+            Assert.That(center, Does.Contain("TileBorder-tiles_white-00"));
+            Assert.That(center.Any(id => id.StartsWith("TileBorder-tiles_steel-")), Is.False);
 
+            // Neighbour (1,2): mask 0xC6 → canonical 0x1b
             var neighbour = GeneratedAt(decals, grid.Owner, new Vector2i(1, 2));
-            Assert.That(neighbour, Does.Contain("TileBorder-tiles_steel-s"));
+            Assert.That(neighbour, Does.Contain("TileBorder-tiles_steel-1b"));
 
             var mapper = decals.GetDecalsIntersecting(grid.Owner, new Box2(new Vector2(1, 1), new Vector2(2, 2)))
                 .Where(d => d.Decal.Id == "WoodTrimThinBox")
@@ -158,9 +156,7 @@ public sealed class TileBorderDecalTest : GameTest
             var tiles = server.ResolveDependency<ITileDefinitionManager>();
             var maps = server.System<SharedMapSystem>();
             maps.SetTile(grid.Owner, grid.Comp, Vector2i.Zero, new Tile(tiles["FloorSteel"].TileId));
-            server.System<TileBorderSystem>().Update(0f);
             maps.SetTile(grid.Owner, grid.Comp, Vector2i.Zero, Tile.Empty);
-            server.System<TileBorderSystem>().Update(0f);
         });
 
         await server.WaitAssertion(() =>
@@ -180,7 +176,7 @@ public sealed class TileBorderDecalTest : GameTest
             var deps = server.ResolveDependency<IDependencyCollection>();
             var dict = new Dictionary<ushort, Decal>
             {
-                [0] = new Decal(Vector2.Zero, "TileBorder-tiles_steel-n", null, Angle.Zero, -1, false),
+                [0] = new Decal(Vector2.Zero, "TileBorder-tiles_steel-0a", null, Angle.Zero, -1, false),
                 [1] = new Decal(new Vector2(1, 1), "WoodTrimThinBox", null, Angle.Zero, 0, false),
             };
 
