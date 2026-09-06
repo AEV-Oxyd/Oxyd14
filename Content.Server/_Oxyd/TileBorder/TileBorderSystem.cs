@@ -1,5 +1,7 @@
+using System.Collections.Frozen;
 using System.Numerics;
 using Content.Server.Decals;
+using Content.Server.Explosion.EntitySystems;
 using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Decals;
 using Content.Shared.Maps;
@@ -12,25 +14,33 @@ using Robust.Shared.Prototypes;
 namespace Content.Server._Oxyd.TileBorder;
 
 /// <summary>
-/// Server-authored same-group floor rims stored as ordinary decals on the
-/// existing <see cref="DecalChunkComponent"/> / <see cref="ChunkEntitySystem"/> chunk entity.
+/// Server-authored floor rims stored as decals on grid <see cref="DecalChunkComponent"/> chunk entities.
+/// Rebuilds only the changed tile and its 8 neighbours; whole chunks only on grid init/split/prototype reload.
+/// Defers updates while explosions process tiles.
 /// </summary>
 public sealed partial class TileBorderSystem : EntitySystem
 {
     [Dependency] private DecalSystem _decals = default!;
     [Dependency] private ChunkEntitySystem _chunks = default!;
     [Dependency] private SharedMapSystem _map = default!;
+    [Dependency] private ExplosionSystem _explosions = default!;
     [Dependency] private ITileDefinitionManager _tiles = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
 
     [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
     [Dependency] private EntityQuery<DecalChunkComponent> _decalQuery = default!;
 
-    private readonly Dictionary<int, ContentTileDefinition> _byTypeId = new();
-    private readonly Dictionary<int, string> _groupByTypeId = new();
-    private readonly HashSet<string> _validProtos = new();
-    private readonly HashSet<(EntityUid Grid, Vector2i Chunk)> _dirty = new();
-    private readonly List<(EntityUid Grid, Vector2i Chunk)> _rebuild = new();
+    private FrozenDictionary<int, ContentTileDefinition> _byTypeId = FrozenDictionary<int, ContentTileDefinition>.Empty;
+    private FrozenDictionary<int, string> _groupByTypeId = FrozenDictionary<int, string>.Empty;
+    private FrozenSet<string> _validProtos = FrozenSet<string>.Empty;
+
+    private readonly HashSet<(EntityUid Grid, Vector2i Chunk)> _dirtyChunks = new();
+    private readonly HashSet<(EntityUid Grid, Vector2i Tile)> _dirtyTiles = new();
+    private readonly List<(EntityUid Grid, Vector2i Chunk)> _chunkDrain = new();
+    private readonly List<(EntityUid Grid, Vector2i Tile)> _tileDrain = new();
+    private readonly List<Vector2i> _affectedTiles = new(9);
+    private readonly Dictionary<(EntityUid Grid, Vector2i Chunk), List<Vector2i>> _tilesByChunk = new();
+    private readonly HashSet<Vector2> _stripCoords = new();
     private readonly List<DecalIndex> _strip = new();
     private readonly List<string> _layers = new(8);
 
@@ -47,23 +57,50 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     public override void Update(float frameTime)
     {
-        if (_dirty.Count == 0)
+        if (_dirtyChunks.Count == 0 && _dirtyTiles.Count == 0)
+            return;
+
+        // Explosions change tiles in large batches over several ticks; rebuild once when done.
+        if (_explosions.IsProcessing)
             return;
 
         // Tile definitions may finish registering after this system initializes.
         RebuildIndex();
 
-        _rebuild.Clear();
-        _rebuild.AddRange(_dirty);
-        _dirty.Clear();
+        _chunkDrain.Clear();
+        _chunkDrain.AddRange(_dirtyChunks);
+        _dirtyChunks.Clear();
 
-        foreach (var (grid, chunk) in _rebuild)
+        foreach (var (grid, chunk) in _chunkDrain)
         {
             if (!_gridQuery.TryComp(grid, out var gridComp))
                 continue;
 
             RebuildChunk(grid, gridComp, chunk);
         }
+
+        _tileDrain.Clear();
+        _tileDrain.AddRange(_dirtyTiles);
+        _dirtyTiles.Clear();
+
+        foreach (var (grid, tile) in _tileDrain)
+        {
+            var chunk = TileBorderChunks.ChunkIndex(tile);
+            if (!_tilesByChunk.TryGetValue((grid, chunk), out var tiles))
+                _tilesByChunk[(grid, chunk)] = tiles = new List<Vector2i>(4);
+
+            tiles.Add(tile);
+        }
+
+        foreach (var ((grid, chunk), tiles) in _tilesByChunk)
+        {
+            if (!_gridQuery.TryComp(grid, out var gridComp))
+                continue;
+
+            RebuildTiles(grid, gridComp, chunk, tiles);
+        }
+
+        _tilesByChunk.Clear();
     }
 
     private void OnGridInit(GridInitializeEvent ev)
@@ -74,20 +111,17 @@ public sealed partial class TileBorderSystem : EntitySystem
     private void OnTileChanged(ref TileChangedEvent args)
     {
         var grid = args.Entity.Owner;
-        var chunkSize = MapGridComponent.DefaultChunkSize;
 
         foreach (var change in args.Changes)
         {
-            _chunkScratch.Clear();
-            TileBorderChunks.AppendDirtyChunks(change.GridIndices, change.ChunkIndex, _chunkScratch, chunkSize);
-            foreach (var chunk in _chunkScratch)
+            _affectedTiles.Clear();
+            TileBorderChunks.AppendAffectedTiles(change.GridIndices, _affectedTiles);
+            foreach (var tile in _affectedTiles)
             {
-                _dirty.Add((grid, chunk));
+                _dirtyTiles.Add((grid, tile));
             }
         }
     }
-
-    private readonly List<Vector2i> _chunkScratch = new(4);
 
     private void OnGridSplit(ref PostGridSplitEvent ev)
     {
@@ -100,7 +134,8 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private void OnGridRemoved(GridRemovalEvent ev)
     {
-        _dirty.RemoveWhere(entry => entry.Grid == ev.EntityUid);
+        _dirtyChunks.RemoveWhere(entry => entry.Grid == ev.EntityUid);
+        _dirtyTiles.RemoveWhere(entry => entry.Grid == ev.EntityUid);
     }
 
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs args)
@@ -121,32 +156,39 @@ public sealed partial class TileBorderSystem : EntitySystem
     {
         foreach (var tile in _map.GetAllTiles(grid, gridComp))
         {
-            _dirty.Add((grid, TileBorderChunks.ChunkIndex(tile.GridIndices)));
+            _dirtyChunks.Add((grid, TileBorderChunks.ChunkIndex(tile.GridIndices)));
         }
     }
 
     private void RebuildIndex()
     {
-        _byTypeId.Clear();
-        _groupByTypeId.Clear();
-        _validProtos.Clear();
+        var byTypeId = new Dictionary<int, ContentTileDefinition>();
+        var groupByTypeId = new Dictionary<int, string>();
 
         foreach (var def in _tiles)
         {
             if (def is not ContentTileDefinition content || content.BorderSprites == null)
                 continue;
 
-            _byTypeId[def.TileId] = content;
-            _groupByTypeId[def.TileId] = TileBorderMask.ResolveGroup(content);
+            byTypeId[def.TileId] = content;
+            groupByTypeId[def.TileId] = TileBorderMask.ResolveGroup(content);
         }
 
+        var validProtos = new HashSet<string>();
         foreach (var proto in _prototypes.EnumeratePrototypes<DecalPrototype>())
         {
             if (TileBorderDecals.IsGenerated(proto.ID))
-                _validProtos.Add(proto.ID);
+                validProtos.Add(proto.ID);
         }
+
+        _byTypeId = byTypeId.ToFrozenDictionary();
+        _groupByTypeId = groupByTypeId.ToFrozenDictionary();
+        _validProtos = validProtos.ToFrozenSet();
     }
 
+    /// <summary>
+    /// Rebuilds an entire chunk. Used for whole-grid rebuilds (grid init, split, prototype reload).
+    /// </summary>
     private void RebuildChunk(EntityUid grid, MapGridComponent gridComp, Vector2i chunkIndices)
     {
         StripGenerated(grid, chunkIndices);
@@ -158,45 +200,73 @@ public sealed partial class TileBorderSystem : EntitySystem
         {
             for (var y = 0; y < chunkSize; y++)
             {
-                var pos = origin + new Vector2i(x, y);
-                if (!_map.TryGetTile(gridComp, pos, out var tile) || tile.IsEmpty)
-                    continue;
-
-                if (!_byTypeId.TryGetValue(tile.TypeId, out var def) || def.BorderSprites == null)
-                    continue;
-
-                if (!_groupByTypeId.TryGetValue(tile.TypeId, out var group))
-                    continue;
-
-                var mask = TileBorderMask.Compute(pos, group, neighbour =>
-                {
-                    if (!_map.TryGetTile(gridComp, neighbour, out var other) || other.IsEmpty)
-                        return null;
-
-                    return _groupByTypeId.TryGetValue(other.TypeId, out var otherGroup) ? otherGroup : null;
-                });
-
-                if (TileBorderMask.IsInterior(mask))
-                    continue;
-
-                _layers.Clear();
-                TileBorderMask.AppendLayers(mask, _layers);
-
-                var coords = new EntityCoordinates(grid, new Vector2(pos.X, pos.Y));
-                var rsi = def.BorderSprites.Value;
-                foreach (var state in _layers)
-                {
-                    var id = TileBorderDecals.PrototypeId(rsi, state);
-                    if (!_validProtos.Contains(id))
-                        continue;
-
-                    _decals.TryAddDecal(id, coords, out _, zIndex: TileBorderDecals.ZIndex, cleanable: false);
-                }
+                EmitRims(grid, gridComp, origin + new Vector2i(x, y));
             }
         }
     }
 
+    /// <summary>
+    /// Rebuilds rims for specific tiles in a chunk.
+    /// </summary>
+    private void RebuildTiles(EntityUid grid, MapGridComponent gridComp, Vector2i chunkIndices, List<Vector2i> tiles)
+    {
+        StripGenerated(grid, chunkIndices, tiles);
+
+        foreach (var pos in tiles)
+        {
+            EmitRims(grid, gridComp, pos);
+        }
+    }
+
+    private void EmitRims(EntityUid grid, MapGridComponent gridComp, Vector2i pos)
+    {
+        if (!_map.TryGetTile(gridComp, pos, out var tile) || tile.IsEmpty)
+            return;
+
+        if (!_byTypeId.TryGetValue(tile.TypeId, out var def))
+            return;
+
+        if (!_groupByTypeId.TryGetValue(tile.TypeId, out var group))
+            return;
+
+        var mask = TileBorderMask.Compute(pos, group, neighbour =>
+        {
+            if (!_map.TryGetTile(gridComp, neighbour, out var other) || other.IsEmpty)
+                return null;
+
+            return _groupByTypeId.TryGetValue(other.TypeId, out var otherGroup) ? otherGroup : null;
+        });
+
+        if (TileBorderMask.IsInterior(mask))
+            return;
+
+        _layers.Clear();
+        TileBorderMask.AppendLayers(mask, _layers);
+
+        var coords = new EntityCoordinates(grid, new Vector2(pos.X, pos.Y));
+        var rsi = def.BorderSprites!.Value;
+        foreach (var state in _layers)
+        {
+            var id = TileBorderDecals.PrototypeId(rsi, state);
+            if (!_validProtos.Contains(id))
+                continue;
+
+            _decals.TryAddDecal(id, coords, out _, zIndex: TileBorderDecals.ZIndex, cleanable: false);
+        }
+    }
+
+    /// <summary>
+    /// Removes all generated rim decals in a chunk (whole-chunk rebuilds).
+    /// </summary>
     private void StripGenerated(EntityUid grid, Vector2i chunkIndices)
+    {
+        StripGenerated(grid, chunkIndices, null);
+    }
+
+    /// <summary>
+    /// Removes generated rim decals at the given tiles (null = all in chunk).
+    /// </summary>
+    private void StripGenerated(EntityUid grid, Vector2i chunkIndices, List<Vector2i>? tiles)
     {
         if (!_chunks.TryGetChunk(grid, chunkIndices, out var chunkEnt) ||
             !_decalQuery.TryComp(chunkEnt.Value.Owner, out var decals))
@@ -204,11 +274,25 @@ public sealed partial class TileBorderSystem : EntitySystem
             return;
         }
 
+        _stripCoords.Clear();
+        if (tiles != null)
+        {
+            foreach (var pos in tiles)
+            {
+                _stripCoords.Add(new Vector2(pos.X, pos.Y));
+            }
+        }
+
         _strip.Clear();
         foreach (var (id, decal) in decals.Decals)
         {
-            if (TileBorderDecals.IsGenerated(decal.Id))
-                _strip.Add(new DecalIndex(chunkEnt.Value.Comp.Chunk, id));
+            if (!TileBorderDecals.IsGenerated(decal.Id))
+                continue;
+
+            if (tiles != null && !_stripCoords.Contains(decal.Coordinates))
+                continue;
+
+            _strip.Add(new DecalIndex(chunkEnt.Value.Comp.Chunk, id));
         }
 
         foreach (var index in _strip)
