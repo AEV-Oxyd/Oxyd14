@@ -9205,3 +9205,3875 @@
   sprite:
     sprite: Oxyd/erisported/techmaint_panels.rsi
     state: bf
+
+# gaycarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-00
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-01
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-02
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-03
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-05
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-06
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-07
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-09
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-11
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-12
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-13
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-15
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-16
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-17
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-19
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-22
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-23
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-25
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-26
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-27
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-29
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-33
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-35
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-36
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-37
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-39
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-55
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-56
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-57
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-66
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-67
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-77
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-af
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-gaycarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/gaycarpet.rsi
+    state: bf
+
+# carpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-00
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-01
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-02
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-03
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-05
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-06
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-07
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-09
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-0a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-0b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-0d
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-0e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-0f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-11
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-12
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-13
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-15
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-16
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-17
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-19
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-1a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-1b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-1d
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-1e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-1f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-22
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-23
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-25
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-26
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-27
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-29
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-2a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-2b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-2d
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-2e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-2f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-33
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-35
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-36
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-37
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-39
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-3a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-3b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-3d
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-3e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-3f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-55
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-56
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-57
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-5a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-5b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-5e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-5f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-66
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-67
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-6a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-6b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-6e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-6f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-77
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-7a
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-7b
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-7e
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-7f
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-aa
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-ab
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-af
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-bb
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-carpet-bf
+  sprite:
+    sprite: Oxyd/erisported/carpet.rsi
+    state: bf
+
+# bcarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-00
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-01
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-02
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-03
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-05
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-06
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-07
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-09
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-11
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-12
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-13
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-15
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-16
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-17
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-19
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-22
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-23
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-25
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-26
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-27
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-29
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-33
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-35
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-36
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-37
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-39
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-55
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-56
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-57
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-66
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-67
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-77
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-af
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-bcarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/bcarpet.rsi
+    state: bf
+
+# blucarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-00
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-01
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-02
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-03
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-05
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-06
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-07
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-09
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-11
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-12
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-13
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-15
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-16
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-17
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-19
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-22
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-23
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-25
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-26
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-27
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-29
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-33
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-35
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-36
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-37
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-39
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-55
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-56
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-57
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-66
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-67
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-77
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-af
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-blucarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/blucarpet.rsi
+    state: bf
+
+# turcarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-00
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-01
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-02
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-03
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-05
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-06
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-07
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-09
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-11
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-12
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-13
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-15
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-16
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-17
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-19
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-22
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-23
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-25
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-26
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-27
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-29
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-33
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-35
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-36
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-37
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-39
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-55
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-56
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-57
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-66
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-67
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-77
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-af
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-turcarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/turcarpet.rsi
+    state: bf
+
+# sblucarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-00
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-01
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-02
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-03
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-05
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-06
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-07
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-09
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-11
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-12
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-13
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-15
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-16
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-17
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-19
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-22
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-23
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-25
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-26
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-27
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-29
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-33
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-35
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-36
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-37
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-39
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-55
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-56
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-57
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-66
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-67
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-77
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-af
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-sblucarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/sblucarpet.rsi
+    state: bf
+
+# purcarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-00
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-01
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-02
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-03
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-05
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-06
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-07
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-09
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-11
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-12
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-13
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-15
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-16
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-17
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-19
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-22
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-23
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-25
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-26
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-27
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-29
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-33
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-35
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-36
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-37
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-39
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-55
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-56
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-57
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-66
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-67
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-77
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-af
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-purcarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/purcarpet.rsi
+    state: bf
+
+# oracarpet.rsi
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-00
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-01
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-02
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-03
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-05
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-06
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-07
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-09
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-0a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-0b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-0d
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-0e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-0f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-11
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-12
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-13
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-15
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-16
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-17
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-19
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-1a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-1b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-1d
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-1e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-1f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-22
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-23
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-25
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-26
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-27
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-29
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-2a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-2b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-2d
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-2e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-2f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-33
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-35
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-36
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-37
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-39
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-3a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-3b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-3d
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-3e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-3f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-55
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-56
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-57
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-5a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-5b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-5e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-5f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-66
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-67
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-6a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-6b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-6e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-6f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-77
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-7a
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-7b
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-7e
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-7f
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-aa
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-ab
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-af
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-bb
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-oracarpet-bf
+  sprite:
+    sprite: Oxyd/erisported/oracarpet.rsi
+    state: bf

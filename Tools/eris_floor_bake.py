@@ -32,9 +32,9 @@ from eris_cardinal_bake import TILE, write_rsi
 from eris_dmi import frame, parse_dmi
 
 ERIS_FLOORING = Path("/Users/russellrozario/Desktop/SS13-14/CEV-Eris/icons/turf/flooring")
-OXYD = Path("/Users/russellrozario/Desktop/SS13-14/Oxyd14")
-OUT_TEX = OXYD / "Resources/Textures/Oxyd/erisported"
-OUT_YAML = OXYD / "Resources/Prototypes/_Oxyd/Decals/tile_borders.yml"
+REPO = Path(__file__).resolve().parents[1]
+OUT_TEX = REPO / "Resources/Textures/Oxyd/erisported"
+OUT_YAML = REPO / "Resources/Prototypes/_Oxyd/Decals/tile_borders.yml"
 
 COPYRIGHT = "Ported station floor art (https://github.com/discordia-space/CEV-Eris)."
 
@@ -75,6 +75,15 @@ FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
     ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
     ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
+    # PR B: Eris carpets (icon_base == RSI stem)
+    ("gaycarpet", "carpet.dmi", "gaycarpet", True),
+    ("carpet", "carpet.dmi", "carpet", True),
+    ("bcarpet", "carpet.dmi", "bcarpet", True),
+    ("blucarpet", "carpet.dmi", "blucarpet", True),
+    ("turcarpet", "carpet.dmi", "turcarpet", True),
+    ("sblucarpet", "carpet.dmi", "sblucarpet", True),
+    ("purcarpet", "carpet.dmi", "purcarpet", True),
+    ("oracarpet", "carpet.dmi", "oracarpet", True),
 ]
 
 
@@ -199,12 +208,57 @@ def bake_floor(
     clear_rsi_pngs(rsi_dir)
     write_rsi(rsi_dir, files, states, COPYRIGHT)
 
-    # Leave sibling fill alone.
-    base_png = OUT_TEX / f"{stem}_base.png"
-    if not base_png.is_file():
-        print(f"WARNING: missing fill {base_png.name}")
+    # Export dirs=1 fill base if missing (does not overwrite existing fills).
+    export_fill_base(stem, icon_base, tiles)
 
     return len(files)
+
+
+def export_fill_base(stem: str, icon_base: str, tiles: dict) -> None:
+    """Write {stem}_base.png from dirs=1 icon_base frame when missing."""
+    base_png = OUT_TEX / f"{stem}_base.png"
+    if base_png.is_file():
+        return
+    if icon_base not in tiles:
+        print(f"WARNING: missing fill source state {icon_base!r} for {stem}")
+        return
+    img = frame(tiles, icon_base, 0)
+    OUT_TEX.mkdir(parents=True, exist_ok=True)
+    img.save(base_png)
+    print(f"wrote fill {base_png.name}")
+
+
+def append_yaml(stems: list[str], masks: list[int]) -> None:
+    """Append TileBorder-* blocks for stems without rewriting existing YAML."""
+    existing = OUT_YAML.read_text() if OUT_YAML.is_file() else ""
+    out_lines: list[str] = []
+    added_stems: list[str] = []
+    for stem in stems:
+        if f"id: TileBorder-{stem}-" in existing:
+            print(f"yaml append: skip existing stem {stem}")
+            continue
+        out_lines.append(f"# {stem}.rsi")
+        for mask in masks:
+            st = state_name(mask)
+            out_lines.append("- type: decal")
+            out_lines.append("  parent: TileBorderBase")
+            out_lines.append(f"  id: TileBorder-{stem}-{st}")
+            out_lines.append("  sprite:")
+            out_lines.append(f"    sprite: Oxyd/erisported/{stem}.rsi")
+            out_lines.append(f"    state: {st}")
+            out_lines.append("")
+        added_stems.append(stem)
+    if not out_lines:
+        print("yaml append: nothing to add")
+        return
+    prefix = existing
+    if prefix and not prefix.endswith('\n'):
+        prefix += '\n'
+    if prefix and not prefix.endswith('\n\n'):
+        prefix += '\n'
+    OUT_YAML.write_text(prefix + '\n'.join(out_lines))
+    n_entries = len(added_stems) * len(masks)
+    print(f"yaml append: +{len(added_stems)} stems ({n_entries} entries) -> {OUT_YAML}")
 
 
 def generate_yaml(stems: list[str], masks: list[int]) -> None:
@@ -248,7 +302,14 @@ def main() -> None:
         action="store_true",
         help="Do not regenerate tile_borders.yml",
     )
+    parser.add_argument(
+        "--append-yaml",
+        action="store_true",
+        help="Append TileBorder blocks for --only stems without rewriting other stems",
+    )
     args = parser.parse_args()
+    if args.skip_yaml and args.append_yaml:
+        raise SystemExit("use either --skip-yaml or --append-yaml, not both")
 
     masks = enumerate_canonical_masks()
     assert len(masks) == 69, f"expected 69 canonical masks, got {len(masks)}"
@@ -270,8 +331,10 @@ def main() -> None:
         counts[stem] = n
         print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
 
-    if not args.skip_yaml:
-        # YAML always lists all wired stems (full FLOOR_MAP), using canonical masks.
+    if args.append_yaml:
+        append_yaml([row[0] for row in selected], masks)
+    elif not args.skip_yaml:
+        # Full rewrite — avoid when parallel PRs own other stems; prefer --append-yaml / --skip-yaml.
         generate_yaml([row[0] for row in FLOOR_MAP], masks)
         print(f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} stems x {len(masks)} states)")
 
