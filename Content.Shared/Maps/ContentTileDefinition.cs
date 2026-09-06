@@ -43,7 +43,7 @@ public sealed partial class ContentTileDefinition : IPrototype, IInheritingProto
     [DataField] public string? BorderGroup { get; private set; }
 
     /// <summary>
-    /// RSI of 32x32 rim states (n/s/e/w, in-*, out-*). Null means no rim overlay.
+    /// RSI of 32x32 rim states (n/s/e/w, in-*, out-*). Null means no rim decals.
     /// </summary>
     [DataField] public ResPath? BorderSprites { get; private set; }
 
