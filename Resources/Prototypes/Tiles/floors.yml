@@ -41,7 +41,8 @@
   id: FloorWood
   parent: BaseStationTile
   name: tiles-wood
-  sprite: /Textures/Tiles/Wood/wood.png
+  sprite: /Textures/Oxyd/erisported/wood_base.png
+  variants: 1
   footstepSounds:
     collection: FootstepWood
   barestepSounds:
@@ -52,7 +53,9 @@
   id: FloorReinforced
   parent: BaseStationTile
   name: tiles-reinforced-floor
-  sprite: /Textures/Tiles/reinforced.png
+  sprite: /Textures/Oxyd/erisported/reinforced_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/reinforced.rsi
   footstepSounds:
     collection: FootstepHull
   itemDrop: PartRodMetal1
@@ -105,7 +108,9 @@
   id: FloorBar
   parent: BaseStationTile
   name: tiles-bar-floor
-  sprite: /Textures/Tiles/Checker/checker-bar.png
+  sprite: /Textures/Oxyd/erisported/bar_flat_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/bar_flat.rsi
   itemDrop: FloorTileItemBar
 
 - type: tile
@@ -126,7 +131,9 @@
   id: FloorKitchen
   parent: BaseStationTile
   name: tiles-kitchen-floor
-  sprite: /Textures/Tiles/Checker/checker-kitchen.png
+  sprite: /Textures/Oxyd/erisported/cafe_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/cafe.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemKitchen
@@ -212,7 +219,9 @@
   id: FloorGold
   parent: BaseStationTile
   name: tiles-gold-tile
-  sprite: /Textures/Tiles/gold.png
+  sprite: /Textures/Oxyd/erisported/golden_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/golden.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemGold

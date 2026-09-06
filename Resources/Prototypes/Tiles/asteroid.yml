@@ -30,8 +30,8 @@
 - type: tile
   id: FloorAsteroidTile
   name: tiles-asteroid-tile
-  sprite: /Textures/Tiles/Asteroid/asteroid-tile.png
-  variants: 4
+  sprite: /Textures/Oxyd/erisported/asteroidfloor_base.png
+  variants: 1
   baseTurf: Plating
   isSubfloor: false
   deconstructTools: [ Prying ]
@@ -40,7 +40,6 @@
   heatCapacity: 10000
   weather: true
 
-### ASTRO TILES
 - type: tile
   parent: [ BaseStationTile, FloorAsteroidSand ]
   id: FloorAstroAsteroidSand

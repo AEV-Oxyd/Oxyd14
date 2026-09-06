@@ -32,7 +32,8 @@ from eris_cardinal_bake import TILE, write_rsi
 from eris_dmi import frame, parse_dmi
 
 ERIS_FLOORING = Path("/Users/russellrozario/Desktop/SS13-14/CEV-Eris/icons/turf/flooring")
-OXYD = Path("/Users/russellrozario/Desktop/SS13-14/Oxyd14")
+# Resolve repo root from this script so worktrees (not only main checkout) work.
+OXYD = Path(__file__).resolve().parents[1]
 OUT_TEX = OXYD / "Resources/Textures/Oxyd/erisported"
 OUT_YAML = OXYD / "Resources/Prototypes/_Oxyd/Decals/tile_borders.yml"
 
@@ -75,6 +76,15 @@ FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
     ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
     ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
+    # PR A STRONG retargets (C4BRA / port-eris-floors-retargets)
+    ("bcircuit", "circuit.dmi", "bcircuit", True),
+    ("reinforced", "tiles.dmi", "reinforced", True),
+    ("cafe", "tiles.dmi", "cafe", True),
+    ("golden", "tiles_steel.dmi", "golden", True),
+    ("bar_flat", "tiles_steel.dmi", "bar_flat", True),
+    ("techmaint_cargo", "tiles_maint.dmi", "techmaint_cargo", True),
+    ("techmaint_perforated", "tiles_maint.dmi", "techmaint_perforated", True),
+    ("grass", "grass.dmi", "grass", True),
 ]
 
 
@@ -168,6 +178,32 @@ def clear_rsi_pngs(rsi_dir: Path) -> None:
         p.unlink()
 
 
+def resolve_fill_state(tiles: dict, icon_base: str) -> str | None:
+    """Pick a dirs=1 fill state for {stem}_base.png extraction."""
+    for candidate in (icon_base, f"{icon_base}0", f"{icon_base}floor"):
+        st = tiles.get(candidate)
+        if st is not None and st.get("dirs", 1) == 1:
+            return candidate
+    return None
+
+
+def extract_fill_png(stem: str, dmi_name: str, icon_base: str, tiles_cache: dict[str, dict]) -> Path | None:
+    """Write Resources/Textures/Oxyd/erisported/{stem}_base.png from icon_base (or grass0)."""
+    dmi_path = ERIS_FLOORING / dmi_name
+    if dmi_name not in tiles_cache:
+        _, _, tiles_cache[dmi_name] = parse_dmi(dmi_path)
+    tiles = tiles_cache[dmi_name]
+    fill_state = resolve_fill_state(tiles, icon_base)
+    if fill_state is None:
+        print(f"WARNING: no fill state for {stem} ({dmi_name} / {icon_base})")
+        return None
+    OUT_TEX.mkdir(parents=True, exist_ok=True)
+    base_png = OUT_TEX / f"{stem}_base.png"
+    frame(tiles, fill_state, 0).save(base_png)
+    print(f"fill: {stem}_base.png <- {dmi_name}:{fill_state}")
+    return base_png
+
+
 def bake_floor(
     stem: str,
     dmi_name: str,
@@ -176,36 +212,65 @@ def bake_floor(
     tiles_cache: dict[str, dict],
     masks: list[int],
 ) -> int:
+    """Bake rim RSI. Returns state count, or 0 if edges missing (fill still extracted)."""
     dmi_path = ERIS_FLOORING / dmi_name
     if dmi_name not in tiles_cache:
         _, _, tiles_cache[dmi_name] = parse_dmi(dmi_path)
     tiles = tiles_cache[dmi_name]
 
+    extract_fill_png(stem, dmi_name, icon_base, tiles_cache)
+
     edges = f"{icon_base}_edges"
     corners = f"{icon_base}_corners"
     if edges not in tiles or tiles[edges]["dirs"] != 8:
-        raise KeyError(f"{dmi_name}: missing dirs=8 state {edges!r}")
+        dirs = tiles[edges]["dirs"] if edges in tiles else None
+        print(f"SKIP rim {stem}: missing dirs=8 {edges!r} (have={edges in tiles}, dirs={dirs})")
+        return 0
+    use_inner = has_inner
     if has_inner and (corners not in tiles or tiles[corners]["dirs"] != 8):
-        raise KeyError(f"{dmi_name}: missing dirs=8 state {corners!r}")
+        print(f"WARNING {stem}: no dirs=8 {corners!r}; baking edges-only")
+        use_inner = False
 
     rsi_dir = OUT_TEX / f"{stem}.rsi"
     files: dict[str, Image.Image] = {}
     states: list[dict] = []
     for mask in masks:
         name = state_name(mask)
-        files[name] = composite_rim(tiles, icon_base, mask, has_inner)
+        files[name] = composite_rim(tiles, icon_base, mask, use_inner)
         states.append({"name": name})
 
     clear_rsi_pngs(rsi_dir)
     write_rsi(rsi_dir, files, states, COPYRIGHT)
-
-    # Leave sibling fill alone.
-    base_png = OUT_TEX / f"{stem}_base.png"
-    if not base_png.is_file():
-        print(f"WARNING: missing fill {base_png.name}")
-
     return len(files)
 
+
+def append_yaml_stems(stems: list[str], masks: list[int]) -> None:
+    """Append TileBorder-* blocks for stems not already present. Never wipes other stems."""
+    existing = OUT_YAML.read_text() if OUT_YAML.is_file() else ""
+    to_add = [s for s in stems if f"# {s}.rsi" not in existing and f"TileBorder-{s}-" not in existing]
+    if not to_add:
+        print(f"yaml: no new stems to append ({OUT_YAML})")
+        return
+    nl = chr(10)
+    chunks: list[str] = []
+    for stem in to_add:
+        chunks.append(f"# {stem}.rsi")
+        for mask in masks:
+            st = state_name(mask)
+            chunks.append("- type: decal")
+            chunks.append("  parent: TileBorderBase")
+            chunks.append(f"  id: TileBorder-{stem}-{st}")
+            chunks.append("  sprite:")
+            chunks.append(f"    sprite: Oxyd/erisported/{stem}.rsi")
+            chunks.append(f"    state: {st}")
+            chunks.append("")
+    with OUT_YAML.open("a") as f:
+        if existing and not existing.endswith(nl):
+            f.write(nl)
+        f.write(nl.join(chunks))
+        if chunks and chunks[-1] != "":
+            f.write(nl)
+    print(f"yaml append: {to_add} -> {OUT_YAML}")
 
 def generate_yaml(stems: list[str], masks: list[int]) -> None:
     lines = [
@@ -265,15 +330,23 @@ def main() -> None:
 
     cache: dict[str, dict] = {}
     counts: dict[str, int] = {}
+    baked_stems: list[str] = []
     for stem, dmi, icon_base, has_inner in selected:
         n = bake_floor(stem, dmi, icon_base, has_inner, cache, masks)
         counts[stem] = n
-        print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
+        if n:
+            baked_stems.append(stem)
+            print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
+        else:
+            print(f"{stem}: rim skipped (fill-only if extracted)")
 
     if not args.skip_yaml:
-        # YAML always lists all wired stems (full FLOOR_MAP), using canonical masks.
-        generate_yaml([row[0] for row in FLOOR_MAP], masks)
-        print(f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} stems x {len(masks)} states)")
+        if args.only:
+            # Parallel-safe: append only newly baked stems; never rewrite whole YAML.
+            append_yaml_stems(baked_stems, masks)
+        else:
+            generate_yaml([row[0] for row in FLOOR_MAP], masks)
+            print(f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} stems x {len(masks)} states)")
 
     print(f"canonical_masks={len(masks)} names={state_name(masks[0])}..{state_name(masks[-1])}")
 
