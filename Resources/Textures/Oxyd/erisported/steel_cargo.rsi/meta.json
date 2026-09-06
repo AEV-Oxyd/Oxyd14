@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Ported station floor art (https://github.com/discordia-space/CEV-Eris).",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "n"
+    },
+    {
+      "name": "s"
+    },
+    {
+      "name": "e"
+    },
+    {
+      "name": "w"
+    },
+    {
+      "name": "out-ne"
+    },
+    {
+      "name": "out-nw"
+    },
+    {
+      "name": "out-se"
+    },
+    {
+      "name": "out-sw"
+    },
+    {
+      "name": "in-ne"
+    },
+    {
+      "name": "in-nw"
+    },
+    {
+      "name": "in-se"
+    },
+    {
+      "name": "in-sw"
+    }
+  ]
+}
