@@ -36,6 +36,17 @@ public sealed partial class ContentTileDefinition : IPrototype, IInheritingProto
 
     [DataField] public int EdgeSpritePriority { get; private set; } = 0;
 
+    /// <summary>
+    /// Tiles that share this string treat each other as interior for rim drawing.
+    /// When null, the prototype ID is the group.
+    /// </summary>
+    [DataField] public string? BorderGroup { get; private set; }
+
+    /// <summary>
+    /// RSI of 32x32 rim states (n/s/e/w, in-*, out-*). Null means no rim overlay.
+    /// </summary>
+    [DataField] public ResPath? BorderSprites { get; private set; }
+
     [DataField("isSubfloor")] public bool IsSubFloor { get; private set; }
 
     [DataField]
