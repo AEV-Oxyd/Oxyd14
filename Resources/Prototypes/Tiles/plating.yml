@@ -74,6 +74,7 @@
   variants: 1
   borderSprites: /Textures/Oxyd/erisported/lattices.rsi
   borderGroup: Lattice
+  borderRotate: false
   baseTurf: Space
   isSubfloor: true
   deconstructTools: [ Cutting ]

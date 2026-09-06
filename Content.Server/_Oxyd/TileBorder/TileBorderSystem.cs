@@ -30,7 +30,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private readonly List<Vector2i> _affectedTiles = new(9);
     private readonly List<DecalIndex> _strip = new();
-    private static readonly Vector2 StripPad = new(0.01f);
+    private static readonly Vector2 StripPad = new(0.5f);
 
     public override void Initialize()
     {
@@ -51,16 +51,28 @@ public sealed partial class TileBorderSystem : EntitySystem
         if (!_gridQuery.TryComp(grid, out var gridComp))
             return;
 
+        // Explosions batch many tile changes into one event. Union the affected
+        // neighbourhoods first, then strip+emit once so we never rebuild from a
+        // half-applied blast and leave stale rims/lattice links.
+        _affectedTiles.Clear();
         foreach (var change in args.Changes)
         {
-            _affectedTiles.Clear();
             TileBorderChunks.AppendAffectedTiles(change.GridIndices, _affectedTiles);
-            foreach (var tile in _affectedTiles)
-            {
-                StripGeneratedAt(grid, tile);
-                EmitRims(grid, gridComp, tile);
-            }
         }
+
+        var seen = new HashSet<Vector2i>();
+        var unique = new List<Vector2i>(_affectedTiles.Count);
+        foreach (var tile in _affectedTiles)
+        {
+            if (seen.Add(tile))
+                unique.Add(tile);
+        }
+
+        foreach (var tile in unique)
+            StripGeneratedAt(grid, tile);
+
+        foreach (var tile in unique)
+            EmitRims(grid, gridComp, tile);
     }
 
     [SubscribeLocalEvent]
@@ -149,11 +161,27 @@ public sealed partial class TileBorderSystem : EntitySystem
             return _groupByTypeId.TryGetValue(other.TypeId, out var otherGroup) ? otherGroup : null;
         });
 
-        if (TileBorderMask.IsInterior(mask))
-            return;
+        byte stateKey;
+        Angle rotation;
+        if (def.BorderRotate)
+        {
+            // Floor rims: fully 8-neighbour-surrounded → fill sprite only.
+            if (TileBorderMask.IsInterior(mask))
+                return;
 
-        var canonical = TileBorderMask.Canonicalize(mask, out var cwTurns);
-        var id = TileBorderDecals.PrototypeId(def.BorderSprites!.Value, canonical);
+            stateKey = TileBorderMask.Canonicalize(mask, out var cwTurns);
+            rotation = Angle.FromDegrees(cwTurns * 90);
+        }
+        else
+        {
+            // Absolute cardinal art (Eris lattices): full-tile frames, no Decal.Angle.
+            // Always emit dir_sum 00–0f (including 0x0F). Requires DecalSystem to allow
+            // TileBorder-* on isSpace tiles (Lattice).
+            stateKey = TileBorderMask.CardinalDirSum(mask);
+            rotation = Angle.Zero;
+        }
+
+        var id = TileBorderDecals.PrototypeId(def.BorderSprites!.Value, stateKey);
         if (!_validProtos.Contains(id))
             return;
 
@@ -162,7 +190,7 @@ public sealed partial class TileBorderSystem : EntitySystem
             id,
             coords,
             out _,
-            rotation: Angle.FromDegrees(cwTurns * 90),
+            rotation: rotation,
             zIndex: TileBorderDecals.ZIndex,
             cleanable: false);
     }

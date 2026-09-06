@@ -2,6 +2,7 @@ using System.Linq;
 using System.Numerics;
 using Content.Client.Decals.Overlays;
 using Content.Shared.Decals;
+using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Maps;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
@@ -56,7 +57,8 @@ namespace Content.Client.Decals
             if (gridUid == null || !_gridQuery.TryComp(gridUid.Value, out var grid))
                 return false;
 
-            if (_turf.IsSpace(_mapSystem.GetTileRef(gridUid.Value, grid, coordinates)))
+            if (_turf.IsSpace(_mapSystem.GetTileRef(gridUid.Value, grid, coordinates))
+                && !TileBorderDecals.IsGenerated(decal.Id))
                 return false;
 
             var chunk = ChunkEntities.GetOrCreateChunk(gridUid.Value, ChunkEntitySystem.GetChunkIndices(decal.Coordinates));
