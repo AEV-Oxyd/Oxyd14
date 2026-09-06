@@ -56,8 +56,49 @@ OLD_PIECE_STATES = (
 # stem -> (dmi filename under icons/turf/flooring, icon_base, has_inner_corners)
 # Inner corners: plating/under/hull explicit; steel/white/dark/techmaint inherit
 # TURF_HAS_INNER_CORNERS from /decl/flooring/tiling.
-FLOOR_MAP: list[tuple[str, str, str, bool]
-# --- PR C mapper-only ZERO/WEAK (append; leave A strong retargets alone) ---
+# FLOOR_MAP is the full union baked into tile_borders.yml: 19 original port
+# stems, 8 PR A strong-retarget stems, 8 PR B carpet stems, 37 PR C mapper
+# stems. Section order matches the committed tile_borders.yml stem order so a
+# full regeneration produces a stable file.
+FLOOR_MAP: list[tuple[str, str, str, bool]] = [
+    ("tiles_steel", "tiles_steel.dmi", "tiles", True),
+    ("steel_gray_perforated", "tiles_steel.dmi", "gray_perforated", True),
+    ("steel_gray_platform", "tiles_steel.dmi", "gray_platform", True),
+    ("steel_cargo", "tiles_steel.dmi", "cargo", True),
+    ("techmaint", "tiles_maint.dmi", "techmaint", True),
+    ("tiles_white", "tiles_white.dmi", "tiles", True),
+    ("white_brown_perforated", "tiles_white.dmi", "brown_perforated", True),
+    ("tiles_dark", "tiles_dark.dmi", "tiles", True),
+    ("dark_gray_platform", "tiles_dark.dmi", "gray_platform", True),
+    ("dark_techfloor", "tiles_dark.dmi", "techfloor", True),
+    ("steel_techfloor_grid", "tiles_steel.dmi", "techfloor_grid", True),
+    ("hullcenter", "hull.dmi", "hullcenter", True),
+    ("plating", "plating.dmi", "plating", True),
+    ("under", "plating.dmi", "under", True),
+    ("steel_techfloor", "tiles_steel.dmi", "techfloor", True),
+    ("steel_orangecorner", "tiles_steel.dmi", "orangecorner", True),
+    ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
+    ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
+    ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
+    # PR A STRONG retargets (C4BRA / port-eris-floors-retargets)
+    ("bcircuit", "circuit.dmi", "bcircuit", True),
+    ("reinforced", "tiles.dmi", "reinforced", True),
+    ("cafe", "tiles.dmi", "cafe", True),
+    ("golden", "tiles_steel.dmi", "golden", True),
+    ("bar_flat", "tiles_steel.dmi", "bar_flat", True),
+    ("techmaint_cargo", "tiles_maint.dmi", "techmaint_cargo", True),
+    ("techmaint_perforated", "tiles_maint.dmi", "techmaint_perforated", True),
+    ("grass", "grass.dmi", "grass", True),
+    # PR B: Eris carpets (icon_base == RSI stem)
+    ("gaycarpet", "carpet.dmi", "gaycarpet", True),
+    ("carpet", "carpet.dmi", "carpet", True),
+    ("bcarpet", "carpet.dmi", "bcarpet", True),
+    ("blucarpet", "carpet.dmi", "blucarpet", True),
+    ("turcarpet", "carpet.dmi", "turcarpet", True),
+    ("sblucarpet", "carpet.dmi", "sblucarpet", True),
+    ("purcarpet", "carpet.dmi", "purcarpet", True),
+    ("oracarpet", "carpet.dmi", "oracarpet", True),
+    # --- PR C mapper-only ZERO/WEAK (append; leave A strong retargets alone) ---
     # Derelict (has_inner=False — edges dirs=8, no _corners)
     ("derelict1", "derelict.dmi", "derelict1", False),
     ("derelict2", "derelict.dmi", "derelict2", False),
@@ -99,45 +140,6 @@ FLOOR_MAP: list[tuple[str, str, str, bool]
     ("dark_bluecorner", "tiles_dark.dmi", "bluecorner", True),
     ("dark_orangecorner", "tiles_dark.dmi", "orangecorner", True),
     ("dark_monofloor", "tiles_dark.dmi", "monofloor", True),
-] = [
-    ("tiles_steel", "tiles_steel.dmi", "tiles", True),
-    ("steel_gray_perforated", "tiles_steel.dmi", "gray_perforated", True),
-    ("steel_gray_platform", "tiles_steel.dmi", "gray_platform", True),
-    ("steel_cargo", "tiles_steel.dmi", "cargo", True),
-    ("techmaint", "tiles_maint.dmi", "techmaint", True),
-    ("tiles_white", "tiles_white.dmi", "tiles", True),
-    ("white_brown_perforated", "tiles_white.dmi", "brown_perforated", True),
-    ("tiles_dark", "tiles_dark.dmi", "tiles", True),
-    ("dark_gray_platform", "tiles_dark.dmi", "gray_platform", True),
-    ("dark_techfloor", "tiles_dark.dmi", "techfloor", True),
-    ("steel_techfloor_grid", "tiles_steel.dmi", "techfloor_grid", True),
-    ("hullcenter", "hull.dmi", "hullcenter", True),
-    ("plating", "plating.dmi", "plating", True),
-    ("under", "plating.dmi", "under", True),
-    ("steel_techfloor", "tiles_steel.dmi", "techfloor", True),
-    ("steel_orangecorner", "tiles_steel.dmi", "orangecorner", True),
-    ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
-    ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
-    ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
-    # PR A STRONG retargets (C4BRA / port-eris-floors-retargets)
-    ("bcircuit", "circuit.dmi", "bcircuit", True),
-    ("reinforced", "tiles.dmi", "reinforced", True),
-    ("cafe", "tiles.dmi", "cafe", True),
-    ("golden", "tiles_steel.dmi", "golden", True),
-    ("bar_flat", "tiles_steel.dmi", "bar_flat", True),
-    ("techmaint_cargo", "tiles_maint.dmi", "techmaint_cargo", True),
-    ("techmaint_perforated", "tiles_maint.dmi", "techmaint_perforated", True),
-    ("grass", "grass.dmi", "grass", True),
-    # PR B: Eris carpets (icon_base == RSI stem)
-    ("gaycarpet", "carpet.dmi", "gaycarpet", True),
-    ("carpet", "carpet.dmi", "carpet", True),
-    ("bcarpet", "carpet.dmi", "bcarpet", True),
-    ("blucarpet", "carpet.dmi", "blucarpet", True),
-    ("turcarpet", "carpet.dmi", "turcarpet", True),
-    ("sblucarpet", "carpet.dmi", "sblucarpet", True),
-    ("purcarpet", "carpet.dmi", "purcarpet", True),
-    ("oracarpet", "carpet.dmi", "oracarpet", True),
-
 ]
 
 
@@ -359,7 +361,7 @@ def main() -> None:
     parser.add_argument(
         "--only",
         nargs="*",
-        help="Bake only these RSI stems (default: all 19)",
+        help="Bake only these RSI stems (default: all 72)",
     )
     parser.add_argument(
         "--skip-yaml",
