@@ -176,7 +176,9 @@
   id: FloorCarpetClown
   parent: BaseStationTile
   name: tiles-clown-carpet-floor
-  sprite: /Textures/Tiles/carpetclown.png
+  sprite: /Textures/Oxyd/erisported/gaycarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/gaycarpet.rsi
   footstepSounds:
     collection: FootstepCarpet
   barestepSounds:

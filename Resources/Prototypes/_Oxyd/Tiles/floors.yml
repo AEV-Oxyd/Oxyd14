@@ -77,3 +77,93 @@
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemSteelMaint
+- type: tile
+  id: FloorCarpet
+  parent: BaseStationTile
+  name: tiles-eris-carpet
+  sprite: /Textures/Oxyd/erisported/carpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/carpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetBlack
+  parent: BaseStationTile
+  name: tiles-eris-carpet-black
+  sprite: /Textures/Oxyd/erisported/bcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/bcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetBlue
+  parent: BaseStationTile
+  name: tiles-eris-carpet-blue
+  sprite: /Textures/Oxyd/erisported/blucarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/blucarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetTurquoise
+  parent: BaseStationTile
+  name: tiles-eris-carpet-turquoise
+  sprite: /Textures/Oxyd/erisported/turcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/turcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetSkyBlue
+  parent: BaseStationTile
+  name: tiles-eris-carpet-sky-blue
+  sprite: /Textures/Oxyd/erisported/sblucarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/sblucarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetPurple
+  parent: BaseStationTile
+  name: tiles-eris-carpet-purple
+  sprite: /Textures/Oxyd/erisported/purcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/purcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetOrange
+  parent: BaseStationTile
+  name: tiles-eris-carpet-orange
+  sprite: /Textures/Oxyd/erisported/oracarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/oracarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25

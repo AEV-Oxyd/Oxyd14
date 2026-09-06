@@ -85,6 +85,16 @@ FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("techmaint_cargo", "tiles_maint.dmi", "techmaint_cargo", True),
     ("techmaint_perforated", "tiles_maint.dmi", "techmaint_perforated", True),
     ("grass", "grass.dmi", "grass", True),
+    # PR B: Eris carpets (icon_base == RSI stem)
+    ("gaycarpet", "carpet.dmi", "gaycarpet", True),
+    ("carpet", "carpet.dmi", "carpet", True),
+    ("bcarpet", "carpet.dmi", "bcarpet", True),
+    ("blucarpet", "carpet.dmi", "blucarpet", True),
+    ("turcarpet", "carpet.dmi", "turcarpet", True),
+    ("sblucarpet", "carpet.dmi", "sblucarpet", True),
+    ("purcarpet", "carpet.dmi", "purcarpet", True),
+    ("oracarpet", "carpet.dmi", "oracarpet", True),
+
 ]
 
 
