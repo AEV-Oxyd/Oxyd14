@@ -9205,3 +9205,487 @@
   sprite:
     sprite: Oxyd/erisported/techmaint_panels.rsi
     state: bf
+# lattices.rsi
+# lattices appended by Tools/eris_lattice_bake.py
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-00
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 00
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-01
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 01
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-02
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 02
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-03
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 03
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-05
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 05
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-06
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 06
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-07
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 07
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-09
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 09
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-0a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 0a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-0b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 0b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-0d
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 0d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-0e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 0e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-0f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 0f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-11
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 11
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-12
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 12
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-13
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 13
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-15
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 15
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-16
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 16
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-17
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 17
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-19
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 19
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-1a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 1a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-1b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 1b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-1d
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 1d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-1e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 1e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-1f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 1f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-22
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 22
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-23
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 23
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-25
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 25
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-26
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 26
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-27
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 27
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-29
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 29
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-2a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 2a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-2b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 2b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-2d
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 2d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-2e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 2e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-2f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 2f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-33
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 33
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-35
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 35
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-36
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 36
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-37
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 37
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-39
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 39
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-3a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 3a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-3b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 3b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-3d
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 3d
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-3e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 3e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-3f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 3f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-55
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 55
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-56
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 56
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-57
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 57
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-5a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 5a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-5b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 5b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-5e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 5e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-5f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 5f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-66
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 66
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-67
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 67
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-6a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 6a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-6b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 6b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-6e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 6e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-6f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 6f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-77
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 77
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-7a
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 7a
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-7b
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 7b
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-7e
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 7e
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-7f
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: 7f
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-aa
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: aa
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-ab
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: ab
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-af
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: af
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-bb
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: bb
+
+- type: decal
+  parent: TileBorderBase
+  id: TileBorder-lattices-bf
+  sprite:
+    sprite: Oxyd/erisported/lattices.rsi
+    state: bf
