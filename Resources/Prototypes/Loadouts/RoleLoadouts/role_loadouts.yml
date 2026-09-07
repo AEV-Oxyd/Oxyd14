@@ -454,12 +454,26 @@
 - type: roleLoadout
   id: JobSecurityCadet
   groups:
+  - SecurityCadetHead
   - SecurityCadetJumpsuit
   - SecurityBackpack
   - AssistiveItems
   - SurvivalSecurity
   - Trinkets
   #- SecurityCadetJobTrinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobMedicalSpecialist
+  groups:
+  - MedicalSpecialistJumpsuit
+  - SecurityBackpack
+  - MedicalSpecialistBelt
+  - MedicalSpecialistOuterClothing
+  - SecurityShoes
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
   - GroupSpeciesBreathToolSecurity
 
 # Wildcards

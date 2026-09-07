@@ -1,0 +1,22 @@
+# Jumpsuit
+- type: loadout
+  id: MedicalSpecialistJumpsuit
+  equipment:
+    jumpsuit: erisport_Medical_Specialists_jumpsuit
+
+- type: loadout
+  id: MedicalSpecialistJumpskirt
+  equipment:
+    jumpsuit: erisport_Medical_Specialists_jumpskirt
+
+# Outer Clothing (Lab Coat)
+- type: loadout
+  id: MedicalSpecialistOuterClothing
+  equipment:
+    outerClothing: erisport_medical_specialists_labcoat
+
+# Belt
+- type: loadout
+  id: MedicalSpecialistBelt
+  equipment:
+    belt: erisport_medical_belt
