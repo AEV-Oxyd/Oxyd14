@@ -128,9 +128,6 @@
   id: JobSecurityCadet
 
 - type: playTimeTracker
-  id: JobMedicalSpecialist
-
-- type: playTimeTracker
   id: JobSecurityOfficer
 
 - type: playTimeTracker

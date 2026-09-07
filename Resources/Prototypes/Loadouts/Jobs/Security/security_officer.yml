@@ -17,17 +17,17 @@
 - type: loadout
   id: SecurityHelmet
   equipment:
-    head: erisport_operator_helmet
+    head: ClothingHeadHelmetBasic
 
 - type: loadout
   id: SecurityHat
   equipment:
-    head: erisport_IH_field_cap
+    head: ClothingHeadHatSecsoft
 
 - type: loadout
   id: SecurityBeret
   equipment:
-    head: erisport_Operative_beret
+    head: ClothingHeadHatBeretSecurity
 
 - type: loadout
   id: TrooperHat
@@ -38,22 +38,22 @@
 - type: loadout
   id: SecurityJumpsuit
   equipment:
-    jumpsuit: erisport_Ironhammer_Operatives_jumpsuit
+    jumpsuit: ClothingUniformJumpsuitSec
 
 - type: loadout
   id: SecurityJumpskirt
   equipment:
-    jumpsuit: erisport_Ironhammer_Operatives_jumpskirt
+    jumpsuit: ClothingUniformJumpskirtSec
 
 - type: loadout
   id: SecurityJumpsuitGrey
   equipment:
-    jumpsuit: erisport_Ironhammer_Operatives_turtleneck
+    jumpsuit: ClothingUniformJumpsuitSecGrey
 
 - type: loadout
   id: SecurityJumpskirtGrey
   equipment:
-    jumpsuit: erisport_Ironhammer_Operatives_turtleneck
+    jumpsuit: ClothingUniformJumpskirtSecGrey
 
 - type: loadout
   id: TrooperUniform
@@ -66,7 +66,7 @@
   - !type:GroupLoadoutEffect
     proto: SeniorOfficer
   equipment:
-    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+    jumpsuit: ClothingUniformJumpsuitSeniorOfficer
 
 - type: loadout
   id: SeniorOfficerJumpskirt
@@ -74,18 +74,18 @@
   - !type:GroupLoadoutEffect
     proto: SeniorOfficer
   equipment:
-    jumpsuit: erisport_Gunnery_Sergeant_jumpskirt
+    jumpsuit: ClothingUniformJumpskirtSeniorOfficer
 
 # Back
 - type: loadout
   id: SecurityBackpack
   equipment:
-    back: erisport_security_backpack
+    back: ClothingBackpackSecurity
 
 - type: loadout
   id: SecuritySatchel
   equipment:
-    back: erisport_security_satchel
+    back: ClothingBackpackSatchelSecurity
 
 - type: loadout
   id: SecurityDuffel
@@ -107,12 +107,12 @@
 - type: loadout
   id: ArmorVest
   equipment:
-    outerClothing: erisport_full_operator_armor
+    outerClothing: ClothingOuterArmorBasic
 
 - type: loadout
   id: ArmorVestSlim
   equipment:
-    outerClothing: erisport_operator_armor
+    outerClothing: ClothingOuterArmorBasicSlim
 
 - type: loadout
   id: SecurityOfficerWintercoat

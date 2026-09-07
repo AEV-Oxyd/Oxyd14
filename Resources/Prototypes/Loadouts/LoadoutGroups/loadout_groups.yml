@@ -1205,19 +1205,6 @@
   - SecurityWebbing
 
 - type: loadoutGroup
-  id: MedicalSpecialistOuterClothing
-  name: loadout-group-medical-specialist-outerclothing
-  minLimit: 0
-  loadouts:
-  - MedicalSpecialistOuterClothing
-
-- type: loadoutGroup
-  id: MedicalSpecialistBelt
-  name: loadout-group-medical-specialist-belt
-  loadouts:
-  - MedicalSpecialistBelt
-
-- type: loadoutGroup
   id: SecurityOuterClothing
   name: loadout-group-security-outerclothing
   loadouts:
@@ -1274,9 +1261,9 @@
   id: DetectiveOuterClothing
   name: loadout-group-detective-outerclothing
   loadouts:
+  - DetectiveArmorVest
   - DetectiveCoat
   - DetectiveCoatGrey
-  - DetectiveArmorVest
   - SecurityOfficerWintercoat
 
 - type: loadoutGroup
@@ -1292,21 +1279,6 @@
   loadouts:
   - RedJumpsuit
   - RedJumpskirt
-
-- type: loadoutGroup
-  id: SecurityCadetHead
-  name: loadout-group-security-cadet-head
-  minLimit: 0
-  loadouts:
-  - CadetFieldCap
-  - CadetBeret
-
-- type: loadoutGroup
-  id: MedicalSpecialistJumpsuit
-  name: loadout-group-medical-specialist-jumpsuit
-  loadouts:
-  - MedicalSpecialistJumpsuit
-  - MedicalSpecialistJumpskirt
 
 #- type: loadoutGroup
 #  id: SecurityCadetJobTrinkets

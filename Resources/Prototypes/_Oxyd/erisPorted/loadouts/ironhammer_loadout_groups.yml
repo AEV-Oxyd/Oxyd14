@@ -1,0 +1,207 @@
+# Ironhammer-specific loadout groups. Existing upstream groups remain intact.
+
+- type: loadoutGroup
+  id: IronhammerHeadOfSecurityHead
+  name: loadout-group-head-of-security-head
+  minLimit: 0
+  loadouts:
+  - IronhammerHeadOfSecurityHead
+  - IronhammerHeadOfSecurityBeret
+
+- type: loadoutGroup
+  id: IronhammerHeadOfSecurityJumpsuit
+  name: loadout-group-head-of-security-jumpsuit
+  loadouts:
+  - IronhammerHeadOfSecurityJumpsuit
+  - IronhammerHeadOfSecurityJumpskirt
+  - IronhammerHeadOfSecurityTurtleneck
+  - IronhammerHeadOfSecurityTurtleneckSkirt
+  - IronhammerHeadOfSecurityFormalSuit
+  - IronhammerHeadOfSecurityFormalSkirt
+
+- type: loadoutGroup
+  id: IronhammerHeadOfSecurityNeck
+  name: loadout-group-head-of-security-neck
+  minLimit: 0
+  loadouts:
+  - IronhammerHeadOfSecurityCloak
+  - IronhammerHeadOfSecurityMantle
+
+- type: loadoutGroup
+  id: IronhammerHeadOfSecurityOuterClothing
+  name: loadout-group-head-of-security-outerclothing
+  minLimit: 0
+  loadouts:
+  - IronhammerHeadOfSecurityCoat
+  - IronhammerHeadOfSecurityWinterCoat
+
+- type: loadoutGroup
+  id: IronhammerHeadOfSecurityJobTrinkets
+  name: loadout-group-jobtrinkets
+  minLimit: 0
+  loadouts:
+  - SecStar
+
+- type: loadoutGroup
+  id: IronhammerWardenHead
+  name: loadout-group-warden-head
+  minLimit: 0
+  loadouts:
+  - IronhammerWardenHead
+  - IronhammerWardenBeret
+
+- type: loadoutGroup
+  id: IronhammerWardenJumpsuit
+  name: loadout-group-warden-jumpsuit
+  loadouts:
+  - IronhammerWardenJumpsuit
+  - IronhammerWardenJumpskirt
+
+- type: loadoutGroup
+  id: IronhammerWardenOuterClothing
+  name: loadout-group-warden-outerclothing
+  loadouts:
+  - IronhammerWardenCoat
+  - IronhammerWardenArmoredWinterCoat
+
+- type: loadoutGroup
+  id: IronhammerWardenJobTrinkets
+  name: loadout-group-jobtrinkets
+  minLimit: 0
+  loadouts:
+  - SecStar
+
+- type: loadoutGroup
+  id: IronhammerSecurityHead
+  name: loadout-group-security-head
+  minLimit: 0
+  loadouts:
+  - IronhammerSecurityHelmet
+  - IronhammerSecurityBeret
+  - IronhammerSecurityHat
+  - IronhammerTrooperHat
+
+- type: loadoutGroup
+  id: IronhammerSecurityJumpsuit
+  name: loadout-group-security-jumpsuit
+  loadouts:
+  - IronhammerSecurityJumpsuit
+  - IronhammerSecurityJumpskirt
+  - IronhammerSecurityJumpsuitGrey
+  - IronhammerSecurityJumpskirtGrey
+  - IronhammerSeniorOfficerJumpsuit
+  - IronhammerSeniorOfficerJumpskirt
+  - IronhammerTrooperUniform
+
+- type: loadoutGroup
+  id: IronhammerSecurityBackpack
+  name: loadout-group-security-backpack
+  loadouts:
+  - IronhammerSecurityBackpack
+  - IronhammerSecuritySatchel
+  - IronhammerSecurityDuffel
+
+- type: loadoutGroup
+  id: IronhammerSecurityBelt
+  name: loadout-group-security-belt
+  loadouts:
+  - IronhammerSecurityBelt
+  - IronhammerSecurityWebbing
+
+- type: loadoutGroup
+  id: IronhammerSecurityOuterClothing
+  name: loadout-group-security-outerclothing
+  loadouts:
+  - IronhammerArmorVest
+  - IronhammerArmorVestSlim
+  - IronhammerSecurityOfficerWintercoat
+
+- type: loadoutGroup
+  id: IronhammerSecurityPDA
+  name: loadout-group-security-id
+  loadouts:
+  - IronhammerSecurityPDA
+  - IronhammerSeniorOfficerPDA
+
+- type: loadoutGroup
+  id: IronhammerSecurityShoes
+  name: loadout-group-security-shoes
+  loadouts:
+  - CombatBoots
+  - JackBoots
+  - SecurityWinterBoots
+
+- type: loadoutGroup
+  id: IronhammerDetectiveHead
+  name: loadout-group-detective-head
+  minLimit: 0
+  loadouts:
+  - IronhammerDetectiveFedora
+  - IronhammerDetectiveFedoraGrey
+
+- type: loadoutGroup
+  id: IronhammerDetectiveNeck
+  name: loadout-group-detective-neck
+  minLimit: 0
+  loadouts:
+  - IronhammerDetectiveTie
+
+- type: loadoutGroup
+  id: IronhammerDetectiveJumpsuit
+  name: loadout-group-detective-jumpsuit
+  loadouts:
+  - IronhammerDetectiveJumpsuit
+  - IronhammerDetectiveJumpskirt
+  - IronhammerNoirJumpsuit
+  - IronhammerNoirJumpskirt
+
+- type: loadoutGroup
+  id: IronhammerDetectiveOuterClothing
+  name: loadout-group-detective-outerclothing
+  loadouts:
+  - IronhammerDetectiveCoat
+  - IronhammerDetectiveCoatGrey
+  - IronhammerDetectiveArmorVest
+  - IronhammerSecurityOfficerWintercoat
+
+- type: loadoutGroup
+  id: IronhammerDetectiveJobTrinkets
+  name: loadout-group-jobtrinkets
+  minLimit: 0
+  loadouts:
+  - SecStar
+
+- type: loadoutGroup
+  id: IronhammerSecurityCadetJumpsuit
+  name: loadout-group-security-cadet-jumpsuit
+  loadouts:
+  - IronhammerRedJumpsuit
+  - IronhammerRedJumpskirt
+
+- type: loadoutGroup
+  id: IronhammerSecurityCadetHead
+  name: loadout-group-security-cadet-head
+  minLimit: 0
+  loadouts:
+  - IronhammerCadetFieldCap
+  - IronhammerCadetBeret
+
+- type: loadoutGroup
+  id: IronhammerMedicalSpecialistJumpsuit
+  name: loadout-group-medical-specialist-jumpsuit
+  loadouts:
+  - IronhammerMedicalSpecialistJumpsuit
+  - IronhammerMedicalSpecialistJumpskirt
+
+- type: loadoutGroup
+  id: IronhammerMedicalSpecialistBelt
+  name: loadout-group-medical-specialist-belt
+  loadouts:
+  - IronhammerMedicalSpecialistBelt
+
+- type: loadoutGroup
+  id: IronhammerMedicalSpecialistOuterClothing
+  name: loadout-group-medical-specialist-outerclothing
+  minLimit: 0
+  loadouts:
+  - IronhammerMedicalSpecialistOuterClothing

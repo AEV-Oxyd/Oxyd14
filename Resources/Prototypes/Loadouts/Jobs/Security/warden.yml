@@ -2,29 +2,29 @@
 - type: loadout
   id: WardenHead
   equipment:
-    head: erisport_IH_sergeant_cap
+    head: ClothingHeadHatWarden
 
 - type: loadout
   id: WardenBeret
   equipment:
-    head: erisport_Sergeant_beret
+    head: ClothingHeadHatBeretWarden
 
 # Jumpsuit
 - type: loadout
   id: WardenJumpsuit
   equipment:
-    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+    jumpsuit: ClothingUniformJumpsuitWarden
 
 - type: loadout
   id: WardenJumpskirt
   equipment:
-    jumpsuit: erisport_Gunnery_Sergeant_jumpskirt
+    jumpsuit: ClothingUniformJumpskirtWarden
 
 # OuterClothing
 - type: loadout
   id: WardenCoat
   equipment:
-    outerClothing: erisport_Wardens_overcoat
+    outerClothing: ClothingOuterCoatWarden
 
 - type: loadout
   id: WardenArmoredWinterCoat

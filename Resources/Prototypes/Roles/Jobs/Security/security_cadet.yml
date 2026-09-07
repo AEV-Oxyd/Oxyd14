@@ -27,7 +27,7 @@
   id: SecurityCadetGear
   equipment:
     shoes: ClothingShoesBootsJackFilled
-    outerClothing: erisport_operator_armor
+    outerClothing: ClothingOuterArmorBasic
     id: SecurityCadetPDA
     ears: ClothingHeadsetSecurity
     belt: ClothingBeltSecurityFilled
@@ -36,7 +36,6 @@
   storage:
     back:
     - Flash
-    - WeaponPDWMartin
     - MagazinePistol
 
 - type: chameleonOutfit
@@ -44,9 +43,9 @@
   job: SecurityCadet
   hasMindShield: true
   equipment:
-    head: erisport_IH_field_cap
-    eyes: erisport_Ironhammer_tactical_HUD
-    mask: erisport_tactical_balaclava
+    head: ClothingHeadHelmetBasic
+    eyes: ClothingEyesHudSecurity
+    mask: ClothingMaskGasSecurity
     neck: ClothingNeckScarfStripedRed
     belt: ClothingBeltSecurity
     gloves: ClothingHandsGlovesColorBlack

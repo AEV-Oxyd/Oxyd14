@@ -23,13 +23,12 @@
 - type: startingGear
   id: SecurityOfficerGear
   equipment:
-    eyes: erisport_Ironhammer_tactical_HUD
+    eyes: ClothingEyesGlassesSecurity
     ears: ClothingHeadsetSecurity
     pocket1: WeaponPistolMk58
   storage:
     back:
     - Flash
-    - WeaponPDWMartin
     - MagazinePistol
 
 - type: chameleonOutfit
@@ -37,7 +36,7 @@
   job: SecurityOfficer
   hasMindShield: true
   equipment:
-    head: erisport_old_security_beret
-    mask: erisport_tactical_balaclava
+    head: ClothingHeadHatBeretSecurity
+    mask: ClothingMaskGasSecurity
     neck: Dinkystar
     gloves: ClothingHandsGlovesColorBlack

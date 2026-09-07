@@ -110,7 +110,6 @@
   weight: 20
   roles:
   - HeadOfSecurity
-  - MedicalSpecialist
   - SecurityCadet
   - SecurityOfficer
   - Detective

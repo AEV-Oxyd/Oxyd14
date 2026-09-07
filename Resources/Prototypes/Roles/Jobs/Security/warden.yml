@@ -30,14 +30,13 @@
 - type: startingGear
   id: WardenGear
   equipment:
-    eyes: erisport_Ironhammer_tactical_HUD
+    eyes: ClothingEyesGlassesSecurity
     id: WardenPDA
     ears: ClothingHeadsetSecurity
     pocket1: WeaponPistolMk58
   storage:
     back:
     - Flash
-    - WeaponPDWMartin
     - MagazinePistol
 
 - type: chameleonOutfit
@@ -45,10 +44,10 @@
   job: Warden
   hasMindShield: true
   equipment:
-    head: erisport_IH_sergeant_cap
-    mask: erisport_Ironhammer_gasmask
-    outerClothing: erisport_Wardens_overcoat
-    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+    head: ClothingHeadHatWarden
+    mask: ClothingMaskGasSecurity
+    outerClothing: ClothingOuterCoatWarden
+    jumpsuit: ClothingUniformJumpsuitWarden
     neck: Dinkystar
     belt: ClothingBeltSecurity
     gloves: ClothingHandsGlovesCombat
