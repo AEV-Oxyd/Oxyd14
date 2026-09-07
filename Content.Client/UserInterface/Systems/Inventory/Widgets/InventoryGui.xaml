@@ -22,11 +22,12 @@
             Name="InventoryHotbar"
             Access="Public"
             Visible="True"
-            MaxColumns="3"
             SlotGroup="Default"
             ExpandBackwards="True"
             VerticalExpand="True"
             HorizontalAlignment="Left"
+            Columns = "4"
+            Rows="4"
         />
     </Control>
 </widgets:InventoryGui>

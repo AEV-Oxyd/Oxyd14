@@ -13,8 +13,15 @@ namespace Content.Client.UserInterface.Controls
     /// </summary>
     public sealed partial class MainViewport : UIWidget
     {
-        [Dependency] private IConfigurationManager _cfg = default!;
         [Dependency] private ViewportManager _vpManager = default!;
+
+        public const bool ViewportStretch = false;
+        public const int ViewPortSnapToleranceMargin = 32;
+        public const int ViewportSnapToleranceClip = 16;
+        public const int ViewportFixedScaleFactor = 2;
+        public const bool ViewportRenderScaleUp = true;
+        public const bool ViewportVerticalFit = true;
+        public static readonly string ViewportScalingFilterMode = "bilinear";
 
         public ScalingViewport Viewport { get; }
 
@@ -32,8 +39,7 @@ namespace Content.Client.UserInterface.Controls
             };
 
             AddChild(Viewport);
-
-            _cfg.OnValueChanged(CCVars.ViewportScalingFilterMode, _ => UpdateCfg(), true);
+            UpdateCfg();
         }
 
         protected override void EnteredTree()
@@ -52,11 +58,11 @@ namespace Content.Client.UserInterface.Controls
 
         public void UpdateCfg()
         {
-            var stretch = _cfg.GetCVar(CCVars.ViewportStretch);
-            var renderScaleUp = _cfg.GetCVar(CCVars.ViewportScaleRender);
-            var fixedFactor = _cfg.GetCVar(CCVars.ViewportFixedScaleFactor);
-            var verticalFit = _cfg.GetCVar(CCVars.ViewportVerticalFit);
-            var filterMode = _cfg.GetCVar(CCVars.ViewportScalingFilterMode);
+            var stretch = ViewportStretch;
+            var renderScaleUp = ViewportRenderScaleUp;
+            var fixedFactor = ViewportFixedScaleFactor;
+            var verticalFit = ViewportVerticalFit;
+            var filterMode = ViewportScalingFilterMode;
 
             if (stretch)
             {
@@ -111,12 +117,12 @@ namespace Content.Client.UserInterface.Controls
         {
             // Margin tolerance is tolerance of "the window is too big"
             // where we add a margin to the viewport to make it fit.
-            var cfgToleranceMargin = _cfg.GetCVar(CCVars.ViewportSnapToleranceMargin);
+            var cfgToleranceMargin = ViewPortSnapToleranceMargin;
             // Clip tolerance is tolerance of "the window is too small"
             // where we are clipping the viewport to make it fit.
-            var cfgToleranceClip = _cfg.GetCVar(CCVars.ViewportSnapToleranceClip);
+            var cfgToleranceClip = ViewportSnapToleranceClip;
 
-            var cfgVerticalFit = _cfg.GetCVar(CCVars.ViewportVerticalFit);
+            var cfgVerticalFit = ViewportVerticalFit;
 
             // Calculate if the viewport, when rendered at an integer scale,
             // is close enough to the control size to enable "snapping" to NN,
