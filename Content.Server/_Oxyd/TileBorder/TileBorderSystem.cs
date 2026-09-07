@@ -1,12 +1,16 @@
 using System.Collections.Frozen;
+using System.Linq;
 using System.Numerics;
 using Content.Server.Decals;
+using Content.Server.GameTicking;
+using Content.Server.GameTicking.Events;
 using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Decals;
 using Content.Shared.Maps;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.TileBorder;
 
@@ -23,6 +27,7 @@ public sealed partial class TileBorderSystem : EntitySystem
     [Dependency] private ITileDefinitionManager _tiles = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
+    [Dependency] private GameTicker ticker = default!;
 
     private FrozenDictionary<int, ContentTileDefinition> _byTypeId = FrozenDictionary<int, ContentTileDefinition>.Empty;
     private FrozenDictionary<int, string> _groupByTypeId = FrozenDictionary<int, string>.Empty;
@@ -37,11 +42,11 @@ public sealed partial class TileBorderSystem : EntitySystem
         base.Initialize();
         RebuildIndex();
     }
-
+    
     [SubscribeLocalEvent]
-    private void OnGridInit(GridInitializeEvent ev)
+    private void OnGridInit(Entity<MapGridComponent> grid,ref  MapInitEvent args)
     {
-        RebuildGrid(ev.EntityUid, ev.Grid);
+        RebuildGrid(grid, grid.Comp);
     }
 
     [SubscribeLocalEvent]
@@ -72,6 +77,7 @@ public sealed partial class TileBorderSystem : EntitySystem
         if (_gridQuery.TryComp(ev.Grid, out var grid))
             RebuildGrid(ev.Grid, grid);
     }
+    
 
     [SubscribeLocalEvent]
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs args)
@@ -93,10 +99,6 @@ public sealed partial class TileBorderSystem : EntitySystem
         foreach (var tile in _map.GetAllTiles(grid, gridComp))
         {
             StripGeneratedAt(grid, tile.GridIndices);
-        }
-
-        foreach (var tile in _map.GetAllTiles(grid, gridComp))
-        {
             EmitRims(grid, gridComp, tile.GridIndices);
         }
     }

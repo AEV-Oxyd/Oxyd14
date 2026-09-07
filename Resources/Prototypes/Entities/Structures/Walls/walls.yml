@@ -441,13 +441,13 @@
   suffix: rusted
   components:
   - type: Sprite
-    sprite: Structures/Walls/solid_rust.rsi
+    sprite: Structures/Walls/solid-rust.rsi
     # Hidden layer so inherited parent state: reinf_over0 is not drawn under Corners.
     layers:
     - state: rgeneric
       visible: false
   - type: Icon
-    sprite: Structures/Walls/solid_rust.rsi
+    sprite: Structures/Walls/solid-rust.rsi
     state: rgeneric
   - type: Construction
     graph: Girder
@@ -733,13 +733,13 @@
   suffix: rusted
   components:
   - type: Sprite
-    sprite: Structures/Walls/solid_rust.rsi
+    sprite: Structures/Walls/solid-rust.rsi
     # Hidden layer so inherited parent state: solid0 is not drawn under Corners.
     layers:
     - state: full
       visible: false
   - type: Icon
-    sprite: Structures/Walls/solid_rust.rsi
+    sprite: Structures/Walls/solid-rust.rsi
     state: full
   - type: Construction
     graph: Girder
