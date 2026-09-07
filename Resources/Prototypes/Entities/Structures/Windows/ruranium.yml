@@ -28,7 +28,9 @@
             min: 1
             max: 2
   - type: IconSmooth
+    key: walls
     base: ruwindow
+    mode: Corners
   - type: Construction
     graph: Window
     node: reinforcedUraniumWindow

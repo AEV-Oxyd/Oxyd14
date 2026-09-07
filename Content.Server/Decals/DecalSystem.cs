@@ -3,6 +3,7 @@ using Content.Server.Administration.Logs;
 using Content.Server.Administration.Managers;
 using Content.Shared.Administration;
 using Content.Shared.Database;
+using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Decals;
 using Content.Shared.Maps;
 using Robust.Shared.EntitySerialization;
@@ -186,6 +187,9 @@ public sealed partial class DecalSystem : SharedDecalSystem
 
         foreach (var (decalId, decal) in GetDecalsInRange(gridId.Value, ev.Coordinates.Position))
         {
+            if (TileBorderDecals.IsGenerated(decal.Id))
+                continue;
+
             if (eventArgs.SenderSession.AttachedEntity != null)
             {
                 _adminLogger.Add(LogType.CrayonDraw, LogImpact.Low,

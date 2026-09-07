@@ -7,9 +7,9 @@
   components:
   - type: Sprite
     drawdepth: SmallObjects
-    sprite: Structures/Walls/railing.rsi
+    sprite: Oxyd/erisported/railings.rsi
   - type: Icon
-    sprite: Structures/Walls/railing.rsi
+    sprite: Oxyd/erisported/railings.rsi
   - type: Physics
     bodyType: Static
   - type: InteractionOutline

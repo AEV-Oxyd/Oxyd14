@@ -271,7 +271,9 @@
   id: FloorTechMaint3
   parent: BaseStationTile
   name: tiles-techmaint3-floor
-  sprite: /Textures/Tiles/grating-maint.png
+  sprite: /Textures/Oxyd/erisported/steel_techfloor_grid_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_techfloor_grid.rsi
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemGratingMaint
@@ -346,7 +348,10 @@
   id: FloorHull
   parent: BaseStationTile
   name: tiles-hull
-  sprite: /Textures/Tiles/hull.png
+  sprite: /Textures/Oxyd/erisported/hullcenter_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/hullcenter.rsi
+  borderGroup: Hull
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemSteel #probably should not be normally obtainable, but the game shits itself and dies when you try to put null here

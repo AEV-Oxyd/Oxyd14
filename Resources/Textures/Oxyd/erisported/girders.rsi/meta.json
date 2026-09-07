@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Girder states taken from CEV-Eris icons/obj/structures.dmi (https://github.com/discordia-space/CEV-Eris).",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "wall_girder"
+    },
+    {
+      "name": "reinforced_wall_girder"
+    },
+    {
+      "name": "displaced"
+    },
+    {
+      "name": "girder_low"
+    },
+    {
+      "name": "reinforced_low"
+    },
+    {
+      "name": "displaced_low"
+    }
+  ]
+}

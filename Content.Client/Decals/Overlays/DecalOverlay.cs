@@ -117,6 +117,10 @@ namespace Content.Client.Decals.Overlays
             }
 
             handle.SetTransform(Matrix3x2.Identity);
+            // Clyde only flushes WorldSpaceGrids overlays before the next grid
+            // when this is set; otherwise shuttle/station decals can draw over
+            // the other grid's tiles.
+            RequiresFlush = true;
         }
 
         private static int CompareDecalIndex(DecalIndex x, DecalIndex y)

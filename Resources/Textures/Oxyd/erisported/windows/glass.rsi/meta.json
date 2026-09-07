@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Window states composited from CEV-Eris icons/walls.dmi low-wall and glass overlays; directional frames from icons/obj/structures.dmi (https://github.com/discordia-space/CEV-Eris).",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "full"
+    },
+    {
+      "name": "window0"
+    },
+    {
+      "name": "window1"
+    },
+    {
+      "name": "window2"
+    },
+    {
+      "name": "window3"
+    },
+    {
+      "name": "window4"
+    },
+    {
+      "name": "window5"
+    },
+    {
+      "name": "window6"
+    },
+    {
+      "name": "window7"
+    },
+    {
+      "name": "window8"
+    },
+    {
+      "name": "window9"
+    },
+    {
+      "name": "window10"
+    },
+    {
+      "name": "window11"
+    },
+    {
+      "name": "window12"
+    },
+    {
+      "name": "window13"
+    },
+    {
+      "name": "window14"
+    },
+    {
+      "name": "window15"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+# Mapper-only station floor tiles. Live station ids live in Prototypes/Tiles/.
+
+- type: tile
+  id: Underplating
+  parent: BasePlating
+  name: tiles-underplating
+  sprite: /Textures/Oxyd/erisported/under_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/under.rsi
+  footstepSounds:
+    collection: FootstepCatwalk
+  itemDrop: SheetSteel1
+
+- type: tile
+  id: FloorSteelTech
+  parent: BaseStationTile
+  name: tiles-steel-techfloor
+  sprite: /Textures/Oxyd/erisported/steel_techfloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_techfloor.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorSteelOrangeCorner
+  parent: BaseStationTile
+  name: tiles-steel-orange-corner
+  sprite: /Textures/Oxyd/erisported/steel_orangecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_orangecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorSteelBlueCorner
+  parent: BaseStationTile
+  name: tiles-steel-blue-corner
+  sprite: /Textures/Oxyd/erisported/steel_bluecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_bluecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorSteelMono
+  parent: BaseStationTile
+  name: tiles-steel-mono
+  sprite: /Textures/Oxyd/erisported/steel_monofloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_monofloor.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorTechMaintPanels
+  parent: BaseStationTile
+  name: tiles-techmaint-panels
+  sprite: /Textures/Oxyd/erisported/techmaint_panels_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint_panels.rsi
+  itemDrop: FloorTileItemSteel

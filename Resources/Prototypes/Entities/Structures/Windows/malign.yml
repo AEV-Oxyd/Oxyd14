@@ -6,8 +6,10 @@
   components:
   - type: Sprite
     sprite: Structures/Windows/window-malign.rsi
+    state: full
   - type: Icon
     sprite: Structures/Windows/window-malign.rsi
+    state: full
   - type: Damageable
     damageModifierSet: RGlass
   - type: Injurable
@@ -28,7 +30,9 @@
       - !type:DoActsBehavior
         acts: [ "Destruction" ]
   - type: IconSmooth
+    key: walls
     base: malign
+    mode: Corners
   - type: Appearance
   - type: DamageVisuals
     thresholds: [5, 10, 20]
