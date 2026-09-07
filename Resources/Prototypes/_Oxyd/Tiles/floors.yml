@@ -55,3 +55,455 @@
   variants: 1
   borderSprites: /Textures/Oxyd/erisported/techmaint_panels.rsi
   itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorTechMaintCargo
+  parent: BaseStationTile
+  name: tiles-techmaint-cargo
+  sprite: /Textures/Oxyd/erisported/techmaint_cargo_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint_cargo.rsi
+  footstepSounds:
+    collection: FootstepHull
+  itemDrop: FloorTileItemSteelMaint
+
+- type: tile
+  id: FloorTechMaintPerforated
+  parent: BaseStationTile
+  name: tiles-techmaint-perforated
+  sprite: /Textures/Oxyd/erisported/techmaint_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/techmaint_perforated.rsi
+  footstepSounds:
+    collection: FootstepHull
+  itemDrop: FloorTileItemSteelMaint
+- type: tile
+  id: FloorCarpet
+  parent: BaseStationTile
+  name: tiles-eris-carpet
+  sprite: /Textures/Oxyd/erisported/carpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/carpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetBlack
+  parent: BaseStationTile
+  name: tiles-eris-carpet-black
+  sprite: /Textures/Oxyd/erisported/bcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/bcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetBlue
+  parent: BaseStationTile
+  name: tiles-eris-carpet-blue
+  sprite: /Textures/Oxyd/erisported/blucarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/blucarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetTurquoise
+  parent: BaseStationTile
+  name: tiles-eris-carpet-turquoise
+  sprite: /Textures/Oxyd/erisported/turcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/turcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetSkyBlue
+  parent: BaseStationTile
+  name: tiles-eris-carpet-sky-blue
+  sprite: /Textures/Oxyd/erisported/sblucarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/sblucarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetPurple
+  parent: BaseStationTile
+  name: tiles-eris-carpet-purple
+  sprite: /Textures/Oxyd/erisported/purcarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/purcarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+
+- type: tile
+  id: FloorCarpetOrange
+  parent: BaseStationTile
+  name: tiles-eris-carpet-orange
+  sprite: /Textures/Oxyd/erisported/oracarpet_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/oracarpet.rsi
+  footstepSounds:
+    collection: FootstepCarpet
+  barestepSounds:
+    collection: BarestepCarpet
+  friction: 1.25
+- type: tile
+  id: FloorErisDerelict1
+  parent: BaseStationTile
+  name: tiles-eris-derelict1
+  sprite: /Textures/Oxyd/erisported/derelict1_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/derelict1.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDerelict2
+  parent: BaseStationTile
+  name: tiles-eris-derelict2
+  sprite: /Textures/Oxyd/erisported/derelict2_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/derelict2.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDerelict3
+  parent: BaseStationTile
+  name: tiles-eris-derelict3
+  sprite: /Textures/Oxyd/erisported/derelict3_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/derelict3.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDerelict4
+  parent: BaseStationTile
+  name: tiles-eris-derelict4
+  sprite: /Textures/Oxyd/erisported/derelict4_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/derelict4.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelDanger
+  parent: BaseStationTile
+  name: tiles-eris-steel-danger
+  sprite: /Textures/Oxyd/erisported/steel_danger_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_danger.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelCyanCorner
+  parent: BaseStationTile
+  name: tiles-eris-steel-cyan-corner
+  sprite: /Textures/Oxyd/erisported/steel_cyancorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_cyancorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelVioletCorner
+  parent: BaseStationTile
+  name: tiles-eris-steel-violet-corner
+  sprite: /Textures/Oxyd/erisported/steel_violetcorener_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_violetcorener.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelBrownPlatform
+  parent: BaseStationTile
+  name: tiles-eris-steel-brown-platform
+  sprite: /Textures/Oxyd/erisported/steel_brown_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_brown_platform.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelPanels
+  parent: BaseStationTile
+  name: tiles-eris-steel-panels
+  sprite: /Textures/Oxyd/erisported/steel_panels_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_panels.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelBrownPerforated
+  parent: BaseStationTile
+  name: tiles-eris-steel-brown-perforated
+  sprite: /Textures/Oxyd/erisported/steel_brown_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_brown_perforated.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelBarDance
+  parent: BaseStationTile
+  name: tiles-eris-steel-bar-dance
+  sprite: /Textures/Oxyd/erisported/steel_bar_dance_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_bar_dance.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisSteelBarLight
+  parent: BaseStationTile
+  name: tiles-eris-steel-bar-light
+  sprite: /Textures/Oxyd/erisported/steel_bar_light_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_bar_light.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteDanger
+  parent: BaseStationTile
+  name: tiles-eris-white-danger
+  sprite: /Textures/Oxyd/erisported/white_danger_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_danger.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteCyanCorner
+  parent: BaseStationTile
+  name: tiles-eris-white-cyan-corner
+  sprite: /Textures/Oxyd/erisported/white_cyancorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_cyancorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteVioletCorner
+  parent: BaseStationTile
+  name: tiles-eris-white-violet-corner
+  sprite: /Textures/Oxyd/erisported/white_violetcorener_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_violetcorener.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteBrownPlatform
+  parent: BaseStationTile
+  name: tiles-eris-white-brown-platform
+  sprite: /Textures/Oxyd/erisported/white_brown_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_brown_platform.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhitePanels
+  parent: BaseStationTile
+  name: tiles-eris-white-panels
+  sprite: /Textures/Oxyd/erisported/white_panels_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_panels.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteTechfloor
+  parent: BaseStationTile
+  name: tiles-eris-white-techfloor
+  sprite: /Textures/Oxyd/erisported/white_techfloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_techfloor.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteTechfloorGrid
+  parent: BaseStationTile
+  name: tiles-eris-white-techfloor-grid
+  sprite: /Textures/Oxyd/erisported/white_techfloor_grid_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_techfloor_grid.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteGrayPerforated
+  parent: BaseStationTile
+  name: tiles-eris-white-gray-perforated
+  sprite: /Textures/Oxyd/erisported/white_gray_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_gray_perforated.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteCargo
+  parent: BaseStationTile
+  name: tiles-eris-white-cargo
+  sprite: /Textures/Oxyd/erisported/white_cargo_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_cargo.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteGrayPlatform
+  parent: BaseStationTile
+  name: tiles-eris-white-gray-platform
+  sprite: /Textures/Oxyd/erisported/white_gray_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_gray_platform.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteBlueCorner
+  parent: BaseStationTile
+  name: tiles-eris-white-blue-corner
+  sprite: /Textures/Oxyd/erisported/white_bluecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_bluecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteOrangeCorner
+  parent: BaseStationTile
+  name: tiles-eris-white-orange-corner
+  sprite: /Textures/Oxyd/erisported/white_orangecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_orangecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisWhiteMono
+  parent: BaseStationTile
+  name: tiles-eris-white-mono
+  sprite: /Textures/Oxyd/erisported/white_monofloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/white_monofloor.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkDanger
+  parent: BaseStationTile
+  name: tiles-eris-dark-danger
+  sprite: /Textures/Oxyd/erisported/dark_danger_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_danger.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkCyanCorner
+  parent: BaseStationTile
+  name: tiles-eris-dark-cyan-corner
+  sprite: /Textures/Oxyd/erisported/dark_cyancorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_cyancorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkVioletCorner
+  parent: BaseStationTile
+  name: tiles-eris-dark-violet-corner
+  sprite: /Textures/Oxyd/erisported/dark_violetcorener_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_violetcorener.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkBrownPlatform
+  parent: BaseStationTile
+  name: tiles-eris-dark-brown-platform
+  sprite: /Textures/Oxyd/erisported/dark_brown_platform_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_brown_platform.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkPanels
+  parent: BaseStationTile
+  name: tiles-eris-dark-panels
+  sprite: /Textures/Oxyd/erisported/dark_panels_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_panels.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkTechfloorGrid
+  parent: BaseStationTile
+  name: tiles-eris-dark-techfloor-grid
+  sprite: /Textures/Oxyd/erisported/dark_techfloor_grid_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_techfloor_grid.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkBrownPerforated
+  parent: BaseStationTile
+  name: tiles-eris-dark-brown-perforated
+  sprite: /Textures/Oxyd/erisported/dark_brown_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_brown_perforated.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkGrayPerforated
+  parent: BaseStationTile
+  name: tiles-eris-dark-gray-perforated
+  sprite: /Textures/Oxyd/erisported/dark_gray_perforated_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_gray_perforated.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkCargo
+  parent: BaseStationTile
+  name: tiles-eris-dark-cargo
+  sprite: /Textures/Oxyd/erisported/dark_cargo_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_cargo.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkBlueCorner
+  parent: BaseStationTile
+  name: tiles-eris-dark-blue-corner
+  sprite: /Textures/Oxyd/erisported/dark_bluecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_bluecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkOrangeCorner
+  parent: BaseStationTile
+  name: tiles-eris-dark-orange-corner
+  sprite: /Textures/Oxyd/erisported/dark_orangecorner_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_orangecorner.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisDarkMono
+  parent: BaseStationTile
+  name: tiles-eris-dark-mono
+  sprite: /Textures/Oxyd/erisported/dark_monofloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/dark_monofloor.rsi
+  itemDrop: FloorTileItemSteel
+
+- type: tile
+  id: FloorErisCult
+  parent: BaseStationTile
+  name: tiles-eris-cult
+  sprite: /Textures/Oxyd/erisported/cult_base.png
+  variants: 1
+  itemDrop: FloorTileItemSteel
