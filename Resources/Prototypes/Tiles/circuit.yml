@@ -2,8 +2,8 @@
   id: FloorGreenCircuit
   parent: BaseStationTile
   name: tiles-green-circuit-floor
-  sprite: /Textures/Tiles/Circuit/circuit-green.png
-  variants: 2
+  sprite: /Textures/Oxyd/erisported/gcircuit_base.png
+  variants: 1
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemGCircuit
@@ -12,8 +12,9 @@
   id: FloorBlueCircuit
   parent: BaseStationTile
   name: tiles-blue-circuit-floor
-  sprite: /Textures/Tiles/Circuit/circuit-blue.png
-  variants: 2
+  sprite: /Textures/Oxyd/erisported/bcircuit_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/bcircuit.rsi
   footstepSounds:
     collection: FootstepHull
   itemDrop: FloorTileItemBCircuit

@@ -5,6 +5,11 @@ Source of truth: CEV-Eris flooring DMIs (icon_base_edges / icon_base_corners).
 Runtime keeps Decal.Angle — we bake only rotation-canonical masks (bit-rotate by 2
 under 90°), ~69 frames in 0..254. Interior 0xFF is not baked (no rim).
 
+A full run (no --only) regenerates the whole tile_borders.yml: the FLOOR_MAP
+floor sections plus the TileBorder-lattices-* dir_sum section owned by
+eris_lattice_bake.py, guarded by a stem-parity check so a stale or truncated
+FLOOR_MAP can never silently drop committed prototypes.
+
 Bit order matches Robust Direction / TileBorderMask:
   S=0, SE=1, E=2, NE=3, N=4, NW=5, W=6, SW=7
   bit i set => neighbour present in Direction i (same border group).
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -30,9 +36,11 @@ from PIL import Image
 
 from eris_cardinal_bake import TILE, write_rsi
 from eris_dmi import frame, parse_dmi
+from eris_lattice_bake import STEM as LATTICE_STEM, lattices_yaml_block
 
 ERIS_FLOORING = Path("/Users/russellrozario/Desktop/SS13-14/CEV-Eris/icons/turf/flooring")
-OXYD = Path("/Users/russellrozario/Desktop/SS13-14/Oxyd14")
+# Resolve repo root from this script so worktrees (not only main checkout) work.
+OXYD = Path(__file__).resolve().parents[1]
 OUT_TEX = OXYD / "Resources/Textures/Oxyd/erisported"
 OUT_YAML = OXYD / "Resources/Prototypes/_Oxyd/Decals/tile_borders.yml"
 
@@ -55,6 +63,10 @@ OLD_PIECE_STATES = (
 # stem -> (dmi filename under icons/turf/flooring, icon_base, has_inner_corners)
 # Inner corners: plating/under/hull explicit; steel/white/dark/techmaint inherit
 # TURF_HAS_INNER_CORNERS from /decl/flooring/tiling.
+# FLOOR_MAP is the full union baked into tile_borders.yml: 19 original port
+# stems, 8 PR A strong-retarget stems, 8 PR B carpet stems, 37 PR C mapper
+# stems. Section order matches the committed tile_borders.yml stem order so a
+# full regeneration produces a stable file.
 FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("tiles_steel", "tiles_steel.dmi", "tiles", True),
     ("steel_gray_perforated", "tiles_steel.dmi", "gray_perforated", True),
@@ -75,6 +87,66 @@ FLOOR_MAP: list[tuple[str, str, str, bool]] = [
     ("steel_bluecorner", "tiles_steel.dmi", "bluecorner", True),
     ("steel_monofloor", "tiles_steel.dmi", "monofloor", True),
     ("techmaint_panels", "tiles_maint.dmi", "techmaint_panels", True),
+    # PR A STRONG retargets (C4BRA / port-eris-floors-retargets)
+    ("bcircuit", "circuit.dmi", "bcircuit", True),
+    ("reinforced", "tiles.dmi", "reinforced", True),
+    ("cafe", "tiles.dmi", "cafe", True),
+    ("golden", "tiles_steel.dmi", "golden", True),
+    ("bar_flat", "tiles_steel.dmi", "bar_flat", True),
+    ("techmaint_cargo", "tiles_maint.dmi", "techmaint_cargo", True),
+    ("techmaint_perforated", "tiles_maint.dmi", "techmaint_perforated", True),
+    ("grass", "grass.dmi", "grass", True),
+    # PR B: Eris carpets (icon_base == RSI stem)
+    ("gaycarpet", "carpet.dmi", "gaycarpet", True),
+    ("carpet", "carpet.dmi", "carpet", True),
+    ("bcarpet", "carpet.dmi", "bcarpet", True),
+    ("blucarpet", "carpet.dmi", "blucarpet", True),
+    ("turcarpet", "carpet.dmi", "turcarpet", True),
+    ("sblucarpet", "carpet.dmi", "sblucarpet", True),
+    ("purcarpet", "carpet.dmi", "purcarpet", True),
+    ("oracarpet", "carpet.dmi", "oracarpet", True),
+    # --- PR C mapper-only ZERO/WEAK (append; leave A strong retargets alone) ---
+    # Derelict (has_inner=False — edges dirs=8, no _corners)
+    ("derelict1", "derelict.dmi", "derelict1", False),
+    ("derelict2", "derelict.dmi", "derelict2", False),
+    ("derelict3", "derelict.dmi", "derelict3", False),
+    ("derelict4", "derelict.dmi", "derelict4", False),
+    # Steel
+    ("steel_danger", "tiles_steel.dmi", "danger", True),
+    ("steel_cyancorner", "tiles_steel.dmi", "cyancorner", True),
+    ("steel_violetcorener", "tiles_steel.dmi", "violetcorener", True),
+    ("steel_brown_platform", "tiles_steel.dmi", "brown_platform", True),
+    ("steel_panels", "tiles_steel.dmi", "panels", True),
+    ("steel_brown_perforated", "tiles_steel.dmi", "brown_perforated", True),
+    ("steel_bar_dance", "tiles_steel.dmi", "bar_dance", True),
+    ("steel_bar_light", "tiles_steel.dmi", "bar_light", True),
+    # White
+    ("white_danger", "tiles_white.dmi", "danger", True),
+    ("white_cyancorner", "tiles_white.dmi", "cyancorner", True),
+    ("white_violetcorener", "tiles_white.dmi", "violetcorener", True),
+    ("white_brown_platform", "tiles_white.dmi", "brown_platform", True),
+    ("white_panels", "tiles_white.dmi", "panels", True),
+    ("white_techfloor", "tiles_white.dmi", "techfloor", True),
+    ("white_techfloor_grid", "tiles_white.dmi", "techfloor_grid", True),
+    ("white_gray_perforated", "tiles_white.dmi", "gray_perforated", True),
+    ("white_cargo", "tiles_white.dmi", "cargo", True),
+    ("white_gray_platform", "tiles_white.dmi", "gray_platform", True),
+    ("white_bluecorner", "tiles_white.dmi", "bluecorner", True),
+    ("white_orangecorner", "tiles_white.dmi", "orangecorner", True),
+    ("white_monofloor", "tiles_white.dmi", "monofloor", True),
+    # Dark
+    ("dark_danger", "tiles_dark.dmi", "danger", True),
+    ("dark_cyancorner", "tiles_dark.dmi", "cyancorner", True),
+    ("dark_violetcorener", "tiles_dark.dmi", "violetcorener", True),
+    ("dark_brown_platform", "tiles_dark.dmi", "brown_platform", True),
+    ("dark_panels", "tiles_dark.dmi", "panels", True),
+    ("dark_techfloor_grid", "tiles_dark.dmi", "techfloor_grid", True),
+    ("dark_brown_perforated", "tiles_dark.dmi", "brown_perforated", True),
+    ("dark_gray_perforated", "tiles_dark.dmi", "gray_perforated", True),
+    ("dark_cargo", "tiles_dark.dmi", "cargo", True),
+    ("dark_bluecorner", "tiles_dark.dmi", "bluecorner", True),
+    ("dark_orangecorner", "tiles_dark.dmi", "orangecorner", True),
+    ("dark_monofloor", "tiles_dark.dmi", "monofloor", True),
 ]
 
 
@@ -168,6 +240,32 @@ def clear_rsi_pngs(rsi_dir: Path) -> None:
         p.unlink()
 
 
+def resolve_fill_state(tiles: dict, icon_base: str) -> str | None:
+    """Pick a dirs=1 fill state for {stem}_base.png extraction."""
+    for candidate in (icon_base, f"{icon_base}0", f"{icon_base}floor"):
+        st = tiles.get(candidate)
+        if st is not None and st.get("dirs", 1) == 1:
+            return candidate
+    return None
+
+
+def extract_fill_png(stem: str, dmi_name: str, icon_base: str, tiles_cache: dict[str, dict]) -> Path | None:
+    """Write Resources/Textures/Oxyd/erisported/{stem}_base.png from icon_base (or grass0)."""
+    dmi_path = ERIS_FLOORING / dmi_name
+    if dmi_name not in tiles_cache:
+        _, _, tiles_cache[dmi_name] = parse_dmi(dmi_path)
+    tiles = tiles_cache[dmi_name]
+    fill_state = resolve_fill_state(tiles, icon_base)
+    if fill_state is None:
+        print(f"WARNING: no fill state for {stem} ({dmi_name} / {icon_base})")
+        return None
+    OUT_TEX.mkdir(parents=True, exist_ok=True)
+    base_png = OUT_TEX / f"{stem}_base.png"
+    frame(tiles, fill_state, 0).save(base_png)
+    print(f"fill: {stem}_base.png <- {dmi_name}:{fill_state}")
+    return base_png
+
+
 def bake_floor(
     stem: str,
     dmi_name: str,
@@ -176,43 +274,103 @@ def bake_floor(
     tiles_cache: dict[str, dict],
     masks: list[int],
 ) -> int:
+    """Bake rim RSI. Returns state count, or 0 if edges missing (fill still extracted)."""
     dmi_path = ERIS_FLOORING / dmi_name
     if dmi_name not in tiles_cache:
         _, _, tiles_cache[dmi_name] = parse_dmi(dmi_path)
     tiles = tiles_cache[dmi_name]
 
+    extract_fill_png(stem, dmi_name, icon_base, tiles_cache)
+
     edges = f"{icon_base}_edges"
     corners = f"{icon_base}_corners"
     if edges not in tiles or tiles[edges]["dirs"] != 8:
-        raise KeyError(f"{dmi_name}: missing dirs=8 state {edges!r}")
+        dirs = tiles[edges]["dirs"] if edges in tiles else None
+        print(f"SKIP rim {stem}: missing dirs=8 {edges!r} (have={edges in tiles}, dirs={dirs})")
+        return 0
+    use_inner = has_inner
     if has_inner and (corners not in tiles or tiles[corners]["dirs"] != 8):
-        raise KeyError(f"{dmi_name}: missing dirs=8 state {corners!r}")
+        print(f"WARNING {stem}: no dirs=8 {corners!r}; baking edges-only")
+        use_inner = False
 
     rsi_dir = OUT_TEX / f"{stem}.rsi"
     files: dict[str, Image.Image] = {}
     states: list[dict] = []
     for mask in masks:
         name = state_name(mask)
-        files[name] = composite_rim(tiles, icon_base, mask, has_inner)
+        files[name] = composite_rim(tiles, icon_base, mask, use_inner)
         states.append({"name": name})
 
     clear_rsi_pngs(rsi_dir)
     write_rsi(rsi_dir, files, states, COPYRIGHT)
-
-    # Leave sibling fill alone.
-    base_png = OUT_TEX / f"{stem}_base.png"
-    if not base_png.is_file():
-        print(f"WARNING: missing fill {base_png.name}")
-
     return len(files)
 
 
+def yaml_section_stems(text: str) -> set[str]:
+    """Stems that have a '# <stem>.rsi' section marker in a tile_borders yaml."""
+    return set(re.findall(r"(?m)^# ([A-Za-z0-9_]+)\.rsi$", text))
+
+
+def check_full_regen_stems(current: str) -> None:
+    """Guard the full-file rewrite against dropping prototypes.
+
+    generate_yaml wipes everything not regenerable from FLOOR_MAP + the lattices
+    section, so refuse when the on-disk file lists stems this bake cannot produce
+    (e.g. a FLOOR_MAP that was accidentally truncated) and warn when known stems
+    are missing (this regen will re-add them).
+    """
+    known = {row[0] for row in FLOOR_MAP} | {LATTICE_STEM}
+    have = yaml_section_stems(current)
+    unknown = have - known
+    if unknown:
+        raise SystemExit(
+            f"tile_borders.yml has stems this FLOOR_MAP cannot regenerate: {sorted(unknown)}\n"
+            "Update FLOOR_MAP (or remove those sections) before a full regen — the rewrite "
+            "would silently drop their TileBorder-* prototypes."
+        )
+    missing = known - have
+    if missing:
+        print(f"yaml: full regen will (re)add stems absent from {OUT_YAML}: {sorted(missing)}")
+
+
+def append_yaml_stems(stems: list[str], masks: list[int]) -> None:
+    """Append TileBorder-* blocks for stems not already present. Never wipes other stems."""
+    existing = OUT_YAML.read_text() if OUT_YAML.is_file() else ""
+    to_add = [s for s in stems if f"# {s}.rsi" not in existing and f"TileBorder-{s}-" not in existing]
+    if not to_add:
+        print(f"yaml: no new stems to append ({OUT_YAML})")
+        return
+    nl = chr(10)
+    chunks: list[str] = []
+    for stem in to_add:
+        chunks.append(f"# {stem}.rsi")
+        for mask in masks:
+            st = state_name(mask)
+            chunks.append("- type: decal")
+            chunks.append("  parent: TileBorderBase")
+            chunks.append(f"  id: TileBorder-{stem}-{st}")
+            chunks.append("  sprite:")
+            chunks.append(f"    sprite: Oxyd/erisported/{stem}.rsi")
+            chunks.append(f"    state: {st}")
+            chunks.append("")
+    with OUT_YAML.open("a") as f:
+        if existing and not existing.endswith(nl):
+            f.write(nl)
+        f.write(nl.join(chunks))
+        if chunks and chunks[-1] != "":
+            f.write(nl)
+    print(f"yaml append: {to_add} -> {OUT_YAML}")
+
 def generate_yaml(stems: list[str], masks: list[int]) -> None:
+    """Write the complete tile_borders.yml: floor stems in FLOOR_MAP order, then the
+    TileBorder-lattices-* dir_sum section. The lattice block is reused verbatim from
+    eris_lattice_bake.py so both tools always write identical content and the lattice
+    tool's own section replace stays idempotent."""
     lines = [
-        "# Server-generated floor rims. Not mapper-placeable; stripped from map YAML.",
-        "# States are rotation-canonical adjacency masks (hex, no 0x): \"00\"..\"fe\".",
+        "# Server-generated floor rims + lattice frames. Not mapper-placeable; stripped from map YAML.",
+        "# Floor states are rotation-canonical adjacency masks (hex, no 0x): \"00\"..\"fe\".",
         "# Interior 0xFF is not baked. Runtime applies Decal.Angle for non-canonical orientations.",
-        "# Generated by Tools/eris_floor_bake.py — do not hand-edit.",
+        "# Generated by Tools/eris_floor_bake.py + Tools/eris_lattice_bake.py — do not hand-edit.",
         "- type: decal",
         "  abstract: true",
         "  id: TileBorderBase",
@@ -233,6 +391,8 @@ def generate_yaml(stems: list[str], masks: list[int]) -> None:
             lines.append(f"    sprite: Oxyd/erisported/{stem}.rsi")
             lines.append(f"    state: {st}")
             lines.append("")
+    lines.extend(lattices_yaml_block().splitlines())
+    lines.append("")
     OUT_YAML.write_text("\n".join(lines))
 
 
@@ -241,7 +401,7 @@ def main() -> None:
     parser.add_argument(
         "--only",
         nargs="*",
-        help="Bake only these RSI stems (default: all 19)",
+        help="Bake only these RSI stems (default: all 72)",
     )
     parser.add_argument(
         "--skip-yaml",
@@ -265,15 +425,28 @@ def main() -> None:
 
     cache: dict[str, dict] = {}
     counts: dict[str, int] = {}
+    baked_stems: list[str] = []
     for stem, dmi, icon_base, has_inner in selected:
         n = bake_floor(stem, dmi, icon_base, has_inner, cache, masks)
         counts[stem] = n
-        print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
+        if n:
+            baked_stems.append(stem)
+            print(f"{stem}: {n} states -> {OUT_TEX / (stem + '.rsi')}")
+        else:
+            print(f"{stem}: rim skipped (fill-only if extracted)")
 
     if not args.skip_yaml:
-        # YAML always lists all wired stems (full FLOOR_MAP), using canonical masks.
-        generate_yaml([row[0] for row in FLOOR_MAP], masks)
-        print(f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} stems x {len(masks)} states)")
+        if args.only:
+            # Parallel-safe: append only newly baked stems; never rewrite whole YAML.
+            append_yaml_stems(baked_stems, masks)
+        else:
+            current = OUT_YAML.read_text() if OUT_YAML.is_file() else ""
+            check_full_regen_stems(current)
+            generate_yaml([row[0] for row in FLOOR_MAP], masks)
+            print(
+                f"yaml: {OUT_YAML} ({len(FLOOR_MAP)} floor stems x {len(masks)} states "
+                f"+ {LATTICE_STEM} x 16 dir_sum states)"
+            )
 
     print(f"canonical_masks={len(masks)} names={state_name(masks[0])}..{state_name(masks[-1])}")
 
