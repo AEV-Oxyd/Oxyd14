@@ -299,7 +299,7 @@ public abstract partial class InventorySystem
                               item != null &&
                               _item.GetSizePrototype(item.Size) <= _item.GetSizePrototype(PocketableItemSize);
         if (clothing == null && !fittingInPocket
-            || clothing != null && !clothing.Slots.HasFlag(slotDefinition.SlotFlags) && !fittingInPocket)
+            || clothing != null && !clothing.Slots.HasFlag(slotDefinition.SlotFlags & SlotFlags.SLOTIDS) && !fittingInPocket)
         {
             reason = "inventory-component-can-equip-does-not-fit";
             return false;

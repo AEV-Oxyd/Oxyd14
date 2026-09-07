@@ -5,10 +5,10 @@
            VerticalExpand="False"
            Orientation="Vertical"
            VerticalAlignment="Top"
-           SeparationOverride="5"
+           SeparationOverride="1"
 >
-    <BoxContainer Orientation="Horizontal" MinWidth="500" Name="StatMenus" Access="Public"/>
-    <PanelContainer Name="SeparatedChatPanel" MinWidth="500" VerticalExpand="True" HorizontalExpand="True">
+    <BoxContainer Orientation="Horizontal" Name="StatMenus" Access="Public" VerticalExpand="True" HorizontalExpand="True"/>
+    <PanelContainer Name="SeparatedChatPanel" VerticalExpand="True" HorizontalExpand="True">
         <PanelContainer.PanelOverride>
             <graphics:StyleBoxFlat BackgroundColor="#35353B" />
         </PanelContainer.PanelOverride>

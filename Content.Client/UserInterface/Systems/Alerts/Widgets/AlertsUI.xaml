@@ -2,6 +2,6 @@
                   xmlns:widgets="clr-namespace:Content.Client.UserInterface.Systems.Alerts.Widgets"
                   MinSize="64 64">
     <PanelContainer HorizontalAlignment="Right" VerticalAlignment="Top">
-        <BoxContainer Name="AlertContainer" Access="Public" Orientation="Vertical" />
+        <BoxContainer Name="AlertContainer" Access="Public" Orientation="Horizontal" />
     </PanelContainer>
 </widgets:AlertsUI>

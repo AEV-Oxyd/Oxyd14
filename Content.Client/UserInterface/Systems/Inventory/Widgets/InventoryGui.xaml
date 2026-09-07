@@ -8,7 +8,7 @@
     VerticalAlignment="Bottom"
     Orientation="Horizontal"
     HorizontalAlignment="Center">
-    <Control HorizontalAlignment="Center">
+    <Control HorizontalAlignment="Left">
         <!-- Needs to default to invisible because if we attach to a non-slots entity this will never get unset -->
         <controls:SlotButton
             Name="InventoryButton"
@@ -26,7 +26,7 @@
             SlotGroup="Default"
             ExpandBackwards="True"
             VerticalExpand="True"
-            HorizontalAlignment="Center"
+            HorizontalAlignment="Left"
         />
     </Control>
 </widgets:InventoryGui>

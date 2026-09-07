@@ -27,6 +27,8 @@ public enum SlotFlags
     FEET = 1 << 14,
     SUITSTORAGE = 1 << 15,
     DEPENDANTRENDER = 1<<16, // if dependencies not fulfilled do not render
+    // SLOT IDENTIFIERS ONLY
+    SLOTIDS = HEAD | EYES | EARS | MASK | OUTERCLOTHING | INNERCLOTHING | NECK | BACK | BELT | GLOVES | IDCARD | POCKET | LEGS | FEET | SUITSTORAGE,
     All = ~NONE,
 
     WITHOUT_POCKET = All & ~POCKET

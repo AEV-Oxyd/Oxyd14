@@ -16,7 +16,8 @@ public abstract partial class EquipmentHudSystem<T> : EntitySystem where T : ICo
 
     [ViewVariables]
     public bool IsActive { get; private set; }
-    protected virtual SlotFlags TargetSlots => ~SlotFlags.POCKET;
+
+    protected virtual SlotFlags TargetSlots => SlotFlags.HEAD | SlotFlags.EYES | SlotFlags.MASK;
 
     public override void Initialize()
     {
