@@ -32,8 +32,6 @@
     ears: ClothingHeadsetSecurity
     pocket1: WeaponPistolMk58
     id: SecurityPDA
-    outerClothing: erisport_medical_specialists_labcoat
-    belt: erisport_medical_belt
   storage:
     back:
     - Flash

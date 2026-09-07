@@ -19,4 +19,4 @@
 - type: loadout
   id: MedicalSpecialistBelt
   equipment:
-    belt: erisport_medical_belt
+    belt: erisport_medical_belt_filled
