@@ -1,0 +1,110 @@
+- type: oxydLitanySet
+  id: OxydLitanyCommon
+  litanies:
+  - OxydLitanyRelief
+  - OxydLitanySoulHunger
+  - OxydLitanyEntreaty
+  - OxydLitanyRejection
+  - OxydLitanyRevealAdversaries
+  - OxydLitanyCruciformSense
+  - OxydLitanyRevelation
+  - OxydLitanyInstallUpgrade
+  - OxydLitanyUninstallUpgrade
+  - OxydLitanyReincarnation
+  - OxydLitanyCommitment
+  - OxydLitanyDeprivation
+
+- type: oxydLitanySet
+  id: OxydLitanyMachinery
+  litanies:
+  - OxydLitanyResurrection
+  - OxydLitanyMakeCruciform
+  - OxydLitanyActivateDoor
+  - OxydLitanyRepairDoor
+  - OxydLitanyPowerBiogenerator
+  - OxydLitanyBioreactorSolution
+  - OxydLitanyBioreactorChamber
+
+- type: oxydLitanySet
+  id: OxydLitanyAcolyte
+  litanies:
+  - OxydLitanyEpiphany
+  - OxydLitanyAsacris
+  - OxydLitanyGraceOfPerseverance
+  - OxydLitanyUpholdHolyWord
+  - OxydLitanyAtonement
+  - OxydLitanyBaptismalRecord
+  - OxydLitanyDivineIntervention
+  - OxydLitanyHolyGuidance
+  - OxydLitanyDivineBlessing
+  - OxydLitanyConfirmation
+  - OxydLitanyAdoption
+  - OxydLitanyOrdination
+  - OxydLitanyOmission
+  - OxydLitanyExcommunication
+  - OxydLitanyOrderArmaments
+  - OxydLitanyDivineGuidance
+  - OxydLitanyManifestation
+  - OxydLitanyUproot
+
+- type: oxydLitanySet
+  id: OxydLitanyAgrolyte
+  litanies:
+  - OxydLitanyAcceleratedGrowth
+  - OxydLitanyHandOfMercy
+  - OxydLitanyAbsolutionOfWounds
+
+- type: oxydLitanySet
+  id: OxydLitanyCustodian
+  litanies:
+  - OxydLitanyWordsOfPurging
+
+- type: oxydLitanySet
+  id: OxydLitanyPriest
+  litanies:
+  - OxydLitanyGraceOfPerseverance
+  - OxydLitanyUpholdHolyWord
+  - OxydLitanyBaptismalRecord
+  - OxydLitanyDivineIntervention
+  - OxydLitanyHolyGuidance
+  - OxydLitanyDivineBlessing
+  - OxydLitanyConfirmation
+  - OxydLitanyAdoption
+  - OxydLitanyOrdination
+  - OxydLitanyOmission
+  - OxydLitanyExcommunication
+  - OxydLitanyOrderArmaments
+  - OxydLitanyDivineGuidance
+  - OxydLitanyManifestation
+  - OxydLitanyUproot
+
+- type: oxydLitanySet
+  id: OxydLitanyInquisitor
+  litanies:
+  - OxydLitanyPenance
+  - OxydLitanyConvalescence
+  - OxydLitanySuccour
+  - OxydLitanyScrying
+  - OxydLitanySending
+  - OxydLitanyInitiation
+  - OxydLitanyKnowledge
+  - OxydLitanyBounty
+
+- type: oxydLitanySet
+  id: OxydLitanyGroup
+  litanies:
+  - OxydLitanyPoundingWhisper
+  - OxydLitanyRevelationOfSecrets
+  - OxydLitanyLispOfVitae
+  - OxydLitanyCantoOfCourage
+  - OxydLitanyChantOfObservance
+  - OxydLitanyReclamationOfEndurance
+  - OxydLitanySanctify
+  - OxydLitanyCrusade
+
+- type: oxydLitanySet
+  id: OxydLitanyCrusader
+  litanies:
+  - OxydLitanyEternalBrotherhood
+  - OxydLitanyCallToBattle
+  - OxydLitanySearingRevelation

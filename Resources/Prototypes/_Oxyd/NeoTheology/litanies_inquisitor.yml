@@ -1,0 +1,195 @@
+- type: oxydLitany
+  id: OxydLitanyPenance
+  name: oxyd-litany-penance-name
+  description: oxyd-litany-penance-desc
+  phrase: "Mihi vindicta [Target human]."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Penance
+  targetMode: VisibleFollower
+  range: 7
+  cost: 35
+  enabled: false
+  dependency: Pain
+  unavailableReason: oxyd-litany-unavailable-pain
+  sourcePath: /datum/ritual/cruciform/inquisitor/penance
+
+- type: oxydLitany
+  id: OxydLitanyConvalescence
+  name: oxyd-litany-convalescence-name
+  description: oxyd-litany-convalescence-desc
+  phrase: "Dominus autem dirigat corda vestra in caritate Dei et patientia Christi."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Convalescence
+  targetMode: Self
+  range: 0
+  cost: 25
+  cooldownKey: OxydNtInquisitorHealing
+  cooldownScope: Personal
+  cooldownDuration: 10
+  effectDuration: 20
+  parameters:
+    healing:
+      brute: 20
+      heat: 20
+      asphyxiation: 40
+      analgesia: OxydNtAnalgesia
+  sourcePath: /datum/ritual/cruciform/inquisitor/convalescence
+
+- type: oxydLitany
+  id: OxydLitanySuccour
+  name: oxyd-litany-succour-name
+  description: oxyd-litany-succour-desc
+  phrase: "Venite ad me, omnes qui laboratis, et onerati estis et ego reficiam vos."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Succour
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 35
+  cooldownKey: OxydNtInquisitorHealing
+  cooldownScope: Personal
+  cooldownDuration: 10
+  extraDelay: 4
+  effectDuration: 20
+  parameters:
+    healing:
+      brute: 20
+      heat: 20
+      asphyxiation: 40
+      analgesia: OxydNtAnalgesia
+  sourcePath: /datum/ritual/cruciform/inquisitor/succour
+
+- type: oxydLitany
+  id: OxydLitanyScrying
+  name: oxyd-litany-scrying-name
+  description: oxyd-litany-scrying-desc
+  phrase: "Ecce ego ad te et ad caelum. Scio omnes absconditis tuis. Vos can abscondere, tu es coram me: nudus."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Scrying
+  targetMode: StationFollower
+  range: 0
+  cost: 100
+  effectDuration: 30
+  enabled: false
+  dependency: RemoteView
+  unavailableReason: oxyd-litany-unavailable-remote-view
+  sourcePath: /datum/ritual/cruciform/inquisitor/scrying
+
+- type: oxydLitany
+  id: OxydLitanySending
+  name: oxyd-litany-sending-name
+  description: oxyd-litany-sending-desc
+  phrase: "Audit, me audit vocationem. Ego nuntius vobis."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Sending
+  targetMode: StationFollower
+  range: 0
+  cost: 30
+  sourcePath: /datum/ritual/cruciform/inquisitor/sending
+
+- type: oxydLitany
+  id: OxydLitanyInitiation
+  name: oxyd-litany-initiation-name
+  description: oxyd-litany-initiation-desc
+  phrase: "Habe fiduciam in Domino ex toto corde tuo et ne innitaris prudentiae tuae, in omnibus viis tuis cogita illum et ipse diriget gressus tuos."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Initiation
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 100
+  enabled: false
+  dependency: CoreModules
+  unavailableReason: oxyd-litany-unavailable-core-modules
+  sourcePath: /datum/ritual/cruciform/inquisitor/initiation
+
+- type: oxydLitany
+  id: OxydLitanyKnowledge
+  name: oxyd-litany-knowledge-name
+  description: oxyd-litany-knowledge-desc
+  phrase: "Cor sapientis quaerit doctrinam, et os stultorum pascetur inperitia."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Knowledge
+  targetMode: Self
+  range: 0
+  cost: 0
+  enabled: false
+  dependency: NtUplink
+  unavailableReason: oxyd-litany-unavailable-uplink
+  sourcePath: /datum/ritual/cruciform/inquisitor/knowledge
+
+- type: oxydLitany
+  id: OxydLitanyBounty
+  name: oxyd-litany-bounty-name
+  description: oxyd-litany-bounty-desc
+  phrase: "Supra Domini, bona de te peto. Audi me, et libera vocationem ad me munera tua."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Bounty
+  targetMode: Self
+  range: 0
+  cost: 20
+  enabled: false
+  dependency: NtUplink
+  unavailableReason: oxyd-litany-unavailable-uplink
+  sourcePath: /datum/ritual/cruciform/inquisitor/bounty
+
+- type: oxydLitany
+  id: OxydLitanyEternalBrotherhood
+  name: oxyd-litany-eternal-brotherhood-name
+  description: oxyd-litany-eternal-brotherhood-desc
+  phrase: "Ita multi unum corpus sumus in Christo singuli autem alter alterius membra."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: EternalBrotherhood
+  targetMode: VisibleFollower
+  range: 7
+  cost: 1
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/cruciform/crusader/brotherhood
+
+- type: oxydLitany
+  id: OxydLitanyCallToBattle
+  name: oxyd-litany-call-to-battle-name
+  description: oxyd-litany-call-to-battle-desc
+  phrase: "Si exieritis ad bellum de terra vestra contra hostes qui dimicant adversum vos clangetis ululantibus tubis et erit recordatio vestri coram Domino Deo vestro ut eruamini de manibus inimicorum vestrorum."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: CallToBattle
+  targetMode: VisibleArea
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCallToBattle
+  cooldownScope: Personal
+  cooldownDuration: 600
+  effectDuration: 600
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/cruciform/crusader/battle_call
+
+- type: oxydLitany
+  id: OxydLitanySearingRevelation
+  name: oxyd-litany-searing-revelation-name
+  description: oxyd-litany-searing-revelation-desc
+  phrase: "Per fidem enim ambulamus et non per speciem."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: SearingRevelation
+  targetMode: VisibleArea
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanySearingRevelation
+  cooldownScope: Personal
+  cooldownDuration: 120
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/cruciform/crusader/flash

@@ -1,0 +1,109 @@
+- type: oxydLitany
+  id: OxydLitanyResurrection
+  name: oxyd-litany-resurrection-name
+  description: oxyd-litany-resurrection-desc
+  phrase: "Qui fuit, et crediderunt in me non morietur in aeternum."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: Resurrection
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 0
+  enabled: false
+  dependency: SoulCloning
+  unavailableReason: oxyd-litany-unavailable-cloning
+  sourcePath: /datum/ritual/cruciform/machines/resurrection
+
+- type: oxydLitany
+  id: OxydLitanyMakeCruciform
+  name: oxyd-litany-make-cruciform-name
+  description: oxyd-litany-make-cruciform-desc
+  phrase: "Nos nostrae initium creatores."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: MakeCruciform
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 0
+  enabled: false
+  dependency: ForgeMaterials
+  unavailableReason: oxyd-litany-unavailable-forge
+  sourcePath: /datum/ritual/cruciform/machines/cruciformforge
+
+- type: oxydLitany
+  id: OxydLitanyActivateDoor
+  name: oxyd-litany-activate-door-name
+  description: oxyd-litany-activate-door-desc
+  phrase: "Inlaqueatus."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: ActivateDoor
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 0
+  sourcePath: /datum/ritual/cruciform/machines/lock_door
+
+- type: oxydLitany
+  id: OxydLitanyRepairDoor
+  name: oxyd-litany-repair-door-name
+  description: oxyd-litany-repair-door-desc
+  phrase: "Redde quod periit."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: RepairDoor
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 0
+  extraDelay: 5
+  enabled: false
+  dependency: BiomatterMaterials
+  unavailableReason: oxyd-litany-unavailable-biomatter
+  sourcePath: /datum/ritual/cruciform/machines/repair_door
+
+- type: oxydLitany
+  id: OxydLitanyPowerBiogenerator
+  name: oxyd-litany-biogenerator-name
+  description: oxyd-litany-biogenerator-desc
+  phrase: "Dixitque Deus: Fiat lux. Et facta est lux. Et lux in tenebris lucet, et renebrae eam non comprehenderunt."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: PowerBiogenerator
+  targetMode: NearbyMachine
+  range: 4
+  cost: 0
+  enabled: false
+  dependency: Biogenerator
+  unavailableReason: oxyd-litany-unavailable-biogenerator
+  sourcePath: /datum/ritual/cruciform/machines/power_biogen_awake
+
+- type: oxydLitany
+  id: OxydLitanyBioreactorSolution
+  name: oxyd-litany-bioreactor-solution-name
+  description: oxyd-litany-bioreactor-solution-desc
+  phrase: "Nihil igitur fieri de nihilo posse putandum est."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: BioreactorSolution
+  targetMode: NearbyMachine
+  range: 4
+  cost: 0
+  enabled: false
+  dependency: Bioreactor
+  unavailableReason: oxyd-litany-unavailable-bioreactor
+  sourcePath: /datum/ritual/cruciform/machines/bioreactor/solution
+
+- type: oxydLitany
+  id: OxydLitanyBioreactorChamber
+  name: oxyd-litany-bioreactor-chamber-name
+  description: oxyd-litany-bioreactor-chamber-desc
+  phrase: "Constituit quoque ianitores in portis domus Domini ut non ingrederetur eam inmundus in omni."
+  category: Machinery
+  grantedBy: [OxydLitanyMachinery]
+  effect: BioreactorChamber
+  targetMode: NearbyMachine
+  range: 4
+  cost: 0
+  enabled: false
+  dependency: Bioreactor
+  unavailableReason: oxyd-litany-unavailable-bioreactor
+  sourcePath: /datum/ritual/cruciform/machines/bioreactor/chamber_doors

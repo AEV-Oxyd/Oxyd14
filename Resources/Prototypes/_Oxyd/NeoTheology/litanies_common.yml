@@ -1,0 +1,201 @@
+- type: oxydLitany
+  id: OxydLitanyRelief
+  name: oxyd-litany-relief-name
+  description: oxyd-litany-relief-desc
+  phrase: "Semper invicta."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Relief
+  targetMode: Self
+  range: 0
+  cost: 20
+  cooldownKey: OxydLitanyRelief
+  cooldownScope: Personal
+  cooldownDuration: 60
+  ignoreStuttering: true
+  effectDuration: 60
+  parameters:
+    healing:
+      analgesia: OxydNtAnalgesia
+  sourcePath: /datum/ritual/cruciform/base/relief
+
+- type: oxydLitany
+  id: OxydLitanySoulHunger
+  name: oxyd-litany-soul-hunger-name
+  description: oxyd-litany-soul-hunger-desc
+  phrase: "Panem nostrum cotidianum da nobis hodie."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: SoulHunger
+  targetMode: Self
+  range: 0
+  cost: 50
+  cooldownKey: OxydLitanySoulHunger
+  cooldownScope: Personal
+  cooldownDuration: 60
+  parameters:
+    healing:
+      heat: 5
+  sourcePath: /datum/ritual/cruciform/base/soul_hunger
+
+- type: oxydLitany
+  id: OxydLitanyEntreaty
+  name: oxyd-litany-entreaty-name
+  description: oxyd-litany-entreaty-desc
+  phrase: "Deus meus ut quid dereliquisti me."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Entreaty
+  targetMode: StationFollower
+  range: 0
+  cost: 0
+  cooldownKey: OxydLitanyEntreaty
+  cooldownScope: Personal
+  cooldownDuration: 60
+  ignoreStuttering: true
+  sourcePath: /datum/ritual/cruciform/base/entreaty
+
+- type: oxydLitany
+  id: OxydLitanyRejection
+  name: oxyd-litany-rejection-name
+  description: oxyd-litany-rejection-desc
+  phrase: "Ad tollendum zizania a corpore."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Rejection
+  targetMode: Self
+  range: 0
+  cost: 25
+  cooldownKey: OxydLitanyRejection
+  cooldownScope: Personal
+  cooldownDuration: 10
+  ignoreStuttering: true
+  enabled: false
+  dependency: Purity
+  unavailableReason: oxyd-litany-unavailable-purity
+  sourcePath: /datum/ritual/cruciform/base/reject
+
+- type: oxydLitany
+  id: OxydLitanyRevealAdversaries
+  name: oxyd-litany-reveal-adversaries-name
+  description: oxyd-litany-reveal-adversaries-desc
+  phrase: "Et fumus tormentorum eorum ascendet in saecula saeculorum: nec habent requiem die ac nocte, qui adoraverunt bestiam, et imaginem ejus, et si quis acceperit caracterem nominis ejus."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: RevealAdversaries
+  targetMode: VisibleArea
+  range: 14
+  cost: 35
+  cooldownKey: OxydLitanyRevealAdversaries
+  cooldownScope: Personal
+  cooldownDuration: 60
+  enabled: false
+  dependency: ThreatClassification
+  unavailableReason: oxyd-litany-unavailable-threats
+  sourcePath: /datum/ritual/cruciform/base/reveal
+
+- type: oxydLitany
+  id: OxydLitanyCruciformSense
+  name: oxyd-litany-cruciform-sense-name
+  description: oxyd-litany-cruciform-sense-desc
+  phrase: "Et si medio umbrae."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: CruciformSense
+  targetMode: VisibleFollower
+  range: 7
+  cost: 20
+  cooldownKey: OxydLitanyCruciformSense
+  cooldownScope: Personal
+  cooldownDuration: 60
+  sourcePath: /datum/ritual/cruciform/base/sense_cruciform
+
+- type: oxydLitany
+  id: OxydLitanyRevelation
+  name: oxyd-litany-revelation-name
+  description: oxyd-litany-revelation-desc
+  phrase: "Patris ostendere viam."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Revelation
+  targetMode: AdjacentLiving
+  range: 4
+  cost: 10
+  cooldownKey: OxydLitanyRevelation
+  cooldownScope: Personal
+  cooldownDuration: 60
+  sourcePath: /datum/ritual/cruciform/base/revelation
+
+- type: oxydLitany
+  id: OxydLitanyInstallUpgrade
+  name: oxyd-litany-install-upgrade-name
+  description: oxyd-litany-install-upgrade-desc
+  phrase: "Deum benedicite mihi voluntas in suum donum."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: InstallUpgrade
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 20
+  enabled: false
+  dependency: Attachments
+  unavailableReason: oxyd-litany-unavailable-attachments
+  sourcePath: /datum/ritual/cruciform/base/install_upgrade
+
+- type: oxydLitany
+  id: OxydLitanyUninstallUpgrade
+  name: oxyd-litany-uninstall-upgrade-name
+  description: oxyd-litany-uninstall-upgrade-desc
+  phrase: "Deus meus ut quid habebant affectus."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: UninstallUpgrade
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 20
+  enabled: false
+  dependency: Attachments
+  unavailableReason: oxyd-litany-unavailable-attachments
+  sourcePath: /datum/ritual/cruciform/base/uninstall_upgrade
+
+- type: oxydLitany
+  id: OxydLitanyReincarnation
+  name: oxyd-litany-reincarnation-name
+  description: oxyd-litany-reincarnation-desc
+  phrase: "Vetus moritur et onus hoc levaverit."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Reincarnation
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 0
+  enabled: false
+  dependency: SoulCloning
+  unavailableReason: oxyd-litany-unavailable-cloning
+  sourcePath: /datum/ritual/cruciform/base/reincarnation
+
+- type: oxydLitany
+  id: OxydLitanyCommitment
+  name: oxyd-litany-commitment-name
+  description: oxyd-litany-commitment-desc
+  phrase: "Unde ipse Dominus dabit vobis signum."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Commitment
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 0
+  sourcePath: /datum/ritual/cruciform/base/install
+
+- type: oxydLitany
+  id: OxydLitanyDeprivation
+  name: oxyd-litany-deprivation-name
+  description: oxyd-litany-deprivation-desc
+  phrase: "Et revertatur pulvis in terram suam unde erat et spiritus redeat ad Deum qui dedit illum."
+  category: Common
+  grantedBy: [OxydLitanyCommon]
+  effect: Deprivation
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 0
+  sourcePath: /datum/ritual/cruciform/base/ejection

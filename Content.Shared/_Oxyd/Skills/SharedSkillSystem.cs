@@ -93,10 +93,9 @@ public abstract partial class SharedSkillSystem : EntitySystem
         else if(ent.Comp.buffSources[skill][id].Count == 1)
         {
             var old = ent.Comp.buffSources[skill][id][0];
-            if (old.amount == amount)
-            {
-                old.expires = expires ?? TimeSpan.MaxValue;
-            }
+            old.amount = amount;
+            old.expires = expires ?? TimeSpan.MaxValue;
+            RecalculateBuffs(ent);
             return old;
         }
         ent.Comp.buffSources[skill][id].Clear();
@@ -122,7 +121,8 @@ public abstract partial class SharedSkillSystem : EntitySystem
             return;
         if (!ent.Comp.buffSources[proto].ContainsKey(id))
             return;
-        ent.Comp.buffSources[proto][id].Remove(target);
+        if (ent.Comp.buffSources[proto][id].Remove(target))
+            RecalculateBuffs(ent);
     }
 
     public void RecalculateBuffs(Entity<MobSkillComponent> ent)
