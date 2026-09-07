@@ -2,9 +2,20 @@
 - type: loadout
   id: RedJumpsuit
   equipment:
-    jumpsuit: ClothingUniformJumpsuitColorRed
+    jumpsuit: erisport_Ironhammer_Cadets_jumpskirt
 
 - type: loadout
   id: RedJumpskirt
   equipment:
-    jumpsuit: ClothingUniformJumpskirtColorRed
+    jumpsuit: erisport_Ironhammer_Cadets_jumpskirt
+
+# Head
+- type: loadout
+  id: CadetFieldCap
+  equipment:
+    head: erisport_IH_field_cap
+
+- type: loadout
+  id: CadetBeret
+  equipment:
+    head: erisport_old_security_beret

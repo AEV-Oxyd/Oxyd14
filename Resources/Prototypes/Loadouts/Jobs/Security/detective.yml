@@ -19,7 +19,7 @@
 - type: loadout
   id: DetectiveJumpsuit
   equipment:
-    jumpsuit: ClothingUniformJumpsuitDetective
+    jumpsuit: erisport_inspectors_suit
 
 - type: loadout
   id: DetectiveJumpskirt
@@ -45,9 +45,9 @@
 - type: loadout
   id: DetectiveCoat
   equipment:
-    outerClothing: ClothingOuterCoatDetectiveLoadout
+    outerClothing: erisport_inspectors_brown_armored_trenchcoat
 
 - type: loadout
   id: DetectiveCoatGrey
   equipment:
-    outerClothing: ClothingOuterCoatDetectiveLoadoutGrey
+    outerClothing: erisport_inspectors_grey_armored_trenchcoat

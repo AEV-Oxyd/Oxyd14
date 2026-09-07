@@ -41,21 +41,22 @@
 - type: startingGear
   id: HoSGear
   equipment:
-    eyes: ClothingEyesGlassesSecurity
+    eyes: erisport_Ironhammer_tactical_HUD
     id: HoSPDA
     gloves: ClothingHandsGlovesCombat
     ears: ClothingHeadsetAltSecurity
-    pocket1: WeaponPistolMk58
+    pocket1: WeaponPistolLamia
   storage:
     back:
     - Flash
-    - MagazinePistol
+    - WeaponPDWMartin
+    - MagazineMagnum
 
 - type: chameleonOutfit
   id: HeadOfSecurityChameleonOutfit
   job: HeadOfSecurity
   hasMindShield: true
   equipment:
-    head: ClothingHeadHatBeretHoS
-    mask: ClothingMaskGasSecurity
+    head: erisport_Commander_beret
+    mask: erisport_Ironhammer_gasmask
     neck: ClothingNeckCloakHos

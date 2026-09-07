@@ -3,7 +3,7 @@ job-description-captain = Manage the resources and personnel of the entire stati
 job-description-ce = Manage the resources and personnel of the Engineering department to ensure the station remains intact, functional, and habitable.
 job-description-cmo = Manage the resources and personnel of the Medical department to ensure the station's crew remain alive and in good health.
 job-description-hop = Manage the resources and personnel of the Service department, and perform general administrative duties. Handle paperwork, perform job transfers, and keep your pet corgi safe.
-job-description-hos = Manage the resources and personnel of the Security department to ensure the station's crew remain safe and law-abiding.
+job-description-hos = Command the Ironhammer regiment: coordinate operatives, plan responses to threats, and advise the captain on station security.
 job-description-qm = Manage the resources and personnel of the Cargo department to ensure the station remains well-supplied and the money keeps flowing.
 job-description-rd = Manage the resources and personnel of the Science department to ensure that research progresses smoothly and the station's silicons function properly.
 
@@ -28,10 +28,11 @@ job-description-research-assistant = Learn the basics of scientific research and
 job-description-scientist = Research alien artifacts and supernatural anomalies to develop cutting-edge equipment for the station's crew. Build and upgrade cyborgs to perform various tasks across the station.
 
 # Security
-job-description-cadet = Learn the basics of investigating crime and arresting criminals.
-job-description-detective = Investigate crime scenes using forensic tools to ensure that the guilty party is found.
-job-description-security = Uphold the law, arrest criminals, and ensure that the station does not fall into disarray.
-job-description-warden = Guard the Security department, manage the armory, and ensure that all prisoners are properly charged and serve their sentence without incident.
+job-description-cadet = Learn the Ironhammer way: study law enforcement, arrest procedure, and discipline under the operatives.
+job-description-detective = Investigate crime scenes with forensic tools and bring the guilty to Ironhammer justice.
+job-description-medspec = Keep Ironhammer operatives alive in the field: treat the wounded, secure crime scenes, and assist the medbay when Ironhammer needs it.
+job-description-security = Enforce the law and protect the ship as an Ironhammer operative. Arrest criminals and stop threats before they grow.
+job-description-warden = Guard the Ironhammer barracks and armory, manage the arsenal, and keep prisoners safely charged and confined.
 
 # Service
 job-description-bartender = Serve drinks and keep the bar lively.

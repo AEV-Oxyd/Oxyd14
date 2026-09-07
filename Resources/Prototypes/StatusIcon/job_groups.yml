@@ -73,6 +73,7 @@
     state: SecurityOfficer
   icons:
   - JobIconHeadOfSecurity
+  - JobIconMedicalSpecialist
   - JobIconSecurityOfficer
   - JobIconSecurityCadet
   - JobIconBrigmedic

@@ -44,6 +44,7 @@
     Scientist: 0
     Detective: 0
     HeadOfSecurity: 10
+    MedicalSpecialist: 0
     SecurityCadet: 0
     SecurityOfficer: 0
     Warden: 5

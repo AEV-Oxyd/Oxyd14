@@ -12,31 +12,31 @@
 - type: loadout
   id: HeadofSecurityJumpsuit
   equipment:
-    jumpsuit: ClothingUniformJumpsuitHoS
+    jumpsuit: erisport_Ironhammer_Commanders_jumpsuit
   groupBy: "jumpsuit"
 
 - type: loadout
   id: HeadofSecurityJumpskirt
   equipment:
-    jumpsuit: ClothingUniformJumpskirtHoS
+    jumpsuit: erisport_Ironhammer_Commanders_jumpskirt
   groupBy: "jumpskirt"
 
 - type: loadout
   id: HeadofSecurityTurtleneck
   equipment:
-    jumpsuit: ClothingUniformJumpsuitHoSAlt
+    jumpsuit: erisport_ironhammer_formal_uniform
   groupBy: "jumpsuit"
 
 - type: loadout
   id: HeadofSecurityTurtleneckSkirt
   equipment:
-    jumpsuit: ClothingUniformJumpskirtHoSAlt
+    jumpsuit: erisport_Ironhammer_Commanders_jumpskirt
   groupBy: "jumpskirt"
 
 - type: loadout
   id: HeadofSecurityFormalSuit
   equipment:
-    jumpsuit: ClothingUniformJumpsuitHosFormal
+    jumpsuit: erisport_ironhammer_formal_uniform
   groupBy: "jumpsuit"
 
 - type: loadout
@@ -49,12 +49,12 @@
 - type: loadout
   id: HeadofSecurityHead
   equipment:
-    head: ClothingHeadHatHoshat
+    head: erisport_Ironhammer_Commander_Hat
 
 - type: loadout
   id: HeadofSecurityBeret
   equipment:
-    head: ClothingHeadHatBeretHoS
+    head: erisport_Commander_beret
 
 # Neck
 - type: loadout
@@ -79,7 +79,7 @@
 - type: loadout
   id: HeadofSecurityCoat
   equipment:
-    outerClothing: ClothingOuterCoatHoSTrench
+    outerClothing: erisport_greatcoat_ironhammer
 
 - type: loadout
   id: HeadofSecurityWinterCoat

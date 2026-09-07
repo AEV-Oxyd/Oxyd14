@@ -24,7 +24,7 @@
 - type: startingGear
   id: DetectiveGear
   equipment:
-    eyes: ClothingEyesGlassesSecurity
+    eyes: erisport_Ironhammer_tactical_HUD
     id: DetectivePDA
     ears: ClothingHeadsetSecurity
     belt: ClothingBeltHolsterFilled
@@ -33,6 +33,7 @@
     - Flash
     - ForensicPad
     - ForensicScanner
+    - WeaponPDWMartin
 
 - type: chameleonOutfit
   id: DetectiveChameleonOutfit
