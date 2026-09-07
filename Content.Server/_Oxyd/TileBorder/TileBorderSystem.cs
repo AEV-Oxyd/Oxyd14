@@ -27,7 +27,6 @@ public sealed partial class TileBorderSystem : EntitySystem
     [Dependency] private ITileDefinitionManager _tiles = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
-    [Dependency] private GameTicker ticker = default!;
     [Dependency] private TurfSystem _turf = default!;
 
     private FrozenDictionary<int, ContentTileDefinition> _byTypeId = FrozenDictionary<int, ContentTileDefinition>.Empty;
@@ -108,7 +107,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private void RebuildGrid(EntityUid grid, MapGridComponent gridComp)
     {
-        foreach (var tile in _map.GetAllTiles(grid, gridComp))
+        foreach (var tile in _map.GetAllTiles(grid, gridComp, false))
         {
             StripGeneratedAt(grid, tile.GridIndices);
             EmitRims(grid, gridComp, tile.GridIndices);
@@ -146,7 +145,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private void EmitRims(EntityUid grid, MapGridComponent gridComp, Vector2i pos)
     {
-        if (!_map.TryGetTile(gridComp, pos, out var tile) || tile.IsEmpty)
+        if (!_map.TryGetTile(gridComp, pos, out var tile))
             return;
 
         if (!_byTypeId.TryGetValue(tile.TypeId, out var def))
@@ -157,7 +156,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
         var mask = TileBorderMask.Compute(pos, group, neighbour =>
         {
-            if (!_map.TryGetTile(gridComp, neighbour, out var other) || other.IsEmpty)
+            if (!_map.TryGetTile(gridComp, neighbour, out var other))
                 return null;
 
             // Same borderGroup always links (floors and lattices).
