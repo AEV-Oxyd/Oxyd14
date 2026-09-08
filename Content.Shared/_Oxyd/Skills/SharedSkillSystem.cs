@@ -92,11 +92,11 @@ public abstract partial class SharedSkillSystem : EntitySystem
             ent.Comp.buffSources[skill][id] = new();
         else if(ent.Comp.buffSources[skill][id].Count == 1)
         {
-            var old = ent.Comp.buffSources[skill][id][0];
-            old.amount = amount;
-            old.expires = expires ?? TimeSpan.MaxValue;
+            var updated = ent.Comp.buffSources[skill][id][0];
+            updated.amount = amount;
+            updated.expires = expires ?? TimeSpan.MaxValue;
             RecalculateBuffs(ent);
-            return old;
+            return updated;
         }
         ent.Comp.buffSources[skill][id].Clear();
         var buff = new MobSkillComponent.BuffData() { amount = amount, expires = expires ?? TimeSpan.MaxValue};
