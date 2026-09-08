@@ -1,0 +1,9 @@
+oxyd-litany-ui-title = NeoTheology Litany
+oxyd-litany-ui-begin = Begin
+oxyd-litany-ui-cancel = Cancel
+oxyd-litany-ui-search = Search
+oxyd-litany-ui-reference = Reference catalog
+oxyd-litany-ui-busy = A litany is already in progress.
+oxyd-litany-ui-unavailable = Unavailable: { $reason }
+oxyd-litany-ui-cost = Cost: { $cost }
+oxyd-litany-ui-cooldown = Cooldown: { $duration }

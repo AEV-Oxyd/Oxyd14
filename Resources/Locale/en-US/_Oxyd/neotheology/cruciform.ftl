@@ -1,0 +1,10 @@
+oxyd-cruciform-inactive = The cruciform is installed but inactive.
+oxyd-cruciform-no-implant = You have no active cruciform.
+oxyd-cruciform-holiness = Holiness: { $current } / { $maximum }
+oxyd-cruciform-rank = Rank: { $rank }
+oxyd-cruciform-specialization = Specialization: { $specialization }
+oxyd-cruciform-clearance = Clearance: { $clearance }
+oxyd-access-follower = NeoTheology follower
+oxyd-access-common = NeoTheology common
+oxyd-access-clergy = NeoTheology clergy
+oxyd-nt-analgesia = NeoTheology analgesia

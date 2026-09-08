@@ -1,0 +1,10 @@
+- type: oxydNeoTheologyRules
+  id: OxydNtDefaultRules
+  selected: true
+  baseHolinessPerMinute: 1
+  discipleCapacity: 50
+  preacherCapacity: 80
+  inquisitorCapacity: 100
+  preacherRegenMultiplier: 1.15
+  inquisitorRegenMultiplier: 1.25
+  debitTolerance: 0.000001

@@ -1,0 +1,467 @@
+using System.Linq;
+using Content.Server.GameTicking;
+using Content.Shared._Oxyd.NeoTheology;
+using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Skills;
+using Content.Shared.Access;
+using Content.Shared.Access.Components;
+using Content.Shared.GameTicking;
+using Content.Shared.Implants;
+using Content.Shared.Implants.Components;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Components;
+using Content.Shared.Mobs.Systems;
+using Robust.Shared.Containers;
+using Robust.Shared.GameObjects;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
+
+namespace Content.Server._Oxyd.NeoTheology;
+
+/// <summary>
+/// Owns the relationship between a physical cruciform implant and its current body,
+/// together with the server-side holiness and role profile. No gameplay authority is
+/// granted by a bare bearer component.
+/// </summary>
+public sealed partial class CruciformSystem : EntitySystem
+{
+    private const double DefaultDiscipleCapacity = 50d;
+    private const double DefaultPreacherCapacity = 80d;
+    private const double DefaultInquisitorCapacity = 100d;
+    private const double DefaultBaseHolinessPerMinute = 1d;
+    private const double DebitTolerance = 0.000001d;
+
+    [Dependency] private SharedContainerSystem _containers = default!;
+    [Dependency] private MobStateSystem _mobStates = default!;
+    [Dependency] private IGameTiming _timing = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        SubscribeLocalEvent<CruciformComponent, ImplantImplantedEvent>(OnImplanted);
+        SubscribeLocalEvent<CruciformComponent, ImplantRemovedEvent>(OnRemoved);
+        SubscribeLocalEvent<CruciformComponent, EntityTerminatingEvent>(OnCruciformTerminating);
+        SubscribeLocalEvent<CruciformBearerComponent, MobStateChangedEvent>(OnMobStateChanged);
+        SubscribeLocalEvent<CruciformBearerComponent, EntityTerminatingEvent>(OnBearerTerminating);
+        SubscribeLocalEvent<CruciformBearerComponent, GetAccessTagsEvent>(OnGetAccessTags);
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+
+        var query = EntityQueryEnumerator<CruciformComponent, SubdermalImplantComponent>();
+        while (query.MoveNext(out var cruciform, out var component, out var implant))
+        {
+            if (!component.Active || implant.ImplantedEntity is not { } body)
+            {
+                component.LastHolinessUpdate = _timing.CurTime;
+                continue;
+            }
+
+            if (!TryGetLinkedBearer(body, cruciform, out _) || _mobStates.IsDead(body))
+            {
+                component.LastHolinessUpdate = _timing.CurTime;
+                continue;
+            }
+
+            AdvanceHoliness((cruciform, component), body);
+        }
+    }
+
+    private void OnImplanted(Entity<CruciformComponent> ent, ref ImplantImplantedEvent args)
+    {
+        if (args.Implant != ent.Owner)
+            return;
+
+        var body = args.Implanted;
+        if (HasAnotherCruciform(body, ent.Owner))
+        {
+            // The implant is left recoverable on the ground. ForceRemove is deliberately
+            // not used because it deletes the physical implant.
+            if (TryComp<ImplantedComponent>(body, out var installed))
+                _containers.Remove(ent.Owner, installed.ImplantContainer);
+            return;
+        }
+
+        ent.Comp.ImplantedEntity = body;
+        ent.Comp.LastHolinessUpdate = _timing.CurTime;
+
+        var bearer = EnsureComp<CruciformBearerComponent>(body);
+        bearer.Cruciform = ent.Owner;
+        bearer.UiRevision++;
+
+        // Initial installation is inert. A previously activated implant may resume
+        // on the same living body after extraction/reimplantation.
+        ent.Comp.Active = ent.Comp.EverActivated && !_mobStates.IsDead(body);
+        RecomputeProfile(ent.Owner, body);
+        Dirty(ent);
+        Dirty(body, bearer);
+    }
+
+    private void OnRemoved(Entity<CruciformComponent> ent, ref ImplantRemovedEvent args)
+    {
+        if (args.Implant != ent.Owner)
+            return;
+
+        var body = args.Implanted;
+        AdvanceHoliness(ent, body);
+        ent.Comp.Active = false;
+        ent.Comp.ImplantedEntity = null;
+        ent.Comp.LastHolinessUpdate = _timing.CurTime;
+        Dirty(ent);
+
+        if (TryComp<CruciformBearerComponent>(body, out var bearer) && bearer.Cruciform == ent.Owner)
+        {
+            bearer.Cruciform = null;
+            bearer.PendingRequestId = null;
+            bearer.UiRevision++;
+            Dirty(body, bearer);
+        }
+    }
+
+    private void OnCruciformTerminating(Entity<CruciformComponent> ent, ref EntityTerminatingEvent args)
+    {
+        if (ent.Comp.ImplantedEntity is not { } body || !TryComp<CruciformBearerComponent>(body, out var bearer))
+            return;
+
+        if (bearer.Cruciform == ent.Owner)
+        {
+            bearer.Cruciform = null;
+            bearer.PendingRequestId = null;
+            bearer.UiRevision++;
+            Dirty(body, bearer);
+        }
+    }
+
+    private void OnBearerTerminating(Entity<CruciformBearerComponent> ent, ref EntityTerminatingEvent args)
+    {
+        if (ent.Comp.Cruciform is not { } cruciform || !TryComp<CruciformComponent>(cruciform, out var component))
+            return;
+
+        AdvanceHoliness((cruciform, component), ent.Owner);
+        component.Active = false;
+        component.ImplantedEntity = null;
+        component.LastHolinessUpdate = _timing.CurTime;
+        Dirty(cruciform, component);
+    }
+
+    private void OnMobStateChanged(Entity<CruciformBearerComponent> ent, ref MobStateChangedEvent args)
+    {
+        if (ent.Comp.Cruciform is not { } cruciform || !TryComp<CruciformComponent>(cruciform, out var component))
+            return;
+
+        if (!TryGetLinkedBearer(ent.Owner, cruciform, out _))
+            return;
+
+        AdvanceHoliness((cruciform, component), ent.Owner);
+        if (args.NewMobState == MobState.Dead)
+            component.Active = false;
+        else if (args.NewMobState == MobState.Alive && component.EverActivated)
+            component.Active = true;
+
+        component.LastHolinessUpdate = _timing.CurTime;
+        RecomputeProfile(cruciform, ent.Owner);
+        Dirty(cruciform, component);
+    }
+
+    private void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
+    {
+        if (ent.Comp.Cruciform is not { } cruciform || !TryGetLinkedBearer(ent.Owner, cruciform, out var component) || !component.Active)
+            return;
+
+        args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtFollower"));
+        if (component.Clearance is NeoTheologyClearance.Common or NeoTheologyClearance.Clergy)
+            args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtCommon"));
+        if (component.Clearance == NeoTheologyClearance.Clergy)
+            args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtClergy"));
+    }
+
+    private void OnRoundCleanup(RoundRestartCleanupEvent ev)
+    {
+        var query = EntityQueryEnumerator<CruciformBearerComponent>();
+        while (query.MoveNext(out var uid, out var bearer))
+        {
+            bearer.PersonalCooldowns.Clear();
+            bearer.PendingRequestId = null;
+            bearer.UiRevision++;
+            Dirty(uid, bearer);
+        }
+    }
+
+    public bool TryGetLinkedBearer(EntityUid body, EntityUid cruciform, out CruciformComponent component)
+    {
+        component = null!;
+        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform != cruciform)
+            return false;
+        if (!TryComp<CruciformComponent>(cruciform, out CruciformComponent? linkedComponent) || linkedComponent == null || linkedComponent.ImplantedEntity != body)
+            return false;
+        component = linkedComponent;
+        if (!TryComp<SubdermalImplantComponent>(cruciform, out var implant) || implant.ImplantedEntity != body)
+            return false;
+        if (!TryComp<ImplantedComponent>(body, out var installed))
+            return false;
+
+        return installed.ImplantContainer.ContainedEntities.Contains(cruciform);
+    }
+
+    public bool TryGetCruciform(EntityUid body, out EntityUid cruciform, out CruciformComponent component)
+    {
+        cruciform = EntityUid.Invalid;
+        component = null!;
+        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform is not { } linked)
+            return false;
+        if (!TryGetLinkedBearer(body, linked, out component))
+            return false;
+
+        cruciform = linked;
+        return component.Active;
+    }
+
+    public bool IsActiveBearer(EntityUid body)
+    {
+        return TryGetCruciform(body, out _, out _);
+    }
+
+    public bool Activate(EntityUid body)
+    {
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component))
+            return false;
+        if (component.Active)
+            return false;
+
+        component.EverActivated = true;
+        component.Active = true;
+        if (component.Holiness <= DebitTolerance)
+            component.Holiness = component.MaxHoliness;
+        component.LastHolinessUpdate = _timing.CurTime;
+        RecomputeProfile(cruciform, body);
+        Dirty(cruciform, component);
+        return true;
+    }
+
+    public bool Deactivate(EntityUid body)
+    {
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || !component.Active)
+            return false;
+
+        AdvanceHoliness((cruciform, component), body);
+        component.Active = false;
+        component.LastHolinessUpdate = _timing.CurTime;
+        RecomputeProfile(cruciform, body);
+        Dirty(cruciform, component);
+        return true;
+    }
+
+    public bool TrySpend(EntityUid body, double amount)
+    {
+        if (amount < 0 || !double.IsFinite(amount) || !TryGetCruciformEntity(body, out var cruciform, out var component) || !component.Active)
+            return false;
+
+        AdvanceHoliness((cruciform, component), body);
+        if (component.Holiness + DebitTolerance < amount)
+            return false;
+
+        component.Holiness -= amount;
+        if (Math.Abs(component.Holiness) <= DebitTolerance)
+            component.Holiness = 0;
+        Dirty(cruciform, component);
+        return true;
+    }
+
+    public void Refund(EntityUid body, double amount)
+    {
+        if (amount <= 0 || !double.IsFinite(amount) || !TryGetCruciformEntity(body, out var cruciform, out var component))
+            return;
+
+        AdvanceHoliness((cruciform, component), body);
+        component.Holiness = Math.Clamp(component.Holiness + amount, 0, component.MaxHoliness);
+        Dirty(cruciform, component);
+    }
+
+    public bool TrySetRank(EntityUid body, NeoTheologyRank rank)
+    {
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Rank == rank)
+            return false;
+
+        AdvanceHoliness((cruciform, component), body);
+        component.Rank = rank;
+        RecomputeProfile(cruciform, body);
+        Dirty(cruciform, component);
+        return true;
+    }
+
+    public bool TrySetSpecialization(EntityUid body, NeoTheologySpecialization specialization)
+    {
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Specialization == specialization)
+            return false;
+
+        component.Specialization = specialization;
+        RecomputeProfile(cruciform, body);
+        Dirty(cruciform, component);
+        return true;
+    }
+
+    public bool TrySetClearance(EntityUid body, NeoTheologyClearance clearance)
+    {
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Clearance == clearance)
+            return false;
+
+        component.Clearance = clearance;
+        Dirty(cruciform, component);
+        if (TryComp<CruciformBearerComponent>(body, out var bearer))
+        {
+            bearer.UiRevision++;
+            Dirty(body, bearer);
+        }
+        return true;
+    }
+
+    public double GetMaximumHoliness(EntityUid body)
+    {
+        return TryGetCruciformEntity(body, out _, out var component) ? component.MaxHoliness : 0;
+    }
+
+    public double GetHoliness(EntityUid body)
+    {
+        return TryGetCruciformEntity(body, out var cruciform, out var component)
+            ? AdvanceHoliness((cruciform, component), body)
+            : 0;
+    }
+
+    public double GetRegenerationPerSecond(EntityUid body)
+    {
+        return TryGetCruciformEntity(body, out _, out var component) ? component.RegenerationPerSecond : 0;
+    }
+
+    public bool TryGetCruciformEntity(EntityUid body, out EntityUid cruciform, out CruciformComponent component)
+    {
+        cruciform = EntityUid.Invalid;
+        component = null!;
+        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform is not { } linked)
+            return false;
+        if (!TryGetLinkedBearer(body, linked, out component))
+            return false;
+
+        cruciform = linked;
+        return true;
+    }
+
+    private double AdvanceHoliness(Entity<CruciformComponent> ent, EntityUid body)
+    {
+        var now = _timing.CurTime;
+        if (ent.Comp.LastHolinessUpdate == default)
+            ent.Comp.LastHolinessUpdate = now;
+
+        var elapsed = now - ent.Comp.LastHolinessUpdate;
+        ent.Comp.LastHolinessUpdate = now;
+        if (elapsed <= TimeSpan.Zero || !ent.Comp.Active || _mobStates.IsDead(body))
+            return ent.Comp.Holiness;
+
+        var seconds = elapsed.TotalSeconds;
+        if (double.IsFinite(seconds) && seconds > 0)
+            ent.Comp.Holiness = Math.Clamp(ent.Comp.Holiness + ent.Comp.RegenerationPerSecond * seconds, 0, ent.Comp.MaxHoliness);
+
+        Dirty(ent);
+        return ent.Comp.Holiness;
+    }
+
+    private void RecomputeProfile(EntityUid cruciform, EntityUid body)
+    {
+        if (!TryComp<CruciformComponent>(cruciform, out var component))
+            return;
+
+        var rules = GetRules();
+        component.MaxHoliness = component.Rank switch
+        {
+            NeoTheologyRank.Preacher => rules?.PreacherCapacity ?? DefaultPreacherCapacity,
+            NeoTheologyRank.Inquisitor => rules?.InquisitorCapacity ?? DefaultInquisitorCapacity,
+            _ => rules?.DiscipleCapacity ?? DefaultDiscipleCapacity,
+        };
+
+        var cognitive = 0;
+        if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue(new ProtoId<SkillPrototype>("Cog"), out var cog) && cog.Length > 0)
+            cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
+
+        var cognitionSteps = Math.Max(0, (int)Math.Floor(Math.Max(cognitive, 0) / 4d + 0.5d));
+        var righteousFactor = 1.5d * Math.Clamp(component.RighteousLife, 0, 100) / 100d;
+        var channelingFactor = component.Channeling ? CountEligibleChannelingFollowers(body) / 5d : 0d;
+        var rankMultiplier = component.Rank switch
+        {
+            NeoTheologyRank.Preacher => rules?.PreacherRegenMultiplier ?? 1.15d,
+            NeoTheologyRank.Inquisitor => rules?.InquisitorRegenMultiplier ?? 1.25d,
+            _ => 1d,
+        };
+        var perSecond = (rules?.BaseHolinessPerMinute ?? DefaultBaseHolinessPerMinute) / 60d * rankMultiplier
+                        * (1d + 0.05d * cognitionSteps + righteousFactor + channelingFactor);
+        component.RegenerationPerSecond = double.IsFinite(perSecond) && perSecond >= 0 ? perSecond : 0;
+        component.Holiness = Math.Clamp(component.Holiness, 0, component.MaxHoliness);
+
+        component.UnlockedSets.Clear();
+        if (!component.Active)
+            return;
+
+        component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyCommon"));
+        component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyMachinery"));
+        if (component.Specialization == NeoTheologySpecialization.Acolyte || component.Rank is NeoTheologyRank.Preacher or NeoTheologyRank.Inquisitor)
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyAcolyte"));
+        if (component.Specialization == NeoTheologySpecialization.Agrolyte)
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyAgrolyte"));
+        if (component.Specialization == NeoTheologySpecialization.Custodian)
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyCustodian"));
+        if (component.Rank == NeoTheologyRank.Preacher)
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyPriest"));
+        if (component.Rank == NeoTheologyRank.Inquisitor)
+        {
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyPriest"));
+            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyInquisitor"));
+        }
+    }
+
+    private int CountEligibleChannelingFollowers(EntityUid source)
+    {
+        var count = 0;
+        var sourceMap = Transform(source).MapID;
+        var query = EntityQueryEnumerator<CruciformComponent, SubdermalImplantComponent>();
+        while (query.MoveNext(out var uid, out var component, out var implant))
+        {
+            if (uid == source || !component.Active || component.Rank != NeoTheologyRank.Disciple || implant.ImplantedEntity is not { } body)
+                continue;
+            if (Transform(body).MapID == sourceMap && TryGetLinkedBearer(body, uid, out _))
+                count++;
+        }
+
+        return count;
+    }
+
+    private bool HasAnotherCruciform(EntityUid body, EntityUid except)
+    {
+        if (!TryComp<ImplantedComponent>(body, out var installed))
+            return false;
+        foreach (var entity in installed.ImplantContainer.ContainedEntities)
+        {
+            if (entity == except || !HasComp<CruciformComponent>(entity))
+                continue;
+            return true;
+        }
+
+        return false;
+    }
+
+    private NeoTheologyRulesPrototype? GetRules()
+    {
+        NeoTheologyRulesPrototype? selected = null;
+        foreach (var rules in ProtoMan.EnumeratePrototypes<NeoTheologyRulesPrototype>())
+        {
+            if (!rules.Selected)
+                continue;
+            if (selected != null)
+                return null;
+            selected = rules;
+        }
+
+        return selected;
+    }
+}

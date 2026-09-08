@@ -1,0 +1,480 @@
+- type: oxydLitany
+  id: OxydLitanyAcceleratedGrowth
+  name: oxyd-litany-accelerated-growth-name
+  description: oxyd-litany-accelerated-growth-desc
+  phrase: "Plantae crescere in divinum lumen tua."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: AcceleratedGrowth
+  targetMode: VisibleArea
+  range: 7
+  cost: 10
+  cooldownKey: OxydLitanyAcceleratedGrowth
+  cooldownScope: Global
+  cooldownDuration: 300
+  effectDuration: 300
+  enabled: false
+  dependency: PlantGrowth
+  unavailableReason: oxyd-litany-unavailable-plant-growth
+  sourcePath: /datum/ritual/cruciform/agrolyte/accelerated_growth
+
+- type: oxydLitany
+  id: OxydLitanyHandOfMercy
+  name: oxyd-litany-hand-of-mercy-name
+  description: oxyd-litany-hand-of-mercy-desc
+  phrase: "Non est verus dolor."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: HandOfMercy
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 5
+  effectDuration: 120
+  parameters:
+    healing:
+      analgesia: OxydNtAnalgesia
+  sourcePath: /datum/ritual/cruciform/agrolyte/mercy
+
+- type: oxydLitany
+  id: OxydLitanyAbsolutionOfWounds
+  name: oxyd-litany-absolution-name
+  description: oxyd-litany-absolution-desc
+  phrase: "Surge et ambula."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: AbsolutionOfWounds
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 10
+  sourcePath: /datum/ritual/cruciform/agrolyte/absolution
+
+- type: oxydLitany
+  id: OxydLitanyWordsOfPurging
+  name: oxyd-litany-words-of-purging-name
+  description: oxyd-litany-words-of-purging-desc
+  phrase: "Purificati a peccatis et in remissionem peccatorum."
+  category: Custodian
+  grantedBy: [OxydLitanyCustodian]
+  effect: WordsOfPurging
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 5
+  enabled: false
+  dependency: Addiction
+  unavailableReason: oxyd-litany-unavailable-addiction
+  sourcePath: /datum/ritual/cruciform/custodian/purging
+
+- type: oxydLitany
+  id: OxydLitanyEpiphany
+  name: oxyd-litany-epiphany-name
+  description: oxyd-litany-epiphany-desc
+  phrase: "In nomine Patris et Filii et Spiritus sancti."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Epiphany
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 0
+  sourcePath: /datum/ritual/cruciform/priest/acolyte/convert
+
+- type: oxydLitany
+  id: OxydLitanyAsacris
+  name: oxyd-litany-asacris-name
+  description: oxyd-litany-asacris-desc
+  phrase: "A caelo usque ad centrum."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Asacris
+  targetMode: Self
+  range: 0
+  cost: 0
+  enabled: false
+  dependency: CoreModules
+  unavailableReason: oxyd-litany-unavailable-core-modules
+  sourcePath: /datum/ritual/cruciform/priest/acolyte/asacris
+
+- type: oxydLitany
+  id: OxydLitanyGraceOfPerseverance
+  name: oxyd-litany-grace-name
+  description: oxyd-litany-grace-desc
+  phrase: "Domine petra mea et robur meum et salvator meus Deus meus fortis meus sperabo in eo scutum meum et cornu salutis meae susceptor meus."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: GraceOfPerseverance
+  targetMode: VisibleArea
+  range: 7
+  cost: 30
+  cooldownKey: OxydNtShortBoost
+  cooldownScope: Global
+  cooldownDuration: 120
+  effectDuration: 600
+  parameters:
+    skills:
+      amounts:
+        Mec: 10
+        Cog: 10
+        Bio: 10
+      permanent: false
+  sourcePath: /datum/ritual/cruciform/priest/short_boost/mechanical
+
+- type: oxydLitany
+  id: OxydLitanyUpholdHolyWord
+  name: oxyd-litany-uphold-name
+  description: oxyd-litany-uphold-desc
+  phrase: "In Deo laudabo verbum in Domino praedicabo sermonem in Deo speravi non timebo quid faciat homo mihi."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: UpholdHolyWord
+  targetMode: VisibleArea
+  range: 7
+  cost: 30
+  cooldownKey: OxydNtShortBoost
+  cooldownScope: Global
+  cooldownDuration: 120
+  effectDuration: 600
+  parameters:
+    skills:
+      amounts:
+        Rob: 10
+        Tgh: 10
+        Vig: 10
+      permanent: false
+  sourcePath: /datum/ritual/cruciform/priest/short_boost/robustness
+
+- type: oxydLitany
+  id: OxydLitanyAtonement
+  name: oxyd-litany-atonement-name
+  description: oxyd-litany-atonement-desc
+  phrase: "Piaculo sit [Target human]!"
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Atonement
+  targetMode: VisibleFollower
+  range: 7
+  cost: 45
+  enabled: false
+  dependency: Pain
+  unavailableReason: oxyd-litany-unavailable-pain
+  sourcePath: /datum/ritual/cruciform/priest/atonement
+
+- type: oxydLitany
+  id: OxydLitanyBaptismalRecord
+  name: oxyd-litany-baptismal-record-name
+  description: oxyd-litany-baptismal-record-desc
+  phrase: "Memento nomina..."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: BaptismalRecord
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 30
+  sourcePath: /datum/ritual/cruciform/priest/baptismal_record
+
+- type: oxydLitany
+  id: OxydLitanyDivineIntervention
+  name: oxyd-litany-divine-intervention-name
+  description: oxyd-litany-divine-intervention-desc
+  phrase: "Auxilium instaurarent domum tuam."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: DivineIntervention
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 15
+  enabled: false
+  dependency: EyeEconomy
+  unavailableReason: oxyd-litany-unavailable-eye
+  sourcePath: /datum/ritual/cruciform/priest/divine_intervention
+
+- type: oxydLitany
+  id: OxydLitanyHolyGuidance
+  name: oxyd-litany-holy-guidance-name
+  description: oxyd-litany-holy-guidance-desc
+  phrase: "Domine deus, lux via."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: HolyGuidance
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 15
+  enabled: false
+  dependency: EyeEconomy
+  unavailableReason: oxyd-litany-unavailable-eye
+  sourcePath: /datum/ritual/cruciform/priest/holy_guidance
+
+- type: oxydLitany
+  id: OxydLitanyDivineBlessing
+  name: oxyd-litany-divine-blessing-name
+  description: oxyd-litany-divine-blessing-desc
+  phrase: "Corpus Deus."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: DivineBlessing
+  targetMode: Self
+  range: 0
+  cost: 30
+  sourcePath: /datum/ritual/cruciform/priest/blessing
+
+- type: oxydLitany
+  id: OxydLitanyConfirmation
+  name: oxyd-litany-confirmation-name
+  description: oxyd-litany-confirmation-desc
+  phrase: "Misericordia et veritas non te deserant circumda eas gutturi tuo et describe in tabulis cordis tui..."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Confirmation
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 80
+  cooldownKey: OxydLitanyConfirmation
+  cooldownScope: Personal
+  cooldownDuration: 60
+  sourcePath: /datum/ritual/cruciform/priest/confirmation
+
+- type: oxydLitany
+  id: OxydLitanyAdoption
+  name: oxyd-litany-adoption-name
+  description: oxyd-litany-adoption-desc
+  phrase: "Dervans semitas iustitiae et vias sanctorum custodiens."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Adoption
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 15
+  sourcePath: /datum/ritual/cruciform/priest/adoption
+
+- type: oxydLitany
+  id: OxydLitanyOrdination
+  name: oxyd-litany-ordination-name
+  description: oxyd-litany-ordination-desc
+  phrase: "Gloriam sapientes possidebunt stultorum exaltatio ignominia."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Ordination
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 15
+  sourcePath: /datum/ritual/cruciform/priest/ordination
+
+- type: oxydLitany
+  id: OxydLitanyOmission
+  name: oxyd-litany-omission-name
+  description: oxyd-litany-omission-desc
+  phrase: "Via impiorum tenebrosa nesciunt ubi corruant."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Omission
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 30
+  sourcePath: /datum/ritual/cruciform/priest/omission
+
+- type: oxydLitany
+  id: OxydLitanyExcommunication
+  name: oxyd-litany-excommunication-name
+  description: oxyd-litany-excommunication-desc
+  phrase: "Excommunicatio [Target human]!"
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Excommunication
+  targetMode: StationFollower
+  range: 0
+  cost: 60
+  cooldownKey: OxydLitanyExcommunication
+  cooldownScope: Personal
+  cooldownDuration: 300
+  sourcePath: /datum/ritual/cruciform/priest/excommunication
+
+- type: oxydLitany
+  id: OxydLitanyOrderArmaments
+  name: oxyd-litany-order-armaments-name
+  description: oxyd-litany-order-armaments-desc
+  phrase: "Et qui non habet, vendat tunicam suam et emat gladium."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: OrderArmaments
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 20
+  enabled: false
+  dependency: Armaments
+  unavailableReason: oxyd-litany-unavailable-armaments
+  sourcePath: /datum/ritual/cruciform/priest/armaments
+
+- type: oxydLitany
+  id: OxydLitanyDivineGuidance
+  name: oxyd-litany-divine-guidance-name
+  description: oxyd-litany-divine-guidance-desc
+  phrase: "Dirige me in veritate tua, et doce me, quia tu es Deus salvator meus, et te sustinui tota die."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: DivineGuidance
+  targetMode: FrontTile
+  range: 1.5
+  cost: 0
+  enabled: false
+  dependency: ConstructionCatalog
+  unavailableReason: oxyd-litany-unavailable-construction-catalog
+  sourcePath: /datum/ritual/cruciform/priest/acolyte/blueprint_check
+
+- type: oxydLitany
+  id: OxydLitanyManifestation
+  name: oxyd-litany-manifestation-name
+  description: oxyd-litany-manifestation-desc
+  phrase: "Omnia autem quae arguuntur a lumine manifestantur omne enim quod manifestatur lumen est."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Manifestation
+  targetMode: FrontTile
+  range: 1.5
+  cost: 40
+  enabled: false
+  dependency: Construction
+  unavailableReason: oxyd-litany-unavailable-construction
+  sourcePath: /datum/ritual/cruciform/priest/acolyte/construction
+
+- type: oxydLitany
+  id: OxydLitanyUproot
+  name: oxyd-litany-uproot-name
+  description: oxyd-litany-uproot-desc
+  phrase: "Dominus dedit, Dominus abstulit."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Uproot
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 40
+  extraDelay: 5
+  enabled: false
+  dependency: Construction
+  unavailableReason: oxyd-litany-unavailable-construction
+  sourcePath: /datum/ritual/cruciform/priest/acolyte/deconstruction
+
+- type: oxydLitany
+  id: OxydLitanyPoundingWhisper
+  name: oxyd-litany-pounding-whisper-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Omnia haec tractavi in corde meo ut curiose intellegerem sunt iusti atque sapientes et opera eorum in manu Dei et tamen nescit homo utrum amore an odio dignus sit."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: PoundingWhisper
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/mechanical
+
+- type: oxydLitany
+  id: OxydLitanyRevelationOfSecrets
+  name: oxyd-litany-revelation-secrets-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Dedit quoque Deus sapientiam Salomoni et prudentiam multam nimis et latitudinem cordis quasi harenam quae est in litore maris."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: RevelationOfSecrets
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/cognition
+
+- type: oxydLitany
+  id: OxydLitanyLispOfVitae
+  name: oxyd-litany-lisp-vitae-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Convocatis autem duodecim apostolis dedit illis virtutem et potestatem super omnia daemonia et ut languores curarent."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: LispOfVitae
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/biology
+
+- type: oxydLitany
+  id: OxydLitanyCantoOfCourage
+  name: oxyd-litany-canto-courage-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Audi Israhel tu transgredieris hodie Iordanem ut possideas nationes maximas et fortiores te civitates ingentes et ad caelum usque muratas."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: CantoOfCourage
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/robustness
+
+- type: oxydLitany
+  id: OxydLitanyChantOfObservance
+  name: oxyd-litany-chant-observance-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Vigilia exemplum imitari debemus."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: ChantOfObservance
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/vigilance
+
+- type: oxydLitany
+  id: OxydLitanyReclamationOfEndurance
+  name: oxyd-litany-reclamation-endurance-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "In finem psalmus David."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: ReclamationOfEndurance
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/stat/toughness
+
+- type: oxydLitany
+  id: OxydLitanySanctify
+  name: oxyd-litany-sanctify-name
+  description: oxyd-litany-sanctify-desc
+  phrase: "Benedicite loco isto."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: Sanctify
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/sanctify
+
+- type: oxydLitany
+  id: OxydLitanyCrusade
+  name: oxyd-litany-crusade-name
+  description: oxyd-litany-crusade-desc
+  phrase: "Locutus est Dominus ad Mosen dicens."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: Crusade
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  enabled: false
+  dependency: Ceremonies
+  unavailableReason: oxyd-litany-unavailable-ceremonies
+  sourcePath: /datum/ritual/group/cruciform/crusade

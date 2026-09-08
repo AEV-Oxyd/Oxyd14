@@ -1,4 +1,6 @@
 using System.Linq;
+using Content.Shared._Oxyd.NeoTheology;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Chat;
 using Content.Shared.Database;
 using Content.Shared.IdentityManagement;
@@ -12,6 +14,8 @@ namespace Content.Server.Chat.Systems;
 
 public sealed partial class ChatSystem
 {
+    private ulong _litanySpeechSequence;
+
     private void SendEntitySpeak(
         MessageData msg,
         string? nameOverride,
@@ -89,6 +93,19 @@ public sealed partial class ChatSystem
 
         var ev = new EntitySpokeEvent(msg.speaker, message, null, null);
         RaiseLocalEvent(msg.speaker, ev, true);
+
+        // This is deliberately raised only after the message has passed all chat
+        // validation, transformation, and delivery work above. LitanySystem uses
+        // this narrow accepted-speech hook; EntitySpokeEvent remains unchanged for
+        // existing consumers.
+        var accepted = new LitanySpeechAcceptedEvent(
+            msg.speaker,
+            msg.raw,
+            message,
+            LitanySpeechKind.Speak,
+            false,
+            ++_litanySpeechSequence);
+        RaiseLocalEvent(msg.speaker, ref accepted);
 
         // To avoid logging any messages sent by entities that are not players, like vendors, cloning, etc.
         // Also doesn't log if hideLog is true.
@@ -194,6 +211,14 @@ public sealed partial class ChatSystem
 
         var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage);
         RaiseLocalEvent(msg.speaker, ev, true);
+        var accepted = new LitanySpeechAcceptedEvent(
+            msg.speaker,
+            msg.raw,
+            message,
+            LitanySpeechKind.Whisper,
+            channel != null,
+            ++_litanySpeechSequence);
+        RaiseLocalEvent(msg.speaker, ref accepted);
         if (!hideLog)
             if (msg.raw == message)
             {

@@ -1,0 +1,64 @@
+- type: entity
+  parent: BaseSubdermalImplant
+  id: OxydNtCruciform
+  name: cruciform
+  description: A dormant NeoTheology implant.
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: SubdermalImplant
+    whitelist:
+      components:
+      - MobState
+  - type: Cruciform
+  - type: Tag
+    tags:
+    - SubdermalImplant
+    - HideContextMenu
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtBible
+  name: NeoTheology litany book
+  description: A reference book for spoken NeoTheology litanies.
+  components:
+  - type: LitanyBook
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+    sprite: Objects/Specific/Chapel/bible.rsi
+  - type: ActivatableUI
+    key: enum.LitanyUiKey.Book
+    inHandsOnly: true
+    requireActiveHand: true
+    requiresComplex: true
+    singleUser: true
+    blockSpectators: true
+  - type: UserInterface
+    interfaces:
+      enum.LitanyUiKey.Book:
+        type: LitanyBoundUserInterface
+  - type: Tag
+    tags:
+    - Book
+
+- type: entity
+  parent: BaseStructure
+  id: OxydNtAltar
+  name: NeoTheology altar
+  description: A place for cruciform rites.
+  components:
+  - type: NeoTheologyAltar
+  - type: InteractionOutline
+
+- type: entity
+  parent: Airlock
+  id: OxydNtHolyDoor
+  name: NeoTheology holy door
+  description: A door secured by NeoTheology clearance.
+  components:
+  - type: NeoTheologyDoor
+  - type: AccessReader
+    access:
+    - [ OxydNtFollower ]
