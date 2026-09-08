@@ -376,7 +376,7 @@ public sealed partial class CruciformSystem : EntitySystem
         };
 
         var cognitive = 0;
-        if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue(new ProtoId<SkillPrototype>("Cog"), out var cog) && cog.Length > 0)
+        if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
             cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
 
         component.RegenerationPerSecond = NeoTheologyHoliness.RegenerationPerSecond(
