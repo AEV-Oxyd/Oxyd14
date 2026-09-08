@@ -30,19 +30,6 @@
   litanies:
   - OxydLitanyEpiphany
   - OxydLitanyAsacris
-  - OxydLitanyGraceOfPerseverance
-  - OxydLitanyUpholdHolyWord
-  - OxydLitanyAtonement
-  - OxydLitanyBaptismalRecord
-  - OxydLitanyDivineIntervention
-  - OxydLitanyHolyGuidance
-  - OxydLitanyDivineBlessing
-  - OxydLitanyConfirmation
-  - OxydLitanyAdoption
-  - OxydLitanyOrdination
-  - OxydLitanyOmission
-  - OxydLitanyExcommunication
-  - OxydLitanyOrderArmaments
   - OxydLitanyDivineGuidance
   - OxydLitanyManifestation
   - OxydLitanyUproot
@@ -64,6 +51,7 @@
   litanies:
   - OxydLitanyGraceOfPerseverance
   - OxydLitanyUpholdHolyWord
+  - OxydLitanyAtonement
   - OxydLitanyBaptismalRecord
   - OxydLitanyDivineIntervention
   - OxydLitanyHolyGuidance
@@ -74,9 +62,6 @@
   - OxydLitanyOmission
   - OxydLitanyExcommunication
   - OxydLitanyOrderArmaments
-  - OxydLitanyDivineGuidance
-  - OxydLitanyManifestation
-  - OxydLitanyUproot
 
 - type: oxydLitanySet
   id: OxydLitanyInquisitor

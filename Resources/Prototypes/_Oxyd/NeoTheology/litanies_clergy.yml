@@ -307,8 +307,8 @@
   name: oxyd-litany-divine-guidance-name
   description: oxyd-litany-divine-guidance-desc
   phrase: "Dirige me in veritate tua, et doce me, quia tu es Deus salvator meus, et te sustinui tota die."
-  category: Priest
-  grantedBy: [OxydLitanyPriest]
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
   effect: DivineGuidance
   targetMode: FrontTile
   range: 1.5
@@ -323,8 +323,8 @@
   name: oxyd-litany-manifestation-name
   description: oxyd-litany-manifestation-desc
   phrase: "Omnia autem quae arguuntur a lumine manifestantur omne enim quod manifestatur lumen est."
-  category: Priest
-  grantedBy: [OxydLitanyPriest]
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
   effect: Manifestation
   targetMode: FrontTile
   range: 1.5
@@ -339,8 +339,8 @@
   name: oxyd-litany-uproot-name
   description: oxyd-litany-uproot-desc
   phrase: "Dominus dedit, Dominus abstulit."
-  category: Priest
-  grantedBy: [OxydLitanyPriest]
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
   effect: Uproot
   targetMode: AdjacentLiving
   range: 1.5
