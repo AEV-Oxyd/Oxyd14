@@ -11,6 +11,7 @@ using Content.Shared.Implants.Components;
 using Content.Shared.Mobs;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
+using Content.Shared.Station;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Prototypes;
@@ -25,14 +26,9 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// </summary>
 public sealed partial class CruciformSystem : EntitySystem
 {
-    private const double DefaultDiscipleCapacity = 50d;
-    private const double DefaultPreacherCapacity = 80d;
-    private const double DefaultInquisitorCapacity = 100d;
-    private const double DefaultBaseHolinessPerMinute = 1d;
-    private const double DebitTolerance = 0.000001d;
-
     [Dependency] private SharedContainerSystem _containers = default!;
     [Dependency] private MobStateSystem _mobStates = default!;
+    [Dependency] private SharedStationSystem _stations = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     public override void Initialize()
@@ -91,7 +87,7 @@ public sealed partial class CruciformSystem : EntitySystem
 
         var bearer = EnsureComp<CruciformBearerComponent>(body);
         bearer.Cruciform = ent.Owner;
-        bearer.UiRevision++;
+        BumpRevision(body, bearer);
 
         // Initial installation is inert. A previously activated implant may resume
         // on the same living body after extraction/reimplantation.
@@ -117,8 +113,7 @@ public sealed partial class CruciformSystem : EntitySystem
         {
             bearer.Cruciform = null;
             bearer.PendingRequestId = null;
-            bearer.UiRevision++;
-            Dirty(body, bearer);
+            BumpRevision(body, bearer);
         }
     }
 
@@ -131,8 +126,7 @@ public sealed partial class CruciformSystem : EntitySystem
         {
             bearer.Cruciform = null;
             bearer.PendingRequestId = null;
-            bearer.UiRevision++;
-            Dirty(body, bearer);
+            BumpRevision(body, bearer);
         }
     }
 
@@ -165,6 +159,7 @@ public sealed partial class CruciformSystem : EntitySystem
         component.LastHolinessUpdate = _timing.CurTime;
         RecomputeProfile(cruciform, ent.Owner);
         Dirty(cruciform, component);
+        BumpRevision(ent.Owner, ent.Comp);
     }
 
     private void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
@@ -186,8 +181,7 @@ public sealed partial class CruciformSystem : EntitySystem
         {
             bearer.PersonalCooldowns.Clear();
             bearer.PendingRequestId = null;
-            bearer.UiRevision++;
-            Dirty(uid, bearer);
+            BumpRevision(uid, bearer);
         }
     }
 
@@ -234,11 +228,12 @@ public sealed partial class CruciformSystem : EntitySystem
 
         component.EverActivated = true;
         component.Active = true;
-        if (component.Holiness <= DebitTolerance)
+        if (component.Holiness <= NeoTheologyHoliness.DebitTolerance)
             component.Holiness = component.MaxHoliness;
         component.LastHolinessUpdate = _timing.CurTime;
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
+        BumpRevision(body);
         return true;
     }
 
@@ -252,6 +247,7 @@ public sealed partial class CruciformSystem : EntitySystem
         component.LastHolinessUpdate = _timing.CurTime;
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
+        BumpRevision(body);
         return true;
     }
 
@@ -261,12 +257,10 @@ public sealed partial class CruciformSystem : EntitySystem
             return false;
 
         AdvanceHoliness((cruciform, component), body);
-        if (component.Holiness + DebitTolerance < amount)
+        if (!NeoTheologyHoliness.CanAfford(component.Holiness, amount))
             return false;
 
-        component.Holiness -= amount;
-        if (Math.Abs(component.Holiness) <= DebitTolerance)
-            component.Holiness = 0;
+        component.Holiness = NeoTheologyHoliness.Normalize(component.Holiness - amount);
         Dirty(cruciform, component);
         return true;
     }
@@ -277,7 +271,7 @@ public sealed partial class CruciformSystem : EntitySystem
             return;
 
         AdvanceHoliness((cruciform, component), body);
-        component.Holiness = Math.Clamp(component.Holiness + amount, 0, component.MaxHoliness);
+        component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness + amount, component.MaxHoliness);
         Dirty(cruciform, component);
     }
 
@@ -290,6 +284,7 @@ public sealed partial class CruciformSystem : EntitySystem
         component.Rank = rank;
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
+        BumpRevision(body);
         return true;
     }
 
@@ -301,6 +296,7 @@ public sealed partial class CruciformSystem : EntitySystem
         component.Specialization = specialization;
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
+        BumpRevision(body);
         return true;
     }
 
@@ -311,11 +307,7 @@ public sealed partial class CruciformSystem : EntitySystem
 
         component.Clearance = clearance;
         Dirty(cruciform, component);
-        if (TryComp<CruciformBearerComponent>(body, out var bearer))
-        {
-            bearer.UiRevision++;
-            Dirty(body, bearer);
-        }
+        BumpRevision(body);
         return true;
     }
 
@@ -362,7 +354,9 @@ public sealed partial class CruciformSystem : EntitySystem
 
         var seconds = elapsed.TotalSeconds;
         if (double.IsFinite(seconds) && seconds > 0)
-            ent.Comp.Holiness = Math.Clamp(ent.Comp.Holiness + ent.Comp.RegenerationPerSecond * seconds, 0, ent.Comp.MaxHoliness);
+            ent.Comp.Holiness = NeoTheologyHoliness.ClampResource(
+                ent.Comp.Holiness + ent.Comp.RegenerationPerSecond * seconds,
+                ent.Comp.MaxHoliness);
 
         Dirty(ent);
         return ent.Comp.Holiness;
@@ -376,28 +370,25 @@ public sealed partial class CruciformSystem : EntitySystem
         var rules = GetRules();
         component.MaxHoliness = component.Rank switch
         {
-            NeoTheologyRank.Preacher => rules?.PreacherCapacity ?? DefaultPreacherCapacity,
-            NeoTheologyRank.Inquisitor => rules?.InquisitorCapacity ?? DefaultInquisitorCapacity,
-            _ => rules?.DiscipleCapacity ?? DefaultDiscipleCapacity,
+            NeoTheologyRank.Preacher => rules?.PreacherCapacity ?? NeoTheologyHoliness.PreacherCapacity,
+            NeoTheologyRank.Inquisitor => rules?.InquisitorCapacity ?? NeoTheologyHoliness.InquisitorCapacity,
+            _ => rules?.DiscipleCapacity ?? NeoTheologyHoliness.DiscipleCapacity,
         };
 
         var cognitive = 0;
         if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue(new ProtoId<SkillPrototype>("Cog"), out var cog) && cog.Length > 0)
             cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
 
-        var cognitionSteps = Math.Max(0, (int)Math.Floor(Math.Max(cognitive, 0) / 4d + 0.5d));
-        var righteousFactor = 1.5d * Math.Clamp(component.RighteousLife, 0, 100) / 100d;
-        var channelingFactor = component.Channeling ? CountEligibleChannelingFollowers(body) / 5d : 0d;
-        var rankMultiplier = component.Rank switch
-        {
-            NeoTheologyRank.Preacher => rules?.PreacherRegenMultiplier ?? 1.15d,
-            NeoTheologyRank.Inquisitor => rules?.InquisitorRegenMultiplier ?? 1.25d,
-            _ => 1d,
-        };
-        var perSecond = (rules?.BaseHolinessPerMinute ?? DefaultBaseHolinessPerMinute) / 60d * rankMultiplier
-                        * (1d + 0.05d * cognitionSteps + righteousFactor + channelingFactor);
-        component.RegenerationPerSecond = double.IsFinite(perSecond) && perSecond >= 0 ? perSecond : 0;
-        component.Holiness = Math.Clamp(component.Holiness, 0, component.MaxHoliness);
+        component.RegenerationPerSecond = NeoTheologyHoliness.RegenerationPerSecond(
+            component.Rank,
+            cognitive,
+            component.RighteousLife,
+            component.Channeling,
+            CountEligibleChannelingFollowers(body),
+            rules?.BaseHolinessPerMinute ?? NeoTheologyHoliness.DefaultBasePerMinute,
+            rules?.PreacherRegenMultiplier,
+            rules?.InquisitorRegenMultiplier);
+        component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness, component.MaxHoliness);
 
         component.UnlockedSets.Clear();
         if (!component.Active)
@@ -423,17 +414,38 @@ public sealed partial class CruciformSystem : EntitySystem
     private int CountEligibleChannelingFollowers(EntityUid source)
     {
         var count = 0;
-        var sourceMap = Transform(source).MapID;
         var query = EntityQueryEnumerator<CruciformComponent, SubdermalImplantComponent>();
         while (query.MoveNext(out var uid, out var component, out var implant))
         {
-            if (uid == source || !component.Active || component.Rank != NeoTheologyRank.Disciple || implant.ImplantedEntity is not { } body)
+            if (!component.Active || component.Rank != NeoTheologyRank.Disciple || implant.ImplantedEntity is not { } body)
                 continue;
-            if (Transform(body).MapID == sourceMap && TryGetLinkedBearer(body, uid, out _))
+            if (body == source)
+                continue;
+            if (SameStationOrMap(source, body) && TryGetLinkedBearer(body, uid, out _))
                 count++;
         }
 
         return count;
+    }
+
+    private bool SameStationOrMap(EntityUid left, EntityUid right)
+    {
+        var leftStation = _stations.GetOwningStation(left);
+        var rightStation = _stations.GetOwningStation(right);
+        if (leftStation != null && rightStation != null)
+            return leftStation == rightStation;
+        if (leftStation == null && rightStation == null)
+            return Transform(left).MapID == Transform(right).MapID;
+        return false;
+    }
+
+    private void BumpRevision(EntityUid body, CruciformBearerComponent? bearer = null)
+    {
+        if (bearer == null && !TryComp(body, out bearer))
+            return;
+
+        bearer.UiRevision++;
+        Dirty(body, bearer);
     }
 
     private bool HasAnotherCruciform(EntityUid body, EntityUid except)
