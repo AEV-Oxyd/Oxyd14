@@ -1,0 +1,115 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-litany-ui-title'}"
+               MinSize="900 560"
+               SetSize="900 560">
+    <BoxContainer Orientation="Vertical" Margin="8" SeparationOverride="6">
+        <BoxContainer Orientation="Vertical" SeparationOverride="2">
+            <BoxContainer Orientation="Horizontal" SeparationOverride="12">
+                <Label Name="HolinessLabel" HorizontalExpand="True"/>
+                <Label Name="RegenerationLabel" HorizontalAlignment="Right"/>
+            </BoxContainer>
+            <ProgressBar Name="HolinessBar" MinValue="0" MaxValue="1" HorizontalExpand="True"/>
+            <BoxContainer Orientation="Horizontal" SeparationOverride="12">
+                <Label Name="RankLabel" HorizontalExpand="True"/>
+                <Label Name="SpecializationLabel" HorizontalExpand="True"/>
+                <Label Name="ClearanceLabel" HorizontalExpand="True"/>
+            </BoxContainer>
+            <Label Name="StatusLabel"/>
+            <Label Name="CastProgressLabel"/>
+            <ProgressBar Name="CastProgressBar" MinValue="0" MaxValue="1" Visible="False" HorizontalExpand="True"/>
+        </BoxContainer>
+
+        <BoxContainer Orientation="Horizontal" SeparationOverride="6">
+            <LineEdit Name="SearchBar"
+                      PlaceHolder="{Loc 'oxyd-litany-ui-search'}"
+                      HorizontalExpand="True"/>
+            <OptionButton Name="CategorySelector" MinWidth="180"/>
+        </BoxContainer>
+
+        <BoxContainer Orientation="Horizontal" VerticalExpand="True" SeparationOverride="8">
+            <ScrollContainer Name="EntryScroll"
+                             VerticalExpand="True"
+                             HorizontalExpand="True"
+                             HScrollEnabled="False"
+                             SizeFlagsStretchRatio="1">
+                <BoxContainer Name="EntryList"
+                              Orientation="Vertical"
+                              HorizontalExpand="True"
+                              VerticalExpand="True"
+                              SeparationOverride="2"/>
+            </ScrollContainer>
+
+            <BoxContainer Name="DetailsPanel"
+                          Orientation="Vertical"
+                          MinWidth="430"
+                          VerticalExpand="True"
+                          SeparationOverride="4">
+                <Label Name="SelectedName" StyleClasses="LabelHeading"/>
+                <RichTextLabel Name="SelectedDescription"
+                               HorizontalExpand="True"
+                               VerticalExpand="True"
+                               MinHeight="55"/>
+                <Label Name="PhraseLabel"/>
+                <Label Name="CostLabel"/>
+                <Label Name="CooldownLabel"/>
+                <Label Name="CastDurationLabel"/>
+                <Label Name="TargetLabel"/>
+                <Label Name="AvailabilityLabel"/>
+
+                <BoxContainer Name="ChoiceContainer"
+                              Orientation="Vertical"
+                              Visible="False"
+                              SeparationOverride="3">
+                    <PanelContainer StyleClasses="LowDivider"/>
+                    <Label Text="Choices" StyleClasses="LabelHeading"/>
+                    <Label Name="ChoiceInstructionLabel"/>
+                    <ItemList Name="ChoiceList"
+                              SelectMode="Multiple"
+                              MinHeight="80"
+                              MaxHeight="150"
+                              HorizontalExpand="True"
+                              Visible="False"/>
+                    <Label Name="ChoiceExpiryLabel" Visible="False"/>
+                    <BoxContainer Name="SpecializationRow" Orientation="Horizontal" Visible="False">
+                        <Label Text="Specialization:" MinWidth="150"/>
+                        <OptionButton Name="SpecializationSelector" HorizontalExpand="True"/>
+                    </BoxContainer>
+                    <BoxContainer Name="RecipeRow" Orientation="Horizontal" Visible="False">
+                        <Label Text="Recipe ID:" MinWidth="150"/>
+                        <LineEdit Name="RecipeIdEdit"
+                                  HorizontalExpand="True"
+                                  PlaceHolder="Server-provided recipe ID"/>
+                    </BoxContainer>
+                    <BoxContainer Name="PlainTextRow" Orientation="Horizontal" Visible="False">
+                        <Label Text="Message:" MinWidth="150"/>
+                        <LineEdit Name="PlainTextEdit"
+                                  HorizontalExpand="True"
+                                  PlaceHolder="Up to 512 Unicode scalars"/>
+                    </BoxContainer>
+                    <Label Name="PlainTextCountLabel" Visible="False"/>
+                    <Label Name="PendingRequestLabel" Visible="False"/>
+                </BoxContainer>
+
+                <BoxContainer Orientation="Horizontal" SeparationOverride="4">
+                    <Button Name="BeginButton"
+                            Text="{Loc 'oxyd-litany-ui-begin'}"
+                            HorizontalExpand="True"/>
+                    <Button Name="SubmitChoiceButton"
+                            Text="Submit choice"
+                            Visible="False"
+                            HorizontalExpand="True"/>
+                    <Button Name="CancelButton"
+                            Text="{Loc 'oxyd-litany-ui-cancel'}"
+                            Visible="False"
+                            HorizontalExpand="True"/>
+                </BoxContainer>
+            </BoxContainer>
+        </BoxContainer>
+
+        <Label Name="EmptyCatalogLabel"
+               Text="No matching litanies."
+               Visible="False"
+               HorizontalAlignment="Center"/>
+    </BoxContainer>
+</controls:FancyWindow>
