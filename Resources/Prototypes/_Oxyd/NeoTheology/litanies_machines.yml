@@ -38,7 +38,7 @@
   category: Machinery
   grantedBy: [OxydLitanyMachinery]
   effect: ActivateDoor
-  targetMode: NearbyMachine
+  targetMode: FrontMachine
   range: 1.5
   cost: 0
   sourcePath: /datum/ritual/cruciform/machines/lock_door
