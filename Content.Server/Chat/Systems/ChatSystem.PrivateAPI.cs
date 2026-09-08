@@ -12,7 +12,6 @@ namespace Content.Server.Chat.Systems;
 
 public sealed partial class ChatSystem
 {
-
     private void SendEntitySpeak(
         MessageData msg,
         string? nameOverride,
