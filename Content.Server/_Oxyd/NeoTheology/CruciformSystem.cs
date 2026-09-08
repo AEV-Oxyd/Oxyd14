@@ -167,11 +167,11 @@ public sealed partial class CruciformSystem : EntitySystem
         if (ent.Comp.Cruciform is not { } cruciform || !TryGetLinkedBearer(ent.Owner, cruciform, out var component) || !component.Active)
             return;
 
-        args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtFollower"));
-        if (component.Clearance is NeoTheologyClearance.Common or NeoTheologyClearance.Clergy)
-            args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtCommon"));
-        if (component.Clearance == NeoTheologyClearance.Clergy)
-            args.Tags.Add(new ProtoId<AccessLevelPrototype>("OxydNtClergy"));
+        if (!TryGetConfiguredProfile(component.Profile, GetRules(), out var profile))
+            return;
+
+        foreach (var access in profile.AccessPrivileges)
+            args.Tags.Add(access);
     }
 
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
@@ -228,7 +228,7 @@ public sealed partial class CruciformSystem : EntitySystem
 
         component.EverActivated = true;
         component.Active = true;
-        if (component.Holiness <= NeoTheologyHoliness.DebitTolerance)
+        if (component.Holiness <= GetDebitTolerance())
             component.Holiness = component.MaxHoliness;
         component.LastHolinessUpdate = _timing.CurTime;
         RecomputeProfile(cruciform, body);
@@ -257,10 +257,10 @@ public sealed partial class CruciformSystem : EntitySystem
             return false;
 
         AdvanceHoliness((cruciform, component), body);
-        if (!NeoTheologyHoliness.CanAfford(component.Holiness, amount))
+        if (!NeoTheologyHoliness.CanAfford(component.Holiness, amount, GetDebitTolerance()))
             return false;
 
-        component.Holiness = NeoTheologyHoliness.Normalize(component.Holiness - amount);
+        component.Holiness = NeoTheologyHoliness.Normalize(component.Holiness - amount, GetDebitTolerance());
         Dirty(cruciform, component);
         return true;
     }
@@ -275,37 +275,33 @@ public sealed partial class CruciformSystem : EntitySystem
         Dirty(cruciform, component);
     }
 
-    public bool TrySetRank(EntityUid body, NeoTheologyRank rank)
+    public bool TrySetProfile(EntityUid body, ProtoId<NeoTheologyProfilePrototype> profileId)
     {
-        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Rank == rank)
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) ||
+            component.Profile == profileId || !TryGetConfiguredProfile(profileId, GetRules(), out var profile))
             return false;
 
         AdvanceHoliness((cruciform, component), body);
-        component.Rank = rank;
+        component.Profile = profileId;
+        if (!profile.Specializations.Contains(component.Specialization))
+            component.Specialization = profile.Specializations.FirstOrDefault();
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
     }
 
-    public bool TrySetSpecialization(EntityUid body, NeoTheologySpecialization specialization)
+    public bool TrySetSpecialization(EntityUid body, ProtoId<NeoTheologySpecializationPrototype> specializationId)
     {
-        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Specialization == specialization)
+        if (!TryGetCruciformEntity(body, out var cruciform, out var component) ||
+            component.Specialization == specializationId ||
+            !TryGetConfiguredProfile(component.Profile, GetRules(), out var profile) ||
+            !profile.Specializations.Contains(specializationId) ||
+            !ProtoMan.TryIndex<NeoTheologySpecializationPrototype>(specializationId, out _))
             return false;
 
-        component.Specialization = specialization;
+        component.Specialization = specializationId;
         RecomputeProfile(cruciform, body);
-        Dirty(cruciform, component);
-        BumpRevision(body);
-        return true;
-    }
-
-    public bool TrySetClearance(EntityUid body, NeoTheologyClearance clearance)
-    {
-        if (!TryGetCruciformEntity(body, out var cruciform, out var component) || component.Clearance == clearance)
-            return false;
-
-        component.Clearance = clearance;
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
@@ -368,46 +364,36 @@ public sealed partial class CruciformSystem : EntitySystem
             return;
 
         var rules = GetRules();
-        component.MaxHoliness = component.Rank switch
-        {
-            NeoTheologyRank.Preacher => rules?.PreacherCapacity ?? NeoTheologyHoliness.PreacherCapacity,
-            NeoTheologyRank.Inquisitor => rules?.InquisitorCapacity ?? NeoTheologyHoliness.InquisitorCapacity,
-            _ => rules?.DiscipleCapacity ?? NeoTheologyHoliness.DiscipleCapacity,
-        };
+        var hasProfile = TryGetConfiguredProfile(component.Profile, rules, out var profile);
+        component.MaxHoliness = hasProfile ? profile.CruciformCapacity : 0d;
 
         var cognitive = 0;
         if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
             cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
 
-        component.RegenerationPerSecond = NeoTheologyHoliness.RegenerationPerSecond(
-            component.Rank,
-            cognitive,
-            component.RighteousLife,
-            component.Channeling,
-            CountEligibleChannelingFollowers(body),
-            rules?.BaseHolinessPerMinute ?? NeoTheologyHoliness.DefaultBasePerMinute,
-            rules?.PreacherRegenMultiplier,
-            rules?.InquisitorRegenMultiplier);
+        component.RegenerationPerSecond = hasProfile && rules != null
+            ? NeoTheologyHoliness.RegenerationPerSecond(
+                cognitive,
+                component.RighteousLife,
+                component.Channeling && profile.CanChannel,
+                CountEligibleChannelingFollowers(body),
+                rules.BaseHolinessPerMinute,
+                profile.RegenerationMultiplier)
+            : 0d;
         component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness, component.MaxHoliness);
 
         component.UnlockedSets.Clear();
-        if (!component.Active)
+        if (!component.Active || !hasProfile)
             return;
 
-        component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyCommon"));
-        component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyMachinery"));
-        if (component.Specialization == NeoTheologySpecialization.Acolyte || component.Rank is NeoTheologyRank.Preacher or NeoTheologyRank.Inquisitor)
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyAcolyte"));
-        if (component.Specialization == NeoTheologySpecialization.Agrolyte)
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyAgrolyte"));
-        if (component.Specialization == NeoTheologySpecialization.Custodian)
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyCustodian"));
-        if (component.Rank == NeoTheologyRank.Preacher)
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyPriest"));
-        if (component.Rank == NeoTheologyRank.Inquisitor)
+        foreach (var set in profile.LitanySets)
+            component.UnlockedSets.Add(set);
+
+        if (profile.Specializations.Contains(component.Specialization) &&
+            ProtoMan.TryIndex<NeoTheologySpecializationPrototype>(component.Specialization, out var specialization))
         {
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyPriest"));
-            component.UnlockedSets.Add(new ProtoId<LitanySetPrototype>("OxydLitanyInquisitor"));
+            foreach (var set in specialization.LitanySets)
+                component.UnlockedSets.Add(set);
         }
     }
 
@@ -417,7 +403,9 @@ public sealed partial class CruciformSystem : EntitySystem
         var query = EntityQueryEnumerator<CruciformComponent, SubdermalImplantComponent>();
         while (query.MoveNext(out var uid, out var component, out var implant))
         {
-            if (!component.Active || component.Rank != NeoTheologyRank.Disciple || implant.ImplantedEntity is not { } body)
+            if (!component.Active || implant.ImplantedEntity is not { } body ||
+                !TryGetConfiguredProfile(component.Profile, GetRules(), out var profile) ||
+                !profile.CountsAsChannelingFollower)
                 continue;
             if (body == source)
                 continue;
@@ -475,5 +463,31 @@ public sealed partial class CruciformSystem : EntitySystem
         }
 
         return selected;
+    }
+
+    private double GetDebitTolerance()
+    {
+        var rules = GetRules();
+        return rules is { DebitTolerance: var tolerance } && double.IsFinite(tolerance) && tolerance >= 0
+            ? tolerance
+            : 0d;
+    }
+
+    private bool TryGetConfiguredProfile(
+        ProtoId<NeoTheologyProfilePrototype> profileId,
+        NeoTheologyRulesPrototype? rules,
+        out NeoTheologyProfilePrototype profile)
+    {
+        profile = null!;
+        if (rules == null || !rules.Profiles.Contains(profileId))
+            return false;
+
+        if (ProtoMan.TryIndex(profileId, out NeoTheologyProfilePrototype? configuredProfile) && configuredProfile != null)
+        {
+            profile = configuredProfile;
+            return true;
+        }
+
+        return false;
     }
 }

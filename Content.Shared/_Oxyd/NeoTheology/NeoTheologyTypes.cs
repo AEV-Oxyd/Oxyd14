@@ -1,34 +1,10 @@
+using Content.Shared.Damage;
 using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.NeoTheology;
-
-/// <summary>
-/// The independent dimensions that make up a NeoTheology profile.
-/// </summary>
-public enum NeoTheologyRank : byte
-{
-    Disciple,
-    Preacher,
-    Inquisitor,
-}
-
-public enum NeoTheologySpecialization : byte
-{
-    None,
-    Acolyte,
-    Agrolyte,
-    Custodian,
-}
-
-public enum NeoTheologyClearance : byte
-{
-    None,
-    Common,
-    Clergy,
-}
 
 public enum LitanyCategory : byte
 {
@@ -191,13 +167,7 @@ public sealed partial class LitanyParameters
 public sealed partial class LitanyHealData
 {
     [DataField]
-    public float Brute;
-
-    [DataField]
-    public float Heat;
-
-    [DataField]
-    public float Asphyxiation;
+    public DamageSpecifier Damage = new();
 
     [DataField]
     public EntProtoId? Analgesia;

@@ -29,6 +29,8 @@ public static class LitanyCatalogValidator
         var errors = new List<string>();
         var litanies = prototypes.EnumeratePrototypes<LitanyPrototype>().ToList();
         var sets = prototypes.EnumeratePrototypes<LitanySetPrototype>().ToDictionary(s => s.ID);
+        var profiles = prototypes.EnumeratePrototypes<NeoTheologyProfilePrototype>().ToDictionary(p => p.ID);
+        var specializations = prototypes.EnumeratePrototypes<NeoTheologySpecializationPrototype>().ToDictionary(s => s.ID);
         var rules = prototypes.EnumeratePrototypes<NeoTheologyRulesPrototype>().Where(r => r.Selected).ToList();
 
         if (litanies.Count != ExpectedLitanyCount)
@@ -40,7 +42,7 @@ public static class LitanyCatalogValidator
             errors.Add($"Exactly one selected NeoTheology rules profile is required; found {rules.Count}.");
 
         var selectedRules = rules.Count == 1 ? rules[0] : null;
-        ValidateRules(selectedRules, errors);
+        ValidateRules(selectedRules, profiles, errors);
 
         var phrases = new Dictionary<string, string>(StringComparer.Ordinal);
         var setMembership = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -60,12 +62,14 @@ public static class LitanyCatalogValidator
             setMembership[setId] = members;
         }
 
+        ValidateProfiles(prototypes, localization, sets, profiles, specializations, selectedRules, errors);
+
         foreach (var litany in litanies)
         {
             ValidateLitany(litany, localization, phrases, setMembership, errors);
         }
 
-        ValidateReachableCosts(litanies, sets, selectedRules, errors);
+        ValidateReachableCosts(litanies, sets, profiles, specializations, selectedRules, errors);
         return errors;
     }
 
@@ -117,25 +121,115 @@ public static class LitanyCatalogValidator
         }
     }
 
-    private static void ValidateRules(NeoTheologyRulesPrototype? rules, List<string> errors)
+    private static void ValidateRules(
+        NeoTheologyRulesPrototype? rules,
+        Dictionary<string, NeoTheologyProfilePrototype> profiles,
+        List<string> errors)
     {
         if (rules == null)
             return;
 
         if (!double.IsFinite(rules.BaseHolinessPerMinute) || rules.BaseHolinessPerMinute <= 0)
             errors.Add($"{rules.ID} has an invalid base holiness regeneration value.");
-        if (!double.IsFinite(rules.DiscipleCapacity) || rules.DiscipleCapacity < 0)
-            errors.Add($"{rules.ID} has an invalid disciple capacity.");
-        if (!double.IsFinite(rules.PreacherCapacity) || rules.PreacherCapacity < 0)
-            errors.Add($"{rules.ID} has an invalid preacher capacity.");
-        if (!double.IsFinite(rules.InquisitorCapacity) || rules.InquisitorCapacity < 0)
-            errors.Add($"{rules.ID} has an invalid inquisitor capacity.");
-        if (!double.IsFinite(rules.PreacherRegenMultiplier) || rules.PreacherRegenMultiplier <= 0)
-            errors.Add($"{rules.ID} has an invalid preacher regeneration multiplier.");
-        if (!double.IsFinite(rules.InquisitorRegenMultiplier) || rules.InquisitorRegenMultiplier <= 0)
-            errors.Add($"{rules.ID} has an invalid inquisitor regeneration multiplier.");
         if (!double.IsFinite(rules.DebitTolerance) || rules.DebitTolerance < 0)
             errors.Add($"{rules.ID} has an invalid debit tolerance.");
+
+        var profileIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var profileId in rules.Profiles)
+        {
+            if (!profileIds.Add(profileId.Id))
+                errors.Add($"{rules.ID} lists profile {profileId.Id} more than once.");
+            else if (!profiles.ContainsKey(profileId.Id))
+                errors.Add($"{rules.ID} references unknown profile {profileId.Id}.");
+        }
+
+        if (rules.Profiles.Count == 0)
+            errors.Add($"{rules.ID} must configure at least one NeoTheology profile.");
+    }
+
+    private static void ValidateProfiles(
+        IPrototypeManager prototypes,
+        ILocalizationManager localization,
+        Dictionary<string, LitanySetPrototype> sets,
+        Dictionary<string, NeoTheologyProfilePrototype> profiles,
+        Dictionary<string, NeoTheologySpecializationPrototype> specializations,
+        NeoTheologyRulesPrototype? rules,
+        List<string> errors)
+    {
+        foreach (var specialization in specializations.Values)
+        {
+            if (!localization.HasString(specialization.Name.Id))
+                errors.Add($"{specialization.ID} missing localization {specialization.Name.Id}.");
+
+            ValidateSetReferences(
+                specialization.ID,
+                specialization.LitanySets,
+                sets,
+                errors);
+        }
+
+        foreach (var profile in profiles.Values)
+        {
+            if (!localization.HasString(profile.Name.Id))
+                errors.Add($"{profile.ID} missing localization {profile.Name.Id}.");
+            if (!double.IsFinite(profile.CruciformCapacity) || profile.CruciformCapacity < 0)
+                errors.Add($"{profile.ID} has an invalid cruciform capacity.");
+            if (!double.IsFinite(profile.RegenerationMultiplier) || profile.RegenerationMultiplier < 0)
+                errors.Add($"{profile.ID} has an invalid regeneration multiplier.");
+
+            var accessIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var access in profile.AccessPrivileges)
+            {
+                if (!accessIds.Add(access.Id))
+                    errors.Add($"{profile.ID} lists access privilege {access.Id} more than once.");
+                else if (!prototypes.TryIndex<Content.Shared.Access.AccessLevelPrototype>(access, out _))
+                    errors.Add($"{profile.ID} references unknown access privilege {access.Id}.");
+            }
+
+            var specializationIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var specialization in profile.Specializations)
+            {
+                if (!specializationIds.Add(specialization.Id))
+                    errors.Add($"{profile.ID} lists specialization {specialization.Id} more than once.");
+                else if (!specializations.ContainsKey(specialization.Id))
+                    errors.Add($"{profile.ID} references unknown specialization {specialization.Id}.");
+            }
+
+            if (profile.Specializations.Count == 0)
+                errors.Add($"{profile.ID} must configure at least one specialization.");
+
+            ValidateSetReferences(profile.ID, profile.LitanySets, sets, errors);
+        }
+
+        if (rules == null)
+            return;
+
+        foreach (var profileId in rules.Profiles)
+        {
+            if (!profiles.TryGetValue(profileId.Id, out var profile))
+                continue;
+
+            if (profile.AccessPrivileges.Count == 0)
+                errors.Add($"{profile.ID} has no access privileges.");
+            if (profile.LitanySets.Count == 0)
+                errors.Add($"{profile.ID} has no base litany sets.");
+        }
+    }
+
+    private static void ValidateSetReferences(
+        string ownerId,
+        IEnumerable<ProtoId<LitanySetPrototype>> references,
+        Dictionary<string, LitanySetPrototype> sets,
+        List<string> errors)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var setId in references)
+        {
+            if (!ids.Add(setId.Id))
+                errors.Add($"{ownerId} lists litany set {setId.Id} more than once.");
+            else if (!sets.ContainsKey(setId.Id))
+                errors.Add($"{ownerId} references unknown litany set {setId.Id}.");
+        }
     }
 
     public static List<string> ValidateMissingHandler(LitanyPrototype litany)
@@ -292,12 +386,11 @@ public static class LitanyCatalogValidator
 
             if (parameters.Healing is { } healing)
             {
-                if (!float.IsFinite(healing.Brute) || healing.Brute < 0)
-                    errors.Add($"{litany.ID} has an invalid brute healing value.");
-                if (!float.IsFinite(healing.Heat) || healing.Heat < 0)
-                    errors.Add($"{litany.ID} has an invalid heat healing value.");
-                if (!float.IsFinite(healing.Asphyxiation) || healing.Asphyxiation < 0)
-                    errors.Add($"{litany.ID} has an invalid asphyxiation healing value.");
+                foreach (var (damageType, value) in healing.Damage.DamageDict)
+                {
+                    if (value.Value >= 0)
+                        errors.Add($"{litany.ID} healing for {damageType} must use a negative damage value.");
+                }
             }
         }
 
@@ -309,12 +402,14 @@ public static class LitanyCatalogValidator
                     errors.Add($"{litany.ID} requires analgesia parameters.");
                 break;
             case LitanyEffectKind.SoulHunger:
-                if (parameters?.Healing is null || parameters.Healing.Heat <= 0)
-                    errors.Add($"{litany.ID} requires a Heat injury parameter.");
+                if (parameters?.Healing is null ||
+                    !parameters.Healing.Damage.DamageDict.TryGetValue("Heat", out var heat) ||
+                    heat.Value >= 0)
+                    errors.Add($"{litany.ID} requires a negative Heat damage parameter.");
                 break;
             case LitanyEffectKind.Convalescence:
             case LitanyEffectKind.Succour:
-                if (parameters?.Healing is null)
+                if (parameters?.Healing is null || parameters.Healing.Damage.Empty)
                     errors.Add($"{litany.ID} requires healing parameters.");
                 break;
             case LitanyEffectKind.GraceOfPerseverance:
@@ -340,6 +435,8 @@ public static class LitanyCatalogValidator
     private static void ValidateReachableCosts(
         List<LitanyPrototype> litanies,
         Dictionary<string, LitanySetPrototype> sets,
+        Dictionary<string, NeoTheologyProfilePrototype> profiles,
+        Dictionary<string, NeoTheologySpecializationPrototype> specializations,
         NeoTheologyRulesPrototype? rules,
         List<string> errors)
     {
@@ -349,56 +446,40 @@ public static class LitanyCatalogValidator
         foreach (var litany in litanies.Where(l => l.IsAvailable && l.Cost > 0))
         {
             var max = 0d;
-            if (CanRankUse(NeoTheologyRank.Disciple, NeoTheologySpecialization.None, litany, sets))
-                max = Math.Max(max, rules.DiscipleCapacity);
-            if (CanRankUse(NeoTheologyRank.Disciple, NeoTheologySpecialization.Acolyte, litany, sets))
-                max = Math.Max(max, rules.DiscipleCapacity);
-            if (CanRankUse(NeoTheologyRank.Disciple, NeoTheologySpecialization.Agrolyte, litany, sets))
-                max = Math.Max(max, rules.DiscipleCapacity);
-            if (CanRankUse(NeoTheologyRank.Disciple, NeoTheologySpecialization.Custodian, litany, sets))
-                max = Math.Max(max, rules.DiscipleCapacity);
-            if (CanRankUse(NeoTheologyRank.Preacher, NeoTheologySpecialization.None, litany, sets))
-                max = Math.Max(max, rules.PreacherCapacity);
-            if (CanRankUse(NeoTheologyRank.Inquisitor, NeoTheologySpecialization.None, litany, sets))
-                max = Math.Max(max, rules.InquisitorCapacity);
+            foreach (var profileId in rules.Profiles)
+            {
+                if (!profiles.TryGetValue(profileId.Id, out var profile))
+                    continue;
+
+                foreach (var specializationId in profile.Specializations)
+                {
+                    if (!specializations.TryGetValue(specializationId.Id, out var specialization))
+                        continue;
+                    if (CanProfileUse(profile, specialization, litany, sets))
+                        max = Math.Max(max, profile.CruciformCapacity);
+                }
+            }
 
             var debitTolerance = double.IsFinite(rules.DebitTolerance) && rules.DebitTolerance >= 0
                 ? rules.DebitTolerance
-                : NeoTheologyHoliness.DebitTolerance;
+                : 0d;
             if (max + debitTolerance < litany.Cost)
                 errors.Add($"{litany.ID} cost {litany.Cost} is not reachable by any granting profile.");
         }
     }
 
-    private static bool CanRankUse(
-        NeoTheologyRank rank,
-        NeoTheologySpecialization specialization,
+    private static bool CanProfileUse(
+        NeoTheologyProfilePrototype profile,
+        NeoTheologySpecializationPrototype specialization,
         LitanyPrototype litany,
         Dictionary<string, LitanySetPrototype> sets)
     {
-        var unlocked = UnlockSets(rank, specialization);
+        var unlocked = profile.LitanySets.Select(set => set.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var set in specialization.LitanySets)
+            unlocked.Add(set.Id);
+
         return litany.GrantedBy.Any(grant => unlocked.Contains(grant.Id) &&
                                              sets.TryGetValue(grant.Id, out var set) &&
                                              set.Litanies.Any(id => id.Id == litany.ID));
-    }
-
-    private static HashSet<string> UnlockSets(NeoTheologyRank rank, NeoTheologySpecialization specialization)
-    {
-        var sets = new HashSet<string> { "OxydLitanyCommon", "OxydLitanyMachinery" };
-        if (specialization == NeoTheologySpecialization.Acolyte || rank is NeoTheologyRank.Preacher or NeoTheologyRank.Inquisitor)
-            sets.Add("OxydLitanyAcolyte");
-        if (specialization == NeoTheologySpecialization.Agrolyte)
-            sets.Add("OxydLitanyAgrolyte");
-        if (specialization == NeoTheologySpecialization.Custodian)
-            sets.Add("OxydLitanyCustodian");
-        if (rank == NeoTheologyRank.Preacher)
-            sets.Add("OxydLitanyPriest");
-        if (rank == NeoTheologyRank.Inquisitor)
-        {
-            sets.Add("OxydLitanyPriest");
-            sets.Add("OxydLitanyInquisitor");
-        }
-
-        return sets;
     }
 }

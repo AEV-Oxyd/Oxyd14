@@ -1,0 +1,83 @@
+- type: oxydNeoTheologySpecialization
+  id: OxydNtNone
+  name: oxyd-neotheology-specialization-none
+
+- type: oxydNeoTheologySpecialization
+  id: OxydNtAcolyte
+  name: oxyd-neotheology-specialization-acolyte
+  litanySets:
+  - OxydLitanyAcolyte
+
+- type: oxydNeoTheologySpecialization
+  id: OxydNtAgrolyte
+  name: oxyd-neotheology-specialization-agrolyte
+  litanySets:
+  - OxydLitanyAgrolyte
+
+- type: oxydNeoTheologySpecialization
+  id: OxydNtCustodian
+  name: oxyd-neotheology-specialization-custodian
+  litanySets:
+  - OxydLitanyCustodian
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtDisciple
+  name: oxyd-neotheology-profile-disciple
+  accessPrivileges:
+  - OxydNtFollower
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  specializations:
+  - OxydNtNone
+  - OxydNtAcolyte
+  - OxydNtAgrolyte
+  - OxydNtCustodian
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtPreacher
+  name: oxyd-neotheology-profile-preacher
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 80
+  regenerationMultiplier: 1.15
+  specializations:
+  - OxydNtNone
+  - OxydNtAcolyte
+  - OxydNtAgrolyte
+  - OxydNtCustodian
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyAcolyte
+  - OxydLitanyPriest
+  canChannel: true
+  countsAsChannelingFollower: false
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtInquisitor
+  name: oxyd-neotheology-profile-inquisitor
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  - OxydNtClergy
+  cruciformCapacity: 100
+  regenerationMultiplier: 1.25
+  specializations:
+  - OxydNtNone
+  - OxydNtAcolyte
+  - OxydNtAgrolyte
+  - OxydNtCustodian
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyAcolyte
+  - OxydLitanyPriest
+  - OxydLitanyInquisitor
+  canChannel: true
+  countsAsChannelingFollower: false

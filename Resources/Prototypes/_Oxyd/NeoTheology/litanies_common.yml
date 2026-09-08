@@ -35,7 +35,9 @@
   cooldownDuration: 60
   parameters:
     healing:
-      heat: 5
+      damage:
+        types:
+          Heat: -5
   sourcePath: /datum/ritual/cruciform/base/soul_hunger
 
 - type: oxydLitany

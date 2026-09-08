@@ -39,7 +39,7 @@ public sealed class LitanyBoundUserInterface : BoundUserInterface
     private void OnSubmitChoices(
         string requestId,
         List<string> selectedTokens,
-        NeoTheologySpecialization? specialization,
+        ProtoId<NeoTheologySpecializationPrototype>? specialization,
         string? recipeId,
         string? plainText)
     {

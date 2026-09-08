@@ -13,8 +13,7 @@ rules support, private UI contracts/client presentation, and their focused tests
   support slice only.
 - SDK observed in the checkout: `10.0.203`.
 - Current validation evidence: the shared, server, and client projects build with
-  **0 errors**; the shared build reports 185 warnings, the server build 3, and the
-  client build 201. The focused NeoTheology test filter passes **16/16** tests.
+  **0 errors**. The focused NeoTheology test filter passes **15/15** tests.
 - The current checks do not establish a complete test, integration-test,
   prototype-validation, or two-client manual-scenario pass. Those remain required
   before any foundation milestone can be marked `Verified`.
@@ -23,7 +22,7 @@ rules support, private UI contracts/client presentation, and their focused tests
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
-| 1. Baseline and shared contracts | In progress | Shared prototype/catalog contracts, phrase parsing, handler catalog, and holiness arithmetic are present. Focused pure-type tests pass 16/16; full catalog validation evidence is still outstanding. |
+| 1. Baseline and shared contracts | In progress | Shared prototype/catalog contracts, phrase parsing, handler catalog, and holiness arithmetic are present. Focused pure-type tests pass 15/15; full catalog validation evidence is still outstanding. |
 | 2. Cruciform lifecycle | In progress | Cruciform state/lifecycle scaffolding is present in the checkpoint worktree. Duplicate implant, extraction, save/load, death, pending-cast, and cleanup tests remain unverified. |
 | 3. Speech and cast transaction | In progress | Chat's existing `EntitySpokeEvent` remains the future integration point, but the complete authoritative cast state machine and transaction tests are not evidenced by the checkpoint. |
 | 4. Bible UI and common effects | In progress | Foundation catalog and private client UI contracts/presentation build successfully. Runtime handlers, interruption behavior, privacy isolation, and manual use are not verified. |

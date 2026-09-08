@@ -14,20 +14,8 @@ public sealed partial class NeoTheologyRulesPrototype : IPrototype
     [DataField]
     public double BaseHolinessPerMinute = 1d;
 
-    [DataField]
-    public double DiscipleCapacity = 50d;
-
-    [DataField]
-    public double PreacherCapacity = 80d;
-
-    [DataField]
-    public double InquisitorCapacity = 100d;
-
-    [DataField]
-    public double PreacherRegenMultiplier = 1.15d;
-
-    [DataField]
-    public double InquisitorRegenMultiplier = 1.25d;
+    [DataField(required: true)]
+    public List<ProtoId<NeoTheologyProfilePrototype>> Profiles { get; private set; } = new();
 
     [DataField]
     public double DebitTolerance = 0.000001d;

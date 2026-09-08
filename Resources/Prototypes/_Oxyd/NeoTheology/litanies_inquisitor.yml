@@ -31,9 +31,11 @@
   effectDuration: 20
   parameters:
     healing:
-      brute: 20
-      heat: 20
-      asphyxiation: 40
+      damage:
+        types:
+          Brute: -20
+          Heat: -20
+          Asphyxiation: -40
       analgesia: OxydNtAnalgesia
   sourcePath: /datum/ritual/cruciform/inquisitor/convalescence
 
@@ -55,9 +57,11 @@
   effectDuration: 20
   parameters:
     healing:
-      brute: 20
-      heat: 20
-      asphyxiation: 40
+      damage:
+        types:
+          Brute: -20
+          Heat: -20
+          Asphyxiation: -40
       analgesia: OxydNtAnalgesia
   sourcePath: /datum/ritual/cruciform/inquisitor/succour
 

@@ -24,23 +24,21 @@ public sealed partial class CruciformComponent : Component
     public double Holiness;
 
     [ViewVariables, AutoNetworkedField]
-    public double MaxHoliness = 50d;
+    public double MaxHoliness;
 
     [ViewVariables, AutoNetworkedField]
     public double RegenerationPerSecond;
 
     [DataField, AutoNetworkedField]
-    public NeoTheologyRank Rank = NeoTheologyRank.Disciple;
+    public ProtoId<NeoTheologyProfilePrototype> Profile = "OxydNtDisciple";
 
     [DataField, AutoNetworkedField]
-    public NeoTheologySpecialization Specialization = NeoTheologySpecialization.None;
-
-    [DataField, AutoNetworkedField]
-    public NeoTheologyClearance Clearance = NeoTheologyClearance.None;
+    public ProtoId<NeoTheologySpecializationPrototype> Specialization = "OxydNtNone";
 
     /// <summary>
-    /// Source-derived profile inputs. They are kept separate from rank so a future
-    /// role/module system can update them without silently changing authority.
+    /// Source-derived profile inputs. They remain separate from the configured
+    /// profile so role/module systems can update them without silently changing
+    /// profile authority.
     /// </summary>
     [DataField]
     public float RighteousLife;
