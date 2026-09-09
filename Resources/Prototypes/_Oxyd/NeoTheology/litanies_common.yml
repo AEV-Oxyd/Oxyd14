@@ -18,7 +18,6 @@
     healing:
       analgesia: OxydNtAnalgesia
   enabled: true
-  sourcePath: /datum/ritual/cruciform/base/relief
 
 - type: oxydLitany
   id: OxydLitanySoulHunger
@@ -40,7 +39,6 @@
         types:
           Heat: -5
   enabled: true
-  sourcePath: /datum/ritual/cruciform/base/soul_hunger
 
 - type: oxydLitany
   id: OxydLitanyEntreaty
@@ -58,7 +56,6 @@
   cooldownDuration: 60
   ignoreStuttering: true
   enabled: true
-  sourcePath: /datum/ritual/cruciform/base/entreaty
 
 - type: oxydLitany
   id: OxydLitanyRejection
@@ -78,7 +75,6 @@
   enabled: false
   dependency: Purity
   unavailableReason: oxyd-litany-unavailable-purity
-  sourcePath: /datum/ritual/cruciform/base/reject
 
 - type: oxydLitany
   id: OxydLitanyRevealAdversaries
@@ -97,7 +93,6 @@
   enabled: false
   dependency: ThreatClassification
   unavailableReason: oxyd-litany-unavailable-threats
-  sourcePath: /datum/ritual/cruciform/base/reveal
 
 - type: oxydLitany
   id: OxydLitanyCruciformSense
@@ -114,7 +109,6 @@
   cooldownScope: Personal
   cooldownDuration: 60
   enabled: true
-  sourcePath: /datum/ritual/cruciform/base/sense_cruciform
 
 - type: oxydLitany
   id: OxydLitanyRevelation
@@ -132,7 +126,6 @@
   cooldownDuration: 60
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/base/revelation
 
 - type: oxydLitany
   id: OxydLitanyInstallUpgrade
@@ -148,7 +141,6 @@
   enabled: false
   dependency: Attachments
   unavailableReason: oxyd-litany-unavailable-attachments
-  sourcePath: /datum/ritual/cruciform/base/install_upgrade
 
 - type: oxydLitany
   id: OxydLitanyUninstallUpgrade
@@ -164,7 +156,6 @@
   enabled: false
   dependency: Attachments
   unavailableReason: oxyd-litany-unavailable-attachments
-  sourcePath: /datum/ritual/cruciform/base/uninstall_upgrade
 
 - type: oxydLitany
   id: OxydLitanyReincarnation
@@ -180,7 +171,6 @@
   enabled: false
   dependency: SoulCloning
   unavailableReason: oxyd-litany-unavailable-cloning
-  sourcePath: /datum/ritual/cruciform/base/reincarnation
 
 - type: oxydLitany
   id: OxydLitanyCommitment
@@ -195,7 +185,6 @@
   cost: 0
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/base/install
 
 - type: oxydLitany
   id: OxydLitanyDeprivation
@@ -210,4 +199,3 @@
   cost: 0
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/base/ejection

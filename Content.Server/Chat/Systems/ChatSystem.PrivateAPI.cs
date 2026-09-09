@@ -1,7 +1,5 @@
 using System.Linq;
 using Content.Shared.Chat;
-using Content.Shared._Oxyd.NeoTheology;
-using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Database;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Radio;
@@ -14,16 +12,6 @@ namespace Content.Server.Chat.Systems;
 
 public sealed partial class ChatSystem
 {
-    /// <summary>Monotonic sequence for <see cref="LitanySpeechAcceptedEvent"/>.</summary>
-    private ulong _litanySpeechSequence;
-
-    /// <summary>
-    /// Next sequence that will be stamped on the following accepted Speak/Whisper
-    /// <see cref="LitanySpeechAcceptedEvent"/>. Used by book casts to bind the
-    /// synchronous utterance they are about to emit.
-    /// </summary>
-    public ulong PeekNextLitanySpeechSequence() => _litanySpeechSequence + 1;
-
     private void SendEntitySpeak(
         MessageData msg,
         string? nameOverride,
@@ -99,19 +87,8 @@ public sealed partial class ChatSystem
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Local, message, finalMessages[k][1], GetNetEntity(msg.speaker), null, MessageRangeHideChatForReplay(msg.range)));
         
 
-        var ev = new EntitySpokeEvent(msg.speaker, message, null, null);
+        var ev = new EntitySpokeEvent(msg.speaker, message, null, null, msg.raw);
         RaiseLocalEvent(msg.speaker, ev, true);
-
-        // Narrow NeoTheology hook: once per accepted local Speak after transform.
-        var litanySpeech = new LitanySpeechAcceptedEvent(
-            msg.speaker,
-            msg.raw,
-            message,
-            LitanySpeechKind.Speak,
-            ++_litanySpeechSequence,
-            msg.category,
-            radioTransmitted: false);
-        RaiseLocalEvent(msg.speaker, litanySpeech, true);
 
         // To avoid logging any messages sent by entities that are not players, like vendors, cloning, etc.
         // Also doesn't log if hideLog is true.
@@ -215,19 +192,8 @@ public sealed partial class ChatSystem
 
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Whisper, message, finalMessages[k][0], GetNetEntity(msg.speaker), null, MessageRangeHideChatForReplay(msg.range)));
 
-        var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage);
+        var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage, msg.raw);
         RaiseLocalEvent(msg.speaker, ev, true);
-
-        // Narrow NeoTheology hook: once per accepted Whisper; radio channel intent is preserved.
-        var litanySpeech = new LitanySpeechAcceptedEvent(
-            msg.speaker,
-            msg.raw,
-            message,
-            LitanySpeechKind.Whisper,
-            ++_litanySpeechSequence,
-            msg.category,
-            radioTransmitted: channel != null);
-        RaiseLocalEvent(msg.speaker, litanySpeech, true);
 
         if (!hideLog)
             if (msg.raw == message)

@@ -113,12 +113,6 @@ public enum LitanyCastOrigin : byte
     Ceremony,
 }
 
-public enum LitanySpeechKind : byte
-{
-    Speak,
-    Whisper,
-}
-
 public enum NeoTheologyDependency : byte
 {
     None,
@@ -178,9 +172,6 @@ public sealed partial class LitanySkillData
 {
     [DataField]
     public Dictionary<ProtoId<SkillPrototype>, int> Amounts = new();
-
-    [DataField]
-    public bool Permanent;
 }
 
 [DataDefinition]

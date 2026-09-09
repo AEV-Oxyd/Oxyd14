@@ -302,29 +302,11 @@ public sealed partial class CruciformSystem : EntitySystem
     public bool TrySetProfile(EntityUid body, ProtoId<NeoTheologyProfilePrototype> profileId)
     {
         if (!TryGetCruciformEntity(body, out var cruciform, out var component) ||
-            component.Profile == profileId || !TryGetConfiguredProfile(profileId, GetRules(), out var profile))
+            component.Profile == profileId || !TryGetConfiguredProfile(profileId, GetRules(), out _))
             return false;
 
         AdvanceHoliness((cruciform, component), body);
         component.Profile = profileId;
-        if (!profile.Specializations.Contains(component.Specialization))
-            component.Specialization = profile.Specializations.FirstOrDefault();
-        RecomputeProfile(cruciform, body);
-        Dirty(cruciform, component);
-        BumpRevision(body);
-        return true;
-    }
-
-    public bool TrySetSpecialization(EntityUid body, ProtoId<NeoTheologySpecializationPrototype> specializationId)
-    {
-        if (!TryGetCruciformEntity(body, out var cruciform, out var component) ||
-            component.Specialization == specializationId ||
-            !TryGetConfiguredProfile(component.Profile, GetRules(), out var profile) ||
-            !profile.Specializations.Contains(specializationId) ||
-            !ProtoMan.TryIndex<NeoTheologySpecializationPrototype>(specializationId, out _))
-            return false;
-
-        component.Specialization = specializationId;
         RecomputeProfile(cruciform, body);
         Dirty(cruciform, component);
         BumpRevision(body);
@@ -412,13 +394,6 @@ public sealed partial class CruciformSystem : EntitySystem
 
         foreach (var set in profile.LitanySets)
             component.UnlockedSets.Add(set);
-
-        if (profile.Specializations.Contains(component.Specialization) &&
-            ProtoMan.TryIndex<NeoTheologySpecializationPrototype>(component.Specialization, out var specialization))
-        {
-            foreach (var set in specialization.LitanySets)
-                component.UnlockedSets.Add(set);
-        }
     }
 
     private int CountEligibleChannelingFollowers(EntityUid source)

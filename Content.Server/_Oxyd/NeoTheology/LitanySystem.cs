@@ -47,7 +47,7 @@ public sealed partial class LitanySystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<LitanySpeechAcceptedEvent>(OnSpeechAccepted);
+        SubscribeLocalEvent<EntitySpokeEvent>(OnSpeechAccepted);
         SubscribeLocalEvent<LitanyDoAfterEvent>(OnLitanyDoAfter);
         SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
 
@@ -209,7 +209,6 @@ public sealed partial class LitanySystem : EntitySystem
             StartedAt = now,
             ChantEndsAt = now + chantDuration,
             ExpiresAt = endsAt,
-            ExpectedSpeechSequence = null,
             AwaitingBookSpeech = false,
             Committed = false,
         };
@@ -358,7 +357,6 @@ public sealed class PendingLitanyCast
     public TimeSpan StartedAt;
     public TimeSpan ChantEndsAt;
     public TimeSpan ExpiresAt;
-    public ulong? ExpectedSpeechSequence;
     public bool AwaitingBookSpeech;
     public bool Committed;
     public DoAfterId? DoAfterId;

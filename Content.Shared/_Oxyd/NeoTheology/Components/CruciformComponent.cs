@@ -32,9 +32,6 @@ public sealed partial class CruciformComponent : Component
     [DataField, AutoNetworkedField]
     public ProtoId<NeoTheologyProfilePrototype> Profile = "OxydNtDisciple";
 
-    [DataField, AutoNetworkedField]
-    public ProtoId<NeoTheologySpecializationPrototype> Specialization = "OxydNtNone";
-
     /// <summary>
     /// Source-derived profile inputs. They remain separate from the configured
     /// profile so role/module systems can update them without silently changing
@@ -55,14 +52,4 @@ public sealed partial class CruciformComponent : Component
     /// </summary>
     [DataField]
     public TimeSpan LastHolinessUpdate;
-
-    /// <summary>
-    /// A one-shot module marker used by the foundation scenario and future core-module
-    /// integration. It is deliberately not treated as a rank grant by itself.
-    /// </summary>
-    [DataField]
-    public bool PreacherAscensionKitInstalled;
-
-    [DataField]
-    public bool PreacherAscensionKitActive;
 }

@@ -27,7 +27,6 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
     public double Cap { get; }
     public double RegenerationPerSecond { get; }
     public ProtoId<NeoTheologyProfilePrototype>? Profile { get; }
-    public ProtoId<NeoTheologySpecializationPrototype>? Specialization { get; }
     public bool Active { get; }
     public List<LitanyViewerEntry> Entries { get; }
     public string? BusyReason { get; }
@@ -37,7 +36,6 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
         double holiness,
         double regenerationPerSecond,
         ProtoId<NeoTheologyProfilePrototype>? profile,
-        ProtoId<NeoTheologySpecializationPrototype>? specialization,
         bool active,
         List<LitanyViewerEntry> entries,
         string? busyReason,
@@ -48,7 +46,6 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
         Cap = cap;
         RegenerationPerSecond = regenerationPerSecond;
         Profile = profile;
-        Specialization = specialization;
         Active = active;
         Entries = entries;
         BusyReason = busyReason;
@@ -61,25 +58,15 @@ public sealed class LitanyViewerEntry
     public ProtoId<LitanyPrototype> Litany { get; }
     public bool Available { get; }
     public LocId? UnavailableReason { get; }
-    /// <summary>Exact invariant phrase for display; never localized.</summary>
-    public string Phrase { get; }
-    public double Cost { get; }
-    public LitanyCategory Category { get; }
 
     public LitanyViewerEntry(
         ProtoId<LitanyPrototype> litany,
         bool available,
-        LocId? unavailableReason,
-        string phrase,
-        double cost,
-        LitanyCategory category)
+        LocId? unavailableReason)
     {
         Litany = litany;
         Available = available;
         UnavailableReason = unavailableReason;
-        Phrase = phrase;
-        Cost = cost;
-        Category = category;
     }
 }
 
@@ -91,18 +78,15 @@ public sealed class LitanyViewerEntry
 public sealed class LitanyRolePresentation
 {
     public ProtoId<NeoTheologyProfilePrototype>? Profile { get; }
-    public ProtoId<NeoTheologySpecializationPrototype>? Specialization { get; }
     public bool HasCruciform { get; }
     public bool Active { get; }
 
     public LitanyRolePresentation(
         ProtoId<NeoTheologyProfilePrototype>? profile,
-        ProtoId<NeoTheologySpecializationPrototype>? specialization,
         bool hasCruciform,
         bool active)
     {
         Profile = profile;
-        Specialization = specialization;
         HasCruciform = hasCruciform;
         Active = active;
     }
@@ -321,20 +305,17 @@ public sealed class SubmitLitanyChoicesMessage : BoundUserInterfaceMessage
 {
     public string RequestId { get; }
     public List<string> SelectedTokens { get; }
-    public ProtoId<NeoTheologySpecializationPrototype>? Specialization { get; }
     public string? RecipeId { get; }
     public string? PlainText { get; }
 
     public SubmitLitanyChoicesMessage(
         string requestId,
         List<string> selectedTokens,
-        ProtoId<NeoTheologySpecializationPrototype>? specialization = null,
         string? recipeId = null,
         string? plainText = null)
     {
         RequestId = requestId;
         SelectedTokens = selectedTokens;
-        Specialization = specialization;
         RecipeId = recipeId;
         PlainText = plainText;
     }

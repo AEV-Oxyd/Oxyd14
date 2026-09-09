@@ -12,7 +12,6 @@
             <ProgressBar Name="HolinessBar" MinValue="0" MaxValue="1" HorizontalExpand="True"/>
             <BoxContainer Orientation="Horizontal" SeparationOverride="12">
                 <Label Name="RankLabel" HorizontalExpand="True"/>
-                <Label Name="SpecializationLabel" HorizontalExpand="True"/>
                 <Label Name="ClearanceLabel" HorizontalExpand="True"/>
             </BoxContainer>
             <Label Name="StatusLabel"/>
@@ -71,10 +70,6 @@
                               HorizontalExpand="True"
                               Visible="False"/>
                     <Label Name="ChoiceExpiryLabel" Visible="False"/>
-                    <BoxContainer Name="SpecializationRow" Orientation="Horizontal" Visible="False">
-                        <Label Text="Specialization:" MinWidth="150"/>
-                        <OptionButton Name="SpecializationSelector" HorizontalExpand="True"/>
-                    </BoxContainer>
                     <BoxContainer Name="RecipeRow" Orientation="Horizontal" Visible="False">
                         <Label Text="Recipe ID:" MinWidth="150"/>
                         <LineEdit Name="RecipeIdEdit"

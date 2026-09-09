@@ -30,14 +30,13 @@ public sealed partial class LitanyWindow : FancyWindow
     private string? _choiceRequestId;
     private TimeSpan _choiceExpiresAt;
     private List<LitanyChoiceOption> _choiceOptions = new();
-    private readonly List<ProtoId<NeoTheologySpecializationPrototype>> _specializations = new();
     private string? _resultText;
     private uint _resultRevision;
     private bool _hasRolePresentation;
     private bool _hasCruciform;
 
     public event Action<ProtoId<LitanyPrototype>, uint, string?>? BeginLitany;
-    public event Action<string, List<string>, ProtoId<NeoTheologySpecializationPrototype>?, string?, string?>? SubmitChoices;
+    public event Action<string, List<string>, string?, string?>? SubmitChoices;
     public event Action<string>? CancelLitany;
 
     public LitanyWindow()
@@ -46,7 +45,6 @@ public sealed partial class LitanyWindow : FancyWindow
         IoCManager.InjectDependencies(this);
 
         CategorySelector.Prefix = "Category:";
-        SpecializationSelector.Prefix = "Specialization:";
 
         SearchBar.OnTextChanged += _ => RefreshEntryList(preserveSelection: false);
         CategorySelector.OnItemSelected += args =>
@@ -67,7 +65,6 @@ public sealed partial class LitanyWindow : FancyWindow
         PlainTextEdit.IsValid = IsPlainTextLengthValid;
         PlainTextEdit.OnTextChanged += _ => UpdatePlainTextCount();
 
-        RefreshSpecializations();
         UpdatePlainTextCount();
     }
 
@@ -88,7 +85,6 @@ public sealed partial class LitanyWindow : FancyWindow
         if (catalogChanged)
             RefreshCategories();
 
-        RefreshSpecializations();
         UpdateProfilePresentation();
         RefreshEntryList(preserveSelection: true);
         UpdateBusyPresentation();
@@ -111,7 +107,6 @@ public sealed partial class LitanyWindow : FancyWindow
             snapshot.Holiness,
             snapshot.RegenerationPerSecond,
             role.Profile,
-            role.Specialization,
             role.Active,
             snapshot.Entries,
             null,
@@ -354,12 +349,6 @@ public sealed partial class LitanyWindow : FancyWindow
         var profile = GetProfile(snapshot.Profile);
         var profileName = profile is null ? "—" : Loc.GetString(profile.Name);
         var maximumHoliness = snapshot.Cap > 0 ? snapshot.Cap : GetMaximumHoliness(profile);
-        var specializationName = "—";
-        if (snapshot.Specialization is { } specializationId &&
-            _prototypeManager.TryIndex(specializationId, out NeoTheologySpecializationPrototype? specialization))
-        {
-            specializationName = Loc.GetString(specialization.Name);
-        }
 
         var accessNames = profile?.AccessPrivileges
             .Select(GetAccessName)
@@ -375,8 +364,6 @@ public sealed partial class LitanyWindow : FancyWindow
             : snapshot.Active || profile is not null;
         RankLabel.Text = Loc.GetString("oxyd-cruciform-rank",
             ("rank", hasCruciform ? profileName : "—"));
-        SpecializationLabel.Text = Loc.GetString("oxyd-cruciform-specialization",
-            ("specialization", hasCruciform ? specializationName : "—"));
         ClearanceLabel.Text = Loc.GetString("oxyd-cruciform-clearance",
             ("clearance", hasCruciform && accessNames is { Count: > 0 }
                 ? string.Join(", ", accessNames)
@@ -424,9 +411,9 @@ public sealed partial class LitanyWindow : FancyWindow
 
         SelectedName.Text = Loc.GetString(litany.Name);
         SelectedDescription.SetMessage(Loc.GetString(litany.Description));
-        // Prefer server-authored entry fields so locked rows still show exact phrase/cost/category.
-        PhraseLabel.Text = $"Phrase: {entry.Phrase}";
-        CostLabel.Text = Loc.GetString("oxyd-litany-ui-cost", ("cost", entry.Cost.ToString("0.##")));
+        // Prototype-set values are read from the prototype, not duplicated over the wire.
+        PhraseLabel.Text = $"Phrase: {litany.Phrase}";
+        CostLabel.Text = Loc.GetString("oxyd-litany-ui-cost", ("cost", litany.Cost.ToString("0.##")));
         CooldownLabel.Text = Loc.GetString("oxyd-litany-ui-cooldown", ("duration", FormatDuration(litany.CooldownDuration)));
         CastDurationLabel.Text = $"Cast duration: {FormatDuration(litany.ExtraDelay)}";
         TargetLabel.Text = $"Target mode: {litany.TargetMode}";
@@ -460,7 +447,6 @@ public sealed partial class LitanyWindow : FancyWindow
                 : string.Empty;
         ChoiceList.Visible = hasChoiceRequest && _choiceOptions.Count > 0;
         ChoiceExpiryLabel.Visible = hasChoiceRequest;
-        SpecializationRow.Visible = hasChoiceRequest;
         RecipeRow.Visible = hasChoiceRequest;
         PlainTextRow.Visible = hasChoiceRequest;
         PlainTextCountLabel.Visible = hasChoiceRequest;
@@ -523,16 +509,10 @@ public sealed partial class LitanyWindow : FancyWindow
             .Where(token => token is not null)
             .Cast<string>()
             .ToList();
-        ProtoId<NeoTheologySpecializationPrototype>? specialization = null;
-        if (SpecializationSelector.SelectedId > 0 &&
-            SpecializationSelector.SelectedId < _specializations.Count)
-        {
-            specialization = _specializations[SpecializationSelector.SelectedId];
-        }
         var recipeId = string.IsNullOrEmpty(RecipeIdEdit.Text) ? null : RecipeIdEdit.Text;
         var plainText = string.IsNullOrEmpty(PlainTextEdit.Text) ? null : PlainTextEdit.Text;
 
-        SubmitChoices?.Invoke(requestId, tokens, specialization, recipeId, plainText);
+        SubmitChoices?.Invoke(requestId, tokens, recipeId, plainText);
     }
 
     private void ClearChoiceSnapshot()
@@ -541,7 +521,6 @@ public sealed partial class LitanyWindow : FancyWindow
         _choiceExpiresAt = default;
         _choiceOptions = new List<LitanyChoiceOption>();
         ChoiceList.Clear();
-        SpecializationSelector.TrySelectId(0);
         RecipeIdEdit.Clear();
         PlainTextEdit.Clear();
     }
@@ -644,56 +623,7 @@ public sealed partial class LitanyWindow : FancyWindow
     {
         return left.Litany.Equals(right.Litany)
                && left.Available == right.Available
-               && left.UnavailableReason.Equals(right.UnavailableReason)
-               && left.Phrase == right.Phrase
-               && left.Cost.Equals(right.Cost)
-               && left.Category == right.Category;
-    }
-
-    private void RefreshSpecializations()
-    {
-        var selected = SpecializationSelector.SelectedId >= 0 &&
-                       SpecializationSelector.SelectedId < _specializations.Count
-            ? _specializations[SpecializationSelector.SelectedId]
-            : (ProtoId<NeoTheologySpecializationPrototype>?) null;
-
-        _specializations.Clear();
-        SpecializationSelector.Clear();
-
-        if (_snapshot?.Profile is { } profileId &&
-            _prototypeManager.TryIndex(profileId, out NeoTheologyProfilePrototype? profile))
-        {
-            _specializations.AddRange(profile.Specializations);
-        }
-
-        var none = new ProtoId<NeoTheologySpecializationPrototype>("OxydNtNone");
-        if (_specializations.Count == 0)
-            _specializations.Add(none);
-        else if (!_specializations.Contains(none))
-            _specializations.Insert(0, none);
-
-        var distinct = _specializations.Distinct().ToList();
-        _specializations.Clear();
-        _specializations.AddRange(distinct);
-
-        for (var i = 0; i < _specializations.Count; i++)
-        {
-            var specializationId = _specializations[i];
-            var label = _prototypeManager.TryIndex(specializationId, out NeoTheologySpecializationPrototype? specialization)
-                ? Loc.GetString(specialization.Name)
-                : specializationId.ToString();
-            SpecializationSelector.AddItem(label, i);
-        }
-
-        if (selected is { } selectedId)
-        {
-            var selectedIndex = _specializations.IndexOf(selectedId);
-            if (selectedIndex >= 0)
-                SpecializationSelector.TrySelectId(selectedIndex);
-        }
-
-        if (SpecializationSelector.SelectedId < 0)
-            SpecializationSelector.TrySelectId(0);
+               && left.UnavailableReason.Equals(right.UnavailableReason);
     }
 
     private bool TryGetLitany(LitanyViewerEntry entry, out LitanyPrototype litany)
@@ -720,7 +650,7 @@ public sealed partial class LitanyWindow : FancyWindow
 
     private LitanyCategory GetLitanyCategory(LitanyViewerEntry entry)
     {
-        return entry.Category;
+        return TryGetLitany(entry, out var litany) ? litany.Category : default;
     }
 
     private string GetAccessName(ProtoId<AccessLevelPrototype> accessId)

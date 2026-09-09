@@ -52,7 +52,6 @@ public sealed class LitanyPrototypeTest : GameTest
         foreach (var litany in litanies)
         {
             Assert.That(litany.ID, Is.EqualTo($"OxydLitany{litany.Effect}"));
-            Assert.That(litany.SourcePath, Is.Not.Empty, litany.ID);
         }
     }
 
@@ -72,8 +71,7 @@ public sealed class LitanyPrototypeTest : GameTest
                          typeof(LitanySetPrototype),
                          typeof(NeoTheologyRulesPrototype),
                          typeof(NeoTheologyProfilePrototype),
-                         typeof(NeoTheologySpecializationPrototype),
-                     })
+                         })
             {
                 foreach (var prototype in prototypes.EnumeratePrototypes(kind))
                 {

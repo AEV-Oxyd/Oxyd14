@@ -61,9 +61,6 @@ public sealed partial class LitanyPrototype : IPrototype
     [DataField]
     public NeoTheologyDependency Dependency { get; private set; }
 
-    [DataField]
-    public string SourcePath { get; private set; } = string.Empty;
-
     /// <summary>Dependency-gated entries remain in the reference catalog but cannot be cast.</summary>
     [DataField]
     public bool Enabled { get; private set; } = true;

@@ -1,25 +1,3 @@
-- type: oxydNeoTheologySpecialization
-  id: OxydNtNone
-  name: oxyd-neotheology-specialization-none
-
-- type: oxydNeoTheologySpecialization
-  id: OxydNtAcolyte
-  name: oxyd-neotheology-specialization-acolyte
-  litanySets:
-  - OxydLitanyAcolyte
-
-- type: oxydNeoTheologySpecialization
-  id: OxydNtAgrolyte
-  name: oxyd-neotheology-specialization-agrolyte
-  litanySets:
-  - OxydLitanyAgrolyte
-
-- type: oxydNeoTheologySpecialization
-  id: OxydNtCustodian
-  name: oxyd-neotheology-specialization-custodian
-  litanySets:
-  - OxydLitanyCustodian
-
 - type: oxydNeoTheologyProfile
   id: OxydNtDisciple
   name: oxyd-neotheology-profile-disciple
@@ -27,14 +5,54 @@
   - OxydNtFollower
   cruciformCapacity: 50
   regenerationMultiplier: 1
-  specializations:
-  - OxydNtNone
-  - OxydNtAcolyte
-  - OxydNtAgrolyte
-  - OxydNtCustodian
   litanySets:
   - OxydLitanyCommon
   - OxydLitanyMachinery
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAcolyte
+  name: oxyd-neotheology-profile-acolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyAcolyte
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAgrolyte
+  name: oxyd-neotheology-profile-agrolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyAgrolyte
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtCustodian
+  name: oxyd-neotheology-profile-custodian
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyCustodian
   canChannel: false
   countsAsChannelingFollower: true
 
@@ -46,11 +64,6 @@
   - OxydNtCommon
   cruciformCapacity: 80
   regenerationMultiplier: 1.15
-  specializations:
-  - OxydNtNone
-  - OxydNtAcolyte
-  - OxydNtAgrolyte
-  - OxydNtCustodian
   litanySets:
   - OxydLitanyCommon
   - OxydLitanyMachinery
@@ -68,11 +81,6 @@
   - OxydNtClergy
   cruciformCapacity: 100
   regenerationMultiplier: 1.25
-  specializations:
-  - OxydNtNone
-  - OxydNtAcolyte
-  - OxydNtAgrolyte
-  - OxydNtCustodian
   litanySets:
   - OxydLitanyCommon
   - OxydLitanyMachinery

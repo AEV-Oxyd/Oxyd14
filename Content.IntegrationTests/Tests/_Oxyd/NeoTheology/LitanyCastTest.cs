@@ -9,6 +9,7 @@ using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Chat;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Implants;
+using Content.Shared.Radio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -54,9 +55,8 @@ public sealed class LitanyCastTest : GameTest
             holinessBefore = _cruciform.GetHoliness(body);
             var phrase = _prototypes.Index(Relief).Phrase;
 
-            _litany.TestingHandleSpeech(new LitanySpeechAcceptedEvent(
-                body, phrase, phrase, LitanySpeechKind.Speak, 10,
-                InGameICChatType.Speak, radioTransmitted: false));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(
+                body, phrase, null, null, phrase));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(1));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Not.Null);
@@ -132,16 +132,15 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var garbled = "S-s-semper invicta.";
 
-            _litany.TestingHandleSpeech(new LitanySpeechAcceptedEvent(
-                body, phrase, garbled, LitanySpeechKind.Speak, 42,
-                InGameICChatType.Speak, radioTransmitted: false));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(
+                body, garbled, null, null, phrase));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(1));
         });
     }
 
     [Test]
-    public async Task RadioAndEmote_AreRejected()
+    public async Task RadioSpeech_IsRejected()
     {
         var map = await Pair.CreateTestMap();
         await Server.WaitAssertion(() =>
@@ -150,12 +149,8 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var before = _cruciform.GetHoliness(body);
 
-            _litany.TestingHandleSpeech(new LitanySpeechAcceptedEvent(
-                body, phrase, phrase, LitanySpeechKind.Whisper, 1,
-                InGameICChatType.Speak, radioTransmitted: true));
-            _litany.TestingHandleSpeech(new LitanySpeechAcceptedEvent(
-                body, phrase, phrase, LitanySpeechKind.Speak, 2,
-                InGameICChatType.Emote, radioTransmitted: false));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(
+                body, phrase, _prototypes.Index<RadioChannelPrototype>("Common"), phrase, phrase));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
@@ -178,9 +173,7 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var before = _cruciform.GetHoliness(npc);
 
-            _litany.TestingHandleSpeech(new LitanySpeechAcceptedEvent(
-                npc, phrase, phrase, LitanySpeechKind.Speak, 3,
-                InGameICChatType.Speak, radioTransmitted: false));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(npc, phrase, null, null, phrase));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(npc), Is.EqualTo(before));
@@ -277,6 +270,26 @@ public sealed class LitanyCastTest : GameTest
                 Relief.Id,
                 "OxydLitanySoulHunger",
             }));
+        });
+    }
+
+    [Test]
+    public async Task DebitTolerance_UsesSelectedRules_NotHardcodedFallback()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var body = PrepareCaster(map.GridCoords);
+            // Selected rules tolerance is 1e-6. 0.0005 below cost: the old 0.001
+            // fallback allowed it, the selected rules must reject.
+            var before = _cruciform.GetHoliness(body);
+            Assert.That(_cruciform.TrySpend(body, before), Is.True);
+            _cruciform.Refund(body, 20 - 0.0005);
+            Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(20 - 0.0005).Within(0.00001));
+
+            var result = _litany.TryBeginLitany(body, Relief, LitanyCastOrigin.ManualSpeech);
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Reason?.Id, Is.EqualTo("oxyd-litany-no-cost"));
         });
     }
 

@@ -4,6 +4,9 @@
   baseHolinessPerMinute: 1
   profiles:
   - OxydNtDisciple
+  - OxydNtAcolyte
+  - OxydNtAgrolyte
+  - OxydNtCustodian
   - OxydNtPreacher
   - OxydNtInquisitor
   debitTolerance: 0.000001

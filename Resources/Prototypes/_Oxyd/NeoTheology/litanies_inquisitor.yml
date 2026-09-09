@@ -12,7 +12,6 @@
   enabled: false
   dependency: Pain
   unavailableReason: oxyd-litany-unavailable-pain
-  sourcePath: /datum/ritual/cruciform/inquisitor/penance
 
 - type: oxydLitany
   id: OxydLitanyConvalescence
@@ -39,7 +38,6 @@
       analgesia: OxydNtAnalgesia
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/inquisitor/convalescence
 
 - type: oxydLitany
   id: OxydLitanySuccour
@@ -67,7 +65,6 @@
       analgesia: OxydNtAnalgesia
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/inquisitor/succour
 
 - type: oxydLitany
   id: OxydLitanyScrying
@@ -84,7 +81,6 @@
   enabled: false
   dependency: RemoteView
   unavailableReason: oxyd-litany-unavailable-remote-view
-  sourcePath: /datum/ritual/cruciform/inquisitor/scrying
 
 - type: oxydLitany
   id: OxydLitanySending
@@ -99,7 +95,6 @@
   cost: 30
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/inquisitor/sending
 
 - type: oxydLitany
   id: OxydLitanyInitiation
@@ -115,7 +110,6 @@
   enabled: false
   dependency: CoreModules
   unavailableReason: oxyd-litany-unavailable-core-modules
-  sourcePath: /datum/ritual/cruciform/inquisitor/initiation
 
 - type: oxydLitany
   id: OxydLitanyKnowledge
@@ -131,7 +125,6 @@
   enabled: false
   dependency: NtUplink
   unavailableReason: oxyd-litany-unavailable-uplink
-  sourcePath: /datum/ritual/cruciform/inquisitor/knowledge
 
 - type: oxydLitany
   id: OxydLitanyBounty
@@ -147,7 +140,6 @@
   enabled: false
   dependency: NtUplink
   unavailableReason: oxyd-litany-unavailable-uplink
-  sourcePath: /datum/ritual/cruciform/inquisitor/bounty
 
 - type: oxydLitany
   id: OxydLitanyEternalBrotherhood
@@ -163,7 +155,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/cruciform/crusader/brotherhood
 
 - type: oxydLitany
   id: OxydLitanyCallToBattle
@@ -183,7 +174,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/cruciform/crusader/battle_call
 
 - type: oxydLitany
   id: OxydLitanySearingRevelation
@@ -202,4 +192,3 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/cruciform/crusader/flash

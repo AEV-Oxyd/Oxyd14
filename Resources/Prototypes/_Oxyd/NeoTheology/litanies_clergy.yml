@@ -16,7 +16,6 @@
   enabled: false
   dependency: PlantGrowth
   unavailableReason: oxyd-litany-unavailable-plant-growth
-  sourcePath: /datum/ritual/cruciform/agrolyte/accelerated_growth
 
 - type: oxydLitany
   id: OxydLitanyHandOfMercy
@@ -35,7 +34,6 @@
       analgesia: OxydNtAnalgesia
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/agrolyte/mercy
 
 - type: oxydLitany
   id: OxydLitanyAbsolutionOfWounds
@@ -50,7 +48,6 @@
   cost: 10
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/agrolyte/absolution
 
 - type: oxydLitany
   id: OxydLitanyWordsOfPurging
@@ -66,7 +63,6 @@
   enabled: false
   dependency: Addiction
   unavailableReason: oxyd-litany-unavailable-addiction
-  sourcePath: /datum/ritual/cruciform/custodian/purging
 
 - type: oxydLitany
   id: OxydLitanyEpiphany
@@ -81,7 +77,6 @@
   cost: 0
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/acolyte/convert
 
 - type: oxydLitany
   id: OxydLitanyAsacris
@@ -97,7 +92,6 @@
   enabled: false
   dependency: CoreModules
   unavailableReason: oxyd-litany-unavailable-core-modules
-  sourcePath: /datum/ritual/cruciform/priest/acolyte/asacris
 
 - type: oxydLitany
   id: OxydLitanyGraceOfPerseverance
@@ -113,17 +107,15 @@
   cooldownKey: OxydNtShortBoost
   cooldownScope: Global
   cooldownDuration: 120
-  effectDuration: 600
+  effectDuration: 900
   parameters:
     skills:
       amounts:
         Mec: 10
         Cog: 10
         Bio: 10
-      permanent: false
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/short_boost/mechanical
 
 - type: oxydLitany
   id: OxydLitanyUpholdHolyWord
@@ -139,17 +131,15 @@
   cooldownKey: OxydNtShortBoost
   cooldownScope: Global
   cooldownDuration: 120
-  effectDuration: 600
+  effectDuration: 900
   parameters:
     skills:
       amounts:
         Rob: 10
         Tgh: 10
         Vig: 10
-      permanent: false
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/short_boost/robustness
 
 - type: oxydLitany
   id: OxydLitanyAtonement
@@ -165,7 +155,6 @@
   enabled: false
   dependency: Pain
   unavailableReason: oxyd-litany-unavailable-pain
-  sourcePath: /datum/ritual/cruciform/priest/atonement
 
 - type: oxydLitany
   id: OxydLitanyBaptismalRecord
@@ -180,7 +169,6 @@
   cost: 30
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/baptismal_record
 
 - type: oxydLitany
   id: OxydLitanyDivineIntervention
@@ -196,7 +184,6 @@
   enabled: false
   dependency: EyeEconomy
   unavailableReason: oxyd-litany-unavailable-eye
-  sourcePath: /datum/ritual/cruciform/priest/divine_intervention
 
 - type: oxydLitany
   id: OxydLitanyHolyGuidance
@@ -212,7 +199,6 @@
   enabled: false
   dependency: EyeEconomy
   unavailableReason: oxyd-litany-unavailable-eye
-  sourcePath: /datum/ritual/cruciform/priest/holy_guidance
 
 - type: oxydLitany
   id: OxydLitanyDivineBlessing
@@ -227,7 +213,6 @@
   cost: 30
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/blessing
 
 - type: oxydLitany
   id: OxydLitanyConfirmation
@@ -245,7 +230,6 @@
   cooldownDuration: 60
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/confirmation
 
 - type: oxydLitany
   id: OxydLitanyAdoption
@@ -260,7 +244,6 @@
   cost: 15
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/adoption
 
 - type: oxydLitany
   id: OxydLitanyOrdination
@@ -275,7 +258,6 @@
   cost: 15
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/ordination
 
 - type: oxydLitany
   id: OxydLitanyOmission
@@ -290,7 +272,6 @@
   cost: 30
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/omission
 
 - type: oxydLitany
   id: OxydLitanyExcommunication
@@ -308,7 +289,6 @@
   cooldownDuration: 300
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
-  sourcePath: /datum/ritual/cruciform/priest/excommunication
 
 - type: oxydLitany
   id: OxydLitanyOrderArmaments
@@ -324,7 +304,6 @@
   enabled: false
   dependency: Armaments
   unavailableReason: oxyd-litany-unavailable-armaments
-  sourcePath: /datum/ritual/cruciform/priest/armaments
 
 - type: oxydLitany
   id: OxydLitanyDivineGuidance
@@ -340,7 +319,6 @@
   enabled: false
   dependency: ConstructionCatalog
   unavailableReason: oxyd-litany-unavailable-construction-catalog
-  sourcePath: /datum/ritual/cruciform/priest/acolyte/blueprint_check
 
 - type: oxydLitany
   id: OxydLitanyManifestation
@@ -356,7 +334,6 @@
   enabled: false
   dependency: Construction
   unavailableReason: oxyd-litany-unavailable-construction
-  sourcePath: /datum/ritual/cruciform/priest/acolyte/construction
 
 - type: oxydLitany
   id: OxydLitanyUproot
@@ -373,7 +350,6 @@
   enabled: false
   dependency: Construction
   unavailableReason: oxyd-litany-unavailable-construction
-  sourcePath: /datum/ritual/cruciform/priest/acolyte/deconstruction
 
 - type: oxydLitany
   id: OxydLitanyPoundingWhisper
@@ -389,7 +365,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/mechanical
 
 - type: oxydLitany
   id: OxydLitanyRevelationOfSecrets
@@ -405,7 +380,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/cognition
 
 - type: oxydLitany
   id: OxydLitanyLispOfVitae
@@ -421,7 +395,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/biology
 
 - type: oxydLitany
   id: OxydLitanyCantoOfCourage
@@ -437,7 +410,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/robustness
 
 - type: oxydLitany
   id: OxydLitanyChantOfObservance
@@ -453,7 +425,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/vigilance
 
 - type: oxydLitany
   id: OxydLitanyReclamationOfEndurance
@@ -469,7 +440,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/stat/toughness
 
 - type: oxydLitany
   id: OxydLitanySanctify
@@ -485,7 +455,6 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/sanctify
 
 - type: oxydLitany
   id: OxydLitanyCrusade
@@ -501,4 +470,3 @@
   enabled: false
   dependency: Ceremonies
   unavailableReason: oxyd-litany-unavailable-ceremonies
-  sourcePath: /datum/ritual/group/cruciform/crusade

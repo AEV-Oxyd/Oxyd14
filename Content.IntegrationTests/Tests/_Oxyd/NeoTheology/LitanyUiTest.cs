@@ -153,7 +153,7 @@ public sealed class LitanyUiTest : GameTest
     }
 
     [Test]
-    public async Task Entries_ShowExactPhrase_Cost_Category_UnavailableReason()
+    public async Task Entries_CarryViewerAvailabilityOnly()
     {
         var map = await Pair.CreateTestMap();
         await Server.WaitAssertion(() =>
@@ -179,9 +179,9 @@ public sealed class LitanyUiTest : GameTest
             {
                 Assert.That(byId.ContainsKey(litany.ID), Is.True, litany.ID);
                 var entry = byId[litany.ID];
-                Assert.That(entry.Phrase, Is.EqualTo(litany.Phrase), litany.ID);
-                Assert.That(entry.Cost, Is.EqualTo(litany.Cost).Within(1e-9), litany.ID);
-                Assert.That(entry.Category, Is.EqualTo(litany.Category), litany.ID);
+                // Prototype-set phrase/cost/category are read from the prototype client-side;
+                // the BUI entry only carries viewer-specific availability.
+                Assert.That(entry.Litany.Id, Is.EqualTo(litany.ID));
                 var expectAvailable = litany.Effect is LitanyEffectKind.Relief
                     or LitanyEffectKind.SoulHunger
                     or LitanyEffectKind.Entreaty
@@ -193,9 +193,6 @@ public sealed class LitanyUiTest : GameTest
             }
 
             var reliefEntry = byId[Relief.Id];
-            Assert.That(reliefEntry.Phrase, Is.EqualTo("Semper invicta."));
-            Assert.That(reliefEntry.Cost, Is.EqualTo(20d).Within(1e-9));
-            Assert.That(reliefEntry.Category, Is.EqualTo(LitanyCategory.Common));
             Assert.That(reliefEntry.Available, Is.True);
             Assert.That(reliefEntry.UnavailableReason, Is.Null);
         });

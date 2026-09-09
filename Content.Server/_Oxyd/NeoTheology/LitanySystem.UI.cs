@@ -198,7 +198,6 @@ public sealed partial class LitanySystem
         var cap = 0d;
         var regen = 0d;
         ProtoId<NeoTheologyProfilePrototype>? profile = null;
-        ProtoId<NeoTheologySpecializationPrototype>? specialization = null;
         var hasCruciform = false;
         var active = false;
         CruciformComponent? cruciformComp = null;
@@ -214,7 +213,6 @@ public sealed partial class LitanySystem
             cap = _cruciform.GetMaximumHoliness(viewer);
             regen = _cruciform.GetRegenerationPerSecond(viewer);
             profile = cruciformComp.Profile;
-            specialization = cruciformComp.Specialization;
 
             if (!string.IsNullOrEmpty(bearer.PendingRequestId) &&
                 _pendingByRequest.TryGetValue(bearer.PendingRequestId, out var cast) &&
@@ -230,7 +228,7 @@ public sealed partial class LitanySystem
             }
         }
 
-        var role = new LitanyRolePresentation(profile, specialization, hasCruciform, active);
+        var role = new LitanyRolePresentation(profile, hasCruciform, active);
         var entries = BuildViewerEntries(cruciformComp, active);
 
         return new LitanyViewerSnapshotMessage(
@@ -278,10 +276,7 @@ public sealed partial class LitanySystem
             entries.Add(new LitanyViewerEntry(
                 litany.ID,
                 available,
-                reason,
-                litany.Phrase,
-                litany.Cost,
-                litany.Category));
+                reason));
         }
 
         return entries;

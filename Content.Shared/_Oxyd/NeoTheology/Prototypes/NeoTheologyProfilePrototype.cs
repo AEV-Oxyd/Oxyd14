@@ -27,9 +27,6 @@ public sealed partial class NeoTheologyProfilePrototype : IPrototype
     public double RegenerationMultiplier { get; private set; } = 1d;
 
     [DataField]
-    public List<ProtoId<NeoTheologySpecializationPrototype>> Specializations { get; private set; } = new();
-
-    [DataField]
     public List<ProtoId<LitanySetPrototype>> LitanySets { get; private set; } = new();
 
     /// <summary>
@@ -44,15 +41,3 @@ public sealed partial class NeoTheologyProfilePrototype : IPrototype
     public bool CountsAsChannelingFollower { get; private set; }
 }
 
-[Prototype("oxydNeoTheologySpecialization")]
-public sealed partial class NeoTheologySpecializationPrototype : IPrototype
-{
-    [IdDataField]
-    public string ID { get; private set; } = string.Empty;
-
-    [DataField(required: true)]
-    public LocId Name { get; private set; } = string.Empty;
-
-    [DataField]
-    public List<ProtoId<LitanySetPrototype>> LitanySets { get; private set; } = new();
-}
