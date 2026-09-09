@@ -24,7 +24,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// together with the server-side holiness and role profile. No gameplay authority is
 /// granted by a bare bearer component.
 /// </summary>
-public sealed partial class CruciformSystem : EntitySystem
+public sealed partial class CruciformSystem : SharedCruciformSystem
 {
     [Dependency] private SharedContainerSystem _containers = default!;
     [Dependency] private MobStateSystem _mobStates = default!;
@@ -209,40 +209,6 @@ public sealed partial class CruciformSystem : EntitySystem
         }
     }
 
-    public bool TryGetLinkedBearer(EntityUid body, EntityUid cruciform, out CruciformComponent component)
-    {
-        component = null!;
-        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform != cruciform)
-            return false;
-        if (!TryComp<CruciformComponent>(cruciform, out CruciformComponent? linkedComponent) || linkedComponent == null || linkedComponent.ImplantedEntity != body)
-            return false;
-        component = linkedComponent;
-        if (!TryComp<SubdermalImplantComponent>(cruciform, out var implant) || implant.ImplantedEntity != body)
-            return false;
-        if (!TryComp<ImplantedComponent>(body, out var installed))
-            return false;
-
-        return installed.ImplantContainer.ContainedEntities.Contains(cruciform);
-    }
-
-    public bool TryGetCruciform(EntityUid body, out EntityUid cruciform, out CruciformComponent component)
-    {
-        cruciform = EntityUid.Invalid;
-        component = null!;
-        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform is not { } linked)
-            return false;
-        if (!TryGetLinkedBearer(body, linked, out component))
-            return false;
-
-        cruciform = linked;
-        return component.Active;
-    }
-
-    public bool IsActiveBearer(EntityUid body)
-    {
-        return TryGetCruciform(body, out _, out _);
-    }
-
     public bool Activate(EntityUid body)
     {
         if (!TryGetCruciformEntity(body, out var cruciform, out var component))
@@ -328,19 +294,6 @@ public sealed partial class CruciformSystem : EntitySystem
     public double GetRegenerationPerSecond(EntityUid body)
     {
         return TryGetCruciformEntity(body, out _, out var component) ? component.RegenerationPerSecond : 0;
-    }
-
-    public bool TryGetCruciformEntity(EntityUid body, out EntityUid cruciform, out CruciformComponent component)
-    {
-        cruciform = EntityUid.Invalid;
-        component = null!;
-        if (!TryComp<CruciformBearerComponent>(body, out var bearer) || bearer.Cruciform is not { } linked)
-            return false;
-        if (!TryGetLinkedBearer(body, linked, out component))
-            return false;
-
-        cruciform = linked;
-        return true;
     }
 
     private double AdvanceHoliness(Entity<CruciformComponent> ent, EntityUid body)
