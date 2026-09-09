@@ -3,11 +3,28 @@ using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.UI;
 
+/// <summary>
+/// Shared BUI state broadcast via <c>SetUiState</c>. Contains only public catalog
+/// revision metadata — never holiness, roles, or per-viewer availability.
+/// Private viewer data must use <see cref="LitanyViewerSnapshotMessage"/>.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed class LitanyBookPublicState : BoundUserInterfaceState
+{
+    public uint CatalogRevision { get; }
+
+    public LitanyBookPublicState(uint catalogRevision)
+    {
+        CatalogRevision = catalogRevision;
+    }
+}
+
 [Serializable, NetSerializable]
 public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
 {
     public uint Revision { get; }
     public double Holiness { get; }
+    public double Cap { get; }
     public double RegenerationPerSecond { get; }
     public ProtoId<NeoTheologyProfilePrototype>? Profile { get; }
     public ProtoId<NeoTheologySpecializationPrototype>? Specialization { get; }
@@ -23,10 +40,12 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
         ProtoId<NeoTheologySpecializationPrototype>? specialization,
         bool active,
         List<LitanyViewerEntry> entries,
-        string? busyReason)
+        string? busyReason,
+        double cap = 0d)
     {
         Revision = revision;
         Holiness = holiness;
+        Cap = cap;
         RegenerationPerSecond = regenerationPerSecond;
         Profile = profile;
         Specialization = specialization;
@@ -42,15 +61,25 @@ public sealed class LitanyViewerEntry
     public ProtoId<LitanyPrototype> Litany { get; }
     public bool Available { get; }
     public LocId? UnavailableReason { get; }
+    /// <summary>Exact invariant phrase for display; never localized.</summary>
+    public string Phrase { get; }
+    public double Cost { get; }
+    public LitanyCategory Category { get; }
 
     public LitanyViewerEntry(
         ProtoId<LitanyPrototype> litany,
         bool available,
-        LocId? unavailableReason)
+        LocId? unavailableReason,
+        string phrase,
+        double cost,
+        LitanyCategory category)
     {
         Litany = litany;
         Available = available;
         UnavailableReason = unavailableReason;
+        Phrase = phrase;
+        Cost = cost;
+        Category = category;
     }
 }
 
@@ -135,6 +164,7 @@ public sealed class LitanyViewerSnapshotMessage : BoundUserInterfaceMessage
 {
     public uint Revision { get; }
     public double Holiness { get; }
+    public double Cap { get; }
     public double RegenerationPerSecond { get; }
     public LitanyRolePresentation RolePresentation { get; }
     public List<LitanyViewerEntry> Entries { get; }
@@ -143,6 +173,7 @@ public sealed class LitanyViewerSnapshotMessage : BoundUserInterfaceMessage
     public LitanyViewerSnapshotMessage(
         uint revision,
         double holiness,
+        double cap,
         double regenerationPerSecond,
         LitanyRolePresentation rolePresentation,
         List<LitanyViewerEntry> entries,
@@ -150,6 +181,7 @@ public sealed class LitanyViewerSnapshotMessage : BoundUserInterfaceMessage
     {
         Revision = revision;
         Holiness = holiness;
+        Cap = cap;
         RegenerationPerSecond = regenerationPerSecond;
         RolePresentation = rolePresentation;
         Entries = entries;

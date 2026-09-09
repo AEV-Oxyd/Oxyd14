@@ -43,6 +43,13 @@
     tags:
     - Book
 
+
+- type: entity
+  parent: OxydNtBible
+  id: OxydNtClergyBible
+  name: NeoTheology clergy litany book
+  description: A clergy reference book for spoken NeoTheology litanies.
+
 - type: entity
   parent: BaseStructure
   id: OxydNtAltar

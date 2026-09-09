@@ -32,6 +32,7 @@ public sealed partial class LitanySystem : EntitySystem
     [Dependency] private readonly LitanyPrototypeValidationSystem _catalog = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
 
     private readonly Dictionary<string, PendingLitanyCast> _pendingByRequest = new(StringComparer.Ordinal);
@@ -54,6 +55,8 @@ public sealed partial class LitanySystem : EntitySystem
             subs.Event<BeginLitanyMessage>(OnBeginLitanyMessage);
             subs.Event<CancelLitanyMessage>(OnCancelLitanyMessage);
         });
+
+        InitializeUi();
     }
 
     public override void Update(float frameTime)
@@ -128,7 +131,10 @@ public sealed partial class LitanySystem : EntitySystem
             return LitanyActionResult.Fail("oxyd-litany-denied-no-implant");
 
         if (expectedRevision is { } revision && bearer.UiRevision != revision)
+        {
+            RefreshSnapshotOnStaleRevision(actor, book);
             return LitanyActionResult.Fail("oxyd-litany-denied-stale-revision");
+        }
 
         if (!_catalog.TryGetLitany(litanyId, out var litany))
             return LitanyActionResult.Fail("oxyd-litany-denied-unknown");

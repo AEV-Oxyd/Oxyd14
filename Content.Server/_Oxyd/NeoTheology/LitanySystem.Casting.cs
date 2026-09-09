@@ -296,6 +296,9 @@ public sealed partial class LitanySystem
         _globalCooldowns.Clear();
         _availabilityOverrides.Clear();
         _testingTreatAsActor.Clear();
+        _bookViewers.Clear();
+        _testingLastSnapshot.Clear();
+        TestingSnapshotSendCount = 0;
         _requestNonce = 0;
     }
 

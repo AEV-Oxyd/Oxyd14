@@ -114,7 +114,8 @@ public sealed partial class LitanyWindow : FancyWindow
             role.Specialization,
             role.Active,
             snapshot.Entries,
-            null));
+            null,
+            snapshot.Cap));
 
         // UpdateState also supports the legacy state path and clears this
         // marker, so apply the actor-targeted role presentation after it runs.
@@ -352,7 +353,7 @@ public sealed partial class LitanyWindow : FancyWindow
 
         var profile = GetProfile(snapshot.Profile);
         var profileName = profile is null ? "—" : Loc.GetString(profile.Name);
-        var maximumHoliness = GetMaximumHoliness(profile);
+        var maximumHoliness = snapshot.Cap > 0 ? snapshot.Cap : GetMaximumHoliness(profile);
         var specializationName = "—";
         if (snapshot.Specialization is { } specializationId &&
             _prototypeManager.TryIndex(specializationId, out NeoTheologySpecializationPrototype? specialization))
@@ -423,8 +424,9 @@ public sealed partial class LitanyWindow : FancyWindow
 
         SelectedName.Text = Loc.GetString(litany.Name);
         SelectedDescription.SetMessage(Loc.GetString(litany.Description));
-        PhraseLabel.Text = $"Phrase: {litany.Phrase}";
-        CostLabel.Text = Loc.GetString("oxyd-litany-ui-cost", ("cost", litany.Cost.ToString("0.##")));
+        // Prefer server-authored entry fields so locked rows still show exact phrase/cost/category.
+        PhraseLabel.Text = $"Phrase: {entry.Phrase}";
+        CostLabel.Text = Loc.GetString("oxyd-litany-ui-cost", ("cost", entry.Cost.ToString("0.##")));
         CooldownLabel.Text = Loc.GetString("oxyd-litany-ui-cooldown", ("duration", FormatDuration(litany.CooldownDuration)));
         CastDurationLabel.Text = $"Cast duration: {FormatDuration(litany.ExtraDelay)}";
         TargetLabel.Text = $"Target mode: {litany.TargetMode}";
@@ -642,7 +644,10 @@ public sealed partial class LitanyWindow : FancyWindow
     {
         return left.Litany.Equals(right.Litany)
                && left.Available == right.Available
-               && left.UnavailableReason.Equals(right.UnavailableReason);
+               && left.UnavailableReason.Equals(right.UnavailableReason)
+               && left.Phrase == right.Phrase
+               && left.Cost.Equals(right.Cost)
+               && left.Category == right.Category;
     }
 
     private void RefreshSpecializations()
@@ -715,7 +720,7 @@ public sealed partial class LitanyWindow : FancyWindow
 
     private LitanyCategory GetLitanyCategory(LitanyViewerEntry entry)
     {
-        return TryGetLitany(entry, out var litany) ? litany.Category : LitanyCategory.Common;
+        return entry.Category;
     }
 
     private string GetAccessName(ProtoId<AccessLevelPrototype> accessId)
