@@ -17,8 +17,7 @@
   parameters:
     healing:
       analgesia: OxydNtAnalgesia
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
   sourcePath: /datum/ritual/cruciform/base/relief
 
 - type: oxydLitany
@@ -40,8 +39,7 @@
       damage:
         types:
           Heat: -5
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
   sourcePath: /datum/ritual/cruciform/base/soul_hunger
 
 - type: oxydLitany

@@ -10,8 +10,12 @@ public static class LitanyHandlerCatalog
 {
     public const int ExpectedFoundationEffectCount = 23;
 
-    /// <summary>Effects with an actual commit handler. Empty until LitanySystem lands.</summary>
-    public static readonly FrozenSet<LitanyEffectKind> Implemented = FrozenSet<LitanyEffectKind>.Empty;
+    /// <summary>Effects with an actual commit handler. Packet B: Relief + SoulHunger.</summary>
+    public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
+    {
+        LitanyEffectKind.Relief,
+        LitanyEffectKind.SoulHunger,
+    }.ToFrozenSet();
 
     /// <summary>
     /// Foundation effects planned for milestones 4 and 5. These entries may be

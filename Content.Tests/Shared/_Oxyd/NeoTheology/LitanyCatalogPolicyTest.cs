@@ -35,10 +35,16 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.ActivateDoor,
     ];
 
+    private static readonly LitanyEffectKind[] ImplementedEffects =
+    [
+        LitanyEffectKind.Relief,
+        LitanyEffectKind.SoulHunger,
+    ];
+
     [Test]
     public void FoundationPolicy_ContainsExactlyThePlannedEffects()
     {
-        Assert.That(LitanyHandlerCatalog.Implemented, Is.Empty);
+        Assert.That(LitanyHandlerCatalog.Implemented, Is.EquivalentTo(ImplementedEffects));
         Assert.That(
             LitanyHandlerCatalog.Foundation,
             Is.EquivalentTo(FoundationEffects));
@@ -59,12 +65,13 @@ public sealed class LitanyCatalogPolicyTest
     }
 
     [Test]
-    public void PlannedFoundationEffectsAreNotRuntimeHandlers()
+    public void PlannedFoundationEffectsAreNotRuntimeHandlers_ExceptPacketB()
     {
         foreach (var effect in FoundationEffects)
         {
-            Assert.That(LitanyHandlerCatalog.HasHandler(effect), Is.False, effect.ToString());
-            Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(effect), Is.False, effect.ToString());
+            var expected = ImplementedEffects.Contains(effect);
+            Assert.That(LitanyHandlerCatalog.HasHandler(effect), Is.EqualTo(expected), effect.ToString());
+            Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(effect), Is.EqualTo(expected), effect.ToString());
         }
     }
 
@@ -72,11 +79,24 @@ public sealed class LitanyCatalogPolicyTest
     public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
     {
         var errors = LitanyCatalogValidator.ValidateMissingHandler(
-            "OxydLitanyRelief",
-            LitanyEffectKind.Relief,
+            "OxydLitanyEntreaty",
+            LitanyEffectKind.Entreaty,
             isAvailable: true);
 
         Assert.That(errors, Has.Count.EqualTo(1));
         Assert.That(errors[0], Does.Contain("without a registered runtime handler"));
+    }
+
+    [Test]
+    public void PacketBImplementedEffectsAllowEnabledCatalogEntries()
+    {
+        Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.Relief), Is.True);
+        Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.SoulHunger), Is.True);
+        Assert.That(
+            LitanyCatalogValidator.ValidateMissingHandler(
+                "OxydLitanyRelief",
+                LitanyEffectKind.Relief,
+                isAvailable: true),
+            Is.Empty);
     }
 }

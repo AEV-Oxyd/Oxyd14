@@ -22,3 +22,4 @@ oxyd-litany-denied-doafter = The litany could not begin.
 oxyd-litany-denied-unknown-request = That litany request is unknown.
 oxyd-litany-denied-already-committed = That litany has already completed.
 oxyd-litany-denied-rate-limit = You are chanting too quickly.
+oxyd-litany-no-effect = The litany could not take hold.

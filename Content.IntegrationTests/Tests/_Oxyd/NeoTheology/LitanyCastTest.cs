@@ -26,6 +26,7 @@ public sealed class LitanyCastTest : GameTest
     private static readonly EntProtoId BibleProto = "OxydNtBible";
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
+    private static readonly ProtoId<LitanyPrototype> Entreaty = "OxydLitanyEntreaty";
 
     public override PoolSettings PoolSettings => new()
     {
@@ -250,8 +251,8 @@ public sealed class LitanyCastTest : GameTest
             var body = PrepareCaster(map.GridCoords);
             _litany.TestingClearAvailabilityOverrides();
             var before = _cruciform.GetHoliness(body);
-            Assert.That(_prototypes.Index(Relief).IsAvailable, Is.False);
-            var result = _litany.TryBeginLitany(body, Relief, LitanyCastOrigin.ManualSpeech);
+            Assert.That(_prototypes.Index(Entreaty).IsAvailable, Is.False);
+            var result = _litany.TryBeginLitany(body, Entreaty, LitanyCastOrigin.ManualSpeech);
             Assert.That(result.Success, Is.False);
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
@@ -259,13 +260,17 @@ public sealed class LitanyCastTest : GameTest
     }
 
     [Test]
-    public async Task ShippedCatalogStillHasZeroAvailable()
+    public async Task ShippedCatalog_OnlyPacketBMedicalAvailable()
     {
         await Server.WaitAssertion(() =>
         {
             _litany.TestingClearAvailabilityOverrides();
-            var available = _prototypes.EnumeratePrototypes<LitanyPrototype>().Count(l => l.IsAvailable);
-            Assert.That(available, Is.EqualTo(0));
+            var available = _prototypes.EnumeratePrototypes<LitanyPrototype>()
+                .Where(l => l.IsAvailable)
+                .Select(l => l.ID)
+                .OrderBy(id => id)
+                .ToArray();
+            Assert.That(available, Is.EquivalentTo(new[] { Relief.Id, "OxydLitanySoulHunger" }));
         });
     }
 

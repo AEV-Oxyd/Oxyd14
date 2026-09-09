@@ -205,15 +205,22 @@ public sealed partial class LitanySystem
             return;
         }
 
-        // 3. No multi-resource reservations for M3 stub.
-        // 4. Effect plan: M3 no-op success stub when available and no real handler.
+        // 3. No multi-resource reservations for Packet B medical effects.
+        // 4. Effect plan: real handlers validate before debit; others no-op when available.
         if (!IsEffectivelyAvailable(litany))
         {
             ClearPending(cast, cancelled: true);
             return;
         }
 
-        // 5. Debit once, apply cooldown, commit stub effect synchronously.
+        var hasHandler = LitanyHandlerCatalog.HasHandler(litany.Effect);
+        if (hasHandler && !TryValidateEffect(cast.Actor, litany, out _))
+        {
+            ClearPending(cast, cancelled: true);
+            return;
+        }
+
+        // 5. Debit once, apply cooldown, then apply the effect synchronously.
         if (cast.Cost > 0 && !_cruciform.TrySpend(cast.Actor, cast.Cost))
         {
             ClearPending(cast, cancelled: true);
@@ -223,7 +230,15 @@ public sealed partial class LitanySystem
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
 
-        // M3: no-op success stub. Real handlers land in later milestones.
+        if (hasHandler && !TryApplyEffect(cast.Actor, litany))
+        {
+            // Effect plan was validated; apply failure is unexpected. Cast is already
+            // committed so a second completion still no-ops via Committed.
+            ClearPending(cast, cancelled: false);
+            return;
+        }
+
+        // Unimplemented available effects keep the historical no-op success stub.
         // A second completion must no-op because Committed is set.
         ClearPending(cast, cancelled: false);
     }

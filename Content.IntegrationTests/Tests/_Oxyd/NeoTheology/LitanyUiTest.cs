@@ -31,6 +31,7 @@ public sealed class LitanyUiTest : GameTest
     private static readonly EntProtoId UpstreamBibleProto = "Bible";
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
+    private static readonly ProtoId<LitanyPrototype> SoulHunger = "OxydLitanySoulHunger";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Disciple = "OxydNtDisciple";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Preacher = "OxydNtPreacher";
 
@@ -165,8 +166,8 @@ public sealed class LitanyUiTest : GameTest
             Assert.That(relief.Phrase, Is.EqualTo("Semper invicta."));
             Assert.That(relief.Cost, Is.EqualTo(20d).Within(1e-9));
             Assert.That(relief.Category, Is.EqualTo(LitanyCategory.Common));
-            Assert.That(relief.UnavailableReason?.Id, Is.EqualTo("oxyd-litany-unavailable-foundation"));
-            Assert.That(relief.IsAvailable, Is.False);
+            Assert.That(relief.UnavailableReason, Is.Null);
+            Assert.That(relief.IsAvailable, Is.True);
 
             var viewer = PrepareBearer(map.GridCoords, Disciple);
             var snapshot = _litany.TestingBuildViewerSnapshot(viewer);
@@ -181,16 +182,19 @@ public sealed class LitanyUiTest : GameTest
                 Assert.That(entry.Phrase, Is.EqualTo(litany.Phrase), litany.ID);
                 Assert.That(entry.Cost, Is.EqualTo(litany.Cost).Within(1e-9), litany.ID);
                 Assert.That(entry.Category, Is.EqualTo(litany.Category), litany.ID);
-                Assert.That(entry.Available, Is.False,
-                    $"{litany.ID}: shipped catalog must present unavailable (fail-closed).");
-                Assert.That(entry.UnavailableReason, Is.Not.Null, litany.ID);
+                var expectAvailable = litany.Effect is LitanyEffectKind.Relief or LitanyEffectKind.SoulHunger;
+                Assert.That(entry.Available, Is.EqualTo(expectAvailable),
+                    $"{litany.ID}: Packet B medical only should be available for entitled disciple.");
+                if (!expectAvailable)
+                    Assert.That(entry.UnavailableReason, Is.Not.Null, litany.ID);
             }
 
             var reliefEntry = byId[Relief.Id];
             Assert.That(reliefEntry.Phrase, Is.EqualTo("Semper invicta."));
             Assert.That(reliefEntry.Cost, Is.EqualTo(20d).Within(1e-9));
             Assert.That(reliefEntry.Category, Is.EqualTo(LitanyCategory.Common));
-            Assert.That(reliefEntry.UnavailableReason?.Id, Is.EqualTo("oxyd-litany-unavailable-foundation"));
+            Assert.That(reliefEntry.Available, Is.True);
+            Assert.That(reliefEntry.UnavailableReason, Is.Null);
         });
     }
 
@@ -298,17 +302,23 @@ public sealed class LitanyUiTest : GameTest
     }
 
     [Test]
-    public async Task Catalog_ZeroIsAvailable_NoImplementedAdds()
+    public async Task Catalog_OnlyPacketBMedicalAvailable_WithHandlers()
     {
         await Server.WaitAssertion(() =>
         {
             _litany.TestingClearAvailabilityOverrides();
-            var available = _prototypes.EnumeratePrototypes<LitanyPrototype>().Count(l => l.IsAvailable);
-            Assert.That(available, Is.EqualTo(0),
-                "Shipped litany catalog must remain fail-closed with zero IsAvailable entries.");
-            Assert.That(LitanyHandlerCatalog.Implemented, Is.Empty,
-                "LitanyHandlerCatalog.Implemented must stay empty until CE adds concrete handlers.");
-            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.False);
+            var available = _prototypes.EnumeratePrototypes<LitanyPrototype>()
+                .Where(l => l.IsAvailable)
+                .Select(l => l.Effect)
+                .ToHashSet();
+            Assert.That(available, Is.EquivalentTo(new[]
+            {
+                LitanyEffectKind.Relief,
+                LitanyEffectKind.SoulHunger,
+            }));
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(2));
         });
     }
 

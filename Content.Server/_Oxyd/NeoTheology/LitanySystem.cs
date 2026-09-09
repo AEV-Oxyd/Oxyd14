@@ -16,8 +16,9 @@ using Robust.Shared.Timing;
 namespace Content.Server._Oxyd.NeoTheology;
 
 /// <summary>
-/// Milestone 3: speech recognition and the server cast transaction state machine.
-/// Effect handlers remain out of scope; available litanies may commit a no-op stub.
+/// Speech recognition and the server cast transaction state machine.
+/// Packet B medical handlers (Relief, SoulHunger) live in LitanySystem.Medical.cs;
+/// unimplemented available effects may still commit a no-op stub.
 /// </summary>
 public sealed partial class LitanySystem : EntitySystem
 {
@@ -174,6 +175,10 @@ public sealed partial class LitanySystem : EntitySystem
         var holiness = _cruciform.GetHoliness(actor);
         if (litany.Cost > 0 && !NeoTheologyHoliness.CanAfford(holiness, litany.Cost, GetDebitTolerance()))
             return LitanyActionResult.Fail("oxyd-litany-no-cost");
+
+        if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
+            !TryValidateEffect(actor, litany, out var effectFail))
+            return LitanyActionResult.Fail(effectFail ?? "oxyd-litany-no-effect");
 
         var requestId = NextRequestId();
         var now = _timing.CurTime;
