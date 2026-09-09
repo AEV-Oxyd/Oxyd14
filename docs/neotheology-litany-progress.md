@@ -9,7 +9,7 @@ rules support, private UI contracts/client presentation, and their focused tests
 
 ## Baseline and validation evidence
 
-- Branch: `eris-litany-port` @ `73c19fc182` (Milestone 1 verified).
+- Branch: `eris-litany-port` @ `2b008ab721` (Milestone 1 verified).
 - RobustToolbox: `af2a7d0406`. SDK: `10.0.203`.
 - M1 policy: catalog has 60 rows (23 foundation + 37 dependency-gated); **0**
   `IsAvailable` until a runtime handler is registered. Foundation rows use
