@@ -160,11 +160,9 @@ public sealed partial class LitanyParameters
 [DataDefinition]
 public sealed partial class LitanyHealData
 {
+    /// <summary>Negative values heal; the validator rejects non-negative entries.</summary>
     [DataField]
     public DamageSpecifier Damage = new();
-
-    [DataField]
-    public EntProtoId? Analgesia;
 }
 
 [DataDefinition]

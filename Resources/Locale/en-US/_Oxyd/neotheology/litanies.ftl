@@ -1,5 +1,5 @@
 oxyd-litany-relief-name = Relief
-oxyd-litany-relief-desc = Apply temporary analgesia to yourself.
+oxyd-litany-relief-desc = Heal a small amount of brute and burn damage from yourself.
 oxyd-litany-soul-hunger-name = Soul Hunger
 oxyd-litany-soul-hunger-desc = Restore hunger at the cost of a small heat injury.
 oxyd-litany-entreaty-name = Entreaty

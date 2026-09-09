@@ -7,7 +7,6 @@ using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Nutrition.Components;
 using Content.Shared.Nutrition.EntitySystems;
-using Content.Shared.StatusEffectNew;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.NeoTheology;
@@ -23,7 +22,6 @@ public sealed partial class LitanySystem
     [Dependency] private readonly DamageableSystem _damageable = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SatiationSystem _satiation = default!;
-    [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
 
     /// <summary>
     /// Validates that the litany's effect can apply to the actor. Called before debit
@@ -61,7 +59,7 @@ public sealed partial class LitanySystem
     private bool TryValidateRelief(EntityUid actor, LitanyPrototype litany, out LocId? failure)
     {
         failure = null;
-        if (litany.Parameters?.Healing?.Analgesia is not { } analgesia)
+        if (litany.Parameters?.Healing is not { } healing || healing.Damage.Empty)
         {
             failure = "oxyd-litany-no-effect";
             return false;
@@ -73,23 +71,7 @@ public sealed partial class LitanySystem
             return false;
         }
 
-        // OxydNtAnalgesia whitelist requires MobState + MobThresholds.
-        if (!HasComp<MobStateComponent>(actor) || !HasComp<MobThresholdsComponent>(actor))
-        {
-            failure = "oxyd-litany-no-effect";
-            return false;
-        }
-
-        var duration = litany.EffectDuration > TimeSpan.Zero
-            ? litany.EffectDuration
-            : TimeSpan.FromSeconds(60);
-        if (duration <= TimeSpan.Zero)
-        {
-            failure = "oxyd-litany-no-effect";
-            return false;
-        }
-
-        if (!ProtoMan.TryIndex(analgesia, out _))
+        if (!HasComp<DamageableComponent>(actor) || HasComp<GodmodeComponent>(actor))
         {
             failure = "oxyd-litany-no-effect";
             return false;
@@ -100,15 +82,19 @@ public sealed partial class LitanySystem
 
     private bool TryApplyRelief(EntityUid actor, LitanyPrototype litany)
     {
-        if (litany.Parameters?.Healing?.Analgesia is not { } analgesia)
+        if (litany.Parameters?.Healing is not { } healing)
             return false;
 
-        var duration = litany.EffectDuration > TimeSpan.Zero
-            ? litany.EffectDuration
-            : TimeSpan.FromSeconds(60);
-
-        // Max(remaining, new) — refresh-not-stack / non-additive.
-        return _statusEffects.TryUpdateStatusEffectDuration(actor, analgesia, duration);
+        // Negative catalog values heal. Casting at full health is a no-op but still
+        // spends holiness, matching Eris relief always applying.
+        _damageable.TryChangeDamage(
+            actor,
+            healing.Damage,
+            ignoreResistances: true,
+            interruptsDoAfters: false,
+            origin: actor,
+            ignoreGlobalModifiers: true);
+        return true;
     }
 
     private bool TryValidateSoulHunger(EntityUid actor, LitanyPrototype litany, out LocId? failure)

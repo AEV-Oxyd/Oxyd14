@@ -35,7 +35,6 @@
           Brute: -20
           Heat: -20
           Asphyxiation: -40
-      analgesia: OxydNtAnalgesia
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 
@@ -62,7 +61,6 @@
           Brute: -20
           Heat: -20
           Asphyxiation: -40
-      analgesia: OxydNtAnalgesia
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 

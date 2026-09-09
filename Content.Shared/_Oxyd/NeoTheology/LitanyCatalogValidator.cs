@@ -430,9 +430,6 @@ public static class LitanyCatalogValidator
                     if (value.Value >= 0)
                         errors.Add($"{litany.ID} healing for {damageType} must use a negative damage value.");
                 }
-
-                if (healing.Analgesia is { } analgesia && !prototypes.TryIndex(analgesia, out _))
-                    errors.Add($"{litany.ID} references unknown analgesia prototype {analgesia.Id}.");
             }
         }
 
@@ -440,8 +437,8 @@ public static class LitanyCatalogValidator
         {
             case LitanyEffectKind.Relief:
             case LitanyEffectKind.HandOfMercy:
-                if (parameters?.Healing?.Analgesia is null)
-                    errors.Add($"{litany.ID} requires analgesia parameters.");
+                if (parameters?.Healing is null || parameters.Healing.Damage.Empty)
+                    errors.Add($"{litany.ID} requires healing parameters.");
                 break;
             case LitanyEffectKind.SoulHunger:
                 if (parameters?.Healing is null ||

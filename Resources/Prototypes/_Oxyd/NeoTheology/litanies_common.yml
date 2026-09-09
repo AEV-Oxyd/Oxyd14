@@ -16,7 +16,10 @@
   effectDuration: 60
   parameters:
     healing:
-      analgesia: OxydNtAnalgesia
+      damage:
+        types:
+          Blunt: -5
+          Heat: -5
   enabled: true
 
 - type: oxydLitany

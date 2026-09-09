@@ -13,8 +13,6 @@ using Content.Shared.FixedPoint;
 using Content.Shared.Implants;
 using Content.Shared.Nutrition.Components;
 using Content.Shared.Nutrition.EntitySystems;
-using Content.Shared.StatusEffectNew;
-using Content.Shared.Traits.Assorted;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -32,7 +30,6 @@ public sealed class LitanyEffectsMedicalTest : GameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";
-    private static readonly EntProtoId AnalgesiaProto = "OxydNtAnalgesia";
     private static readonly ProtoId<DamageTypePrototype> BluntDamage = "Blunt";
     private static readonly ProtoId<DamageTypePrototype> HeatDamage = "Heat";
     private static readonly ProtoId<DamageTypePrototype> ShockDamage = "Shock";
@@ -57,13 +54,12 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
     [SidedDependency(Side.Server)] private readonly IPrototypeManager _prototypes = default!;
-    [SidedDependency(Side.Server)] private readonly StatusEffectsSystem _status = default!;
     [SidedDependency(Side.Server)] private readonly DamageableSystem _damageable = default!;
     [SidedDependency(Side.Server)] private readonly SatiationSystem _satiation = default!;
     [SidedDependency(Side.Server)] private readonly IGameTiming _timing = default!;
 
     [Test]
-    public async Task Relief_AppliesAnalgesia60s_NoBruteBurnHeal_RefreshNotStack()
+    public async Task Relief_HealsBluntAndHeat_NoStatusEffect()
     {
         var map = await Pair.CreateTestMap();
         EntityUid body = default;
@@ -75,13 +71,14 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             body = PrepareCaster(map.GridCoords, Relief);
             var proto = _prototypes.Index(Relief);
             Assert.That(proto.Cost, Is.EqualTo(20));
-            Assert.That(proto.EffectDuration, Is.EqualTo(TimeSpan.FromSeconds(60)));
             Assert.That(proto.IgnoreStuttering, Is.True);
-            Assert.That(proto.Parameters?.Healing?.Analgesia, Is.EqualTo(AnalgesiaProto));
+            Assert.That(
+                proto.Parameters?.Healing?.Damage.DamageDict.TryGetValue("Blunt", out var blunt) == true &&
+                blunt < FixedPoint2.Zero,
+                Is.True,
+                "Relief must heal through a negative Blunt damage value.");
 
-            // Seed Brute (Blunt) + Burn (Heat) so Relief must not heal them.
-            // SetDamage writes authoritative values (TryChangeDamage can report success without
-            // storing unsupported/converted types).
+            // Seed Blunt + Heat so the heal has something to remove.
             _damageable.SetDamage(body, new DamageSpecifier
             {
                 DamageDict =
@@ -105,61 +102,14 @@ public sealed class LitanyEffectsMedicalTest : GameTest
 
         await Server.WaitAssertion(() =>
         {
-            Assert.That(_status.HasStatusEffect(body, AnalgesiaProto), Is.True,
-                "Relief must apply OxydNtAnalgesia via PainNumbness status effect.");
-            Assert.That(_status.HasEffectComp<PainNumbnessStatusEffectComponent>(body), Is.True);
-            Assert.That(_status.TryGetTime(body, AnalgesiaProto, out var time), Is.True);
-            Assert.That(time.EndEffectTime, Is.Not.Null);
-            var remaining = time.EndEffectTime!.Value - _timing.CurTime;
-            Assert.That(remaining.TotalSeconds, Is.EqualTo(60).Within(2.5),
-                $"Relief analgesia remaining should be ~60s, was {remaining.TotalSeconds:F2}s.");
-
-            var damageable = SComp<DamageableComponent>(body);
-            Assert.That(DamageOf(body, "Blunt").Float(), Is.GreaterThanOrEqualTo(bluntBefore.Float() - 0.01f),
-                "Relief must not heal Brute/Blunt.");
-            Assert.That(DamageOf(body, "Heat").Float(), Is.GreaterThanOrEqualTo(heatBefore.Float() - 0.01f),
-                "Relief must not heal Burn/Heat.");
-        });
-
-        // Let some duration elapse, clear personal cooldown, recast — refresh max(remaining, 60), not stack-add.
-        await Pair.RunTicksSync(150);
-
-        await Server.WaitAssertion(() =>
-        {
-            Assert.That(_status.TryGetTime(body, AnalgesiaProto, out var mid), Is.True);
-            Assert.That(mid.EndEffectTime, Is.Not.Null);
-            var remainingBeforeRefresh = mid.EndEffectTime!.Value - _timing.CurTime;
-            Assert.That(remainingBeforeRefresh.TotalSeconds, Is.LessThan(55),
-                "Expected analgesia to have ticked down before refresh cast.");
-
-            StabilizeNeeds(body);
-            ClearPersonalCooldown(body, Relief.Id);
-            _cruciform.Refund(body, 20);
-
-            // Re-snapshot after the wait so satiation/environment damage is not attributed to Relief.
-            bluntBefore = DamageOf(body, "Blunt");
-            heatBefore = DamageOf(body, "Heat");
-
-            var begin = _litany.TryBeginLitany(body, Relief, LitanyCastOrigin.ManualSpeech);
-            Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "Relief refresh begin failed");
-        });
-
-        await AdvancePastCast();
-
-        await Server.WaitAssertion(() =>
-        {
-            Assert.That(_status.TryGetTime(body, AnalgesiaProto, out var refreshed), Is.True);
-            Assert.That(refreshed.EndEffectTime, Is.Not.Null);
-            var remaining = refreshed.EndEffectTime!.Value - _timing.CurTime;
-            Assert.That(remaining.TotalSeconds, Is.EqualTo(60).Within(2.5),
-                "Refresh must set remaining to max(old, 60s) (~60s), not stack-add durations.");
-            Assert.That(remaining.TotalSeconds, Is.LessThan(90),
-                "Refresh must not stack-add analgesia duration.");
-
-            Assert.That(DamageOf(body, "Blunt").Float(), Is.GreaterThanOrEqualTo(bluntBefore.Float() - 0.01f),
-                "Relief refresh must not heal Brute/Blunt.");
-            Assert.That(DamageOf(body, "Heat").Float(), Is.GreaterThanOrEqualTo(heatBefore.Float() - 0.01f),
-                "Relief refresh must not heal Burn/Heat.");
+            var bluntHealed = bluntBefore.Float() - DamageOf(body, "Blunt").Float();
+            var heatHealed = heatBefore.Float() - DamageOf(body, "Heat").Float();
+            Assert.That(bluntHealed, Is.EqualTo(5f).Within(0.75f),
+                "Relief must heal ~5 Blunt via the negative damage specifier.");
+            Assert.That(heatHealed, Is.EqualTo(5f).Within(0.75f),
+                "Relief must heal ~5 Heat via the negative damage specifier.");
+            Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(30).Within(0.01),
+                "Disciple 50 capacity - Relief 20 cost once.");
         });
     }
 
@@ -191,7 +141,6 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             holinessAfterSuccess = _cruciform.GetHoliness(body);
             Assert.That(holinessAfterSuccess, Is.EqualTo(30).Within(0.01),
                 "Disciple 50 capacity − Relief 20 cost once.");
-            Assert.That(_status.HasStatusEffect(body, AnalgesiaProto), Is.True);
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null);
         });
@@ -202,10 +151,6 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             RaiseStaleLitanyCompletion(body, successRequestId!);
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(holinessAfterSuccess).Within(0.01),
                 "Duplicate completion must not charge again.");
-            Assert.That(_status.TryGetTime(body, AnalgesiaProto, out var time), Is.True);
-            var remaining = time.EndEffectTime!.Value - _timing.CurTime;
-            Assert.That(remaining.TotalSeconds, Is.LessThan(90),
-                "Duplicate completion must not stack analgesia.");
         });
 
         // 2) Invalid begin no-op
@@ -214,28 +159,21 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         {
             Assert.That(_cruciform.TrySpend(body, _cruciform.GetHoliness(body)), Is.True);
             var before = _cruciform.GetHoliness(body);
-            var hadAnalgesia = _status.HasStatusEffect(body, AnalgesiaProto);
             var begin = _litany.TryBeginLitany(body, Relief, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.False);
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
-            Assert.That(_status.HasStatusEffect(body, AnalgesiaProto), Is.EqualTo(hadAnalgesia));
         });
 
         // 3) Interrupted delay refund (cancel before commit → no charge / no new effect)
         await Pair.RunTicksSync(60);
         await Server.WaitAssertion(() =>
         {
-            _status.TryRemoveStatusEffect(body, AnalgesiaProto);
             _cruciform.Refund(body, 50);
             ClearPersonalCooldown(body, Relief.Id);
         });
-        // PredictedQueueDel from TryRemoveStatusEffect needs a tick to settle.
-        await Pair.RunTicksSync(5);
         await Server.WaitAssertion(() =>
         {
-            Assert.That(_status.HasStatusEffect(body, AnalgesiaProto), Is.False,
-                "Precondition: analgesia cleared before interrupted cast.");
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, Relief, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "interrupt begin failed");
@@ -246,8 +184,6 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null);
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before).Within(0.01),
                 "Interrupted cast must refund / never charge.");
-            Assert.That(_status.HasStatusEffect(body, AnalgesiaProto), Is.False,
-                "Interrupted cast must not apply analgesia.");
             Assert.That(cancel.Success, Is.False); // cancel returns Fail("cancelled") by M3 contract
         });
     }

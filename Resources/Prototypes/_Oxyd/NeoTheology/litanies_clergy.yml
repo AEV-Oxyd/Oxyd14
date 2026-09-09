@@ -31,7 +31,10 @@
   effectDuration: 120
   parameters:
     healing:
-      analgesia: OxydNtAnalgesia
+      damage:
+        types:
+          Blunt: -10
+          Heat: -10
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 
