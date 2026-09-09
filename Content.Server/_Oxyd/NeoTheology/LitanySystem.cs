@@ -178,7 +178,7 @@ public sealed partial class LitanySystem : EntitySystem
             return cooldownFail;
 
         var holiness = _cruciform.GetHoliness(actor);
-        if (litany.Cost > 0 && !NeoTheologyHoliness.CanAfford(holiness, litany.Cost, GetDebitTolerance()))
+        if (litany.Cost > 0 && !NeoTheologyHoliness.CanAfford(holiness, litany.Cost, _cruciform.GetDebitTolerance()))
             return LitanyActionResult.Fail("oxyd-litany-no-cost");
 
         if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
@@ -312,13 +312,6 @@ public sealed partial class LitanySystem : EntitySystem
         }
 
         return true;
-    }
-
-    private double GetDebitTolerance()
-    {
-        return ProtoMan.TryIndex<NeoTheologyRulesPrototype>("OxydNtRules", out var rules)
-            ? rules.DebitTolerance
-            : 0.001d;
     }
 
     private string NextRequestId()

@@ -481,7 +481,7 @@ public sealed partial class CruciformSystem : EntitySystem
         return selected;
     }
 
-    private double GetDebitTolerance()
+    public double GetDebitTolerance()
     {
         var rules = GetRules();
         return rules is { DebitTolerance: var tolerance } && double.IsFinite(tolerance) && tolerance >= 0
