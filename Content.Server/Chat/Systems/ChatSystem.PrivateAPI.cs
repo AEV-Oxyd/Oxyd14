@@ -17,6 +17,13 @@ public sealed partial class ChatSystem
     /// <summary>Monotonic sequence for <see cref="LitanySpeechAcceptedEvent"/>.</summary>
     private ulong _litanySpeechSequence;
 
+    /// <summary>
+    /// Next sequence that will be stamped on the following accepted Speak/Whisper
+    /// <see cref="LitanySpeechAcceptedEvent"/>. Used by book casts to bind the
+    /// synchronous utterance they are about to emit.
+    /// </summary>
+    public ulong PeekNextLitanySpeechSequence() => _litanySpeechSequence + 1;
+
     private void SendEntitySpeak(
         MessageData msg,
         string? nameOverride,

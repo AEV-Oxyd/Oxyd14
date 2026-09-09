@@ -107,7 +107,7 @@ public sealed partial class LitanySystem
 
         // Claim the next accepted local Speak for this pending book cast.
         cast.AwaitingBookSpeech = true;
-        cast.ExpectedSpeechSequence = null;
+        cast.ExpectedSpeechSequence = _chat.PeekNextLitanySpeechSequence();
 
         // Speak without ignoreActionBlocker; radio prefixes disabled so the phrase is local.
         // TrySendInGameICMessage raises LitanySpeechAcceptedEvent synchronously on success.
