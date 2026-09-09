@@ -23,3 +23,6 @@ oxyd-litany-denied-unknown-request = That litany request is unknown.
 oxyd-litany-denied-already-committed = That litany has already completed.
 oxyd-litany-denied-rate-limit = You are chanting too quickly.
 oxyd-litany-no-effect = The litany could not take hold.
+
+oxyd-litany-entreaty-notice = { $name }, faithful cruciform follower, cries for salvation at { $location }!
+oxyd-litany-cruciform-sense-notice = { $name } has a cruciform installed.

@@ -182,9 +182,12 @@ public sealed class LitanyUiTest : GameTest
                 Assert.That(entry.Phrase, Is.EqualTo(litany.Phrase), litany.ID);
                 Assert.That(entry.Cost, Is.EqualTo(litany.Cost).Within(1e-9), litany.ID);
                 Assert.That(entry.Category, Is.EqualTo(litany.Category), litany.ID);
-                var expectAvailable = litany.Effect is LitanyEffectKind.Relief or LitanyEffectKind.SoulHunger;
+                var expectAvailable = litany.Effect is LitanyEffectKind.Relief
+                    or LitanyEffectKind.SoulHunger
+                    or LitanyEffectKind.Entreaty
+                    or LitanyEffectKind.CruciformSense;
                 Assert.That(entry.Available, Is.EqualTo(expectAvailable),
-                    $"{litany.ID}: Packet B medical only should be available for entitled disciple.");
+                    $"{litany.ID}: Packet C (Relief/SoulHunger/Entreaty/CruciformSense) should be available for entitled disciple.");
                 if (!expectAvailable)
                     Assert.That(entry.UnavailableReason, Is.Not.Null, litany.ID);
             }
@@ -302,7 +305,7 @@ public sealed class LitanyUiTest : GameTest
     }
 
     [Test]
-    public async Task Catalog_OnlyPacketBMedicalAvailable_WithHandlers()
+    public async Task Catalog_PacketCAvailable_WithHandlers()
     {
         await Server.WaitAssertion(() =>
         {
@@ -315,10 +318,14 @@ public sealed class LitanyUiTest : GameTest
             {
                 LitanyEffectKind.Relief,
                 LitanyEffectKind.SoulHunger,
+                LitanyEffectKind.Entreaty,
+                LitanyEffectKind.CruciformSense,
             }));
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
-            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(2));
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Entreaty), Is.True);
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.CruciformSense), Is.True);
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(4));
         });
     }
 

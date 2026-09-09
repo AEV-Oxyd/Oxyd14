@@ -26,7 +26,7 @@ public sealed class LitanyCastTest : GameTest
     private static readonly EntProtoId BibleProto = "OxydNtBible";
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
-    private static readonly ProtoId<LitanyPrototype> Entreaty = "OxydLitanyEntreaty";
+    private static readonly ProtoId<LitanyPrototype> Revelation = "OxydLitanyRevelation";
 
     public override PoolSettings PoolSettings => new()
     {
@@ -251,8 +251,8 @@ public sealed class LitanyCastTest : GameTest
             var body = PrepareCaster(map.GridCoords);
             _litany.TestingClearAvailabilityOverrides();
             var before = _cruciform.GetHoliness(body);
-            Assert.That(_prototypes.Index(Entreaty).IsAvailable, Is.False);
-            var result = _litany.TryBeginLitany(body, Entreaty, LitanyCastOrigin.ManualSpeech);
+            Assert.That(_prototypes.Index(Revelation).IsAvailable, Is.False);
+            var result = _litany.TryBeginLitany(body, Revelation, LitanyCastOrigin.ManualSpeech);
             Assert.That(result.Success, Is.False);
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
@@ -260,7 +260,7 @@ public sealed class LitanyCastTest : GameTest
     }
 
     [Test]
-    public async Task ShippedCatalog_OnlyPacketBMedicalAvailable()
+    public async Task ShippedCatalog_OnlyPacketCEffectsAvailable()
     {
         await Server.WaitAssertion(() =>
         {
@@ -270,7 +270,13 @@ public sealed class LitanyCastTest : GameTest
                 .Select(l => l.ID)
                 .OrderBy(id => id)
                 .ToArray();
-            Assert.That(available, Is.EquivalentTo(new[] { Relief.Id, "OxydLitanySoulHunger" }));
+            Assert.That(available, Is.EquivalentTo(new[]
+            {
+                "OxydLitanyCruciformSense",
+                "OxydLitanyEntreaty",
+                Relief.Id,
+                "OxydLitanySoulHunger",
+            }));
         });
     }
 

@@ -10,11 +10,13 @@ public static class LitanyHandlerCatalog
 {
     public const int ExpectedFoundationEffectCount = 23;
 
-    /// <summary>Effects with an actual commit handler. Packet B: Relief + SoulHunger.</summary>
+    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense.</summary>
     public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
     {
         LitanyEffectKind.Relief,
         LitanyEffectKind.SoulHunger,
+        LitanyEffectKind.Entreaty,
+        LitanyEffectKind.CruciformSense,
     }.ToFrozenSet();
 
     /// <summary>

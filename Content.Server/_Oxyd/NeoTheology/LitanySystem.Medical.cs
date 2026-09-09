@@ -13,7 +13,7 @@ using Robust.Shared.Prototypes;
 namespace Content.Server._Oxyd.NeoTheology;
 
 /// <summary>
-/// M4 Packet B: Relief (analgesia) and SoulHunger (satiation + Heat) commit handlers.
+/// M4 Packet B/C effect dispatch: Relief, SoulHunger, Entreaty, CruciformSense.
 /// </summary>
 public sealed partial class LitanySystem
 {
@@ -36,6 +36,8 @@ public sealed partial class LitanySystem
         {
             LitanyEffectKind.Relief => TryValidateRelief(actor, litany, out failure),
             LitanyEffectKind.SoulHunger => TryValidateSoulHunger(actor, litany, out failure),
+            LitanyEffectKind.Entreaty => TryValidateEntreaty(actor, litany, out failure),
+            LitanyEffectKind.CruciformSense => TryValidateCruciformSense(actor, litany, out failure),
             _ => true,
         };
     }
@@ -50,6 +52,8 @@ public sealed partial class LitanySystem
         {
             LitanyEffectKind.Relief => TryApplyRelief(actor, litany),
             LitanyEffectKind.SoulHunger => TryApplySoulHunger(actor, litany),
+            LitanyEffectKind.Entreaty => TryApplyEntreaty(actor, litany),
+            LitanyEffectKind.CruciformSense => TryApplyCruciformSense(actor, litany),
             _ => true,
         };
     }

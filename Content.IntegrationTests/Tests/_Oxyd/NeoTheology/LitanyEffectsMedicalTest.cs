@@ -39,10 +39,12 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
     private static readonly ProtoId<LitanyPrototype> SoulHunger = "OxydLitanySoulHunger";
 
-    private static readonly LitanyEffectKind[] PacketBImplemented =
+    private static readonly LitanyEffectKind[] PacketCImplemented =
     [
         LitanyEffectKind.Relief,
         LitanyEffectKind.SoulHunger,
+        LitanyEffectKind.Entreaty,
+        LitanyEffectKind.CruciformSense,
     ];
 
     public override PoolSettings PoolSettings => new()
@@ -481,38 +483,17 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     }
 
     [Test]
-    public async Task Catalog_OnlyReliefAndSoulHungerAvailable()
+    public async Task Catalog_PacketCAvailableIncludesMedical()
     {
         await Server.WaitAssertion(() =>
         {
             _litany.TestingClearAvailabilityOverrides();
 
-            // Fail-closed Packet B gate: Implemented must be exactly Relief + SoulHunger.
+            // Packet C supersedes Packet B: medical handlers remain Implemented alongside social.
             Assert.That(
                 LitanyHandlerCatalog.Implemented,
-                Is.EquivalentTo(PacketBImplemented),
-                "Packet B: LitanyHandlerCatalog.Implemented must be exactly {Relief, SoulHunger}.");
-
-            foreach (var effect in LitanyHandlerCatalog.Foundation)
-            {
-                if (PacketBImplemented.Contains(effect))
-                    continue;
-                Assert.That(LitanyHandlerCatalog.HasHandler(effect), Is.False,
-                    $"Foundation effect {effect} must remain unimplemented / fail-closed.");
-                Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(effect), Is.False,
-                    $"Foundation effect {effect} must not allow enabled catalog entries yet.");
-            }
-
-            var available = _prototypes.EnumeratePrototypes<LitanyPrototype>()
-                .Where(l => l.IsAvailable)
-                .Select(l => l.ID)
-                .OrderBy(id => id)
-                .ToArray();
-
-            Assert.That(
-                available,
-                Is.EquivalentTo(new[] { Relief.Id, SoulHunger.Id }),
-                "Packet B: only OxydLitanyRelief and OxydLitanySoulHunger may be IsAvailable.");
+                Is.EquivalentTo(PacketCImplemented),
+                "Packet C: Implemented must be {Relief, SoulHunger, Entreaty, CruciformSense}.");
 
             Assert.That(_prototypes.Index(Relief).IsAvailable, Is.True);
             Assert.That(_prototypes.Index(SoulHunger).IsAvailable, Is.True);

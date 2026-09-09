@@ -57,8 +57,7 @@
   cooldownScope: Personal
   cooldownDuration: 60
   ignoreStuttering: true
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
   sourcePath: /datum/ritual/cruciform/base/entreaty
 
 - type: oxydLitany
@@ -114,8 +113,7 @@
   cooldownKey: OxydLitanyCruciformSense
   cooldownScope: Personal
   cooldownDuration: 60
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
   sourcePath: /datum/ritual/cruciform/base/sense_cruciform
 
 - type: oxydLitany

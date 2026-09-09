@@ -39,6 +39,8 @@ public sealed class LitanyCatalogPolicyTest
     [
         LitanyEffectKind.Relief,
         LitanyEffectKind.SoulHunger,
+        LitanyEffectKind.Entreaty,
+        LitanyEffectKind.CruciformSense,
     ];
 
     [Test]
@@ -65,7 +67,7 @@ public sealed class LitanyCatalogPolicyTest
     }
 
     [Test]
-    public void PlannedFoundationEffectsAreNotRuntimeHandlers_ExceptPacketB()
+    public void PlannedFoundationEffectsAreNotRuntimeHandlers_ExceptImplemented()
     {
         foreach (var effect in FoundationEffects)
         {
@@ -79,8 +81,8 @@ public sealed class LitanyCatalogPolicyTest
     public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
     {
         var errors = LitanyCatalogValidator.ValidateMissingHandler(
-            "OxydLitanyEntreaty",
-            LitanyEffectKind.Entreaty,
+            "OxydLitanyRevelation",
+            LitanyEffectKind.Revelation,
             isAvailable: true);
 
         Assert.That(errors, Has.Count.EqualTo(1));
@@ -88,14 +90,22 @@ public sealed class LitanyCatalogPolicyTest
     }
 
     [Test]
-    public void PacketBImplementedEffectsAllowEnabledCatalogEntries()
+    public void PacketCImplementedEffectsAllowEnabledCatalogEntries()
     {
         Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.Relief), Is.True);
         Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.SoulHunger), Is.True);
+        Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.Entreaty), Is.True);
+        Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(LitanyEffectKind.CruciformSense), Is.True);
         Assert.That(
             LitanyCatalogValidator.ValidateMissingHandler(
-                "OxydLitanyRelief",
-                LitanyEffectKind.Relief,
+                "OxydLitanyEntreaty",
+                LitanyEffectKind.Entreaty,
+                isAvailable: true),
+            Is.Empty);
+        Assert.That(
+            LitanyCatalogValidator.ValidateMissingHandler(
+                "OxydLitanyCruciformSense",
+                LitanyEffectKind.CruciformSense,
                 isAvailable: true),
             Is.Empty);
     }

@@ -17,7 +17,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 
 /// <summary>
 /// Speech recognition and the server cast transaction state machine.
-/// Packet B medical handlers (Relief, SoulHunger) live in LitanySystem.Medical.cs;
+/// Packet B/C handlers live in LitanySystem.Medical.cs / LitanySystem.Social.cs;
 /// unimplemented available effects may still commit a no-op stub.
 /// </summary>
 public sealed partial class LitanySystem : EntitySystem
@@ -162,8 +162,13 @@ public sealed partial class LitanySystem : EntitySystem
                 return LitanyActionResult.Fail("oxyd-litany-denied-book-hand");
         }
 
-        // M3: only Self/None modes without choice tokens. Other modes need M4 targeting.
-        if (litany.TargetMode is not (LitanyTargetMode.Self or LitanyTargetMode.None))
+        // Self/None and Packet C auto-resolved social modes (no choice token).
+        // Other targeted modes still need M4/M5 choice UI.
+        if (litany.TargetMode is not (
+                LitanyTargetMode.Self or
+                LitanyTargetMode.None or
+                LitanyTargetMode.StationFollower or
+                LitanyTargetMode.VisibleFollower))
             return LitanyActionResult.Fail("oxyd-litany-no-target");
 
         if (!string.IsNullOrEmpty(choiceToken))
