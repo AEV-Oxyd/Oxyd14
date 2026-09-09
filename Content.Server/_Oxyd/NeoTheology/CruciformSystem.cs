@@ -16,7 +16,6 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
-using Robust.Shared.Utility;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
@@ -173,7 +172,11 @@ public sealed partial class CruciformSystem : EntitySystem
 
         AdvanceHoliness((cruciform, component), ent.Owner);
         if (args.NewMobState == MobState.Dead)
+        {
             component.Active = false;
+            // Plan §5.2: death deactivates and cancels in-flight casts.
+            ent.Comp.PendingRequestId = null;
+        }
         else if (args.NewMobState == MobState.Alive && component.EverActivated)
             component.Active = true;
 

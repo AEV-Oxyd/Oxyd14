@@ -252,10 +252,13 @@ public sealed class CruciformLifecycleTest : GameTest
             var implant = Implant(body);
             Assert.That(_cruciform.Activate(body), Is.True);
             Assert.That(SComp<CruciformComponent>(implant).Active, Is.True);
+            SComp<CruciformBearerComponent>(body).PendingRequestId = "pending-at-death";
 
             _mobState.ChangeMobState(body, MobState.Dead);
             Assert.That(SComp<CruciformComponent>(implant).Active, Is.False);
             Assert.That(_cruciform.IsActiveBearer(body), Is.False);
+            Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null,
+                "Death must cancel pending casts (§5.2).");
 
             ExtractRecoverable(body, implant);
             Assert.That(SComp<CruciformComponent>(implant).EverActivated, Is.True);
