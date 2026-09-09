@@ -1,6 +1,6 @@
 # NeoTheology litany progress
 
-Status: **In progress** (Milestone 1 verified; Milestone 2 lifecycle tests verified; later milestones scaffolded)
+Status: **In progress** (Milestones 1–3 verified; later milestones scaffolded)
 
 This ledger records the current foundation/catalog work on the litany port. It is
 not a claim that the litany runtime is playable or at exact Eris parity. The
@@ -27,7 +27,7 @@ rules support, private UI contracts/client presentation, and their focused tests
 | --- | --- | --- |
 | 1. Baseline and shared contracts | **Verified** | Contracts + fail-closed validation. Evidence: unit NeoTheology **16/16**; integration LitanyPrototypeTest **3/3**; 60 `enabled:false` / 0 IsAvailable; no gameplay handlers. Later milestones remain scaffold-only. |
 | 2. Cruciform lifecycle | **Verified** | Implant/bearer lifecycle + focused tests. Evidence: `CruciformLifecycleTest` **8/8** (`FullyQualifiedName~CruciformLifecycle`); NeoTheology unit **16/16** still green. Covered: duplicate rejection (insert cancel, recoverable), extraction clears bearer/pending, DataField serialization + extracted-state persistence (full implanted-mob map-save not harness-supported), pending-cast clear on remove, promotion without refill, access tags when active, elapsed-time holiness regen, death deactivate + pending clear + reimplant resume. M1 catalog policy unchanged (60 `enabled:false`). Content-only; no RobustToolbox/engine edits. Not a claim that foundation is playable. |
-| 3. Speech and cast transaction | In progress | Chat's existing `EntitySpokeEvent` remains the future integration point, but the complete authoritative cast state machine and transaction tests are not evidenced by the checkpoint. |
+| 3. Speech and cast transaction | **Verified** | Narrow `LitanySpeechAcceptedEvent` + `LitanySystem` cast state machine. Evidence (tip filled at commit): `LitanyCastTest` **11/11**, `LitanySecurityTest` **3/3**, `CruciformLifecycleTest` **8/8**, NeoTheology unit **16/16**. Covered: manual/book speech, stutter exception (OriginalMessage), radio/emote/NPC rejection, duplicate begin, stale UI revision, no debit on failed preconditions, chat Speak hook begins cast, shipped catalog still **0 IsAvailable**. Availability for runtime exercised via test-local `TestingSetAvailabilityOverride` (no production `enabled:true`). Intentional deferrals: real effect handlers (M4+; M3 uses no-op success stub when available), full Bible UI polish/target tokens (M4), non-Self targeting, choice prompts, private denial popups/admin log polish. Content-only; dirty submodule `Oxyd14-port-eris-ironhammer` untouched. |
 | 4. Bible UI and common effects | In progress | Foundation catalog and private client UI contracts/presentation build successfully. Runtime handlers, interruption behavior, privacy isolation, and manual use are not verified. |
 | 5. Rank/medical/social foundation | In progress | The 15 milestone-5 chants are catalogued and shared holiness rules are testable. Effect handlers and their integration tests are not evidenced by the checkpoint. |
 | 6. Foundation integration review | Not started | Requires the complete build/test suite, prototype and map validation, logs/privacy review, and the two-client manual scenario. |

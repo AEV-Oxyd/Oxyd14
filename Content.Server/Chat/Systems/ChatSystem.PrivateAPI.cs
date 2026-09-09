@@ -1,5 +1,7 @@
 using System.Linq;
 using Content.Shared.Chat;
+using Content.Shared._Oxyd.NeoTheology;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Database;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Radio;
@@ -12,6 +14,9 @@ namespace Content.Server.Chat.Systems;
 
 public sealed partial class ChatSystem
 {
+    /// <summary>Monotonic sequence for <see cref="LitanySpeechAcceptedEvent"/>.</summary>
+    private ulong _litanySpeechSequence;
+
     private void SendEntitySpeak(
         MessageData msg,
         string? nameOverride,
@@ -89,6 +94,17 @@ public sealed partial class ChatSystem
 
         var ev = new EntitySpokeEvent(msg.speaker, message, null, null);
         RaiseLocalEvent(msg.speaker, ev, true);
+
+        // Narrow NeoTheology hook: once per accepted local Speak after transform.
+        var litanySpeech = new LitanySpeechAcceptedEvent(
+            msg.speaker,
+            msg.raw,
+            message,
+            LitanySpeechKind.Speak,
+            ++_litanySpeechSequence,
+            msg.category,
+            radioTransmitted: false);
+        RaiseLocalEvent(msg.speaker, litanySpeech, true);
 
         // To avoid logging any messages sent by entities that are not players, like vendors, cloning, etc.
         // Also doesn't log if hideLog is true.
@@ -194,6 +210,18 @@ public sealed partial class ChatSystem
 
         var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage);
         RaiseLocalEvent(msg.speaker, ev, true);
+
+        // Narrow NeoTheology hook: once per accepted Whisper; radio channel intent is preserved.
+        var litanySpeech = new LitanySpeechAcceptedEvent(
+            msg.speaker,
+            msg.raw,
+            message,
+            LitanySpeechKind.Whisper,
+            ++_litanySpeechSequence,
+            msg.category,
+            radioTransmitted: channel != null);
+        RaiseLocalEvent(msg.speaker, litanySpeech, true);
+
         if (!hideLog)
             if (msg.raw == message)
             {
