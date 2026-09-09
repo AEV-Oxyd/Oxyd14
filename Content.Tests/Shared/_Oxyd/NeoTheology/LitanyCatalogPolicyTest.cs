@@ -36,14 +36,14 @@ public sealed class LitanyCatalogPolicyTest
     ];
 
     [Test]
-    public void FoundationPolicy_ContainsExactlyTheEnabledEffects()
+    public void FoundationPolicy_ContainsExactlyThePlannedEffects()
     {
         Assert.That(LitanyHandlerCatalog.Implemented, Is.Empty);
         Assert.That(
-            LitanyHandlerCatalog.PendingFoundation,
+            LitanyHandlerCatalog.Foundation,
             Is.EquivalentTo(FoundationEffects));
         Assert.That(
-            LitanyHandlerCatalog.PendingFoundation,
+            LitanyHandlerCatalog.Foundation,
             Has.Count.EqualTo(LitanyHandlerCatalog.ExpectedFoundationEffectCount));
     }
 
@@ -54,14 +54,29 @@ public sealed class LitanyCatalogPolicyTest
 
         Assert.That(effectCount, Is.EqualTo(LitanyCatalogValidator.ExpectedLitanyCount));
         Assert.That(
-            effectCount - LitanyHandlerCatalog.PendingFoundation.Count,
+            effectCount - LitanyHandlerCatalog.Foundation.Count,
             Is.EqualTo(LitanyCatalogValidator.ExpectedDependencyGatedLitanyCount));
     }
 
     [Test]
-    public void PendingFoundationEffectsHaveExactlyOneRegistration()
+    public void PlannedFoundationEffectsAreNotRuntimeHandlers()
     {
         foreach (var effect in FoundationEffects)
-            Assert.That(LitanyHandlerCatalog.HasExactlyOneRegistration(effect), Is.True, effect.ToString());
+        {
+            Assert.That(LitanyHandlerCatalog.HasHandler(effect), Is.False, effect.ToString());
+            Assert.That(LitanyHandlerCatalog.AllowsEnabledCatalogEntry(effect), Is.False, effect.ToString());
+        }
+    }
+
+    [Test]
+    public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
+    {
+        var errors = LitanyCatalogValidator.ValidateMissingHandler(
+            "OxydLitanyRelief",
+            LitanyEffectKind.Relief,
+            isAvailable: true);
+
+        Assert.That(errors, Has.Count.EqualTo(1));
+        Assert.That(errors[0], Does.Contain("without a registered runtime handler"));
     }
 }

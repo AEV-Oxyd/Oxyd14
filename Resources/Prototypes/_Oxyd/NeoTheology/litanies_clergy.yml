@@ -33,6 +33,8 @@
   parameters:
     healing:
       analgesia: OxydNtAnalgesia
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/agrolyte/mercy
 
 - type: oxydLitany
@@ -46,6 +48,8 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 10
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/agrolyte/absolution
 
 - type: oxydLitany
@@ -75,6 +79,8 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 0
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/acolyte/convert
 
 - type: oxydLitany
@@ -115,6 +121,8 @@
         Cog: 10
         Bio: 10
       permanent: false
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/short_boost/mechanical
 
 - type: oxydLitany
@@ -139,6 +147,8 @@
         Tgh: 10
         Vig: 10
       permanent: false
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/short_boost/robustness
 
 - type: oxydLitany
@@ -168,6 +178,8 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 30
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/baptismal_record
 
 - type: oxydLitany
@@ -213,6 +225,8 @@
   targetMode: Self
   range: 0
   cost: 30
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/blessing
 
 - type: oxydLitany
@@ -229,6 +243,8 @@
   cooldownKey: OxydLitanyConfirmation
   cooldownScope: Personal
   cooldownDuration: 60
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/confirmation
 
 - type: oxydLitany
@@ -242,6 +258,8 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 15
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/adoption
 
 - type: oxydLitany
@@ -255,6 +273,8 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 15
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/ordination
 
 - type: oxydLitany
@@ -268,6 +288,8 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 30
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/omission
 
 - type: oxydLitany
@@ -284,6 +306,8 @@
   cooldownKey: OxydLitanyExcommunication
   cooldownScope: Personal
   cooldownDuration: 300
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/priest/excommunication
 
 - type: oxydLitany

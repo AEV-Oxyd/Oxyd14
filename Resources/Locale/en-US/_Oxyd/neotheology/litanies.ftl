@@ -114,6 +114,7 @@ oxyd-litany-call-to-battle-desc = Temporarily strengthen the caster according to
 oxyd-litany-searing-revelation-name = Searing Revelation
 oxyd-litany-searing-revelation-desc = Test visible nonfollowers with a short knockdown effect.
 
+oxyd-litany-unavailable-foundation = This litany is catalogued but its runtime handler has not been implemented yet.
 oxyd-litany-unavailable-purity = Requires the body-purity compatibility system.
 oxyd-litany-unavailable-threats = Requires explicit hostile and trap classifications.
 oxyd-litany-unavailable-attachments = Requires the cruciform attachment subsystem.

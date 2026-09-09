@@ -1,6 +1,6 @@
 # NeoTheology litany progress
 
-Status: **In progress**
+Status: **In progress** (Milestone 1 verified; later milestones scaffolded)
 
 This ledger records the current foundation/catalog work on the litany port. It is
 not a claim that the litany runtime is playable or at exact Eris parity. The
@@ -9,20 +9,22 @@ rules support, private UI contracts/client presentation, and their focused tests
 
 ## Baseline and validation evidence
 
-- The PR head is based directly on `origin/master` and contains the litany
-  support slice only.
-- SDK observed in the checkout: `10.0.203`.
-- Current validation evidence: the shared, server, and client projects build with
-  **0 errors**. The focused NeoTheology test filter passes **15/15** tests.
-- The current checks do not establish a complete test, integration-test,
-  prototype-validation, or two-client manual-scenario pass. Those remain required
-  before any foundation milestone can be marked `Verified`.
+- Branch: `eris-litany-port` (M1 tip SHA filled at commit).
+- RobustToolbox: `af2a7d0406`. SDK: `10.0.203`.
+- M1 policy: catalog has 60 rows (23 foundation + 37 dependency-gated); **0**
+  `IsAvailable` until a runtime handler is registered. Foundation rows use
+  `enabled: false` + `oxyd-litany-unavailable-foundation`. `LitanyHandlerCatalog.Implemented`
+  is empty; `AllowsEnabledCatalogEntry` requires Implemented only.
+- Server `LitanyPrototypeValidationSystem` fail-closed: validation errors clear
+  indexes, set `CatalogReady=false`, and throw on initial load / reload.
+- Focused NeoTheology unit filter: **16/16** passed (Content.Tests).
+- `LitanyPrototypeTest` (integration): **3/3** passed (`LoadedCatalogHasNoStructuralValidationErrors`, `CatalogHasExpectedAvailabilityAndStableIdentity`, `CatalogSerializationRoundTrips`); `CatalogReady` asserted true.
 
 ## Milestone ledger
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
-| 1. Baseline and shared contracts | In progress | Shared prototype/catalog contracts, phrase parsing, handler catalog, and holiness arithmetic are present. Focused pure-type tests pass 15/15; full catalog validation evidence is still outstanding. |
+| 1. Baseline and shared contracts | **Verified** | Contracts + fail-closed validation. Evidence: unit NeoTheology **16/16**; integration LitanyPrototypeTest **3/3**; 60 `enabled:false` / 0 IsAvailable; no gameplay handlers. Later milestones remain scaffold-only. |
 | 2. Cruciform lifecycle | In progress | Cruciform state/lifecycle scaffolding is present in the checkpoint worktree. Duplicate implant, extraction, save/load, death, pending-cast, and cleanup tests remain unverified. |
 | 3. Speech and cast transaction | In progress | Chat's existing `EntitySpokeEvent` remains the future integration point, but the complete authoritative cast state machine and transaction tests are not evidenced by the checkpoint. |
 | 4. Bible UI and common effects | In progress | Foundation catalog and private client UI contracts/presentation build successfully. Runtime handlers, interruption behavior, privacy isolation, and manual use are not verified. |
@@ -31,10 +33,11 @@ rules support, private UI contracts/client presentation, and their focused tests
 | 7. Dependency packets | Blocked | The named subsystem APIs below are not available for these rows; no gated chant is enabled as a fallback. |
 | 8. Full catalog audit | In progress | The catalog contains 60 entries and structural validation scaffolding. A complete source-to-port audit and passing validation run remain outstanding. |
 
-## Enabled foundation chants (23)
+## Planned foundation chants (23)
 
-These are the currently enabled, ungated entries. They are catalog availability,
-not proof of a committed runtime handler.
+These are the ungated foundation catalog rows. Under the M1 policy they are
+`enabled: false` (`IsAvailable == false`) until a runtime handler lands; they
+are reference material only, not castable.
 
 ### Common and machinery foundation
 

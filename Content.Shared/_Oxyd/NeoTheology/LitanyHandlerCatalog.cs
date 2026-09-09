@@ -3,9 +3,8 @@ using System.Collections.Frozen;
 namespace Content.Shared._Oxyd.NeoTheology;
 
 /// <summary>
-/// Tracks which litany effects currently have a server commit handler versus which
-/// foundation effects are catalogued but not yet implemented. An enabled, ungated
-/// chant must appear in exactly one of these sets.
+/// Separates the planned foundation catalog from effects that have a concrete
+/// server commit handler. Catalog membership never grants runtime authority.
 /// </summary>
 public static class LitanyHandlerCatalog
 {
@@ -15,10 +14,10 @@ public static class LitanyHandlerCatalog
     public static readonly FrozenSet<LitanyEffectKind> Implemented = FrozenSet<LitanyEffectKind>.Empty;
 
     /// <summary>
-    /// Foundation effects that are allowed to be enabled in the catalog before their
-    /// handler exists. Move an entry to <see cref="Implemented"/> when the handler is added.
+    /// Foundation effects planned for milestones 4 and 5. These entries may be
+    /// displayed as unavailable reference material, but are not castable.
     /// </summary>
-    public static readonly FrozenSet<LitanyEffectKind> PendingFoundation = new HashSet<LitanyEffectKind>
+    public static readonly FrozenSet<LitanyEffectKind> Foundation = new HashSet<LitanyEffectKind>
     {
         LitanyEffectKind.Relief,
         LitanyEffectKind.SoulHunger,
@@ -52,11 +51,6 @@ public static class LitanyHandlerCatalog
 
     public static bool AllowsEnabledCatalogEntry(LitanyEffectKind effect)
     {
-        return Implemented.Contains(effect) || PendingFoundation.Contains(effect);
-    }
-
-    public static bool HasExactlyOneRegistration(LitanyEffectKind effect)
-    {
-        return Implemented.Contains(effect) != PendingFoundation.Contains(effect);
+        return Implemented.Contains(effect);
     }
 }

@@ -37,6 +37,8 @@
           Heat: -20
           Asphyxiation: -40
       analgesia: OxydNtAnalgesia
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/inquisitor/convalescence
 
 - type: oxydLitany
@@ -63,6 +65,8 @@
           Heat: -20
           Asphyxiation: -40
       analgesia: OxydNtAnalgesia
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/inquisitor/succour
 
 - type: oxydLitany
@@ -93,6 +97,8 @@
   targetMode: StationFollower
   range: 0
   cost: 30
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/inquisitor/sending
 
 - type: oxydLitany

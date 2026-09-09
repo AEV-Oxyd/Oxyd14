@@ -41,6 +41,8 @@
   targetMode: FrontMachine
   range: 1.5
   cost: 0
+  enabled: false
+  unavailableReason: oxyd-litany-unavailable-foundation
   sourcePath: /datum/ritual/cruciform/machines/lock_door
 
 - type: oxydLitany
