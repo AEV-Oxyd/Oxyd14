@@ -1,5 +1,7 @@
 using System.Linq;
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.Skills;
+using Content.Shared.Damage;
 using Robust.Shared.Localization;
 using Robust.Shared.Prototypes;
 
@@ -70,7 +72,6 @@ public static class LitanyCatalogValidator
         {
             ValidateLitany(
                 litany,
-                prototypes,
                 localization,
                 phrases,
                 setMembership,
@@ -251,7 +252,6 @@ public static class LitanyCatalogValidator
 
     private static void ValidateLitany(
         LitanyPrototype litany,
-        IPrototypeManager prototypes,
         ILocalizationManager localization,
         Dictionary<string, string> phrases,
         Dictionary<string, HashSet<string>> setMembership,
@@ -360,76 +360,38 @@ public static class LitanyCatalogValidator
                 errors.Add($"Set {setId} includes {litany.ID} but the litany does not list that grant.");
         }
 
-        ValidateParameters(litany, prototypes, errors);
+        ValidateEffects(litany, errors);
     }
 
-    private static void ValidateParameters(
-        LitanyPrototype litany,
-        IPrototypeManager prototypes,
-        List<string> errors)
+    private static void ValidateEffects(LitanyPrototype litany, List<string> errors)
     {
-        var parameters = litany.Parameters;
-        var allowsHealing = litany.Effect is LitanyEffectKind.Relief
-            or LitanyEffectKind.SoulHunger
-            or LitanyEffectKind.HandOfMercy
-            or LitanyEffectKind.Convalescence
-            or LitanyEffectKind.Succour;
-        var allowsSkills = litany.Effect is LitanyEffectKind.GraceOfPerseverance
-            or LitanyEffectKind.UpholdHolyWord;
-        var allowsMachine = litany.Effect is LitanyEffectKind.Resurrection
-            or LitanyEffectKind.MakeCruciform
-            or LitanyEffectKind.ActivateDoor
-            or LitanyEffectKind.RepairDoor
-            or LitanyEffectKind.PowerBiogenerator
-            or LitanyEffectKind.BioreactorSolution
-            or LitanyEffectKind.BioreactorChamber;
-        var allowsGroup = litany.Effect is LitanyEffectKind.PoundingWhisper
-            or LitanyEffectKind.RevelationOfSecrets
-            or LitanyEffectKind.LispOfVitae
-            or LitanyEffectKind.CantoOfCourage
-            or LitanyEffectKind.ChantOfObservance
-            or LitanyEffectKind.ReclamationOfEndurance
-            or LitanyEffectKind.Sanctify
-            or LitanyEffectKind.Crusade;
-
-        if (parameters != null)
+        foreach (var effect in litany.Effects)
         {
-            var parameterFamilies = (parameters.Healing != null ? 1 : 0)
-                                    + (parameters.Skills != null ? 1 : 0)
-                                    + (parameters.Machine != null ? 1 : 0)
-                                    + (parameters.Group != null ? 1 : 0);
-            if (parameterFamilies == 0)
-                errors.Add($"{litany.ID} has an empty parameter block.");
-            if (parameters.Healing != null && !allowsHealing)
-                errors.Add($"{litany.ID} has unexpected healing parameters.");
-            if (parameters.Skills != null && !allowsSkills)
-                errors.Add($"{litany.ID} has unexpected skill parameters.");
-            if (parameters.Machine != null && !allowsMachine)
-                errors.Add($"{litany.ID} has unexpected machine parameters.");
-            if (parameters.Group != null && !allowsGroup)
-                errors.Add($"{litany.ID} has unexpected group parameters.");
-            if (parameters.Machine != null)
+            switch (effect)
             {
-                if (string.IsNullOrWhiteSpace(parameters.Machine.Command))
-                    errors.Add($"{litany.ID} machine parameters require a command.");
-                if (parameters.Machine.Output is { } output && !prototypes.TryIndex(output, out _))
-                    errors.Add($"{litany.ID} references unknown machine output {output.Id}.");
-            }
-            if (parameters.Group != null)
-            {
-                if (parameters.Group.MinimumFollowers < 0)
-                    errors.Add($"{litany.ID} has a negative group follower threshold.");
-                if (litany.TargetMode != LitanyTargetMode.Ceremony)
-                    errors.Add($"{litany.ID} has group parameters without Ceremony targeting.");
-            }
+                case LitanyHealEffect heal:
+                    foreach (var (damageType, value) in heal.Damage.DamageDict)
+                    {
+                        if (value.Value >= 0)
+                            errors.Add($"{litany.ID} healing for {damageType} must use a negative damage value.");
+                    }
 
-            if (parameters.Healing is { } healing)
-            {
-                foreach (var (damageType, value) in healing.Damage.DamageDict)
-                {
-                    if (value.Value >= 0)
-                        errors.Add($"{litany.ID} healing for {damageType} must use a negative damage value.");
-                }
+                    if (heal.Damage.Empty)
+                        errors.Add($"{litany.ID} has an empty healing effect.");
+                    break;
+                case LitanySoulHungerEffect soulHunger:
+                    if (!soulHunger.Damage.DamageDict.TryGetValue("Heat", out var heat) || heat.Value <= 0)
+                        errors.Add($"{litany.ID} requires a positive Heat damage parameter.");
+                    break;
+                case LitanySkillEffect skills:
+                    if (skills.Amounts.Count == 0)
+                        errors.Add($"{litany.ID} has an empty skill effect.");
+                    foreach (var skill in skills.Amounts.Keys)
+                    {
+                        if (skill.Id is not ("Mec" or "Cog" or "Bio" or "Rob" or "Tgh" or "Vig"))
+                            errors.Add($"{litany.ID} references unknown skill {skill.Id}.");
+                    }
+                    break;
             }
         }
 
@@ -437,41 +399,21 @@ public static class LitanyCatalogValidator
         {
             case LitanyEffectKind.Relief:
             case LitanyEffectKind.HandOfMercy:
-                if (parameters?.Healing is null || parameters.Healing.Damage.Empty)
-                    errors.Add($"{litany.ID} requires healing parameters.");
-                break;
-            case LitanyEffectKind.SoulHunger:
-                if (parameters?.Healing is null ||
-                    !parameters.Healing.Damage.DamageDict.TryGetValue("Heat", out var heat) ||
-                    heat.Value >= 0)
-                    errors.Add($"{litany.ID} requires a negative Heat damage parameter.");
-                break;
             case LitanyEffectKind.Convalescence:
             case LitanyEffectKind.Succour:
-                if (parameters?.Healing is null || parameters.Healing.Damage.Empty)
-                    errors.Add($"{litany.ID} requires healing parameters.");
+                if (!litany.Effects.OfType<LitanyHealEffect>().Any())
+                    errors.Add($"{litany.ID} requires a LitanyHealEffect.");
+                break;
+            case LitanyEffectKind.SoulHunger:
+                if (!litany.Effects.OfType<LitanySoulHungerEffect>().Any())
+                    errors.Add($"{litany.ID} requires a LitanySoulHungerEffect.");
                 break;
             case LitanyEffectKind.GraceOfPerseverance:
             case LitanyEffectKind.UpholdHolyWord:
-                if (parameters?.Skills?.Amounts is not { Count: > 0 })
-                    errors.Add($"{litany.ID} requires skill parameters.");
+                if (!litany.Effects.OfType<LitanySkillEffect>().Any())
+                    errors.Add($"{litany.ID} requires a LitanySkillEffect.");
                 break;
         }
-
-        if (parameters?.Skills is { Amounts.Count: > 0 } skills)
-        {
-            foreach (var skill in skills.Amounts.Keys)
-            {
-                if (skill.Id is not ("Mec" or "Cog" or "Bio" or "Rob" or "Tgh" or "Vig"))
-                    errors.Add($"{litany.ID} references unknown skill {skill.Id}.");
-            }
-        }
-
-        if (parameters?.Skills is { } skillData && skillData.Amounts.Count == 0)
-            errors.Add($"{litany.ID} has an empty skill parameter map.");
-
-        if (parameters?.Machine != null && litany.TargetMode is not (LitanyTargetMode.FrontMachine or LitanyTargetMode.NearbyMachine))
-            errors.Add($"{litany.ID} machine parameters require machine targeting.");
     }
 
     private static void ValidateReachableCosts(

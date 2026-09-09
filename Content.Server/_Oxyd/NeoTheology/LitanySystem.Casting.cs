@@ -213,7 +213,7 @@ public sealed partial class LitanySystem
         }
 
         var hasHandler = LitanyHandlerCatalog.HasHandler(litany.Effect);
-        if (hasHandler && !TryValidateEffect(cast.Actor, litany, out _))
+        if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _))
         {
             ClearPending(cast, cancelled: true);
             return;
@@ -229,7 +229,7 @@ public sealed partial class LitanySystem
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
 
-        if (hasHandler && !TryApplyEffect(cast.Actor, litany))
+        if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany))
         {
             // Effect plan was validated; apply failure is unexpected. Cast is already
             // committed so a second completion still no-ops via Committed.

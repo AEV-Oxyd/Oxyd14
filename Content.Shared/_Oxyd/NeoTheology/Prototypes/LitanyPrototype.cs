@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
@@ -55,8 +56,12 @@ public sealed partial class LitanyPrototype : IPrototype
     [DataField]
     public TimeSpan EffectDuration { get; private set; } = TimeSpan.Zero;
 
+    /// <summary>
+    /// Declarative effect list, instantiated from YAML as <c>!type:</c> entries.
+    /// Replaces the legacy parameter-block families.
+    /// </summary>
     [DataField]
-    public LitanyParameters? Parameters { get; private set; }
+    public List<LitanyEffect> Effects { get; private set; } = new();
 
     [DataField]
     public NeoTheologyDependency Dependency { get; private set; }

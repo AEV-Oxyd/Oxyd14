@@ -6,6 +6,7 @@ using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.IdentityManagement;
 using Content.Shared.IdentityManagement.Components;
@@ -58,6 +59,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
     };
 
     [SidedDependency(Side.Server)] private readonly LitanySystem _litany = default!;
+    [SidedDependency(Side.Server)] private readonly LitanyEffectSystem _effects = default!;
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
     [SidedDependency(Side.Server)] private readonly IPrototypeManager _prototypes = default!;
@@ -100,7 +102,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             discipleC = PrepareFollower(map.GridCoords.Offset(new Vector2(2f, 2f)), Disciple, "DiscC");
             discipleD = PrepareFollower(map.GridCoords.Offset(new Vector2(-1f, 0f)), Disciple, "DiscD");
 
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             _random.SetSeed(EntreatyRngSeed);
 
             var begin = _litany.TryBeginLitany(caster, Entreaty, LitanyCastOrigin.ManualSpeech);
@@ -111,11 +113,11 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
         await Server.WaitAssertion(() =>
         {
-            Assert.That(_litany.TestingGetSocialNotices(caster), Is.Empty,
+            Assert.That(_effects.TestingGetSocialNotices(caster), Is.Empty,
                 "Caster must not receive their own Entreaty notice.");
 
-            var preacherNotice = _litany.TestingGetSocialNotices(preacher);
-            var inquisitorNotice = _litany.TestingGetSocialNotices(inquisitor);
+            var preacherNotice = _effects.TestingGetSocialNotices(preacher);
+            var inquisitorNotice = _effects.TestingGetSocialNotices(inquisitor);
             Assert.That(preacherNotice, Is.Not.Empty, "Preacher must always receive Entreaty.");
             Assert.That(inquisitorNotice, Is.Not.Empty, "Inquisitor must always receive Entreaty.");
             AssertNoticeEscaped(preacherNotice, escapedCasterName, "Preacher notice");
@@ -130,7 +132,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             firstWaveDisciples = new HashSet<EntityUid>();
             foreach (var disciple in new[] { discipleA, discipleB, discipleC, discipleD })
             {
-                var notices = _litany.TestingGetSocialNotices(disciple);
+                var notices = _effects.TestingGetSocialNotices(disciple);
                 if (notices.Count == 0)
                     continue;
                 firstWaveDisciples.Add(disciple);
@@ -150,7 +152,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         await Server.WaitAssertion(() =>
         {
             ClearPersonalCooldown(caster, Entreaty.Id);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             _random.SetSeed(EntreatyRngSeed);
 
             var begin = _litany.TryBeginLitany(caster, Entreaty, LitanyCastOrigin.ManualSpeech);
@@ -161,13 +163,13 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
         await Server.WaitAssertion(() =>
         {
-            Assert.That(_litany.TestingGetSocialNotices(preacher), Is.Not.Empty);
-            Assert.That(_litany.TestingGetSocialNotices(inquisitor), Is.Not.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(preacher), Is.Not.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(inquisitor), Is.Not.Empty);
 
             var secondWave = new HashSet<EntityUid>();
             foreach (var disciple in new[] { discipleA, discipleB, discipleC, discipleD })
             {
-                if (_litany.TestingGetSocialNotices(disciple).Count > 0)
+                if (_effects.TestingGetSocialNotices(disciple).Count > 0)
                     secondWave.Add(disciple);
             }
 
@@ -192,7 +194,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
             body = PrepareCaster(map.GridCoords, Entreaty);
             peer = PrepareFollower(map.GridCoords.Offset(new Vector2(1f, 0f)), Preacher, "PeerPriest");
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             _random.SetSeed(EntreatyRngSeed);
 
             var before = _cruciform.GetHoliness(body);
@@ -210,7 +212,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         {
             holinessAfterSuccess = _cruciform.GetHoliness(body);
             Assert.That(holinessAfterSuccess, Is.EqualTo(50).Within(0.01));
-            Assert.That(_litany.TestingGetSocialNotices(peer), Is.Not.Empty,
+            Assert.That(_effects.TestingGetSocialNotices(peer), Is.Not.Empty,
                 "Successful Entreaty must deliver at least to Preacher peer.");
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null);
@@ -226,10 +228,10 @@ public sealed class LitanyEffectsSocialTest : GameTest
         // 4) Duplicate completion no-op
         await Server.WaitAssertion(() =>
         {
-            var peerCount = _litany.TestingGetSocialNotices(peer).Count;
+            var peerCount = _effects.TestingGetSocialNotices(peer).Count;
             RaiseStaleLitanyCompletion(body, successRequestId!);
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(holinessAfterSuccess).Within(0.01));
-            Assert.That(_litany.TestingGetSocialNotices(peer).Count, Is.EqualTo(peerCount),
+            Assert.That(_effects.TestingGetSocialNotices(peer).Count, Is.EqualTo(peerCount),
                 "Duplicate completion must not re-deliver Entreaty notices.");
         });
 
@@ -237,14 +239,14 @@ public sealed class LitanyEffectsSocialTest : GameTest
         await Pair.RunTicksSync(60);
         await Server.WaitAssertion(() =>
         {
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, Entreaty, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.False, "Personal cooldown must reject a second Entreaty begin.");
             Assert.That(begin.Reason?.Id, Is.EqualTo("oxyd-litany-denied-cooldown"));
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
-            Assert.That(_litany.TestingGetSocialNotices(peer), Is.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(peer), Is.Empty);
         });
 
         // 3) Interrupted delay refund (cancel before commit → no notice / no cooldown refresh)
@@ -252,7 +254,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         await Server.WaitAssertion(() =>
         {
             ClearPersonalCooldown(body, Entreaty.Id);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, Entreaty, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "interrupt begin failed");
@@ -262,7 +264,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null);
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before).Within(0.01));
-            Assert.That(_litany.TestingGetSocialNotices(peer), Is.Empty,
+            Assert.That(_effects.TestingGetSocialNotices(peer), Is.Empty,
                 "Interrupted Entreaty must not deliver notices.");
             Assert.That(SComp<CruciformBearerComponent>(body).PersonalCooldowns.ContainsKey(Entreaty.Id), Is.False,
                 "Interrupted Entreaty must not arm personal cooldown.");
@@ -288,7 +290,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             AssertCruciformSenseProtoContract();
 
             caster = PrepareCaster(map.GridCoords, CruciformSense);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             var before = _cruciform.GetHoliness(caster);
             var begin = _litany.TryBeginLitany(caster, CruciformSense, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.False, "CruciformSense must fail when no other active visible followers are in range.");
@@ -296,7 +298,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(caster), Is.EqualTo(before),
                 "Failed CruciformSense must not charge.");
-            Assert.That(_litany.TestingGetSocialNotices(caster), Is.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(caster), Is.Empty);
         });
 
         await Pair.RunTicksSync(60);
@@ -333,7 +335,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
             ClearPersonalCooldown(caster, CruciformSense.Id);
             _cruciform.Refund(caster, 20);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
 
             var begin = _litany.TryBeginLitany(caster, CruciformSense, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "CruciformSense begin failed");
@@ -343,7 +345,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
         await Server.WaitAssertion(() =>
         {
-            var notices = _litany.TestingGetSocialNotices(caster);
+            var notices = _effects.TestingGetSocialNotices(caster);
             Assert.That(notices, Is.Not.Empty, "Caster must receive CruciformSense listing.");
             AssertNoticeEscaped(notices, escapedNear, "CruciformSense near-active listing");
             Assert.That(notices.Any(n => n.Contains("has a cruciform installed", StringComparison.Ordinal)), Is.True);
@@ -359,8 +361,8 @@ public sealed class LitanyEffectsSocialTest : GameTest
                 "Extracted / unimplanted soul cruciform must not leak via global implant registry.");
 
             // Peers must not receive the sense listing (caster-only).
-            Assert.That(_litany.TestingGetSocialNotices(nearActive), Is.Empty);
-            Assert.That(_litany.TestingGetSocialNotices(farActive), Is.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(nearActive), Is.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(farActive), Is.Empty);
 
             Assert.That(_cruciform.GetHoliness(caster), Is.EqualTo(30).Within(0.01),
                 "Disciple 50 − CruciformSense 20.");
@@ -385,7 +387,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
             body = PrepareCaster(map.GridCoords, CruciformSense);
             peer = PrepareFollower(map.GridCoords.Offset(new Vector2(2f, 0f)), Disciple, "SensePeer");
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
 
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, CruciformSense, LitanyCastOrigin.ManualSpeech);
@@ -402,7 +404,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             holinessAfterSuccess = _cruciform.GetHoliness(body);
             Assert.That(holinessAfterSuccess, Is.EqualTo(30).Within(0.01),
                 "Disciple 50 − CruciformSense 20 once.");
-            noticesAfterSuccess = _litany.TestingGetSocialNotices(body).Count;
+            noticesAfterSuccess = _effects.TestingGetSocialNotices(body).Count;
             Assert.That(noticesAfterSuccess, Is.GreaterThan(0));
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Null);
@@ -413,7 +415,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         {
             RaiseStaleLitanyCompletion(body, successRequestId!);
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(holinessAfterSuccess).Within(0.01));
-            Assert.That(_litany.TestingGetSocialNotices(body).Count, Is.EqualTo(noticesAfterSuccess),
+            Assert.That(_effects.TestingGetSocialNotices(body).Count, Is.EqualTo(noticesAfterSuccess),
                 "Duplicate completion must not re-list followers / re-charge.");
         });
 
@@ -423,14 +425,14 @@ public sealed class LitanyEffectsSocialTest : GameTest
         {
             ClearPersonalCooldown(body, CruciformSense.Id);
             Assert.That(_cruciform.TrySpend(body, _cruciform.GetHoliness(body)), Is.True);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, CruciformSense, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.False);
             Assert.That(begin.Reason?.Id, Is.EqualTo("oxyd-litany-no-cost"));
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
-            Assert.That(_litany.TestingGetSocialNotices(body), Is.Empty);
+            Assert.That(_effects.TestingGetSocialNotices(body), Is.Empty);
         });
 
         // 3) Interrupted delay refund
@@ -439,7 +441,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         {
             _cruciform.Refund(body, 50);
             ClearPersonalCooldown(body, CruciformSense.Id);
-            _litany.TestingClearSocialNotices();
+            _effects.TestingClearSocialNotices();
             var before = _cruciform.GetHoliness(body);
             var begin = _litany.TryBeginLitany(body, CruciformSense, LitanyCastOrigin.ManualSpeech);
             Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "interrupt begin failed");
@@ -448,7 +450,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before).Within(0.01),
                 "Interrupted CruciformSense must never charge.");
-            Assert.That(_litany.TestingGetSocialNotices(body), Is.Empty,
+            Assert.That(_effects.TestingGetSocialNotices(body), Is.Empty,
                 "Interrupted CruciformSense must not deliver listings.");
         });
     }

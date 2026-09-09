@@ -2,6 +2,8 @@ using System.Linq;
 using Content.IntegrationTests.Fixtures;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology;
+using Content.Shared._Oxyd.NeoTheology.Effects;
+using Content.Shared.FixedPoint;
 using Robust.Shared.Localization;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.Manager;
@@ -52,6 +54,39 @@ public sealed class LitanyPrototypeTest : GameTest
         foreach (var litany in litanies)
         {
             Assert.That(litany.ID, Is.EqualTo($"OxydLitany{litany.Effect}"));
+        }
+    }
+
+    [Test]
+    public async Task Effects_ResolveToTypedEffectClasses()
+    {
+        var prototypes = Pair.Server.ResolveDependency<IPrototypeManager>();
+        var litanies = prototypes.EnumeratePrototypes<LitanyPrototype>().ToDictionary(l => l.ID);
+
+        var relief = litanies["OxydLitanyRelief"];
+        Assert.That(relief.Effects, Has.Count.EqualTo(1), "Relief must declare exactly one effect.");
+        Assert.That(relief.Effects[0], Is.InstanceOf<LitanyHealEffect>());
+        Assert.That(((LitanyHealEffect) relief.Effects[0]).Damage.DamageDict["Blunt"],
+            Is.EqualTo(FixedPoint2.New(-5)), "Relief Blunt heal value drifted.");
+
+        var soulHunger = litanies["OxydLitanySoulHunger"];
+        Assert.That(soulHunger.Effects, Has.Count.EqualTo(1));
+        Assert.That(soulHunger.Effects[0], Is.InstanceOf<LitanySoulHungerEffect>());
+        Assert.That(((LitanySoulHungerEffect) soulHunger.Effects[0]).Damage.DamageDict["Heat"],
+            Is.EqualTo(FixedPoint2.New(5)), "SoulHunger Heat injury must be stored positive.");
+
+        Assert.That(litanies["OxydLitanyEntreaty"].Effects[0], Is.InstanceOf<LitanyEntreatyEffect>());
+        Assert.That(litanies["OxydLitanyCruciformSense"].Effects[0], Is.InstanceOf<LitanyCruciformSenseEffect>());
+
+        var grace = litanies["OxydLitanyGraceOfPerseverance"];
+        Assert.That(grace.Effects, Has.Count.EqualTo(1));
+        Assert.That(grace.Effects[0], Is.InstanceOf<LitanySkillEffect>());
+        Assert.That(((LitanySkillEffect) grace.Effects[0]).Amounts["Mec"], Is.EqualTo(10));
+
+        foreach (var litany in litanies.Values.Where(l => l.IsAvailable))
+        {
+            Assert.That(litany.Effects, Is.Not.Empty,
+                $"{litany.ID} is available but declares no effects.");
         }
     }
 

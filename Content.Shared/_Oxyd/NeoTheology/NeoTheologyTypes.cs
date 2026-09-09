@@ -138,61 +138,6 @@ public enum NeoTheologyDependency : byte
 }
 
 /// <summary>
-/// Typed optional parameters for a litany family. The server validates that the
-/// member matching the effect kind is the only member used by that effect.
-/// </summary>
-[DataDefinition]
-public sealed partial class LitanyParameters
-{
-    [DataField]
-    public LitanyHealData? Healing;
-
-    [DataField]
-    public LitanySkillData? Skills;
-
-    [DataField]
-    public LitanyMachineData? Machine;
-
-    [DataField]
-    public LitanyGroupData? Group;
-}
-
-[DataDefinition]
-public sealed partial class LitanyHealData
-{
-    /// <summary>Negative values heal; the validator rejects non-negative entries.</summary>
-    [DataField]
-    public DamageSpecifier Damage = new();
-}
-
-[DataDefinition]
-public sealed partial class LitanySkillData
-{
-    [DataField]
-    public Dictionary<ProtoId<SkillPrototype>, int> Amounts = new();
-}
-
-[DataDefinition]
-public sealed partial class LitanyMachineData
-{
-    [DataField]
-    public string Command = string.Empty;
-
-    [DataField]
-    public EntProtoId? Output;
-}
-
-[DataDefinition]
-public sealed partial class LitanyGroupData
-{
-    [DataField]
-    public int MinimumFollowers;
-
-    [DataField]
-    public bool RequiresObelisk;
-}
-
-/// <summary>
 /// Server result shared by the UI and integration tests. Reasons are localization
 /// identifiers, never arbitrary client-provided text.
 /// </summary>

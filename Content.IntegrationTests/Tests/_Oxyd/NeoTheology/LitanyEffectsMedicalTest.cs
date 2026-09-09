@@ -4,6 +4,7 @@ using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
@@ -72,9 +73,8 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             var proto = _prototypes.Index(Relief);
             Assert.That(proto.Cost, Is.EqualTo(20));
             Assert.That(proto.IgnoreStuttering, Is.True);
-            Assert.That(
-                proto.Parameters?.Healing?.Damage.DamageDict.TryGetValue("Blunt", out var blunt) == true &&
-                blunt < FixedPoint2.Zero,
+            var heal = proto.Effects.OfType<LitanyHealEffect>().Single();
+            Assert.That(heal.Damage.DamageDict.TryGetValue("Blunt", out var blunt) && blunt < FixedPoint2.Zero,
                 Is.True,
                 "Relief must heal through a negative Blunt damage value.");
 
@@ -203,7 +203,8 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             body = PrepareCaster(map.GridCoords, SoulHunger);
             var proto = _prototypes.Index(SoulHunger);
             Assert.That(proto.Cost, Is.EqualTo(50));
-            Assert.That(proto.Parameters?.Healing?.Damage.DamageDict.ContainsKey("Heat"), Is.True);
+            var soulHungerEffect = proto.Effects.OfType<LitanySoulHungerEffect>().Single();
+            Assert.That(soulHungerEffect.Damage.DamageDict["Heat"], Is.GreaterThan(FixedPoint2.Zero));
 
             var sat = SEntity<SatiationComponent>(body);
             Assert.That(sat.Comp.Has(SatiationSystem.Hunger), Is.True);

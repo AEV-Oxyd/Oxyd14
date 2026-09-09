@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Content.Server.Chat.Systems;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.ActionBlocker;
@@ -30,6 +31,7 @@ public sealed partial class LitanySystem : EntitySystem
     [Dependency] private readonly ActionBlockerSystem _actionBlocker = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
     [Dependency] private readonly CruciformSystem _cruciform = default!;
+    [Dependency] private readonly LitanyEffectSystem _effects = default!;
     [Dependency] private readonly LitanyPrototypeValidationSystem _catalog = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
@@ -182,7 +184,7 @@ public sealed partial class LitanySystem : EntitySystem
             return LitanyActionResult.Fail("oxyd-litany-no-cost");
 
         if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
-            !TryValidateEffect(actor, litany, out var effectFail))
+            !_effects.TryValidateEffects(actor, litany, out var effectFail))
             return LitanyActionResult.Fail(effectFail ?? "oxyd-litany-no-effect");
 
         var requestId = NextRequestId();
