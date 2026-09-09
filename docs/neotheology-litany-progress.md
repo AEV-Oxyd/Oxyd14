@@ -1,6 +1,6 @@
 # NeoTheology litany progress
 
-Status: **In progress** (Milestone 1 verified; later milestones scaffolded)
+Status: **In progress** (Milestone 1 verified; Milestone 2 lifecycle tests verified; later milestones scaffolded)
 
 This ledger records the current foundation/catalog work on the litany port. It is
 not a claim that the litany runtime is playable or at exact Eris parity. The
@@ -19,13 +19,14 @@ rules support, private UI contracts/client presentation, and their focused tests
   indexes, set `CatalogReady=false`, and throw on initial load / reload.
 - Focused NeoTheology unit filter: **16/16** passed (Content.Tests).
 - `LitanyPrototypeTest` (integration): **3/3** passed (`LoadedCatalogHasNoStructuralValidationErrors`, `CatalogHasExpectedAvailabilityAndStableIdentity`, `CatalogSerializationRoundTrips`); `CatalogReady` asserted true.
+- M2 `CruciformLifecycleTest` (integration): **8/8** passed on `eris-litany-port` @ `6b9b3de457` + local uncommitted M2 edits. Duplicate-insert cancel gap patched in `CruciformSystem` (nested container Remove during ImplantImplantedEvent was illegal).
 
 ## Milestone ledger
 
 | Milestone | Status | Evidence / remaining work |
 | --- | --- | --- |
 | 1. Baseline and shared contracts | **Verified** | Contracts + fail-closed validation. Evidence: unit NeoTheology **16/16**; integration LitanyPrototypeTest **3/3**; 60 `enabled:false` / 0 IsAvailable; no gameplay handlers. Later milestones remain scaffold-only. |
-| 2. Cruciform lifecycle | In progress | Cruciform state/lifecycle scaffolding is present in the checkpoint worktree. Duplicate implant, extraction, save/load, death, pending-cast, and cleanup tests remain unverified. |
+| 2. Cruciform lifecycle | **Verified** | Implant/bearer lifecycle + focused tests. Evidence: `CruciformLifecycleTest` **8/8** (`FullyQualifiedName~CruciformLifecycle`); NeoTheology unit **16/16** still green. Covered: duplicate rejection (insert cancel, recoverable), extraction clears bearer/pending, DataField serialization + extracted-state persistence (full implanted-mob map-save not harness-supported), pending-cast clear on remove, promotion without refill, access tags when active, elapsed-time holiness regen, death deactivate + reimplant resume. M1 catalog policy unchanged (60 `enabled:false`). Content-only; no RobustToolbox/engine edits. Not a claim that foundation is playable. |
 | 3. Speech and cast transaction | In progress | Chat's existing `EntitySpokeEvent` remains the future integration point, but the complete authoritative cast state machine and transaction tests are not evidenced by the checkpoint. |
 | 4. Bible UI and common effects | In progress | Foundation catalog and private client UI contracts/presentation build successfully. Runtime handlers, interruption behavior, privacy isolation, and manual use are not verified. |
 | 5. Rank/medical/social foundation | In progress | The 15 milestone-5 chants are catalogued and shared holiness rules are testable. Effect handlers and their integration tests are not evidenced by the checkpoint. |

@@ -16,6 +16,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
@@ -35,6 +36,7 @@ public sealed partial class CruciformSystem : EntitySystem
     {
         base.Initialize();
 
+        SubscribeLocalEvent<CruciformComponent, ContainerGettingInsertedAttemptEvent>(OnInsertAttempt);
         SubscribeLocalEvent<CruciformComponent, ImplantImplantedEvent>(OnImplanted);
         SubscribeLocalEvent<CruciformComponent, ImplantRemovedEvent>(OnRemoved);
         SubscribeLocalEvent<CruciformComponent, EntityTerminatingEvent>(OnCruciformTerminating);
@@ -67,6 +69,25 @@ public sealed partial class CruciformSystem : EntitySystem
         }
     }
 
+    private void OnInsertAttempt(Entity<CruciformComponent> ent, ref ContainerGettingInsertedAttemptEvent args)
+    {
+        if (args.Container.ID != ImplanterComponent.ImplantSlotId)
+            return;
+
+        var body = args.Container.Owner;
+        if (!HasAnotherCruciform(body, ent.Owner))
+            return;
+
+        // Reject before insert completes. Nested Remove during ImplantImplantedEvent
+        // trips container metadata asserts; cancelling leaves the implant recoverable.
+        args.Cancel();
+        if (TryComp<SubdermalImplantComponent>(ent.Owner, out var implant))
+        {
+            implant.ImplantedEntity = null;
+            Dirty(ent.Owner, implant);
+        }
+    }
+
     private void OnImplanted(Entity<CruciformComponent> ent, ref ImplantImplantedEvent args)
     {
         if (args.Implant != ent.Owner)
@@ -75,10 +96,10 @@ public sealed partial class CruciformSystem : EntitySystem
         var body = args.Implanted;
         if (HasAnotherCruciform(body, ent.Owner))
         {
-            // The implant is left recoverable on the ground. ForceRemove is deliberately
-            // not used because it deletes the physical implant.
-            if (TryComp<ImplantedComponent>(body, out var installed))
-                _containers.Remove(ent.Owner, installed.ImplantContainer);
+            // Defensive fallback if insert somehow bypassed OnInsertAttempt. Do not
+            // Remove synchronously here — that nests container mutations. Defer.
+            var rejected = ent.Owner;
+            Timer.Spawn(0, () => TryRemoveDuplicateDeferred(rejected));
             return;
         }
 
@@ -448,6 +469,23 @@ public sealed partial class CruciformSystem : EntitySystem
         }
 
         return false;
+    }
+
+    private void TryRemoveDuplicateDeferred(EntityUid rejected)
+    {
+        if (TerminatingOrDeleted(rejected))
+            return;
+        if (!TryComp<SubdermalImplantComponent>(rejected, out var implant) || implant.ImplantedEntity is not { } body)
+            return;
+        if (!TryComp<ImplantedComponent>(body, out var installed))
+            return;
+        if (!installed.ImplantContainer.ContainedEntities.Contains(rejected))
+            return;
+        if (!HasAnotherCruciform(body, rejected))
+            return;
+
+        // Recoverable rejection: container remove without ForceRemove (which deletes).
+        _containers.Remove(rejected, installed.ImplantContainer);
     }
 
     private NeoTheologyRulesPrototype? GetRules()
