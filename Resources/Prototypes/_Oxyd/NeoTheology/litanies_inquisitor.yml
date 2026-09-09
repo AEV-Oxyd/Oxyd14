@@ -28,13 +28,13 @@
   cooldownScope: Personal
   cooldownDuration: 10
   effectDuration: 20
-  parameters:
-    healing:
-      damage:
-        types:
-          Brute: -20
-          Heat: -20
-          Asphyxiation: -40
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 
@@ -54,13 +54,13 @@
   cooldownDuration: 10
   extraDelay: 4
   effectDuration: 20
-  parameters:
-    healing:
-      damage:
-        types:
-          Brute: -20
-          Heat: -20
-          Asphyxiation: -40
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 

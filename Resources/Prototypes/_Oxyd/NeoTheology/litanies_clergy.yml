@@ -29,12 +29,12 @@
   range: 1.5
   cost: 5
   effectDuration: 120
-  parameters:
-    healing:
-      damage:
-        types:
-          Blunt: -10
-          Heat: -10
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Blunt: -10
+        Heat: -10
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 
@@ -111,12 +111,12 @@
   cooldownScope: Global
   cooldownDuration: 120
   effectDuration: 900
-  parameters:
-    skills:
-      amounts:
-        Mec: 10
-        Cog: 10
-        Bio: 10
+  effects:
+  - !type:LitanySkillEffect
+    amounts:
+      Mec: 10
+      Cog: 10
+      Bio: 10
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 
@@ -135,12 +135,12 @@
   cooldownScope: Global
   cooldownDuration: 120
   effectDuration: 900
-  parameters:
-    skills:
-      amounts:
-        Rob: 10
-        Tgh: 10
-        Vig: 10
+  effects:
+  - !type:LitanySkillEffect
+    amounts:
+      Rob: 10
+      Tgh: 10
+      Vig: 10
   enabled: false
   unavailableReason: oxyd-litany-unavailable-foundation
 

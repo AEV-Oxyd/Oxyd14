@@ -14,12 +14,12 @@
   cooldownDuration: 60
   ignoreStuttering: true
   effectDuration: 60
-  parameters:
-    healing:
-      damage:
-        types:
-          Blunt: -5
-          Heat: -5
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Blunt: -5
+        Heat: -5
   enabled: true
 
 - type: oxydLitany
@@ -36,11 +36,11 @@
   cooldownKey: OxydLitanySoulHunger
   cooldownScope: Personal
   cooldownDuration: 60
-  parameters:
-    healing:
-      damage:
-        types:
-          Heat: -5
+  effects:
+  - !type:LitanySoulHungerEffect
+    damage:
+      types:
+        Heat: 5
   enabled: true
 
 - type: oxydLitany
@@ -58,6 +58,8 @@
   cooldownScope: Personal
   cooldownDuration: 60
   ignoreStuttering: true
+  effects:
+  - !type:LitanyEntreatyEffect
   enabled: true
 
 - type: oxydLitany
@@ -111,6 +113,8 @@
   cooldownKey: OxydLitanyCruciformSense
   cooldownScope: Personal
   cooldownDuration: 60
+  effects:
+  - !type:LitanyCruciformSenseEffect
   enabled: true
 
 - type: oxydLitany
