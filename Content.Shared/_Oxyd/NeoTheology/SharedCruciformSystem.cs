@@ -55,4 +55,30 @@ public partial class SharedCruciformSystem : EntitySystem
     {
         return TryGetCruciform(body, out _, out _);
     }
+
+    /// <summary>
+    /// Active cruciform bearers within <paramref name="range"/> of <paramref name="origin"/>.
+    /// ponytail: linear scan per call. Fine for ≤100 players; add a spatial index if a
+    /// ceremony ever runs per-tick on a 200-pop server.
+    /// </summary>
+    public IEnumerable<(EntityUid Body, EntityUid Cruciform, CruciformComponent CruciformState)> BearersInRange(
+        EntityUid origin, float range)
+    {
+        var xform = Transform(origin);
+        var query = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
+
+        while (query.MoveNext(out var body, out var bearer, out var bodyXform))
+        {
+            if (bodyXform.MapID != xform.MapID)
+                continue;
+            if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > range)
+                continue;
+            if (bearer.Cruciform is not { } cruciform)
+                continue;
+            if (!TryComp<CruciformComponent>(cruciform, out var comp) || !comp.Active)
+                continue;
+
+            yield return (body, cruciform, comp);
+        }
+    }
 }
