@@ -1,3 +1,4 @@
+using Content.Shared.Roles;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology;
@@ -19,4 +20,12 @@ public sealed partial class NeoTheologyRulesPrototype : IPrototype
 
     [DataField]
     public double DebitTolerance = 0.000001d;
+
+    /// <summary>
+    /// Job id → cruciform profile. A player spawning into a mapped job receives an active
+    /// cruciform carrying that profile and its rank modules. Empty by default, so nothing
+    /// changes for stations that never set it.
+    /// </summary>
+    [DataField]
+    public Dictionary<ProtoId<JobPrototype>, ProtoId<NeoTheologyProfilePrototype>> JobProfiles { get; private set; } = new();
 }
