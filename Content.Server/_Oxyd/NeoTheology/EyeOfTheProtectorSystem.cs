@@ -76,6 +76,11 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             AddObservation(eye, comp.ObservationPerFaithful);
             _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
         }
+
+        // P3.5: accrue armament points from the observation bank each scan. This diverges from Eris
+        // (which adds a fixed +125 per miracle, not observation/100 per scan) — flagged, not silent.
+        comp.ArmamentsPoints = Math.Min(comp.MaxArmamentsPoints, comp.ArmamentsPoints + (int)(comp.Observation / 100f));
+        Dirty(eye, comp);
     }
 
     /// <summary>The first Eye on the same map as <paramref name="near"/>, if any.</summary>
@@ -91,5 +96,19 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         }
 
         return null;
+    }
+
+    /// <summary>Debit <paramref name="cost"/> armament points, or refuse if the bank is short.</summary>
+    public bool TrySpendArmaments(EntityUid eye, int cost)
+    {
+        if (!TryComp<EyeOfTheProtectorComponent>(eye, out var comp))
+            return false;
+
+        if (comp.ArmamentsPoints < cost)
+            return false;
+
+        comp.ArmamentsPoints -= cost;
+        Dirty(eye, comp);
+        return true;
     }
 }

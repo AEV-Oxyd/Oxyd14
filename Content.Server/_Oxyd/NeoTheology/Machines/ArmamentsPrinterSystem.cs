@@ -10,10 +10,13 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 
 /// <summary>
 /// P2.16: armaments printer (Eris <c>datum/armament/purchase</c> + <c>eotp</c>'s armory UI).
+/// P3.5: points and purchase counters live on the Eye, so the printer only validates the buyer and
+/// routes the debit through <see cref="EyeOfTheProtectorSystem.TrySpendArmaments"/>.
 /// </summary>
 public sealed class ArmamentsPrinterSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
+    [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
@@ -27,36 +30,49 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
 
     private void OnUiOpened(EntityUid uid, ArmamentsPrinterComponent component, AfterActivatableUIOpenEvent args)
     {
-        UpdateUi(uid, component);
+        UpdateUi(uid);
     }
 
     private void OnPurchaseMessage(EntityUid uid, ArmamentsPrinterComponent component, PurchaseArmamentMessage args)
     {
         TryPurchase(uid, args.Actor, args.ArmamentId);
-        UpdateUi(uid, component);
+        UpdateUi(uid);
     }
 
-    public void UpdateUi(EntityUid uid, ArmamentsPrinterComponent component)
+    public void UpdateUi(EntityUid uid)
     {
-        _ui.SetUiState(uid, ArmamentsPrinterUiKey.Key, BuildState(component));
+        _ui.SetUiState(uid, ArmamentsPrinterUiKey.Key, BuildState(uid));
     }
 
-    private ArmamentsPrinterState BuildState(ArmamentsPrinterComponent component)
+    private ArmamentsPrinterState BuildState(EntityUid printer)
     {
         var entries = new List<ArmamentsPrinterEntry>();
+
+        var points = 0;
+        var maxPoints = 0;
+        EyeOfTheProtectorComponent? eyeComp = null;
+        if (_eye.FindEye(printer) is { } eye)
+            TryComp<EyeOfTheProtectorComponent>(eye, out eyeComp);
+
+        if (eyeComp is not null)
+        {
+            points = eyeComp.ArmamentsPoints;
+            maxPoints = eyeComp.MaxArmamentsPoints;
+        }
+
         foreach (var armament in ProtoMan.EnumeratePrototypes<ArmamentPrototype>())
         {
-            var cost = GetCost(component, armament);
+            var cost = eyeComp is not null ? GetCost(eyeComp, armament) : armament.GetCost(0);
             entries.Add(new ArmamentsPrinterEntry(
                 armament.ID,
                 Loc.GetString(armament.Name),
                 armament.Desc is { } desc ? Loc.GetString(desc) : string.Empty,
                 cost,
-                component.Points >= cost));
+                eyeComp is not null && eyeComp.ArmamentsPoints >= cost));
         }
 
         entries.Sort((left, right) => left.Cost.CompareTo(right.Cost));
-        return new ArmamentsPrinterState(component.Points, component.MaxPoints, entries);
+        return new ArmamentsPrinterState(points, maxPoints, entries);
     }
 
     /// <summary>
@@ -86,34 +102,37 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
         if (distance > component.Range)
             return false;
 
-        var cost = GetCost(component, armament);
-        if (component.Points < cost)
+        if (_eye.FindEye(printer) is not { } eye ||
+            !TryComp<EyeOfTheProtectorComponent>(eye, out var eyeComp))
             return false;
 
-        component.Points -= cost;
-        component.PurchaseCount[armamentId] = GetPurchaseCount(component, armamentId) + 1;
+        var cost = GetCost(eyeComp, armament);
+        if (!_eye.TrySpendArmaments(eye, cost))
+            return false;
 
-        if (!component.FirstPurchaseMade)
+        eyeComp.PurchaseCount[armamentId] = GetPurchaseCount(eyeComp, armamentId) + 1;
+
+        if (!eyeComp.FirstPurchaseMade)
         {
-            component.FirstPurchaseMade = true;
-            component.MaxPoints += armament.MaxPointsIncrease;
+            eyeComp.FirstPurchaseMade = true;
+            eyeComp.MaxArmamentsPoints += armament.MaxPointsIncrease;
         }
 
         SpawnAtPosition(armament.Path, printerXform.Coordinates);
         return true;
     }
 
-    public int GetCost(ArmamentsPrinterComponent component, ArmamentPrototype armament)
+    public int GetCost(EyeOfTheProtectorComponent component, ArmamentPrototype armament)
     {
         return armament.GetCost(GetDiscount(component, armament));
     }
 
-    private int GetPurchaseCount(ArmamentsPrinterComponent component, string armamentId)
+    private int GetPurchaseCount(EyeOfTheProtectorComponent component, string armamentId)
     {
         return component.PurchaseCount.GetValueOrDefault(armamentId);
     }
 
-    private int GetDiscount(ArmamentsPrinterComponent component, ArmamentPrototype armament)
+    private int GetDiscount(EyeOfTheProtectorComponent component, ArmamentPrototype armament)
     {
         return armament.GetDiscount(GetPurchaseCount(component, armament.ID));
     }

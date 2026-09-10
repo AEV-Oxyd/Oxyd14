@@ -183,6 +183,24 @@ public sealed class EyeOfTheProtectorTest : GameTest
         return eye;
     }
 
+    [Test]
+    public async Task ScanAccruesArmamentPointsFromObservation()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
+            eyeComp.Observation = 250f;
+
+            _eye.Scan(eye);
+
+            Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(2),
+                "A scan must accrue (int)(Observation / 100) armament points.");
+        });
+    }
+
     private EntityUid ActiveBearer(EntityCoordinates coords)
     {
         var body = SSpawnAtPosition(HumanProto, coords);

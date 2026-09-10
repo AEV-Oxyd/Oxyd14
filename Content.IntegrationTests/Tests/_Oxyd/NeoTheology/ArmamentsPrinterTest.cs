@@ -15,7 +15,8 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 
 /// <summary>
 /// P2.16: the armaments printer only sells to an active bearer of a configured profile, only within
-/// reach, and only when the armory can pay — and it debits exactly what it charged.
+/// reach, and only when the armory can pay — and it debits exactly what it charged. P3.5 rebases the
+/// points onto the Eye of the Protector, so the sale debits the Eye, not the printer.
 /// </summary>
 [TestOf(typeof(ArmamentsPrinterSystem))]
 public sealed class ArmamentsPrinterTest : GameTest
@@ -39,10 +40,11 @@ public sealed class ArmamentsPrinterTest : GameTest
         await Server.WaitAssertion(() =>
         {
             var printer = SSpawnAtPosition(PrinterProto, map.GridCoords);
+            var eye = SpawnEye(map.GridCoords);
             var buyer = ActiveBearer(map.GridCoords);
 
-            Assert.That(SComp<ArmamentsPrinterComponent>(printer).Points, Is.Zero,
-                "Setup: a fresh printer must start with no armament points.");
+            Assert.That(SComp<EyeOfTheProtectorComponent>(eye).ArmamentsPoints, Is.Zero,
+                "Setup: a fresh Eye must start with no armament points.");
 
             Assert.That(_printer.TryPurchase(printer, buyer, ArmamentId), Is.False,
                 "An empty armory must refuse the sale.");
@@ -51,26 +53,35 @@ public sealed class ArmamentsPrinterTest : GameTest
     }
 
     [Test]
-    public async Task APurchaseWithPointsSpawnsOnThePrinterAndDebits()
+    public async Task APurchaseWithPointsSpawnsOnThePrinterAndDebitsTheEye()
     {
         var map = await Pair.CreateTestMap();
         await Server.WaitAssertion(() =>
         {
             var printer = SSpawnAtPosition(PrinterProto, map.GridCoords);
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
             var buyer = ActiveBearer(map.GridCoords);
-            var component = SComp<ArmamentsPrinterComponent>(printer);
-            var cost = _printer.GetCost(component, SProtoMan.Index<ArmamentPrototype>(ArmamentId));
-            component.Points = cost + 10;
+            var cost = _printer.GetCost(eyeComp, SProtoMan.Index<ArmamentPrototype>(ArmamentId));
+            eyeComp.ArmamentsPoints = cost + 10;
 
             Assert.That(_printer.TryPurchase(printer, buyer, ArmamentId), Is.True,
                 "A stocked armory must sell to a faithful buyer in reach.");
-            Assert.That(component.Points, Is.EqualTo(10), "The sale must debit exactly its price.");
+            Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(10), "The sale must debit the Eye exactly its price.");
 
             var spawned = Armaments().Single();
             Assert.That(SComp<TransformComponent>(spawned).Coordinates,
                 Is.EqualTo(SComp<TransformComponent>(printer).Coordinates),
                 "The armament must appear on the printer's turf.");
         });
+    }
+
+    private EntityUid SpawnEye(EntityCoordinates coords)
+    {
+        // ponytail: the Eye prototype arrives in P3.7; until then the printer debits a bare entity.
+        var eye = SSpawnAtPosition(null, coords);
+        SEntMan.AddComponent<EyeOfTheProtectorComponent>(eye);
+        return eye;
     }
 
     private EntityUid ActiveBearer(EntityCoordinates coords)

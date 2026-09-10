@@ -21,6 +21,14 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     [DataField]
     public int MaxArmamentsPoints = 300;
 
+    /// <summary>Eris <c>max_increase</c>: the first purchase of an armament lifts the ceiling.</summary>
+    [ViewVariables]
+    public bool FirstPurchaseMade;
+
+    /// <summary>Per-armament purchase counters, keyed by prototype id (Eris keeps these on the EOTP datum).</summary>
+    [ViewVariables]
+    public Dictionary<string, int> PurchaseCount = new();
+
     [DataField]
     public float ObservationRadius = 20f;
 
