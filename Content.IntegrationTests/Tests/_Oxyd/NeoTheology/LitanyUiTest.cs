@@ -318,13 +318,17 @@ public sealed class LitanyUiTest : GameTest
                 LitanyEffectKind.Entreaty,
                 LitanyEffectKind.CruciformSense,
                 LitanyEffectKind.ActivateDoor,
+                LitanyEffectKind.HandOfMercy,
+                LitanyEffectKind.AbsolutionOfWounds,
+                LitanyEffectKind.Convalescence,
+                LitanyEffectKind.Succour,
             }));
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Entreaty), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.CruciformSense), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.ActivateDoor), Is.True);
-            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(5));
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(9));
         });
     }
 

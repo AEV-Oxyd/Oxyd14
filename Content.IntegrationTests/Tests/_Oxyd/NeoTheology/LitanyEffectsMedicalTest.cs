@@ -1,7 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
+using Content.Server.Atmos.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
@@ -36,6 +39,12 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     private static readonly ProtoId<DamageTypePrototype> ShockDamage = "Shock";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
     private static readonly ProtoId<LitanyPrototype> SoulHunger = "OxydLitanySoulHunger";
+    private static readonly ProtoId<LitanyPrototype> HandOfMercy = "OxydLitanyHandOfMercy";
+    private static readonly ProtoId<LitanyPrototype> AbsolutionOfWounds = "OxydLitanyAbsolutionOfWounds";
+    private static readonly ProtoId<LitanyPrototype> Convalescence = "OxydLitanyConvalescence";
+    private static readonly ProtoId<LitanyPrototype> Succour = "OxydLitanySuccour";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> Agrolyte = "OxydNtAgrolyte";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> Inquisitor = "OxydNtInquisitor";
 
     private static readonly LitanyEffectKind[] PacketCImplemented =
     [
@@ -44,6 +53,10 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
         LitanyEffectKind.ActivateDoor,
+        LitanyEffectKind.HandOfMercy,
+        LitanyEffectKind.AbsolutionOfWounds,
+        LitanyEffectKind.Convalescence,
+        LitanyEffectKind.Succour,
     ];
 
     public override PoolSettings PoolSettings => new()
@@ -442,7 +455,111 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     }
 
 
-    /// <summary>Prevent satiation damage from skewing medical damage asserts during waits.</summary>
+    // P4.5: the four medical litanies heal through their negative damage blocks. The heal
+    // applies through the casting body; adjacent helper bodies exist only where the target
+    // mode requires a recipient (HandOfMercy / Absolution: adjacent living, Succour: adjacent
+    // active follower). Seeds exceed the budget but stay below the mob's 100-damage critical
+    // threshold, so the asserted delta proves the heal is capped: the Brute-group entry spends
+    // 20 across Blunt/Slash, not 20 per subtype.
+    [Test]
+    public async Task HandOfMercy_HealsBlunt10Heat10() =>
+        await AssertLitanyHealsExactDelta(HandOfMercy, Agrolyte, adjacentLiving: true, adjacentFollower: false,
+            ("Blunt", 20f, 10f), ("Heat", 20f, 10f));
+
+    [Test]
+    public async Task AbsolutionOfWounds_HealsBrute20Heat20Asphyxiation40() =>
+        await AssertLitanyHealsExactDelta(AbsolutionOfWounds, Agrolyte, adjacentLiving: true, adjacentFollower: false,
+            ("Blunt", 11f, 10f), ("Slash", 11f, 10f), ("Heat", 22f, 20f), ("Asphyxiation", 41f, 40f));
+
+    [Test]
+    public async Task Convalescence_HealsBrute20Heat20Asphyxiation40() =>
+        await AssertLitanyHealsExactDelta(Convalescence, Inquisitor, adjacentLiving: false, adjacentFollower: false,
+            ("Blunt", 11f, 10f), ("Slash", 11f, 10f), ("Heat", 22f, 20f), ("Asphyxiation", 41f, 40f));
+
+    [Test]
+    public async Task Succour_HealsBrute20Heat20Asphyxiation40() =>
+        await AssertLitanyHealsExactDelta(Succour, Inquisitor, adjacentLiving: false, adjacentFollower: true,
+            ("Blunt", 11f, 10f), ("Slash", 11f, 10f), ("Heat", 22f, 20f), ("Asphyxiation", 41f, 40f));
+
+    /// <summary>
+    /// Seeds each listed damage type above its heal budget, casts <paramref name="litany"/>
+    /// and asserts the exact numeric damage delta per type (not just "health improved").
+    /// </summary>
+    private async Task AssertLitanyHealsExactDelta(
+        ProtoId<LitanyPrototype> litany,
+        ProtoId<NeoTheologyProfilePrototype> profile,
+        bool adjacentLiving,
+        bool adjacentFollower,
+        params (string Type, float Seed, float Heal)[] expected)
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid body = default;
+        var before = new Dictionary<string, float>();
+
+        await Server.WaitAssertion(() =>
+        {
+            body = PrepareCaster(map.GridCoords, litany);
+            Assert.That(_cruciform.TrySetProfile(body, profile), Is.True,
+                $"{litany.Id} requires the {profile.Id} profile's litany set.");
+
+            if (adjacentLiving || adjacentFollower)
+            {
+                var neighbour = SSpawnAtPosition(HumanProto, map.GridCoords.Offset(new Vector2(1f, 0f)));
+                if (adjacentFollower)
+                {
+                    Assert.That(_implants.AddImplant(neighbour, CruciformProto), Is.Not.Null);
+                    Assert.That(_cruciform.Activate(neighbour), Is.True);
+                }
+            }
+
+            var seed = new DamageSpecifier();
+            foreach (var (type, amount, _) in expected)
+                seed.DamageDict[type] = FixedPoint2.New(amount);
+            _damageable.SetDamage(body, seed);
+
+            StabilizeNeeds(body);
+            foreach (var (type, _, _) in expected)
+            {
+                before[type] = DamageOf(body, type).Float();
+                Assert.That(before[type], Is.GreaterThan(0f), $"{litany.Id} seed missing for {type}.");
+            }
+
+            var begin = _litany.TryBeginLitany(body, litany, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? $"{litany.Id} begin failed");
+        });
+
+        await AdvancePastCast();
+
+        await Server.WaitAssertion(() =>
+        {
+            var observed = new Dictionary<string, float>();
+            var after = new Dictionary<string, float>();
+            foreach (var (type, _, _) in expected)
+            {
+                after[type] = DamageOf(body, type).Float();
+                observed[type] = before[type] - after[type];
+            }
+
+            var healSpec = string.Join(", ",
+                _prototypes.Index(litany).Effects.OfType<LitanyHealEffect>()
+                    .SelectMany(heal => heal.Damage.DamageDict)
+                    .Select(kv => $"{kv.Key}={kv.Value}"));
+
+            foreach (var (type, _, heal) in expected)
+            {
+                Assert.That(observed[type], Is.EqualTo(heal).Within(Math.Max(1f, heal * 0.1f)),
+                    $"{litany.Id} must heal {heal} {type}; observed {observed[type]}. " +
+                    $"Before=[{string.Join(", ", before.Select(kv => $"{kv.Key}:{kv.Value:F2}"))}] " +
+                    $"After=[{string.Join(", ", after.Select(kv => $"{kv.Key}:{kv.Value:F2}"))}] Spec=[{healSpec}]");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Prevent environment drift from skewing medical damage asserts during waits:
+    /// satiation decay damage is removed, and the vacuum test map's 1 Hz barotrauma
+    /// damage is disabled so a long cast (Succour's extra delay) cannot outrun the heal.
+    /// </summary>
     private void StabilizeNeeds(EntityUid body)
     {
         if (SEntMan.TryGetComponent(body, out SatiationComponent satiation))
@@ -456,6 +573,7 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         }
 
         SEntMan.RemoveComponent<SatiationDamageComponent>(body);
+        SEntMan.RemoveComponent<BarotraumaComponent>(body);
     }
 
     private FixedPoint2 DamageOf(EntityUid body, string type)
@@ -513,7 +631,9 @@ public sealed class LitanyEffectsMedicalTest : GameTest
 
     private async Task AdvancePastCast()
     {
-        for (var i = 0; i < 60; i++)
+        // Succour carries an extra 4 s delay on top of the chant; 150 iterations leave
+        // ample headroom at the default tick period and exit as soon as the cast settles.
+        for (var i = 0; i < 150; i++)
         {
             await Pair.RunTicksSync(5);
             var done = false;

@@ -42,6 +42,10 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
         LitanyEffectKind.ActivateDoor,
+        LitanyEffectKind.HandOfMercy,
+        LitanyEffectKind.AbsolutionOfWounds,
+        LitanyEffectKind.Convalescence,
+        LitanyEffectKind.Succour,
     ];
 
     [Test]

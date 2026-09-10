@@ -35,8 +35,7 @@
       types:
         Blunt: -10
         Heat: -10
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyAbsolutionOfWounds
@@ -49,8 +48,14 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 10
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyWordsOfPurging

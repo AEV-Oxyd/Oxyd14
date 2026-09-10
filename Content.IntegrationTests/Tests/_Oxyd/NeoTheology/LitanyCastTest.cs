@@ -270,6 +270,10 @@ public sealed class LitanyCastTest : GameTest
                 Relief.Id,
                 "OxydLitanySoulHunger",
                 "OxydLitanyActivateDoor",
+                "OxydLitanyHandOfMercy",
+                "OxydLitanyAbsolutionOfWounds",
+                "OxydLitanyConvalescence",
+                "OxydLitanySuccour",
             }));
         });
     }

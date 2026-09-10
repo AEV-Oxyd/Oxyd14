@@ -35,8 +35,7 @@
         Brute: -20
         Heat: -20
         Asphyxiation: -40
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanySuccour
@@ -61,8 +60,7 @@
         Brute: -20
         Heat: -20
         Asphyxiation: -40
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyScrying

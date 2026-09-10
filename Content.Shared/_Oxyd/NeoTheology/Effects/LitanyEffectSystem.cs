@@ -2,10 +2,12 @@ using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
+using Content.Shared.Damage.Prototypes;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Doors.Components;
 using Content.Shared.Doors.Systems;
 using Content.Shared.Examine;
+using Content.Shared.FixedPoint;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Nutrition.Components;
@@ -146,6 +148,31 @@ public sealed partial class LitanyEffectSystem : EntitySystem
             interruptsDoAfters: false,
             origin: target,
             ignoreGlobalModifiers: true);
+    }
+
+    /// <summary>
+    /// True when a heal entry's key names a damage group ("Brute") rather than a damage
+    /// type ("Blunt"). The engine only applies type entries; group entries must be
+    /// spread over the group's present damage via <see cref="TryHealDamageGroup"/>.
+    /// Group membership wins on the rare id that is registered as both (test-only
+    /// prototypes can add a type that collides with a production group).
+    /// </summary>
+    public bool IsDamageGroup(ProtoId<DamageTypePrototype> type)
+    {
+        return ProtoMan.HasIndex<DamageGroupPrototype>(type.Id);
+    }
+
+    /// <summary>
+    /// Heals a damage-group entry from a litany heal block: the negative budget is spread
+    /// over the group's present positive damage (engine <c>HealDistributed</c>), so
+    /// "Brute: -20" heals 20 total across Blunt/Slash/Piercing, never 20 per subtype.
+    /// </summary>
+    public bool TryHealDamageGroup(EntityUid target, ProtoId<DamageTypePrototype> group, FixedPoint2 budget)
+    {
+        if (budget >= FixedPoint2.Zero || !CanReceiveDamage(target))
+            return false;
+
+        return !_damageable.HealDistributed(target, budget, group.Id).Empty;
     }
 
     public bool TryGetHunger(

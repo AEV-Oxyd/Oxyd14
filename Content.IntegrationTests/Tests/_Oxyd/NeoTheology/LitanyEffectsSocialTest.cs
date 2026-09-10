@@ -49,6 +49,10 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
         LitanyEffectKind.ActivateDoor,
+        LitanyEffectKind.HandOfMercy,
+        LitanyEffectKind.AbsolutionOfWounds,
+        LitanyEffectKind.Convalescence,
+        LitanyEffectKind.Succour,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -488,7 +492,12 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
             Assert.That(
                 available,
-                Is.EquivalentTo(new[] { CruciformSense.Id, Entreaty.Id, Relief.Id, SoulHunger.Id, ActivateDoor.Id }),
+                Is.EquivalentTo(new[]
+                {
+                    CruciformSense.Id, Entreaty.Id, Relief.Id, SoulHunger.Id, ActivateDoor.Id,
+                    "OxydLitanyHandOfMercy", "OxydLitanyAbsolutionOfWounds",
+                    "OxydLitanyConvalescence", "OxydLitanySuccour",
+                }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 
             Assert.That(_prototypes.Index(Relief).IsAvailable, Is.True);
