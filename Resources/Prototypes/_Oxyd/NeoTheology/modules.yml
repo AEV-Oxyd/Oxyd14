@@ -41,4 +41,7 @@
 
 - type: oxydCoreModule
   id: OxydNtModuleCloning
+
+- type: oxydCoreModule
+  id: OxydNtModulePriestConvert
   activationProfile: OxydNtPreacher
