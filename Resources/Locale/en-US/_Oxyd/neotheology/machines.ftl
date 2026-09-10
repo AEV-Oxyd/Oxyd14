@@ -10,3 +10,5 @@ ent-OxydNtCloner = cruciform cloner
 ent-OxydNtCloner-desc = Grows a body for a soul read off a cruciform.
 ent-OxydNtBiomassContainer = biomass container
 ent-OxydNtBiomassContainer-desc = Holds biomatter for the cloner.
+ent-OxydNtObelisk = NeoTheology obelisk
+ent-OxydNtObelisk-desc = Projects the faith of the faithful, purging the unclean around it.

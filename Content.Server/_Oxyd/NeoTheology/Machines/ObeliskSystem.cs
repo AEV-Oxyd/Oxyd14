@@ -90,6 +90,8 @@ public sealed class ObeliskSystem : EntitySystem
 
         obelisk.Active = faithful > 0;
 
+        // Phase 3: _eye.AddObservation(gen.ObservationPerFaithful * faithfulCount);
+
         DamageHostiles(uid, obelisk, xform);
         WeedTrays(xform, obelisk);
     }

@@ -106,3 +106,18 @@
   - type: Sprite
     sprite: Structures/Storage/tanks.rsi
     state: generictank-1
+
+# P2.14: the obelisk's aura (P2.13). Observation payout is a no-op until Phase 3's Eye lands.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtObelisk
+  name: NeoTheology obelisk
+  description: Projects the faith of the faithful, purging the unclean around it.
+  components:
+  - type: Obelisk
+  - type: ApcPowerReceiver
+    powerLoad: 30
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/tech_disk_printer.rsi
+    state: icon
