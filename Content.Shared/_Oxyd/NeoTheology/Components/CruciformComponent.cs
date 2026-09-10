@@ -29,6 +29,14 @@ public sealed partial class CruciformComponent : Component
     [ViewVariables, AutoNetworkedField]
     public double RegenerationPerSecond;
 
+    /// <summary>
+    /// Temporary regeneration multiplier contributed by auras (the obelisk's faithful buff). It is
+    /// an input to <see cref="CruciformSystem.RecomputeProfile"/> alongside profile ∪ modules ∪
+    /// upgrade, so repeated aura ticks can never compound and an out-of-aura reset is exact.
+    /// </summary>
+    [DataField]
+    public double RegenerationMultiplier = 1.0;
+
     [DataField, AutoNetworkedField]
     public ProtoId<NeoTheologyProfilePrototype> Profile = "OxydNtDisciple";
 

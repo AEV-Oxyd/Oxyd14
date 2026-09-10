@@ -461,6 +461,10 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             regenMultiplier += upgrade.RegenMultiplierDelta;
         }
 
+        // Auras (the obelisk) ride the same derivation, so an aura pulse can neither compound on
+        // itself nor be lost when a module changes.
+        regenMultiplier *= component.RegenerationMultiplier;
+
         component.MaxHoliness = capacity;
 
         var cognitive = 0;
