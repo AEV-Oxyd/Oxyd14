@@ -23,6 +23,7 @@ public sealed class CoreModuleTest : GameTest
     private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
     private static readonly ProtoId<CoreModulePrototype> RedLightModule = "OxydNtModuleRedLight";
     private static readonly ProtoId<CoreModulePrototype> InquisitorModule = "OxydNtModuleInquisitor";
+    private static readonly ProtoId<CoreModulePrototype> PriestConvertModule = "OxydNtModulePriestConvert";
     private static readonly ProtoId<LitanySetPrototype> CustodianSet = "OxydLitanyCustodian";
     private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
 
@@ -133,6 +134,31 @@ public sealed class CoreModuleTest : GameTest
                 "Ordination swaps the rank modules in, it does not stack profiles.");
             // Inquisitor profile capacity (100) x inquisitor module (2.0) x red light (1.6).
             Assert.That(comp.MaxHoliness, Is.EqualTo(100d * 2.0 * 1.6).Within(0.001));
+        });
+    }
+
+    [Test]
+    public async Task ActivatingCruciformWithPriestConvertModuleConvertsToPreacher()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var body = SSpawnAtPosition(HumanProto, map.GridCoords);
+            var implant = _implants.AddImplant(body, CruciformProto);
+            Assert.That(implant, Is.Not.Null);
+            var comp = SComp<CruciformComponent>(implant!.Value);
+
+            Assert.That(_modules.TryInstall(implant.Value, comp, PriestConvertModule), Is.True);
+            Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtDisciple"),
+                "Installing the convert module must not convert on its own.");
+
+            Assert.That(_cruciform.Activate(body), Is.True);
+
+            Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtPreacher"),
+                "Activation must apply the installed module's activation profile.");
+            Assert.That(comp.InstalledModules, Does.Contain(PriestModule),
+                "Conversion must bring the target rank's modules with it.");
         });
     }
 

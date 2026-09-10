@@ -228,6 +228,17 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
 
         component.EverActivated = true;
         component.Active = true;
+
+        // Eris cruciform.dm:94-122 — an activatable module (priest_convert) converts on activation.
+        // InstalledModules is mutated by MakeRank, so iterate a snapshot.
+        foreach (var moduleId in component.InstalledModules.ToArray())
+        {
+            if (!ProtoMan.TryIndex(moduleId, out CoreModulePrototype? module) || module.ActivationProfile is not { } profile)
+                continue;
+
+            MakeRank(cruciform, component, profile);
+        }
+
         if (component.Holiness <= GetDebitTolerance())
             component.Holiness = component.MaxHoliness;
         component.LastHolinessUpdate = _timing.CurTime;
