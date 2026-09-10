@@ -21,6 +21,7 @@ public sealed class CoreModuleTest : GameTest
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<CoreModulePrototype> PriestModule = "OxydNtModulePriest";
     private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
+    private static readonly ProtoId<CoreModulePrototype> RedLightModule = "OxydNtModuleRedLight";
     private static readonly ProtoId<LitanySetPrototype> CustodianSet = "OxydLitanyCustodian";
     private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
 
@@ -76,6 +77,31 @@ public sealed class CoreModuleTest : GameTest
                 "Installing the custodian module must unlock its litany set, even while inactive.");
             Assert.That(comp.UnlockedSets, Does.Contain(CommonSet),
                 "Profile sets must survive the module union.");
+        });
+    }
+
+    [Test]
+    public async Task RedLightModuleRaisesCapacityBySixtyPercent()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var implant = ImplantBody(map.GridCoords);
+            var comp = SComp<CruciformComponent>(implant);
+
+            var before = comp.MaxHoliness;
+            Assert.That(before, Is.GreaterThan(0d));
+
+            Assert.That(_modules.TryInstall(implant, comp, RedLightModule), Is.True);
+
+            var after = comp.MaxHoliness;
+            Assert.That(after / before, Is.EqualTo(1.6).Within(0.001),
+                "Red light multiplies cruciform capacity by 1.6.");
+
+            Assert.That(_modules.TryRemove(implant, comp, RedLightModule), Is.True);
+            Assert.That(comp.MaxHoliness, Is.EqualTo(before).Within(0.001),
+                "Removing the module must restore the base capacity.");
         });
     }
 

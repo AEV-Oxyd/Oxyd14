@@ -321,23 +321,10 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     {
         var rules = GetRules();
         var hasProfile = TryGetConfiguredProfile(component.Profile, rules, out var profile);
-        component.MaxHoliness = hasProfile ? profile.CruciformCapacity : 0d;
-
         var body = component.ImplantedEntity;
-        var cognitive = 0;
-        if (body is { } skillBody && TryComp<MobSkillComponent>(skillBody, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
-            cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
 
-        component.RegenerationPerSecond = hasProfile && rules != null && body is { } regenBody
-            ? NeoTheologyHoliness.RegenerationPerSecond(
-                cognitive,
-                component.RighteousLife,
-                component.Channeling && profile.CanChannel,
-                CountEligibleChannelingFollowers(regenBody),
-                rules.BaseHolinessPerMinute,
-                profile.RegenerationMultiplier)
-            : 0d;
-        component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness, component.MaxHoliness);
+        var capacity = hasProfile ? profile.CruciformCapacity : 50d;
+        var regenMultiplier = hasProfile ? profile.RegenerationMultiplier : 1d;
 
         component.UnlockedSets.Clear();
 
@@ -354,7 +341,31 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
 
             foreach (var set in module.LitanySets)
                 component.UnlockedSets.Add(set);
+
+            capacity *= module.MaxHolinessMultiplier;
+            regenMultiplier += module.RegenMultiplierDelta;
         }
+
+        component.MaxHoliness = capacity;
+
+        var cognitive = 0;
+        if (body is { } skillBody && TryComp<MobSkillComponent>(skillBody, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
+            cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
+
+        // The shared regen helper already folds righteous life, cognition and channeling in;
+        // module deltas ride the multiplier. Multiplying by capacity here would be 50x the
+        // rate the existing lifecycle test pins for a disciple (1/min), so it is not applied.
+        component.RegenerationPerSecond = hasProfile && rules != null && body is { } regenBody
+            ? NeoTheologyHoliness.RegenerationPerSecond(
+                cognitive,
+                component.RighteousLife,
+                component.Channeling && profile.CanChannel,
+                CountEligibleChannelingFollowers(regenBody),
+                rules.BaseHolinessPerMinute,
+                regenMultiplier)
+            : 0d;
+
+        component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness, component.MaxHoliness);
     }
 
     private int CountEligibleChannelingFollowers(EntityUid source)
