@@ -54,6 +54,13 @@ public sealed partial class CruciformComponent : Component
     public HashSet<ProtoId<LitanySetPrototype>> UnlockedSets = new();
 
     /// <summary>
+    /// Installed cruciform attachment, if any. Its deltas ride the same derivation as
+    /// profile ∪ modules inside <c>RecomputeProfile</c>.
+    /// </summary>
+    [DataField]
+    public EntityUid? Upgrade;
+
+    /// <summary>
     /// Simulation timestamp used to settle regeneration. It is re-anchored whenever
     /// activation or implantation state changes so detached time is never retroactive.
     /// </summary>

@@ -449,6 +449,18 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             regenMultiplier += module.RegenMultiplierDelta;
         }
 
+        // Installed attachment: same derivation path as profile ∪ modules, so it can never
+        // be clobbered by a later recompute and uninstall lands on the exact prior value.
+        if (component.Upgrade is { } upgradeItem &&
+            TryComp<CruciformUpgradeComponent>(upgradeItem, out var upgrade))
+        {
+            foreach (var set in upgrade.LitanySets)
+                component.UnlockedSets.Add(set);
+
+            capacity += upgrade.MaxHolinessDelta;
+            regenMultiplier += upgrade.RegenMultiplierDelta;
+        }
+
         component.MaxHoliness = capacity;
 
         var cognitive = 0;
