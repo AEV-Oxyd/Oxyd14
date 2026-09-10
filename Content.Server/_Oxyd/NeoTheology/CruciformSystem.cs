@@ -250,11 +250,15 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     }
 
     /// <summary>
-    /// Job-spawn entry point (see <c>NeoTheologyJobSystem</c>): spawn a cruciform, implant it
-    /// and bring it live with the given profile and that rank's modules.
+    /// Spawns, implants and activates a cruciform on <paramref name="body"/> with the given
+    /// profile. No-op when the body is already a bearer, so job respawns and admin healing
+    /// cannot double-implant.
     /// </summary>
     public bool GrantCruciform(EntityUid body, ProtoId<NeoTheologyProfilePrototype> profile)
     {
+        if (TryComp<CruciformBearerComponent>(body, out _))
+            return false;
+
         if (_implants.AddImplant(body, "OxydNtCruciform") is not { } implant)
             return false;
 

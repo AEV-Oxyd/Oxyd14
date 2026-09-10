@@ -1,4 +1,6 @@
 using Content.IntegrationTests.Fixtures;
+using Content.IntegrationTests.Fixtures.Attributes;
+using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.GameTicking;
 using Content.Shared.Preferences;
@@ -14,6 +16,8 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 public sealed class NeoTheologyJobTest : GameTest
 {
     private static readonly EntProtoId HumanProto = "MobHuman";
+
+    [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
 
     [Test]
     public async Task SpawningIntoChaplainJobGrantsPreacherCruciform()
@@ -44,6 +48,9 @@ public sealed class NeoTheologyJobTest : GameTest
             Assert.That(comp.Active, Is.True, "A job-granted cruciform starts active.");
             Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtPreacher"));
             Assert.That(comp.UnlockedSets, Is.Not.Empty);
+
+            Assert.That(_cruciform.GrantCruciform(mob, "OxydNtPreacher"), Is.False,
+                "A body that already wears a cruciform must not be granted a second one.");
         });
     }
 }
