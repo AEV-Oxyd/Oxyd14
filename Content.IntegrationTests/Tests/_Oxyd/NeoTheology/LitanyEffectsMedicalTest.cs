@@ -59,6 +59,9 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.Succour,
         LitanyEffectKind.GraceOfPerseverance,
         LitanyEffectKind.UpholdHolyWord,
+        LitanyEffectKind.Revelation,
+        LitanyEffectKind.Epiphany,
+        LitanyEffectKind.DivineBlessing,
     ];
 
     public override PoolSettings PoolSettings => new()

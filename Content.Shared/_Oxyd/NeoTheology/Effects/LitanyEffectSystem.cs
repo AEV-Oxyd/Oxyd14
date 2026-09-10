@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Damage;
@@ -9,6 +10,7 @@ using Content.Shared.Doors.Components;
 using Content.Shared.Doors.Systems;
 using Content.Shared.Examine;
 using Content.Shared.FixedPoint;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Nutrition.Components;
@@ -42,6 +44,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private readonly DamageableSystem _damageable = default!;
     [Dependency] private readonly SharedDoorSystem _doors = default!;
     [Dependency] private readonly ExamineSystemShared _examine = default!;
+    [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SatiationSystem _satiation = default!;
@@ -143,6 +146,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return _mobState.IsAlive(uid) && HasComp<MobSkillComponent>(uid);
     }
 
+    /// <summary>True when the target has sanity to modify (Revelation's Belief gain).</summary>
+    public bool CanReceiveSanityDelta(EntityUid uid)
+    {
+        return HasComp<SanityComponent>(uid);
+    }
+
     /// <summary>
     /// Applies or refreshes one unique skill buff per listed skill. <paramref name="sourceId"/>
     /// is the unique source: recasting from the same source refreshes it, never stacks.
@@ -163,6 +172,19 @@ public sealed partial class LitanyEffectSystem : EntitySystem
             _skill.SetUniqueBuff((target, skills), sourceId, amount, skill, expires);
         }
 
+        return true;
+    }
+
+    /// <summary>
+    /// Applies or refreshes one litany-keyed unique skill penalty (negative amount) with no
+    /// expiry — Eris <c>changeStat</c> is permanent, unlike the timed buffs above.
+    /// </summary>
+    public bool TryApplySkillPenalty(EntityUid target, string sourceId, ProtoId<SkillPrototype> skill, int amount)
+    {
+        if (amount >= 0 || !CanReceiveSkillBuff(target) || !TryComp<MobSkillComponent>(target, out var skills))
+            return false;
+
+        _skill.SetUniqueBuff((target, skills), sourceId, amount, skill, expires: null);
         return true;
     }
 
@@ -240,6 +262,25 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return _cruciform.TryGetCruciform(body, out _, out component);
     }
 
+    /// <summary>Installed cruciform regardless of active state (Epiphany activates it).</summary>
+    public bool TryGetInstalledCruciform(EntityUid body, out CruciformComponent component)
+    {
+        return _cruciform.TryGetCruciformEntity(body, out _, out component);
+    }
+
+    /// <summary>Oddity held in the active hand — DivineBlessing blesses the caster's own oddity.</summary>
+    public bool TryGetHeldOddity(EntityUid user, out OddityComponent oddity)
+    {
+        oddity = null!;
+        if (!_hands.TryGetActiveItem(user, out var item) || item is not { } held)
+            return false;
+        if (!TryComp(held, out OddityComponent? comp))
+            return false;
+
+        oddity = comp;
+        return true;
+    }
+
     public static bool IsClergyProfile(ProtoId<NeoTheologyProfilePrototype> profile)
     {
         return profile == PreacherProfile || profile == InquisitorProfile;
@@ -253,6 +294,22 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     public bool Prob(float chance)
     {
         return _random.Prob(chance);
+    }
+
+    /// <summary>Inclusive integer roll from the shared random (Revelation 0..10, blessing 1..8).</summary>
+    public int RollInclusive(int min, int max)
+    {
+        return _random.Next(min, max + 1);
+    }
+
+    /// <summary>
+    /// Raises a by-ref event on a target on behalf of an effect. Effects are prototype data
+    /// with no bus access; server-only handlers own the authoritative side (sanity delta,
+    /// cruciform activation) and set <c>Handled</c>.
+    /// </summary>
+    public void RaiseOn<TEvent>(EntityUid target, ref TEvent args) where TEvent : notnull
+    {
+        RaiseLocalEvent(target, ref args);
     }
 
     public string GetName(EntityUid uid, EntityUid? viewer = null)

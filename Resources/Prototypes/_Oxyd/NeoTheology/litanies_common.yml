@@ -131,8 +131,9 @@
   cooldownKey: OxydLitanyRevelation
   cooldownScope: Personal
   cooldownDuration: 60
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyRevelationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyInstallUpgrade

@@ -35,7 +35,7 @@ public sealed class LitanyPrototypeTest : GameTest
         var litanies = prototypes.EnumeratePrototypes<LitanyPrototype>().ToArray();
 
         Assert.That(litanies, Has.Length.EqualTo(LitanyCatalogValidator.ExpectedLitanyCount));
-        Assert.That(litanies.Count(litany => litany.IsAvailable), Is.EqualTo(11));
+        Assert.That(litanies.Count(litany => litany.IsAvailable), Is.EqualTo(14));
         Assert.That(litanies.Where(l => l.IsAvailable).Select(l => l.Effect),
             Is.EquivalentTo(new[]
             {
@@ -50,6 +50,9 @@ public sealed class LitanyPrototypeTest : GameTest
                 LitanyEffectKind.Succour,
                 LitanyEffectKind.GraceOfPerseverance,
                 LitanyEffectKind.UpholdHolyWord,
+                LitanyEffectKind.Revelation,
+                LitanyEffectKind.Epiphany,
+                LitanyEffectKind.DivineBlessing,
             }));
         Assert.That(litanies.Count(litany => litany.Dependency == NeoTheologyDependency.None),
             Is.EqualTo(LitanyCatalogValidator.ExpectedFoundationLitanyCount));

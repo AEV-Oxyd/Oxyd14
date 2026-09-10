@@ -55,6 +55,9 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.Succour,
         LitanyEffectKind.GraceOfPerseverance,
         LitanyEffectKind.UpholdHolyWord,
+        LitanyEffectKind.Revelation,
+        LitanyEffectKind.Epiphany,
+        LitanyEffectKind.DivineBlessing,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -500,6 +503,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
                     "OxydLitanyHandOfMercy", "OxydLitanyAbsolutionOfWounds",
                     "OxydLitanyConvalescence", "OxydLitanySuccour",
                     "OxydLitanyGraceOfPerseverance", "OxydLitanyUpholdHolyWord",
+                    "OxydLitanyRevelation", "OxydLitanyEpiphany", "OxydLitanyDivineBlessing",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

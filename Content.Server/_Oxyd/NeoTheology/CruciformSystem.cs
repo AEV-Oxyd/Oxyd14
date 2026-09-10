@@ -2,6 +2,7 @@ using System.Linq;
 using Content.Server.GameTicking;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Access;
 using Content.Shared.Access.Components;
@@ -44,7 +45,18 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         SubscribeLocalEvent<CruciformBearerComponent, MobStateChangedEvent>(OnMobStateChanged);
         SubscribeLocalEvent<CruciformBearerComponent, EntityTerminatingEvent>(OnBearerTerminating);
         SubscribeLocalEvent<CruciformBearerComponent, GetAccessTagsEvent>(OnGetAccessTags);
+        SubscribeLocalEvent<CruciformBearerComponent, LitanyActivateCruciformEvent>(OnLitanyActivateCruciform);
         SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+    }
+
+    /// <summary>
+    /// Epiphany bridge: the shared litany effect cannot call this server system, so it
+    /// raises <see cref="LitanyActivateCruciformEvent"/> on the target body. <c>Handled</c>
+    /// stays false when the target has no installed, inactive cruciform.
+    /// </summary>
+    private void OnLitanyActivateCruciform(Entity<CruciformBearerComponent> ent, ref LitanyActivateCruciformEvent args)
+    {
+        args.Handled = Activate(ent.Owner);
     }
 
     public override void Update(float frameTime)

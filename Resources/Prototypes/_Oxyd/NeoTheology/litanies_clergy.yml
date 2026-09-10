@@ -83,8 +83,9 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 0
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyEpiphanyEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyAsacris
@@ -217,8 +218,9 @@
   targetMode: Self
   range: 0
   cost: 30
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyDivineBlessingEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyConfirmation

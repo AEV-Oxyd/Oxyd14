@@ -23,8 +23,12 @@ oxyd-litany-denied-unknown-request = That litany request is unknown.
 oxyd-litany-denied-already-committed = That litany has already completed.
 oxyd-litany-denied-rate-limit = You are chanting too quickly.
 oxyd-litany-no-effect = The litany could not take hold.
+oxyd-litany-no-cruciform = The target has no installed cruciform.
+oxyd-litany-already-active = The target's cruciform is already active.
+oxyd-litany-no-oddity = You must hold an oddity to bless.
 
 oxyd-litany-entreaty-notice = { $name }, faithful cruciform follower, cries for salvation at { $location }!
 oxyd-litany-cruciform-sense-notice = { $name } has a cruciform installed.
+oxyd-litany-revelation-vision = A vision of the divine floods your mind.
 
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.
