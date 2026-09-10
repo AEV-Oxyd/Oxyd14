@@ -1,0 +1,44 @@
+# Eris modules.dm — datum/core_module/rituals/cruciform/*
+- type: oxydCoreModule
+  id: OxydNtModuleBase
+  litanySets: [ OxydLitanyCommon, OxydLitanyMachinery, OxydLitanyGroup ]
+
+- type: oxydCoreModule
+  id: OxydNtModuleAgrolyte
+  litanySets: [ OxydLitanyAgrolyte ]
+  access: [ OxydNtCommon ]
+
+- type: oxydCoreModule
+  id: OxydNtModuleCustodian
+  litanySets: [ OxydLitanyCustodian ]
+  access: [ OxydNtCommon ]
+
+- type: oxydCoreModule
+  id: OxydNtModulePriest
+  litanySets: [ OxydLitanyPriest ]
+  access: [ OxydNtClergy ]
+
+- type: oxydCoreModule
+  id: OxydNtModuleAcolyte
+  litanySets: [ OxydLitanyAcolyte ]
+  access: [ OxydNtClergy ]
+
+- type: oxydCoreModule
+  id: OxydNtModuleInquisitor
+  litanySets: [ OxydLitanyInquisitor ]
+  access: [ OxydNtClergy ]
+  maxHolinessMultiplier: 2.0
+  regenMultiplierDelta: 0.25
+
+- type: oxydCoreModule
+  id: OxydNtModuleCrusader
+  litanySets: [ OxydLitanyCrusader ]
+
+- type: oxydCoreModule
+  id: OxydNtModuleRedLight
+  maxHolinessMultiplier: 1.6
+  regenMultiplierDelta: 0.15
+
+- type: oxydCoreModule
+  id: OxydNtModuleCloning
+  activationProfile: OxydNtPreacher
