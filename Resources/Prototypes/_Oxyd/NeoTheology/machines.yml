@@ -1,3 +1,4 @@
+# NeoTheology machines (P2). No NT RSI exists in this fork, so sprites are borrowed from real machines.
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydNtCruciformForge
@@ -16,3 +17,38 @@
   # plasteel/gold 100/sheet).
   - type: MaterialStorage
     storageLimit: 10050
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBiogenerator
+  name: biogenerator
+  description: Burns biomatter to feed the power network.
+  components:
+  - type: Biogenerator
+  - type: NodeContainer
+    nodes:
+      output_mv:
+        !type:CableDeviceNode
+        nodeGroupID: MVPower
+  - type: PowerSupplier
+    supplyRampRate: 5000
+    supplyRampTolerance: 1500
+  - type: MaterialStorage
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/biofabricator.rsi
+    state: icon
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBioreactor
+  name: bioreactor
+  description: Processes crops left in its sealed chamber into biomatter.
+  components:
+  - type: Bioreactor
+  - type: ApcPowerReceiver
+    powerLoad: 150
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/gasrecycler.rsi
+    state: icon
