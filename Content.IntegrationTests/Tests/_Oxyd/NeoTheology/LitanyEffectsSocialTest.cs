@@ -37,6 +37,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
     private static readonly ProtoId<LitanyPrototype> CruciformSense = "OxydLitanyCruciformSense";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
     private static readonly ProtoId<LitanyPrototype> SoulHunger = "OxydLitanySoulHunger";
+    private static readonly ProtoId<LitanyPrototype> ActivateDoor = "OxydLitanyActivateDoor";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Disciple = "OxydNtDisciple";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Preacher = "OxydNtPreacher";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Inquisitor = "OxydNtInquisitor";
@@ -47,6 +48,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.SoulHunger,
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
+        LitanyEffectKind.ActivateDoor,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -462,11 +464,11 @@ public sealed class LitanyEffectsSocialTest : GameTest
         {
             _litany.TestingClearAvailabilityOverrides();
 
-            // Fail-closed Packet C gate: Implemented must be exactly Relief + SoulHunger + Entreaty + CruciformSense.
+            // Fail-closed handler gate: Implemented must be exactly the enabled catalog effects.
             Assert.That(
                 LitanyHandlerCatalog.Implemented,
                 Is.EquivalentTo(PacketCImplemented),
-                "Packet C: LitanyHandlerCatalog.Implemented must be exactly {Relief, SoulHunger, Entreaty, CruciformSense}.");
+                "LitanyHandlerCatalog.Implemented must be exactly the enabled catalog effects.");
 
             foreach (var effect in LitanyHandlerCatalog.Foundation)
             {
@@ -486,8 +488,8 @@ public sealed class LitanyEffectsSocialTest : GameTest
 
             Assert.That(
                 available,
-                Is.EquivalentTo(new[] { CruciformSense.Id, Entreaty.Id, Relief.Id, SoulHunger.Id }),
-                "Packet C: only Relief, SoulHunger, Entreaty, CruciformSense may be IsAvailable (enabled:true).");
+                Is.EquivalentTo(new[] { CruciformSense.Id, Entreaty.Id, Relief.Id, SoulHunger.Id, ActivateDoor.Id }),
+                "Only implemented effects may be IsAvailable (enabled:true).");
 
             Assert.That(_prototypes.Index(Relief).IsAvailable, Is.True);
             Assert.That(_prototypes.Index(SoulHunger).IsAvailable, Is.True);

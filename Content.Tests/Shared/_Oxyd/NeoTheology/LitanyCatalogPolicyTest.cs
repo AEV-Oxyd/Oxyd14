@@ -41,6 +41,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.SoulHunger,
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
+        LitanyEffectKind.ActivateDoor,
     ];
 
     [Test]

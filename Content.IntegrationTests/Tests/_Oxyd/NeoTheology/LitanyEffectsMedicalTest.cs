@@ -43,6 +43,7 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.SoulHunger,
         LitanyEffectKind.Entreaty,
         LitanyEffectKind.CruciformSense,
+        LitanyEffectKind.ActivateDoor,
     ];
 
     public override PoolSettings PoolSettings => new()
@@ -426,11 +427,12 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         {
             _litany.TestingClearAvailabilityOverrides();
 
-            // Packet C supersedes Packet B: medical handlers remain Implemented alongside social.
+            // Packet C supersedes Packet B: medical handlers remain Implemented alongside social;
+            // P4.3 adds the door handler.
             Assert.That(
                 LitanyHandlerCatalog.Implemented,
                 Is.EquivalentTo(PacketCImplemented),
-                "Packet C: Implemented must be {Relief, SoulHunger, Entreaty, CruciformSense}.");
+                "Implemented must match the enabled catalog handlers.");
 
             Assert.That(_prototypes.Index(Relief).IsAvailable, Is.True);
             Assert.That(_prototypes.Index(SoulHunger).IsAvailable, Is.True);

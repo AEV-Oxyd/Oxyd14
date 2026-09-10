@@ -3,6 +3,8 @@ using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
 using Content.Shared.Damage.Systems;
+using Content.Shared.Doors.Components;
+using Content.Shared.Doors.Systems;
 using Content.Shared.Examine;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Mobs.Systems;
@@ -35,6 +37,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
 
     [Dependency] private readonly SharedCruciformSystem _cruciform = default!;
     [Dependency] private readonly DamageableSystem _damageable = default!;
+    [Dependency] private readonly SharedDoorSystem _doors = default!;
     [Dependency] private readonly ExamineSystemShared _examine = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
@@ -99,6 +102,35 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     public bool CanReceiveDamage(EntityUid uid)
     {
         return HasComp<DamageableComponent>(uid) && !HasComp<GodmodeComponent>(uid);
+    }
+
+    /// <summary>
+    /// True when <paramref name="uid"/> is a holy door the door litanies can act on:
+    /// a NeoTheology door that also carries the shared bolt state.
+    /// </summary>
+    public bool IsLitanyDoor(EntityUid uid)
+    {
+        return HasComp<NeoTheologyDoorComponent>(uid) && HasComp<DoorBoltComponent>(uid);
+    }
+
+    /// <summary>
+    /// Eris <c>lock_door</c> (machinery.dm): toggles the bolt on a holy door and mirrors
+    /// the state into <see cref="NeoTheologyDoorComponent.LitanyLocked"/>. Returns whether
+    /// the bolt state changed.
+    /// </summary>
+    public bool TryToggleLitanyDoor(EntityUid door, EntityUid user)
+    {
+        if (!TryComp<NeoTheologyDoorComponent>(door, out var litanyDoor) ||
+            !TryComp<DoorBoltComponent>(door, out var bolt))
+            return false;
+
+        var locked = !_doors.IsBolted(door, bolt);
+        if (!_doors.TrySetBoltDown(new Entity<DoorBoltComponent>(door, bolt), locked, user))
+            return false;
+
+        litanyDoor.LitanyLocked = locked;
+        Dirty(door, litanyDoor);
+        return true;
     }
 
     /// <summary>

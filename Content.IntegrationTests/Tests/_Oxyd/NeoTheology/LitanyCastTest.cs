@@ -269,6 +269,7 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyEntreaty",
                 Relief.Id,
                 "OxydLitanySoulHunger",
+                "OxydLitanyActivateDoor",
             }));
         });
     }
