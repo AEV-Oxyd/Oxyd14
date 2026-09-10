@@ -186,7 +186,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         BumpRevision(ent.Owner, ent.Comp);
     }
 
-    private void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
+    public void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
     {
         if (ent.Comp.Cruciform is not { } cruciform || !TryGetLinkedBearer(ent.Owner, cruciform, out var component) || !component.Active)
             return;
@@ -196,6 +196,15 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
 
         foreach (var access in profile.AccessPrivileges)
             args.Tags.Add(access);
+
+        foreach (var moduleId in component.InstalledModules)
+        {
+            if (!ProtoMan.TryIndex(moduleId, out CoreModulePrototype? module) || module == null)
+                continue;
+
+            foreach (var level in module.Access)
+                args.Tags.Add(level);
+        }
     }
 
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
