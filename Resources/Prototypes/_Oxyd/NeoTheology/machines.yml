@@ -52,3 +52,57 @@
   - type: Sprite
     sprite: Structures/Machines/gasrecycler.rsi
     state: icon
+
+# P2.12: reader + cloner + biomass tank. Plan says the tank is a Solution; biomatter is a
+# MaterialPrototype in this port (P2.3), not a reagent, and P2.10a's rule is one store — so the tank
+# and the cloner both use MaterialStorage, the same store the forge and biogenerator use.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtCruciformReader
+  name: cruciform reader
+  description: Reads the soul a cruciform carries.
+  components:
+  - type: CruciformReader
+  - type: ItemSlots
+    slots:
+      cruciform:
+        name: cruciform
+        whitelist:
+          components:
+          - Cruciform
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/artifact_analyzer.rsi
+    state: icon
+
+# Upstream cloning pod (body growth is its job) with the module's own biomass and the reader link.
+- type: entity
+  parent: [ CloningPod ]
+  id: OxydNtCloner
+  name: cruciform cloner
+  description: Grows a body for a soul read off a cruciform.
+  components:
+  - type: CruciformCloner
+  - type: CloningPod
+    requiredMaterial: Biomatter
+  - type: MaterialStorage
+    materialWhiteList:
+    - Biomatter
+    storageLimit: 300
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBiomassContainer
+  name: biomass container
+  description: Holds biomatter for the cloner.
+  components:
+  - type: MaterialStorage
+    materialWhiteList:
+    - Biomatter
+    storageLimit: 1000
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Storage/tanks.rsi
+    state: generictank-1
