@@ -340,11 +340,21 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         component.Holiness = NeoTheologyHoliness.ClampResource(component.Holiness, component.MaxHoliness);
 
         component.UnlockedSets.Clear();
-        if (!component.Active || !hasProfile)
-            return;
 
-        foreach (var set in profile.LitanySets)
-            component.UnlockedSets.Add(set);
+        if (hasProfile)
+        {
+            foreach (var set in profile.LitanySets)
+                component.UnlockedSets.Add(set);
+        }
+
+        foreach (var moduleId in component.InstalledModules)
+        {
+            if (!ProtoMan.TryIndex(moduleId, out CoreModulePrototype? module) || module == null)
+                continue;
+
+            foreach (var set in module.LitanySets)
+                component.UnlockedSets.Add(set);
+        }
     }
 
     private int CountEligibleChannelingFollowers(EntityUid source)

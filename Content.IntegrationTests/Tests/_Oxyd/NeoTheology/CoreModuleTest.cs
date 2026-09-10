@@ -20,6 +20,9 @@ public sealed class CoreModuleTest : GameTest
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<CoreModulePrototype> PriestModule = "OxydNtModulePriest";
+    private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
+    private static readonly ProtoId<LitanySetPrototype> CustodianSet = "OxydLitanyCustodian";
+    private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
 
     public override PoolSettings PoolSettings => PsDisconnected;
 
@@ -49,6 +52,30 @@ public sealed class CoreModuleTest : GameTest
             Assert.That(_modules.HasModule(comp, PriestModule), Is.False);
             Assert.That(_modules.TryRemove(implant, comp, PriestModule), Is.False,
                 "Removing a module that is not installed must be a no-op.");
+        });
+    }
+
+    [Test]
+    public async Task InstallingCustodianModuleUnlocksCustodianSet()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var implant = ImplantBody(map.GridCoords);
+            var comp = SComp<CruciformComponent>(implant);
+
+            Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtDisciple"));
+            Assert.That(comp.UnlockedSets, Does.Contain(CommonSet));
+            Assert.That(comp.UnlockedSets, Does.Not.Contain(CustodianSet),
+                "The disciple profile must not grant the custodian set.");
+
+            Assert.That(_modules.TryInstall(implant, comp, CustodianModule), Is.True);
+
+            Assert.That(comp.UnlockedSets, Does.Contain(CustodianSet),
+                "Installing the custodian module must unlock its litany set, even while inactive.");
+            Assert.That(comp.UnlockedSets, Does.Contain(CommonSet),
+                "Profile sets must survive the module union.");
         });
     }
 
