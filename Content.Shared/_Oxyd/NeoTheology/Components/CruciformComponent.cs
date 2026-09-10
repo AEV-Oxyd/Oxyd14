@@ -43,6 +43,13 @@ public sealed partial class CruciformComponent : Component
     [DataField]
     public bool Channeling;
 
+    /// <summary>
+    /// Installed core modules. Litany sets, access and the two stat multipliers are
+    /// derived from profile ∪ modules — never written directly by feature code.
+    /// </summary>
+    [DataField]
+    public HashSet<ProtoId<CoreModulePrototype>> InstalledModules = new();
+
     [DataField]
     public HashSet<ProtoId<LitanySetPrototype>> UnlockedSets = new();
 
