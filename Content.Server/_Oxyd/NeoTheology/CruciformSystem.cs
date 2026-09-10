@@ -112,7 +112,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         // Initial installation is inert. A previously activated implant may resume
         // on the same living body after extraction/reimplantation.
         ent.Comp.Active = ent.Comp.EverActivated && !_mobStates.IsDead(body);
-        RecomputeProfile(ent.Owner, body);
+        RecomputeProfile(ent.Owner, ent.Comp);
         Dirty(ent);
         Dirty(body, bearer);
     }
@@ -181,7 +181,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             component.Active = true;
 
         component.LastHolinessUpdate = _timing.CurTime;
-        RecomputeProfile(cruciform, ent.Owner);
+        RecomputeProfile(cruciform, component);
         Dirty(cruciform, component);
         BumpRevision(ent.Owner, ent.Comp);
     }
@@ -221,7 +221,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         if (component.Holiness <= GetDebitTolerance())
             component.Holiness = component.MaxHoliness;
         component.LastHolinessUpdate = _timing.CurTime;
-        RecomputeProfile(cruciform, body);
+        RecomputeProfile(cruciform, component);
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
@@ -235,7 +235,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         AdvanceHoliness((cruciform, component), body);
         component.Active = false;
         component.LastHolinessUpdate = _timing.CurTime;
-        RecomputeProfile(cruciform, body);
+        RecomputeProfile(cruciform, component);
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
@@ -273,7 +273,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
 
         AdvanceHoliness((cruciform, component), body);
         component.Profile = profileId;
-        RecomputeProfile(cruciform, body);
+        RecomputeProfile(cruciform, component);
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
@@ -317,25 +317,23 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         return ent.Comp.Holiness;
     }
 
-    private void RecomputeProfile(EntityUid cruciform, EntityUid body)
+    public void RecomputeProfile(EntityUid cruciform, CruciformComponent component)
     {
-        if (!TryComp<CruciformComponent>(cruciform, out var component))
-            return;
-
         var rules = GetRules();
         var hasProfile = TryGetConfiguredProfile(component.Profile, rules, out var profile);
         component.MaxHoliness = hasProfile ? profile.CruciformCapacity : 0d;
 
+        var body = component.ImplantedEntity;
         var cognitive = 0;
-        if (TryComp<MobSkillComponent>(body, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
+        if (body is { } skillBody && TryComp<MobSkillComponent>(skillBody, out var skills) && skills.skills.TryGetValue("Cog", out var cog) && cog.Length > 0)
             cognitive = cog[0] + (cog.Length > 1 ? cog[1] : 0);
 
-        component.RegenerationPerSecond = hasProfile && rules != null
+        component.RegenerationPerSecond = hasProfile && rules != null && body is { } regenBody
             ? NeoTheologyHoliness.RegenerationPerSecond(
                 cognitive,
                 component.RighteousLife,
                 component.Channeling && profile.CanChannel,
-                CountEligibleChannelingFollowers(body),
+                CountEligibleChannelingFollowers(regenBody),
                 rules.BaseHolinessPerMinute,
                 profile.RegenerationMultiplier)
             : 0d;
