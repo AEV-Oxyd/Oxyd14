@@ -22,5 +22,12 @@ public abstract partial class LitanyEffect
     public abstract bool Apply(LitanyEffectSystem system, LitanyEffectContext context);
 }
 
-/// <summary>Runtime context handed to a <see cref="LitanyEffect"/>.</summary>
-public readonly record struct LitanyEffectContext(EntityUid User, LitanyPrototype Litany);
+/// <summary>
+/// Runtime context handed to a <see cref="LitanyEffect"/>. <see cref="Targets"/> is the
+/// candidate list resolved by the cast transaction at begin time (P4.1); effects that
+/// predate targeting ignore it and re-derive their own set.
+/// </summary>
+public readonly record struct LitanyEffectContext(
+    EntityUid User,
+    LitanyPrototype Litany,
+    IReadOnlyList<EntityUid> Targets);

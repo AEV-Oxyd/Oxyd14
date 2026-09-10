@@ -46,9 +46,13 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     /// <summary>Disconnected-fixture capture of private social litany notices.</summary>
     private readonly Dictionary<EntityUid, List<string>> _testingSocialNotices = new();
 
-    public bool TryValidateEffects(EntityUid user, LitanyPrototype litany, out LocId? failure)
+    public bool TryValidateEffects(
+        EntityUid user,
+        LitanyPrototype litany,
+        out LocId? failure,
+        IReadOnlyList<EntityUid>? targets = null)
     {
-        var context = new LitanyEffectContext(user, litany);
+        var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>());
         foreach (var effect in litany.Effects)
         {
             if (!effect.CanApply(this, context, out failure))
@@ -59,9 +63,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return true;
     }
 
-    public bool TryApplyEffects(EntityUid user, LitanyPrototype litany)
+    public bool TryApplyEffects(
+        EntityUid user,
+        LitanyPrototype litany,
+        IReadOnlyList<EntityUid>? targets = null)
     {
-        var context = new LitanyEffectContext(user, litany);
+        var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>());
         foreach (var effect in litany.Effects)
         {
             if (!effect.Apply(this, context))

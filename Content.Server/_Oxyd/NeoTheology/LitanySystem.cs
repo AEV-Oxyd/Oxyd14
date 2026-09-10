@@ -164,14 +164,10 @@ public sealed partial class LitanySystem : EntitySystem
                 return LitanyActionResult.Fail("oxyd-litany-denied-book-hand");
         }
 
-        // Self/None and Packet C auto-resolved social modes (no choice token).
-        // Other targeted modes still need M4/M5 choice UI.
-        if (litany.TargetMode is not (
-                LitanyTargetMode.Self or
-                LitanyTargetMode.None or
-                LitanyTargetMode.StationFollower or
-                LitanyTargetMode.VisibleFollower))
-            return LitanyActionResult.Fail("oxyd-litany-no-target");
+        // Every mode resolves its candidates up front (P4.1). Modes whose target needs
+        // the M4/M5 choice UI still reject a choice token here.
+        if (!TryResolveTargets(actor, litany, out var resolvedTargets, out var targetFail))
+            return LitanyActionResult.Fail(targetFail ?? "oxyd-litany-no-target");
 
         if (!string.IsNullOrEmpty(choiceToken))
             return LitanyActionResult.Fail("oxyd-litany-denied-invalid-choice");
@@ -184,7 +180,7 @@ public sealed partial class LitanySystem : EntitySystem
             return LitanyActionResult.Fail("oxyd-litany-no-cost");
 
         if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
-            !_effects.TryValidateEffects(actor, litany, out var effectFail))
+            !_effects.TryValidateEffects(actor, litany, out var effectFail, resolvedTargets))
             return LitanyActionResult.Fail(effectFail ?? "oxyd-litany-no-effect");
 
         var requestId = NextRequestId();
@@ -201,6 +197,7 @@ public sealed partial class LitanySystem : EntitySystem
             Book = origin == LitanyCastOrigin.Book ? book : null,
             LitanyId = litany.ID,
             Origin = origin,
+            Targets = resolvedTargets,
             Stage = LitanyCastStage.Chanting,
             Phrase = phrase,
             Cost = litany.Cost,
@@ -342,6 +339,13 @@ public sealed class PendingLitanyCast
     public EntityUid? Book;
     public string LitanyId = string.Empty;
     public LitanyCastOrigin Origin;
+
+    /// <summary>
+    /// Targets resolved once at begin time (P4.1). Commit revalidates and applies to
+    /// this exact list — it never re-resolves, so a mid-chant move cannot retarget.
+    /// </summary>
+    public List<EntityUid> Targets = new();
+
     public LitanyCastStage Stage;
     public string Phrase = string.Empty;
     public double Cost;

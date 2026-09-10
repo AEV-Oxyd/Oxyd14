@@ -1,16 +1,27 @@
+using System.Numerics;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.Chat;
 using Content.Shared.DoAfter;
+using Content.Shared.Examine;
 using Content.Shared.GameTicking;
+using Content.Shared.Mobs.Components;
+using Content.Shared.Mobs.Systems;
+using Robust.Shared.Map;
 using Robust.Shared.Player;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
 public sealed partial class LitanySystem
 {
+    // P4.1 target resolution (TryResolveTargets).
+    [Dependency] private readonly EntityLookupSystem _lookup = default!;
+    [Dependency] private readonly ExamineSystemShared _examine = default!;
+    [Dependency] private readonly MobStateSystem _mobState = default!;
+    [Dependency] private readonly SharedTransformSystem _xform = default!;
+
     private bool StartCastDoAfter(PendingLitanyCast cast, TimeSpan delay, bool requireBook)
     {
         var args = new DoAfterArgs(
@@ -213,7 +224,7 @@ public sealed partial class LitanySystem
         }
 
         var hasHandler = LitanyHandlerCatalog.HasHandler(litany.Effect);
-        if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _))
+        if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _, cast.Targets))
         {
             ClearPending(cast, cancelled: true);
             return;
@@ -229,7 +240,7 @@ public sealed partial class LitanySystem
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
 
-        if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany))
+        if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets))
         {
             // Effect plan was validated; apply failure is unexpected. Cast is already
             // committed so a second completion still no-ops via Committed.
@@ -352,5 +363,194 @@ public sealed partial class LitanySystem
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Resolves the target candidates for a litany's <see cref="LitanyTargetMode"/>.
+    /// Called once when the cast begins; commit replays the recorded list instead of
+    /// re-resolving. Returns false when the mode resolved no candidates — the caller
+    /// fails the begin with <paramref name="reason"/>.
+    /// </summary>
+    public bool TryResolveTargets(
+        EntityUid actor,
+        LitanyPrototype proto,
+        out List<EntityUid> targets,
+        out LocId? reason)
+    {
+        targets = [];
+        reason = "oxyd-litany-no-target";
+
+        switch (proto.TargetMode)
+        {
+            case LitanyTargetMode.None:
+                reason = null;
+                return true;
+            case LitanyTargetMode.Self:
+                targets = [actor];
+                reason = null;
+                return true;
+            case LitanyTargetMode.AdjacentLiving:
+                targets = ResolveAdjacentMobs(actor, proto, followersOnly: false);
+                break;
+            case LitanyTargetMode.AdjacentFollower:
+                targets = ResolveAdjacentMobs(actor, proto, followersOnly: true);
+                break;
+            case LitanyTargetMode.VisibleFollower:
+                targets = _effects.CollectVisibleActiveFollowers(actor, _effects.GetSenseRange(proto));
+                break;
+            case LitanyTargetMode.StationFollower:
+                targets = new List<EntityUid>(_effects.EnumerateSameStationActiveFollowers(actor));
+                break;
+            case LitanyTargetMode.FrontMachine:
+                targets = ResolveFacedTileMachines(actor, proto);
+                break;
+            case LitanyTargetMode.NearbyMachine:
+                targets = ResolveNearbyMachines(actor, proto);
+                break;
+            case LitanyTargetMode.VisibleArea:
+                targets = ResolveVisibleMobs(actor, proto);
+                break;
+            case LitanyTargetMode.FrontTile:
+                // ponytail: FrontTile must resolve to a coordinate, not an entity, for the
+                // construction packet (P4.13). Fail closed until that path exists.
+                return false;
+            case LitanyTargetMode.Ceremony:
+                // P4.11 owns the ceremony participant ring; fail closed until then.
+                return false;
+            default:
+                return false;
+        }
+
+        // Deterministic order: the recorded list must not depend on lookup hash order.
+        targets.Sort();
+        if (targets.Count == 0)
+            return false;
+
+        reason = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Living mobs on the actor's own tile and the tile they face. Range bounds the
+    /// lookup circle (1 m default); the tile gate is what makes "adjacent" mean the
+    /// tile in front. Followers-only additionally requires an active cruciform.
+    /// </summary>
+    private List<EntityUid> ResolveAdjacentMobs(EntityUid actor, LitanyPrototype proto, bool followersOnly)
+    {
+        var results = new List<EntityUid>();
+        if (!TryGetFrontTiles(actor, out var ownTile, out var frontTile))
+            return results;
+
+        var range = proto.Range > 0 ? proto.Range : 1f;
+        foreach (var (mob, _) in _lookup.GetEntitiesInRange<MobStateComponent>(Transform(actor).Coordinates, range))
+        {
+            if (mob == actor || !_mobState.IsAlive(mob))
+                continue;
+            if (followersOnly && !_cruciform.IsActiveBearer(mob))
+                continue;
+            if (!IsOnTile(mob, ownTile) && !IsOnTile(mob, frontTile))
+                continue;
+
+            results.Add(mob);
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Machine-ish marker for FrontMachine/NearbyMachine: the NeoTheology machines
+    /// built in P2 (machines.yml) plus the holy door. Effect handlers narrow to the
+    /// machine they need; add a component here when a new machine litany lands.
+    /// </summary>
+    private bool IsLitanyMachine(EntityUid uid)
+    {
+        return HasComp<NeoTheologyDoorComponent>(uid) ||
+               HasComp<BioreactorComponent>(uid) ||
+               HasComp<BiogeneratorComponent>(uid) ||
+               HasComp<CruciformForgeComponent>(uid) ||
+               HasComp<CruciformClonerComponent>(uid) ||
+               HasComp<ArmamentsPrinterComponent>(uid) ||
+               HasComp<EyeOfTheProtectorComponent>(uid);
+    }
+
+    /// <summary>Machines on the tile the actor faces.</summary>
+    private List<EntityUid> ResolveFacedTileMachines(EntityUid actor, LitanyPrototype proto)
+    {
+        var results = new List<EntityUid>();
+        if (!TryGetFrontTiles(actor, out _, out var frontTile))
+            return results;
+
+        var range = proto.Range > 0 ? proto.Range : 1.5f;
+        foreach (var uid in _lookup.GetEntitiesInRange(Transform(actor).Coordinates, range))
+        {
+            if (uid != actor && IsLitanyMachine(uid) && IsOnTile(uid, frontTile))
+                results.Add(uid);
+        }
+
+        return results;
+    }
+
+    /// <summary>Machines within the litany range (1.5 m default) on the actor's map.</summary>
+    private List<EntityUid> ResolveNearbyMachines(EntityUid actor, LitanyPrototype proto)
+    {
+        var results = new List<EntityUid>();
+        var actorXform = Transform(actor);
+        var range = proto.Range > 0 ? proto.Range : 1.5f;
+        foreach (var uid in _lookup.GetEntitiesInRange(actorXform.Coordinates, range))
+        {
+            if (uid == actor || !IsLitanyMachine(uid))
+                continue;
+            if (Transform(uid).MapID != actorXform.MapID)
+                continue;
+
+            results.Add(uid);
+        }
+
+        return results;
+    }
+
+    /// <summary>Every mob with line of sight inside the litany range.</summary>
+    private List<EntityUid> ResolveVisibleMobs(EntityUid actor, LitanyPrototype proto)
+    {
+        var results = new List<EntityUid>();
+        var range = _effects.GetSenseRange(proto);
+        foreach (var (mob, _) in _lookup.GetEntitiesInRange<MobStateComponent>(Transform(actor).Coordinates, range))
+        {
+            if (mob == actor)
+                continue;
+            if (!_examine.InRangeUnOccluded(actor, mob, range, predicate: null))
+                continue;
+
+            results.Add(mob);
+        }
+
+        return results;
+    }
+
+    /// <summary>The actor's tile and the tile their local rotation faces.</summary>
+    private bool TryGetFrontTiles(EntityUid actor, out Vector2i ownTile, out Vector2i frontTile)
+    {
+        ownTile = default;
+        frontTile = default;
+        if (!TryComp(actor, out TransformComponent? xform))
+            return false;
+
+        var coords = _xform.ToMapCoordinates(xform.Coordinates);
+        if (coords.MapId == MapId.Nullspace)
+            return false;
+
+        var pos = coords.Position;
+        ownTile = pos.Floored();
+        frontTile = (pos + xform.LocalRotation.ToVec()).Floored();
+        return true;
+    }
+
+    private bool IsOnTile(EntityUid uid, Vector2i tile)
+    {
+        if (!TryComp(uid, out TransformComponent? xform))
+            return false;
+
+        var coords = _xform.ToMapCoordinates(xform.Coordinates);
+        return coords.MapId != MapId.Nullspace && coords.Position.Floored() == tile;
     }
 }
