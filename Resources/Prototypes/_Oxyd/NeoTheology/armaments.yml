@@ -1,9 +1,40 @@
+# P2.17: the Eris armament catalog, transcribed from
+# CEV-Eris/code/modules/core_implant/cruciform/machinery/armaments.dm.
+#
+# Omitted (Eris entries whose path has no Oxyd14 equivalent — a missing armament beats a broken one):
+#  - the base /datum/armament debug entry ("Virtue of coding", path is a design disk).
+#  - all 16 /datum/armament/item/disk/* entries (bioprinter, bioprinter clothes, NT melee, cells,
+#    pouches, Svalinn, Velite, Protector, Principes, Medicii, Dominion, grenades, Triarii, Lightfall,
+#    Excruciator). They spawn portable design disks that unlock the NT gear set; this fork has no
+#    portable design-disk prototypes (only the debug BaseRecipeDisk) and none of that gear exists,
+#    so such a disk would unlock nothing.
+#  - /datum/armament/item/gun/destroyer: no plasma weapon exists in Oxyd14.
 - type: oxydArmament
   id: OxydNtArmamentRitualBook
   name: oxyd-armament-ritual-book
   desc: oxyd-armament-ritual-book-desc
   path: OxydNtBible
   cost: 100
-  minCost: 50
+  minCost: 10
   discountIncrease: 25
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentEnergyCrossbow
+  name: oxyd-armament-energy-crossbow
+  desc: oxyd-armament-energy-crossbow-desc
+  path: WeaponEnergyCrossbow
+  cost: 125
+  minCost: 50
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentHolyGrenade
+  name: oxyd-armament-holy-grenade
+  desc: oxyd-armament-holy-grenade-desc
+  path: HolyHandGrenade
+  cost: 275
+  minCost: 200
+  discountIncrease: 100
   maxPointsIncrease: 25
