@@ -53,6 +53,8 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.AbsolutionOfWounds,
         LitanyEffectKind.Convalescence,
         LitanyEffectKind.Succour,
+        LitanyEffectKind.GraceOfPerseverance,
+        LitanyEffectKind.UpholdHolyWord,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -497,6 +499,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
                     CruciformSense.Id, Entreaty.Id, Relief.Id, SoulHunger.Id, ActivateDoor.Id,
                     "OxydLitanyHandOfMercy", "OxydLitanyAbsolutionOfWounds",
                     "OxydLitanyConvalescence", "OxydLitanySuccour",
+                    "OxydLitanyGraceOfPerseverance", "OxydLitanyUpholdHolyWord",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

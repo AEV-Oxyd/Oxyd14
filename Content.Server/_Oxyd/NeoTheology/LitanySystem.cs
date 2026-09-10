@@ -82,6 +82,12 @@ public sealed partial class LitanySystem : EntitySystem
         _availabilityOverrides.Clear();
     }
 
+    /// <summary>Test helper: drops round-global cooldowns so recast contracts can be exercised.</summary>
+    public void TestingClearCooldowns()
+    {
+        _globalCooldowns.Clear();
+    }
+
     /// <summary>
     /// Integration-test helper so disconnected fixtures can exercise player-only
     /// cast paths without a real <see cref="ActorComponent"/> session.

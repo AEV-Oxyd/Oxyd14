@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Skills;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
 using Content.Shared.Damage.Prototypes;
@@ -44,6 +45,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SatiationSystem _satiation = default!;
+    [Dependency] private readonly SharedSkillSystem _skill = default!;
     [Dependency] private readonly SharedStationSystem _stations = default!;
     [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
@@ -132,6 +134,35 @@ public sealed partial class LitanyEffectSystem : EntitySystem
 
         litanyDoor.LitanyLocked = locked;
         Dirty(door, litanyDoor);
+        return true;
+    }
+
+    /// <summary>True when the target is a living mob that can carry skill buffs.</summary>
+    public bool CanReceiveSkillBuff(EntityUid uid)
+    {
+        return _mobState.IsAlive(uid) && HasComp<MobSkillComponent>(uid);
+    }
+
+    /// <summary>
+    /// Applies or refreshes one unique skill buff per listed skill. <paramref name="sourceId"/>
+    /// is the unique source: recasting from the same source refreshes it, never stacks.
+    /// A zero duration means no expiry (skill-system default), not an already-expired buff.
+    /// </summary>
+    public bool TryApplySkillBuff(
+        EntityUid target,
+        string sourceId,
+        Dictionary<ProtoId<SkillPrototype>, int> amounts,
+        TimeSpan duration)
+    {
+        if (!CanReceiveSkillBuff(target) || !TryComp<MobSkillComponent>(target, out var skills))
+            return false;
+
+        TimeSpan? expires = duration > TimeSpan.Zero ? duration : null;
+        foreach (var (skill, amount) in amounts)
+        {
+            _skill.SetUniqueBuff((target, skills), sourceId, amount, skill, expires);
+        }
+
         return true;
     }
 

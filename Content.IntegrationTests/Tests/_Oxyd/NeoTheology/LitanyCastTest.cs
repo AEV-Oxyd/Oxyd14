@@ -274,6 +274,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyAbsolutionOfWounds",
                 "OxydLitanyConvalescence",
                 "OxydLitanySuccour",
+                "OxydLitanyGraceOfPerseverance",
+                "OxydLitanyUpholdHolyWord",
             }));
         });
     }

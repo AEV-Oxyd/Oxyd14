@@ -46,6 +46,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.AbsolutionOfWounds,
         LitanyEffectKind.Convalescence,
         LitanyEffectKind.Succour,
+        LitanyEffectKind.GraceOfPerseverance,
+        LitanyEffectKind.UpholdHolyWord,
     ];
 
     [Test]

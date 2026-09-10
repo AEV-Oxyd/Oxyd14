@@ -122,8 +122,7 @@
       Mec: 10
       Cog: 10
       Bio: 10
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyUpholdHolyWord
@@ -146,8 +145,7 @@
       Rob: 10
       Tgh: 10
       Vig: 10
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyAtonement
