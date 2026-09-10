@@ -9,6 +9,7 @@ using Content.Shared.StatusEffectNew;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 
 namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 
@@ -31,6 +32,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
     [SidedDependency(Side.Server)] private readonly StatusEffectsSystem _statusEffects = default!;
+    [SidedDependency(Side.Server)] private readonly IRobustRandom _random = default!;
 
     [Test]
     public async Task ActiveBearerInRadiusRaisesObservation()
@@ -172,6 +174,52 @@ public sealed class EyeOfTheProtectorTest : GameTest
         {
             Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.False,
                 "The blessing must lapse once its duration elapses without a refresh.");
+        });
+    }
+
+    [Test]
+    public async Task MiracleRequiresObservationBank()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            _random.SetSeed(42);
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
+            eyeComp.Observation = 500f;
+            eyeComp.NextMiracle = TimeSpan.Zero;
+            var before = eyeComp.NextMiracle;
+
+            _eye.TryMiracle(eye, eyeComp);
+
+            Assert.That(eyeComp.NextMiracle, Is.GreaterThan(before),
+                "NextMiracle must advance even when the bank cannot fund a miracle.");
+            Assert.That(eyeComp.Observation, Is.EqualTo(500f),
+                "An unfunded miracle must not spend observation.");
+        });
+    }
+
+    [Test]
+    public async Task MiracleSpendsObservation()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            _random.SetSeed(1337);
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
+            eyeComp.Observation = 1500f;
+            eyeComp.NextMiracle = TimeSpan.Zero;
+            var before = eyeComp.NextMiracle;
+
+            _eye.TryMiracle(eye, eyeComp);
+
+            Assert.That(eyeComp.Observation, Is.EqualTo(500f).Within(1e-6),
+                "A funded miracle must spend exactly 1000 observation.");
+            Assert.That(eyeComp.NextMiracle, Is.GreaterThan(before),
+                "NextMiracle must advance when a miracle fires.");
         });
     }
 

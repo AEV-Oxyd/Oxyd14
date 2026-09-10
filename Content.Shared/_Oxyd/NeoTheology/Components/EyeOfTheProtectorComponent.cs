@@ -1,4 +1,5 @@
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Components;
 
@@ -53,6 +54,10 @@ public sealed partial class EyeOfTheProtectorComponent : Component
 
     [DataField]
     public TimeSpan ScanInterval = TimeSpan.FromSeconds(5);
+
+    /// <summary>Oddity prototypes the ODDITY miracle may spawn. Empty until a real oddity exists in-tree.</summary>
+    [DataField]
+    public List<EntProtoId> OddityRewards = new();
 
     [ViewVariables]
     public TimeSpan NextMiracle;

@@ -1,5 +1,10 @@
+using Content.Server.Chat.Systems;
+using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Skills;
 using Content.Shared.StatusEffectNew;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology;
@@ -13,6 +18,10 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
+    [Dependency] private readonly ChatSystem _chat = default!;
+    [Dependency] private readonly SanitySystem _sanity = default!;
+    [Dependency] private readonly SharedSkillSystem _skill = default!;
+    [Dependency] private readonly IRobustRandom _random = default!;
 
     /// <summary>When each Eye next scans.</summary>
     /// <remarks>ponytail: entries for deleted Eyes are never pruned. One Eye per station per the Eris
@@ -27,6 +36,8 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         var query = EntityQueryEnumerator<EyeOfTheProtectorComponent>();
         while (query.MoveNext(out var uid, out var eye))
         {
+            TryMiracle(uid, eye); // self-gates on NextMiracle; runs even when the scan tick is skipped
+
             if (_nextScan.TryGetValue(uid, out var next) && now < next)
                 continue;
 
@@ -110,5 +121,107 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         comp.ArmamentsPoints -= cost;
         Dirty(eye, comp);
         return true;
+    }
+
+    private static readonly ProtoId<SkillPrototype>[] MiracleSkills =
+    {
+        "Rob", "Vig", "Tgh", "Cog", "Mec", "Bio"
+    };
+
+    private static readonly EntProtoId[] MiracleMaterials =
+    {
+        "SheetPlasteel", "SheetPlasma", "SheetUranium", "IngotGold", "IngotSilver", "MaterialDiamond"
+    };
+
+    /// <summary>
+    /// P3.6: fire a miracle when the observation bank can fund one. Gated on <c>NextMiracle</c>
+    /// (cadence) and a 1000-point observation cost, mirroring Eris <c>power_release()</c>.
+    /// </summary>
+    public void TryMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
+    {
+        if (_timing.CurTime < comp.NextMiracle)
+            return;
+
+        comp.NextMiracle = _timing.CurTime + comp.MiracleInterval;
+
+        if (comp.Observation < 1000f)
+            return;
+
+        comp.Observation -= 1000f;
+        FireRandomMiracle(eye, comp);
+    }
+
+    private void FireRandomMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
+    {
+        var xform = Transform(eye);
+
+        switch (_random.Next(6))
+        {
+            case 0: // ALERT
+                _chat.DispatchStationAnnouncement(eye, Loc.GetString("oxyd-eotp-miracle"));
+                break;
+
+            case 1: // INSPIRATION — insight amount is a flagged balance choice.
+                foreach (var (body, _) in FaithfulInRange(eye, comp))
+                {
+                    if (TryComp<SanityComponent>(body, out var sanity))
+                        _sanity.GiveInsight((body, sanity), 20f);
+                }
+                break;
+
+            case 2: // ODDITY — no oddity prototype exists in-tree yet, so the list is empty and this no-ops.
+                if (comp.OddityRewards.Count > 0)
+                    SpawnAtPosition(_random.Pick(comp.OddityRewards), xform.Coordinates);
+                break;
+
+            case 3: // STAT_BUFF — Eris stat_buff_power (10) / duration (20 min).
+            {
+                var skill = _random.Pick(MiracleSkills);
+                foreach (var (body, _) in FaithfulInRange(eye, comp))
+                {
+                    if (TryComp<MobSkillComponent>(body, out var mobSkill))
+                        _skill.SetUniqueBuff((body, mobSkill), "EyeOfTheProtector", 10, skill, TimeSpan.FromMinutes(20));
+                }
+                break;
+            }
+
+            case 4: // MATERIAL_REWARD
+                SpawnAtPosition(_random.Pick(MiracleMaterials), xform.Coordinates);
+                break;
+
+            case 5: // ENERGY_REWARD — restore the cruciform's holiness to full.
+                foreach (var (_, cruciform) in FaithfulInRange(eye, comp))
+                {
+                    if (TryComp<CruciformComponent>(cruciform, out var state))
+                    {
+                        state.Holiness = state.MaxHoliness;
+                        Dirty(cruciform, state);
+                    }
+                }
+                break;
+        }
+    }
+
+    /// <summary>Active faithful bodies (and their cruciform implants) within the observation radius.</summary>
+    private List<(EntityUid Body, EntityUid Cruciform)> FaithfulInRange(EntityUid eye, EyeOfTheProtectorComponent comp)
+    {
+        var result = new List<(EntityUid, EntityUid)>();
+        var xform = Transform(eye);
+        var bearers = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
+        while (bearers.MoveNext(out var body, out var bearer, out var bodyXform))
+        {
+            if (bearer.Cruciform is not { } cruciform ||
+                !TryComp<CruciformComponent>(cruciform, out var state) ||
+                !state.Active ||
+                bodyXform.MapID != xform.MapID)
+                continue;
+
+            if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > comp.ObservationRadius)
+                continue;
+
+            result.Add((body, cruciform));
+        }
+
+        return result;
     }
 }

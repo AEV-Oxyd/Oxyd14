@@ -26,3 +26,5 @@ oxyd-litany-no-effect = The litany could not take hold.
 
 oxyd-litany-entreaty-notice = { $name }, faithful cruciform follower, cries for salvation at { $location }!
 oxyd-litany-cruciform-sense-notice = { $name } has a cruciform installed.
+
+oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.
