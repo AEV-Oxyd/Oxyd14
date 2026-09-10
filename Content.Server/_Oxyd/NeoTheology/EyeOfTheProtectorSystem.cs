@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared.StatusEffectNew;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology;
@@ -11,6 +12,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 public sealed class EyeOfTheProtectorSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
 
     /// <summary>When each Eye next scans.</summary>
     /// <remarks>ponytail: entries for deleted Eyes are never pruned. One Eye per station per the Eris
@@ -44,6 +46,12 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     }
 
     /// <summary>One scan: award each active faithful in radius exactly once per window.</summary>
+    /// <remarks>
+    /// ponytail: Eris also penalises mutants (<c>mutation_index</c>) and carrion (<c>is_carrion</c>)
+    /// here via ObservationPerFaithless. Neither marker exists in this fork (only Botany plant
+    /// mutations), so the penalty is deferred until a real marker lands — do not map it onto a
+    /// guessed stand-in. ObservationPerFaithless stays unused until then.
+    /// </remarks>
     public void Scan(EntityUid eye, EyeOfTheProtectorComponent? comp = null)
     {
         if (!Resolve(eye, ref comp))
@@ -66,6 +74,7 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
                 continue;
 
             AddObservation(eye, comp.ObservationPerFaithful);
+            _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
         }
     }
 

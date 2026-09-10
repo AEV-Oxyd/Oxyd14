@@ -5,6 +5,7 @@ using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
+using Content.Shared.StatusEffectNew;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -21,6 +22,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";
+    private static readonly EntProtoId BlessingProto = "OxydNtEyeBlessing";
 
     public override PoolSettings PoolSettings => PsDisconnected;
 
@@ -28,6 +30,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
     [SidedDependency(Side.Server)] private readonly ObeliskSystem _obelisk = default!;
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
+    [SidedDependency(Side.Server)] private readonly StatusEffectsSystem _statusEffects = default!;
 
     [Test]
     public async Task ActiveBearerInRadiusRaisesObservation()
@@ -101,6 +104,74 @@ public sealed class EyeOfTheProtectorTest : GameTest
 
             Assert.That(eyeComp.Observation, Is.EqualTo(eyeComp.ObservationPerFaithful).Within(1e-6),
                 "An obelisk pulse over one faithful must feed the Eye one ObservationPerFaithful.");
+        });
+    }
+
+    [Test]
+    public async Task ActiveBearerInRangeGainsBlessing()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var body = ActiveBearer(map.GridCoords);
+
+            _eye.Scan(eye);
+
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.True,
+                "An active faithful in range must be blessed each scan.");
+        });
+    }
+
+    [Test]
+    public async Task BearerOutsideRadiusGainsNoBlessing()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
+            var body = ActiveBearer(map.GridCoords.Offset(new Vector2(eyeComp.ObservationRadius * 3f, 0f)));
+
+            _eye.Scan(eye);
+
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.False,
+                "A faithful outside the radius must not be blessed.");
+        });
+    }
+
+    [Test]
+    public async Task BlessingLapsesAfterDuration()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid eye = default;
+        EntityUid body = default;
+        var duration = TimeSpan.Zero;
+
+        await Server.WaitAssertion(() =>
+        {
+            eye = SpawnEye(map.GridCoords);
+            duration = SComp<EyeOfTheProtectorComponent>(eye).FaithfulBlessingDuration;
+            body = ActiveBearer(map.GridCoords);
+
+            _eye.Scan(eye);
+
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.True,
+                "Setup: the scan must bless the faithful before the lapse check.");
+
+            // Stop the eye from re-scanning so the blessing is not refreshed — the same thing that
+            // happens when a bearer walks out of the radius and the scan stops reaching them.
+            SEntMan.RemoveComponent<EyeOfTheProtectorComponent>(eye);
+        });
+
+        await Pair.RunSeconds((float)duration.TotalSeconds + 1f);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.False,
+                "The blessing must lapse once its duration elapses without a refresh.");
         });
     }
 

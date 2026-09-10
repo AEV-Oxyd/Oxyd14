@@ -80,3 +80,16 @@
   components:
   - type: Explosive
     totalIntensity: 500
+
+# P3.4: the faithful in the Eye's radius are blessed each scan. The blessing's stat benefit is a
+# deferred balance decision (see the plan) — this only wires the apply/lapse mechanism, no stat
+# change yet.
+- type: entity
+  parent: MobStatusEffectBase
+  id: OxydNtEyeBlessing
+  name: eye blessing
+  components:
+  - type: StatusEffect
+    whitelist:
+      components:
+      - MobState
