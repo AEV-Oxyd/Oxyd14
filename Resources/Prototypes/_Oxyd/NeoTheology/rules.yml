@@ -10,3 +10,5 @@
   - OxydNtPreacher
   - OxydNtInquisitor
   debitTolerance: 0.000001
+  jobProfiles:
+    Chaplain: OxydNtPreacher
