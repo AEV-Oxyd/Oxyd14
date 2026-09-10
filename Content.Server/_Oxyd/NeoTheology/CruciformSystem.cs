@@ -30,6 +30,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     [Dependency] private MobStateSystem _mobStates = default!;
     [Dependency] private SharedStationSystem _stations = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private readonly CoreModuleSystem _modules = default!;
 
     public override void Initialize()
     {
@@ -304,6 +305,59 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     {
         return TryGetCruciformEntity(body, out _, out var component) ? component.RegenerationPerSecond : 0;
     }
+
+    /// <summary>
+    /// Eris <c>make_*()</c> ported as profile + module swaps. Removing the previous rank's
+    /// modules is required — otherwise ordination would stack inquisitor capacity onto priest.
+    /// </summary>
+    public void MakeRank(EntityUid cruciform, CruciformComponent comp, ProtoId<NeoTheologyProfilePrototype> profile)
+    {
+        if (RankModules.TryGetValue(comp.Profile, out var previous))
+        {
+            foreach (var module in previous)
+                _modules.TryRemove(cruciform, comp, module);
+        }
+
+        comp.Profile = profile;
+
+        if (RankModules.TryGetValue(profile, out var modules))
+        {
+            foreach (var module in modules)
+                _modules.TryInstall(cruciform, comp, module);
+        }
+
+        RecomputeProfile(cruciform, comp);
+    }
+
+    public void MakeCommon(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtDisciple");
+
+    public void MakePriest(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtPreacher");
+
+    public void MakeInquisitor(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtInquisitor");
+
+    public void MakeAcolyte(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtAcolyte");
+
+    public void MakeCustodian(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtCustodian");
+
+    public void MakeAgrolyte(EntityUid c, CruciformComponent comp)
+        => MakeRank(c, comp, "OxydNtAgrolyte");
+
+    /// <summary>Modules implied by a profile id. One table, no switch statements elsewhere.</summary>
+    private static readonly Dictionary<ProtoId<NeoTheologyProfilePrototype>, ProtoId<CoreModulePrototype>[]> RankModules =
+        new()
+        {
+            ["OxydNtDisciple"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase" },
+            ["OxydNtAcolyte"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte" },
+            ["OxydNtAgrolyte"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAgrolyte" },
+            ["OxydNtCustodian"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleCustodian" },
+            ["OxydNtPreacher"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest" },
+            ["OxydNtInquisitor"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest", "OxydNtModuleInquisitor", "OxydNtModuleRedLight" },
+        };
 
     private double AdvanceHoliness(Entity<CruciformComponent> ent, EntityUid body)
     {

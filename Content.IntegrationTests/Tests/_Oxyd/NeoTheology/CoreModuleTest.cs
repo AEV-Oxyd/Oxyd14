@@ -22,12 +22,14 @@ public sealed class CoreModuleTest : GameTest
     private static readonly ProtoId<CoreModulePrototype> PriestModule = "OxydNtModulePriest";
     private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
     private static readonly ProtoId<CoreModulePrototype> RedLightModule = "OxydNtModuleRedLight";
+    private static readonly ProtoId<CoreModulePrototype> InquisitorModule = "OxydNtModuleInquisitor";
     private static readonly ProtoId<LitanySetPrototype> CustodianSet = "OxydLitanyCustodian";
     private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
 
     public override PoolSettings PoolSettings => PsDisconnected;
 
     [SidedDependency(Side.Server)] private readonly CoreModuleSystem _modules = default!;
+    [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
 
     [Test]
@@ -102,6 +104,35 @@ public sealed class CoreModuleTest : GameTest
             Assert.That(_modules.TryRemove(implant, comp, RedLightModule), Is.True);
             Assert.That(comp.MaxHoliness, Is.EqualTo(before).Within(0.001),
                 "Removing the module must restore the base capacity.");
+        });
+    }
+
+    [Test]
+    public async Task OrdinationReplacesPriestModulesWithInquisitor()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var implant = ImplantBody(map.GridCoords);
+            var comp = SComp<CruciformComponent>(implant);
+
+            _cruciform.MakePriest(implant, comp);
+            Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtPreacher"));
+            Assert.That(comp.InstalledModules, Does.Not.Contain(InquisitorModule),
+                "A preacher must not carry the inquisitor module.");
+
+            var priestCount = comp.InstalledModules.Count;
+
+            _cruciform.MakeInquisitor(implant, comp);
+
+            Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtInquisitor"));
+            Assert.That(comp.InstalledModules, Does.Contain(InquisitorModule));
+            Assert.That(comp.InstalledModules, Does.Contain(RedLightModule));
+            Assert.That(comp.InstalledModules.Count, Is.EqualTo(priestCount + 2),
+                "Ordination swaps the rank modules in, it does not stack profiles.");
+            // Inquisitor profile capacity (100) x inquisitor module (2.0) x red light (1.6).
+            Assert.That(comp.MaxHoliness, Is.EqualTo(100d * 2.0 * 1.6).Within(0.001));
         });
     }
 
