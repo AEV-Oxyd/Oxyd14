@@ -142,3 +142,26 @@
     interfaces:
       enum.ArmamentsPrinterUiKey.Key:
         type: ArmamentsPrinterBoundUserInterface
+
+# P3.7: the Eye of the Protector (Eris obj/machinery/power/eotp). Its status UI is read-only:
+# the server pushes a snapshot on open; no client messages, no buttons.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtEyeOfTheProtector
+  name: Eye of the Protector
+  description: Watches over the faithful, banking observation and armament points for their miracles.
+  components:
+  - type: EyeOfTheProtector
+  - type: ApcPowerReceiver
+    # Eris idle is 30W; active draw is 2500W during a miracle, which is not modelled here.
+    powerLoad: 30
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/tech_disk_printer.rsi
+    state: icon
+  - type: ActivatableUI
+    key: enum.EyeOfTheProtectorUiKey.Key
+  - type: UserInterface
+    interfaces:
+      enum.EyeOfTheProtectorUiKey.Key:
+        type: EyeOfTheProtectorBoundUserInterface

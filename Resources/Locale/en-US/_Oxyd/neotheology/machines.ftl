@@ -14,3 +14,5 @@ ent-OxydNtObelisk = NeoTheology obelisk
 ent-OxydNtObelisk-desc = Projects the faith of the faithful, purging the unclean around it.
 ent-OxydNtArmamentsPrinter = NeoTheology armaments printer
 ent-OxydNtArmamentsPrinter-desc = Spends the faith's armament points to print gear for the faithful.
+ent-OxydNtEyeOfTheProtector = Eye of the Protector
+ent-OxydNtEyeOfTheProtector-desc = Watches over the faithful, banking observation and armament points for their miracles.

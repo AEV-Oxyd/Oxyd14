@@ -1,8 +1,11 @@
 using Content.Server.Chat.Systems;
 using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.StatusEffectNew;
+using Content.Shared.UserInterface;
+using Robust.Server.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -22,6 +25,28 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     [Dependency] private readonly SanitySystem _sanity = default!;
     [Dependency] private readonly SharedSkillSystem _skill = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
+    [Dependency] private readonly UserInterfaceSystem _ui = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        SubscribeLocalEvent<EyeOfTheProtectorComponent, AfterActivatableUIOpenEvent>(OnUiOpened);
+    }
+
+    /// <summary>P3.7: push a read-only status snapshot when the Eye's UI is opened.</summary>
+    private void OnUiOpened(EntityUid uid, EyeOfTheProtectorComponent component, AfterActivatableUIOpenEvent args)
+    {
+        var cooldown = component.NextMiracle - _timing.CurTime;
+        if (cooldown < TimeSpan.Zero)
+            cooldown = TimeSpan.Zero;
+
+        _ui.SetUiState(uid, EyeOfTheProtectorUiKey.Key, new EyeOfTheProtectorState(
+            component.Observation,
+            component.ArmamentsPoints,
+            component.MaxArmamentsPoints,
+            cooldown));
+    }
 
     /// <summary>When each Eye next scans.</summary>
     /// <remarks>ponytail: entries for deleted Eyes are never pruned. One Eye per station per the Eris
