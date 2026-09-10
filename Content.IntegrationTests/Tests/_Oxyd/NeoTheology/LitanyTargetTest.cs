@@ -4,6 +4,7 @@ using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology;
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -165,6 +166,54 @@ public sealed class LitanyTargetTest : GameTest
     }
 
     [Test]
+    public async Task StationFollower_ToleratesZeroOtherBearers()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var origin = TileCentre(map.GridCoords);
+            var caster = SpawnBearer(origin);
+
+            Assert.That(_litany.TryResolveTargets(caster, _prototypes.Index(Entreaty), out var targets, out var reason),
+                Is.True, "StationFollower is a broadcast mode: zero other bearers must still resolve.");
+            Assert.That(targets, Is.Empty, "No other bearer exists, so the resolved list is empty.");
+            Assert.That(reason, Is.Null, "An empty broadcast resolves cleanly, not as a failure.");
+        });
+    }
+
+    [Test]
+    public async Task Entreaty_CommitsWithZeroFollowers()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid caster = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            _litany.TestingClearAvailabilityOverrides();
+            _litany.TestingClearActors();
+
+            var origin = TileCentre(map.GridCoords);
+            caster = SpawnBearer(origin);
+            _litany.TestingTreatAsActor(caster);
+
+            var begin = _litany.TryBeginLitany(caster, Entreaty, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.True,
+                begin.Reason?.Id ?? "Entreaty must begin with no other followers on the station.");
+        });
+
+        await AdvancePastCast();
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(_litany.TestingPendingCount, Is.EqualTo(0), "The cast must complete.");
+            Assert.That(SComp<CruciformBearerComponent>(caster).PendingRequestId, Is.Null);
+            Assert.That(_cruciform.GetHoliness(caster), Is.EqualTo(50).Within(0.01),
+                "Entreaty cost is 0 — an empty broadcast still commits without charge.");
+        });
+    }
+
+    [Test]
     public async Task FrontMachine_ResolvesFacedTileMachineOnly()
     {
         var map = await Pair.CreateTestMap();
@@ -281,6 +330,21 @@ public sealed class LitanyTargetTest : GameTest
     /// <summary>Centre of the tile at <paramref name="gridCoords"/> so tile math is unambiguous.</summary>
     private static EntityCoordinates TileCentre(EntityCoordinates gridCoords)
         => gridCoords.Offset(new Vector2(0.5f, 0.5f));
+
+    /// <summary>Waits out the cast DoAfter / extra delay until no pending cast remains.</summary>
+    private async Task AdvancePastCast()
+    {
+        for (var i = 0; i < 60; i++)
+        {
+            await Pair.RunTicksSync(5);
+            var done = false;
+            await Server.WaitPost(() => done = _litany.TestingPendingCount == 0);
+            if (done)
+                return;
+        }
+
+        Assert.Fail("Cast did not complete within expected ticks.");
+    }
 
     /// <summary>A human with an active cruciform: the shared actor/follower fixture.</summary>
     private EntityUid SpawnBearer(EntityCoordinates coords)

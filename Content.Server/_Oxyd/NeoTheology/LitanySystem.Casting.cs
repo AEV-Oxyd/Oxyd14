@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Numerics;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
@@ -366,10 +367,22 @@ public sealed partial class LitanySystem
     }
 
     /// <summary>
+    /// Modes that succeed with zero candidates. These broadcast to "whoever is
+    /// eligible" rather than selecting a specific target, so an empty list is a valid
+    /// outcome (Eris Entreaty always succeeds, even with no other followers).
+    /// Every mode not listed here fails closed on zero candidates.
+    /// </summary>
+    private static readonly FrozenSet<LitanyTargetMode> EmptyTolerantModes = new HashSet<LitanyTargetMode>
+    {
+        LitanyTargetMode.StationFollower,
+    }.ToFrozenSet();
+
+    /// <summary>
     /// Resolves the target candidates for a litany's <see cref="LitanyTargetMode"/>.
     /// Called once when the cast begins; commit replays the recorded list instead of
     /// re-resolving. Returns false when the mode resolved no candidates — the caller
-    /// fails the begin with <paramref name="reason"/>.
+    /// fails the begin with <paramref name="reason"/> — except for the broadcast modes
+    /// in <see cref="EmptyTolerantModes"/>, where zero recipients is a success.
     /// </summary>
     public bool TryResolveTargets(
         EntityUid actor,
@@ -423,7 +436,7 @@ public sealed partial class LitanySystem
 
         // Deterministic order: the recorded list must not depend on lookup hash order.
         targets.Sort();
-        if (targets.Count == 0)
+        if (targets.Count == 0 && !EmptyTolerantModes.Contains(proto.TargetMode))
             return false;
 
         reason = null;
