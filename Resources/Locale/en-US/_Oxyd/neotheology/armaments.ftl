@@ -11,3 +11,5 @@ oxyd-armament-energy-crossbow-desc = A NeoTheology-marked energy crossbow. The E
 
 oxyd-armament-holy-grenade = NT OBG "Holy Grail"
 oxyd-armament-holy-grenade-desc = And the Lord spake, saying: first shalt thou take out the Holy Pin. Then, shalt thou count to three, no more, no less.
+
+oxyd-offering-divine-intervention = divine intervention

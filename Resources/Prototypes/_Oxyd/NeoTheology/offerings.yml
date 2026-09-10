@@ -1,0 +1,15 @@
+# P3.8: Eris /datum/ritual/offering, ported as data. The priest names an offering;
+# the altar collects matching items on its turf and the Eye converts them to observation.
+#
+# Omitted: holy_guidance (1 oddity + 40 fruits) — neither an oddity nor a fruit
+# prototype exists in this fork, so a missing offering beats a broken one.
+
+- type: oxydOffering
+  id: OxydNtOfferingDivineIntervention
+  name: oxyd-offering-divine-intervention
+  required:
+  - proto: OxydNtBiomatter
+    count: 200
+  # ponytail: one full miracle's worth (1000 observation) per 200 biomatter — a flagged
+  # balance choice; Eris grants the same intervention directly rather than banking it.
+  observation: 1000
