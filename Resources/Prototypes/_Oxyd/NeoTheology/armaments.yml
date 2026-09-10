@@ -33,7 +33,7 @@
   id: OxydNtArmamentHolyGrenade
   name: oxyd-armament-holy-grenade
   desc: oxyd-armament-holy-grenade-desc
-  path: HolyHandGrenade
+  path: OxydNtHolyHandGrenade
   cost: 275
   minCost: 200
   discountIncrease: 100
