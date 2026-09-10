@@ -58,7 +58,8 @@ namespace Content.Server.Medical.BiomassReclaimer
         [Dependency] private SharedMindSystem _minds = default!;
         [Dependency] private InventorySystem _inventory = default!;
 
-        public static readonly ProtoId<MaterialPrototype> BiomassPrototype = "Biomass";
+        // Eris burns biomass into biomatter; this is the reclaimer's output material.
+        public static readonly ProtoId<MaterialPrototype> OutputMaterial = "Biomatter";
 
         public override void Update(float frameTime)
         {
@@ -92,7 +93,7 @@ namespace Content.Server.Medical.BiomassReclaimer
 
                 var actualYield = (int) (reclaimer.CurrentExpectedYield); // can only have integer biomass
                 reclaimer.CurrentExpectedYield = reclaimer.CurrentExpectedYield - actualYield; // store non-integer leftovers
-                _material.SpawnMultipleFromMaterial(actualYield, BiomassPrototype, Transform(uid).Coordinates);
+                _material.SpawnMultipleFromMaterial(actualYield, OutputMaterial, Transform(uid).Coordinates);
 
                 reclaimer.BloodReagents = null;
                 reclaimer.SpawnedEntities.Clear();
