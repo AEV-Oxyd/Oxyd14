@@ -2,6 +2,7 @@ using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology.Machines;
+using Content.Server.Materials;
 using Content.Server.Power.Components;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Materials;
@@ -13,7 +14,8 @@ using Robust.Shared.Prototypes;
 namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 
 /// <summary>
-/// P2.6: the cruciform forge banks the recipe materials and produces a cruciform after WorkTime.
+/// P2.6: the cruciform forge banks the recipe materials (through its MaterialStorage) and produces
+/// a cruciform after WorkTime.
 /// </summary>
 [TestOf(typeof(CruciformForgeSystem))]
 public sealed class CruciformForgeTest : GameTest
@@ -29,6 +31,7 @@ public sealed class CruciformForgeTest : GameTest
     public override PoolSettings PoolSettings => PsDisconnected;
 
     [SidedDependency(Side.Server)] private readonly CruciformForgeSystem _forge = default!;
+    [SidedDependency(Side.Server)] private readonly MaterialStorageSystem _material = default!;
     [SidedDependency(Side.Server)] private readonly SharedStackSystem _stack = default!;
 
     [Test]
@@ -51,9 +54,12 @@ public sealed class CruciformForgeTest : GameTest
             {
                 Assert.That(comp.Working, Is.True, "The forge must be working once the run starts.");
                 Assert.That(comp.Ready, Is.False, "Nothing is ready to take while the run is in flight.");
-                Assert.That(comp.Stored["Biomatter"], Is.EqualTo(0), "The run must debit 10 biomatter.");
-                Assert.That(comp.Stored["Plasteel"], Is.EqualTo(0), "The run must debit 5 plasteel.");
-                Assert.That(comp.Stored["Gold"], Is.EqualTo(0), "The run must debit 2 gold.");
+                Assert.That(_material.GetMaterialAmount(forge, "Biomatter"), Is.EqualTo(0),
+                    "The run must debit 10 biomatter.");
+                Assert.That(_material.GetMaterialAmount(forge, "Plasteel"), Is.EqualTo(0),
+                    "The run must debit 5 plasteel.");
+                Assert.That(_material.GetMaterialAmount(forge, "Gold"), Is.EqualTo(0),
+                    "The run must debit 2 gold.");
             });
         });
     }
@@ -108,8 +114,10 @@ public sealed class CruciformForgeTest : GameTest
             Assert.Multiple(() =>
             {
                 Assert.That(comp.Working, Is.False, "A refused run must not start working.");
-                Assert.That(comp.Stored["Biomatter"], Is.EqualTo(10), "A refused run must not debit biomatter.");
-                Assert.That(comp.Stored["Plasteel"], Is.EqualTo(5), "A refused run must not debit plasteel.");
+                Assert.That(_material.GetMaterialAmount(forge, "Biomatter"), Is.EqualTo(10),
+                    "A refused run must not debit biomatter.");
+                Assert.That(_material.GetMaterialAmount(forge, "Plasteel"), Is.EqualTo(500),
+                    "A refused run must not debit plasteel.");
             });
         });
     }
@@ -135,26 +143,31 @@ public sealed class CruciformForgeTest : GameTest
         });
     }
 
-    /// <summary>Spawns a bare entity carrying the forge component.</summary>
+    /// <summary>Spawns the real forge prototype, so material insertion goes through MaterialStorage.</summary>
     private (EntityUid Forge, CruciformForgeComponent Comp) SpawnForge(EntityCoordinates coords)
     {
-        var forge = SSpawnAtPosition(null, coords.Offset(ForgeOffset));
-        return (forge, SEntMan.AddComponent<CruciformForgeComponent>(forge));
+        var forge = SSpawnAtPosition(ForgeProto, coords.Offset(ForgeOffset));
+        // MaterialStorageSystem refuses insertion into an unpowered ApcPowerReceiver; there is no APC
+        // in PsDisconnected, so mark it powered for the test.
+        SComp<ApcPowerReceiverComponent>(forge).Powered = true;
+        return (forge, SComp<CruciformForgeComponent>(forge));
     }
 
     private void InsertRecipe(EntityUid forge, EntityCoordinates coords)
     {
+        // Recipe is in material volume units: biomatter 10/sheet, plasteel & gold 100/sheet.
         Insert(forge, coords, BiomatterProto, 10);
         Insert(forge, coords, PlasteelProto, 5);
         Insert(forge, coords, GoldProto, 2);
     }
 
-    /// <summary>Banks a stack of the given size in the forge.</summary>
+    /// <summary>Banks a stack in the forge through the real MaterialStorage insertion path.</summary>
     private void Insert(EntityUid forge, EntityCoordinates coords, EntProtoId proto, int count)
     {
         var items = SSpawnAtPosition(proto, coords);
         _stack.SetCount((Entity<StackComponent?>) items, count);
 
-        Assert.That(_forge.TryInsert(forge, items), Is.True, $"Setup: banks {count} {proto} in the forge.");
+        Assert.That(_material.TryInsertMaterialEntity(forge, items, forge), Is.True,
+            $"Setup: banks {count} {proto} in the forge.");
     }
 }

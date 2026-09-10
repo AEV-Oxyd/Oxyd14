@@ -1,20 +1,21 @@
-using System.Linq;
+using Content.Server.Materials;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Materials;
-using Content.Shared.Stacks;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology.Machines;
 
 /// <summary>
-/// P2.6: the cruciform forge. Banks material stacks handed to it and, once the recipe is
-/// stocked, spends <see cref="CruciformForgeComponent.WorkTime"/> to forge a cruciform.
+/// P2.6: the cruciform forge. Materials handed to it are banked by
+/// <see cref="SharedMaterialStorageSystem"/>'s own <c>InteractUsing</c> handler (the forge carries a
+/// <see cref="MaterialStorageComponent"/>); once the recipe is stocked, it spends
+/// <see cref="CruciformForgeComponent.WorkTime"/> to forge a cruciform.
 /// </summary>
 public sealed class CruciformForgeSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly SharedStackSystem _stack = default!;
+    [Dependency] private readonly MaterialStorageSystem _materialStorage = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
 
@@ -39,40 +40,6 @@ public sealed class CruciformForgeSystem : EntitySystem
     }
 
     /// <summary>
-    /// Banks <paramref name="item"/> in the forge. One item counts as one sheet of the material it
-    /// is made of; a part-used stack keeps its remainder.
-    /// </summary>
-    public bool TryInsert(EntityUid uid, EntityUid item, CruciformForgeComponent? forge = null)
-    {
-        if (!Resolve(uid, ref forge))
-            return false;
-
-        if (!TryComp<PhysicalCompositionComponent>(item, out var composition) ||
-            composition.MaterialComposition.Count == 0)
-        {
-            return false;
-        }
-
-        var material = composition.MaterialComposition.Keys.First();
-        var available = TryComp<StackComponent>(item, out var stack) ? _stack.GetCount((item, stack)) : 1;
-
-        // ponytail: banked amounts count sheets, the unit the recipe is written in.
-        var space = forge.StorageCapacity - forge.Stored.GetValueOrDefault(material);
-        var take = Math.Min(space, available);
-        if (take <= 0)
-            return false;
-
-        if (stack != null)
-            _stack.TryUse((item, stack), take);
-        else
-            QueueDel(item);
-
-        forge.Stored[material] = forge.Stored.GetValueOrDefault(material) + take;
-        Dirty(uid, forge);
-        return true;
-    }
-
-    /// <summary>
     /// Spends the recipe and starts a work run. Refuses, spending nothing, if any material is short.
     /// </summary>
     public bool TryProduce(EntityUid uid, CruciformForgeComponent? forge = null)
@@ -80,14 +47,17 @@ public sealed class CruciformForgeSystem : EntitySystem
         if (!Resolve(uid, ref forge) || forge.Working)
             return false;
 
+        if (!TryComp<MaterialStorageComponent>(uid, out var storage))
+            return false;
+
         foreach (var (material, amount) in forge.Needed)
         {
-            if (forge.Stored.GetValueOrDefault(material) < amount)
+            if (_materialStorage.GetMaterialAmount(uid, material, storage) < amount)
                 return false;
         }
 
         foreach (var (material, amount) in forge.Needed)
-            forge.Stored[material] -= amount;
+            _materialStorage.TryChangeMaterialAmount(uid, material, -amount, storage);
 
         forge.Working = true;
         forge.StartedAt = _timing.CurTime;

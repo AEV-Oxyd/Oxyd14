@@ -11,4 +11,8 @@
   - type: Sprite
     sprite: Structures/Machines/seed_extractor.rsi
     state: seedextractor
+  # P2.10a: MaterialStorage is the forge's single store. storageLimit is a *total* cap (there is no
+  # per-material field); 10050 = 50 sheets of each recipe material in volume units (biomatter 1/sheet,
+  # plasteel/gold 100/sheet).
   - type: MaterialStorage
+    storageLimit: 10050
