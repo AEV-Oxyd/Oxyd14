@@ -68,4 +68,19 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             AddObservation(eye, comp.ObservationPerFaithful);
         }
     }
+
+    /// <summary>The first Eye on the same map as <paramref name="near"/>, if any.</summary>
+    /// <remarks>ponytail: deterministic order not required — one Eye per station.</remarks>
+    public EntityUid? FindEye(EntityUid near)
+    {
+        var map = Transform(near).MapID;
+        var query = EntityQueryEnumerator<EyeOfTheProtectorComponent, TransformComponent>();
+        while (query.MoveNext(out var uid, out _, out var xform))
+        {
+            if (xform.MapID == map)
+                return uid;
+        }
+
+        return null;
+    }
 }

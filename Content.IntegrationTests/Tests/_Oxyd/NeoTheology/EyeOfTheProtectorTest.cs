@@ -2,6 +2,7 @@ using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
+using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
 using Robust.Shared.GameObjects;
@@ -24,6 +25,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
     public override PoolSettings PoolSettings => PsDisconnected;
 
     [SidedDependency(Side.Server)] private readonly EyeOfTheProtectorSystem _eye = default!;
+    [SidedDependency(Side.Server)] private readonly ObeliskSystem _obelisk = default!;
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly SharedSubdermalImplantSystem _implants = default!;
 
@@ -79,6 +81,26 @@ public sealed class EyeOfTheProtectorTest : GameTest
 
             Assert.That(eyeComp.Observation, Is.EqualTo(eyeComp.ObservationPerFaithful).Within(1e-6),
                 "The same bearer scanned twice in one window must award only once.");
+        });
+    }
+
+    [Test]
+    public async Task ObeliskTickFeedsTheEyeObservation()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
+            var obelisk = SSpawnAtPosition(null, map.GridCoords);
+            SEntMan.AddComponent<ObeliskComponent>(obelisk);
+            ActiveBearer(map.GridCoords);
+
+            _obelisk.Tick(obelisk);
+
+            Assert.That(eyeComp.Observation, Is.EqualTo(eyeComp.ObservationPerFaithful).Within(1e-6),
+                "An obelisk pulse over one faithful must feed the Eye one ObservationPerFaithful.");
         });
     }
 

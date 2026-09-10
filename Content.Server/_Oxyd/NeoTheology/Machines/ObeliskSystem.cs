@@ -18,6 +18,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 public sealed class ObeliskSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
+    [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
     [Dependency] private readonly DamageableSystem _damageable = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly PlantTraySystem _tray = default!;
@@ -90,7 +91,10 @@ public sealed class ObeliskSystem : EntitySystem
 
         obelisk.Active = faithful > 0;
 
-        // Phase 3: _eye.AddObservation(gen.ObservationPerFaithful * faithfulCount);
+        // An obelisk with no Eye on its map is legal; it simply banks nothing.
+        if (faithful > 0 && _eye.FindEye(uid) is { } eye &&
+            TryComp<EyeOfTheProtectorComponent>(eye, out var eyeComp))
+            _eye.AddObservation(eye, eyeComp.ObservationPerFaithful * faithful);
 
         DamageHostiles(uid, obelisk, xform);
         WeedTrays(xform, obelisk);
