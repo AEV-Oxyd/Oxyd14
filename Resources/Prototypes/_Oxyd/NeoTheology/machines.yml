@@ -1,0 +1,14 @@
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtCruciformForge
+  name: cruciform forge
+  description: Prints cruciforms from biomatter, plasteel and gold.
+  components:
+  - type: CruciformForge
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/seed_extractor.rsi
+    state: seedextractor
+  - type: MaterialStorage

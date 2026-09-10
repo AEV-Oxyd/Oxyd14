@@ -2,7 +2,9 @@ using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology.Machines;
+using Content.Server.Power.Components;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared.Materials;
 using Content.Shared.Stacks;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -19,6 +21,7 @@ public sealed class CruciformForgeTest : GameTest
     private static readonly EntProtoId PlasteelProto = "SheetPlasteel";
     private static readonly EntProtoId GoldProto = "IngotGold";
     private static readonly EntProtoId BiomatterProto = "OxydNtBiomatter";
+    private static readonly EntProtoId ForgeProto = "OxydNtCruciformForge";
 
     /// <summary>Where the forge sits relative to the test tile.</summary>
     private static readonly Vector2 ForgeOffset = new(3f, 0f);
@@ -107,6 +110,27 @@ public sealed class CruciformForgeTest : GameTest
                 Assert.That(comp.Working, Is.False, "A refused run must not start working.");
                 Assert.That(comp.Stored["Biomatter"], Is.EqualTo(10), "A refused run must not debit biomatter.");
                 Assert.That(comp.Stored["Plasteel"], Is.EqualTo(5), "A refused run must not debit plasteel.");
+            });
+        });
+    }
+
+    [Test]
+    public async Task ForgePrototypeLoadsAsAMachine()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var forge = SSpawnAtPosition(ForgeProto, map.GridCoords);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(SEntMan.HasComponent<CruciformForgeComponent>(forge), Is.True,
+                    "The forge machine must carry the forge component.");
+                Assert.That(SEntMan.HasComponent<MaterialStorageComponent>(forge), Is.True,
+                    "The forge machine must take material storage.");
+                Assert.That(SEntMan.HasComponent<ApcPowerReceiverComponent>(forge), Is.True,
+                    "The forge machine must draw power.");
             });
         });
     }
