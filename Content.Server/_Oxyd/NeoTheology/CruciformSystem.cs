@@ -31,6 +31,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     [Dependency] private SharedStationSystem _stations = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private readonly CoreModuleSystem _modules = default!;
+    [Dependency] private readonly SharedSubdermalImplantSystem _implants = default!;
 
     public override void Initialize()
     {
@@ -245,6 +246,30 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         RecomputeProfile(cruciform, component);
         Dirty(cruciform, component);
         BumpRevision(body);
+        return true;
+    }
+
+    /// <summary>
+    /// Job-spawn entry point (see <c>NeoTheologyJobSystem</c>): spawn a cruciform, implant it
+    /// and bring it live with the given profile and that rank's modules.
+    /// </summary>
+    public bool GrantCruciform(EntityUid body, ProtoId<NeoTheologyProfilePrototype> profile)
+    {
+        if (_implants.AddImplant(body, "OxydNtCruciform") is not { } implant)
+            return false;
+
+        if (!TryComp<CruciformComponent>(implant, out var comp))
+            return false;
+
+        comp.EverActivated = true;
+        comp.Active = true;
+        comp.LastHolinessUpdate = _timing.CurTime;
+        MakeRank(implant, comp, profile);
+
+        // Same semantics as Activate(): a freshly granted cruciform starts full.
+        if (comp.Holiness <= GetDebitTolerance())
+            comp.Holiness = comp.MaxHoliness;
+
         return true;
     }
 
@@ -512,7 +537,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         _containers.Remove(rejected, installed.ImplantContainer);
     }
 
-    private NeoTheologyRulesPrototype? GetRules()
+    public NeoTheologyRulesPrototype? GetRules()
     {
         NeoTheologyRulesPrototype? selected = null;
         foreach (var rules in ProtoMan.EnumeratePrototypes<NeoTheologyRulesPrototype>())
