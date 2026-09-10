@@ -121,3 +121,24 @@
   - type: Sprite
     sprite: Structures/Machines/tech_disk_printer.rsi
     state: icon
+
+# P2.16: the armory. Points are local until P3.5 rebases them onto the Eye.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtArmamentsPrinter
+  name: NeoTheology armaments printer
+  description: Spends the faith's armament points to print gear for the faithful.
+  components:
+  - type: ArmamentsPrinter
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/uniform_printer.rsi
+    state: icon
+  - type: ActivatableUI
+    key: enum.ArmamentsPrinterUiKey.Key
+  - type: UserInterface
+    interfaces:
+      enum.ArmamentsPrinterUiKey.Key:
+        type: ArmamentsPrinterBoundUserInterface

@@ -1,0 +1,9 @@
+- type: oxydArmament
+  id: OxydNtArmamentRitualBook
+  name: oxyd-armament-ritual-book
+  desc: oxyd-armament-ritual-book-desc
+  path: OxydNtBible
+  cost: 100
+  minCost: 50
+  discountIncrease: 25
+  maxPointsIncrease: 25
