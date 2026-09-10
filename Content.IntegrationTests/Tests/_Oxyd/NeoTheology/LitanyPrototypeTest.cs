@@ -35,7 +35,7 @@ public sealed class LitanyPrototypeTest : GameTest
         var litanies = prototypes.EnumeratePrototypes<LitanyPrototype>().ToArray();
 
         Assert.That(litanies, Has.Length.EqualTo(LitanyCatalogValidator.ExpectedLitanyCount));
-        Assert.That(litanies.Count(litany => litany.IsAvailable), Is.EqualTo(14));
+        Assert.That(litanies.Count(litany => litany.IsAvailable), Is.EqualTo(16));
         Assert.That(litanies.Where(l => l.IsAvailable).Select(l => l.Effect),
             Is.EquivalentTo(new[]
             {
@@ -53,6 +53,8 @@ public sealed class LitanyPrototypeTest : GameTest
                 LitanyEffectKind.Revelation,
                 LitanyEffectKind.Epiphany,
                 LitanyEffectKind.DivineBlessing,
+                LitanyEffectKind.Commitment,
+                LitanyEffectKind.Deprivation,
             }));
         Assert.That(litanies.Count(litany => litany.Dependency == NeoTheologyDependency.None),
             Is.EqualTo(LitanyCatalogValidator.ExpectedFoundationLitanyCount));
@@ -87,6 +89,8 @@ public sealed class LitanyPrototypeTest : GameTest
 
         Assert.That(litanies["OxydLitanyEntreaty"].Effects[0], Is.InstanceOf<LitanyEntreatyEffect>());
         Assert.That(litanies["OxydLitanyCruciformSense"].Effects[0], Is.InstanceOf<LitanyCruciformSenseEffect>());
+        Assert.That(litanies["OxydLitanyCommitment"].Effects[0], Is.InstanceOf<LitanyCommitmentEffect>());
+        Assert.That(litanies["OxydLitanyDeprivation"].Effects[0], Is.InstanceOf<LitanyDeprivationEffect>());
 
         var grace = litanies["OxydLitanyGraceOfPerseverance"];
         Assert.That(grace.Effects, Has.Count.EqualTo(1));

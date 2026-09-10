@@ -9,6 +9,12 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 public abstract partial class LitanyEffect
 {
     /// <summary>
+    /// True for the dead-only flows (Deprivation's extraction; resurrection later). Target
+    /// resolution excludes Dead mobs by default (§7.1); these effects need them delivered.
+    /// </summary>
+    public virtual bool AllowsDeadTarget => false;
+
+    /// <summary>
     /// Validates the effect before any holiness is debited. Must not mutate state.
     /// </summary>
     public abstract bool CanApply(

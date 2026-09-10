@@ -27,8 +27,8 @@ public sealed class LitanyCastTest : GameTest
     private static readonly EntProtoId BibleProto = "OxydNtBible";
     private static readonly EntProtoId HumanProto = "MobHuman";
     private static readonly ProtoId<LitanyPrototype> Relief = "OxydLitanyRelief";
-    // Still foundation-gated (disabled) — used as the "recognized but rejected" fixture.
-    private static readonly ProtoId<LitanyPrototype> Commitment = "OxydLitanyCommitment";
+    // Still dependency-gated (disabled) — used as the "recognized but rejected" fixture.
+    private static readonly ProtoId<LitanyPrototype> Rejection = "OxydLitanyRejection";
 
     public override PoolSettings PoolSettings => new()
     {
@@ -245,8 +245,8 @@ public sealed class LitanyCastTest : GameTest
             var body = PrepareCaster(map.GridCoords);
             _litany.TestingClearAvailabilityOverrides();
             var before = _cruciform.GetHoliness(body);
-            Assert.That(_prototypes.Index(Commitment).IsAvailable, Is.False);
-            var result = _litany.TryBeginLitany(body, Commitment, LitanyCastOrigin.ManualSpeech);
+            Assert.That(_prototypes.Index(Rejection).IsAvailable, Is.False);
+            var result = _litany.TryBeginLitany(body, Rejection, LitanyCastOrigin.ManualSpeech);
             Assert.That(result.Success, Is.False);
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
@@ -280,6 +280,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyRevelation",
                 "OxydLitanyEpiphany",
                 "OxydLitanyDivineBlessing",
+                "OxydLitanyCommitment",
+                "OxydLitanyDeprivation",
             }));
         });
     }

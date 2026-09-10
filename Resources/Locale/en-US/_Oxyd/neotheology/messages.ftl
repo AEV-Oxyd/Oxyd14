@@ -26,6 +26,11 @@ oxyd-litany-no-effect = The litany could not take hold.
 oxyd-litany-no-cruciform = The target has no installed cruciform.
 oxyd-litany-already-active = The target's cruciform is already active.
 oxyd-litany-no-oddity = You must hold an oddity to bless.
+oxyd-litany-not-human = The lesser creatures are unworthy.
+oxyd-litany-commitment-too-late = It is too late for this one; the soul has already left the vessel.
+oxyd-litany-commitment-has-cruciform = The target already bears a cruciform.
+oxyd-litany-commitment-no-cruciform = No loose cruciform rests on the altar.
+oxyd-litany-deprivation-alive = Deprivation does not work upon the living.
 
 oxyd-litany-entreaty-notice = { $name }, faithful cruciform follower, cries for salvation at { $location }!
 oxyd-litany-cruciform-sense-notice = { $name } has a cruciform installed.

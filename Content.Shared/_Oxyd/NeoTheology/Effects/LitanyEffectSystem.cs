@@ -11,12 +11,17 @@ using Content.Shared.Doors.Systems;
 using Content.Shared.Examine;
 using Content.Shared.FixedPoint;
 using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Humanoid;
+using Content.Shared.Humanoid.Prototypes;
 using Content.Shared.IdentityManagement;
+using Content.Shared.Implants;
+using Content.Shared.Implants.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Nutrition.Components;
 using Content.Shared.Nutrition.EntitySystems;
 using Content.Shared.Popups;
 using Content.Shared.Station;
+using Robust.Shared.Containers;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -39,12 +44,19 @@ public sealed partial class LitanyEffectSystem : EntitySystem
 
     private static readonly ProtoId<NeoTheologyProfilePrototype> PreacherProfile = "OxydNtPreacher";
     private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
+    private static readonly ProtoId<SpeciesPrototype> HumanSpecies = "Human";
+
+    /// <summary>How far from the target a NeoTheology altar still counts as "their altar".</summary>
+    private const float AltarSearchRadius = 1.5f;
 
     [Dependency] private readonly SharedCruciformSystem _cruciform = default!;
+    [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly DamageableSystem _damageable = default!;
     [Dependency] private readonly SharedDoorSystem _doors = default!;
     [Dependency] private readonly ExamineSystemShared _examine = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private readonly SharedSubdermalImplantSystem _implants = default!;
+    [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SatiationSystem _satiation = default!;
@@ -266,6 +278,111 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     public bool TryGetInstalledCruciform(EntityUid body, out CruciformComponent component)
     {
         return _cruciform.TryGetCruciformEntity(body, out _, out component);
+    }
+
+    /// <summary>Installed cruciform entity plus state; the extraction path needs the entity itself.</summary>
+    public bool TryGetInstalledCruciformEntity(EntityUid body, out EntityUid cruciform, out CruciformComponent component)
+    {
+        return _cruciform.TryGetCruciformEntity(body, out cruciform, out component);
+    }
+
+    /// <summary>True only for MobState.Dead — Critical is still a living target.</summary>
+    public bool IsDead(EntityUid uid)
+    {
+        return _mobState.IsDead(uid);
+    }
+
+    /// <summary>
+    /// §5.2 v1 conversion restriction: only actual Human-species humanoids may be committed.
+    /// Everything else is rejected before anything is consumed and keeps its implant state
+    /// untouched — no species-specific gibbings or limb surgery.
+    /// </summary>
+    public bool IsEligibleHuman(EntityUid uid)
+    {
+        return TryComp<HumanoidProfileComponent>(uid, out var profile) && profile.Species == HumanSpecies;
+    }
+
+    /// <summary>
+    /// Finds the loose, never-activated cruciform resting on a NeoTheology altar beside
+    /// <paramref name="target"/> — Eris install's <c>get_front(user)</c> item lookup adapted to
+    /// the altar's turf radius. Candidates are uid-sorted, so an unchanged world yields the same
+    /// altar/item pair at begin and commit; commit re-runs this lookup instead of picking a
+    /// different pair mid-chant.
+    /// </summary>
+    public bool TryFindAltarCruciform(EntityUid target, out EntityUid altar, out EntityUid cruciform)
+    {
+        altar = EntityUid.Invalid;
+        cruciform = EntityUid.Invalid;
+        if (!TryComp(target, out TransformComponent? targetXform))
+            return false;
+
+        var altars = _lookup.GetEntitiesInRange<NeoTheologyAltarComponent>(targetXform.Coordinates, AltarSearchRadius);
+        foreach (var candidate in altars.OrderBy(entry => entry.Owner))
+        {
+            var items = _lookup.GetEntitiesInRange<CruciformComponent>(Transform(candidate.Owner).Coordinates, candidate.Comp.Radius);
+            foreach (var item in items.OrderBy(entry => entry.Owner))
+            {
+                if (!IsLooseNeverActivatedCruciform(item.Owner, item.Comp))
+                    continue;
+
+                altar = candidate.Owner;
+                cruciform = item.Owner;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>An implant the altar ritual may install: loose (in no container) and never activated.</summary>
+    private bool IsLooseNeverActivatedCruciform(EntityUid uid, CruciformComponent component)
+    {
+        return !component.EverActivated &&
+               !component.Active &&
+               !_containers.IsEntityInContainer(uid) &&
+               TryComp<SubdermalImplantComponent>(uid, out var implant) &&
+               implant.ImplantedEntity == null;
+    }
+
+    /// <summary>
+    /// Eris install(): insert the existing loose cruciform with <c>ForceImplant</c>, then confirm
+    /// the bearer linkage actually resolved. A rejected insert (duplicate guard) fails loudly
+    /// here instead of silently no-opping.
+    /// </summary>
+    public bool TryImplantLooseCruciform(EntityUid target, EntityUid cruciform)
+    {
+        if (!TryComp<SubdermalImplantComponent>(cruciform, out var implant))
+            return false;
+
+        _implants.ForceImplant(target, (cruciform, implant));
+
+        return _cruciform.TryGetCruciformEntity(target, out var linked, out _) && linked == cruciform;
+    }
+
+    /// <summary>
+    /// Eris ejection(): remove the installed cruciform from the implant container WITHOUT
+    /// deleting it, dropping the same entity at <paramref name="body"/>'s coordinates. Container
+    /// removal raises ImplantRemovedEvent, which is what lets CruciformSystem detach the bearer.
+    /// <c>ForceRemove</c> is never used — it deletes the implant, and the cruciform must survive
+    /// for re-installation and Resurrection.
+    /// </summary>
+    public bool TryExtractInstalledCruciform(EntityUid body, EntityUid cruciform)
+    {
+        if (!TryComp<ImplantedComponent>(body, out var installed) ||
+            !installed.ImplantContainer.Contains(cruciform))
+            return false;
+
+        if (!_containers.Remove(cruciform, installed.ImplantContainer, destination: Transform(body).Coordinates))
+            return false;
+
+        // A corpse must not keep a pending cast after losing its cruciform.
+        if (TryComp<CruciformBearerComponent>(body, out var bearer))
+        {
+            bearer.PendingRequestId = null;
+            Dirty(body, bearer);
+        }
+
+        return true;
     }
 
     /// <summary>Oddity held in the active hand — DivineBlessing blesses the caster's own oddity.</summary>

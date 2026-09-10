@@ -182,12 +182,18 @@ public sealed class LitanyUiTest : GameTest
                 // Prototype-set phrase/cost/category are read from the prototype client-side;
                 // the BUI entry only carries viewer-specific availability.
                 Assert.That(entry.Litany.Id, Is.EqualTo(litany.ID));
+                // A disciple unlocks the Common + Machinery sets, so exactly the implemented
+                // entries granted by those sets are available to this viewer.
                 var expectAvailable = litany.Effect is LitanyEffectKind.Relief
                     or LitanyEffectKind.SoulHunger
                     or LitanyEffectKind.Entreaty
-                    or LitanyEffectKind.CruciformSense;
+                    or LitanyEffectKind.CruciformSense
+                    or LitanyEffectKind.Revelation
+                    or LitanyEffectKind.ActivateDoor
+                    or LitanyEffectKind.Commitment
+                    or LitanyEffectKind.Deprivation;
                 Assert.That(entry.Available, Is.EqualTo(expectAvailable),
-                    $"{litany.ID}: Packet C (Relief/SoulHunger/Entreaty/CruciformSense) should be available for entitled disciple.");
+                    $"{litany.ID}: Common/Machinery handlers should be available for an entitled disciple.");
                 if (!expectAvailable)
                     Assert.That(entry.UnavailableReason, Is.Not.Null, litany.ID);
             }
@@ -327,6 +333,8 @@ public sealed class LitanyUiTest : GameTest
                 LitanyEffectKind.Revelation,
                 LitanyEffectKind.Epiphany,
                 LitanyEffectKind.DivineBlessing,
+                LitanyEffectKind.Commitment,
+                LitanyEffectKind.Deprivation,
             }));
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
@@ -336,7 +344,9 @@ public sealed class LitanyUiTest : GameTest
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Revelation), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Epiphany), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.DivineBlessing), Is.True);
-            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(14));
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Commitment), Is.True);
+            Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Deprivation), Is.True);
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(16));
         });
     }
 

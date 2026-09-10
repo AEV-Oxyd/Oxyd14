@@ -1,7 +1,9 @@
 using System.Collections.Frozen;
+using System.Linq;
 using System.Numerics;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.Chat;
@@ -447,6 +449,8 @@ public sealed partial class LitanySystem
     /// Living mobs on the actor's own tile and the tile they face. Range bounds the
     /// lookup circle (1 m default); the tile gate is what makes "adjacent" mean the
     /// tile in front. Followers-only additionally requires an active cruciform.
+    /// §7.1: Dead mobs are excluded unless the litany is a dead-only flow (extraction,
+    /// resurrection) that declares <see cref="LitanyEffect.AllowsDeadTarget"/>.
     /// </summary>
     private List<EntityUid> ResolveAdjacentMobs(EntityUid actor, LitanyPrototype proto, bool followersOnly)
     {
@@ -454,10 +458,14 @@ public sealed partial class LitanySystem
         if (!TryGetFrontTiles(actor, out var ownTile, out var frontTile))
             return results;
 
+        var allowDead = proto.Effects.Any(effect => effect.AllowsDeadTarget);
+
         var range = proto.Range > 0 ? proto.Range : 1f;
         foreach (var (mob, _) in _lookup.GetEntitiesInRange<MobStateComponent>(Transform(actor).Coordinates, range))
         {
-            if (mob == actor || !_mobState.IsAlive(mob))
+            if (mob == actor)
+                continue;
+            if (!_mobState.IsAlive(mob) && !(allowDead && _mobState.IsDead(mob)))
                 continue;
             if (followersOnly && !_cruciform.IsActiveBearer(mob))
                 continue;

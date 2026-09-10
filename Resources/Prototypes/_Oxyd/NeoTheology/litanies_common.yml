@@ -191,8 +191,9 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 0
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyCommitmentEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyDeprivation
@@ -205,5 +206,6 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 0
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyDeprivationEffect
+  enabled: true
