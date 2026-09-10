@@ -75,11 +75,13 @@ public sealed partial class CharacterUIController : UIController, IOnStateEntere
     public void OnStateEntered(GameplayState state)
     {
         DebugTools.Assert(_window == null);
+        panelButtons.Orphan();
 
         _window = UIManager.CreateWindow<CharacterWindow>();
         _window.CategoryButton.Children.Add(panelButtons);
         foreach (var (key, content) in panels)
         {
+            content.Orphan();
             panelButtons.AddItem(key, key, _ =>
             {
                 _window.CategoryContent.RemoveAllChildren();

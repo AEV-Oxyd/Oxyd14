@@ -22,7 +22,9 @@
                 <actions:ActionsBar Name="Actions" Access="Protected" />
                 <alerts:AlertsUI Name="Alerts" Access="Protected" />
                 <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
-                <inventory:InventoryGui Name="Inventory" Access="Protected" HorizontalAlignment="Left"/>
+                <ui:GridMapping Name="inventory">
+                   <ui:OxTag tag="inventory"/>
+                </ui:GridMapping>
             </VBox>
             <VBox MinWidth="1032" MinHeight="1032" SetHeight="1032" SetWidth="1032" Name="ViewportContainer">
                 <controls:MainViewport SetHeight="1032" SetWidth="1032" MinHeight="1032" MinWidth="1032" HorizontalExpand="True" VerticalExpand="True"/>

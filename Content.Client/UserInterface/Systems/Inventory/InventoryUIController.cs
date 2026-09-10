@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.Hands.Systems;
 using Content.Client.Inventory;
@@ -38,7 +39,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
 
     private EntityUid? _playerUid;
     private InventorySlotsComponent? _playerInventory;
-    private readonly Dictionary<string, ItemSlotButtonContainer> _slotGroups = new();
+    private readonly Dictionary<string, GridMapping> _slotGroups = new();
 
     private StrippingWindow? _strippingWindow;
     private ItemSlotButtonContainer? _inventoryHotbar;
@@ -69,7 +70,6 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
             return true;
         if ((slotDef.SlotFlags & SlotFlags.DEPENDANTRENDER) == SlotFlags.NONE)
             return true;
-        Log.Info($"ShouldRender: {slotDef.Name} , {_inventorySystem.HasDependenciesFulfilled(_playerUid.Value, slotDef)}");
         return _inventorySystem.HasDependenciesFulfilled(_playerUid.Value, slotDef);
     }
 
@@ -153,11 +153,12 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         {
             if (!data.ShowInWindow || !_slotGroups.TryGetValue(data.SlotGroup, out var container))
                 continue;
-
-            if (!container.TryGetButton(data.SlotName, out var button))
+            
+            if (!container.Slots.TryGetValue(data.ButtonOffset, out var ctrl) ||
+                !ctrl.Children.TryFirstOrDefault(t => t is SlotButton c && c.Name == data.SlotName, out var button))
             {
                 button = CreateSlotButton(data);
-                container.TryAddButton(button);
+                container.InitSlot(data.ButtonOffset, button);
             }
 
             button.Visible = ShouldRender(data.SlotDef);
@@ -389,15 +390,15 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
             return;
 
         var button = CreateSlotButton(data);
-        slotGroup.TryAddButton(button);
+        slotGroup.InitSlot(data.ButtonOffset, button);
     }
 
     private void RemoveSlot(SlotData data)
     {
         if (!_slotGroups.TryGetValue(data.SlotGroup, out var slotGroup))
             return;
-
-        slotGroup.TryRemoveButton(data.SlotName, out _);
+        if(slotGroup.Slots.TryGetValue(data.ButtonOffset, out var slot) && slot.Children.TryFirstOrDefault(t => t is SlotButton c && c.Name == data.SlotName, out var button))
+            slot.RemoveChild(button);
     }
 
     public void ReloadSlots()
@@ -430,7 +431,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         _playerInventory = null;
         foreach (var slotGroup in _slotGroups.Values)
         {
-            slotGroup.ClearButtons();
+            slotGroup.Clear();
         }
 
         UpdateInventoryHotbar(null);
@@ -446,7 +447,13 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
             inventoryButton.StorageButton.Visible = showStorage;
         }
 
-        if (_slotGroups.GetValueOrDefault(group)?.GetButton(name) is not { } button)
+        if (!_slotGroups.TryGetValue(group, out var slotGroup))
+            return;
+
+        if (!slotGroup.GetByName(name, out var output))
+            return;
+
+        if (output is not SlotControl button)
             return;
 
         if (_entities.TryGetComponent(entity, out VirtualItemComponent? virtb))
@@ -462,9 +469,9 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         }
     }
 
-    public bool RegisterSlotGroupContainer(ItemSlotButtonContainer slotContainer)
+    public bool RegisterSlotGroupContainer(GridMapping map, string key)
     {
-        if (_slotGroups.TryAdd(slotContainer.SlotGroup, slotContainer))
+        if (_slotGroups.TryAdd(key, map))
             return true;
 
         return false;

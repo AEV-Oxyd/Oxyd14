@@ -15,13 +15,45 @@ namespace Content.Client.UserInterface.Controls
     {
         [Dependency] private ViewportManager _vpManager = default!;
 
-        public const bool ViewportStretch = false;
-        public const int ViewPortSnapToleranceMargin = 32;
-        public const int ViewportSnapToleranceClip = 16;
-        public const int ViewportFixedScaleFactor = 2;
-        public const bool ViewportRenderScaleUp = true;
-        public const bool ViewportVerticalFit = true;
-        public static readonly string ViewportScalingFilterMode = "bilinear";
+        [ViewVariables(VVAccess.ReadWrite)] bool ViewportStretch
+        {
+            get;
+            set
+            {
+                field = value;
+                UpdateCfg();
+            }
+        } = false;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewPortSnapToleranceMargin { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } } = 32;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewportSnapToleranceClip { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } } = 16;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewportFixedScaleFactor { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= 2;
+        [ViewVariables(VVAccess.ReadWrite)] public bool ViewportRenderScaleUp { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= true;
+        [ViewVariables(VVAccess.ReadWrite)] public bool ViewportVerticalFit { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= true;
+        [ViewVariables(VVAccess.ReadWrite)] public string ViewportScalingFilterMode { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= "bilinear";
 
         public ScalingViewport Viewport { get; }
 
