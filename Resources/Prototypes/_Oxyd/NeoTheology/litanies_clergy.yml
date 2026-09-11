@@ -344,9 +344,10 @@
   targetMode: FrontTile
   range: 1.5
   cost: 0
-  enabled: false
-  dependency: ConstructionCatalog
-  unavailableReason: oxyd-litany-unavailable-construction-catalog
+  selectBlueprint: true
+  effects:
+  - !type:LitanyDivineGuidanceEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyManifestation
@@ -359,9 +360,11 @@
   targetMode: FrontTile
   range: 1.5
   cost: 40
-  enabled: false
-  dependency: Construction
-  unavailableReason: oxyd-litany-unavailable-construction
+  extraDelay: 5
+  selectBlueprint: true
+  effects:
+  - !type:LitanyManifestationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyUproot
@@ -371,13 +374,13 @@
   category: Acolyte
   grantedBy: [OxydLitanyAcolyte]
   effect: Uproot
-  targetMode: AdjacentLiving
+  targetMode: FrontTile
   range: 1.5
   cost: 40
   extraDelay: 5
-  enabled: false
-  dependency: Construction
-  unavailableReason: oxyd-litany-unavailable-construction
+  effects:
+  - !type:LitanyUprootEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyPoundingWhisper

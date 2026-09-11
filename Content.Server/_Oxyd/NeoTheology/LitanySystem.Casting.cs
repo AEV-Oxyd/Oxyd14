@@ -5,6 +5,7 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.Chat;
 using Content.Shared.DoAfter;
@@ -230,7 +231,7 @@ public sealed partial class LitanySystem
 
         var hasHandler = LitanyHandlerCatalog.HasHandler(litany.Effect);
         if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _, cast.Targets,
-                cast.SelectedTokens, cast.SelectedText, cast.Designation))
+                cast.SelectedTokens, cast.SelectedText, cast.Designation, cast.SelectedBlueprint))
         {
             ClearPending(cast, cancelled: true);
             return;
@@ -245,7 +246,7 @@ public sealed partial class LitanySystem
         }
 
         if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets,
-                cast.SelectedTokens, cast.SelectedText, cast.Designation))
+                cast.SelectedTokens, cast.SelectedText, cast.Designation, cast.SelectedBlueprint))
         {
             if (cast.Cost > 0)
                 _cruciform.Refund(cast.Actor, cast.Cost);
@@ -311,12 +312,13 @@ public sealed partial class LitanySystem
 
         var targetIndex = -1;
         ProtoId<NeoTheologyProfilePrototype>? designation = null;
+        ProtoId<NeoTheologyBlueprintPrototype>? blueprint = null;
         foreach (var token in tokens)
         {
             if (token.StartsWith("t:", StringComparison.Ordinal) &&
                 int.TryParse(token.AsSpan(2), out var index))
             {
-                if (targetIndex >= 0 || designation is not null)
+                if (targetIndex >= 0 || designation is not null || blueprint is not null)
                 {
                     ClearPending(cast, cancelled: true);
                     return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
@@ -328,13 +330,25 @@ public sealed partial class LitanySystem
 
             if (token.StartsWith("d:", StringComparison.Ordinal))
             {
-                if (targetIndex >= 0 || designation is not null)
+                if (targetIndex >= 0 || designation is not null || blueprint is not null)
                 {
                     ClearPending(cast, cancelled: true);
                     return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
                 }
 
                 designation = new ProtoId<NeoTheologyProfilePrototype>(token[2..]);
+                continue;
+            }
+
+            if (token.StartsWith("b:", StringComparison.Ordinal))
+            {
+                if (targetIndex >= 0 || designation is not null || blueprint is not null)
+                {
+                    ClearPending(cast, cancelled: true);
+                    return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+                }
+
+                blueprint = new ProtoId<NeoTheologyBlueprintPrototype>(token[2..]);
                 continue;
             }
 
@@ -352,6 +366,14 @@ public sealed partial class LitanySystem
         var wantsDesignation = cast.ChoiceDesignations.Count > 0;
         if (wantsDesignation != designation.HasValue ||
             (wantsDesignation && !cast.ChoiceDesignations.Contains(designation!.Value)))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        var wantsBlueprint = cast.ChoiceBlueprints.Count > 0;
+        if (wantsBlueprint != blueprint.HasValue ||
+            (wantsBlueprint && !cast.ChoiceBlueprints.Contains(blueprint!.Value)))
         {
             ClearPending(cast, cancelled: true);
             return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
@@ -383,11 +405,12 @@ public sealed partial class LitanySystem
         cast.SelectedTokens = tokens;
         cast.SelectedText = text;
         cast.Designation = designation;
+        cast.SelectedBlueprint = blueprint;
         cast.AwaitingChoice = false;
 
         if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
             !_effects.TryValidateEffects(cast.Actor, litany, out var effectFail, cast.Targets,
-                cast.SelectedTokens, cast.SelectedText, cast.Designation))
+                cast.SelectedTokens, cast.SelectedText, cast.Designation, cast.SelectedBlueprint))
         {
             ClearPending(cast, cancelled: true);
             return LitanyActionResult.Fail(effectFail ?? "oxyd-litany-no-effect", requestId);
@@ -530,6 +553,7 @@ public sealed partial class LitanySystem
     private static readonly FrozenSet<LitanyTargetMode> EmptyTolerantModes = new HashSet<LitanyTargetMode>
     {
         LitanyTargetMode.StationFollower,
+        LitanyTargetMode.FrontTile,
     }.ToFrozenSet();
 
     /// <summary>
@@ -579,9 +603,10 @@ public sealed partial class LitanySystem
                 targets = ResolveVisibleMobs(actor, proto);
                 break;
             case LitanyTargetMode.FrontTile:
-                // ponytail: FrontTile must resolve to a coordinate, not an entity, for the
-                // construction packet (P4.13). Fail closed until that path exists.
-                return false;
+                // P4.13: construction litanies resolve the tile in front themselves at apply
+                // time. No entity candidate exists, so this mode always succeeds with none.
+                reason = null;
+                return true;
             case LitanyTargetMode.Ceremony:
                 // P4.11 owns the ceremony participant ring; fail closed until then.
                 return false;
@@ -701,6 +726,17 @@ public sealed partial class LitanySystem
         }
 
         return results;
+    }
+
+    /// <summary>Blueprint ids in ordinal order, so every book session shows the same list.</summary>
+    private List<ProtoId<NeoTheologyBlueprintPrototype>> EnumerateBlueprintChoices()
+    {
+        var ids = new List<ProtoId<NeoTheologyBlueprintPrototype>>();
+        foreach (var proto in _prototypes.EnumeratePrototypes<NeoTheologyBlueprintPrototype>())
+            ids.Add(proto.ID);
+
+        ids.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
+        return ids;
     }
 
     /// <summary>The actor's tile and the tile their local rotation faces.</summary>

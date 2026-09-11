@@ -54,6 +54,9 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Atonement,
         LitanyEffectKind.Penance,
         LitanyEffectKind.Asacris,
+        LitanyEffectKind.DivineGuidance,
+        LitanyEffectKind.Manifestation,
+        LitanyEffectKind.Uproot,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -102,6 +105,9 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Atonement,
         LitanyEffectKind.Penance,
         LitanyEffectKind.Asacris,
+        LitanyEffectKind.DivineGuidance,
+        LitanyEffectKind.Manifestation,
+        LitanyEffectKind.Uproot,
     ];
 
     [Test]

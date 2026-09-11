@@ -1,6 +1,7 @@
 using System.Linq;
 using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
@@ -76,10 +77,11 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         IReadOnlyList<EntityUid>? targets = null,
         IReadOnlyList<string>? selectedTokens = null,
         string? selectedText = null,
-        ProtoId<NeoTheologyProfilePrototype>? designation = null)
+        ProtoId<NeoTheologyProfilePrototype>? designation = null,
+        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null)
     {
         var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation);
+            selectedTokens, selectedText, designation, selectedBlueprint);
         foreach (var effect in litany.Effects)
         {
             if (!effect.CanApply(this, context, out failure))
@@ -96,10 +98,11 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         IReadOnlyList<EntityUid>? targets = null,
         IReadOnlyList<string>? selectedTokens = null,
         string? selectedText = null,
-        ProtoId<NeoTheologyProfilePrototype>? designation = null)
+        ProtoId<NeoTheologyProfilePrototype>? designation = null,
+        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null)
     {
         var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation);
+            selectedTokens, selectedText, designation, selectedBlueprint);
         foreach (var effect in litany.Effects)
         {
             if (!effect.Apply(this, context))

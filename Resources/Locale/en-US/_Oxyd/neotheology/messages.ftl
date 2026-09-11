@@ -55,4 +55,25 @@ oxyd-litany-upgrade-not-installed = The target's cruciform carries no attachment
 oxyd-litany-soul-lost = The target carries no soul to bind.
 oxyd-litany-initiation-already-preacher = The target is already a preacher.
 
+# Construction packet (P4.13): blueprint choice labels, Divine Guidance output and the
+# Manifestation/Uproot failure reasons.
+oxyd-nt-blueprint-altar-name = NeoTheology altar
+oxyd-nt-blueprint-biogenerator-name = biogenerator
+oxyd-nt-blueprint-biomass-container-name = biomass container
+oxyd-nt-blueprint-bioreactor-name = bioreactor
+oxyd-nt-blueprint-cloner-name = cruciform cloner
+oxyd-nt-blueprint-cruciform-forge-name = cruciform forge
+oxyd-nt-blueprint-cruciform-reader-name = cruciform reader
+oxyd-nt-blueprint-eye-name = Eye of the Protector
+oxyd-nt-blueprint-holy-door-name = holy door
+oxyd-nt-blueprint-obelisk-name = obelisk
+oxyd-litany-blueprint-requires = { $name } requires: { $items }.
+oxyd-litany-blueprint-material = { $amount } { $name }
+oxyd-litany-blueprint-unknown = That construction is not in the catalog.
+oxyd-litany-blueprint-missing = The materials in front of you are not enough.
+oxyd-litany-eye-exists = An Eye of the Protector already watches over this place.
+oxyd-litany-uproot-none = There is no NeoTheology construction in front of you.
+oxyd-litany-uproot-forbidden = Only a preacher or an inquisitor can move the Eye of the Protector.
+oxyd-litany-book-required = This litany needs the litany book to pick a construction.
+
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.

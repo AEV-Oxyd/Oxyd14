@@ -307,7 +307,7 @@ public sealed class LitanyTargetTest : GameTest
     }
 
     [Test]
-    public async Task DeferredModes_FailClosedWithNoTarget()
+    public async Task FrontTileResolvesEmpty_AndCeremonyFailsClosedWithNoTarget()
     {
         var map = await Pair.CreateTestMap();
 
@@ -316,8 +316,8 @@ public sealed class LitanyTargetTest : GameTest
             var caster = SpawnBearer(TileCentre(map.GridCoords));
 
             Assert.That(_litany.TryResolveTargets(caster, _prototypes.Index(DivineGuidance), out var targets, out var reason),
-                Is.False, "FrontTile resolution is deferred to P4.13 and must fail closed.");
-            Assert.That(reason?.Id, Is.EqualTo("oxyd-litany-no-target"));
+                Is.True, "FrontTile resolves to no entity candidates; the construction effect reads the tile itself.");
+            Assert.That(reason, Is.Null);
             Assert.That(targets, Is.Empty);
 
             Assert.That(_litany.TryResolveTargets(caster, _prototypes.Index(Sanctify), out targets, out reason),

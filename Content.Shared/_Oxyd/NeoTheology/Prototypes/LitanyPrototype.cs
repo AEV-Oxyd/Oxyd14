@@ -76,6 +76,14 @@ public sealed partial class LitanyPrototype : IPrototype
     public bool AllowPlainText { get; private set; }
 
     /// <summary>
+    /// The caster picks one NeoTheology blueprint in the book UI before the chant
+    /// (Eris construction.dm "Select construction"). Manual speech fails closed because
+    /// it has no choice surface.
+    /// </summary>
+    [DataField]
+    public bool SelectBlueprint { get; private set; }
+
+    /// <summary>
     /// Declarative effect list, instantiated from YAML as <c>!type:</c> entries.
     /// Replaces the legacy parameter-block families.
     /// </summary>

@@ -88,6 +88,9 @@ public sealed class LitanyEffectsSocialTest : SocialNoticeGameTest
         LitanyEffectKind.Atonement,
         LitanyEffectKind.Penance,
         LitanyEffectKind.Asacris,
+        LitanyEffectKind.DivineGuidance,
+        LitanyEffectKind.Manifestation,
+        LitanyEffectKind.Uproot,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -548,6 +551,7 @@ public sealed class LitanyEffectsSocialTest : SocialNoticeGameTest
                     "OxydLitanyAcceleratedGrowth", "OxydLitanyRejection",
                     "OxydLitanyRevealAdversaries", "OxydLitanyWordsOfPurging",
                     "OxydLitanyAtonement", "OxydLitanyPenance", "OxydLitanyAsacris",
+                    "OxydLitanyDivineGuidance", "OxydLitanyManifestation", "OxydLitanyUproot",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

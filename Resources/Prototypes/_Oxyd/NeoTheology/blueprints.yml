@@ -1,0 +1,161 @@
+# Eris construction.dm blueprint catalog (P4.13). Each entry maps /datum/nt_blueprint:
+# the entity Manifestation raises and the materials Uproot returns.
+#
+# Named divergences (Eris -> Oxyd14):
+# - The Eris last-shelter device does not exist in this fork, so the Eye of the Protector
+#   recipe keeps its gold/plasteel/biomatter/cruciform cost only.
+# - Eris builds the biogenerator and the bioreactor from several parts; the fork has one
+#   entity each, so the part costs are summed into one recipe.
+# - Eris builds the biomass tank from a large biomatter canister; biomatter is a material
+#   stack in this fork, so the tank recipe uses steel and plastic only.
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintAltar
+  name: oxyd-nt-blueprint-altar-name
+  build: OxydNtAltar
+  buildTime: 10
+  materials:
+  - stack: Steel
+    amount: 10
+  - stack: Biomatter
+    amount: 50
+  - stack: Silver
+    amount: 5
+  - item: OxydNtCruciform
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintBiogenerator
+  name: oxyd-nt-blueprint-biogenerator-name
+  build: OxydNtBiogenerator
+  buildTime: 15
+  materials:
+  - stack: Steel
+    amount: 30
+  - stack: Plasteel
+    amount: 5
+  - stack: Gold
+    amount: 5
+  - stack: Glass
+    amount: 5
+  - stack: Plastic
+    amount: 15
+  - stack: Cable
+    amount: 30
+  - stack: Biomatter
+    amount: 5
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintBiomassContainer
+  name: oxyd-nt-blueprint-biomass-container-name
+  build: OxydNtBiomassContainer
+  buildTime: 8
+  materials:
+  - stack: Steel
+    amount: 10
+  - stack: Plastic
+    amount: 5
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintBioreactor
+  name: oxyd-nt-blueprint-bioreactor-name
+  build: OxydNtBioreactor
+  buildTime: 15
+  materials:
+  - stack: Steel
+    amount: 42
+  - stack: Silver
+    amount: 13
+  - stack: Glass
+    amount: 6
+  - stack: Plastic
+    amount: 20
+  - stack: MetalRod
+    amount: 5
+  - stack: Cable
+    amount: 30
+  - stack: Biomatter
+    amount: 30
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintCloner
+  name: oxyd-nt-blueprint-cloner-name
+  build: OxydNtCloner
+  buildTime: 10
+  materials:
+  - stack: Glass
+    amount: 15
+  - stack: Plasteel
+    amount: 10
+  - stack: Gold
+    amount: 5
+  - stack: ReinforcedGlass
+    amount: 10
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintCruciformForge
+  name: oxyd-nt-blueprint-cruciform-forge-name
+  build: OxydNtCruciformForge
+  buildTime: 5
+  materials:
+  - stack: Steel
+    amount: 10
+  - stack: Glass
+    amount: 2
+  - stack: Silver
+    amount: 6
+  - item: ToolboxMechanical
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintCruciformReader
+  name: oxyd-nt-blueprint-cruciform-reader-name
+  build: OxydNtCruciformReader
+  buildTime: 10
+  materials:
+  - stack: Steel
+    amount: 10
+  - stack: Plasteel
+    amount: 5
+  - stack: Silver
+    amount: 10
+  - item: OxydNtCruciform
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintEyeOfTheProtector
+  name: oxyd-nt-blueprint-eye-name
+  build: OxydNtEyeOfTheProtector
+  buildTime: 3
+  materials:
+  - stack: Gold
+    amount: 15
+  - stack: Plasteel
+    amount: 50
+  - stack: Biomatter
+    amount: 100
+  - item: OxydNtCruciform
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintHolyDoor
+  name: oxyd-nt-blueprint-holy-door-name
+  build: OxydNtHolyDoor
+  buildTime: 8
+  materials:
+  - stack: Steel
+    amount: 5
+  - stack: Biomatter
+    amount: 20
+  - stack: Silver
+    amount: 2
+  - stack: Gold
+    amount: 1
+
+- type: oxydNtBlueprint
+  id: OxydNtBlueprintObelisk
+  name: oxyd-nt-blueprint-obelisk-name
+  build: OxydNtObelisk
+  buildTime: 8
+  materials:
+  - stack: Plasteel
+    amount: 10
+  - stack: Gold
+    amount: 5
+  - item: OxydNtCruciform

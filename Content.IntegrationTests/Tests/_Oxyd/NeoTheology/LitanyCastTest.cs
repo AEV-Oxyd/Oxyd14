@@ -310,6 +310,9 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyAtonement",
                 "OxydLitanyPenance",
                 "OxydLitanyAsacris",
+                "OxydLitanyDivineGuidance",
+                "OxydLitanyManifestation",
+                "OxydLitanyUproot",
             }));
         });
     }

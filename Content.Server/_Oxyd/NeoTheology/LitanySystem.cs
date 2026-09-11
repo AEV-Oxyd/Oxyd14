@@ -4,6 +4,7 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Chat;
@@ -193,6 +194,11 @@ public sealed partial class LitanySystem : EntitySystem
         if (!TryResolveTargets(actor, litany, out var resolvedTargets, out var targetFail))
             return LitanyActionResult.Fail(targetFail ?? "oxyd-litany-no-target");
 
+        // The blueprint catalog has no deterministic fallback: the caster must pick one
+        // (Eris "Select construction"). Manual speech has no choice surface, so it fails closed.
+        if (litany.SelectBlueprint && origin != LitanyCastOrigin.Book)
+            return LitanyActionResult.Fail("oxyd-litany-book-required");
+
         if (!string.IsNullOrEmpty(choiceToken))
             return LitanyActionResult.Fail("oxyd-litany-denied-invalid-choice");
 
@@ -216,8 +222,9 @@ public sealed partial class LitanySystem : EntitySystem
         // speech has no choice surface, so it keeps the deterministic fallback target.
         var offersTargetChoice = litany.SelectTarget && resolvedTargets.Count > 1;
         var offersDesignationChoice = litany.DesignationChoices.Count > 0;
+        var offersBlueprintChoice = litany.SelectBlueprint;
         var needsChoice = origin == LitanyCastOrigin.Book &&
-                          (offersTargetChoice || offersDesignationChoice || litany.AllowPlainText);
+                          (offersTargetChoice || offersDesignationChoice || offersBlueprintChoice || litany.AllowPlainText);
 
         var cast = new PendingLitanyCast
         {
@@ -252,6 +259,8 @@ public sealed partial class LitanySystem : EntitySystem
                 cast.ChoiceTargets = resolvedTargets;
             if (offersDesignationChoice)
                 cast.ChoiceDesignations = litany.DesignationChoices;
+            if (offersBlueprintChoice)
+                cast.ChoiceBlueprints = EnumerateBlueprintChoices();
             cast.ChoiceAllowsPlainText = litany.AllowPlainText;
         }
 
@@ -422,10 +431,12 @@ public sealed class PendingLitanyCast
     public TimeSpan ChoiceExpiresAt;
     public List<EntityUid> ChoiceTargets = new();
     public List<ProtoId<NeoTheologyProfilePrototype>> ChoiceDesignations = new();
+    public List<ProtoId<NeoTheologyBlueprintPrototype>> ChoiceBlueprints = new();
     public bool ChoiceAllowsPlainText;
     public List<string> SelectedTokens = new();
     public string? SelectedText;
     public ProtoId<NeoTheologyProfilePrototype>? Designation;
+    public ProtoId<NeoTheologyBlueprintPrototype>? SelectedBlueprint;
 }
 
 internal sealed class ActorRateState

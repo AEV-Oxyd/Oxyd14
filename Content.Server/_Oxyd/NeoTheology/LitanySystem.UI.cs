@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.Hands;
 using Robust.Shared.Player;
@@ -198,6 +199,14 @@ public sealed partial class LitanySystem
         {
             var label = _prototypes.TryIndex(profile, out var proto) ? Loc.GetString(proto.Name) : profile.Id;
             options.Add(new LitanyChoiceOption($"d:{profile.Id}", label));
+        }
+
+        foreach (var blueprint in cast.ChoiceBlueprints)
+        {
+            var label = _prototypes.TryIndex(blueprint, out NeoTheologyBlueprintPrototype? proto)
+                ? Loc.GetString(proto.Name)
+                : blueprint.Id;
+            options.Add(new LitanyChoiceOption($"b:{blueprint.Id}", label));
         }
 
         var revision = TryComp(cast.Actor, out CruciformBearerComponent? bearer) ? bearer.UiRevision : 0u;

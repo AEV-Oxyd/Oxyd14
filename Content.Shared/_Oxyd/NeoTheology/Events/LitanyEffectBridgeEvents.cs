@@ -1,4 +1,6 @@
 using Content.Shared.Chemistry.Reagent;
+using Content.Shared._Oxyd.NeoTheology.Prototypes;
+using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Events;
@@ -208,3 +210,40 @@ public record struct LitanyOpenArmamentsEvent(EntityUid User, bool Handled, bool
 /// </summary>
 [ByRefEvent]
 public record struct LitanyInitiationEvent(EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for DivineGuidance: raised on the caster; the server
+/// <c>NeoTheologyConstructionSystem</c> prints the chosen blueprint's material list to the caster
+/// and sets <see cref="Handled"/>. A false <see cref="Handled"/> means the blueprint id is unknown.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyBlueprintInfoEvent(
+    EntityUid User,
+    ProtoId<NeoTheologyBlueprintPrototype> Blueprint,
+    bool Handled,
+    LocId? Failure = null);
+
+/// <summary>
+/// Bridge for Manifestation: raised on the caster; the server
+/// <c>NeoTheologyConstructionSystem</c> checks the materials lying on the tile in front of the
+/// caster, spends them and raises the structure. <see cref="ValidateOnly"/> must not mutate.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyManifestationEvent(
+    EntityUid User,
+    ProtoId<NeoTheologyBlueprintPrototype> Blueprint,
+    bool ValidateOnly,
+    bool Handled,
+    LocId? Failure = null);
+
+/// <summary>
+/// Bridge for Uproot: raised on the caster; the server <c>NeoTheologyConstructionSystem</c>
+/// finds the blueprint construct on the tile in front of the caster, returns its materials and
+/// deletes it. <see cref="ValidateOnly"/> must not mutate.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyUprootEvent(
+    EntityUid User,
+    bool ValidateOnly,
+    bool Handled,
+    LocId? Failure = null);
