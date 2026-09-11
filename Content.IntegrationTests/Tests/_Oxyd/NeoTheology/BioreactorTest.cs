@@ -5,6 +5,8 @@ using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Botany.Items.Components;
 using Content.Shared.Stacks;
+using Content.Server.Power.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -77,6 +79,12 @@ public sealed class BioreactorTest : GameTest
         });
 
         await RunSeconds(1f);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.EntityExists(crop), Is.True, "A dry chamber must not consume produce.");
+            Assert.That(_bioreactor.TryPumpSolution(reactor), Is.True);
+        });
+        await RunSeconds(1f);
 
         await Server.WaitAssertion(() =>
         {
@@ -90,6 +98,40 @@ public sealed class BioreactorTest : GameTest
                 Assert.That(biomatter, Is.Not.Empty, "The crop must come back as biomatter.");
             });
         });
+    }
+
+    [Test]
+    public async Task PowerAndValidationDoNotChangeTheChamberOrConsumeProduce()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid crop = default;
+        await Server.WaitAssertion(() =>
+        {
+            var reactor = SSpawnAtPosition("OxydNtBioreactor", map.GridCoords);
+            var comp = SComp<BioreactorComponent>(reactor);
+            var receiver = SComp<ApcPowerReceiverComponent>(reactor);
+            Assert.That(SComp<TransformComponent>(reactor).Anchored, Is.True);
+            crop = SSpawnAtPosition(CropProto, map.GridCoords);
+            receiver.Powered = true;
+            var validation = new LitanyPumpBioreactorEvent(reactor, false, true);
+            SEntMan.EventBus.RaiseLocalEvent(reactor, ref validation);
+            Assert.That(validation.Handled, Is.True);
+            Assert.That(comp.ChamberSolution, Is.False);
+            Assert.That(_bioreactor.TryPumpSolution(reactor), Is.True);
+
+            receiver.Powered = false;
+            _bioreactor.Update(1);
+            Assert.That(_bioreactor.TryPumpSolution(reactor), Is.False);
+            Assert.That(comp.ChamberSolution, Is.True);
+            Assert.That(_bioreactor.CanToggleChamber(reactor), Is.False);
+            receiver.Powered = true;
+            Assert.That(_bioreactor.CanToggleChamber(reactor), Is.False, "A filled chamber must not open.");
+            comp.ChamberBreached = true;
+            _bioreactor.Update(1);
+            receiver.Powered = false;
+        });
+        await Pair.RunTicksSync(2);
+        await Server.WaitAssertion(() => Assert.That(SEntMan.EntityExists(crop), Is.True));
     }
 
     private EntityUid SpawnReactor(EntityCoordinates coords)

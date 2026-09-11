@@ -7,6 +7,7 @@ using Content.Server.Power.Components;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Materials;
 using Content.Shared.Stacks;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -37,7 +38,7 @@ public sealed class CruciformForgeTest : GameTest
     [Test]
     public async Task StockedForgeStartsWorkAndSpendsTheRecipe()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
 
         await Server.WaitAssertion(() =>
         {
@@ -67,7 +68,7 @@ public sealed class CruciformForgeTest : GameTest
     [Test]
     public async Task FinishedRunLeavesACruciformOnTheTurf()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
 
         EntityUid forge = default;
 
@@ -99,7 +100,7 @@ public sealed class CruciformForgeTest : GameTest
     [Test]
     public async Task PartialStockRefusesTheRunAndDebitsNothing()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
 
         await Server.WaitAssertion(() =>
         {
@@ -143,13 +144,50 @@ public sealed class CruciformForgeTest : GameTest
         });
     }
 
+    [Test]
+    public async Task ValidationDoesNotSpendAndPowerLossPausesWork()
+    {
+        var map = await Pair.CreateMachineTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var (forge, comp) = SpawnForge(map.GridCoords);
+            InsertRecipe(forge, map.GridCoords);
+            var receiver = SComp<ApcPowerReceiverComponent>(forge);
+            var validation = new LitanyForgeProduceEvent(forge, false, true);
+            SEntMan.EventBus.RaiseLocalEvent(forge, ref validation);
+            Assert.That(validation.Handled, Is.True);
+            Assert.That(comp.Working, Is.False);
+            Assert.That(_material.GetMaterialAmount(forge, "Biomatter"), Is.EqualTo(10));
+            receiver.Powered = false;
+            Assert.That(_forge.TryProduce(forge), Is.False);
+            Assert.That(_material.GetMaterialAmount(forge, "Biomatter"), Is.EqualTo(10));
+
+            receiver.Powered = true;
+            Assert.That(_forge.TryProduce(forge), Is.True);
+            Assert.That(_forge.CanProduce(forge), Is.False, "A busy forge must refuse another job.");
+            var started = comp.StartedAt;
+            receiver.Powered = false;
+            _forge.Update(40);
+            Assert.That(comp.StartedAt, Is.EqualTo(started + TimeSpan.FromSeconds(40)));
+            Assert.That(comp.Working, Is.True);
+            receiver.Powered = true;
+            _forge.Update(0);
+            Assert.That(comp.Working, Is.True, "Restoring power must not finish paused work.");
+            comp.StartedAt = SGameTiming.CurTime - comp.WorkTime;
+            _forge.Update(0);
+            Assert.That(comp.Ready, Is.True);
+        });
+    }
+
     /// <summary>Spawns the real forge prototype, so material insertion goes through MaterialStorage.</summary>
     private (EntityUid Forge, CruciformForgeComponent Comp) SpawnForge(EntityCoordinates coords)
     {
         var forge = SSpawnAtPosition(ForgeProto, coords.Offset(ForgeOffset));
         // MaterialStorageSystem refuses insertion into an unpowered ApcPowerReceiver; there is no APC
         // in PsDisconnected, so mark it powered for the test.
+        SComp<ApcPowerReceiverComponent>(forge).NeedsPower = false;
         SComp<ApcPowerReceiverComponent>(forge).Powered = true;
+        Assert.That(SComp<TransformComponent>(forge).Anchored, Is.True);
         return (forge, SComp<CruciformForgeComponent>(forge));
     }
 

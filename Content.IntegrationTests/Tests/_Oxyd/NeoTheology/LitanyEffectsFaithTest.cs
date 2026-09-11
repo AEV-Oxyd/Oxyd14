@@ -27,7 +27,7 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 /// a shared [ByRefEvent] bridge handled by SanitySystem / CruciformSystem.
 /// </summary>
 [TestOf(typeof(LitanySystem))]
-public sealed class LitanyEffectsFaithTest : GameTest
+public sealed class LitanyEffectsFaithTest : SocialNoticeGameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId FaithHumanProto = "MobHumanOxyd";

@@ -95,6 +95,76 @@ public sealed class LitanyEffectsScryingTest : GameTest
         });
     }
 
+    [Test]
+    public async Task RepeatedScryingDoesNotChargeOrReplaceTheSession()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid caster = default;
+        await Server.WaitAssertion(() =>
+        {
+            caster = PrepareCaster(TileCentre(map.GridCoords));
+            SpawnBearer(TileCentre(map.GridCoords).Offset(new Vector2(2, 0)));
+            Assert.That(_litany.TryBeginLitany(caster, Scrying, LitanyCastOrigin.ManualSpeech).Success, Is.True);
+        });
+        await AdvancePastCast();
+        await Server.WaitAssertion(() =>
+        {
+            var session = SComp<ScryingSessionComponent>(caster);
+            var marker = session.Marker;
+            var bearer = SComp<CruciformBearerComponent>(caster);
+            var implant = SComp<CruciformComponent>(bearer.Cruciform!.Value);
+            var holiness = implant.Holiness;
+            var cooldowns = bearer.PersonalCooldowns.Count;
+            var result = _litany.TryBeginLitany(caster, Scrying, LitanyCastOrigin.ManualSpeech);
+            Assert.That(result.Success, Is.False);
+            Assert.That(implant.Holiness, Is.EqualTo(holiness));
+            Assert.That(bearer.PersonalCooldowns, Has.Count.EqualTo(cooldowns));
+            Assert.That(session.Marker, Is.EqualTo(marker));
+            Assert.That(_litany.TestingPendingCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SessionStartedDuringChantPreventsPaymentAtCompletion()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid caster = default;
+        EntityUid marker = default;
+        await Server.WaitAssertion(() =>
+        {
+            caster = PrepareCaster(TileCentre(map.GridCoords));
+            var target = SpawnBearer(TileCentre(map.GridCoords).Offset(new Vector2(2, 0)));
+            Assert.That(_litany.TryBeginLitany(caster, Scrying, LitanyCastOrigin.ManualSpeech).Success, Is.True);
+            Assert.That(SEntMan.System<ScryingSystem>().TryStartSession(caster, target, TimeSpan.FromSeconds(30)), Is.True);
+            marker = SComp<ScryingSessionComponent>(caster).Marker!.Value;
+        });
+        await AdvancePastCast();
+        await Server.WaitAssertion(() =>
+        {
+            var bearer = SComp<CruciformBearerComponent>(caster);
+            var implant = SComp<CruciformComponent>(bearer.Cruciform!.Value);
+            Assert.That(implant.Holiness, Is.EqualTo(implant.MaxHoliness));
+            Assert.That(bearer.PersonalCooldowns, Is.Empty);
+            Assert.That(SComp<ScryingSessionComponent>(caster).Marker, Is.EqualTo(marker));
+        });
+    }
+
+    [Test]
+    public async Task CasterWithoutAnEyeCannotStartOrPayForScrying()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var caster = PrepareCaster(TileCentre(map.GridCoords));
+            SpawnBearer(TileCentre(map.GridCoords).Offset(new Vector2(2, 0)));
+            SEntMan.RemoveComponent<EyeComponent>(caster);
+            var implant = SComp<CruciformComponent>(SComp<CruciformBearerComponent>(caster).Cruciform!.Value);
+            var holiness = implant.Holiness;
+            Assert.That(_litany.TryBeginLitany(caster, Scrying, LitanyCastOrigin.ManualSpeech).Success, Is.False);
+            Assert.That(implant.Holiness, Is.EqualTo(holiness));
+        });
+    }
+
     /// <summary>Centre of the tile at <paramref name="gridCoords"/> so tile math is unambiguous.</summary>
     private static EntityCoordinates TileCentre(EntityCoordinates gridCoords)
         => gridCoords.Offset(new Vector2(0.5f, 0.5f));

@@ -29,7 +29,7 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 /// Engineer 2 owns this file; CE owns LitanySystem.Social.cs / catalog enablement.
 /// </summary>
 [TestOf(typeof(LitanySystem))]
-public sealed class LitanyEffectsSocialTest : GameTest
+public sealed class LitanyEffectsSocialTest : SocialNoticeGameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";

@@ -3,6 +3,7 @@ using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Server.Materials;
+using Content.Server.Power.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Cloning;
@@ -44,6 +45,8 @@ public sealed class CruciformReaderTest : GameTest
         await Server.WaitAssertion(() =>
         {
             var reader = SSpawnAtPosition(CruciformReaderProto, map.GridCoords);
+            SComp<ApcPowerReceiverComponent>(reader).Powered = true;
+            Assert.That(SComp<TransformComponent>(reader).Anchored, Is.True);
             var implant = SoulBearingCruciform(map.GridCoords);
             var name = SComp<CruciformSoulComponent>(implant).Name;
 

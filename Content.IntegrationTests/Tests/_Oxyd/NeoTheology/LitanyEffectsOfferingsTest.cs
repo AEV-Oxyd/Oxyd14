@@ -51,7 +51,7 @@ public sealed class LitanyEffectsOfferingsTest : GameTest
     [Test]
     public async Task DivineIntervention_ConsumesBiomatterAndBanksObservationOnTheEye()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid eye = default;
         EntityUid stackA = default;
         EntityUid stackB = default;
@@ -90,7 +90,7 @@ public sealed class LitanyEffectsOfferingsTest : GameTest
     [Test]
     public async Task HolyGuidance_ConsumesFortyProduceAndBanksObservation()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid eye = default;
         var fruit = new List<EntityUid>();
 
@@ -124,7 +124,7 @@ public sealed class LitanyEffectsOfferingsTest : GameTest
     [Test]
     public async Task DivineIntervention_UnderStocked_ConsumesNothing()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid eye = default;
         EntityUid stack = default;
 
@@ -137,7 +137,7 @@ public sealed class LitanyEffectsOfferingsTest : GameTest
             stack = SpawnBiomatter(SComp<TransformComponent>(altar).Coordinates, 100);
 
             var begin = _litany.TryBeginLitany(caster, DivineIntervention, LitanyCastOrigin.ManualSpeech);
-            Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "DivineIntervention begin failed");
+            Assert.That(begin.Success, Is.False, "An understocked offering must fail before commitment.");
         });
 
         await AdvancePastCast();
@@ -188,12 +188,15 @@ public sealed class LitanyEffectsOfferingsTest : GameTest
     }
 
     /// <summary>
-    /// The real Eye, with its scanning silenced: this suite asserts exact observation totals and
-    /// a live scan would award +10 per bearer per window.
+    /// Disable observation scans to check exact offering awards.
     /// </summary>
     private EntityUid SpawnEye(EntityCoordinates coords)
     {
         var eye = SSpawnAtPosition(EyeProto, coords);
+        var receiver = SComp<Content.Server.Power.Components.ApcPowerReceiverComponent>(eye);
+        receiver.NeedsPower = false;
+        receiver.Powered = true;
+        Assert.That(SComp<TransformComponent>(eye).Anchored, Is.True);
         SComp<EyeOfTheProtectorComponent>(eye).ObservationRadius = 0f;
         return eye;
     }

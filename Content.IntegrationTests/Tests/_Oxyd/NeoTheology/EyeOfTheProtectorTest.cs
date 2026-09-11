@@ -1,10 +1,12 @@
 using System.Numerics;
+using System.Linq;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
+using Content.Server.Power.Components;
 using Content.Shared.StatusEffectNew;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -246,6 +248,96 @@ public sealed class EyeOfTheProtectorTest : GameTest
 
             Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(2),
                 "A scan must accrue (int)(Observation / 100) armament points.");
+        });
+    }
+
+    [Test]
+    public async Task EyeAndObelisksShareRecordsAcrossScanWindows()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var comp = SComp<EyeOfTheProtectorComponent>(eye);
+            var first = SSpawnAtPosition(null, map.GridCoords);
+            var second = SSpawnAtPosition(null, map.GridCoords);
+            SEntMan.AddComponent<ObeliskComponent>(first);
+            SEntMan.AddComponent<ObeliskComponent>(second);
+            ActiveBearer(map.GridCoords);
+            SSpawnAtPosition(HumanProto, map.GridCoords);
+            for (var i = 0; i < 5; i++)
+            {
+                comp.NextScan = TimeSpan.Zero;
+                _eye.Update(0);
+                _obelisk.Tick(first);
+                _obelisk.Tick(second);
+            }
+            Assert.That(comp.Observation, Is.EqualTo(30));
+            Assert.That(comp.Scanned, Has.Count.EqualTo(2));
+
+            // Move the observers away so a forgotten entry cannot be awarded again.
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(eye,
+                map.GridCoords.Offset(new Vector2(100f, 0f)));
+            comp.NextRescan = TimeSpan.Zero;
+            _eye.Scan(eye);
+            Assert.That(comp.Scanned, Has.Count.EqualTo(1));
+            Assert.That(comp.Observation, Is.EqualTo(comp.Scanned.Values.Single()));
+            _eye.Scan(eye);
+            Assert.That(comp.Scanned, Has.Count.EqualTo(1), "A second scan must not forget another body.");
+            comp.NextRescan = TimeSpan.Zero;
+            _eye.Scan(eye);
+            Assert.That(comp.Scanned, Is.Empty);
+            Assert.That(comp.Observation, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task ObservationBoundsAndRecordedAwardsMatch()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SpawnEye(map.GridCoords);
+            var comp = SComp<EyeOfTheProtectorComponent>(eye);
+            _eye.AddObservation(eye, -1000);
+            Assert.That(comp.Observation, Is.EqualTo(-100));
+            _eye.AddObservation(eye, 1895);
+            var body = ActiveBearer(map.GridCoords);
+            _eye.Scan(eye);
+            Assert.That(comp.Observation, Is.EqualTo(1800));
+            Assert.That(comp.Scanned[body], Is.EqualTo(5));
+            SEntMan.DeleteEntity(body);
+            comp.NextRescan = TimeSpan.Zero;
+            _eye.Scan(eye);
+            Assert.That(comp.Observation, Is.EqualTo(1795));
+        });
+    }
+
+    [Test]
+    public async Task UnpoweredEyeDoesNotScanBlessOrPayRewards()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var eye = SSpawnAtPosition("OxydNtEyeOfTheProtector", map.GridCoords);
+            var comp = SComp<EyeOfTheProtectorComponent>(eye);
+            var receiver = SComp<ApcPowerReceiverComponent>(eye);
+            receiver.Powered = false;
+            comp.Observation = 1500;
+            var body = ActiveBearer(map.GridCoords);
+            _eye.Scan(eye);
+            _eye.Update(0);
+            Assert.That(comp.Observation, Is.EqualTo(1500));
+            Assert.That(comp.ArmamentsPoints, Is.Zero);
+            Assert.That(comp.Scanned, Is.Empty);
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.False);
+            Assert.That(_eye.FindEye(body), Is.Null);
+
+            Assert.That(SComp<TransformComponent>(eye).Anchored, Is.True);
+            receiver.Powered = true;
+            _eye.Scan(eye);
+            Assert.That(comp.Observation, Is.EqualTo(1520));
+            Assert.That(_statusEffects.HasStatusEffect(body, BlessingProto), Is.True);
         });
     }
 

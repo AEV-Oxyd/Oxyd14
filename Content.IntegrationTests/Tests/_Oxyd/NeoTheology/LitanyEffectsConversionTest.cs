@@ -22,7 +22,7 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 /// bug this suite exists to catch.
 /// </summary>
 [TestOf(typeof(LitanySystem))]
-public sealed class LitanyEffectsConversionTest : GameTest
+public sealed class LitanyEffectsConversionTest : SocialNoticeGameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";

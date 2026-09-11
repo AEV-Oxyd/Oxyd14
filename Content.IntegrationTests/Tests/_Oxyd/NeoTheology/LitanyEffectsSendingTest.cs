@@ -23,7 +23,7 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 /// to receive it.
 /// </summary>
 [TestOf(typeof(LitanySystem))]
-public sealed class LitanyEffectsSendingTest : GameTest
+public sealed class LitanyEffectsSendingTest : SocialNoticeGameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";

@@ -7,6 +7,7 @@ using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
+using Content.Server.Power.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -60,6 +61,8 @@ public sealed class ArmamentsPrinterTest : GameTest
         {
             var printer = SSpawnAtPosition(PrinterProto, map.GridCoords);
             var eye = SpawnEye(map.GridCoords);
+            SComp<ApcPowerReceiverComponent>(printer).Powered = true;
+            Assert.That(SComp<TransformComponent>(printer).Anchored, Is.True);
             var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
             var buyer = ActiveBearer(map.GridCoords);
             var cost = _printer.GetCost(eyeComp, SProtoMan.Index<ArmamentPrototype>(ArmamentId));

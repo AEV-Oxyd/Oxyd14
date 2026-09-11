@@ -5,6 +5,9 @@ using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
+using Content.Shared.Damage.Components;
+using Content.Shared.Damage.Systems;
+using Content.Server.Power.Components;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.NPC.Components;
@@ -24,7 +27,7 @@ public sealed class ObeliskTest : GameTest
 {
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";
-    private static readonly EntProtoId HostileProto = "MobMouse";
+    private static readonly EntProtoId HostileProto = "MobCarp";
 
     public override PoolSettings PoolSettings => PsDisconnected;
 
@@ -68,6 +71,7 @@ public sealed class ObeliskTest : GameTest
         {
             var obelisk = SpawnObelisk(map.GridCoords);
             var obeliskComp = SComp<ObeliskComponent>(obelisk);
+            ActiveBearer(map.GridCoords);
             var mob = SSpawnAtPosition(HostileProto, map.GridCoords);
 
             Assert.Multiple(() =>
@@ -114,6 +118,97 @@ public sealed class ObeliskTest : GameTest
             });
         });
     }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task CrewAndFriendlyAnimalsNeverTakeAuraDamage(bool active)
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var obelisk = SpawnObelisk(map.GridCoords);
+            if (active)
+                ActiveBearer(map.GridCoords);
+            var human = SSpawnAtPosition(HumanProto, map.GridCoords);
+            var mouse = SSpawnAtPosition("MobMouse", map.GridCoords);
+            var carp = SSpawnAtPosition(HostileProto, map.GridCoords);
+            _obelisk.Tick(obelisk);
+            Assert.That(DamageOf(human), Is.EqualTo(0));
+            Assert.That(DamageOf(mouse), Is.EqualTo(0));
+            Assert.That(DamageOf(carp),
+                active ? Is.GreaterThan(0) : Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public async Task AuraRecomputesAcrossMovementMapsOverlapAndRemoval()
+    {
+        var map = await Pair.CreateTestMap();
+        var otherMap = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var first = SpawnObelisk(map.GridCoords);
+            var second = SpawnObelisk(map.GridCoords.Offset(new Vector2(30f, 0f)));
+            var body = ActiveBearer(map.GridCoords);
+            var normal = _cruciform.GetRegenerationPerSecond(body);
+            var transform = SEntMan.System<SharedTransformSystem>();
+            _obelisk.Tick(first);
+            _obelisk.Tick(second);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
+
+            transform.SetCoordinates(body, map.GridCoords.Offset(new Vector2(15f, 0f)));
+            _obelisk.Update(0);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+            transform.SetCoordinates(body, map.GridCoords);
+            _obelisk.Tick(first);
+            transform.SetCoordinates(body, otherMap.GridCoords);
+            _obelisk.Update(0);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+
+            transform.SetCoordinates(body, map.GridCoords);
+            transform.SetCoordinates(second, map.GridCoords);
+            SComp<ObeliskComponent>(second).RegenMultiplier = 3;
+            _obelisk.Tick(first);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 3));
+            SEntMan.DeleteEntity(second);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
+            SEntMan.RemoveComponent<ObeliskComponent>(first);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+        });
+    }
+
+    [Test]
+    public async Task PowerLossStopsDamageAndResetsRegeneration()
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var obelisk = SSpawnAtPosition("OxydNtObelisk", map.GridCoords);
+            var receiver = SComp<ApcPowerReceiverComponent>(obelisk);
+            Assert.That(SComp<TransformComponent>(obelisk).Anchored, Is.True);
+            receiver.Powered = true;
+            var body = ActiveBearer(map.GridCoords);
+            var normal = _cruciform.GetRegenerationPerSecond(body);
+            _obelisk.Tick(obelisk);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
+
+            receiver.Powered = false;
+            var carp = SSpawnAtPosition(HostileProto, map.GridCoords);
+            _obelisk.Tick(obelisk);
+            Assert.That(DamageOf(carp), Is.EqualTo(0));
+            Assert.That(SComp<ObeliskComponent>(obelisk).Active, Is.False);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+
+            receiver.Powered = true;
+            SEntMan.System<SharedTransformSystem>().Unanchor(obelisk);
+            _obelisk.Tick(obelisk);
+            Assert.That(SComp<ObeliskComponent>(obelisk).Active, Is.False);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+        });
+    }
+
+    private float DamageOf(EntityUid uid) => (float) SEntMan.System<DamageableSystem>()
+        .GetPositiveDamage((uid, SComp<DamageableComponent>(uid))).GetTotal();
 
     private EntityUid SpawnObelisk(EntityCoordinates coords)
     {

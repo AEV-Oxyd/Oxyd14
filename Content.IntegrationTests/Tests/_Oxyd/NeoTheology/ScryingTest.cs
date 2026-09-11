@@ -2,6 +2,9 @@ using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Components;
+using Content.Shared.Mobs.Systems;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 
@@ -84,6 +87,56 @@ public sealed class ScryingTest : GameTest
             Assert.That(_scrying.TryStartSession(caster, targetA, TimeSpan.FromSeconds(10)), Is.True);
             Assert.That(_scrying.TryStartSession(caster, targetB, TimeSpan.FromSeconds(10)), Is.False,
                 "A second session must be refused while one is already active.");
+        });
+    }
+
+    [Test]
+    public async Task DeathRestoresPreviousTargetAndDeletesMarker()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid marker = default;
+        await Server.WaitAssertion(() =>
+        {
+            var caster = SpawnCaster(map.GridCoords);
+            SEntMan.AddComponent<MobStateComponent>(caster);
+            var previous = SSpawnAtPosition(null, map.GridCoords);
+            SEntMan.System<SharedEyeSystem>().SetTarget(caster, previous);
+            Assert.That(_scrying.TryStartSession(caster, previous, TimeSpan.FromSeconds(30)), Is.True);
+            marker = SComp<ScryingSessionComponent>(caster).Marker!.Value;
+            SEntMan.System<MobStateSystem>().ChangeMobState(caster, MobState.Dead);
+            Assert.That(SEntMan.HasComponent<ScryingSessionComponent>(caster), Is.False);
+            Assert.That(SComp<EyeComponent>(caster).Target, Is.EqualTo(previous));
+        });
+        await Pair.RunTicksSync(2);
+        await Server.WaitAssertion(() => Assert.That(SEntMan.Deleted(marker), Is.True));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task LosingControlEndsTheSession(bool disconnect)
+    {
+        var map = await Pair.CreateTestMap();
+        var player = await Server.AddDummySession();
+        EntityUid caster = default;
+        EntityUid marker = default;
+        await Server.WaitAssertion(() =>
+        {
+            caster = SpawnCaster(map.GridCoords);
+            Server.PlayerMan.SetAttachedEntity(player, caster);
+            var target = SSpawnAtPosition(null, map.GridCoords);
+            Assert.That(_scrying.TryStartSession(caster, target, TimeSpan.FromSeconds(30)), Is.True);
+            marker = SComp<ScryingSessionComponent>(caster).Marker!.Value;
+        });
+        if (disconnect)
+            await Server.RemoveDummySession(player);
+        else
+            await Server.WaitPost(() => Server.PlayerMan.SetAttachedEntity(player, null));
+        await Pair.RunTicksSync(2);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.HasComponent<ScryingSessionComponent>(caster), Is.False);
+            Assert.That(SComp<EyeComponent>(caster).Target, Is.Null);
+            Assert.That(SEntMan.Deleted(marker), Is.True);
         });
     }
 

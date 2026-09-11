@@ -4,6 +4,7 @@ using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server.Atmos.Components;
+using Content.Server.Power.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.UI;
@@ -46,7 +47,7 @@ public sealed class LitanyEffectsArmamentsTest : GameTest
     [Test]
     public async Task OrderArmaments_OpensThePrinterShopForTheCaster()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid printer = default;
         EntityUid caster = default;
 
@@ -55,7 +56,13 @@ public sealed class LitanyEffectsArmamentsTest : GameTest
             var origin = TileCentre(map.GridCoords);
             caster = PrepareCaster(origin);
             printer = SSpawnAtPosition(PrinterProto, origin.Offset(new Vector2(1f, 0f)));
-            SSpawnAtPosition(EyeProto, origin.Offset(new Vector2(0f, 1f)));
+            var eye = SSpawnAtPosition(EyeProto, origin.Offset(new Vector2(0f, 1f)));
+            foreach (var machine in new[] { printer, eye })
+            {
+                SComp<ApcPowerReceiverComponent>(machine).NeedsPower = false;
+                SComp<ApcPowerReceiverComponent>(machine).Powered = true;
+                Assert.That(SComp<TransformComponent>(machine).Anchored, Is.True);
+            }
 
             Assert.That(_ui.GetActors(printer, ArmamentsPrinterUiKey.Key), Is.Empty,
                 "Setup: the shop must start closed.");

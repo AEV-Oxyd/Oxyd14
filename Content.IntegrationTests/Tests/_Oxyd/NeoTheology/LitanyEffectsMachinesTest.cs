@@ -149,7 +149,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
     [Test]
     public async Task MakeCruciform_StartsTheAdjacentForgeRun()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid forge = default;
 
         await Server.WaitAssertion(() =>
@@ -280,7 +280,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
     [Test]
     public async Task BioreactorSolution_PumpsTheAdjacentChamber()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid reactor = default;
         EntityUid caster = default;
 
@@ -294,6 +294,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
             _litany.TestingTreatAsActor(caster);
 
             reactor = SSpawnAtPosition(BioreactorProto, origin.Offset(new Vector2(1f, 0f)));
+            PowerMachine(reactor);
             Assert.That(SComp<BioreactorComponent>(reactor).ChamberSolution, Is.False,
                 "Setup: the sealed chamber must start dry.");
 
@@ -330,7 +331,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
     [Test]
     public async Task BioreactorChamber_TogglesTheAdjacentChamberDoor()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid reactor = default;
 
         await Server.WaitAssertion(() =>
@@ -343,6 +344,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
             _litany.TestingTreatAsActor(caster);
 
             reactor = SSpawnAtPosition(BioreactorProto, origin.Offset(new Vector2(1f, 0f)));
+            PowerMachine(reactor);
             Assert.That(SComp<BioreactorComponent>(reactor).ChamberClosed, Is.True,
                 "Setup: the chamber must start sealed.");
 
@@ -356,6 +358,37 @@ public sealed class LitanyEffectsMachinesTest : GameTest
         {
             Assert.That(SComp<BioreactorComponent>(reactor).ChamberClosed, Is.False,
                 "The litany must open the unbreached, unsolved chamber door.");
+        });
+    }
+
+    [TestCase("OxydLitanyMakeCruciform", "OxydNtCruciformForge")]
+    [TestCase("OxydLitanyRepairDoor", "OxydNtHolyDoor")]
+    [TestCase("OxydLitanyBioreactorSolution", "OxydNtBioreactor")]
+    [TestCase("OxydLitanyBioreactorChamber", "OxydNtBioreactor")]
+    public async Task MachineRefusalDoesNotCommitTheCast(string litany, string prototype)
+    {
+        var map = await Pair.CreateMachineTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            _litany.TestingClearAvailabilityOverrides();
+            _litany.TestingClearActors();
+            var origin = TileCentre(map.GridCoords);
+            var caster = SpawnBearer(origin);
+            _litany.TestingTreatAsActor(caster);
+            var machine = SSpawnAtPosition(prototype, origin.Offset(new Vector2(1f, 0f)));
+            PowerMachine(machine);
+            if (STryComp<BioreactorComponent>(machine, out var reactor))
+            {
+                reactor.ChamberClosed = false;
+                reactor.ChamberSolution = true;
+            }
+            var bearer = SComp<CruciformBearerComponent>(caster);
+            var implant = SComp<CruciformComponent>(bearer.Cruciform!.Value);
+            var holiness = implant.Holiness;
+            Assert.That(_litany.TryBeginLitany(caster, litany, LitanyCastOrigin.ManualSpeech).Success, Is.False);
+            Assert.That(implant.Holiness, Is.EqualTo(holiness));
+            Assert.That(bearer.PersonalCooldowns, Is.Empty);
+            Assert.That(_litany.TestingPendingCount, Is.Zero);
         });
     }
 
@@ -380,6 +413,7 @@ public sealed class LitanyEffectsMachinesTest : GameTest
     private EntityUid SpawnPoweredDoor(EntProtoId proto, EntityCoordinates coords)
     {
         var door = SSpawnAtPosition(proto, coords);
+        SComp<ApcPowerReceiverComponent>(door).NeedsPower = false;
         SComp<ApcPowerReceiverComponent>(door).Powered = true;
         return door;
     }
@@ -388,10 +422,17 @@ public sealed class LitanyEffectsMachinesTest : GameTest
     /// Spawns the real forge prototype and marks it powered: MaterialStorageSystem refuses
     /// insertion into an unpowered ApcPowerReceiver, and there is no APC in the disconnected pool.
     /// </summary>
+    private void PowerMachine(EntityUid uid)
+    {
+        SComp<ApcPowerReceiverComponent>(uid).NeedsPower = false;
+        SComp<ApcPowerReceiverComponent>(uid).Powered = true;
+        Assert.That(SComp<TransformComponent>(uid).Anchored, Is.True);
+    }
+
     private EntityUid SpawnForge(EntityCoordinates coords)
     {
         var forge = SSpawnAtPosition(ForgeProto, coords);
-        SComp<ApcPowerReceiverComponent>(forge).Powered = true;
+        PowerMachine(forge);
         return forge;
     }
 
