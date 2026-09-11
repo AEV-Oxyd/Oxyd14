@@ -54,6 +54,7 @@ public sealed partial class LitanySystem
             return false;
 
         cast.DoAfterId = id;
+        SendProgressToActor(cast);
         return true;
     }
 
@@ -233,23 +234,29 @@ public sealed partial class LitanySystem
             return;
         }
 
-        // 5. Debit once, apply cooldown, then apply the effect synchronously.
+        // 5. Debit once, apply the effect, then cool down only on success. An unexpected
+        // apply failure refunds the debit, so a failed cast is atomic.
         if (cast.Cost > 0 && !_cruciform.TrySpend(cast.Actor, cast.Cost))
         {
             ClearPending(cast, cancelled: true);
             return;
         }
 
-        ApplyCooldown(bearer, litany);
-        cast.Committed = true;
-
         if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets))
         {
-            // Effect plan was validated; apply failure is unexpected. Cast is already
-            // committed so a second completion still no-ops via Committed.
+            if (cast.Cost > 0)
+                _cruciform.Refund(cast.Actor, cast.Cost);
+
+            SendResultToActor(cast.Actor, LitanyActionResult.Fail("oxyd-litany-effect-failed", cast.RequestId));
+            RefreshActorSnapshot(cast.Actor);
             ClearPending(cast, cancelled: false);
             return;
         }
+
+        ApplyCooldown(bearer, litany);
+        cast.Committed = true;
+        SendResultToActor(cast.Actor, LitanyActionResult.Ok(cast.RequestId));
+        RefreshActorSnapshot(cast.Actor);
 
         // Unimplemented available effects keep the historical no-op success stub.
         // A second completion must no-op because Committed is set.

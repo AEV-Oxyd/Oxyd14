@@ -126,6 +126,19 @@ public sealed partial class LitanySystem : EntitySystem
         uint? expectedRevision = null,
         string? choiceToken = null)
     {
+        var result = BeginLitanyCore(actor, litanyId, origin, book, expectedRevision, choiceToken);
+        SendResultToActor(actor, result);
+        return result;
+    }
+
+    private LitanyActionResult BeginLitanyCore(
+        EntityUid actor,
+        ProtoId<LitanyPrototype> litanyId,
+        LitanyCastOrigin origin,
+        EntityUid? book = null,
+        uint? expectedRevision = null,
+        string? choiceToken = null)
+    {
         if (!TryRateLimit(actor, isBegin: true, out var rateFail))
             return rateFail;
 
@@ -245,6 +258,13 @@ public sealed partial class LitanySystem : EntitySystem
     }
 
     public LitanyActionResult TryCancelLitany(EntityUid actor, string requestId)
+    {
+        var result = CancelLitanyCore(actor, requestId);
+        SendResultToActor(actor, result);
+        return result;
+    }
+
+    private LitanyActionResult CancelLitanyCore(EntityUid actor, string requestId)
     {
         if (!TryRateLimit(actor, isBegin: false, out var rateFail))
             return rateFail;

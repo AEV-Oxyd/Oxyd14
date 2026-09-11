@@ -23,6 +23,7 @@ oxyd-litany-denied-unknown-request = That litany request is unknown.
 oxyd-litany-denied-already-committed = That litany has already completed.
 oxyd-litany-denied-rate-limit = You are chanting too quickly.
 oxyd-litany-no-effect = The litany could not take hold.
+oxyd-litany-effect-failed = The litany failed to take hold. Your offering was returned.
 oxyd-litany-no-cruciform = The target has no installed cruciform.
 oxyd-litany-already-active = The target's cruciform is already active.
 oxyd-litany-no-oddity = You must hold an oddity to bless.

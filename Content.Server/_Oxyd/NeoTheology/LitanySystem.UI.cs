@@ -191,6 +191,48 @@ public sealed partial class LitanySystem
         _ui.ServerSendUiMessage(book, LitanyUiKey.Book, snapshot, actor);
     }
 
+    private EntityUid? FindActorBook(EntityUid actor)
+    {
+        foreach (var (book, viewers) in _bookViewers)
+        {
+            if (viewers.Contains(actor))
+                return book;
+        }
+
+        return null;
+    }
+
+    private void SendResultToActor(EntityUid actor, LitanyActionResult result)
+    {
+        if (FindActorBook(actor) is not { } book)
+            return;
+
+        var revision = TryComp(actor, out CruciformBearerComponent? bearer) ? bearer.UiRevision : 0u;
+        _ui.ServerSendUiMessage(book, LitanyUiKey.Book, new LitanyResultMessage(revision, result), actor);
+    }
+
+    private void SendProgressToActor(PendingLitanyCast cast)
+    {
+        if (FindActorBook(cast.Actor) is not { } book)
+            return;
+
+        var revision = TryComp(cast.Actor, out CruciformBearerComponent? bearer) ? bearer.UiRevision : 0u;
+        _ui.ServerSendUiMessage(book, LitanyUiKey.Book, new LitanyProgressMessage(
+            revision,
+            cast.RequestId,
+            cast.LitanyId,
+            cast.Stage,
+            cast.StartedAt,
+            cast.ExpiresAt,
+            canCancel: !cast.Committed), cast.Actor);
+    }
+
+    private void RefreshActorSnapshot(EntityUid actor)
+    {
+        if (FindActorBook(actor) is { } book)
+            SendViewerSnapshot(book, actor);
+    }
+
     private LitanyViewerSnapshotMessage BuildViewerSnapshot(EntityUid viewer)
     {
         var revision = 0u;
