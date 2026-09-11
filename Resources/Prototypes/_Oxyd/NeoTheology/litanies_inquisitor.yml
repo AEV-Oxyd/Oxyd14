@@ -89,8 +89,9 @@
   targetMode: StationFollower
   range: 0
   cost: 30
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanySendingEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyInitiation

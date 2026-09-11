@@ -86,6 +86,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.HolyGuidance,
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
+        LitanyEffectKind.Sending,
     ];
 
     [Test]
