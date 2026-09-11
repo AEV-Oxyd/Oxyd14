@@ -74,9 +74,9 @@
   range: 0
   cost: 100
   effectDuration: 30
-  enabled: false
-  dependency: RemoteView
-  unavailableReason: oxyd-litany-unavailable-remote-view
+  effects:
+  - !type:LitanyScryingEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanySending

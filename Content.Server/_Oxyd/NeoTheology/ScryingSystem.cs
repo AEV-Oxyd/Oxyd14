@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology;
@@ -19,6 +20,17 @@ public sealed class ScryingSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<ScryingSessionComponent, ComponentShutdown>(OnSessionShutdown);
+        SubscribeLocalEvent<LitanyScryingEvent>(OnLitanyScrying);
+    }
+
+    /// <summary>
+    /// Scrying bridge: the shared litany effect cannot call this server system, so it raises
+    /// <see cref="LitanyScryingEvent"/> on the target body. Reuses the same bounded session the
+    /// P3.9 API exposes; a caster mid-session (or without an eye) stays unhandled.
+    /// </summary>
+    private void OnLitanyScrying(ref LitanyScryingEvent args)
+    {
+        args.Handled = TryStartSession(args.Caster, args.Target, args.Duration);
     }
 
     public override void Update(float frameTime)

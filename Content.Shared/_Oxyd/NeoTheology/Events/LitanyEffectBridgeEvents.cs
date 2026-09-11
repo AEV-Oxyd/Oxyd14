@@ -120,3 +120,12 @@ public record struct LitanyPumpBioreactorEvent(EntityUid Bioreactor, bool Handle
 /// </summary>
 [ByRefEvent]
 public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bool Handled);
+
+/// <summary>
+/// Bridge for Scrying: raised on the scried body; the server <c>ScryingSystem</c> binds
+/// <see cref="Caster"/>'s eye to <see cref="Target"/>'s surroundings for <see cref="Duration"/>
+/// and sets <see cref="Handled"/>. A false <see cref="Handled"/> means the caster had no eye or
+/// already had a live session.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, TimeSpan Duration, bool Handled);

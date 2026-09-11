@@ -296,6 +296,7 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyPowerBiogenerator",
                 "OxydLitanyBioreactorSolution",
                 "OxydLitanyBioreactorChamber",
+                "OxydLitanyScrying",
             }));
         });
     }

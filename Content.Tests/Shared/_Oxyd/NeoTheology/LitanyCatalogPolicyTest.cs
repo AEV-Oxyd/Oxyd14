@@ -42,6 +42,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.PowerBiogenerator,
         LitanyEffectKind.BioreactorSolution,
         LitanyEffectKind.BioreactorChamber,
+        LitanyEffectKind.Scrying,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -76,6 +77,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.PowerBiogenerator,
         LitanyEffectKind.BioreactorSolution,
         LitanyEffectKind.BioreactorChamber,
+        LitanyEffectKind.Scrying,
     ];
 
     [Test]
