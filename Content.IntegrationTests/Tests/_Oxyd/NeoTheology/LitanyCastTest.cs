@@ -300,6 +300,7 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyDivineIntervention",
                 "OxydLitanyHolyGuidance",
                 "OxydLitanyOrderArmaments",
+                "OxydLitanyInitiation",
             }));
         });
     }

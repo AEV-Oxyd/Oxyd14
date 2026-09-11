@@ -78,6 +78,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.DivineIntervention,
         LitanyEffectKind.HolyGuidance,
         LitanyEffectKind.OrderArmaments,
+        LitanyEffectKind.Initiation,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -533,7 +534,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
                     "OxydLitanyPowerBiogenerator", "OxydLitanyBioreactorSolution",
                     "OxydLitanyBioreactorChamber", "OxydLitanyScrying",
                     "OxydLitanyDivineIntervention", "OxydLitanyHolyGuidance",
-                    "OxydLitanyOrderArmaments",
+                    "OxydLitanyOrderArmaments", "OxydLitanyInitiation",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

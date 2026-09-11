@@ -34,6 +34,10 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     [Dependency] private readonly CoreModuleSystem _modules = default!;
     [Dependency] private readonly SharedSubdermalImplantSystem _implants = default!;
 
+    private static readonly ProtoId<CoreModulePrototype> PriestRankModule = "OxydNtModulePriest";
+    private static readonly ProtoId<CoreModulePrototype> InquisitorRankModule = "OxydNtModuleInquisitor";
+    private static readonly ProtoId<CoreModulePrototype> PriestConvertModule = "OxydNtModulePriestConvert";
+
     public override void Initialize()
     {
         base.Initialize();
@@ -47,6 +51,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         SubscribeLocalEvent<CruciformBearerComponent, GetAccessTagsEvent>(OnGetAccessTags);
         SubscribeLocalEvent<CruciformBearerComponent, LitanyActivateCruciformEvent>(OnLitanyActivateCruciform);
         SubscribeLocalEvent<CruciformBearerComponent, LitanySetRankEvent>(OnLitanySetRank);
+        SubscribeLocalEvent<CruciformBearerComponent, LitanyInitiationEvent>(OnLitanyInitiation);
         SubscribeLocalEvent<LitanyGrantCruciformEvent>(OnLitanyGrantCruciform);
         SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
     }
@@ -272,14 +277,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         component.Active = true;
 
         // Eris cruciform.dm:94-122 — an activatable module (priest_convert) converts on activation.
-        // InstalledModules is mutated by MakeRank, so iterate a snapshot.
-        foreach (var moduleId in component.InstalledModules.ToArray())
-        {
-            if (!ProtoMan.TryIndex(moduleId, out CoreModulePrototype? module) || module.ActivationProfile is not { } profile)
-                continue;
-
-            MakeRank(cruciform, component, profile);
-        }
+        ApplyActivationModules(cruciform, component);
 
         if (component.Holiness <= GetDebitTolerance())
             component.Holiness = component.MaxHoliness;
@@ -288,6 +286,51 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         Dirty(cruciform, component);
         BumpRevision(body);
         return true;
+    }
+
+    /// <summary>
+    /// Installs the preacher-convert module if the target does not carry it yet and applies every
+    /// installed module's <see cref="CoreModulePrototype.ActivationProfile"/>; reports whether a
+    /// conversion ran. Eris <c>rituals/inquisitor.dm:259-289</c> (Initiation) had the ascension kit
+    /// item install the module and the ritual only activate it; the fork has no coreimplant_upgrade
+    /// item path, so the litany performs both stages through this one conversion path.
+    /// </summary>
+    private void OnLitanyInitiation(Entity<CruciformBearerComponent> ent, ref LitanyInitiationEvent args)
+    {
+        if (!TryGetCruciformEntity(ent.Owner, out var cruciform, out var component) || !component.Active)
+            return;
+
+        // Eris guards the perform: the target must not already be a preacher.
+        if (_modules.HasModule(component, PriestRankModule) || _modules.HasModule(component, InquisitorRankModule))
+            return;
+
+        _modules.TryInstall(cruciform, component, PriestConvertModule);
+        if (!ApplyActivationModules(cruciform, component))
+            return;
+
+        Dirty(cruciform, component);
+        BumpRevision(ent.Owner, ent.Comp);
+        args.Handled = true;
+    }
+
+    /// <summary>
+    /// The one writer for activatable-module conversion: <see cref="Activate"/> runs it for a whole
+    /// cruciform activation and the Initiation bridge for a lone ascension kit. InstalledModules is
+    /// mutated by <see cref="MakeRank"/>, so it iterates a snapshot.
+    /// </summary>
+    private bool ApplyActivationModules(EntityUid cruciform, CruciformComponent component)
+    {
+        var converted = false;
+        foreach (var moduleId in component.InstalledModules.ToArray())
+        {
+            if (!ProtoMan.TryIndex(moduleId, out CoreModulePrototype? module) || module.ActivationProfile is not { } profile)
+                continue;
+
+            MakeRank(cruciform, component, profile);
+            converted = true;
+        }
+
+        return converted;
     }
 
     /// <summary>

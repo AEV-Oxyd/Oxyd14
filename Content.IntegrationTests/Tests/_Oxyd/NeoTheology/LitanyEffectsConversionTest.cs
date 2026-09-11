@@ -30,10 +30,12 @@ public sealed class LitanyEffectsConversionTest : GameTest
     private static readonly ProtoId<NeoTheologyProfilePrototype> Disciple = "OxydNtDisciple";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Acolyte = "OxydNtAcolyte";
     private static readonly ProtoId<NeoTheologyProfilePrototype> Preacher = "OxydNtPreacher";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> Inquisitor = "OxydNtInquisitor";
 
     private static readonly ProtoId<CoreModulePrototype> BaseModule = "OxydNtModuleBase";
     private static readonly ProtoId<CoreModulePrototype> AcolyteModule = "OxydNtModuleAcolyte";
     private static readonly ProtoId<CoreModulePrototype> PriestModule = "OxydNtModulePriest";
+    private static readonly ProtoId<CoreModulePrototype> PriestConvertModule = "OxydNtModulePriestConvert";
 
     private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
     private static readonly ProtoId<LitanySetPrototype> MachinerySet = "OxydLitanyMachinery";
@@ -46,6 +48,7 @@ public sealed class LitanyEffectsConversionTest : GameTest
     private static readonly ProtoId<LitanyPrototype> Ordination = "OxydLitanyOrdination";
     private static readonly ProtoId<LitanyPrototype> Omission = "OxydLitanyOmission";
     private static readonly ProtoId<LitanyPrototype> Excommunication = "OxydLitanyExcommunication";
+    private static readonly ProtoId<LitanyPrototype> Initiation = "OxydLitanyInitiation";
 
     public override PoolSettings PoolSettings => new()
     {
@@ -229,15 +232,66 @@ public sealed class LitanyEffectsConversionTest : GameTest
         });
     }
 
+    [Test]
+    public async Task Initiation_PromotesAnAdjacentDiscipleToPreacher()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid target = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            var origin = TileCentre(map.GridCoords);
+            // Initiation is inquisitor-set; only an inquisitor may chant it.
+            var caster = PrepareCaster(origin, Inquisitor);
+            target = SpawnBearer(origin.Offset(new Vector2(1f, 0f)), Disciple);
+
+            var begin = _litany.TryBeginLitany(caster, Initiation, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.True, begin.Reason?.Id ?? "Initiation begin failed");
+        });
+
+        await AdvancePastCast();
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(_cruciform.TryGetCruciform(target, out _, out var component), Is.True);
+            Assert.That(component.Profile, Is.EqualTo(Preacher),
+                "Initiation must complete the preacher ascension (Eris priest_convert.activate).");
+            Assert.That(component.InstalledModules, Does.Contain(PriestModule),
+                "The promotion must bring the preacher rank modules with it.");
+            Assert.That(component.InstalledModules, Does.Contain(PriestConvertModule),
+                "The completed ascension kit stays on the cruciform, as Eris' module does.");
+            Assert.That(component.UnlockedSets, Does.Contain(PriestSet),
+                "The preacher rank must unlock the priest set.");
+        });
+    }
+
+    [Test]
+    public async Task Initiation_OnAnAlreadyPromotedTarget_FailsClosed()
+    {
+        var map = await Pair.CreateTestMap();
+
+        await Server.WaitAssertion(() =>
+        {
+            var origin = TileCentre(map.GridCoords);
+            var caster = PrepareCaster(origin, Inquisitor);
+            SpawnBearer(origin.Offset(new Vector2(1f, 0f)), Preacher);
+
+            var begin = _litany.TryBeginLitany(caster, Initiation, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.False);
+            Assert.That(begin.Reason?.Id, Is.EqualTo("oxyd-litany-initiation-already-preacher"));
+        });
+    }
+
     /// <summary>Centre of the tile at <paramref name="gridCoords"/> so tile math is unambiguous.</summary>
     private static EntityCoordinates TileCentre(EntityCoordinates gridCoords)
         => gridCoords.Offset(new Vector2(0.5f, 0.5f));
 
     /// <summary>
-    /// A living preacher with the test actor flag and a full cruciform: the conversion litanies
-    /// are priest-set, so the caster must be entitled to all five.
+    /// A living caster with the test actor flag and a full cruciform, ranked to
+    /// <paramref name="rank"/> (preacher by default) — the conversion litanies are priest-set,
+    /// and Initiation is inquisitor-set, so the caster must be entitled to them.
     /// </summary>
-    private EntityUid PrepareCaster(EntityCoordinates coords)
+    private EntityUid PrepareCaster(EntityCoordinates coords, ProtoId<NeoTheologyProfilePrototype>? rank = null)
     {
         _litany.TestingClearAvailabilityOverrides();
         _litany.TestingClearActors();
@@ -248,7 +302,7 @@ public sealed class LitanyEffectsConversionTest : GameTest
         Assert.That(_cruciform.Activate(body), Is.True);
 
         var component = SComp<CruciformComponent>(implant!.Value);
-        _cruciform.MakeRank(implant.Value, component, Preacher);
+        _cruciform.MakeRank(implant.Value, component, rank ?? Preacher);
         component.Holiness = component.MaxHoliness;
         StabilizeNeeds(body);
         return body;

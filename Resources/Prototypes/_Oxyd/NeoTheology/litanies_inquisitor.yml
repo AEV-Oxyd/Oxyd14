@@ -103,9 +103,9 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 100
-  enabled: false
-  dependency: CoreModules
-  unavailableReason: oxyd-litany-unavailable-core-modules
+  effects:
+  - !type:LitanyInitiationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyKnowledge

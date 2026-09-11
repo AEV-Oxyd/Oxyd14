@@ -147,3 +147,12 @@ public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, boo
 /// </summary>
 [ByRefEvent]
 public record struct LitanyOpenArmamentsEvent(EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for Initiation: raised on the target follower; the server <c>CruciformSystem</c>
+/// installs the preacher-convert core module when absent, activates it (converting the bearer to
+/// the module's activation profile) and sets <see cref="Handled"/>. A false <see cref="Handled"/>
+/// means the target had no active cruciform or was already a preacher.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyInitiationEvent(EntityUid User, bool Handled);
