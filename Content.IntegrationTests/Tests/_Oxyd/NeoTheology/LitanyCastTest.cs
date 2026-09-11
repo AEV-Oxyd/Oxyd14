@@ -244,10 +244,15 @@ public sealed class LitanyCastTest : GameTest
         {
             var body = PrepareCaster(map.GridCoords);
             _litany.TestingClearAvailabilityOverrides();
+
+            // P5: every shipped entry is available now, so the test forces one back into
+            // the gated state and checks that the rejection path still runs.
+            _litany.TestingSetAvailabilityOverride(Sanctify.Id, false);
             var before = _cruciform.GetHoliness(body);
-            Assert.That(_prototypes.Index(Sanctify).IsAvailable, Is.False);
+            Assert.That(_prototypes.Index(Sanctify).IsAvailable, Is.True);
             var result = _litany.TryBeginLitany(body, Sanctify, LitanyCastOrigin.ManualSpeech);
             Assert.That(result.Success, Is.False);
+            Assert.That(result.Reason?.Id, Is.EqualTo("oxyd-litany-unavailable-feature"));
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
         });
@@ -315,6 +320,17 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyUproot",
                 "OxydLitanyKnowledge",
                 "OxydLitanyBounty",
+                "OxydLitanyPoundingWhisper",
+                "OxydLitanyRevelationOfSecrets",
+                "OxydLitanyLispOfVitae",
+                "OxydLitanyCantoOfCourage",
+                "OxydLitanyChantOfObservance",
+                "OxydLitanyReclamationOfEndurance",
+                "OxydLitanySanctify",
+                "OxydLitanyCrusade",
+                "OxydLitanyEternalBrotherhood",
+                "OxydLitanyCallToBattle",
+                "OxydLitanySearingRevelation",
             }));
         });
     }

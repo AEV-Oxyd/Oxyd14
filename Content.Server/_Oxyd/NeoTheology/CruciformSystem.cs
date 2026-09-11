@@ -183,6 +183,9 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             bearer.PendingRequestId = null;
             BumpRevision(body, bearer);
         }
+
+        // Eternal Brotherhood's HUD lives on the body; Eris loses the module with the implant.
+        RemComp<NtDiscipleHudComponent>(body);
     }
 
     private void OnCruciformTerminating(Entity<CruciformComponent> ent, ref EntityTerminatingEvent args)
@@ -196,6 +199,8 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             bearer.PendingRequestId = null;
             BumpRevision(body, bearer);
         }
+
+        RemComp<NtDiscipleHudComponent>(body);
     }
 
     private void OnBearerTerminating(Entity<CruciformBearerComponent> ent, ref EntityTerminatingEvent args)
@@ -532,6 +537,11 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             capacity *= module.MaxHolinessMultiplier;
             regenMultiplier += module.RegenMultiplierDelta;
         }
+
+        // Runtime grants (the Crusade rite) survive the recompute; Eris keeps them in
+        // known_rituals, which no module change clears.
+        foreach (var set in component.GrantedSets)
+            component.UnlockedSets.Add(set);
 
         // Installed attachment: same derivation path as profile ∪ modules, so it can never
         // be clobbered by a later recompute and uninstall lands on the exact prior value.

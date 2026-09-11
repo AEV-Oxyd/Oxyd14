@@ -245,6 +245,21 @@ public sealed partial class LitanySystem
             return;
         }
 
+        if (litany.TargetMode == LitanyTargetMode.Ceremony)
+        {
+            if (!TryStartCeremony(cast, litany, bearer, out var ceremonyFail))
+            {
+                if (cast.Cost > 0)
+                    _cruciform.Refund(cast.Actor, cast.Cost);
+
+                SendResultToActor(cast.Actor, LitanyActionResult.Fail(ceremonyFail ?? "oxyd-litany-effect-failed", cast.RequestId));
+                RefreshActorSnapshot(cast.Actor);
+                ClearPending(cast, cancelled: false);
+            }
+
+            return;
+        }
+
         if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets,
                 cast.SelectedTokens, cast.SelectedText, cast.Designation, cast.SelectedBlueprint))
         {
@@ -504,6 +519,10 @@ public sealed partial class LitanySystem
         _testingLastSnapshot.Clear();
         TestingSnapshotSendCount = 0;
         _requestNonce = 0;
+
+        var ceremonies = EntityQueryEnumerator<ActiveCeremonyComponent>();
+        while (ceremonies.MoveNext(out var starter, out _))
+            RemComp<ActiveCeremonyComponent>(starter);
     }
 
     private bool TryRateLimit(EntityUid actor, bool isBegin, out LitanyActionResult failure)
@@ -608,8 +627,10 @@ public sealed partial class LitanySystem
                 reason = null;
                 return true;
             case LitanyTargetMode.Ceremony:
-                // P4.11 owns the ceremony participant ring; fail closed until then.
-                return false;
+                // P5.2: followers join while the rite runs, so begin resolves no candidates.
+                targets = new List<EntityUid>();
+                reason = null;
+                return true;
             default:
                 return false;
         }

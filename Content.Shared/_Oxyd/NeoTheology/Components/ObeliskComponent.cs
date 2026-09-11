@@ -41,6 +41,12 @@ public sealed partial class ObeliskComponent : Component
     [DataField, AutoNetworkedField]
     public bool Active;
 
+    /// <summary>
+    /// Sanctify forces the obelisk on until this time (Eris <c>force_active = max(60, ...)</c>).
+    /// <see cref="Active"/> stays the computed state; the tick ORs this deadline in.
+    /// </summary>
+    public TimeSpan ForceActiveUntil;
+
     [DataField]
     public TimeSpan Interval = TimeSpan.FromSeconds(1.5);
 }

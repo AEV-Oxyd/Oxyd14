@@ -78,10 +78,11 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         IReadOnlyList<string>? selectedTokens = null,
         string? selectedText = null,
         ProtoId<NeoTheologyProfilePrototype>? designation = null,
-        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null)
+        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
+        int ceremonyParticipants = 0)
     {
         var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation, selectedBlueprint);
+            selectedTokens, selectedText, designation, selectedBlueprint, ceremonyParticipants);
         foreach (var effect in litany.Effects)
         {
             if (!effect.CanApply(this, context, out failure))
@@ -99,10 +100,11 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         IReadOnlyList<string>? selectedTokens = null,
         string? selectedText = null,
         ProtoId<NeoTheologyProfilePrototype>? designation = null,
-        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null)
+        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
+        int ceremonyParticipants = 0)
     {
         var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation, selectedBlueprint);
+            selectedTokens, selectedText, designation, selectedBlueprint, ceremonyParticipants);
         foreach (var effect in litany.Effects)
         {
             if (!effect.Apply(this, context))

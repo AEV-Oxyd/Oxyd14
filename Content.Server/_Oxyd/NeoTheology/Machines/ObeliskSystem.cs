@@ -107,6 +107,11 @@ public sealed class ObeliskSystem : EntitySystem
 
         var xform = Transform(uid);
         var faithful = 0;
+
+        // Sanctify's forced window lapses on its own; Eris counts force_active down per tick.
+        if (obelisk.ForceActiveUntil > TimeSpan.Zero && _timing.CurTime >= obelisk.ForceActiveUntil)
+            obelisk.ForceActiveUntil = TimeSpan.Zero;
+
         var eye = _eye.FindEye(uid);
         if (eye is { } observer)
             _eye.ObserveArea(observer, uid, obelisk.Radius);
@@ -133,7 +138,7 @@ public sealed class ObeliskSystem : EntitySystem
 
         }
 
-        obelisk.Active = faithful > 0;
+        obelisk.Active = faithful > 0 || obelisk.ForceActiveUntil > _timing.CurTime;
 
         Dirty(uid, obelisk);
 

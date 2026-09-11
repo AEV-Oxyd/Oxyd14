@@ -93,6 +93,17 @@ public sealed class LitanyEffectsSocialTest : SocialNoticeGameTest
         LitanyEffectKind.Uproot,
         LitanyEffectKind.Knowledge,
         LitanyEffectKind.Bounty,
+        LitanyEffectKind.PoundingWhisper,
+        LitanyEffectKind.RevelationOfSecrets,
+        LitanyEffectKind.LispOfVitae,
+        LitanyEffectKind.CantoOfCourage,
+        LitanyEffectKind.ChantOfObservance,
+        LitanyEffectKind.ReclamationOfEndurance,
+        LitanyEffectKind.Sanctify,
+        LitanyEffectKind.Crusade,
+        LitanyEffectKind.EternalBrotherhood,
+        LitanyEffectKind.CallToBattle,
+        LitanyEffectKind.SearingRevelation,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -555,6 +566,12 @@ public sealed class LitanyEffectsSocialTest : SocialNoticeGameTest
                     "OxydLitanyAtonement", "OxydLitanyPenance", "OxydLitanyAsacris",
                     "OxydLitanyDivineGuidance", "OxydLitanyManifestation", "OxydLitanyUproot",
                     "OxydLitanyKnowledge", "OxydLitanyBounty",
+                    "OxydLitanyPoundingWhisper", "OxydLitanyRevelationOfSecrets",
+                    "OxydLitanyLispOfVitae", "OxydLitanyCantoOfCourage",
+                    "OxydLitanyChantOfObservance", "OxydLitanyReclamationOfEndurance",
+                    "OxydLitanySanctify", "OxydLitanyCrusade",
+                    "OxydLitanyEternalBrotherhood", "OxydLitanyCallToBattle",
+                    "OxydLitanySearingRevelation",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

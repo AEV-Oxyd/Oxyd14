@@ -366,6 +366,17 @@ public sealed class LitanyUiTest : GameTest
                 LitanyEffectKind.Uproot,
                 LitanyEffectKind.Knowledge,
                 LitanyEffectKind.Bounty,
+                LitanyEffectKind.PoundingWhisper,
+                LitanyEffectKind.RevelationOfSecrets,
+                LitanyEffectKind.LispOfVitae,
+                LitanyEffectKind.CantoOfCourage,
+                LitanyEffectKind.ChantOfObservance,
+                LitanyEffectKind.ReclamationOfEndurance,
+                LitanyEffectKind.Sanctify,
+                LitanyEffectKind.Crusade,
+                LitanyEffectKind.EternalBrotherhood,
+                LitanyEffectKind.CallToBattle,
+                LitanyEffectKind.SearingRevelation,
             }));
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
@@ -377,7 +388,7 @@ public sealed class LitanyUiTest : GameTest
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.DivineBlessing), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Commitment), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Deprivation), Is.True);
-            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(49));
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(60));
         });
     }
 

@@ -37,7 +37,7 @@ public sealed class LitanyTargetTest : GameTest
     private static readonly ProtoId<LitanyPrototype> RepairDoor = "OxydLitanyRepairDoor";             // NearbyMachine, range 1.5
     private static readonly ProtoId<LitanyPrototype> GraceOfPerseverance = "OxydLitanyGraceOfPerseverance"; // VisibleArea, range 7
     private static readonly ProtoId<LitanyPrototype> DivineGuidance = "OxydLitanyDivineGuidance";     // FrontTile (deferred to P4.13)
-    private static readonly ProtoId<LitanyPrototype> Sanctify = "OxydLitanySanctify";                 // Ceremony (deferred to P4.11)
+    private static readonly ProtoId<LitanyPrototype> Sanctify = "OxydLitanySanctify";                 // Ceremony (P5.2)
 
     public override PoolSettings PoolSettings => PsDisconnected;
 
@@ -307,7 +307,7 @@ public sealed class LitanyTargetTest : GameTest
     }
 
     [Test]
-    public async Task FrontTileResolvesEmpty_AndCeremonyFailsClosedWithNoTarget()
+    public async Task FrontTileResolvesEmpty_AndCeremonyResolvesNoCandidates()
     {
         var map = await Pair.CreateTestMap();
 
@@ -321,8 +321,8 @@ public sealed class LitanyTargetTest : GameTest
             Assert.That(targets, Is.Empty);
 
             Assert.That(_litany.TryResolveTargets(caster, _prototypes.Index(Sanctify), out targets, out reason),
-                Is.False, "Ceremony resolution belongs to P4.11 and must fail closed.");
-            Assert.That(reason?.Id, Is.EqualTo("oxyd-litany-no-target"));
+                Is.True, "P5.2: the ceremony opens with no resolved candidates; followers join while it runs.");
+            Assert.That(reason, Is.Null);
             Assert.That(targets, Is.Empty);
         });
     }

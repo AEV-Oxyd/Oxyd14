@@ -33,6 +33,9 @@ public sealed partial class LitanySystem
             return;
         }
 
+        if (TryHandleCeremonySpeech(args.Source, args))
+            return;
+
         TryBeginFromManualSpeech(args);
     }
 

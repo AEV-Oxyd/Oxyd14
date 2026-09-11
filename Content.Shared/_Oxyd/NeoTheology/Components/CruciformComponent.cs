@@ -62,6 +62,15 @@ public sealed partial class CruciformComponent : Component
     public HashSet<ProtoId<LitanySetPrototype>> UnlockedSets = new();
 
     /// <summary>
+    /// Sets a litany granted at runtime (the Crusade rite; Eris <c>known_rituals |=</c>).
+    /// <see cref="Content.Server._Oxyd.NeoTheology.CruciformSystem.RecomputeProfile"/> re-derives
+    /// <see cref="UnlockedSets"/> from profile, modules and upgrade, so a grant that only wrote
+    /// there would vanish on the next recompute. Grants live here instead.
+    /// </summary>
+    [DataField]
+    public HashSet<ProtoId<LitanySetPrototype>> GrantedSets = new();
+
+    /// <summary>
     /// Installed cruciform attachment, if any. Its deltas ride the same derivation as
     /// profile ∪ modules inside <c>RecomputeProfile</c>.
     /// </summary>

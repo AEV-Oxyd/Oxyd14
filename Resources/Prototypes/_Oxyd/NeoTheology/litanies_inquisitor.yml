@@ -149,12 +149,12 @@
   category: Crusader
   grantedBy: [OxydLitanyCrusader]
   effect: EternalBrotherhood
-  targetMode: VisibleFollower
-  range: 7
-  cost: 1
-  enabled: false
-  dependency: Ceremonies
-  unavailableReason: oxyd-litany-unavailable-ceremonies
+  targetMode: Self
+  range: 0
+  cost: 0
+  effects:
+  - !type:LitanyEternalBrotherhoodEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyCallToBattle
@@ -164,16 +164,16 @@
   category: Crusader
   grantedBy: [OxydLitanyCrusader]
   effect: CallToBattle
-  targetMode: VisibleArea
-  range: 7
+  targetMode: Self
+  range: 0
   cost: 0
   cooldownKey: OxydLitanyCallToBattle
   cooldownScope: Personal
   cooldownDuration: 600
   effectDuration: 600
-  enabled: false
-  dependency: Ceremonies
-  unavailableReason: oxyd-litany-unavailable-ceremonies
+  effects:
+  - !type:LitanyCallToBattleEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanySearingRevelation
@@ -183,12 +183,12 @@
   category: Crusader
   grantedBy: [OxydLitanyCrusader]
   effect: SearingRevelation
-  targetMode: VisibleArea
-  range: 7
+  targetMode: Self
+  range: 0
   cost: 0
   cooldownKey: OxydLitanySearingRevelation
   cooldownScope: Personal
   cooldownDuration: 120
-  enabled: false
-  dependency: Ceremonies
-  unavailableReason: oxyd-litany-unavailable-ceremonies
+  effects:
+  - !type:LitanySearingRevelationEffect
+  enabled: true

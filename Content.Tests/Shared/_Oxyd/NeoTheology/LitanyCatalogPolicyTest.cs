@@ -59,6 +59,17 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Uproot,
         LitanyEffectKind.Knowledge,
         LitanyEffectKind.Bounty,
+        LitanyEffectKind.PoundingWhisper,
+        LitanyEffectKind.RevelationOfSecrets,
+        LitanyEffectKind.LispOfVitae,
+        LitanyEffectKind.CantoOfCourage,
+        LitanyEffectKind.ChantOfObservance,
+        LitanyEffectKind.ReclamationOfEndurance,
+        LitanyEffectKind.Sanctify,
+        LitanyEffectKind.Crusade,
+        LitanyEffectKind.EternalBrotherhood,
+        LitanyEffectKind.CallToBattle,
+        LitanyEffectKind.SearingRevelation,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -112,6 +123,17 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Uproot,
         LitanyEffectKind.Knowledge,
         LitanyEffectKind.Bounty,
+        LitanyEffectKind.PoundingWhisper,
+        LitanyEffectKind.RevelationOfSecrets,
+        LitanyEffectKind.LispOfVitae,
+        LitanyEffectKind.CantoOfCourage,
+        LitanyEffectKind.ChantOfObservance,
+        LitanyEffectKind.ReclamationOfEndurance,
+        LitanyEffectKind.Sanctify,
+        LitanyEffectKind.Crusade,
+        LitanyEffectKind.EternalBrotherhood,
+        LitanyEffectKind.CallToBattle,
+        LitanyEffectKind.SearingRevelation,
     ];
 
     [Test]
@@ -127,7 +149,7 @@ public sealed class LitanyCatalogPolicyTest
     }
 
     [Test]
-    public void FullCatalogPolicy_HasSixtyEffectsAndElevenGatedEntries()
+    public void FullCatalogPolicy_HasSixtyEffectsAndNoGatedEntries()
     {
         var effectCount = Enum.GetValues<LitanyEffectKind>().Length;
 
@@ -151,10 +173,11 @@ public sealed class LitanyCatalogPolicyTest
     [Test]
     public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
     {
-        // Sanctify stays dependency-gated: enabling it without a handler must fail closed.
+        // Every catalog kind now has a handler, so the contract is exercised with an
+        // out-of-catalog kind: an enabled entry without a handler must fail closed.
         var errors = LitanyCatalogValidator.ValidateMissingHandler(
-            "OxydLitanySanctify",
-            LitanyEffectKind.Sanctify,
+            "OxydLitanyTestUnknown",
+            (LitanyEffectKind) 200,
             isAvailable: true);
 
         Assert.That(errors, Has.Count.EqualTo(1));

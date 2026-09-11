@@ -13,6 +13,13 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     [DataField, AutoNetworkedField]
     public float Observation;
 
+    /// <summary>
+    /// Eris <c>GLOB.miracle_points</c>: every released miracle banks one point, and the group
+    /// stat rites spend one. Stored per eye because the fork has no global pool.
+    /// </summary>
+    [DataField]
+    public int MiraclePoints;
+
     [DataField]
     public float MaxObservation = 1800f;
 

@@ -267,3 +267,34 @@ public record struct LitanyUplinkOpenEvent(
     bool ValidateOnly,
     bool Handled,
     LocId? Failure = null);
+
+/// <summary>
+/// Bridge for Sanctify: raised on the starter; the server forces every obelisk active for at
+/// least sixty seconds (Eris <c>O.force_active = max(60, O.force_active)</c>).
+/// </summary>
+[ByRefEvent]
+public record struct LitanySanctifyAreaEvent(EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for Crusade: raised on every participant; the server adds the set to the target's
+/// cruciform so the grant survives a profile recompute (Eris <c>known_rituals |=</c>).
+/// </summary>
+[ByRefEvent]
+public record struct LitanyGrantLitanySetEvent(
+    EntityUid Target,
+    ProtoId<LitanySetPrototype> Set,
+    bool Handled);
+
+/// <summary>
+/// Bridge for Eternal Brotherhood: raised on the caster; the server toggles the disciple HUD
+/// component on that mob.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyToggleDiscipleHudEvent(EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for Searing Revelation: raised on the caster; the server rolls Vigilance against the
+/// caster and every cruciform-less creature in view and knocks the failures down.
+/// </summary>
+[ByRefEvent]
+public record struct LitanySearingRevelationEvent(EntityUid User, float Range, bool Handled);

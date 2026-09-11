@@ -221,6 +221,9 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     private void ReleaseMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
     {
         comp.ArmamentsPoints = Math.Min(comp.ArmamentsPoints + comp.ArmamentsRate, comp.MaxArmamentsPoints);
+
+        // Eris GLOB.miracle_points++ at the end of power_release().
+        comp.MiraclePoints++;
         FireRandomMiracle(eye, comp);
     }
 

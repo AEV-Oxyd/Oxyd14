@@ -81,3 +81,14 @@ oxyd-litany-knowledge-count = You have { $count } telecrystals.
 oxyd-litany-uplink-none = You have no uplink.
 
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.
+
+# Ceremony packet: the group-ritual engine (Eris rituals/group.dm).
+oxyd-litany-ceremony-clergy = Only a priest or an inquisitor may lead this rite.
+oxyd-litany-ceremony-continue = There is { $count } followers continuing the ritual.
+oxyd-litany-ceremony-success = On the verge of audibility you hear pleasant music, your mind clears up and the spirit grows stronger. Your prayer was heard.
+oxyd-litany-ceremony-fail = The Cruciform feels cold against your chest.
+oxyd-litany-ceremony-too-few = Insufficient participants.
+oxyd-litany-group-stat-smarter = You feel like you're getting smarter.
+oxyd-litany-group-stat-stronger = You feel like you're getting stronger.
+oxyd-litany-group-stat-vigilant = You feel like you're getting more vigilant.
+oxyd-litany-group-stat-sturdier = You feel like you're getting sturdier.

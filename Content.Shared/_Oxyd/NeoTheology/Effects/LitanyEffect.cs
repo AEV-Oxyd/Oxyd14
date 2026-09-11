@@ -43,4 +43,5 @@ public readonly record struct LitanyEffectContext(
     IReadOnlyList<string>? SelectedTokens = null,
     string? SelectedText = null,
     ProtoId<NeoTheologyProfilePrototype>? Designation = null,
-    ProtoId<NeoTheologyBlueprintPrototype>? SelectedBlueprint = null);
+    ProtoId<NeoTheologyBlueprintPrototype>? SelectedBlueprint = null,
+    int CeremonyParticipants = 0);

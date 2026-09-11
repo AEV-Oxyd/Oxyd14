@@ -14,7 +14,7 @@ namespace Content.Shared._Oxyd.NeoTheology;
 public static class LitanyCatalogValidator
 {
     public const int ExpectedLitanyCount = 60;
-    public const int ExpectedFoundationLitanyCount = 49;
+    public const int ExpectedFoundationLitanyCount = 60;
     public const int ExpectedDependencyGatedLitanyCount = ExpectedLitanyCount - ExpectedFoundationLitanyCount;
 
     private static readonly HashSet<LitanyEffectKind> IgnoreStutteringEffects =
@@ -294,6 +294,41 @@ public static class LitanyCatalogValidator
             errors.Add($"{litany.ID} missing localization {litany.Name.Id}.");
         if (!localization.HasString(litany.Description.Id))
             errors.Add($"{litany.ID} missing localization {litany.Description.Id}.");
+
+        // P5.2: a ceremony needs a phrase list and the list must begin with the litany phrase.
+        if (litany.TargetMode == LitanyTargetMode.Ceremony)
+        {
+            if (litany.CeremonyPhrases.Count < 2)
+            {
+                errors.Add($"{litany.ID} ceremony litanies need at least two phrases.");
+            }
+            else if (!string.Equals(
+                         LitanyPhraseParser.Normalize(litany.CeremonyPhrases[0]),
+                         LitanyPhraseParser.Normalize(litany.Phrase),
+                         StringComparison.Ordinal))
+            {
+                errors.Add($"{litany.ID} ceremony phrase list must start with the litany phrase.");
+            }
+
+            for (var i = 1; i < litany.CeremonyPhrases.Count; i++)
+            {
+                var phrase = litany.CeremonyPhrases[i];
+                if (string.IsNullOrWhiteSpace(phrase) || phrase.Contains('<') || phrase.Contains('\n'))
+                {
+                    errors.Add($"{litany.ID} ceremony phrase {i} contains forbidden formatting.");
+                    continue;
+                }
+
+                if (LitanyPhraseParser.ScalarCount(phrase) > LitanyPhraseParser.MaxPhraseScalars)
+                {
+                    errors.Add($"{litany.ID} ceremony phrase {i} exceeds {LitanyPhraseParser.MaxPhraseScalars} scalars.");
+                }
+            }
+        }
+        else if (litany.CeremonyPhrases.Count > 0)
+        {
+            errors.Add($"{litany.ID} declares ceremony phrases outside Ceremony target mode.");
+        }
 
         if (!double.IsFinite(litany.Cost) || litany.Cost < 0)
             errors.Add($"{litany.ID} has a nonfinite or negative cost.");

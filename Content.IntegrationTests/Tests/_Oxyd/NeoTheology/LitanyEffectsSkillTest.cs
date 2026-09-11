@@ -72,6 +72,9 @@ public sealed class LitanyEffectsSkillTest : GameTest
         {
             _litany.TestingClearAvailabilityOverrides();
             _litany.TestingClearActors();
+            // OxydNtShortBoost is global: a sibling skill-boost test on the same pooled pair
+            // must not deny this first cast.
+            _litany.TestingClearCooldowns();
 
             var origin = TileCentre(map.GridCoords);
             caster = SpawnBearer(origin);

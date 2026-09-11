@@ -67,12 +67,14 @@ public sealed partial class LitanySystem : EntitySystem
         });
 
         InitializeUi();
+        InitializeCeremony();
     }
 
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
         ExpireStaleCasts();
+        ExpireCeremonies();
     }
 
     /// <summary>

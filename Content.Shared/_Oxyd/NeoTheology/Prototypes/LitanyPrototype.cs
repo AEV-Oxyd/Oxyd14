@@ -20,6 +20,15 @@ public sealed partial class LitanyPrototype : IPrototype
     [DataField(required: true)]
     public string Phrase { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// Group-ritual phrase list (Eris <c>rituals/group.dm</c> <c>phrases</c>): index 0 is the
+    /// starter phrase, later entries are the follower and advance phrases of each round. Only
+    /// <see cref="LitanyTargetMode.Ceremony"/> litanies declare it; the validator requires at
+    /// least two entries and a first entry equal to <see cref="Phrase"/>.
+    /// </summary>
+    [DataField]
+    public List<string> CeremonyPhrases { get; private set; } = new();
+
     [DataField(required: true)]
     public LitanyCategory Category { get; private set; }
 
