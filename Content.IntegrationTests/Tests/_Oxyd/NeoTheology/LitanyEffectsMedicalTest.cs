@@ -69,6 +69,8 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.Ordination,
         LitanyEffectKind.Omission,
         LitanyEffectKind.Excommunication,
+        LitanyEffectKind.InstallUpgrade,
+        LitanyEffectKind.UninstallUpgrade,
     ];
 
     public override PoolSettings PoolSettings => new()

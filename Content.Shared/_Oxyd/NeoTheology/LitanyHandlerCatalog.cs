@@ -8,9 +8,9 @@ namespace Content.Shared._Oxyd.NeoTheology;
 /// </summary>
 public static class LitanyHandlerCatalog
 {
-    public const int ExpectedFoundationEffectCount = 23;
+    public const int ExpectedFoundationEffectCount = 25;
 
-    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles.</summary>
+    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles; P4.8: the attachments.</summary>
     public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
     {
         LitanyEffectKind.Relief,
@@ -34,6 +34,8 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.Ordination,
         LitanyEffectKind.Omission,
         LitanyEffectKind.Excommunication,
+        LitanyEffectKind.InstallUpgrade,
+        LitanyEffectKind.UninstallUpgrade,
     }.ToFrozenSet();
 
     /// <summary>
@@ -65,6 +67,8 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.Succour,
         LitanyEffectKind.Sending,
         LitanyEffectKind.ActivateDoor,
+        LitanyEffectKind.InstallUpgrade,
+        LitanyEffectKind.UninstallUpgrade,
     }.ToFrozenSet();
 
     public static bool HasHandler(LitanyEffectKind effect)

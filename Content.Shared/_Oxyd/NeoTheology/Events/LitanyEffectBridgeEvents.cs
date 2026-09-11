@@ -42,3 +42,21 @@ public record struct LitanySetRankEvent(
     EntityUid Target,
     ProtoId<NeoTheologyProfilePrototype> Profile,
     bool Handled);
+
+/// <summary>
+/// Bridge for InstallUpgrade: raised on the target follower; the server
+/// <c>CruciformUpgradeSystem</c> finds the loose upgrade resting on the altar beside them,
+/// attaches it to their cruciform and sets <see cref="Handled"/>. A false <see cref="Handled"/>
+/// means there was no altar, no item, or the slot was already taken.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyInstallUpgradeEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for UninstallUpgrade: raised on the target follower; the server
+/// <c>CruciformUpgradeSystem</c> detaches the installed upgrade, returns the item to the
+/// bearer's turf (the altar) and sets <see cref="Handled"/>. A false <see cref="Handled"/>
+/// means the target has no attached upgrade.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyUninstallUpgradeEvent(EntityUid Target, bool Handled);

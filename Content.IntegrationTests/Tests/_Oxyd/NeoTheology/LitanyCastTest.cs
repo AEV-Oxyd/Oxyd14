@@ -287,6 +287,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyOrdination",
                 "OxydLitanyOmission",
                 "OxydLitanyExcommunication",
+                "OxydLitanyInstallUpgrade",
+                "OxydLitanyUninstallUpgrade",
             }));
         });
     }

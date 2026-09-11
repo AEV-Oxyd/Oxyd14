@@ -33,6 +33,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Succour,
         LitanyEffectKind.Sending,
         LitanyEffectKind.ActivateDoor,
+        LitanyEffectKind.InstallUpgrade,
+        LitanyEffectKind.UninstallUpgrade,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -58,6 +60,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Ordination,
         LitanyEffectKind.Omission,
         LitanyEffectKind.Excommunication,
+        LitanyEffectKind.InstallUpgrade,
+        LitanyEffectKind.UninstallUpgrade,
     ];
 
     [Test]

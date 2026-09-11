@@ -146,9 +146,9 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 20
-  enabled: false
-  dependency: Attachments
-  unavailableReason: oxyd-litany-unavailable-attachments
+  effects:
+  - !type:LitanyInstallUpgradeEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyUninstallUpgrade
@@ -161,9 +161,9 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 20
-  enabled: false
-  dependency: Attachments
-  unavailableReason: oxyd-litany-unavailable-attachments
+  effects:
+  - !type:LitanyUninstallUpgradeEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyReincarnation

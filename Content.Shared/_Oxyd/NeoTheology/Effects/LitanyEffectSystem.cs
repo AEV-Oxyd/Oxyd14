@@ -345,6 +345,38 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     }
 
     /// <summary>
+    /// Finds the loose cruciform-upgrade item resting on the NeoTheology altar beside
+    /// <paramref name="target"/> — the attachment counterpart of
+    /// <see cref="TryFindAltarCruciform"/>. Candidates are uid-sorted, so an unchanged world
+    /// yields the same altar/item pair at begin and commit; an installed attachment lives inside
+    /// the cruciform's container and is deliberately skipped.
+    /// </summary>
+    public bool TryFindAltarUpgrade(EntityUid target, out EntityUid altar, out EntityUid upgradeItem)
+    {
+        altar = EntityUid.Invalid;
+        upgradeItem = EntityUid.Invalid;
+        if (!TryComp(target, out TransformComponent? targetXform))
+            return false;
+
+        var altars = _lookup.GetEntitiesInRange<NeoTheologyAltarComponent>(targetXform.Coordinates, AltarSearchRadius);
+        foreach (var candidate in altars.OrderBy(entry => entry.Owner))
+        {
+            var items = _lookup.GetEntitiesInRange<CruciformUpgradeComponent>(Transform(candidate.Owner).Coordinates, candidate.Comp.Radius);
+            foreach (var item in items.OrderBy(entry => entry.Owner))
+            {
+                if (_containers.IsEntityInContainer(item.Owner))
+                    continue;
+
+                altar = candidate.Owner;
+                upgradeItem = item.Owner;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Eris install(): insert the existing loose cruciform with <c>ForceImplant</c>, then confirm
     /// the bearer linkage actually resolved. A rejected insert (duplicate guard) fails loudly
     /// here instead of silently no-opping.
