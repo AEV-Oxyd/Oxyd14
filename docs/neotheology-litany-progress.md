@@ -1,20 +1,26 @@
 # NeoTheology litany progress
 
-Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 49 of 60 entries are enabled.**
+Status: **All 60 entries are enabled on `neotheology/fix-pass`; the full-catalog audit is the remaining milestone.**
 
 Completion plan: `.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
-Implementation checkpoint: commits through `fa8a5996c7`.
+Ceremony contract: `.hermes/review/neotheology-ceremony-contract.md`.
+Implementation checkpoint: commits through `7e9c0afcb7`.
 
 ## Current implementation
 
-- 60 catalog entries and 9 sets: 49 foundation entries (all enabled) and 11
-  dependency-gated entries.
-- **49 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
+- 60 catalog entries and 9 sets: all 60 are foundation entries and all 60 are
+  enabled. No dependency-gated entries remain.
+- **60 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
   enabled set.
-- **11 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
-  `CantoOfCourage`, `ChantOfObservance`, `ReclamationOfEndurance`, `Sanctify`,
-  `Crusade`, `EternalBrotherhood`, `CallToBattle`, `SearingRevelation` (the
-  ceremony block).
+- The group-ritual engine runs: a ceremony opens with no followers, followers in
+  range join by speaking the current phrase, the starter advances with the next
+  phrase, and the payload runs for the starter and every recorded follower.
+- The six stat rites grant 3 + 2-per-follower skill (plus one per follower with
+  Channeling) and spend one miracle point; `Sanctify` forces every obelisk active
+  for sixty seconds; `Crusade` teaches the crusader set from six followers.
+- `EternalBrotherhood` toggles the disciple HUD, `CallToBattle` scales with the
+  visible bearers, and `SearingRevelation` knocks down the caster and every
+  cruciform-less creature in view.
 - The inquisitor's hidden uplink runs (NtUplink): the rank installs the module,
   the first litany use creates the nullspace store and the balance survives a
   module swap.
@@ -59,7 +65,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
 | 5. Ranks and medical/social foundation | Handlers complete | `Sending` text, `Confirmation` designations and `Scrying` target choice are live; closed in `89e4cc1784` and `17b7908f45`. |
 | 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
-| 7. Dependency packets | In progress | Ceremonies (11). |
+| 7. Dependency packets | Complete | Ceremonies landed in `7e9c0afcb7`; zero gated entries remain. |
 | 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
 
 ## Packet record
@@ -78,13 +84,13 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | ConstructionCatalog | `DivineGuidance` | Landed in `45b24941f2`; blueprint choice plus material list. |
 | Construction | `Manifestation`, `Uproot` | Landed in `45b24941f2`; front-tile build and refund. |
 | NtUplink | `Knowledge`, `Bounty` | Landed in `fa8a5996c7`; hidden cruciform store plus the NeoTheology category. |
-| Ceremonies | 11 litanies | Pending; engine required. |
+| Ceremonies | 11 litanies | Landed in `7e9c0afcb7`; engine, obelisk force-active, crusader set grant, disciple HUD. |
 
 ## Immediate follow-up
 
-1. Ceremony engine plus the 11 ceremony litanies.
-2. Map the NT machine set into a station area.
-3. Final catalog audit, manual two-client scenario, release cleanup.
+1. Map the NT machine set into a station area.
+2. Final catalog audit and the manual two-client scenario.
+3. Release cleanup.
 
 ## Historical validation evidence
 
@@ -101,3 +107,4 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 - Upgrade behaviours `17b7908f45`: unit 17/17; integration 176/176, zero skips.
 - Construction packet `45b24941f2`: unit 17/17; integration 181/181, zero skips.
 - NtUplink packet `fa8a5996c7`: unit 17/17; integration 184/184, zero skips.
+- Ceremony packet `7e9c0afcb7`: unit 17/17; integration 193/193, zero skips; 9 new ceremony tests.
