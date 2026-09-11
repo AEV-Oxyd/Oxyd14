@@ -152,6 +152,24 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return true;
     }
 
+    /// <summary>
+    /// True when <paramref name="uid"/> is a NeoTheology cloner — the machine the Resurrection
+    /// litany starts a soul-safe cloning job on.
+    /// </summary>
+    public bool IsLitanyCloner(EntityUid uid)
+    {
+        return HasComp<CruciformClonerComponent>(uid);
+    }
+
+    /// <summary>
+    /// True when <paramref name="uid"/> is a cruciform reader — the machine Resurrection reads
+    /// its soul out of.
+    /// </summary>
+    public bool IsLitanyReader(EntityUid uid)
+    {
+        return HasComp<CruciformReaderComponent>(uid);
+    }
+
     /// <summary>True when the target is a living mob that can carry skill buffs.</summary>
     public bool CanReceiveSkillBuff(EntityUid uid)
     {

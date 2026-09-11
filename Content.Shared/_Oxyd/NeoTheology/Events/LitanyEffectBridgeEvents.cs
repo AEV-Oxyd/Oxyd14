@@ -60,3 +60,22 @@ public record struct LitanyInstallUpgradeEvent(EntityUid Target, bool Handled);
 /// </summary>
 [ByRefEvent]
 public record struct LitanyUninstallUpgradeEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for Reincarnation: raised on the living target body; the server
+/// <c>CoreModuleBehaviorSystem</c> writes a fresh soul snapshot from the wearer onto their
+/// installed cruciform and sets <see cref="Handled"/>. A false <see cref="Handled"/> means
+/// the snapshot write could not run (no installed cruciform to write onto).
+/// </summary>
+[ByRefEvent]
+public record struct LitanyWriteSoulSnapshotEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for Resurrection: raised on the NeoTheology cloner among the litany's machine targets;
+/// the server <c>CruciformReaderSystem</c> reads the soul out of <see cref="Reader"/>, starts
+/// upstream <c>CloningPodSystem</c>'s own job for the dead wearer and sets
+/// <see cref="Handled"/>. A false <see cref="Handled"/> means the soul, the corpse, the client
+/// session or the pod's biomatter was not available.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled);

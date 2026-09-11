@@ -289,6 +289,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyExcommunication",
                 "OxydLitanyInstallUpgrade",
                 "OxydLitanyUninstallUpgrade",
+                "OxydLitanyReincarnation",
+                "OxydLitanyResurrection",
             }));
         });
     }

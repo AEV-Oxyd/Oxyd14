@@ -87,6 +87,15 @@
   - !type:LitanyEpiphanyEffect
   enabled: true
 
+# ponytail: deferred — Eris asacris (priest.dm:73-91) removes the cruciform's upgrade *items*
+# (`for(var/obj/item/coreimplant_upgrade/CU in CI.upgrades) CU.remove()`), which this fork
+# already ships as the enabled UninstallUpgrade litany (one attachment slot, P4.8); it is not
+# the "Acolyte resurrection litany" the dependency map calls it. The shipped scope here
+# ("remove supported removable core modules", locale + porting plan §9.3/§10.3) needs
+# capability the module host lacks: a removable/supported marker on oxydCoreModule, module
+# items in an nt-core-modules container, and the Preacher Ascension Kit — CoreModuleSystem
+# only has add/remove-by-id over a bare set, and stripping every installed module would take
+# the bearer's rank sets with it. Revisit with the Initiation/uplink packet (P4.13).
 - type: oxydLitany
   id: OxydLitanyAsacris
   name: oxyd-litany-asacris-name

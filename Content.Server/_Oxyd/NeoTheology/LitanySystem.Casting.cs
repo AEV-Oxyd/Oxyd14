@@ -490,6 +490,7 @@ public sealed partial class LitanySystem
                HasComp<BiogeneratorComponent>(uid) ||
                HasComp<CruciformForgeComponent>(uid) ||
                HasComp<CruciformClonerComponent>(uid) ||
+               HasComp<CruciformReaderComponent>(uid) ||
                HasComp<ArmamentsPrinterComponent>(uid) ||
                HasComp<EyeOfTheProtectorComponent>(uid);
     }

@@ -1,6 +1,7 @@
 using Content.Server.Preferences.Managers;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Mind;
 using Content.Shared.Mind.Components;
 using Robust.Server.Player;
@@ -28,6 +29,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     {
         SubscribeLocalEvent<CruciformComponent, CoreModuleInstalledEvent>(OnModuleInstalled);
         SubscribeLocalEvent<CruciformComponent, CoreModuleUninstalledEvent>(OnModuleUninstalled);
+        SubscribeLocalEvent<CruciformBearerComponent, LitanyWriteSoulSnapshotEvent>(OnLitanyWriteSoulSnapshot);
     }
 
     private void OnModuleInstalled(EntityUid cruciform, CruciformComponent comp, ref CoreModuleInstalledEvent args)
@@ -40,6 +42,22 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     {
         if (args.Module == CloningModule)
             WriteSnapshot(cruciform, comp);
+    }
+
+    /// <summary>
+    /// Reincarnation bridge (Eris <c>rituals/base.dm:258-310</c>): the litany refreshes the
+    /// stored soul from the living wearer onto their installed cruciform. Raised on the body, so
+    /// the handler resolves the implant from the bearer link first.
+    /// </summary>
+    private void OnLitanyWriteSoulSnapshot(EntityUid body, CruciformBearerComponent bearer, ref LitanyWriteSoulSnapshotEvent args)
+    {
+        if (bearer.Cruciform is not { } cruciform ||
+            !TryComp<CruciformComponent>(cruciform, out var comp))
+        {
+            return;
+        }
+
+        args.Handled = WriteSnapshot(cruciform, comp);
     }
 
     /// <summary>

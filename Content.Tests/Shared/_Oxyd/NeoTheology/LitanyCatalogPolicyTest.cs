@@ -35,6 +35,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.ActivateDoor,
         LitanyEffectKind.InstallUpgrade,
         LitanyEffectKind.UninstallUpgrade,
+        LitanyEffectKind.Reincarnation,
+        LitanyEffectKind.Resurrection,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -62,6 +64,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Excommunication,
         LitanyEffectKind.InstallUpgrade,
         LitanyEffectKind.UninstallUpgrade,
+        LitanyEffectKind.Reincarnation,
+        LitanyEffectKind.Resurrection,
     ];
 
     [Test]

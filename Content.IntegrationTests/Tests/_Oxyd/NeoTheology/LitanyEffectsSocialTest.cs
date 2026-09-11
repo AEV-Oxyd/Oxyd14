@@ -67,6 +67,8 @@ public sealed class LitanyEffectsSocialTest : GameTest
         LitanyEffectKind.Excommunication,
         LitanyEffectKind.InstallUpgrade,
         LitanyEffectKind.UninstallUpgrade,
+        LitanyEffectKind.Reincarnation,
+        LitanyEffectKind.Resurrection,
     ];
 
     /// <summary>Fixed seed for independent 50% Entreaty rolls (CE uses IRobustRandom.Prob).</summary>
@@ -517,6 +519,7 @@ public sealed class LitanyEffectsSocialTest : GameTest
                     "OxydLitanyConfirmation", "OxydLitanyAdoption", "OxydLitanyOrdination",
                     "OxydLitanyOmission", "OxydLitanyExcommunication",
                     "OxydLitanyInstallUpgrade", "OxydLitanyUninstallUpgrade",
+                    "OxydLitanyReincarnation", "OxydLitanyResurrection",
                 }),
                 "Only implemented effects may be IsAvailable (enabled:true).");
 

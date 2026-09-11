@@ -40,5 +40,6 @@ oxyd-litany-excommunication-notice = You have been spiritually separated from th
 oxyd-litany-upgrade-present = The target's cruciform already carries an attachment.
 oxyd-litany-upgrade-missing = No cruciform upgrade rests on the altar.
 oxyd-litany-upgrade-not-installed = The target's cruciform carries no attachment.
+oxyd-litany-soul-lost = The target carries no soul to bind.
 
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.

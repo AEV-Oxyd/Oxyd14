@@ -176,9 +176,9 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 0
-  enabled: false
-  dependency: SoulCloning
-  unavailableReason: oxyd-litany-unavailable-cloning
+  effects:
+  - !type:LitanyReincarnationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyCommitment
