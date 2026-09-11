@@ -19,15 +19,18 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// subscribe to the lifecycle events instead of the module just being data.
 /// </summary>
 /// <remarks>
-/// Currently one module: the cloning module writes the wearer's soul onto the cruciform on both
-/// install and uninstall (Eris <c>datum/core_module/cruciform/cloning</c>).
+/// Currently two modules: the cloning module writes the wearer's soul onto the cruciform on both
+/// install and uninstall (Eris <c>datum/core_module/cruciform/cloning</c>), and the uplink module
+/// hands off to <see cref="NtUplinkSystem"/> (Eris <c>datum/core_module/cruciform/uplink</c>).
 /// </remarks>
 public sealed partial class CoreModuleBehaviorSystem : EntitySystem
 {
     private static readonly ProtoId<CoreModulePrototype> CloningModule = "OxydNtModuleCloning";
+    private static readonly ProtoId<CoreModulePrototype> UplinkModule = "OxydNtModuleUplink";
 
     [Dependency] private readonly ISerializationManager _serialization = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
+    [Dependency] private readonly NtUplinkSystem _uplink = default!;
 
     public override void Initialize()
     {
@@ -40,12 +43,16 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     {
         if (args.Module == CloningModule)
             WriteSnapshot(cruciform, comp);
+        else if (args.Module == UplinkModule)
+            _uplink.OnUplinkInstalled(cruciform);
     }
 
     private void OnModuleUninstalled(EntityUid cruciform, CruciformComponent comp, ref CoreModuleUninstalledEvent args)
     {
         if (args.Module == CloningModule)
             WriteSnapshot(cruciform, comp);
+        else if (args.Module == UplinkModule)
+            _uplink.OnUplinkUninstalled(cruciform);
     }
 
     /// <summary>

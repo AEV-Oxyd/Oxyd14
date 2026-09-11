@@ -480,7 +480,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             ["OxydNtAgrolyte"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAgrolyte" },
             ["OxydNtCustodian"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleCustodian" },
             ["OxydNtPreacher"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest" },
-            ["OxydNtInquisitor"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest", "OxydNtModuleInquisitor", "OxydNtModuleRedLight" },
+            ["OxydNtInquisitor"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest", "OxydNtModuleInquisitor", "OxydNtModuleRedLight", "OxydNtModuleUplink" },
         };
 
     private double AdvanceHoliness(Entity<CruciformComponent> ent, EntityUid body)

@@ -23,6 +23,7 @@ public sealed class CoreModuleTest : GameTest
     private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
     private static readonly ProtoId<CoreModulePrototype> RedLightModule = "OxydNtModuleRedLight";
     private static readonly ProtoId<CoreModulePrototype> InquisitorModule = "OxydNtModuleInquisitor";
+    private static readonly ProtoId<CoreModulePrototype> UplinkModule = "OxydNtModuleUplink";
     private static readonly ProtoId<CoreModulePrototype> PriestConvertModule = "OxydNtModulePriestConvert";
     private static readonly ProtoId<LitanySetPrototype> CustodianSet = "OxydLitanyCustodian";
     private static readonly ProtoId<LitanySetPrototype> CommonSet = "OxydLitanyCommon";
@@ -130,7 +131,8 @@ public sealed class CoreModuleTest : GameTest
             Assert.That(comp.Profile.Id, Is.EqualTo("OxydNtInquisitor"));
             Assert.That(comp.InstalledModules, Does.Contain(InquisitorModule));
             Assert.That(comp.InstalledModules, Does.Contain(RedLightModule));
-            Assert.That(comp.InstalledModules.Count, Is.EqualTo(priestCount + 2),
+            Assert.That(comp.InstalledModules, Does.Contain(UplinkModule));
+            Assert.That(comp.InstalledModules.Count, Is.EqualTo(priestCount + 3),
                 "Ordination swaps the rank modules in, it does not stack profiles.");
             // Inquisitor profile capacity (100) x inquisitor module (2.0) x red light (1.6).
             Assert.That(comp.MaxHoliness, Is.EqualTo(100d * 2.0 * 1.6).Within(0.001));

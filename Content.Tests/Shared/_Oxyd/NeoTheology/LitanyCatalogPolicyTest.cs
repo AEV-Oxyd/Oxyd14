@@ -57,6 +57,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.DivineGuidance,
         LitanyEffectKind.Manifestation,
         LitanyEffectKind.Uproot,
+        LitanyEffectKind.Knowledge,
+        LitanyEffectKind.Bounty,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -108,6 +110,8 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.DivineGuidance,
         LitanyEffectKind.Manifestation,
         LitanyEffectKind.Uproot,
+        LitanyEffectKind.Knowledge,
+        LitanyEffectKind.Bounty,
     ];
 
     [Test]
@@ -123,7 +127,7 @@ public sealed class LitanyCatalogPolicyTest
     }
 
     [Test]
-    public void FullCatalogPolicy_HasSixtyEffectsAndThirtySevenGatedEntries()
+    public void FullCatalogPolicy_HasSixtyEffectsAndElevenGatedEntries()
     {
         var effectCount = Enum.GetValues<LitanyEffectKind>().Length;
 

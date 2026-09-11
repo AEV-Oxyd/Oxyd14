@@ -247,3 +247,23 @@ public record struct LitanyUprootEvent(
     bool ValidateOnly,
     bool Handled,
     LocId? Failure = null);
+
+/// <summary>
+/// Bridge for Knowledge: raised on the caster; the server <c>NtUplinkSystem</c> reads the hidden
+/// uplink's telecrystals and shows the count. <see cref="ValidateOnly"/> must not create the
+/// store or send the message; it only checks that the uplink module is present.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyUplinkReportEvent(EntityUid User, bool ValidateOnly, bool Handled);
+
+/// <summary>
+/// Bridge for Bounty: raised on the caster; the server <c>NtUplinkSystem</c> creates the hidden
+/// uplink on demand and opens its interface. <see cref="ValidateOnly"/> only checks that the
+/// uplink module is present.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyUplinkOpenEvent(
+    EntityUid User,
+    bool ValidateOnly,
+    bool Handled,
+    LocId? Failure = null);

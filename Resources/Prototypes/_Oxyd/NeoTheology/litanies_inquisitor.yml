@@ -122,9 +122,9 @@
   targetMode: Self
   range: 0
   cost: 0
-  enabled: false
-  dependency: NtUplink
-  unavailableReason: oxyd-litany-unavailable-uplink
+  effects:
+  - !type:LitanyKnowledgeEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyBounty
@@ -137,9 +137,9 @@
   targetMode: Self
   range: 0
   cost: 20
-  enabled: false
-  dependency: NtUplink
-  unavailableReason: oxyd-litany-unavailable-uplink
+  effects:
+  - !type:LitanyBountyEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyEternalBrotherhood

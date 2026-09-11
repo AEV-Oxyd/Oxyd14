@@ -1,0 +1,85 @@
+# Eris datum/core_module/cruciform/uplink (modules.dm:30-53): the hidden inquisitor uplink.
+# The store mirrors the traitor uplink preset and adds the NeoTheology category
+# (uplink/neotheology.dm:39). Only the Eris listings that exist in this fork are ported; the
+# NT-pattern energy weapons and the preacher ascension kit have no fork equivalents yet.
+
+- type: storeCategory
+  id: OxydNtUplink
+  name: store-category-nt-uplink
+  priority: 12
+
+- type: entity
+  parent: StorePresetUplink
+  id: OxydNtUplink
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: Store
+    name: store-preset-name-nt-uplink
+    categories:
+    - UplinkWeaponry
+    - UplinkAmmo
+    - UplinkExplosives
+    - UplinkChemicals
+    - UplinkDeception
+    - UplinkDisruption
+    - UplinkImplants
+    - UplinkAllies
+    - UplinkWearables
+    - UplinkJob
+    - UplinkPointless
+    - UplinkObjective
+    - OxydNtUplink
+    currencyWhitelist:
+    - Telecrystal
+    balance:
+      Telecrystal: 15
+    expectedFaction:
+    - NanoTrasen
+
+# Eris neotheology.dm:46 "Ritual Book" (1 TC).
+- type: listing
+  id: OxydNtUplinkRitualBook
+  name: uplink-nt-ritual-book-name
+  description: uplink-nt-ritual-book-desc
+  icon: { sprite: Objects/Specific/Chapel/bible.rsi, state: icon }
+  productEntity: OxydNtBible
+  cost:
+    Telecrystal: 1
+  categories:
+  - OxydNtUplink
+
+# Eris neotheology.dm:38 "Cruciform Implant" (1 TC).
+- type: listing
+  id: OxydNtUplinkCruciform
+  name: uplink-nt-cruciform-name
+  description: uplink-nt-cruciform-desc
+  icon: { sprite: /Textures/Actions/Implants/implants.rsi, state: freedom }
+  productEntity: OxydNtCruciform
+  cost:
+    Telecrystal: 1
+  categories:
+  - OxydNtUplink
+
+# Eris neotheology.dm:73 "Preacher Hat" (3 TC).
+- type: listing
+  id: OxydNtUplinkPreacherHat
+  name: uplink-nt-preacher-hat-name
+  description: uplink-nt-preacher-hat-desc
+  icon: { sprite: Oxyd/erisported/clothing/preacher_hat.rsi, state: icon }
+  productEntity: erisport_preacher_hat
+  cost:
+    Telecrystal: 3
+  categories:
+  - OxydNtUplink
+
+# Eris neotheology.dm:68 "Preacher Coat" (3 TC).
+- type: listing
+  id: OxydNtUplinkPreacherCoat
+  name: uplink-nt-preacher-coat-name
+  description: uplink-nt-preacher-coat-desc
+  icon: { sprite: Oxyd/erisported/clothing/preacher_coat.rsi, state: icon }
+  productEntity: erisport_preacher_coat
+  cost:
+    Telecrystal: 3
+  categories:
+  - OxydNtUplink

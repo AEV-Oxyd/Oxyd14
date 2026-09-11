@@ -313,6 +313,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyDivineGuidance",
                 "OxydLitanyManifestation",
                 "OxydLitanyUproot",
+                "OxydLitanyKnowledge",
+                "OxydLitanyBounty",
             }));
         });
     }

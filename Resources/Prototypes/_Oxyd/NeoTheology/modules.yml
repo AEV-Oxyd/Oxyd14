@@ -42,6 +42,11 @@
 - type: oxydCoreModule
   id: OxydNtModuleCloning
 
+# Eris modules.dm:30-53 — the hidden inquisitor uplink module. Installed with the inquisitor
+# rank; NtUplinkSystem owns the store and the telecrystal balance.
+- type: oxydCoreModule
+  id: OxydNtModuleUplink
+
 - type: oxydCoreModule
   id: OxydNtModulePriestConvert
   activationProfile: OxydNtPreacher

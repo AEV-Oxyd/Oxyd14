@@ -76,4 +76,8 @@ oxyd-litany-uproot-none = There is no NeoTheology construction in front of you.
 oxyd-litany-uproot-forbidden = Only a preacher or an inquisitor can move the Eye of the Protector.
 oxyd-litany-book-required = This litany needs the litany book to pick a construction.
 
+# NtUplink packet: the inquisitor's hidden uplink (Eris rituals/inquisitor.dm:291-327).
+oxyd-litany-knowledge-count = You have { $count } telecrystals.
+oxyd-litany-uplink-none = You have no uplink.
+
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.
