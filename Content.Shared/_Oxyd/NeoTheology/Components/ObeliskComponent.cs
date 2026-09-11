@@ -1,3 +1,4 @@
+using Content.Shared.Damage;
 using Content.Shared.NPC.Prototypes;
 using Robust.Shared.Prototypes;
 using Robust.Shared.GameStates;
@@ -19,14 +20,15 @@ public sealed partial class ObeliskComponent : Component
     [DataField]
     public HashSet<ProtoId<NpcFactionPrototype>> HostileFactions = new() { "Dragon", "SimpleHostile", "Xeno" };
 
-    [ViewVariables]
-    public TimeSpan NextPulse;
-
     [DataField]
     public float Radius = 7f;
 
+    /// <summary>Damage applied to every hostile in range per aura pulse.</summary>
     [DataField]
-    public float HostileDamage = 45f;
+    public DamageSpecifier HostileDamage = new()
+    {
+        DamageDict = { ["Blunt"] = 30f },
+    };
 
     [DataField]
     public int MaxTargets = 7;
@@ -38,6 +40,14 @@ public sealed partial class ObeliskComponent : Component
     [DataField]
     public float ObservationPerFaithful = 20f;
 
+    /// <summary>Sanity restored to each faithful in range per aura pulse.</summary>
+    [DataField]
+    public float SanityPerSecond = 2f / 3f;
+
+    /// <summary>Weed level removed from every tray in range per pulse. Larger than every tray max.</summary>
+    [DataField]
+    public float WeedRemovalPerSecond = 200f / 3f;
+
     [DataField, AutoNetworkedField]
     public bool Active;
 
@@ -46,7 +56,4 @@ public sealed partial class ObeliskComponent : Component
     /// <see cref="Active"/> stays the computed state; the tick ORs this deadline in.
     /// </summary>
     public TimeSpan ForceActiveUntil;
-
-    [DataField]
-    public TimeSpan Interval = TimeSpan.FromSeconds(1.5);
 }

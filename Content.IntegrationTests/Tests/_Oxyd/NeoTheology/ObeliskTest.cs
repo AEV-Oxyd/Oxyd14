@@ -19,7 +19,7 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 
 /// <summary>
 /// P2.13: the obelisk's aura. The tests drive <see cref="ObeliskSystem.Tick"/> directly rather than
-/// waiting out the 1.5s pulse interval. The obelisk entity prototype only lands in P2.14, so these
+/// waiting out the one-second view cadence. The obelisk entity prototype only lands in P2.14, so these
 /// tests build a bare entity and attach the component themselves.
 /// </summary>
 [TestOf(typeof(ObeliskSystem))]
@@ -157,12 +157,12 @@ public sealed class ObeliskTest : GameTest
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
 
             transform.SetCoordinates(body, map.GridCoords.Offset(new Vector2(15f, 0f)));
-            _obelisk.Update(0);
+            _obelisk.Tick(first);
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
             transform.SetCoordinates(body, map.GridCoords);
             _obelisk.Tick(first);
             transform.SetCoordinates(body, otherMap.GridCoords);
-            _obelisk.Update(0);
+            _obelisk.Tick(first);
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
 
             transform.SetCoordinates(body, map.GridCoords);

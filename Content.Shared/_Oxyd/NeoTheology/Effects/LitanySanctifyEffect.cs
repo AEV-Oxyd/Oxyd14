@@ -9,6 +9,10 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanySanctifyEffect : LitanyCeremonyEffect
 {
+    /// <summary>Eris <c>O.force_active = max(60, O.force_active)</c>.</summary>
+    [DataField]
+    public TimeSpan ForceActiveTime = TimeSpan.FromSeconds(60);
+
     /// <summary>Eris <c>high_ritual = FALSE</c>: any bearer may start it.</summary>
     public override bool RequiresClergy => false;
 
@@ -23,7 +27,7 @@ public sealed partial class LitanySanctifyEffect : LitanyCeremonyEffect
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
     {
-        var sanctify = new LitanySanctifyAreaEvent(context.User, false);
+        var sanctify = new LitanySanctifyAreaEvent(context.User, ForceActiveTime, false);
         system.RaiseOn(context.User, ref sanctify);
         return sanctify.Handled;
     }

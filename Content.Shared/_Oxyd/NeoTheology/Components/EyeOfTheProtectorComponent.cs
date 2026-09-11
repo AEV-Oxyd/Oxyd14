@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Skills;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
@@ -108,4 +109,22 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     /// <summary>One shared record for Eye scans and obelisk scans. Values store the original awards.</summary>
     [ViewVariables]
     public Dictionary<EntityUid, float> Scanned = new();
+
+    /// <summary>Skills the STAT_BUFF miracle can pick from (Eris <c>stat_buff</c> list).</summary>
+    [DataField]
+    public List<ProtoId<SkillPrototype>> MiracleSkills = new()
+    {
+        "Rob", "Vig", "Tgh", "Cog", "Mec", "Bio",
+    };
+
+    /// <summary>Materials the MATERIAL_REWARD miracle can spawn.</summary>
+    [DataField]
+    public List<EntProtoId> MiracleMaterials = new()
+    {
+        "SheetPlasteel", "SheetPlasma", "SheetUranium", "IngotGold", "IngotSilver", "MaterialDiamond",
+    };
+
+    /// <summary>Unique-buff id for the STAT_BUFF miracle, so a later miracle replaces it.</summary>
+    [DataField]
+    public string MiracleBuffId = "EyeOfTheProtector";
 }

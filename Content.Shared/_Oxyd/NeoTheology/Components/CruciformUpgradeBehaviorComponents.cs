@@ -1,3 +1,5 @@
+using Content.Shared.Damage;
+
 namespace Content.Shared._Oxyd.NeoTheology.Components;
 
 /// <summary>
@@ -22,6 +24,21 @@ public sealed partial class CruciformUpgradeAuraComponent : Component
 
     /// <summary>Eris cleansing_presence also wipes blood off the bearer's own tile.</summary>
     [DataField] public bool CleanPuddles;
+
+    /// <summary>
+    /// Eris heals a plant only below its own cap. The fork has no max-health field on the
+    /// plant holder, so the aura carries the cap.
+    /// </summary>
+    [DataField] public float PlantHealthCap = 100f;
+}
+
+/// <summary>
+/// Marks a bearer whose installed upgrade is <see cref="CruciformUpgradeMartyrComponent"/>.
+/// The death event drives the burst; no per-tick scan is needed.
+/// </summary>
+[RegisterComponent]
+public sealed partial class CruciformMartyrArmedComponent : Component
+{
 }
 
 /// <summary>
@@ -34,8 +51,11 @@ public sealed partial class CruciformUpgradeMartyrComponent : Component
     /// <summary>Eris iterates <c>oviewers(6, src)</c>.</summary>
     [DataField] public float Radius = 6f;
 
-    /// <summary>Eris <c>martyr.burn_damage</c>; the burst deals this value divided by distance.</summary>
-    [DataField] public float Burn = 50f;
+    /// <summary>Eris <c>martyr.burn_damage</c>; the burst divides this value by the distance.</summary>
+    [DataField] public DamageSpecifier BurstDamage = new()
+    {
+        DamageDict = { ["Heat"] = 50f },
+    };
 }
 
 /// <summary>Eris <c>speed_of_the_chosen</c>: the bearer moves faster while the item is installed.</summary>

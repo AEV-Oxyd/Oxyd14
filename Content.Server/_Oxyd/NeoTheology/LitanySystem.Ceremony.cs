@@ -18,30 +18,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// </summary>
 public sealed partial class LitanySystem
 {
-    /// <summary>
-    /// Named divergence: Eris keeps the module until a wrong phrase, so a stalled rite lives
-    /// forever. The fork ends the rite after five minutes.
-    /// </summary>
-    public static readonly TimeSpan CeremonyTimeout = TimeSpan.FromMinutes(5);
-
-    /// <summary>Eris <c>O.force_active = max(60, O.force_active)</c>.</summary>
-    public static readonly TimeSpan SanctifyForceActiveTime = TimeSpan.FromSeconds(60);
-
-    /// <summary>Eris <c>flash</c>: caster Weaken(10), others Weaken(5).</summary>
-    private static readonly TimeSpan SearingSelfKnockdown = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan SearingVictimKnockdown = TimeSpan.FromSeconds(5);
-
-    private static readonly ProtoId<SkillPrototype> VigilanceSkill = "Vig";
-
     [Dependency] private readonly SharedStunSystem _stun = default!;
-
-    private void InitializeCeremony()
-    {
-        SubscribeLocalEvent<CruciformBearerComponent, LitanySanctifyAreaEvent>(OnSanctifyArea);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyGrantLitanySetEvent>(OnGrantLitanySet);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyToggleDiscipleHudEvent>(OnToggleDiscipleHud);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanySearingRevelationEvent>(OnSearingRevelation);
-    }
 
     /// <summary>
     /// True when the litany is a ceremony that only a priest or inquisitor may start
@@ -84,7 +61,7 @@ public sealed partial class LitanySystem
         ceremony.Participants.Clear();
         ceremony.CorrectParticipants.Clear();
         ceremony.Range = _effects.GetSenseRange(litany);
-        ceremony.ExpiresAt = _timing.CurTime + CeremonyTimeout;
+        ceremony.ExpiresAt = _timing.CurTime + ceremony.Timeout;
 
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
@@ -344,10 +321,11 @@ public sealed partial class LitanySystem
         return TryComp(starter, out ceremony);
     }
 
-    private void OnSanctifyArea(EntityUid uid, CruciformBearerComponent bearer, ref LitanySanctifyAreaEvent args)
+    [SubscribeLocalEvent]
+    private void OnSanctifyArea(Entity<CruciformBearerComponent> ent, ref LitanySanctifyAreaEvent args)
     {
-        // Eris loops every obelisk and pushes force_active to at least sixty seconds.
-        var until = _timing.CurTime + SanctifyForceActiveTime;
+        // Eris loops every obelisk and pushes force_active to at least the effect's window.
+        var until = _timing.CurTime + args.ForceActiveTime;
         var query = EntityQueryEnumerator<ObeliskComponent>();
         while (query.MoveNext(out _, out var obelisk))
         {
@@ -358,7 +336,8 @@ public sealed partial class LitanySystem
         args.Handled = true;
     }
 
-    private void OnGrantLitanySet(EntityUid uid, CruciformBearerComponent bearer, ref LitanyGrantLitanySetEvent args)
+    [SubscribeLocalEvent]
+    private void OnGrantLitanySet(Entity<CruciformBearerComponent> ent, ref LitanyGrantLitanySetEvent args)
     {
         if (!_cruciform.TryGetCruciform(args.Target, out _, out var cruciform))
             return;
@@ -371,7 +350,8 @@ public sealed partial class LitanySystem
         args.Handled = true;
     }
 
-    private void OnToggleDiscipleHud(EntityUid uid, CruciformBearerComponent bearer, ref LitanyToggleDiscipleHudEvent args)
+    [SubscribeLocalEvent]
+    private void OnToggleDiscipleHud(Entity<CruciformBearerComponent> ent, ref LitanyToggleDiscipleHudEvent args)
     {
         if (HasComp<NtDiscipleHudComponent>(args.User))
             RemComp<NtDiscipleHudComponent>(args.User);
@@ -381,12 +361,13 @@ public sealed partial class LitanySystem
         args.Handled = true;
     }
 
-    private void OnSearingRevelation(EntityUid uid, CruciformBearerComponent bearer, ref LitanySearingRevelationEvent args)
+    [SubscribeLocalEvent]
+    private void OnSearingRevelation(Entity<CruciformBearerComponent> ent, ref LitanySearingRevelationEvent args)
     {
-        // Eris: prob(100 - STAT_VIG) knocks the caster down for ten seconds. Eris Weaken has no
+        // Eris: prob(100 - STAT_VIG) knocks the caster down. Eris Weaken has no
         // gravity rule, so the fall is forced: a weightless mob still goes down (named divergence).
-        if (ProbPercent(100 - GetSkillValue(args.User, VigilanceSkill)))
-            _stun.TryKnockdown(args.User, SearingSelfKnockdown, force: true);
+        if (ProbPercent(100 - GetSkillValue(args.User, NeoTheologySkills.Vigilance)))
+            _stun.TryKnockdown(args.User, args.SelfKnockdown, force: true);
 
         var xform = Transform(args.User);
         var query = EntityQueryEnumerator<MobStateComponent, TransformComponent>();
@@ -404,8 +385,8 @@ public sealed partial class LitanySystem
             if (!_mobState.IsAlive(victim) || _cruciform.IsActiveBearer(victim))
                 continue;
 
-            if (ProbPercent(100 - GetSkillValue(victim, VigilanceSkill)))
-                _stun.TryKnockdown(victim, SearingVictimKnockdown, force: true);
+            if (ProbPercent(100 - GetSkillValue(victim, NeoTheologySkills.Vigilance)))
+                _stun.TryKnockdown(victim, args.VictimKnockdown, force: true);
         }
 
         args.Handled = true;

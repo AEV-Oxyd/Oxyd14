@@ -16,6 +16,15 @@ public class ViewTickEvent : EntityEventArgs
 }
 
 /// <summary>
+/// Raised on a view ticker every second, whether or not the seen set was recomputed.
+/// Tickers that only need a cadence subscribe to this and leave
+/// <see cref="ViewTickerComponent.trackSeen"/> false.
+/// </summary>
+public class ViewCadenceEvent : EntityEventArgs
+{
+}
+
+/// <summary>
 /// This handles...
 /// </summary>
 public sealed class ViewCalcSystem : EntitySystem
@@ -45,25 +54,33 @@ public sealed class ViewCalcSystem : EntitySystem
     {
         HashSet<Entity<ViewRelevantComponent>> result = new();
         entlook.GetEntitiesInRange<ViewRelevantComponent>(point, range, result, LookupFlags.Approximate);
+        HashSet<EntityUid> keepers = new();
+        foreach (var ent in result)
+        {
+            if (InLineOfSight(point, ent.Owner))
+                keepers.Add(ent);
+        }
+        return keepers;
+    }
+
+    /// <summary>
+    /// True when no opaque wall blocks the ray from <paramref name="origin"/> to
+    /// <paramref name="target"/>. Uses the same filter as <see cref="GetEntsInView"/>
+    /// so callers with their own broad phase get the same answer.
+    /// </summary>
+    public bool InLineOfSight(MapCoordinates origin, EntityUid target)
+    {
         var filter = new QueryFilter()
         {
             Flags = QueryFlags.Static,
             LayerBits = (int)CollisionGroup.Opaque,
             MaskBits = (int)CollisionGroup.Opaque
         };
-        HashSet<EntityUid> keepers = new();
-        foreach (var ent in result)
-        {
-            var res = raycaster.CastRayClosest(point.MapId,
-                point.Position,
-                transform.GetWorldPosition(ent) - point.Position,
-                filter);
-            if (!res.Hit || res.Results.First().Entity == ent.Owner)
-            {
-                keepers.Add(ent);
-            }
-        }
-        return keepers;
+        var res = raycaster.CastRayClosest(origin.MapId,
+            origin.Position,
+            transform.GetWorldPosition(target) - origin.Position,
+            filter);
+        return !res.Hit || res.Results.First().Entity == target;
     }
 
     public override void Update(float frameTime)
@@ -76,20 +93,26 @@ public sealed class ViewCalcSystem : EntitySystem
         while (tickerEnum.MoveNext(out var uid, out var comp))
         {
             var coord = transform.GetMapCoordinates(uid);
-            if(coord.MapId != comp.lastTickPosition.MapId)
-                goto runUpdate;
-            if((coord.Position - comp.lastTickPosition.Position).LengthSquared()> 2f)
-                goto runUpdate;
-            if (timing.CurTime - comp.lastTickTime > TimeSpan.FromSeconds(5))
-                goto runUpdate;
-            RaiseLocalEvent(new ViewTickEvent(){ seen = comp.lastSeen});
-            continue;
-            runUpdate:
-            comp.lastTickTime = timing.CurTime;
-            comp.lastTickPosition = coord;
-            var ev = new ViewTickEvent() { seen = GetEntsInView(coord, comp.range) };
-            RaiseLocalEvent(uid, ev);
-            comp.lastSeen = ev.seen;
+            var recompute = coord.MapId != comp.lastTickPosition.MapId
+                || (coord.Position - comp.lastTickPosition.Position).LengthSquared() > 2f
+                || timing.CurTime - comp.lastTickTime > TimeSpan.FromSeconds(5);
+
+            if (recompute)
+            {
+                comp.lastTickTime = timing.CurTime;
+                comp.lastTickPosition = coord;
+
+                if (comp.trackSeen)
+                {
+                    var ev = new ViewTickEvent() { seen = GetEntsInView(coord, comp.range) };
+                    RaiseLocalEvent(uid, ev);
+                    comp.lastSeen = ev.seen;
+                }
+            }
+
+            // The heartbeat is separate from the scan. Tickers that only need a
+            // cadence do not pay for the raycasts.
+            RaiseLocalEvent(uid, new ViewCadenceEvent());
         }
     }
 }

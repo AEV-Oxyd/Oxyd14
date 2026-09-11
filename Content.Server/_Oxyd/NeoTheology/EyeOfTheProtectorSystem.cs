@@ -9,6 +9,7 @@ using Content.Shared._Oxyd.Skills;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.UserInterface;
 using Robust.Server.GameObjects;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -20,35 +21,30 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// <see cref="Update"/> only paces the scan; the work lives in <see cref="Scan"/> so tests drive it
 /// without waiting out <see cref="EyeOfTheProtectorComponent.ScanInterval"/>.
 /// </summary>
-public sealed class EyeOfTheProtectorSystem : EntitySystem
+public sealed partial class EyeOfTheProtectorSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
+    [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly SanitySystem _sanity = default!;
     [Dependency] private readonly SharedSkillSystem _skill = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<EyeOfTheProtectorComponent, AfterActivatableUIOpenEvent>(OnUiOpened);
-    }
-
     /// <summary>P3.7: push a read-only status snapshot when the Eye's UI is opened.</summary>
-    private void OnUiOpened(EntityUid uid, EyeOfTheProtectorComponent component, AfterActivatableUIOpenEvent args)
+    [SubscribeLocalEvent]
+    private void OnUiOpened(Entity<EyeOfTheProtectorComponent> ent, ref AfterActivatableUIOpenEvent args)
     {
-        var cooldown = component.NextMiracle - _timing.CurTime;
+        var cooldown = ent.Comp.NextMiracle - _timing.CurTime;
         if (cooldown < TimeSpan.Zero)
             cooldown = TimeSpan.Zero;
 
-        _ui.SetUiState(uid, EyeOfTheProtectorUiKey.Key, new EyeOfTheProtectorState(
-            component.Observation,
-            component.ArmamentsPoints,
-            component.MaxArmamentsPoints,
+        _ui.SetUiState(ent.Owner, EyeOfTheProtectorUiKey.Key, new EyeOfTheProtectorState(
+            ent.Comp.Observation,
+            ent.Comp.ArmamentsPoints,
+            ent.Comp.MaxArmamentsPoints,
             cooldown));
     }
 
@@ -101,12 +97,14 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         if (!TryComp<EyeOfTheProtectorComponent>(eye, out var comp) || !_machines.IsOperational(eye))
             return;
 
+        // A zero radius means nobody is in range. EntityLookup asserts a positive range.
+        if (radius <= 0)
+            return;
+
         var xform = Transform(source);
-        var humans = EntityQueryEnumerator<HumanoidProfileComponent, TransformComponent>();
-        while (humans.MoveNext(out var body, out _, out var bodyXform))
+        foreach (var (body, _) in _lookup.GetEntitiesInRange<HumanoidProfileComponent>(xform.Coordinates, radius))
         {
-            if (bodyXform.MapID != xform.MapID ||
-                (bodyXform.WorldPosition - xform.WorldPosition).Length() > radius || comp.Scanned.ContainsKey(body))
+            if (comp.Scanned.ContainsKey(body))
                 continue;
 
             var faithful = TryComp<CruciformBearerComponent>(body, out var bearer) &&
@@ -134,19 +132,17 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         ForgetOneObservation(eye, comp);
         ObserveArea(eye, eye, comp.ObservationRadius);
         var xform = Transform(eye);
-        var bearers = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
-        while (bearers.MoveNext(out var body, out var bearer, out var bodyXform))
+        if (comp.ObservationRadius > 0)
         {
-            if (bearer.Cruciform is not { } cruciform ||
-                !TryComp<CruciformComponent>(cruciform, out var state) ||
-                !state.Active ||
-                bodyXform.MapID != xform.MapID)
-                continue;
+            foreach (var (body, bearer) in _lookup.GetEntitiesInRange<CruciformBearerComponent>(xform.Coordinates, comp.ObservationRadius))
+            {
+                if (bearer.Cruciform is not { } cruciform ||
+                    !TryComp<CruciformComponent>(cruciform, out var state) ||
+                    !state.Active)
+                    continue;
 
-            if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > comp.ObservationRadius)
-                continue;
-
-            _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
+                _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
+            }
         }
 
         Dirty(eye, comp);
@@ -180,16 +176,6 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         Dirty(eye, comp);
         return true;
     }
-
-    private static readonly ProtoId<SkillPrototype>[] MiracleSkills =
-    {
-        "Rob", "Vig", "Tgh", "Cog", "Mec", "Bio"
-    };
-
-    private static readonly EntProtoId[] MiracleMaterials =
-    {
-        "SheetPlasteel", "SheetPlasma", "SheetUranium", "IngotGold", "IngotSilver", "MaterialDiamond"
-    };
 
     /// <summary>
     /// Eris <c>updatePower()</c>: bank power from the observation level plus one per faithful
@@ -233,9 +219,18 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
 
         switch (_random.Next(6))
         {
-            case 0: // ALERT
-                _chat.DispatchStationAnnouncement(eye, Loc.GetString("oxyd-eotp-miracle"));
+            case 0: // ALERT — only the faithful in range hear the Eye.
+            {
+                var faithful = FaithfulInRange(eye, comp);
+                if (faithful.Count > 0)
+                {
+                    _chat.DispatchFilteredAnnouncement(
+                        Filter.Entities(faithful.Select(f => f.Body).ToArray()),
+                        Loc.GetString("oxyd-eotp-miracle"),
+                        source: eye);
+                }
                 break;
+            }
 
             case 1: // INSPIRATION — insight amount is a flagged balance choice.
                 foreach (var (body, _) in FaithfulInRange(eye, comp))
@@ -252,17 +247,17 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
 
             case 3: // STAT_BUFF — Eris stat_buff_power (10) / duration (20 min).
             {
-                var skill = _random.Pick(MiracleSkills);
+                var skill = _random.Pick(comp.MiracleSkills);
                 foreach (var (body, _) in FaithfulInRange(eye, comp))
                 {
                     if (TryComp<MobSkillComponent>(body, out var mobSkill))
-                        _skill.SetUniqueBuff((body, mobSkill), "EyeOfTheProtector", 10, skill, TimeSpan.FromMinutes(20));
+                        _skill.SetUniqueBuff((body, mobSkill), comp.MiracleBuffId, 10, skill, TimeSpan.FromMinutes(20));
                 }
                 break;
             }
 
             case 4: // MATERIAL_REWARD
-                SpawnAtPosition(_random.Pick(MiracleMaterials), xform.Coordinates);
+                SpawnAtPosition(_random.Pick(comp.MiracleMaterials), xform.Coordinates);
                 break;
 
             case 5: // ENERGY_REWARD — restore the cruciform's holiness to full.
@@ -282,17 +277,15 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     private List<(EntityUid Body, EntityUid Cruciform)> FaithfulInRange(EntityUid eye, EyeOfTheProtectorComponent comp)
     {
         var result = new List<(EntityUid, EntityUid)>();
+        if (comp.ObservationRadius <= 0)
+            return result;
+
         var xform = Transform(eye);
-        var bearers = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
-        while (bearers.MoveNext(out var body, out var bearer, out var bodyXform))
+        foreach (var (body, bearer) in _lookup.GetEntitiesInRange<CruciformBearerComponent>(xform.Coordinates, comp.ObservationRadius))
         {
             if (bearer.Cruciform is not { } cruciform ||
                 !TryComp<CruciformComponent>(cruciform, out var state) ||
-                !state.Active ||
-                bodyXform.MapID != xform.MapID)
-                continue;
-
-            if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > comp.ObservationRadius)
+                !state.Active)
                 continue;
 
             result.Add((body, cruciform));

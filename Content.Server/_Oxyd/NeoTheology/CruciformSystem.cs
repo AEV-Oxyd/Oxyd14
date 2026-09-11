@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Server.GameTicking;
+using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
@@ -40,29 +41,28 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     private static readonly ProtoId<CoreModulePrototype> InquisitorRankModule = "OxydNtModuleInquisitor";
     private static readonly ProtoId<CoreModulePrototype> PriestConvertModule = "OxydNtModulePriestConvert";
 
-    public override void Initialize()
-    {
-        base.Initialize();
+    private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
 
-        SubscribeLocalEvent<CruciformComponent, ContainerGettingInsertedAttemptEvent>(OnInsertAttempt);
-        SubscribeLocalEvent<CruciformComponent, ImplantImplantedEvent>(OnImplanted);
-        SubscribeLocalEvent<CruciformComponent, ImplantRemovedEvent>(OnRemoved);
-        SubscribeLocalEvent<CruciformComponent, EntityTerminatingEvent>(OnCruciformTerminating);
-        SubscribeLocalEvent<CruciformBearerComponent, MobStateChangedEvent>(OnMobStateChanged);
-        SubscribeLocalEvent<CruciformBearerComponent, EntityTerminatingEvent>(OnBearerTerminating);
-        SubscribeLocalEvent<CruciformBearerComponent, GetAccessTagsEvent>(OnGetAccessTags);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyActivateCruciformEvent>(OnLitanyActivateCruciform);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanySetRankEvent>(OnLitanySetRank);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyInitiationEvent>(OnLitanyInitiation);
-        SubscribeLocalEvent<LitanyGrantCruciformEvent>(OnLitanyGrantCruciform);
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
-    }
+    private static readonly ProtoId<NeoTheologyProfilePrototype> DiscipleProfile = "OxydNtDisciple";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> PreacherProfile = "OxydNtPreacher";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> AcolyteProfile = "OxydNtAcolyte";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> CustodianProfile = "OxydNtCustodian";
+    private static readonly ProtoId<NeoTheologyProfilePrototype> AgrolyteProfile = "OxydNtAgrolyte";
+
+    private static readonly ProtoId<CoreModulePrototype> BaseModule = "OxydNtModuleBase";
+    private static readonly ProtoId<CoreModulePrototype> AcolyteModule = "OxydNtModuleAcolyte";
+    private static readonly ProtoId<CoreModulePrototype> AgrolyteModule = "OxydNtModuleAgrolyte";
+    private static readonly ProtoId<CoreModulePrototype> CustodianModule = "OxydNtModuleCustodian";
+    private static readonly ProtoId<CoreModulePrototype> RedLightModule = "OxydNtModuleRedLight";
+    private static readonly ProtoId<CoreModulePrototype> UplinkModule = "OxydNtModuleUplink";
 
     /// <summary>
     /// Epiphany bridge: the shared litany effect cannot call this server system, so it
     /// raises <see cref="LitanyActivateCruciformEvent"/> on the target body. <c>Handled</c>
     /// stays false when the target has no installed, inactive cruciform.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyActivateCruciform(Entity<CruciformBearerComponent> ent, ref LitanyActivateCruciformEvent args)
     {
         args.Handled = Activate(ent.Owner);
@@ -74,6 +74,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     /// the target. Profile and rank modules are swapped together; the revision bump keeps the
     /// litany UI in step.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanySetRank(Entity<CruciformBearerComponent> ent, ref LitanySetRankEvent args)
     {
         if (!TryGetCruciformEntity(ent.Owner, out var cruciform, out var component))
@@ -90,6 +91,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     /// subscription is a local broadcast rather than a component one. <c>Handled</c> stays false
     /// when the body already carries a cruciform.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyGrantCruciform(ref LitanyGrantCruciformEvent args)
     {
         args.Handled = GrantCruciform(args.Target, args.Profile);
@@ -118,6 +120,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnInsertAttempt(Entity<CruciformComponent> ent, ref ContainerGettingInsertedAttemptEvent args)
     {
         if (args.Container.ID != ImplanterComponent.ImplantSlotId)
@@ -137,6 +140,27 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         }
     }
 
+    /// <summary>
+    /// The aura upgrade needs the view cadence, and the martyr upgrade needs a death marker.
+    /// Neither can live on the implant, so the body carries them; rebuild the pair whenever the
+    /// implant lands or leaves, or the upgrade slot changes.
+    /// </summary>
+    public void RefreshUpgradeBehaviors(EntityUid body, CruciformComponent component)
+    {
+        if (component.Upgrade is { } aura && HasComp<CruciformUpgradeAuraComponent>(aura) &&
+            !HasComp<ViewTickerComponent>(body))
+        {
+            EnsureComp<ViewTickerComponent>(body).trackSeen = false;
+        }
+
+        if (component.ImplantedEntity == body &&
+            component.Upgrade is { } martyr && HasComp<CruciformUpgradeMartyrComponent>(martyr))
+            EnsureComp<CruciformMartyrArmedComponent>(body);
+        else
+            RemComp<CruciformMartyrArmedComponent>(body);
+    }
+
+    [SubscribeLocalEvent]
     private void OnImplanted(Entity<CruciformComponent> ent, ref ImplantImplantedEvent args)
     {
         if (args.Implant != ent.Owner)
@@ -168,8 +192,12 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
 
         // A stored speed upgrade resumes with the reimplanted cruciform.
         _movement.RefreshMovementSpeedModifiers(body);
+
+        // An already-installed aura or martyr upgrade resumes with the reimplanted cruciform.
+        RefreshUpgradeBehaviors(body, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnRemoved(Entity<CruciformComponent> ent, ref ImplantRemovedEvent args)
     {
         if (args.Implant != ent.Owner)
@@ -181,6 +209,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         ent.Comp.ImplantedEntity = null;
         ent.Comp.LastHolinessUpdate = _timing.CurTime;
         Dirty(ent);
+        RefreshUpgradeBehaviors(body, ent.Comp);
 
         if (TryComp<CruciformBearerComponent>(body, out var bearer) && bearer.Cruciform == ent.Owner)
         {
@@ -196,6 +225,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         RemComp<NtDiscipleHudComponent>(body);
     }
 
+    [SubscribeLocalEvent]
     private void OnCruciformTerminating(Entity<CruciformComponent> ent, ref EntityTerminatingEvent args)
     {
         if (ent.Comp.ImplantedEntity is not { } body || !TryComp<CruciformBearerComponent>(body, out var bearer))
@@ -212,6 +242,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         RemComp<NtDiscipleHudComponent>(body);
     }
 
+    [SubscribeLocalEvent]
     private void OnBearerTerminating(Entity<CruciformBearerComponent> ent, ref EntityTerminatingEvent args)
     {
         if (ent.Comp.Cruciform is not { } cruciform || !TryComp<CruciformComponent>(cruciform, out var component))
@@ -224,6 +255,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         Dirty(cruciform, component);
     }
 
+    [SubscribeLocalEvent]
     private void OnMobStateChanged(Entity<CruciformBearerComponent> ent, ref MobStateChangedEvent args)
     {
         if (ent.Comp.Cruciform is not { } cruciform || !TryComp<CruciformComponent>(cruciform, out var component))
@@ -248,7 +280,8 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         BumpRevision(ent.Owner, ent.Comp);
     }
 
-    public void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
+    [SubscribeLocalEvent]
+    private void OnGetAccessTags(Entity<CruciformBearerComponent> ent, ref GetAccessTagsEvent args)
     {
         if (ent.Comp.Cruciform is not { } cruciform || !TryGetLinkedBearer(ent.Owner, cruciform, out var component) || !component.Active)
             return;
@@ -269,6 +302,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
     {
         var query = EntityQueryEnumerator<CruciformBearerComponent>();
@@ -309,6 +343,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     /// item install the module and the ritual only activate it; the fork has no coreimplant_upgrade
     /// item path, so the litany performs both stages through this one conversion path.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyInitiation(Entity<CruciformBearerComponent> ent, ref LitanyInitiationEvent args)
     {
         if (!TryGetCruciformEntity(ent.Owner, out var cruciform, out var component) || !component.Active)
@@ -357,7 +392,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         if (TryComp<CruciformBearerComponent>(body, out _))
             return false;
 
-        if (_implants.AddImplant(body, "OxydNtCruciform") is not { } implant)
+        if (_implants.AddImplant(body, CruciformProto) is not { } implant)
             return false;
 
         if (!TryComp<CruciformComponent>(implant, out var comp))
@@ -468,33 +503,33 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     }
 
     public void MakeCommon(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtDisciple");
+        => MakeRank(c, comp, DiscipleProfile);
 
     public void MakePriest(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtPreacher");
+        => MakeRank(c, comp, PreacherProfile);
 
     public void MakeInquisitor(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtInquisitor");
+        => MakeRank(c, comp, InquisitorProfile);
 
     public void MakeAcolyte(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtAcolyte");
+        => MakeRank(c, comp, AcolyteProfile);
 
     public void MakeCustodian(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtCustodian");
+        => MakeRank(c, comp, CustodianProfile);
 
     public void MakeAgrolyte(EntityUid c, CruciformComponent comp)
-        => MakeRank(c, comp, "OxydNtAgrolyte");
+        => MakeRank(c, comp, AgrolyteProfile);
 
     /// <summary>Modules implied by a profile id. One table, no switch statements elsewhere.</summary>
     private static readonly Dictionary<ProtoId<NeoTheologyProfilePrototype>, ProtoId<CoreModulePrototype>[]> RankModules =
         new()
         {
-            ["OxydNtDisciple"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase" },
-            ["OxydNtAcolyte"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte" },
-            ["OxydNtAgrolyte"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAgrolyte" },
-            ["OxydNtCustodian"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleCustodian" },
-            ["OxydNtPreacher"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest" },
-            ["OxydNtInquisitor"] = new ProtoId<CoreModulePrototype>[] { "OxydNtModuleBase", "OxydNtModuleAcolyte", "OxydNtModulePriest", "OxydNtModuleInquisitor", "OxydNtModuleRedLight", "OxydNtModuleUplink" },
+            [DiscipleProfile] = new[] { BaseModule },
+            [AcolyteProfile] = new[] { BaseModule, AcolyteModule },
+            [AgrolyteProfile] = new[] { BaseModule, AgrolyteModule },
+            [CustodianProfile] = new[] { BaseModule, CustodianModule },
+            [PreacherProfile] = new[] { BaseModule, AcolyteModule, PriestRankModule },
+            [InquisitorProfile] = new[] { BaseModule, AcolyteModule, PriestRankModule, InquisitorRankModule, RedLightModule, UplinkModule },
         };
 
     private double AdvanceHoliness(Entity<CruciformComponent> ent, EntityUid body)

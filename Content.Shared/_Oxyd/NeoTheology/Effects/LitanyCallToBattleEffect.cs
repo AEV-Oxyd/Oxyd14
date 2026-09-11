@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
 
@@ -20,7 +21,6 @@ public sealed partial class LitanyCallToBattleEffect : LitanyEffect
 
     private static readonly ProtoId<SkillPrototype> Toughness = "Tgh";
     private static readonly ProtoId<SkillPrototype> Robustness = "Rob";
-    private static readonly ProtoId<SkillPrototype> Vigilance = "Vig";
 
     public override bool CanApply(
         LitanyEffectSystem system,
@@ -48,7 +48,7 @@ public sealed partial class LitanyCallToBattleEffect : LitanyEffect
         {
             [Toughness] = count,
             [Robustness] = count,
-            [Vigilance] = count / 2,
+            [NeoTheologySkills.Vigilance] = count / 2,
         };
 
         return system.TryApplySkillBuff(context.User, context.Litany.ID, amounts, context.Litany.EffectDuration);

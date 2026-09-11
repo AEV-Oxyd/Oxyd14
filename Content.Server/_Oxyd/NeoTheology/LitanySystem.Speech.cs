@@ -8,6 +8,7 @@ public sealed partial class LitanySystem
 {
     public void TestingHandleSpeech(EntitySpokeEvent args) => OnSpeechAccepted(args);
 
+    [SubscribeLocalEvent]
     private void OnSpeechAccepted(EntitySpokeEvent args)
     {
         // EntitySpokeEvent is only raised for accepted local Speak/Whisper.

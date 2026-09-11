@@ -14,6 +14,14 @@ public sealed partial class LitanySearingRevelationEffect : LitanyEffect
     [DataField]
     public float Radius = 7f;
 
+    /// <summary>Eris <c>flash</c>: the caster falls.</summary>
+    [DataField]
+    public TimeSpan SelfKnockdown = TimeSpan.FromSeconds(10);
+
+    /// <summary>Eris <c>flash</c>: the others fall.</summary>
+    [DataField]
+    public TimeSpan VictimKnockdown = TimeSpan.FromSeconds(5);
+
     public override bool CanApply(
         LitanyEffectSystem system,
         LitanyEffectContext context,
@@ -25,7 +33,7 @@ public sealed partial class LitanySearingRevelationEffect : LitanyEffect
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
     {
-        var flash = new LitanySearingRevelationEvent(context.User, Radius, false);
+        var flash = new LitanySearingRevelationEvent(context.User, Radius, SelfKnockdown, VictimKnockdown, false);
         system.RaiseOn(context.User, ref flash);
         return flash.Handled;
     }

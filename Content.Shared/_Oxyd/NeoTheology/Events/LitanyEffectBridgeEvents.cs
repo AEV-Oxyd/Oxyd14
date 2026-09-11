@@ -270,10 +270,10 @@ public record struct LitanyUplinkOpenEvent(
 
 /// <summary>
 /// Bridge for Sanctify: raised on the starter; the server forces every obelisk active for at
-/// least sixty seconds (Eris <c>O.force_active = max(60, O.force_active)</c>).
+/// least the effect's window (Eris <c>O.force_active = max(60, O.force_active)</c>).
 /// </summary>
 [ByRefEvent]
-public record struct LitanySanctifyAreaEvent(EntityUid User, bool Handled);
+public record struct LitanySanctifyAreaEvent(EntityUid User, TimeSpan ForceActiveTime, bool Handled);
 
 /// <summary>
 /// Bridge for Crusade: raised on every participant; the server adds the set to the target's
@@ -297,4 +297,9 @@ public record struct LitanyToggleDiscipleHudEvent(EntityUid User, bool Handled);
 /// caster and every cruciform-less creature in view and knocks the failures down.
 /// </summary>
 [ByRefEvent]
-public record struct LitanySearingRevelationEvent(EntityUid User, float Range, bool Handled);
+public record struct LitanySearingRevelationEvent(
+    EntityUid User,
+    float Range,
+    TimeSpan SelfKnockdown,
+    TimeSpan VictimKnockdown,
+    bool Handled);

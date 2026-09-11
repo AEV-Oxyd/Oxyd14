@@ -56,18 +56,12 @@ public sealed partial class LitanySystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<EntitySpokeEvent>(OnSpeechAccepted);
-        SubscribeLocalEvent<LitanyDoAfterEvent>(OnLitanyDoAfter);
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
 
         Subs.BuiEvents<LitanyBookComponent>(LitanyUiKey.Book, subs =>
         {
             subs.Event<BeginLitanyMessage>(OnBeginLitanyMessage);
             subs.Event<CancelLitanyMessage>(OnCancelLitanyMessage);
         });
-
-        InitializeUi();
-        InitializeCeremony();
     }
 
     public override void Update(float frameTime)

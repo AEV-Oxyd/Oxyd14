@@ -24,18 +24,12 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
     [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly MovementSpeedModifierSystem _movement = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyInstallUpgradeEvent>(OnLitanyInstallUpgrade);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyUninstallUpgradeEvent>(OnLitanyUninstallUpgrade);
-    }
-
     /// <summary>
     /// InstallUpgrade bridge: the shared effect cannot see the altar lookup, so it raises
     /// <see cref="LitanyInstallUpgradeEvent"/> on the target. This finds the loose upgrade on the
     /// altar beside them and attaches exactly that item.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyInstallUpgrade(Entity<CruciformBearerComponent> ent, ref LitanyInstallUpgradeEvent args)
     {
         if (!_cruciform.TryGetCruciformEntity(ent.Owner, out var cruciform, out var component) ||
@@ -49,6 +43,7 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
     /// <summary>
     /// UninstallUpgrade bridge: detaches the installed upgrade and returns it to the altar tile.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyUninstallUpgrade(Entity<CruciformBearerComponent> ent, ref LitanyUninstallUpgradeEvent args)
     {
         if (!_cruciform.TryGetCruciformEntity(ent.Owner, out var cruciform, out var component))
@@ -70,6 +65,8 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
             return false;
 
         comp.Upgrade = upgradeItem;
+        if (comp.ImplantedEntity is { } implanted)
+            _cruciform.RefreshUpgradeBehaviors(implanted, comp);
         _cruciform.RecomputeProfile(cruciform, comp);
         RefreshSpeed(comp);
         return true;
@@ -81,6 +78,8 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
             return false;
 
         comp.Upgrade = null;
+        if (comp.ImplantedEntity is { } implanted)
+            _cruciform.RefreshUpgradeBehaviors(implanted, comp);
         _cruciform.RecomputeProfile(cruciform, comp);
         RefreshSpeed(comp);
 

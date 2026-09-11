@@ -71,15 +71,7 @@ public sealed partial class LitanySystem
     /// <summary>Designation labels and message text live on the server; the client only forwards tokens.</summary>
     [Dependency] private readonly IPrototypeManager _prototypes = default!;
 
-    private void InitializeUi()
-    {
-        SubscribeLocalEvent<LitanyBookComponent, BoundUIOpenedEvent>(OnBookUiOpened);
-        SubscribeLocalEvent<LitanyBookComponent, BoundUIClosedEvent>(OnBookUiClosed);
-        SubscribeLocalEvent<LitanyBookComponent, GotUnequippedHandEvent>(OnBookUnequipped);
-        SubscribeLocalEvent<LitanyBookComponent, HandDeselectedEvent>(OnBookHandDeselected);
-        SubscribeLocalEvent<LitanyBookComponent, SubmitLitanyChoicesMessage>(OnSubmitLitanyChoicesMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnBookUiOpened(Entity<LitanyBookComponent> book, ref BoundUIOpenedEvent args)
     {
         if (args.UiKey is not LitanyUiKey.Book)
@@ -94,6 +86,7 @@ public sealed partial class LitanySystem
         SendViewerSnapshot(book.Owner, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnBookUiClosed(Entity<LitanyBookComponent> book, ref BoundUIClosedEvent args)
     {
         if (args.UiKey is not LitanyUiKey.Book)
@@ -102,11 +95,13 @@ public sealed partial class LitanySystem
         ClearViewerState(book.Owner, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnBookUnequipped(Entity<LitanyBookComponent> book, ref GotUnequippedHandEvent args)
     {
         CloseBookUiForActor(book.Owner, args.User);
     }
 
+    [SubscribeLocalEvent]
     private void OnBookHandDeselected(Entity<LitanyBookComponent> book, ref HandDeselectedEvent args)
     {
         // inHandsOnly + requireActiveHand: leaving the active hand closes the UI.
@@ -162,6 +157,7 @@ public sealed partial class LitanySystem
         TryCancelLitany(args.Actor, args.RequestId);
     }
 
+    [SubscribeLocalEvent]
     private void OnSubmitLitanyChoicesMessage(Entity<LitanyBookComponent> book, ref SubmitLitanyChoicesMessage args)
     {
         if (!_ui.GetActors(book.Owner, LitanyUiKey.Book).Contains(args.Actor))

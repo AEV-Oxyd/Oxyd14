@@ -9,6 +9,7 @@ using Content.Shared.Damage.Prototypes;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Doors.Components;
 using Content.Shared.Doors.Systems;
+using Content.Shared.EntityEffects;
 using Content.Shared.Examine;
 using Content.Shared.FixedPoint;
 using Content.Shared.Hands.EntitySystems;
@@ -35,7 +36,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <see cref="LitanyEffect"/> classes need. Server <c>LitanySystem</c> owns the
 /// cast transaction (cost, cooldown, speech); this system owns the effect phase.
 /// </summary>
-public sealed partial class LitanyEffectSystem : EntitySystem
+public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRaiser
 {
     /// <summary>Eris soul_hunger nutrition delta; Oxyd routes through SatiationSystem Hunger.</summary>
     public const float SoulHungerNutritionAmount = 100f;
@@ -66,6 +67,24 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly Content.Shared.Power.EntitySystems.SharedPowerReceiverSystem _power = default!;
+    [Dependency] private readonly SharedEntityEffectsSystem _entityEffects = default!;
+
+    private LitanyEffectContext _context;
+    private bool _lastApplyResult = true;
+
+    /// <inheritdoc/>
+    public LitanyEffectSystem System => this;
+
+    /// <inheritdoc/>
+    public LitanyEffectContext Context => _context;
+
+    /// <inheritdoc/>
+    public void ReportResult(bool applied) => _lastApplyResult = applied;
+
+    /// <inheritdoc/>
+    public void RaiseEffectEvent<T>(EntityUid target, T effect, float scale, EntityUid? user)
+        where T : EntityEffectBase<T>
+        => _entityEffects.RaiseEffectEvent(target, effect, scale, user);
 
     /// <summary>Observers receive notices without retaining them in this system.</summary>
     public event Action<EntityUid, string>? SocialNotice;
@@ -103,15 +122,24 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
         int ceremonyParticipants = 0)
     {
-        var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
+        _context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
             selectedTokens, selectedText, designation, selectedBlueprint, ceremonyParticipants);
+
+        var success = true;
         foreach (var effect in litany.Effects)
         {
-            if (!effect.Apply(this, context))
-                return false;
+            _lastApplyResult = true;
+
+            // The caster anchors the shared pipeline (scale, probability, conditions, log).
+            // The effect receives the full cast context through this raiser.
+            if (!_entityEffects.TryApplyEffect(user, effect, 1f, user, this))
+                continue;
+
+            if (!_lastApplyResult)
+                success = false;
         }
 
-        return true;
+        return success;
     }
 
     public bool IsAlive(EntityUid uid)

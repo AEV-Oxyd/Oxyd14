@@ -59,6 +59,7 @@ public sealed partial class LitanySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnLitanyDoAfter(LitanyDoAfterEvent args)
     {
         if (!_pendingByRequest.TryGetValue(args.RequestId, out var cast))
@@ -329,7 +330,7 @@ public sealed partial class LitanySystem
             if (token.StartsWith("t:", StringComparison.Ordinal) &&
                 int.TryParse(token.AsSpan(2), out var index))
             {
-                if (targetIndex >= 0 || designation is not null || blueprint is not null)
+                if (targetIndex >= 0)
                 {
                     ClearPending(cast, cancelled: true);
                     return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
@@ -341,7 +342,7 @@ public sealed partial class LitanySystem
 
             if (token.StartsWith("d:", StringComparison.Ordinal))
             {
-                if (targetIndex >= 0 || designation is not null || blueprint is not null)
+                if (designation is not null)
                 {
                     ClearPending(cast, cancelled: true);
                     return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
@@ -353,7 +354,7 @@ public sealed partial class LitanySystem
 
             if (token.StartsWith("b:", StringComparison.Ordinal))
             {
-                if (targetIndex >= 0 || designation is not null || blueprint is not null)
+                if (blueprint is not null)
                 {
                     ClearPending(cast, cancelled: true);
                     return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
@@ -509,6 +510,7 @@ public sealed partial class LitanySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
     {
         _pendingByRequest.Clear();

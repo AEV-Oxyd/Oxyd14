@@ -1,15 +1,17 @@
+using Content.Shared.EntityEffects;
 using Robust.Shared.Prototypes;
 using Content.Shared._Oxyd.NeoTheology.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// One declarative litany effect, modelled on
-/// <see cref="Content.Shared.EntityEffects.EntityEffect"/>: data comes from YAML,
-/// behaviour from <see cref="CanApply"/> and <see cref="Apply"/>.
+/// One declarative litany effect. It is a real <see cref="EntityEffect"/>, so the shared
+/// EntityEffects pipeline owns probability, conditions, scale and logging. The litany cast
+/// transaction supplies the rich <see cref="LitanyEffectContext"/> through
+/// <see cref="ILitanyEffectRaiser"/>.
 /// </summary>
 [ImplicitDataDefinitionForInheritors]
-public abstract partial class LitanyEffect
+public abstract partial class LitanyEffect : EntityEffect
 {
     /// <summary>
     /// True for the dead-only flows (Deprivation's extraction; resurrection later). Target
@@ -29,6 +31,30 @@ public abstract partial class LitanyEffect
     /// Applies the effect. Only called after every effect in the litany validated.
     /// </summary>
     public abstract bool Apply(LitanyEffectSystem system, LitanyEffectContext context);
+
+    /// <inheritdoc/>
+    public override void RaiseEvent(EntityUid target, IEntityEffectRaiser raiser, float scale, EntityUid? user)
+    {
+        if (raiser is not ILitanyEffectRaiser litany)
+            return;
+
+        litany.ReportResult(Apply(litany.System, litany.Context));
+    }
+}
+
+/// <summary>
+/// Carries the cast context from <see cref="LitanyEffectSystem"/> into
+/// <see cref="LitanyEffect.RaiseEvent"/>. The shared EntityEffects system raises the effect, so
+/// the litany system passes itself as the raiser.
+/// </summary>
+public interface ILitanyEffectRaiser : IEntityEffectRaiser
+{
+    LitanyEffectSystem System { get; }
+
+    LitanyEffectContext Context { get; }
+
+    /// <summary>Records whether the effect's <see cref="LitanyEffect.Apply"/> accepted the cast.</summary>
+    void ReportResult(bool applied);
 }
 
 /// <summary>

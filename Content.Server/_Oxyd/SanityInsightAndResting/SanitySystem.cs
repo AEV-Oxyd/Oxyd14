@@ -197,7 +197,8 @@ public sealed partial class SanitySystem : EntitySystem
             ent.Comp.modifiers[f][(int)SanIndex.deltaMult] = 1f;
         }
 
-        EnsureComp<ViewTickerComponent>(ent);
+        // The sanity scan owns the seen set; an aura ticker on the same body must not disable it.
+        EnsureComp<ViewTickerComponent>(ent).trackSeen = true;
     }
 
 

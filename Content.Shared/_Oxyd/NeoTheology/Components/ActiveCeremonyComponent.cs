@@ -36,7 +36,11 @@ public sealed partial class ActiveCeremonyComponent : Component
 
     /// <summary>
     /// Named divergence: Eris keeps the module until a wrong phrase, so a stalled rite lives
-    /// forever. The fork ends it after five minutes.
+    /// forever. The fork ends it after <see cref="Timeout"/>.
     /// </summary>
     public TimeSpan ExpiresAt;
+
+    /// <summary>How long a stalled rite lives.</summary>
+    [DataField]
+    public TimeSpan Timeout = TimeSpan.FromMinutes(5);
 }
