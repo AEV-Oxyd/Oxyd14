@@ -14,6 +14,7 @@ using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Robust.Shared.Map;
 using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
@@ -228,7 +229,8 @@ public sealed partial class LitanySystem
         }
 
         var hasHandler = LitanyHandlerCatalog.HasHandler(litany.Effect);
-        if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _, cast.Targets))
+        if (hasHandler && !_effects.TryValidateEffects(cast.Actor, litany, out _, cast.Targets,
+                cast.SelectedTokens, cast.SelectedText, cast.Designation))
         {
             ClearPending(cast, cancelled: true);
             return;
@@ -242,7 +244,8 @@ public sealed partial class LitanySystem
             return;
         }
 
-        if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets))
+        if (hasHandler && !_effects.TryApplyEffects(cast.Actor, litany, cast.Targets,
+                cast.SelectedTokens, cast.SelectedText, cast.Designation))
         {
             if (cast.Cost > 0)
                 _cruciform.Refund(cast.Actor, cast.Cost);
@@ -261,6 +264,149 @@ public sealed partial class LitanySystem
         // Unimplemented available effects keep the historical no-op success stub.
         // A second completion must no-op because Committed is set.
         ClearPending(cast, cancelled: false);
+    }
+
+    /// <summary>
+    /// Applies a book-UI selection to a Choosing cast: parses the opaque tokens, narrows the
+    /// target list, stores the designation/text, revalidates the effects and starts the chant.
+    /// Every rejection clears the pending cast, so a failed choice never leaves a live request.
+    /// </summary>
+    private LitanyActionResult SubmitChoicesCore(
+        EntityUid actor,
+        string requestId,
+        List<string> tokens,
+        string? recipeId,
+        string? plainText,
+        EntityUid? expectBook)
+    {
+        if (!string.IsNullOrEmpty(recipeId))
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+
+        if (string.IsNullOrEmpty(requestId) ||
+            !_pendingByRequest.TryGetValue(requestId, out var cast) ||
+            cast.Actor != actor ||
+            !cast.AwaitingChoice ||
+            cast.Stage != LitanyCastStage.Choosing)
+        {
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        if (expectBook is { } book && cast.Book != book)
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        if (_timing.CurTime > cast.ChoiceExpiresAt)
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-expired");
+        }
+
+        if (!_catalog.TryGetLitany(cast.LitanyId, out var litany) || !IsEffectivelyAvailable(litany))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-unavailable-feature");
+        }
+
+        var targetIndex = -1;
+        ProtoId<NeoTheologyProfilePrototype>? designation = null;
+        foreach (var token in tokens)
+        {
+            if (token.StartsWith("t:", StringComparison.Ordinal) &&
+                int.TryParse(token.AsSpan(2), out var index))
+            {
+                if (targetIndex >= 0 || designation is not null)
+                {
+                    ClearPending(cast, cancelled: true);
+                    return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+                }
+
+                targetIndex = index;
+                continue;
+            }
+
+            if (token.StartsWith("d:", StringComparison.Ordinal))
+            {
+                if (targetIndex >= 0 || designation is not null)
+                {
+                    ClearPending(cast, cancelled: true);
+                    return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+                }
+
+                designation = new ProtoId<NeoTheologyProfilePrototype>(token[2..]);
+                continue;
+            }
+
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        var wantsTarget = cast.ChoiceTargets.Count > 0;
+        if ((targetIndex >= 0) != wantsTarget || (wantsTarget && targetIndex >= cast.ChoiceTargets.Count))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        var wantsDesignation = cast.ChoiceDesignations.Count > 0;
+        if (wantsDesignation != designation.HasValue ||
+            (wantsDesignation && !cast.ChoiceDesignations.Contains(designation!.Value)))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        var text = plainText?.Trim();
+        if (!cast.ChoiceAllowsPlainText && !string.IsNullOrEmpty(text))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        if (cast.ChoiceAllowsPlainText && string.IsNullOrEmpty(text))
+        {
+            // Eris returns without casting when the message is empty.
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-cancelled");
+        }
+
+        if (text is { Length: > MaxChoicePlainTextLength })
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-choice-invalid");
+        }
+
+        if (wantsTarget)
+            cast.Targets = new List<EntityUid> { cast.ChoiceTargets[targetIndex] };
+
+        cast.SelectedTokens = tokens;
+        cast.SelectedText = text;
+        cast.Designation = designation;
+        cast.AwaitingChoice = false;
+
+        if (LitanyHandlerCatalog.HasHandler(litany.Effect) &&
+            !_effects.TryValidateEffects(cast.Actor, litany, out var effectFail, cast.Targets,
+                cast.SelectedTokens, cast.SelectedText, cast.Designation))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail(effectFail ?? "oxyd-litany-no-effect", requestId);
+        }
+
+        var now = _timing.CurTime;
+        var chantDuration = LitanyPhraseParser.BookChantDuration(cast.Phrase);
+        cast.Stage = LitanyCastStage.Chanting;
+        cast.StartedAt = now;
+        cast.ChantEndsAt = now + chantDuration;
+        cast.ExpiresAt = now + chantDuration + cast.ExtraDelay + CastGrace;
+
+        if (!StartCastDoAfter(cast, chantDuration, requireBook: cast.Book is not null))
+        {
+            ClearPending(cast, cancelled: true);
+            return LitanyActionResult.Fail("oxyd-litany-denied-doafter", requestId);
+        }
+
+        return LitanyActionResult.Ok(requestId);
     }
 
     private void ApplyCooldown(CruciformBearerComponent bearer, LitanyPrototype litany)

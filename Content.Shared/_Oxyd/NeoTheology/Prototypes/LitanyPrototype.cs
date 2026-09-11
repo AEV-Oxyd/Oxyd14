@@ -57,6 +57,25 @@ public sealed partial class LitanyPrototype : IPrototype
     public TimeSpan EffectDuration { get; private set; } = TimeSpan.Zero;
 
     /// <summary>
+    /// The caster picks one of the resolved targets in the book UI before the chant
+    /// (Eris <c>pick_disciple_global</c>). Without it the cast uses the deterministic
+    /// first target, which manual speech keeps as its fallback.
+    /// </summary>
+    [DataField]
+    public bool SelectTarget { get; private set; }
+
+    /// <summary>
+    /// Designations the caster picks in the book UI. Eris Confirmation offers
+    /// Acolyte / Agrolyte / Custodian; the YAML lists the profile prototypes.
+    /// </summary>
+    [DataField]
+    public List<ProtoId<NeoTheologyProfilePrototype>> DesignationChoices { get; private set; } = new();
+
+    /// <summary>The caster types a message the effect delivers (Eris Sending).</summary>
+    [DataField]
+    public bool AllowPlainText { get; private set; }
+
+    /// <summary>
     /// Declarative effect list, instantiated from YAML as <c>!type:</c> entries.
     /// Replaces the legacy parameter-block families.
     /// </summary>

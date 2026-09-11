@@ -245,6 +245,7 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 80
+  designationChoices: [OxydNtAcolyte, OxydNtAgrolyte, OxydNtCustodian]
   cooldownKey: OxydLitanyConfirmation
   cooldownScope: Personal
   cooldownDuration: 60

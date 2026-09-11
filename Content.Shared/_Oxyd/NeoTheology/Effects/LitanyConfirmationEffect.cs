@@ -4,10 +4,11 @@ using Robust.Shared.Prototypes;
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// Eris <c>rituals/priest.dm:361-393</c> (Confirmation: Disciple → Acolyte).
-/// Flagged divergence: Eris pops an <c>alert()</c> offering Acolyte / Agrolyte / Custodian and
-/// calls the matching <c>make_*()</c>; the plan fixes the designation to Acolyte, so this port
-/// implements the Acolyte-only version and invents no choice UI. The rank swap is server-only,
+/// Eris <c>rituals/priest.dm:361-393</c> (Confirmation: Disciple → Acolyte / Agrolyte /
+/// Custodian). Eris pops an <c>alert()</c> offering the three designations and calls the
+/// matching <c>make_*()</c>. The book UI now offers the same three profile choices;
+/// <see cref="LitanyEffectContext.Designation"/> carries the pick. Manual-speech casts
+/// have no picker and keep the historical Acolyte fallback. The rank swap is server-only,
 /// reached through <see cref="LitanySetRankEvent"/>.
 /// </summary>
 public sealed partial class LitanyConfirmationEffect : LitanyEffect
@@ -35,7 +36,8 @@ public sealed partial class LitanyConfirmationEffect : LitanyEffect
             return false;
 
         var target = context.Targets[0];
-        var rank = new LitanySetRankEvent(target, AcolyteProfile, false);
+        var profile = context.Designation ?? AcolyteProfile;
+        var rank = new LitanySetRankEvent(target, profile, false);
         system.RaiseOn(target, ref rank);
         return rank.Handled;
     }

@@ -1,3 +1,5 @@
+using Robust.Shared.Prototypes;
+
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
@@ -36,4 +38,7 @@ public abstract partial class LitanyEffect
 public readonly record struct LitanyEffectContext(
     EntityUid User,
     LitanyPrototype Litany,
-    IReadOnlyList<EntityUid> Targets);
+    IReadOnlyList<EntityUid> Targets,
+    IReadOnlyList<string>? SelectedTokens = null,
+    string? SelectedText = null,
+    ProtoId<NeoTheologyProfilePrototype>? Designation = null);

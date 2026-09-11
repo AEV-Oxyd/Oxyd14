@@ -2,9 +2,11 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
 /// Eris <c>rituals/inquisitor.dm:233-252</c> (Sending): a telepathic message to the faithful —
-/// anonymous unless the sender reveals themself. Eris let the caster pick one disciple and type
-/// free text; the fork's litany UI has no text input and its StationFollower resolution is
-/// uid-sorted, so the anonymous notice reaches every same-station follower (flagged divergence).
+/// anonymous unless the sender reveals themself. Eris lets the caster pick one disciple and
+/// type free text; the book UI now offers the same target pick and a text box, carried by
+/// <see cref="LitanyEffectContext.Designation"/>'s sibling fields
+/// <see cref="LitanyEffectContext.SelectedText"/>. Manual-speech casts have no picker, so the
+/// historical prepared notice reaches every same-station follower (flagged fallback).
 /// Delivery rides the shared social-notice helper Entreaty established.
 /// </summary>
 public sealed partial class LitanySendingEffect : LitanyEffect
@@ -29,7 +31,10 @@ public sealed partial class LitanySendingEffect : LitanyEffect
         var delivered = false;
         foreach (var recipient in context.Targets)
         {
-            system.DeliverSocialNotice(recipient, Loc.GetString("oxyd-litany-private-sending"));
+            var message = context.SelectedText is { Length: > 0 } text
+                ? Loc.GetString("oxyd-litany-private-sending-text", ("text", text))
+                : Loc.GetString("oxyd-litany-private-sending");
+            system.DeliverSocialNotice(recipient, message);
             delivered = true;
         }
 

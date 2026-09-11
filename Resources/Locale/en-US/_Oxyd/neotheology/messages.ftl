@@ -6,6 +6,10 @@ oxyd-litany-no-sanity = The target cannot receive a revelation.
 oxyd-litany-no-cost = You lack sufficient holiness.
 oxyd-litany-cancelled = The litany is interrupted.
 oxyd-litany-private-sending = A private litany message has reached you.
+oxyd-litany-private-sending-text = A voice speaks in your mind: "{ $text }"
+oxyd-litany-choice-invalid = That choice is not valid.
+oxyd-litany-choice-expired = The choice window has closed.
+oxyd-litany-choice-cancelled = The cast was cancelled.
 
 oxyd-litany-unavailable-feature = The litany catalog is not ready.
 oxyd-litany-denied-npc = Only living followers may chant.

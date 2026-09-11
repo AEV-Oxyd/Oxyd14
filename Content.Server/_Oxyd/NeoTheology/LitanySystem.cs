@@ -28,6 +28,12 @@ public sealed partial class LitanySystem : EntitySystem
     public static readonly TimeSpan ChoiceExpiry = TimeSpan.FromSeconds(30);
     public static readonly TimeSpan CastGrace = TimeSpan.FromSeconds(5);
 
+    /// <summary>How long a book cast waits for the caster's choice before it expires.</summary>
+    public static readonly TimeSpan ChoiceTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Server limit for a Sending message, matching the client edit limit.</summary>
+    public const int MaxChoicePlainTextLength = 512;
+
     [Dependency] private readonly ActionBlockerSystem _actionBlocker = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
     [Dependency] private readonly CruciformSystem _cruciform = default!;
@@ -183,8 +189,7 @@ public sealed partial class LitanySystem : EntitySystem
                 return LitanyActionResult.Fail("oxyd-litany-denied-book-hand");
         }
 
-        // Every mode resolves its candidates up front (P4.1). Modes whose target needs
-        // the M4/M5 choice UI still reject a choice token here.
+        // Every mode resolves its candidates up front (P4.1).
         if (!TryResolveTargets(actor, litany, out var resolvedTargets, out var targetFail))
             return LitanyActionResult.Fail(targetFail ?? "oxyd-litany-no-target");
 
@@ -206,7 +211,13 @@ public sealed partial class LitanySystem : EntitySystem
         var now = _timing.CurTime;
         var phrase = LitanyPhraseParser.Normalize(litany.Phrase);
         var chantDuration = LitanyPhraseParser.BookChantDuration(phrase);
-        var endsAt = now + chantDuration + litany.ExtraDelay + CastGrace;
+
+        // A book cast of a choice-requiring litany pauses in the Choosing stage. Manual
+        // speech has no choice surface, so it keeps the deterministic fallback target.
+        var offersTargetChoice = litany.SelectTarget && resolvedTargets.Count > 1;
+        var offersDesignationChoice = litany.DesignationChoices.Count > 0;
+        var needsChoice = origin == LitanyCastOrigin.Book &&
+                          (offersTargetChoice || offersDesignationChoice || litany.AllowPlainText);
 
         var cast = new PendingLitanyCast
         {
@@ -217,7 +228,7 @@ public sealed partial class LitanySystem : EntitySystem
             LitanyId = litany.ID,
             Origin = origin,
             Targets = resolvedTargets,
-            Stage = LitanyCastStage.Chanting,
+            Stage = needsChoice ? LitanyCastStage.Choosing : LitanyCastStage.Chanting,
             Phrase = phrase,
             Cost = litany.Cost,
             CooldownKey = litany.CooldownKey,
@@ -226,14 +237,34 @@ public sealed partial class LitanySystem : EntitySystem
             ExtraDelay = litany.ExtraDelay,
             StartedAt = now,
             ChantEndsAt = now + chantDuration,
-            ExpiresAt = endsAt,
+            ExpiresAt = needsChoice
+                ? now + ChoiceTimeout
+                : now + chantDuration + litany.ExtraDelay + CastGrace,
             AwaitingBookSpeech = false,
             Committed = false,
         };
 
+        if (needsChoice)
+        {
+            cast.AwaitingChoice = true;
+            cast.ChoiceExpiresAt = cast.ExpiresAt;
+            if (offersTargetChoice)
+                cast.ChoiceTargets = resolvedTargets;
+            if (offersDesignationChoice)
+                cast.ChoiceDesignations = litany.DesignationChoices;
+            cast.ChoiceAllowsPlainText = litany.AllowPlainText;
+        }
+
         _pendingByRequest[requestId] = cast;
         bearer.PendingRequestId = requestId;
         Dirty(actor, bearer);
+
+        if (needsChoice)
+        {
+            SendChoiceSnapshot(cast);
+            SendProgressToActor(cast);
+            return LitanyActionResult.Ok(requestId);
+        }
 
         if (origin == LitanyCastOrigin.Book)
         {
@@ -385,6 +416,16 @@ public sealed class PendingLitanyCast
     public bool AwaitingBookSpeech;
     public bool Committed;
     public DoAfterId? DoAfterId;
+
+    /// <summary>True while the cast waits for the caster's book-UI selection.</summary>
+    public bool AwaitingChoice;
+    public TimeSpan ChoiceExpiresAt;
+    public List<EntityUid> ChoiceTargets = new();
+    public List<ProtoId<NeoTheologyProfilePrototype>> ChoiceDesignations = new();
+    public bool ChoiceAllowsPlainText;
+    public List<string> SelectedTokens = new();
+    public string? SelectedText;
+    public ProtoId<NeoTheologyProfilePrototype>? Designation;
 }
 
 internal sealed class ActorRateState

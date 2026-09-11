@@ -67,12 +67,16 @@ public sealed partial class LitanySystem
         return HandleBeginLitany(book, actor, message);
     }
 
+    /// <summary>Designation labels and message text live on the server; the client only forwards tokens.</summary>
+    [Dependency] private readonly IPrototypeManager _prototypes = default!;
+
     private void InitializeUi()
     {
         SubscribeLocalEvent<LitanyBookComponent, BoundUIOpenedEvent>(OnBookUiOpened);
         SubscribeLocalEvent<LitanyBookComponent, BoundUIClosedEvent>(OnBookUiClosed);
         SubscribeLocalEvent<LitanyBookComponent, GotUnequippedHandEvent>(OnBookUnequipped);
         SubscribeLocalEvent<LitanyBookComponent, HandDeselectedEvent>(OnBookHandDeselected);
+        SubscribeLocalEvent<LitanyBookComponent, SubmitLitanyChoicesMessage>(OnSubmitLitanyChoicesMessage);
     }
 
     private void OnBookUiOpened(Entity<LitanyBookComponent> book, ref BoundUIOpenedEvent args)
@@ -155,6 +159,50 @@ public sealed partial class LitanySystem
             return;
 
         TryCancelLitany(args.Actor, args.RequestId);
+    }
+
+    private void OnSubmitLitanyChoicesMessage(Entity<LitanyBookComponent> book, ref SubmitLitanyChoicesMessage args)
+    {
+        if (!_ui.GetActors(book.Owner, LitanyUiKey.Book).Contains(args.Actor))
+            return;
+
+        var result = SubmitChoicesCore(args.Actor, args.RequestId, args.SelectedTokens, args.RecipeId,
+            args.PlainText, book.Owner);
+        SendResultToActor(args.Actor, result);
+    }
+
+    /// <summary>Test entry that mirrors the BUI choice submission without a connected client.</summary>
+    public LitanyActionResult TestingSubmitChoices(EntityUid actor, string requestId, List<string> tokens,
+        string? plainText = null)
+    {
+        var result = SubmitChoicesCore(actor, requestId, tokens, recipeId: null, plainText, expectBook: null);
+        SendResultToActor(actor, result);
+        return result;
+    }
+
+    /// <summary>
+    /// Sends the actor the options for a Choosing cast. Target tokens are positional
+    /// (<c>t:index</c>) so no entity/identity value leaves the server; designation tokens
+    /// name the profile prototype the effect will apply.
+    /// </summary>
+    private void SendChoiceSnapshot(PendingLitanyCast cast)
+    {
+        if (FindActorBook(cast.Actor) is not { } book)
+            return;
+
+        var options = new List<LitanyChoiceOption>();
+        for (var i = 0; i < cast.ChoiceTargets.Count; i++)
+            options.Add(new LitanyChoiceOption($"t:{i}", MetaData(cast.ChoiceTargets[i]).EntityName));
+
+        foreach (var profile in cast.ChoiceDesignations)
+        {
+            var label = _prototypes.TryIndex(profile, out var proto) ? Loc.GetString(proto.Name) : profile.Id;
+            options.Add(new LitanyChoiceOption($"d:{profile.Id}", label));
+        }
+
+        var revision = TryComp(cast.Actor, out CruciformBearerComponent? bearer) ? bearer.UiRevision : 0u;
+        _ui.ServerSendUiMessage(book, LitanyUiKey.Book, new LitanyChoiceSnapshotMessage(
+            revision, cast.RequestId, cast.ChoiceExpiresAt, options), cast.Actor);
     }
 
     /// <summary>

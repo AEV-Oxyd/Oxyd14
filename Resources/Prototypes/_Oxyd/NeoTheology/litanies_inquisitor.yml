@@ -74,6 +74,7 @@
   range: 0
   cost: 100
   effectDuration: 30
+  selectTarget: true
   effects:
   - !type:LitanyScryingEffect
   enabled: true
@@ -89,6 +90,8 @@
   targetMode: StationFollower
   range: 0
   cost: 30
+  selectTarget: true
+  allowPlainText: true
   effects:
   - !type:LitanySendingEffect
   enabled: true
