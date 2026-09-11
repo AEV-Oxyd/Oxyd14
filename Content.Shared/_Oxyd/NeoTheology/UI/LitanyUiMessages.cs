@@ -262,20 +262,25 @@ public sealed class LitanyResultMessage : BoundUserInterfaceMessage
     public LocId? Reason { get; }
     public string? RequestId { get; }
 
+    /// <summary>False for an acknowledgment while the cast remains pending.</summary>
+    public bool IsFinal { get; }
+
     public LitanyResultMessage(
         uint revision,
         bool success,
         LocId? reason = null,
-        string? requestId = null)
+        string? requestId = null,
+        bool isFinal = true)
     {
         Revision = revision;
         Success = success;
         Reason = reason;
         RequestId = requestId;
+        IsFinal = isFinal;
     }
 
-    public LitanyResultMessage(uint revision, LitanyActionResult result)
-        : this(revision, result.Success, result.Reason, result.RequestId)
+    public LitanyResultMessage(uint revision, LitanyActionResult result, bool isFinal = true)
+        : this(revision, result.Success, result.Reason, result.RequestId, isFinal)
     {
     }
 

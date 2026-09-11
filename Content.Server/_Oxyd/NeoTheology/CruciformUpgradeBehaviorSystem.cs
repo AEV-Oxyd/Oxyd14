@@ -37,9 +37,13 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
     [Dependency] private readonly PlantTraySystem _plantTray = default!;
     [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly IPrototypeManager _prototypes = default!;
 
     /// <summary>One aura tick per second; Eris's SSobj cadence reduced to a stable unit.</summary>
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1);
+
+    private static readonly ProtoId<DamageGroupPrototype> BruteGroup = "Brute";
+    private static readonly ProtoId<DamageGroupPrototype> BurnGroup = "Burn";
 
     private TimeSpan _nextTick;
 
@@ -99,14 +103,12 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
                 continue;
 
             var groups = _damageable.GetDamagePerGroup((target, damageable));
-            var brute = groups.GetValueOrDefault(new ProtoId<DamageGroupPrototype>("Brute"));
-            var burn = groups.GetValueOrDefault(new ProtoId<DamageGroupPrototype>("Burn"));
             var heal = new DamageSpecifier();
 
-            if (brute > aura.HealThreshold)
-                heal.DamageDict["Blunt"] = FixedPoint2.New(-aura.BruteHealPerSecond);
-            if (burn > aura.HealThreshold)
-                heal.DamageDict["Heat"] = FixedPoint2.New(-aura.BurnHealPerSecond);
+            if (groups.GetValueOrDefault(BruteGroup) > aura.HealThreshold)
+                AddGroupHeal(heal, damageable, BruteGroup, aura.BruteHealPerSecond);
+            if (groups.GetValueOrDefault(BurnGroup) > aura.HealThreshold)
+                AddGroupHeal(heal, damageable, BurnGroup, aura.BurnHealPerSecond);
 
             if (heal.DamageDict.Count > 0)
                 _damageable.TryChangeDamage(target, heal);
@@ -140,6 +142,42 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
         // Eris clean_blood() only wipes the bearer's own tile.
         foreach (var (puddle, _) in _lookup.GetEntitiesInRange<PuddleComponent>(coordinates, 0.5f))
             QueueDel(puddle);
+    }
+
+    /// <summary>
+    /// Spreads one group's healing rate across the damaged types in that group, so a
+    /// slash wound receives slash healing instead of blunt healing. The proportional
+    /// shares keep the configured total rate and never push a type below zero.
+    /// </summary>
+    private void AddGroupHeal(DamageSpecifier heal, DamageableComponent damageable,
+        ProtoId<DamageGroupPrototype> groupId, float totalHeal)
+    {
+        if (totalHeal <= 0 || !_prototypes.TryIndex(groupId, out DamageGroupPrototype? group))
+            return;
+
+        var damaged = _damageable.GetPositiveDamage(damageable);
+        var total = FixedPoint2.Zero;
+        foreach (var type in group.DamageTypes)
+        {
+            if (damaged.DamageDict.TryGetValue(type, out var value) && value > FixedPoint2.Zero)
+                total += value;
+        }
+
+        if (total <= FixedPoint2.Zero)
+            return;
+
+        var rate = FixedPoint2.New(totalHeal);
+        foreach (var type in group.DamageTypes)
+        {
+            if (!damaged.DamageDict.TryGetValue(type, out var value) || value <= FixedPoint2.Zero)
+                continue;
+
+            var share = rate * (value / total);
+            if (share > value)
+                share = value;
+
+            heal.DamageDict[type] = heal.DamageDict.GetValueOrDefault(type) - share;
+        }
     }
 
     private void TriggerMartyr(EntityUid body, EntityUid cruciform, CruciformComponent component, EntityUid upgrade,

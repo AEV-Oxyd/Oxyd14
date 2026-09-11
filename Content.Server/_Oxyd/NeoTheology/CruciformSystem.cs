@@ -12,6 +12,7 @@ using Content.Shared.Implants.Components;
 using Content.Shared.Mobs;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
+using Content.Shared.Movement.Systems;
 using Content.Shared.Station;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -33,6 +34,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private readonly CoreModuleSystem _modules = default!;
     [Dependency] private readonly SharedSubdermalImplantSystem _implants = default!;
+    [Dependency] private readonly MovementSpeedModifierSystem _movement = default!;
 
     private static readonly ProtoId<CoreModulePrototype> PriestRankModule = "OxydNtModulePriest";
     private static readonly ProtoId<CoreModulePrototype> InquisitorRankModule = "OxydNtModuleInquisitor";
@@ -163,6 +165,9 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         RecomputeProfile(ent.Owner, ent.Comp);
         Dirty(ent);
         Dirty(body, bearer);
+
+        // A stored speed upgrade resumes with the reimplanted cruciform.
+        _movement.RefreshMovementSpeedModifiers(body);
     }
 
     private void OnRemoved(Entity<CruciformComponent> ent, ref ImplantRemovedEvent args)
@@ -184,6 +189,9 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             BumpRevision(body, bearer);
         }
 
+        // The speed upgrade lives on the cruciform; the body must lose the multiplier now.
+        _movement.RefreshMovementSpeedModifiers(body);
+
         // Eternal Brotherhood's HUD lives on the body; Eris loses the module with the implant.
         RemComp<NtDiscipleHudComponent>(body);
     }
@@ -200,6 +208,7 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
             BumpRevision(body, bearer);
         }
 
+        _movement.RefreshMovementSpeedModifiers(body);
         RemComp<NtDiscipleHudComponent>(body);
     }
 

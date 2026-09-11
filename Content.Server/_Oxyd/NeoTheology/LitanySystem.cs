@@ -136,7 +136,7 @@ public sealed partial class LitanySystem : EntitySystem
         string? choiceToken = null)
     {
         var result = BeginLitanyCore(actor, litanyId, origin, book, expectedRevision, choiceToken);
-        SendResultToActor(actor, result);
+        SendResultToActor(actor, result, isFinal: !result.Success);
         return result;
     }
 

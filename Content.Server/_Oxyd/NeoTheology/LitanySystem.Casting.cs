@@ -25,7 +25,6 @@ public sealed partial class LitanySystem
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly ExamineSystemShared _examine = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
-    [Dependency] private readonly SharedTransformSystem _xform = default!;
 
     private bool StartCastDoAfter(PendingLitanyCast cast, TimeSpan delay, bool requireBook)
     {
@@ -253,7 +252,6 @@ public sealed partial class LitanySystem
                     _cruciform.Refund(cast.Actor, cast.Cost);
 
                 SendResultToActor(cast.Actor, LitanyActionResult.Fail(ceremonyFail ?? "oxyd-litany-effect-failed", cast.RequestId));
-                RefreshActorSnapshot(cast.Actor);
                 ClearPending(cast, cancelled: false);
             }
 
@@ -267,7 +265,6 @@ public sealed partial class LitanySystem
                 _cruciform.Refund(cast.Actor, cast.Cost);
 
             SendResultToActor(cast.Actor, LitanyActionResult.Fail("oxyd-litany-effect-failed", cast.RequestId));
-            RefreshActorSnapshot(cast.Actor);
             ClearPending(cast, cancelled: false);
             return;
         }
@@ -275,7 +272,6 @@ public sealed partial class LitanySystem
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
         SendResultToActor(cast.Actor, LitanyActionResult.Ok(cast.RequestId));
-        RefreshActorSnapshot(cast.Actor);
 
         // Unimplemented available effects keep the historical no-op success stub.
         // A second completion must no-op because Committed is set.
@@ -464,7 +460,8 @@ public sealed partial class LitanySystem
 
     private void ClearPending(PendingLitanyCast cast, bool cancelled)
     {
-        _pendingByRequest.Remove(cast.RequestId);
+        if (!_pendingByRequest.Remove(cast.RequestId))
+            return;
 
         if (TryComp(cast.Actor, out CruciformBearerComponent? bearer) &&
             bearer.PendingRequestId == cast.RequestId)
@@ -475,6 +472,10 @@ public sealed partial class LitanySystem
 
         cast.AwaitingBookSpeech = false;
         cast.DoAfterId = null;
+
+        // Every terminal path sends idle state only after it removes the pending cast.
+        if (!TerminatingOrDeleted(cast.Actor))
+            RefreshActorSnapshot(cast.Actor);
     }
 
     private void ExpireStaleCasts()
@@ -760,30 +761,33 @@ public sealed partial class LitanySystem
         return ids;
     }
 
-    /// <summary>The actor's tile and the tile their local rotation faces.</summary>
+    /// <summary>
+    /// The actor's tile and the tile their rotation faces, both in the actor's local
+    /// coordinate space. The local rotation and the local position use the same space,
+    /// so a rotated grid cannot move the front tile away from the actor's facing.
+    /// </summary>
     private bool TryGetFrontTiles(EntityUid actor, out Vector2i ownTile, out Vector2i frontTile)
     {
         ownTile = default;
         frontTile = default;
-        if (!TryComp(actor, out TransformComponent? xform))
+        if (!TryComp(actor, out TransformComponent? xform) || xform.MapID == MapId.Nullspace)
             return false;
 
-        var coords = _xform.ToMapCoordinates(xform.Coordinates);
-        if (coords.MapId == MapId.Nullspace)
-            return false;
-
-        var pos = coords.Position;
+        var pos = xform.Coordinates.Position;
         ownTile = pos.Floored();
         frontTile = (pos + xform.LocalRotation.ToVec()).Floored();
         return true;
     }
 
+    /// <summary>
+    /// True when the entity's local tile matches. Candidates already come from a
+    /// world-range lookup, so the local tile stays inside the litany's reach.
+    /// </summary>
     private bool IsOnTile(EntityUid uid, Vector2i tile)
     {
         if (!TryComp(uid, out TransformComponent? xform))
             return false;
 
-        var coords = _xform.ToMapCoordinates(xform.Coordinates);
-        return coords.MapId != MapId.Nullspace && coords.Position.Floored() == tile;
+        return xform.MapID != MapId.Nullspace && xform.Coordinates.Position.Floored() == tile;
     }
 }

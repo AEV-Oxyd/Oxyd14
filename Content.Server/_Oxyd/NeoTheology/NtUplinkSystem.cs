@@ -4,6 +4,7 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.FixedPoint;
+using Content.Shared.Implants;
 using Content.Shared.Mind;
 using Content.Shared.Popups;
 using Content.Shared.Store;
@@ -38,6 +39,7 @@ public sealed partial class NtUplinkSystem : EntitySystem
     public override void Initialize()
     {
         SubscribeLocalEvent<NtUplinkComponent, ComponentShutdown>(OnUplinkShutdown);
+        SubscribeLocalEvent<NtUplinkComponent, ImplantRemovedEvent>(OnImplantRemoved);
         SubscribeLocalEvent<CruciformBearerComponent, LitanyUplinkReportEvent>(OnReport);
         SubscribeLocalEvent<CruciformBearerComponent, LitanyUplinkOpenEvent>(OnOpen);
     }
@@ -119,6 +121,11 @@ public sealed partial class NtUplinkSystem : EntitySystem
         component.Store = null;
     }
 
+    private void OnImplantRemoved(Entity<NtUplinkComponent> ent, ref ImplantRemovedEvent args)
+    {
+        BankBalance(ent.Comp);
+    }
+
     private void BankBalance(NtUplinkComponent component)
     {
         if (component.Store is not { } storeUid || TerminatingOrDeleted(storeUid))
@@ -127,14 +134,13 @@ public sealed partial class NtUplinkSystem : EntitySystem
             return;
         }
 
-        if (TryComp<StoreComponent>(storeUid, out var storeComp) &&
-            storeComp.Balance.TryGetValue(Telecrystal, out var remaining))
-        {
-            component.StoredTelecrystals = remaining;
-        }
+        // Revoke access now. Queued deletion alone permits messages until the next tick.
+        _ui.CloseUi(storeUid, StoreUiKey.Key);
 
-        if (!TerminatingOrDeleted(storeUid))
-            QueueDel(storeUid);
+        if (TryComp<StoreComponent>(storeUid, out var storeComp))
+            component.StoredTelecrystals = storeComp.Balance.GetValueOrDefault(Telecrystal);
+
+        QueueDel(storeUid);
 
         component.Store = null;
     }

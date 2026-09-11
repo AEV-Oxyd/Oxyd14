@@ -169,7 +169,7 @@ public sealed partial class LitanySystem
 
         var result = SubmitChoicesCore(args.Actor, args.RequestId, args.SelectedTokens, args.RecipeId,
             args.PlainText, book.Owner);
-        SendResultToActor(args.Actor, result);
+        SendResultToActor(args.Actor, result, isFinal: !result.Success);
     }
 
     /// <summary>Test entry that mirrors the BUI choice submission without a connected client.</summary>
@@ -177,7 +177,7 @@ public sealed partial class LitanySystem
         string? plainText = null)
     {
         var result = SubmitChoicesCore(actor, requestId, tokens, recipeId: null, plainText, expectBook: null);
-        SendResultToActor(actor, result);
+        SendResultToActor(actor, result, isFinal: !result.Success);
         return result;
     }
 
@@ -259,13 +259,13 @@ public sealed partial class LitanySystem
         return null;
     }
 
-    private void SendResultToActor(EntityUid actor, LitanyActionResult result)
+    private void SendResultToActor(EntityUid actor, LitanyActionResult result, bool isFinal = true)
     {
         if (FindActorBook(actor) is not { } book)
             return;
 
         var revision = TryComp(actor, out CruciformBearerComponent? bearer) ? bearer.UiRevision : 0u;
-        _ui.ServerSendUiMessage(book, LitanyUiKey.Book, new LitanyResultMessage(revision, result), actor);
+        _ui.ServerSendUiMessage(book, LitanyUiKey.Book, new LitanyResultMessage(revision, result, isFinal), actor);
     }
 
     private void SendProgressToActor(PendingLitanyCast cast)

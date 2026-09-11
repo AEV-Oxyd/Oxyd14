@@ -181,6 +181,10 @@ public sealed partial class LitanyWindow : FancyWindow
     /// </summary>
     public void UpdateResult(LitanyResultMessage result)
     {
+        // Begin and choice acknowledgments do not end the cast or replace its progress.
+        if (!result.IsFinal)
+            return;
+
         if (_snapshot is not null && result.Revision < _snapshot.Revision)
             return;
 

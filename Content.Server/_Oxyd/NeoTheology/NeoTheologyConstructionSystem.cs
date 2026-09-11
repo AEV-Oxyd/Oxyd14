@@ -26,7 +26,6 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
     [Dependency] private readonly SharedCruciformSystem _cruciform = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
-    [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IPrototypeManager _prototypes = default!;
 
     /// <summary>Eris forbids a second Eye of the Protector in the area.</summary>
@@ -90,7 +89,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
             return;
         }
 
-        if (!TryGetFrontTile(args.User, out var ownTile, out var frontTile))
+        if (!TryGetFrontTile(args.User, out _, out var frontTile))
         {
             args.Failure = "oxyd-litany-no-target";
             return;
@@ -298,25 +297,28 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
                LitanyEffectSystem.IsClergyProfile(cruciform.Profile);
     }
 
-    /// <summary>The caster's tile and the tile their local rotation faces.</summary>
+    /// <summary>
+    /// The caster's tile and the tile their rotation faces, both in the caster's local
+    /// coordinate space. The local rotation and the local position use the same space,
+    /// so a rotated grid cannot move the front tile away from the caster's facing.
+    /// </summary>
     private bool TryGetFrontTile(EntityUid user, out Vector2i ownTile, out Vector2i frontTile)
     {
         ownTile = default;
         frontTile = default;
-        if (!TryComp(user, out TransformComponent? xform))
+        if (!TryComp(user, out TransformComponent? xform) || xform.MapID == MapId.Nullspace)
             return false;
 
-        var coords = _xform.ToMapCoordinates(xform.Coordinates);
-        if (coords.MapId == MapId.Nullspace)
-            return false;
-
-        var position = coords.Position;
+        var position = xform.Coordinates.Position;
         ownTile = position.Floored();
         frontTile = (position + xform.LocalRotation.ToVec()).Floored();
         return true;
     }
 
-    /// <summary>Entities whose floored position equals the tile. Sorted for determinism.</summary>
+    /// <summary>
+    /// Entities whose local tile matches. Sorted for determinism. Candidates already
+    /// come from a world-range lookup, so the local tile stays inside the reach.
+    /// </summary>
     private List<EntityUid> GetEntitiesOnTile(EntityUid user, Vector2i tile)
     {
         var results = new List<EntityUid>();
@@ -325,8 +327,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
             if (!TryComp(uid, out TransformComponent? xform))
                 continue;
 
-            var coords = _xform.ToMapCoordinates(xform.Coordinates);
-            if (coords.MapId == MapId.Nullspace || coords.Position.Floored() != tile)
+            if (xform.MapID == MapId.Nullspace || xform.Coordinates.Position.Floored() != tile)
                 continue;
 
             results.Add(uid);
@@ -338,7 +339,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
 
     private EntityCoordinates ToTileCoordinates(EntityUid user, Vector2i tile)
     {
-        var coords = _xform.ToMapCoordinates(Transform(user).Coordinates);
-        return _xform.ToCoordinates(new MapCoordinates(new Vector2(tile.X + 0.5f, tile.Y + 0.5f), coords.MapId));
+        var parent = Transform(user).Coordinates.EntityId;
+        return new EntityCoordinates(parent, new Vector2(tile.X + 0.5f, tile.Y + 0.5f));
     }
 }

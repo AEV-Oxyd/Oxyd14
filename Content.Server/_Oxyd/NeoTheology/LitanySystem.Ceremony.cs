@@ -89,7 +89,6 @@ public sealed partial class LitanySystem
         ApplyCooldown(bearer, litany);
         cast.Committed = true;
         SendResultToActor(cast.Actor, LitanyActionResult.Ok(cast.RequestId));
-        RefreshActorSnapshot(cast.Actor);
         ClearPending(cast, cancelled: false);
 
         failure = null;
