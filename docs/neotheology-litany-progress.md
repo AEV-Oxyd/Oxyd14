@@ -21,6 +21,14 @@ Implementation checkpoint: commits through `0c3cdb1294`.
 - The cast transaction is atomic: an unexpected apply failure refunds the debit
   and skips the cooldown; success-only cooldowns; the actor receives
   `LitanyResultMessage` and `LitanyProgressMessage` on the open book UI.
+- A book cast of a choice-requiring litany pauses in the `Choosing` stage. The
+  server publishes server-authored options (targets, designations) and the typed
+  text is limited to 512 characters. Manual speech keeps a deterministic fallback
+  and is a registered divergence.
+- The five behavioural cruciform upgrades run while installed: speed, martyr
+  burst, nature blessing aura, cleansing presence and the wrath melee bonus.
+- The Eye economy matches `eotp.dm` (Stage 1 sign-off). No deviation remains to
+  register for P3.5.
 
 ## Review remediation
 
@@ -47,7 +55,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | 2. Cruciform lifecycle | Complete | Keep lifecycle coverage. |
 | 3. Speech and cast transaction | Complete | Keep atomicity and result tests. |
 | 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
-| 5. Ranks and medical/social foundation | Handlers complete | Fidelity gaps: upgrade effects, `Sending`, `Confirmation`, `Scrying` target choice. |
+| 5. Ranks and medical/social foundation | Handlers complete | `Sending` text, `Confirmation` designations and `Scrying` target choice are live; closed in `89e4cc1784` and `17b7908f45`. |
 | 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
 | 7. Dependency packets | In progress | Construction (3), uplink (2), ceremonies (11). |
 | 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
@@ -63,6 +71,8 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | Pain | `Atonement`, `Penance` | Landed; stamina damage (named divergence). |
 | CoreModules | `Asacris` | Landed; strips every cruciform upgrade. |
 | Persistence | `BaptismalRecord` | Landed in `738ad6dfcf`; altar paper, live bearer scan. |
+| Fidelity | Upgrade behaviours | Landed in `17b7908f45`; five upgrades, 4 integration tests. |
+| Fidelity | `Sending`, `Scrying`, `Confirmation` | Landed in `89e4cc1784`; server-owned book choice flow, 4 integration tests. |
 | ConstructionCatalog | `DivineGuidance` | Pending. |
 | Construction | `Manifestation`, `Uproot` | Pending. |
 | NtUplink | `Knowledge`, `Bounty` | Pending. |
@@ -73,10 +83,8 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 1. Construction packet: `DivineGuidance`, `Manifestation`, `Uproot`.
 2. NtUplink packet: `Knowledge`, `Bounty`.
 3. Ceremony engine plus the 11 ceremony litanies.
-4. Fidelity gaps: upgrade effects, `Sending` recipient/message, `Confirmation`
-   designations, `Scrying` target choice.
-5. Map the NT machine set into a station area.
-6. Final catalog audit, manual two-client scenario, release cleanup.
+4. Map the NT machine set into a station area.
+5. Final catalog audit, manual two-client scenario, release cleanup.
 
 ## Historical validation evidence
 
@@ -89,3 +97,5 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 - Fix pass `4b5970f3c4`: integration 166/166, zero skips.
 - Packet wave `0c3cdb1294`: unit 17/17; integration 168/168, zero skips.
 - `BaptismalRecord` `738ad6dfcf`: records test 2/2.
+- Choice flow `89e4cc1784`: unit 17/17; integration 172/172, zero skips.
+- Upgrade behaviours `17b7908f45`: unit 17/17; integration 176/176, zero skips.
