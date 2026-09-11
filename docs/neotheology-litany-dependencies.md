@@ -12,6 +12,30 @@ against the Oxyd14 tree on 2026-09-10 (scoped to `Content.{Shared,Server,Client}
 
 ---
 
+## Status update (2026-09-11)
+
+The packet tables below are the original map. These packets have landed since the map:
+
+| Packet | Litanies | State |
+| --- | --- | --- |
+| `RemoteView` | `Scrying` | Landed (P3.9 + P4.13). Bounded session; target selection stays a fidelity gap. |
+| `CoreModules` | `Asacris`, `Initiation` | `Initiation` landed. `Asacris` remains gated. |
+| `Attachments` | `InstallUpgrade`, `UninstallUpgrade` | Handlers enabled; effects are stubs. Completion plan Stage 3. |
+| `SoulCloning` | `Reincarnation`, `Resurrection` | Landed. Resurrection restored from the stored profile. |
+| `EyeEconomy` | `DivineIntervention`, `HolyGuidance` | Landed. Values still need Eris alignment. |
+| `Armaments` | `OrderArmaments` | Landed. |
+| `ForgeMaterials` | `MakeCruciform` | Landed. |
+| `BiomatterMaterials` | `RepairDoor` | Landed. |
+| `Biogenerator` | `PowerBiogenerator` | Landed. |
+| `Bioreactor` | `BioreactorSolution`, `BioreactorChamber` | Landed. |
+| `ConstructionCatalog` | `DivineGuidance` | Capability present, handler pending. |
+| `PlantGrowth` | `AcceleratedGrowth` | Capability partial, handler pending. |
+
+Remaining gated set: 24 entries. The completion plan
+(`.hermes/plans/2026-09-11_135754-neotheology-completion.md`) drives the rest.
+
+---
+
 ## 0. What already exists in Oxyd14
 
 | Artifact | State |
