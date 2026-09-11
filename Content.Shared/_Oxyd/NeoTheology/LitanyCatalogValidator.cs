@@ -14,7 +14,7 @@ namespace Content.Shared._Oxyd.NeoTheology;
 public static class LitanyCatalogValidator
 {
     public const int ExpectedLitanyCount = 60;
-    public const int ExpectedFoundationLitanyCount = 33;
+    public const int ExpectedFoundationLitanyCount = 35;
     public const int ExpectedDependencyGatedLitanyCount = ExpectedLitanyCount - ExpectedFoundationLitanyCount;
 
     private static readonly HashSet<LitanyEffectKind> IgnoreStutteringEffects =

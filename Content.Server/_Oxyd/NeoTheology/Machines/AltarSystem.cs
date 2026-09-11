@@ -1,5 +1,7 @@
+using System.Linq;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Item;
 using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
@@ -16,6 +18,48 @@ public sealed partial class AltarSystem : EntitySystem
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
     [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
+
+    /// <summary>How far from the caster an altar still counts as theirs — the litany's own reach.</summary>
+    private const float RitualReach = 1.5f;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        SubscribeLocalEvent<EyeOfTheProtectorComponent, LitanyOfferingEvent>(OnLitanyOffering);
+    }
+
+    /// <summary>
+    /// EyeEconomy bridge (Eris <c>rituals/priest.dm:232-320</c>): the priest stands at the Eye and
+    /// names an offering; the items rest on the altar. Eris scans seven tiles around the EOTP
+    /// itself; the fork's altar is the offering surface, so the handler takes the altar within the
+    /// caster's ritual reach and lets <see cref="TryMakeOffering"/> own the item math.
+    /// </summary>
+    private void OnLitanyOffering(EntityUid eye, EyeOfTheProtectorComponent component, ref LitanyOfferingEvent args)
+    {
+        if (!TryFindAltar(args.User, out var altar))
+            return;
+
+        args.Handled = TryMakeOffering(altar, eye, args.OfferingKey, out _);
+    }
+
+    /// <summary>The first altar within ritual reach of <paramref name="near"/>, uid-ordered for determinism.</summary>
+    public bool TryFindAltar(EntityUid near, out EntityUid altar)
+    {
+        altar = EntityUid.Invalid;
+        if (!TryComp(near, out TransformComponent? xform))
+            return false;
+
+        foreach (var candidate in _lookup
+                     .GetEntitiesInRange<NeoTheologyAltarComponent>(xform.Coordinates, RitualReach)
+                     .OrderBy(entry => entry.Owner))
+        {
+            altar = candidate.Owner;
+            return true;
+        }
+
+        return false;
+    }
 
     /// <summary>Finds items resting on or beside a NeoTheology altar.</summary>
     public IEnumerable<EntityUid> ItemsOnAltar(EntityUid altar)
@@ -94,18 +138,48 @@ public sealed partial class AltarSystem : EntitySystem
         return true;
     }
 
-    /// <summary>Whether <paramref name="item"/>'s prototype is <paramref name="wanted"/> or a descendant.</summary>
+    /// <summary>
+    /// Whether <paramref name="item"/>'s prototype is <paramref name="wanted"/> or a descendant.
+    /// The index-based walk (<c>EnumerateParents</c>) only sees non-abstract prototypes, so raw
+    /// parent ids are walked as well — requirements may deliberately name an abstract base:
+    /// <c>FoodProduceBase</c> covers every edible fruit, and the deferred oddity line will do the
+    /// same once an oddity prototype lands.
+    /// ponytail: abstract intermediates are not traversed (they have no index entry), so an
+    /// abstract requirement reaches direct children and non-abstract chains only.
+    /// </summary>
     private bool MatchesProto(EntityUid item, EntProtoId wanted)
     {
         if (MetaData(item).EntityPrototype is not { } proto)
             return false;
 
-        foreach (var parent in ProtoMan.EnumerateParents<EntityPrototype>(proto, includeSelf: true))
+        if (proto.ID == wanted.Id)
+            return true;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>();
+        EnqueueParents(queue, proto);
+
+        while (queue.TryDequeue(out var id))
         {
-            if (parent.ID == wanted.Id)
+            if (!seen.Add(id))
+                continue;
+            if (id == wanted.Id)
                 return true;
+
+            // Concrete ancestors keep walking their own parents; abstract ids have no index entry.
+            if (ProtoMan.TryIndex<EntityPrototype>(id, out var parent))
+                EnqueueParents(queue, parent);
         }
 
         return false;
+    }
+
+    private static void EnqueueParents(Queue<string> queue, EntityPrototype? prototype)
+    {
+        if (prototype?.Parents is not { } parents)
+            return;
+
+        foreach (var parent in parents)
+            queue.Enqueue(parent);
     }
 }

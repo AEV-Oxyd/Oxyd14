@@ -188,6 +188,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return HasComp<BioreactorComponent>(uid);
     }
 
+    /// <summary>True when <paramref name="uid"/> is an Eye of the Protector — the machine the offering litanies bank observation on.</summary>
+    public bool IsLitanyEye(EntityUid uid)
+    {
+        return HasComp<EyeOfTheProtectorComponent>(uid);
+    }
+
     /// <summary>True when the target is a living mob that can carry skill buffs.</summary>
     public bool CanReceiveSkillBuff(EntityUid uid)
     {

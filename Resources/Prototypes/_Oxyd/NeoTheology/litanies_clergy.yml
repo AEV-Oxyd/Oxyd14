@@ -197,9 +197,10 @@
   targetMode: NearbyMachine
   range: 1.5
   cost: 15
-  enabled: false
-  dependency: EyeEconomy
-  unavailableReason: oxyd-litany-unavailable-eye
+  effects:
+  - !type:LitanyOfferingEffect
+    offering: OxydNtOfferingDivineIntervention
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyHolyGuidance
@@ -212,9 +213,10 @@
   targetMode: NearbyMachine
   range: 1.5
   cost: 15
-  enabled: false
-  dependency: EyeEconomy
-  unavailableReason: oxyd-litany-unavailable-eye
+  effects:
+  - !type:LitanyOfferingEffect
+    offering: OxydNtOfferingHolyGuidance
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyDivineBlessing

@@ -129,3 +129,13 @@ public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bo
 /// </summary>
 [ByRefEvent]
 public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, TimeSpan Duration, bool Handled);
+
+/// <summary>
+/// Bridge for the offering litanies (DivineIntervention, HolyGuidance): raised on the Eye of the
+/// Protector; the server <c>AltarSystem</c> collects <see cref="OfferingKey"/>'s requirements from
+/// the altar within <see cref="User"/>'s reach, banks the observation on the Eye and sets
+/// <see cref="Handled"/>. A false <see cref="Handled"/> means there was no altar or the offering
+/// was under-stocked.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, bool Handled);

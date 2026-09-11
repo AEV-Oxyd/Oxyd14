@@ -297,6 +297,8 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyBioreactorSolution",
                 "OxydLitanyBioreactorChamber",
                 "OxydLitanyScrying",
+                "OxydLitanyDivineIntervention",
+                "OxydLitanyHolyGuidance",
             }));
         });
     }

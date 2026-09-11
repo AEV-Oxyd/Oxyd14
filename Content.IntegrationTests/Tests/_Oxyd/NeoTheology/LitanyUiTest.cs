@@ -350,6 +350,8 @@ public sealed class LitanyUiTest : GameTest
                 LitanyEffectKind.BioreactorSolution,
                 LitanyEffectKind.BioreactorChamber,
                 LitanyEffectKind.Scrying,
+                LitanyEffectKind.DivineIntervention,
+                LitanyEffectKind.HolyGuidance,
             }));
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Relief), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.SoulHunger), Is.True);
@@ -361,7 +363,7 @@ public sealed class LitanyUiTest : GameTest
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.DivineBlessing), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Commitment), Is.True);
             Assert.That(LitanyHandlerCatalog.HasHandler(LitanyEffectKind.Deprivation), Is.True);
-            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(31));
+            Assert.That(LitanyHandlerCatalog.Implemented.Count, Is.EqualTo(33));
         });
     }
 

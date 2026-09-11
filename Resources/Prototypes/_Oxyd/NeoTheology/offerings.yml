@@ -1,8 +1,8 @@
 # P3.8: Eris /datum/ritual/offering, ported as data. The priest names an offering;
 # the altar collects matching items on its turf and the Eye converts them to observation.
 #
-# Omitted: holy_guidance (1 oddity + 40 fruits) — neither an oddity nor a fruit
-# prototype exists in this fork, so a missing offering beats a broken one.
+# holy_guidance's oddity requirement is deferred: no oddity entity prototype exists in this
+# fork (only OddityComponent), so only the fruit half is ported. Flagged in P4.13.
 
 - type: oxydOffering
   id: OxydNtOfferingDivineIntervention
@@ -13,3 +13,17 @@
   # ponytail: one full miracle's worth (1000 observation) per 200 biomatter — a flagged
   # balance choice; Eris grants the same intervention directly rather than banking it.
   observation: 1000
+
+- type: oxydOffering
+  id: OxydNtOfferingHolyGuidance
+  name: oxyd-offering-holy-guidance
+  required:
+  # Eris: 1 oddity + 40 grown fruits (/obj/item/reagent_containers/food/snacks/grown).
+  # Produce has no single ancestor prototype in this fork (ProduceBase grains vs
+  # FoodProduceBase edibles), so the requirement names the edible half; the oddity line is
+  # deferred above.
+  - proto: FoodProduceBase
+    count: 40
+  # ponytail: half a miracle's worth (500 observation) for 40 produce — a flagged balance
+  # choice; Eris hands these offerings one of five miracle outcomes directly.
+  observation: 500

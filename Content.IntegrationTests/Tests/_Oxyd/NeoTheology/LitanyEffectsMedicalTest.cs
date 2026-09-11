@@ -79,6 +79,8 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.BioreactorSolution,
         LitanyEffectKind.BioreactorChamber,
         LitanyEffectKind.Scrying,
+        LitanyEffectKind.DivineIntervention,
+        LitanyEffectKind.HolyGuidance,
     ];
 
     public override PoolSettings PoolSettings => new()
