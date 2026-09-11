@@ -1,45 +1,43 @@
 # NeoTheology litany progress
 
-Status: **In progress — Phase 4 remediation and packet work are active.**
+Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 44 of 60 entries are enabled.**
 
-Implementation checkpoint: branch `neotheology/fix-pass`, commits `55974202b6` and
-`6d8b73e3f4` (the committed review fix pass). The completion plan is
-`.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
+Completion plan: `.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
+Implementation checkpoint: commits through `0c3cdb1294`.
 
 ## Current implementation
 
-- 60 catalog entries and 9 sets: 37 foundation entries (36 enabled plus
-  `BaptismalRecord`) and 23 dependency-gated entries.
-- **36 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
+- 60 catalog entries and 9 sets: 44 foundation entries (all enabled) and 16
+  dependency-gated entries.
+- **44 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
   enabled set.
-- **24 remain disabled:** `AcceleratedGrowth`, `WordsOfPurging`, `Asacris`,
-  `Atonement`, `BaptismalRecord`, `DivineGuidance`, `Manifestation`, `Uproot`,
-  `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`, `CantoOfCourage`,
-  `ChantOfObservance`, `ReclamationOfEndurance`, `Sanctify`, `Crusade`,
-  `Rejection`, `RevealAdversaries`, `Penance`, `Knowledge`, `Bounty`,
-  `EternalBrotherhood`, `CallToBattle`, `SearingRevelation`.
+- **16 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
+  `CantoOfCourage`, `ChantOfObservance`, `ReclamationOfEndurance`, `Sanctify`,
+  `Crusade`, `EternalBrotherhood`, `CallToBattle`, `SearingRevelation` (the
+  ceremony block), `Knowledge`, `Bounty` (uplink), `DivineGuidance`,
+  `Manifestation`, `Uproot` (construction).
 - Server speech recognition, DoAfter casting, ownership/entitlement checks,
   cruciform lifecycle, holiness, profiles and access are implemented.
-- Book presentation and private snapshots exist. The cast transaction is still
-  not atomic: application failure can retain the debit and cooldown.
+- The cast transaction is atomic: an unexpected apply failure refunds the debit
+  and skips the cooldown; success-only cooldowns; the actor receives
+  `LitanyResultMessage` and `LitanyProgressMessage` on the open book UI.
 
-## Review remediation (committed)
+## Review remediation
 
-The independent review `.hermes/review/neotheology-evaluation.md` found ten
-issues. The committed fix pass closes them in direction:
+All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 
-| Finding | State | Remaining work |
-| --- | --- | --- |
-| 1. Obelisk attacks normal crew | Fixed in direction | Faction whitelist names a missing `Carp` id; `MobCarp` is `Dragon`. |
-| 2. Shared reclaimer output changed | Fixed | `OxydNtBiomatterReclaimer` has no world placement. |
-| 3. Resurrection needs the corpse | Fixed, tests pass | Keep covered. |
-| 4. Pre-debit validation missing | Fixed in direction | Add full-cast refusal tests. |
-| 5. Scrying lifecycle cleanup | Fixed in direction | Disconnect test fails on the dummy-session path. |
-| 6. Aura regeneration stale | Fixed | Positive obelisk test is skipped. |
-| 7. Eye repeats the same presence | Fixed in direction | Align armaments cap and accrual to Eris. |
-| 8. Machine power not checked | Fixed | Keep covered. |
-| 9. Bioreactor processes without solution | Fixed | Keep covered. |
-| 10. Test notice archive grows | Fixed | Keep covered. |
+| Finding | State |
+| --- | --- |
+| 1. Obelisk attacks normal crew | Fixed; carp faction corrected to `Dragon`; positive and negative tests pass. |
+| 2. Shared reclaimer output changed | Fixed; `OxydNtBiomatterReclaimer` child added. World placement remains an integration task. |
+| 3. Resurrection needs the corpse | Fixed; grows the saved profile; corpse-deletion tests pass. |
+| 4. Pre-debit validation missing | Fixed with the `ValidateOnly` bridge pass and full-cast tests. |
+| 5. Scrying lifecycle cleanup | Fixed; death, detach and disconnect paths covered. |
+| 6. Aura regeneration stale | Fixed; `RefreshRegeneration` plus shutdown cleanup, covered. |
+| 7. Eye repeats the same presence | Fixed; shared scanned set plus 10-minute reversal; economy aligned to Eris values. |
+| 8. Machine power not checked | Fixed with `NeoTheologyMachineSystem`; unpowered tests pass. |
+| 9. Bioreactor without solution | Fixed; processing requires `ChamberSolution`. |
+| 10. Test notice archive grows | Fixed; observer event replaces the dictionary. |
 
 ## Milestone ledger
 
@@ -47,33 +45,47 @@ issues. The committed fix pass closes them in direction:
 | --- | --- | --- |
 | 1. Baseline and contracts | Complete | Keep catalog and schema checks green. |
 | 2. Cruciform lifecycle | Complete | Keep lifecycle coverage. |
-| 3. Speech and cast transaction | In progress | Atomic debit and refund, success-only cooldown, result publication. |
-| 4. Bible UI and common effects | In progress | UI progress and result refresh, target tokens, `BaptismalRecord`. |
-| 5. Ranks and medical/social foundation | Complete in handlers | Fidelity gaps: upgrade effects, `Sending`, `Confirmation`, `Scrying`. |
-| 6. Foundation integration review | Not complete | Full suite, manual two-client scenario. |
-| 7. Dependency packets | In progress | 10 packets remain, ceremonies last. |
+| 3. Speech and cast transaction | Complete | Keep atomicity and result tests. |
+| 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
+| 5. Ranks and medical/social foundation | Handlers complete | Fidelity gaps: upgrade effects, `Sending`, `Confirmation`, `Scrying` target choice. |
+| 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
+| 7. Dependency packets | In progress | Construction (3), uplink (2), ceremonies (11). |
 | 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
+
+## Packet record
+
+| Packet | Litanies | State |
+| --- | --- | --- |
+| PlantGrowth | `AcceleratedGrowth` | Landed in `0c3cdb1294`. |
+| Purity | `Rejection` | Landed; implant scan and brute rider. |
+| ThreatClassification | `RevealAdversaries` | Landed; faction scan plus landmine scan. |
+| Addiction | `WordsOfPurging` | Landed; reagent purge (named divergence). |
+| Pain | `Atonement`, `Penance` | Landed; stamina damage (named divergence). |
+| CoreModules | `Asacris` | Landed; strips every cruciform upgrade. |
+| Persistence | `BaptismalRecord` | Landed in `738ad6dfcf`; altar paper, live bearer scan. |
+| ConstructionCatalog | `DivineGuidance` | Pending. |
+| Construction | `Manifestation`, `Uproot` | Pending. |
+| NtUplink | `Knowledge`, `Bounty` | Pending. |
+| Ceremonies | 11 litanies | Pending; engine required. |
 
 ## Immediate follow-up
 
-1. Fix the obelisk faction default (`Dragon`, not `Carp`) and make the positive test run.
-2. Fix the `Dirty` call on `NeoTheologyDoorComponent`.
-3. Fix the scrying disconnect test and the `dirty-disposed` skips.
-4. Align the Eye armaments cap and accrual to Eris (`eotp.dm:36-49`).
-5. Place `OxydNtBiomatterReclaimer` in the world.
-6. Complete the cast transaction and the Bible UI.
-7. Then packets in the completion-plan order, ceremonies last.
+1. Construction packet: `DivineGuidance`, `Manifestation`, `Uproot`.
+2. NtUplink packet: `Knowledge`, `Bounty`.
+3. Ceremony engine plus the 11 ceremony litanies.
+4. Fidelity gaps: upgrade effects, `Sending` recipient/message, `Confirmation`
+   designations, `Scrying` target choice.
+5. Map the NT machine set into a station area.
+6. Final catalog audit, manual two-client scenario, release cleanup.
 
 ## Historical validation evidence
 
-These are earlier checkpoints, not results from the current branch.
-
 - Baseline recorded RobustToolbox `af2a7d0406` and SDK `10.0.203`.
-- M1 (`acc944a96a`): NeoTheology unit tests 16/16 and `LitanyPrototypeTest` 3/3.
-- M2 (`6b9b3de457`): `CruciformLifecycleTest` 8/8.
-- M3 (`988219dcee`): `LitanyCastTest` 11/11, `LitanySecurityTest` 3/3.
-- M4 UI (`7cf78157be`): `LitanyUiTest` 9/9.
-- Review checkpoint `6564fbe61d`: unit 17/17; integration 141 passed, 3 skipped;
-  catalog pins 24 passed, 1 skipped. The review found the defects listed above.
-- Current fix-pass baseline: unit 17/17; integration 159 passed, 2–3 failed,
-  4–5 skipped of 166. The failures are the three defects in Immediate follow-up.
+- M1 `acc944a96a`: unit 16/16, `LitanyPrototypeTest` 3/3.
+- M2 `6b9b3de457`: `CruciformLifecycleTest` 8/8.
+- M3 `988219dcee`: `LitanyCastTest` 11/11, `LitanySecurityTest` 3/3.
+- M4 UI `7cf78157be`: `LitanyUiTest` 9/9.
+- Review checkpoint `6564fbe61d`: unit 17/17; integration 141 passed, 3 skipped.
+- Fix pass `4b5970f3c4`: integration 166/166, zero skips.
+- Packet wave `0c3cdb1294`: unit 17/17; integration 168/168, zero skips.
+- `BaptismalRecord` `738ad6dfcf`: records test 2/2.
