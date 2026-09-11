@@ -12,17 +12,23 @@ against the Oxyd14 tree on 2026-09-10 (scoped to `Content.{Shared,Server,Client}
 
 ---
 
-## Status update (2026-09-11)
+## Final status (2026-09-11, Stage 6)
 
-The packet tables below are the original map. These packets have landed since the map:
+**All 60 entries are enabled and audited.** The tables below are the original
+plan-time map and are kept for provenance; every packet in it landed. The final
+divergence register, validation evidence and open items are in
+`docs/neotheology-litany-progress.md`; the source-by-source audit is in
+`.hermes/review/neotheology-catalog-audit.md`.
+
+The packet table below records the landing state:
 
 | Packet | Litanies | State |
 | --- | --- | --- |
-| `RemoteView` | `Scrying` | Landed (P3.9 + P4.13). Bounded session; target selection stays a fidelity gap. |
-| `CoreModules` | `Asacris`, `Initiation` | `Initiation` landed. `Asacris` remains gated. |
-| `Attachments` | `InstallUpgrade`, `UninstallUpgrade` | Handlers enabled; effects are stubs. Completion plan Stage 3. |
+| `RemoteView` | `Scrying` | Landed (P3.9 + P4.13). Bounded session; the book now offers target selection (`89e4cc1784`) and manual speech keeps the deterministic fallback. |
+| `CoreModules` | `Asacris`, `Initiation` | Landed. `Asacris` strips upgrades; its target mode was corrected to the Eris front/grabbed bearer in the Stage 6 audit. |
+| `Attachments` | `InstallUpgrade`, `UninstallUpgrade` | Landed in `17b7908f45`; the five upgrade behaviours run while installed. |
 | `SoulCloning` | `Reincarnation`, `Resurrection` | Landed. Resurrection restored from the stored profile. |
-| `EyeEconomy` | `DivineIntervention`, `HolyGuidance` | Landed. Values still need Eris alignment. |
+| `EyeEconomy` | `DivineIntervention`, `HolyGuidance` | Landed and aligned to `eotp.dm` in `de2cc4b591`. |
 | `Armaments` | `OrderArmaments` | Landed. |
 | `ForgeMaterials` | `MakeCruciform` | Landed. |
 | `BiomatterMaterials` | `RepairDoor` | Landed. |
@@ -38,8 +44,10 @@ The packet tables below are the original map. These packets have landed since th
 | Construction | `Manifestation`, `Uproot` | Landed (front-tile build and refund). |
 | NtUplink | `Knowledge`, `Bounty` | Landed (hidden cruciform store plus the NeoTheology category). |
 
-Remaining gated set: 0 entries. Every catalog entry is enabled; the completion plan
-(`.hermes/plans/2026-09-11_135754-neotheology-completion.md`) drives the rest.
+Remaining gated set: 0 entries. Every catalog entry is enabled, field parity is
+60/60 and the Stage 6 audit is complete. The historical `todo` states further
+down this document describe the plan-time tree; the implementation supersedes
+them.
 
 ---
 

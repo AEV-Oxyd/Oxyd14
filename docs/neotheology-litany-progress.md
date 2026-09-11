@@ -1,17 +1,21 @@
 # NeoTheology litany progress
 
-Status: **All 60 entries are enabled on `neotheology/fix-pass`; the full-catalog audit is the remaining milestone.**
+Status: **Complete.** All 60 catalog entries are enabled on `neotheology/fix-pass`
+and the Stage 6 catalog audit is done. The divergence register is below; the full
+source-by-source audit is `.hermes/review/neotheology-catalog-audit.md`.
 
 Completion plan: `.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
 Ceremony contract: `.hermes/review/neotheology-ceremony-contract.md`.
-Implementation checkpoint: commits through `7e9c0afcb7`.
+Smoke runbook: `.hermes/review/neotheology-smoke-runbook.md`.
+Implementation checkpoint: commits through `7e9c0afcb7`; Stage 6 corrections and
+documentation land in the commits that follow it on this branch.
 
 ## Current implementation
 
 - 60 catalog entries and 9 sets: all 60 are foundation entries and all 60 are
   enabled. No dependency-gated entries remain.
 - **60 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
-  enabled set.
+  enabled set (unit policy 17/17).
 - The group-ritual engine runs: a ceremony opens with no followers, followers in
   range join by speaking the current phrase, the starter advances with the next
   phrase, and the payload runs for the starter and every recorded follower.
@@ -30,13 +34,31 @@ Implementation checkpoint: commits through `7e9c0afcb7`.
   and skips the cooldown; success-only cooldowns; the actor receives
   `LitanyResultMessage` and `LitanyProgressMessage` on the open book UI.
 - A book cast of a choice-requiring litany pauses in the `Choosing` stage. The
-  server publishes server-authored options (targets, designations) and the typed
-  text is limited to 512 characters. Manual speech keeps a deterministic fallback
-  and is a registered divergence.
+  server publishes server-authored options (targets, designations, blueprints)
+  and the typed text is limited to 512 characters. Manual speech keeps a
+  deterministic fallback and is a registered divergence.
 - The five behavioural cruciform upgrades run while installed: speed, martyr
   burst, nature blessing aura, cleansing presence and the wrath melee bonus.
-- The Eye economy matches `eotp.dm` (Stage 1 sign-off). No deviation remains to
-  register for P3.5.
+- The Eye economy matches `eotp.dm` (Stage 1 sign-off).
+
+## Stage 6 audit result
+
+The audit compared all 60 entries against the Eris source on name, phrase, cost,
+cooldown, target mode and effect payload. Field parity is 60/60. The audit found
+two issues and fixed both:
+
+1. `Asacris` targeted the caster (`Self`) instead of the Eris front/grabbed
+   bearer. It is now `AdjacentFollower`, range 1.5, and the locale description
+   matches the Eris text.
+2. `OxydNtBiomatterReclaimer` appeared in no map and no blueprint. It joins the
+   NT blueprint catalog (11th entry) so the biomatter path is reachable in a
+   live round. Eris has no reclaimer (it bridges the upstream machine), so no
+   Eris blueprint is displaced.
+
+The audit also fixed two pre-existing YAML syntax errors in
+`Resources/Prototypes/_Oxyd/erisPorted/mask/` (`fake_moustache.yml`,
+`Vapour_mask.yml`) that stopped the prototype loader and the map tests from
+starting.
 
 ## Review remediation
 
@@ -45,7 +67,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | Finding | State |
 | --- | --- |
 | 1. Obelisk attacks normal crew | Fixed; carp faction corrected to `Dragon`; positive and negative tests pass. |
-| 2. Shared reclaimer output changed | Fixed; `OxydNtBiomatterReclaimer` child added. World placement remains an integration task. |
+| 2. Shared reclaimer output changed | Fixed; `OxydNtBiomatterReclaimer` child added and given an in-round path in Stage 6. |
 | 3. Resurrection needs the corpse | Fixed; grows the saved profile; corpse-deletion tests pass. |
 | 4. Pre-debit validation missing | Fixed with the `ValidateOnly` bridge pass and full-cast tests. |
 | 5. Scrying lifecycle cleanup | Fixed; death, detach and disconnect paths covered. |
@@ -62,11 +84,11 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | 1. Baseline and contracts | Complete | Keep catalog and schema checks green. |
 | 2. Cruciform lifecycle | Complete | Keep lifecycle coverage. |
 | 3. Speech and cast transaction | Complete | Keep atomicity and result tests. |
-| 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
-| 5. Ranks and medical/social foundation | Handlers complete | `Sending` text, `Confirmation` designations and `Scrying` target choice are live; closed in `89e4cc1784` and `17b7908f45`. |
-| 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
+| 4. Bible UI and common effects | Complete | Live client render step is in the smoke runbook. |
+| 5. Ranks and medical/social foundation | Complete | Closed in `89e4cc1784` and `17b7908f45`. |
+| 6. Foundation integration review | Complete | Smoke runbook maps every step to its automated test; the live client pass stays a maintainer action. |
 | 7. Dependency packets | Complete | Ceremonies landed in `7e9c0afcb7`; zero gated entries remain. |
-| 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
+| 8. Full catalog audit | Complete | Field parity 60/60; register below; fixes in the Stage 6 commit. |
 
 ## Packet record
 
@@ -77,7 +99,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | ThreatClassification | `RevealAdversaries` | Landed; faction scan plus landmine scan. |
 | Addiction | `WordsOfPurging` | Landed; reagent purge (named divergence). |
 | Pain | `Atonement`, `Penance` | Landed; stamina damage (named divergence). |
-| CoreModules | `Asacris` | Landed; strips every cruciform upgrade. |
+| CoreModules | `Asacris` | Landed in `0c3cdb1294`; strips upgrades, target fixed in Stage 6. |
 | Persistence | `BaptismalRecord` | Landed in `738ad6dfcf`; altar paper, live bearer scan. |
 | Fidelity | Upgrade behaviours | Landed in `17b7908f45`; five upgrades, 4 integration tests. |
 | Fidelity | `Sending`, `Scrying`, `Confirmation` | Landed in `89e4cc1784`; server-owned book choice flow, 4 integration tests. |
@@ -85,12 +107,82 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | Construction | `Manifestation`, `Uproot` | Landed in `45b24941f2`; front-tile build and refund. |
 | NtUplink | `Knowledge`, `Bounty` | Landed in `fa8a5996c7`; hidden cruciform store plus the NeoTheology category. |
 | Ceremonies | 11 litanies | Landed in `7e9c0afcb7`; engine, obelisk force-active, crusader set grant, disciple HUD. |
+| Audit | All 60 | Field parity 60/60; Asacris target fix and reclaimer blueprint in the Stage 6 commit. |
 
-## Immediate follow-up
+## Divergence register
 
-1. Map the NT machine set into a station area.
-2. Final catalog audit and the manual two-client scenario.
-3. Release cleanup.
+Every deliberate difference from Eris, with the reason. The full per-entry audit
+is in `.hermes/review/neotheology-catalog-audit.md`.
+
+**Target-mode reductions** (no address registry, no global picker in the fork):
+`Atonement`, `Penance` use `VisibleFollower`; `Excommunication`, `Scrying`,
+`Sending` use `StationFollower`; the front/grabbed-reach litanies use
+`AdjacentLiving`/`AdjacentFollower` (own or faced tile, 1.5 m); `Order Armaments`
+keys off the armaments printer instead of the EOTP; `Asacris` uses
+`AdjacentFollower` because Eris requires an active cruciform on the victim.
+
+**Cooldown additions:** `Relief`, `Soul Hunger`, `Entreaty`, `Reveal Adversaries`,
+`Cruciform Sense` and `Revelation` get a personal 60 s cooldown. Eris declares
+`cooldown_time = 1 MINUTES` on the base ritual and calls `set_personal_cooldown`,
+but never sets `cooldown = TRUE`, so its check is a no-op; the fork implements the
+declared intent. The eight group ceremonies carry a shared 1 s per-starter key
+(Eris has none) so a second start cannot overlap a running rite.
+
+**Costs:** `Divine Guidance` and `Knowledge` cost 0 in the fork. Eris lists
+`power = 5` for both but charges nothing because `perform` returns null/false.
+
+**Payload reductions and substitutions (with reason):**
+
+- `Relief`, `Hand of Mercy`, `Absolution of Wounds`, `Convalescence`, `Succour`:
+  the Eris NT reagents (`angelsbalm`, `deusblessing`, `holyinaprovaline`,
+  `holydexalin`) do not exist in the fork, so these heal the matching damage
+  channels. `Convalescence`/`Succour` keep the exact Eris amounts.
+- `Atonement`, `Penance`: Eris `adjustHalLoss(50)` becomes 50 stamina damage
+  (no pain value exists).
+- `Words of Purging`: no addiction model; purges habit-forming reagents. The
+  Eris painkiller message stays.
+- `Rejection`: no external limbs; strips implants and applies the brute rider.
+- `Reveal Adversaries`: `NpcFactionMember` scan and `LandMineComponent`; the
+  hidden 20 % miss and the wire-splicing entity do not exist.
+- `Offerings`: observation (1000 / 500) instead of the Eris miracle list; the
+  Holy Guidance oddity half is deferred (no oddity prototype).
+- `Eye of the Protector`: power, armament and observation values match `eotp.dm`.
+  The `ODDITY` miracle no-ops (empty reward list) and `ObservationPerFaithless`
+  is unused (no faithless marker). The offering miracle lists are not used.
+- `Baptismal Record`: live bearer scan instead of the disciple registry, and
+  round-scoped (no persistence API).
+- `Adoption` / `Ordination` / `Omission` / `Excommunication`: profile rank swaps,
+  because the fork has no separate clearance field.
+- `Initiation`: single ritual instead of the two-stage ascension kit; promotes to
+  Preacher, as the Eris `priest_convert` profile says.
+- `Commitment` / `Install Upgrade` / `Uninstall Upgrade`: the lying-on-altar and
+  undressed gates are not implemented.
+- `Reincarnation` / `Resurrection`: upstream cloning pod grows the stored
+  profile; the Eris per-rank `clone_damage` is not applied.
+- Machinery: the multi-part biogenerator/bioreactor commands map onto the
+  flattened machines; power is checked at the point of use; `ActivateDoor` has no
+  facing requirement and no broken-door state.
+- `Knowledge` / `Bounty`: fork-local store catalog; no NT-pattern weapons, ritual
+  blade or ascension kit; nullspace store and banked balance instead of the
+  hidden uplink item.
+- Ceremonies: 5-minute timeout; participants stay in range; timed per-litany
+  skill entries instead of Eris stacking; no area-sanctify flag, no crusade world
+  flag, no atheist mutation; HUD drains no power and dies with the implant;
+  `Searing Revelation` forces the fall past the SS14 gravity rule.
+- Upgrades: the martyr burst fires from the one-second tick; the nature aura uses
+  one-second units; brute healing lands on the Blunt channel.
+- Construction: no last-shelter device; multi-part machines collapse into one
+  entity each; per-blueprint `build_time` becomes the litany `extraDelay`; the
+  reclaimer joins the blueprint catalog (Stage 6).
+
+**Open capability gaps (visible, not silent):**
+
+| Gap | State |
+| --- | --- |
+| Oddity entity | No prototype carries `OddityComponent`, so `Divine Blessing` fails closed and the Eye `ODDITY` miracle no-ops. |
+| Faithless / mutant / carrion penalties | `ObservationPerFaithless` is unused; the fork has no marker. |
+| Eye blessing stat payoff | `OxydNtEyeBlessing` is mechanism-only; no stat numbers assigned. |
+| Addiction model | Replaced by the reagent purge above. |
 
 ## Historical validation evidence
 
@@ -108,3 +200,19 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 - Construction packet `45b24941f2`: unit 17/17; integration 181/181, zero skips.
 - NtUplink packet `fa8a5996c7`: unit 17/17; integration 184/184, zero skips.
 - Ceremony packet `7e9c0afcb7`: unit 17/17; integration 193/193, zero skips; 9 new ceremony tests.
+- Stage 6 audit corrections: unit 17/17; integration 193/193, zero skips
+  (TRX `bad: []`); construction + prototype tests 9/9.
+
+## Release state and open items
+
+- The NeoTheology suite is green: unit 17/17 and integration 193/193 with zero
+  skips on the final tree.
+- Pre-existing, not NeoTheology: the station-map load tests fail on this branch
+  with `Duplicate chunk entity` (`ChunkEntitySystem.AddChunk`), and the YAML
+  linter reports 8 field/localization errors in unrelated fork prototypes
+  (`newGuns.yml`, `auto.yml`, `restingObjectives.yml`, `bundle.yml`). Both are
+  owned by the map/engine and gun workstreams.
+- The `Oxyd14-port-eris-ironhammer` gitlink stays out of the NeoTheology
+  commits; its ` m` working-tree state is owned by the Ironhammer port.
+- The `.freebuff` preview files are removed from the branch.
+- No push and no PR without owner approval.
