@@ -327,9 +327,9 @@
   targetMode: NearbyMachine
   range: 1.5
   cost: 20
-  enabled: false
-  dependency: Armaments
-  unavailableReason: oxyd-litany-unavailable-armaments
+  effects:
+  - !type:LitanyArmamentsEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyDivineGuidance

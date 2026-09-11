@@ -139,3 +139,11 @@ public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, Time
 /// </summary>
 [ByRefEvent]
 public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, bool Handled);
+
+/// <summary>
+/// Bridge for OrderArmaments: raised on the armaments printer; the server
+/// <c>ArmamentsPrinterSystem</c> opens its own shop UI for <see cref="User"/> and sets
+/// <see cref="Handled"/>. A false <see cref="Handled"/> means the UI could not be opened.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyOpenArmamentsEvent(EntityUid User, bool Handled);

@@ -1,6 +1,7 @@
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared.UserInterface;
 using Robust.Server.GameObjects;
@@ -26,6 +27,17 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
 
         SubscribeLocalEvent<ArmamentsPrinterComponent, AfterActivatableUIOpenEvent>(OnUiOpened);
         SubscribeLocalEvent<ArmamentsPrinterComponent, PurchaseArmamentMessage>(OnPurchaseMessage);
+        SubscribeLocalEvent<ArmamentsPrinterComponent, LitanyOpenArmamentsEvent>(OnLitanyOpenArmaments);
+    }
+
+    /// <summary>
+    /// OrderArmaments bridge (Eris <c>rituals/priest.dm:492-520</c>): the priest opens the shop
+    /// from the machine; Eris opened the EOTP's own armory UI, the fork's shop is this printer
+    /// (P2.16), so the handler opens the printer's existing BUI for the caster.
+    /// </summary>
+    private void OnLitanyOpenArmaments(EntityUid uid, ArmamentsPrinterComponent component, ref LitanyOpenArmamentsEvent args)
+    {
+        args.Handled = _ui.TryOpenUi(uid, ArmamentsPrinterUiKey.Key, args.User);
     }
 
     private void OnUiOpened(EntityUid uid, ArmamentsPrinterComponent component, AfterActivatableUIOpenEvent args)

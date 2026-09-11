@@ -194,6 +194,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return HasComp<EyeOfTheProtectorComponent>(uid);
     }
 
+    /// <summary>True when <paramref name="uid"/> is the armaments printer — the machine the OrderArmaments litany opens.</summary>
+    public bool IsLitanyArmamentsPrinter(EntityUid uid)
+    {
+        return HasComp<ArmamentsPrinterComponent>(uid);
+    }
+
     /// <summary>True when the target is a living mob that can carry skill buffs.</summary>
     public bool CanReceiveSkillBuff(EntityUid uid)
     {

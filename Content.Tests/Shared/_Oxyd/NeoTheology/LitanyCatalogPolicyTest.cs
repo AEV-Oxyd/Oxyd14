@@ -45,6 +45,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Scrying,
         LitanyEffectKind.DivineIntervention,
         LitanyEffectKind.HolyGuidance,
+        LitanyEffectKind.OrderArmaments,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -82,6 +83,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Scrying,
         LitanyEffectKind.DivineIntervention,
         LitanyEffectKind.HolyGuidance,
+        LitanyEffectKind.OrderArmaments,
     ];
 
     [Test]
