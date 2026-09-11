@@ -36,6 +36,7 @@ public sealed partial class StatusPanelSystem : EntitySystem
     [Dependency] private IUserInterfaceManager _uiManager = default!;
     [Dependency] private IStateManager _stateManager = default!;
     [Dependency] private IConfigurationManager configurationManager = default!;
+    [Dependency] private OxTagController tagger = default!;
     private StatPanel? panel => _uiManager.GetActiveUIWidgetOrNull<StatPanel>();
     public Dictionary<string, Control> panelContent = new();
     public RadioOptions<string> buttons = null!;

@@ -34,7 +34,9 @@
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
                 <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="10">
-                    <ui:StatPanel Name="StatPanel" MinHeight="300" MinWidth="435"/>
+                    <ui:StatPanel MinHeight="300" MinWidth="435">
+                        <ui:OxTag tag="ControlPanel"/>
+                    </ui:StatPanel>
                     <chat:ChatBox StyleClasses="ChatOutput" VerticalExpand="True" HorizontalExpand="True" Name="Chat" Access="Protected" MinSize="0 0"/>
                 </BoxContainer>
             </PanelContainer>
