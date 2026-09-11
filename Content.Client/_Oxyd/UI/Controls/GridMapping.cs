@@ -124,16 +124,8 @@ public sealed class GridMapping : Container
                 }
 
                 var box = new UIBox2(gridsize.X * x, y * gridsize.Y, gridsize.X * (x+1), gridsize.Y * (y+1));
-                Log.Info($"Grid slot {x},{y} is {box}");
+                //Log.Info($"Grid slot {x},{y} is {box}");
                 v.Arrange(box);
-            }
-        }
-
-        foreach (var child in Children)
-        {
-            if (child is GridSlot slot)
-            {
-                Log.Info($"Position of {slot.Key} is {slot.Position}, size: {slot.Size}");
             }
         }
     }

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.Framework;
 using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.Hands.Systems;
@@ -155,11 +156,10 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
             if (!data.ShowInWindow || !_slotGroups.TryGetValue(data.SlotGroup, out var container))
                 continue;
             
-            if (!container.Slots.TryGetValue(data.ButtonOffset, out var ctrl) ||
-                !ctrl.Children.TryFirstOrDefault(t => t is SlotButton c && c.SlotName == data.SlotName, out var button))
+            if (!container.GetByPosName(data.ButtonOffset, data.SlotName, out var ctrl) || ctrl is not SlotButton button)
             {
                 button = CreateSlotButton(data);
-                container.InitSlot(data.ButtonOffset, button);
+                container.InitSlot(data.ButtonOffset,data.SlotName, button);
             }
 
             button.Visible = ShouldRender(data.SlotDef);
@@ -391,7 +391,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
             return;
 
         var button = CreateSlotButton(data);
-        slotGroup.InitSlot(data.ButtonOffset, button);
+        slotGroup.InitSlot(data.ButtonOffset, data.SlotName, button);
     }
 
     private void RemoveSlot(SlotData data)
