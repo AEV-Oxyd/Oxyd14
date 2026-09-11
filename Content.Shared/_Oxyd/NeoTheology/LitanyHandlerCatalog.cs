@@ -8,7 +8,7 @@ namespace Content.Shared._Oxyd.NeoTheology;
 /// </summary>
 public static class LitanyHandlerCatalog
 {
-    public const int ExpectedFoundationEffectCount = 37;
+    public const int ExpectedFoundationEffectCount = 44;
 
     /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles; P4.8: the attachments; P4.9: Reincarnation, Resurrection; P4.10: MakeCruciform, RepairDoor, PowerBiogenerator, BioreactorSolution, BioreactorChamber; P4.13: Scrying, DivineIntervention, HolyGuidance, OrderArmaments, Initiation, Sending.</summary>
     public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
@@ -50,6 +50,13 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
         LitanyEffectKind.Sending,
+        LitanyEffectKind.AcceleratedGrowth,
+        LitanyEffectKind.Rejection,
+        LitanyEffectKind.RevealAdversaries,
+        LitanyEffectKind.WordsOfPurging,
+        LitanyEffectKind.Atonement,
+        LitanyEffectKind.Penance,
+        LitanyEffectKind.Asacris,
     }.ToFrozenSet();
 
     /// <summary>
@@ -95,6 +102,13 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.HolyGuidance,
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
+        LitanyEffectKind.AcceleratedGrowth,
+        LitanyEffectKind.Rejection,
+        LitanyEffectKind.RevealAdversaries,
+        LitanyEffectKind.WordsOfPurging,
+        LitanyEffectKind.Atonement,
+        LitanyEffectKind.Penance,
+        LitanyEffectKind.Asacris,
     }.ToFrozenSet();
 
     public static bool HasHandler(LitanyEffectKind effect)

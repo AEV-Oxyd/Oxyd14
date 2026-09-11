@@ -84,6 +84,14 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
         LitanyEffectKind.Sending,
+        LitanyEffectKind.BaptismalRecord,
+        LitanyEffectKind.AcceleratedGrowth,
+        LitanyEffectKind.Rejection,
+        LitanyEffectKind.RevealAdversaries,
+        LitanyEffectKind.WordsOfPurging,
+        LitanyEffectKind.Atonement,
+        LitanyEffectKind.Penance,
+        LitanyEffectKind.Asacris,
     ];
 
     public override PoolSettings PoolSettings => new()

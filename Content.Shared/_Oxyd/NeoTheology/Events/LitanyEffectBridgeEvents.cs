@@ -1,3 +1,4 @@
+using Content.Shared.Chemistry.Reagent;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Events;
@@ -69,6 +70,52 @@ public record struct LitanyUninstallUpgradeEvent(EntityUid Target, bool Handled)
 /// </summary>
 [ByRefEvent]
 public record struct LitanyWriteSoulSnapshotEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for Rejection: raised on the body; the server removes every non-cruciform implant
+/// and damages the body, the closest fork equivalent of Eris shedding foreign matter.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyRejectForeignBodyEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for Reveal Adversaries: raised on the caster; the server scans hostile fauna and
+/// landmines and sends the Eris messages.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyRevealAdversariesEvent(EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for Words of Purging: raised on the target; the server purges the listed reagents
+/// from the target's bloodstream.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyPurgeAddictionEvent(EntityUid Target, IReadOnlyList<ProtoId<ReagentPrototype>> Reagents, bool Handled);
+
+/// <summary>
+/// Bridge for Atonement and Penance: raised on the target; the server applies the Eris pain
+/// rider. The fork has no nonphysical pain value, so this maps to stamina damage.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyPainEvent(EntityUid Target, float Amount, bool Handled);
+
+/// <summary>
+/// Bridge for Asacris: raised on the body; the server strips every upgrade from the installed
+/// cruciform.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyRemoveUpgradesEvent(EntityUid Target, bool Handled);
+
+/// <summary>
+/// Bridge for Accelerated Growth: raised on the caster; the server applies the growth boost to
+/// every plant in range.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyAcceleratedGrowthEvent(
+    EntityUid User,
+    float Multiplier,
+    TimeSpan Duration,
+    bool Handled);
 
 /// <summary>
 /// Bridge for BaptismalRecord: raised on the NeoTheology altar; the server <c>AltarSystem</c>

@@ -47,6 +47,13 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.HolyGuidance,
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
+        LitanyEffectKind.AcceleratedGrowth,
+        LitanyEffectKind.Rejection,
+        LitanyEffectKind.RevealAdversaries,
+        LitanyEffectKind.WordsOfPurging,
+        LitanyEffectKind.Atonement,
+        LitanyEffectKind.Penance,
+        LitanyEffectKind.Asacris,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -88,6 +95,13 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.OrderArmaments,
         LitanyEffectKind.Initiation,
         LitanyEffectKind.Sending,
+        LitanyEffectKind.AcceleratedGrowth,
+        LitanyEffectKind.Rejection,
+        LitanyEffectKind.RevealAdversaries,
+        LitanyEffectKind.WordsOfPurging,
+        LitanyEffectKind.Atonement,
+        LitanyEffectKind.Penance,
+        LitanyEffectKind.Asacris,
     ];
 
     [Test]
@@ -127,10 +141,10 @@ public sealed class LitanyCatalogPolicyTest
     [Test]
     public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
     {
-        // Rejection stays dependency-gated: enabling it without a handler must fail closed.
+        // Sanctify stays dependency-gated: enabling it without a handler must fail closed.
         var errors = LitanyCatalogValidator.ValidateMissingHandler(
-            "OxydLitanyRejection",
-            LitanyEffectKind.Rejection,
+            "OxydLitanySanctify",
+            LitanyEffectKind.Sanctify,
             isAvailable: true);
 
         Assert.That(errors, Has.Count.EqualTo(1));

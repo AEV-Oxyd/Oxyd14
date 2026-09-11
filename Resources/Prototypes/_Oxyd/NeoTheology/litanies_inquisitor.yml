@@ -9,9 +9,9 @@
   targetMode: VisibleFollower
   range: 7
   cost: 35
-  enabled: false
-  dependency: Pain
-  unavailableReason: oxyd-litany-unavailable-pain
+  effects:
+  - !type:LitanyPainEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyConvalescence

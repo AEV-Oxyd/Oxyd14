@@ -77,9 +77,9 @@
   cooldownScope: Personal
   cooldownDuration: 10
   ignoreStuttering: true
-  enabled: false
-  dependency: Purity
-  unavailableReason: oxyd-litany-unavailable-purity
+  effects:
+  - !type:LitanyRejectionEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyRevealAdversaries
@@ -95,9 +95,9 @@
   cooldownKey: OxydLitanyRevealAdversaries
   cooldownScope: Personal
   cooldownDuration: 60
-  enabled: false
-  dependency: ThreatClassification
-  unavailableReason: oxyd-litany-unavailable-threats
+  effects:
+  - !type:LitanyRevealAdversariesEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyCruciformSense

@@ -13,9 +13,9 @@
   cooldownScope: Global
   cooldownDuration: 300
   effectDuration: 300
-  enabled: false
-  dependency: PlantGrowth
-  unavailableReason: oxyd-litany-unavailable-plant-growth
+  effects:
+  - !type:LitanyAcceleratedGrowthEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyHandOfMercy
@@ -68,9 +68,9 @@
   targetMode: AdjacentLiving
   range: 1.5
   cost: 5
-  enabled: false
-  dependency: Addiction
-  unavailableReason: oxyd-litany-unavailable-addiction
+  effects:
+  - !type:LitanyWordsOfPurgingEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyEpiphany
@@ -107,9 +107,9 @@
   targetMode: Self
   range: 0
   cost: 0
-  enabled: false
-  dependency: CoreModules
-  unavailableReason: oxyd-litany-unavailable-core-modules
+  effects:
+  - !type:LitanyAsacrisEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyGraceOfPerseverance
@@ -168,9 +168,9 @@
   targetMode: VisibleFollower
   range: 7
   cost: 45
-  enabled: false
-  dependency: Pain
-  unavailableReason: oxyd-litany-unavailable-pain
+  effects:
+  - !type:LitanyPainEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyBaptismalRecord

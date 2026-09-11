@@ -55,6 +55,13 @@ public sealed partial class PlantGrowthSystem : EntitySystem
         else if (random.Prob(0.8f))
             _plantHolder.AdjustsAge((plantUid, holder), 1);
 
+        // Accelerated Growth: a boost above 1 adds extra age with the fractional probability.
+        var boost = _timing.CurTime < plantComp.GrowthBoostExpiresAt
+            ? MathF.Max(1f, plantComp.GrowthMultiplier)
+            : 1f;
+        if (boost > 1f && random.Prob(MathF.Min(1f, boost - 1f)))
+            _plantHolder.AdjustsAge((plantUid, holder), 1);
+
         if (plantComp.WaterConsumption > 0 && trayComp.WaterLevel > 0 && random.Prob(0.75f))
             _plantTray.AdjustWater((trayUid, trayComp), -MathF.Max(0f, plantComp.WaterConsumption * trayComp.TrayConsumptionMultiplier));
 
@@ -109,5 +116,20 @@ public sealed partial class PlantGrowthSystem : EntitySystem
 
         ent.Comp.NutrientConsumption = MathF.Max(0f, ent.Comp.NutrientConsumption + amount);
         DirtyField(ent, nameof(ent.Comp.NutrientConsumption));
+    }
+
+    /// <summary>
+    /// Applies a temporary growth-rate boost. NeoTheology Accelerated Growth is the first user.
+    /// </summary>
+    [PublicAPI]
+    public void AdjustGrowthBoost(Entity<PlantGrowthComponent?> ent, float multiplier, TimeSpan duration)
+    {
+        if (!Resolve(ent.Owner, ref ent.Comp, false))
+            return;
+
+        ent.Comp.GrowthMultiplier = MathF.Max(1f, multiplier);
+        ent.Comp.GrowthBoostExpiresAt = _timing.CurTime + duration;
+        DirtyField(ent, nameof(ent.Comp.GrowthMultiplier));
+        DirtyField(ent, nameof(ent.Comp.GrowthBoostExpiresAt));
     }
 }
