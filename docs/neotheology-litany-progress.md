@@ -1,20 +1,23 @@
 # NeoTheology litany progress
 
-Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 47 of 60 entries are enabled.**
+Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 49 of 60 entries are enabled.**
 
 Completion plan: `.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
-Implementation checkpoint: commits through `45b24941f2`.
+Implementation checkpoint: commits through `fa8a5996c7`.
 
 ## Current implementation
 
-- 60 catalog entries and 9 sets: 47 foundation entries (all enabled) and 13
+- 60 catalog entries and 9 sets: 49 foundation entries (all enabled) and 11
   dependency-gated entries.
-- **47 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
+- **49 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
   enabled set.
-- **13 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
+- **11 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
   `CantoOfCourage`, `ChantOfObservance`, `ReclamationOfEndurance`, `Sanctify`,
   `Crusade`, `EternalBrotherhood`, `CallToBattle`, `SearingRevelation` (the
-  ceremony block), `Knowledge`, `Bounty` (uplink).
+  ceremony block).
+- The inquisitor's hidden uplink runs (NtUplink): the rank installs the module,
+  the first litany use creates the nullspace store and the balance survives a
+  module swap.
 - Server speech recognition, DoAfter casting, ownership/entitlement checks,
   cruciform lifecycle, holiness, profiles and access are implemented.
 - The cast transaction is atomic: an unexpected apply failure refunds the debit
@@ -56,7 +59,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
 | 5. Ranks and medical/social foundation | Handlers complete | `Sending` text, `Confirmation` designations and `Scrying` target choice are live; closed in `89e4cc1784` and `17b7908f45`. |
 | 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
-| 7. Dependency packets | In progress | Uplink (2), ceremonies (11). |
+| 7. Dependency packets | In progress | Ceremonies (11). |
 | 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
 
 ## Packet record
@@ -74,15 +77,14 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | Fidelity | `Sending`, `Scrying`, `Confirmation` | Landed in `89e4cc1784`; server-owned book choice flow, 4 integration tests. |
 | ConstructionCatalog | `DivineGuidance` | Landed in `45b24941f2`; blueprint choice plus material list. |
 | Construction | `Manifestation`, `Uproot` | Landed in `45b24941f2`; front-tile build and refund. |
-| NtUplink | `Knowledge`, `Bounty` | Pending. |
+| NtUplink | `Knowledge`, `Bounty` | Landed in `fa8a5996c7`; hidden cruciform store plus the NeoTheology category. |
 | Ceremonies | 11 litanies | Pending; engine required. |
 
 ## Immediate follow-up
 
-1. NtUplink packet: `Knowledge`, `Bounty`.
-2. Ceremony engine plus the 11 ceremony litanies.
-3. Map the NT machine set into a station area.
-4. Final catalog audit, manual two-client scenario, release cleanup.
+1. Ceremony engine plus the 11 ceremony litanies.
+2. Map the NT machine set into a station area.
+3. Final catalog audit, manual two-client scenario, release cleanup.
 
 ## Historical validation evidence
 
@@ -98,3 +100,4 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 - Choice flow `89e4cc1784`: unit 17/17; integration 172/172, zero skips.
 - Upgrade behaviours `17b7908f45`: unit 17/17; integration 176/176, zero skips.
 - Construction packet `45b24941f2`: unit 17/17; integration 181/181, zero skips.
+- NtUplink packet `fa8a5996c7`: unit 17/17; integration 184/184, zero skips.

@@ -36,9 +36,9 @@ The packet tables below are the original map. These packets have landed since th
 | `Pain` | `Atonement`, `Penance` | Landed (stamina damage; named divergence). |
 | Ceremonies | 11 litanies | Pending; ceremony engine required. |
 | Construction | `Manifestation`, `Uproot` | Landed (front-tile build and refund). |
-| NtUplink | `Knowledge`, `Bounty` | Pending. |
+| NtUplink | `Knowledge`, `Bounty` | Landed (hidden cruciform store plus the NeoTheology category). |
 
-Remaining gated set: 13 entries. The completion plan
+Remaining gated set: 11 entries. The completion plan
 (`.hermes/plans/2026-09-11_135754-neotheology-completion.md`) drives the rest.
 
 ---
