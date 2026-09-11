@@ -62,7 +62,7 @@ public sealed class HotbarUIController : UIController
 
         if (!ClientOxydHelpers.FindControl<GridMapping>(UIManager.ActiveScreen, "inventory", out var f))
             return;
-        _inventory?.RegisterSlotGroupContainer(f, "inventory");
+        _inventory?.RegisterSlotGroupContainer(f, "Default");
 
         //todo move this over to its own hellhole
         var inventory = UIManager.ActiveScreen.GetWidget<InventoryGui>();

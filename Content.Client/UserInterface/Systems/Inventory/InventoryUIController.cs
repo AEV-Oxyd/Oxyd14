@@ -32,6 +32,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
     IOnSystemChanged<ClientInventorySystem>, IOnSystemChanged<HandsSystem>
 {
     [Dependency] private IEntityManager _entities = default!;
+    [Dependency] private OxTagController tagging = default!;
 
     [UISystemDependency] private readonly ClientInventorySystem _inventorySystem = default!;
     [UISystemDependency] private readonly HandsSystem _handsSystem = default!;
@@ -155,7 +156,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
                 continue;
             
             if (!container.Slots.TryGetValue(data.ButtonOffset, out var ctrl) ||
-                !ctrl.Children.TryFirstOrDefault(t => t is SlotButton c && c.Name == data.SlotName, out var button))
+                !ctrl.Children.TryFirstOrDefault(t => t is SlotButton c && c.SlotName == data.SlotName, out var button))
             {
                 button = CreateSlotButton(data);
                 container.InitSlot(data.ButtonOffset, button);
@@ -471,6 +472,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
 
     public bool RegisterSlotGroupContainer(GridMapping map, string key)
     {
+        Log.Info($"Registering slot group {key} with {map.Slots.Count} slots");
         if (_slotGroups.TryAdd(key, map))
             return true;
 

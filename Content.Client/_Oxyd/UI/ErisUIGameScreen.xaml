@@ -22,7 +22,7 @@
                 <actions:ActionsBar Name="Actions" Access="Protected" />
                 <alerts:AlertsUI Name="Alerts" Access="Protected" />
                 <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
-                <ui:GridMapping Name="inventory">
+                <ui:GridMapping Name="inventory" MinWidth="435" MinHeight="128">
                    <ui:OxTag tag="inventory"/>
                 </ui:GridMapping>
             </VBox>

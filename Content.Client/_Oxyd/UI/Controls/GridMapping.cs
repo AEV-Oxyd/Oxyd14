@@ -7,19 +7,18 @@ using Robust.Client.UserInterface.Controls;
 
 namespace Content.Client._Oxyd.UI;
 
-public sealed class GridMapping : Control
+public sealed class GridMapping : Container
 {
-    public Dictionary<Vector2i, GridSlot> Slots = new();
-    public Vector2 size = new(32,32);
+    [ViewVariables] public Dictionary<Vector2i, GridSlot> Slots = new();
+    public Vector2 gridsize = new(64,64);
 
     protected override void ChildAdded(Control newChild)
     {
-        base.ChildAdded(newChild);
         if (newChild is GridSlot slot)
         {
             AddSlot(slot);
-            UpdateGrid();
         }
+        base.ChildAdded(newChild);
     }
 
     public void Clear()
@@ -42,7 +41,7 @@ public sealed class GridMapping : Control
             return exist;
         var slot = new GridSlot();
         slot.Key = pos;
-        AddSlot(slot);
+        AddChild(slot);
         return slot;
     }
 
@@ -87,6 +86,7 @@ public sealed class GridMapping : Control
     public void AddSlot(GridSlot slot)
     {
         slot.owner = this;
+        slot.SetSize = gridsize;
         Slots[slot.Key] = slot;
     }
 
@@ -100,36 +100,65 @@ public sealed class GridMapping : Control
     {
         Slots.Remove(old);
         Slots[slot.Key] = slot;
-        UpdateGrid();
+        InvalidateMeasure();
     }
 
     protected override void ChildRemoved(Control child)
     {
-        base.ChildRemoved(child);
         if (child is GridSlot slot)
         {
             RemoveSlot(slot);
-            UpdateGrid();
         }
+        base.ChildRemoved(child);
     }
 
-    public void UpdateGrid()
+    public void UpdateGrid(Vector2i max)
     {
-        Vector2i max = new Vector2i(Slots.Keys.Max(x => x.X), Slots.Keys.Max(x => x.Y));
         for (var x = 0; x <= max.X; x++)
         {
             for (var y = 0; y <= max.Y; y++)
             {
                 if (!Slots.TryGetValue(new Vector2i(x,y), out GridSlot? v))
                 {
-                    v = new GridSlot();
-                    v.Key = new Vector2i(x, y);
-                    AddSlot(v);
+                    continue;
                 }
-                v.Arrange(new UIBox2(x, y * size.Y, size.X * x, size.Y));
+
+                var box = new UIBox2(gridsize.X * x, y * gridsize.Y, gridsize.X * (x+1), gridsize.Y * (y+1));
+                Log.Info($"Grid slot {x},{y} is {box}");
+                v.Arrange(box);
             }
         }
-        
+
+        foreach (var child in Children)
+        {
+            if (child is GridSlot slot)
+            {
+                Log.Info($"Position of {slot.Key} is {slot.Position}, size: {slot.Size}");
+            }
+        }
     }
     
+    protected override Vector2 MeasureOverride(Vector2 availableSize)
+    {
+        if (Slots.Count == 0)
+            return base.MeasureOverride(availableSize);
+
+        var maxX = Slots.Keys.Max(k => k.X);
+        var maxY = Slots.Keys.Max(k => k.Y);
+
+        var desired = new Vector2(
+            (maxX + 1) * gridsize.X,
+            (maxY + 1) * gridsize.Y);
+
+        return desired;
+    }
+
+    protected override Vector2 ArrangeOverride(Vector2 finalSize)
+    { 
+        if(Slots.Keys.Count == 0)
+            return base.ArrangeOverride(finalSize);
+        Vector2i max = new Vector2i(Slots.Keys.Max(x => x.X), Slots.Keys.Max(x => x.Y));
+        UpdateGrid(max);
+        return finalSize;
+    }
 }
