@@ -34,6 +34,7 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.Ordination,
         LitanyEffectKind.Omission,
         LitanyEffectKind.Excommunication,
+        LitanyEffectKind.BaptismalRecord,
         LitanyEffectKind.InstallUpgrade,
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,

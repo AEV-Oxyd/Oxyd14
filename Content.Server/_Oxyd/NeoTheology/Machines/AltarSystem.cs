@@ -3,6 +3,7 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Item;
+using Content.Shared.Paper;
 using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
 
@@ -18,6 +19,7 @@ public sealed partial class AltarSystem : EntitySystem
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
     [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
+    [Dependency] private readonly PaperSystem _paper = default!;
 
     /// <summary>How far from the caster an altar still counts as theirs — the litany's own reach.</summary>
     private const float RitualReach = 1.5f;
@@ -27,6 +29,36 @@ public sealed partial class AltarSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<EyeOfTheProtectorComponent, LitanyOfferingEvent>(OnLitanyOffering);
+        SubscribeLocalEvent<NeoTheologyAltarComponent, LitanyBaptismalRecordEvent>(OnLitanyBaptismalRecord);
+    }
+
+    /// <summary>
+    /// BaptismalRecord bridge (Eris <c>rituals/priest.dm:213-230</c>): a paper listing the
+    /// parishioners slides out of the altar. Eris prints the global disciple list; this fork has
+    /// no registry, so the record is a live scan of active cruciform bearers, name-sorted.
+    /// </summary>
+    private void OnLitanyBaptismalRecord(Entity<NeoTheologyAltarComponent> ent, ref LitanyBaptismalRecordEvent args)
+    {
+        if (args.Handled)
+            return;
+
+        var names = new List<string>();
+        var bearers = EntityQueryEnumerator<CruciformBearerComponent>();
+        while (bearers.MoveNext(out var body, out var bearer))
+        {
+            if (bearer.Cruciform is not { } implant ||
+                !TryComp<CruciformComponent>(implant, out var state) ||
+                !state.Active)
+                continue;
+
+            names.Add(MetaData(body).EntityName);
+        }
+
+        names.Sort(StringComparer.Ordinal);
+
+        var paper = Spawn("Paper", Transform(ent.Owner).Coordinates);
+        _paper.SetContent(paper, string.Join("\n", names));
+        args.Handled = true;
     }
 
     /// <summary>

@@ -120,6 +120,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return HasComp<NeoTheologyDoorComponent>(uid) && HasComp<DoorBoltComponent>(uid);
     }
 
+    /// <summary>True when <paramref name="uid"/> is a NeoTheology altar.</summary>
+    public bool IsLitanyAltar(EntityUid uid)
+    {
+        return HasComp<NeoTheologyAltarComponent>(uid);
+    }
+
     /// <summary>
     /// Eris <c>lock_door</c> (machinery.dm): toggles the bolt on a holy door and mirrors
     /// the state into <see cref="NeoTheologyDoorComponent.LitanyLocked"/>. Returns whether

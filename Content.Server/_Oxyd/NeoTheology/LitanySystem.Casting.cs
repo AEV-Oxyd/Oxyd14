@@ -493,6 +493,7 @@ public sealed partial class LitanySystem
     private bool IsLitanyMachine(EntityUid uid)
     {
         return HasComp<NeoTheologyDoorComponent>(uid) ||
+               HasComp<NeoTheologyAltarComponent>(uid) ||
                HasComp<BioreactorComponent>(uid) ||
                HasComp<BiogeneratorComponent>(uid) ||
                HasComp<CruciformForgeComponent>(uid) ||

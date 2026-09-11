@@ -72,6 +72,7 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.Ordination,
         LitanyEffectKind.Omission,
         LitanyEffectKind.Excommunication,
+        LitanyEffectKind.BaptismalRecord,
         LitanyEffectKind.InstallUpgrade,
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
@@ -126,10 +127,10 @@ public sealed class LitanyCatalogPolicyTest
     [Test]
     public void EnabledEffectWithoutRuntimeHandlerFailsClosed()
     {
-        // BaptismalRecord stays foundation-gated: enabling it without a handler must fail closed.
+        // Rejection stays dependency-gated: enabling it without a handler must fail closed.
         var errors = LitanyCatalogValidator.ValidateMissingHandler(
-            "OxydLitanyBaptismalRecord",
-            LitanyEffectKind.BaptismalRecord,
+            "OxydLitanyRejection",
+            LitanyEffectKind.Rejection,
             isAvailable: true);
 
         Assert.That(errors, Has.Count.EqualTo(1));

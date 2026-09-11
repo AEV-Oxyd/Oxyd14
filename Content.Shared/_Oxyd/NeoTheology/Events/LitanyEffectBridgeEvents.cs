@@ -71,6 +71,13 @@ public record struct LitanyUninstallUpgradeEvent(EntityUid Target, bool Handled)
 public record struct LitanyWriteSoulSnapshotEvent(EntityUid Target, bool Handled);
 
 /// <summary>
+/// Bridge for BaptismalRecord: raised on the NeoTheology altar; the server <c>AltarSystem</c>
+/// spawns a paper listing the active cruciform bearers and sets <see cref="Handled"/>.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyBaptismalRecordEvent(EntityUid Altar, bool Handled);
+
+/// <summary>
 /// Bridge for Resurrection: raised on the NeoTheology cloner among the litany's machine targets;
 /// the server <c>CruciformReaderSystem</c> reads the soul out of <see cref="Reader"/>, starts
 /// a pod job from the saved body profile. Validation checks the soul, session, machines, and biomatter without changing them.

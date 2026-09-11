@@ -180,11 +180,12 @@
   category: Priest
   grantedBy: [OxydLitanyPriest]
   effect: BaptismalRecord
-  targetMode: AdjacentFollower
+  targetMode: FrontMachine
   range: 1.5
   cost: 30
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyBaptismalRecordEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyDivineIntervention
