@@ -202,10 +202,12 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 - Ceremony packet `7e9c0afcb7`: unit 17/17; integration 193/193, zero skips; 9 new ceremony tests.
 - Stage 6 audit corrections: unit 17/17; integration 193/193, zero skips
   (TRX `bad: []`); construction + prototype tests 9/9.
+- Litany audit fix: unit 21/21; integration 199/199, zero skips. The six audit
+  regressions are permanent in `LitanyAuditRegressionTest.cs`.
 
 ## Release state and open items
 
-- The NeoTheology suite is green: unit 17/17 and integration 193/193 with zero
+- The NeoTheology suite is green: unit 21/21 and integration 199/199 with zero
   skips on the final tree.
 - Pre-existing, not NeoTheology: the station-map load tests fail on this branch
   with `Duplicate chunk entity` (`ChunkEntitySystem.AddChunk`), and the YAML
@@ -215,4 +217,4 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 - The `Oxyd14-port-eris-ironhammer` gitlink stays out of the NeoTheology
   commits; its ` m` working-tree state is owned by the Ironhammer port.
 - The `.freebuff` preview files are removed from the branch.
-- No push and no PR without owner approval.
+- Owner approval covers the branch push and the PR #33 update.
