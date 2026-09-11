@@ -1,21 +1,20 @@
 # NeoTheology litany progress
 
-Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 44 of 60 entries are enabled.**
+Status: **Phase 4 packet work is active on `neotheology/fix-pass`. 47 of 60 entries are enabled.**
 
 Completion plan: `.hermes/plans/2026-09-11_135754-neotheology-completion.md`.
-Implementation checkpoint: commits through `0c3cdb1294`.
+Implementation checkpoint: commits through `45b24941f2`.
 
 ## Current implementation
 
-- 60 catalog entries and 9 sets: 44 foundation entries (all enabled) and 16
+- 60 catalog entries and 9 sets: 47 foundation entries (all enabled) and 13
   dependency-gated entries.
-- **44 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
+- **47 implemented and enabled.** `LitanyHandlerCatalog.Implemented` matches the
   enabled set.
-- **16 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
+- **13 remain disabled:** `PoundingWhisper`, `RevelationOfSecrets`, `LispOfVitae`,
   `CantoOfCourage`, `ChantOfObservance`, `ReclamationOfEndurance`, `Sanctify`,
   `Crusade`, `EternalBrotherhood`, `CallToBattle`, `SearingRevelation` (the
-  ceremony block), `Knowledge`, `Bounty` (uplink), `DivineGuidance`,
-  `Manifestation`, `Uproot` (construction).
+  ceremony block), `Knowledge`, `Bounty` (uplink).
 - Server speech recognition, DoAfter casting, ownership/entitlement checks,
   cruciform lifecycle, holiness, profiles and access are implemented.
 - The cast transaction is atomic: an unexpected apply failure refunds the debit
@@ -57,7 +56,7 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | 4. Bible UI and common effects | Substantially complete | Live connected-client polish. |
 | 5. Ranks and medical/social foundation | Handlers complete | `Sending` text, `Confirmation` designations and `Scrying` target choice are live; closed in `89e4cc1784` and `17b7908f45`. |
 | 6. Foundation integration review | Not complete | Manual two-client scenario, live round. |
-| 7. Dependency packets | In progress | Construction (3), uplink (2), ceremonies (11). |
+| 7. Dependency packets | In progress | Uplink (2), ceremonies (11). |
 | 8. Full catalog audit | Not complete | Source-to-runtime audit of all 60 entries. |
 
 ## Packet record
@@ -73,18 +72,17 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 | Persistence | `BaptismalRecord` | Landed in `738ad6dfcf`; altar paper, live bearer scan. |
 | Fidelity | Upgrade behaviours | Landed in `17b7908f45`; five upgrades, 4 integration tests. |
 | Fidelity | `Sending`, `Scrying`, `Confirmation` | Landed in `89e4cc1784`; server-owned book choice flow, 4 integration tests. |
-| ConstructionCatalog | `DivineGuidance` | Pending. |
-| Construction | `Manifestation`, `Uproot` | Pending. |
+| ConstructionCatalog | `DivineGuidance` | Landed in `45b24941f2`; blueprint choice plus material list. |
+| Construction | `Manifestation`, `Uproot` | Landed in `45b24941f2`; front-tile build and refund. |
 | NtUplink | `Knowledge`, `Bounty` | Pending. |
 | Ceremonies | 11 litanies | Pending; engine required. |
 
 ## Immediate follow-up
 
-1. Construction packet: `DivineGuidance`, `Manifestation`, `Uproot`.
-2. NtUplink packet: `Knowledge`, `Bounty`.
-3. Ceremony engine plus the 11 ceremony litanies.
-4. Map the NT machine set into a station area.
-5. Final catalog audit, manual two-client scenario, release cleanup.
+1. NtUplink packet: `Knowledge`, `Bounty`.
+2. Ceremony engine plus the 11 ceremony litanies.
+3. Map the NT machine set into a station area.
+4. Final catalog audit, manual two-client scenario, release cleanup.
 
 ## Historical validation evidence
 
@@ -99,3 +97,4 @@ All ten findings from `.hermes/review/neotheology-evaluation.md` are closed:
 - `BaptismalRecord` `738ad6dfcf`: records test 2/2.
 - Choice flow `89e4cc1784`: unit 17/17; integration 172/172, zero skips.
 - Upgrade behaviours `17b7908f45`: unit 17/17; integration 176/176, zero skips.
+- Construction packet `45b24941f2`: unit 17/17; integration 181/181, zero skips.

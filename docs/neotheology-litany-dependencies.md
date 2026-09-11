@@ -28,17 +28,17 @@ The packet tables below are the original map. These packets have landed since th
 | `BiomatterMaterials` | `RepairDoor` | Landed. |
 | `Biogenerator` | `PowerBiogenerator` | Landed. |
 | `Bioreactor` | `BioreactorSolution`, `BioreactorChamber` | Landed. |
-| `ConstructionCatalog` | `DivineGuidance` | Capability present, handler pending. |
+| `ConstructionCatalog` | `DivineGuidance` | Landed (blueprint choice plus material list). |
 | `PlantGrowth` | `AcceleratedGrowth` | Landed (growth multiplier in `PlantGrowthSystem`). |
 | `Purity` | `Rejection` | Landed (implant scan plus brute rider). |
 | `ThreatClassification` | `RevealAdversaries` | Landed (faction scan plus landmine scan). |
 | `Addiction` | `WordsOfPurging` | Landed (reagent purge; named divergence). |
 | `Pain` | `Atonement`, `Penance` | Landed (stamina damage; named divergence). |
 | Ceremonies | 11 litanies | Pending; ceremony engine required. |
-| Construction | `Manifestation`, `Uproot` | Pending. |
+| Construction | `Manifestation`, `Uproot` | Landed (front-tile build and refund). |
 | NtUplink | `Knowledge`, `Bounty` | Pending. |
 
-Remaining gated set: 16 entries. The completion plan
+Remaining gated set: 13 entries. The completion plan
 (`.hermes/plans/2026-09-11_135754-neotheology-completion.md`) drives the rest.
 
 ---
