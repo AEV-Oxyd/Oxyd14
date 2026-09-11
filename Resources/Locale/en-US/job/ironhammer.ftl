@@ -7,12 +7,12 @@ job-name-ironhammer-security = Ironhammer Operative
 job-name-ironhammer-warden = Ironhammer Gunnery Sergeant
 
 # Ironhammer job descriptions
-job-description-ironhammer-cadet = Learn the Ironhammer way: study law enforcement, arrest procedure, and discipline under the operatives.
-job-description-ironhammer-detective = Investigate crime scenes with forensic tools and bring the guilty to Ironhammer justice.
-job-description-ironhammer-hos = Command the Ironhammer regiment: coordinate operatives, plan responses to threats, and advise the captain on station security.
-job-description-ironhammer-medspec = Keep Ironhammer operatives alive in the field: treat the wounded, secure crime scenes, and assist the medbay when Ironhammer needs it.
-job-description-ironhammer-security = Enforce the law and protect the ship as an Ironhammer operative. Arrest criminals and stop threats before they grow.
-job-description-ironhammer-warden = Guard the Ironhammer barracks and armory, manage the arsenal, and keep prisoners safely charged and confined.
+job-description-ironhammer-cadet = Get trained to serve onboard the CEV OXYD. Follow the orders of the Sarge and LT
+job-description-ironhammer-detective = Get drunk, smoke cigars and close cases. Inevitably get your hands dirty with operative work.
+job-description-ironhammer-hos = Enforce the agreement , or your own personal agenda, don't forget your contract with the Captain!
+job-description-ironhammer-medspec = Heal the operatives after they took a poorly calculated fight.
+job-description-ironhammer-security = Follow the orders of your Sergeant and LT, or take bribes and get eventually fired
+job-description-ironhammer-warden = Watch cameras, order your operatives, stock the armoury and follow your LT.
 
 # Ironhammer supervisors
 job-supervisors-ironhammer-commander = the Ironhammer Commander
