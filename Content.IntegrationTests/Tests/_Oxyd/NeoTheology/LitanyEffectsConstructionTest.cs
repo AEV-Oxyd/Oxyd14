@@ -75,7 +75,7 @@ public sealed class LitanyEffectsConstructionTest : GameTest
             Assert.That(_litany.TestingTryGetPending(begin.RequestId!, out var cast), Is.True);
             Assert.That(cast!.Stage, Is.EqualTo(LitanyCastStage.Choosing));
             Assert.That(cast.ChoiceBlueprints, Does.Contain(ObeliskBlueprint));
-            Assert.That(cast.ChoiceBlueprints, Has.Count.EqualTo(10),
+            Assert.That(cast.ChoiceBlueprints, Has.Count.EqualTo(11),
                 "The catalog lists every NeoTheology blueprint.");
 
             var selection = Submit(caster, begin.RequestId!, [$"b:{ObeliskBlueprint.Id}"]);

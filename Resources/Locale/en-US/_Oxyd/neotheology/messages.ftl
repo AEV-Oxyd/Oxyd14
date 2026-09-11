@@ -59,6 +59,7 @@ oxyd-litany-initiation-already-preacher = The target is already a preacher.
 # Manifestation/Uproot failure reasons.
 oxyd-nt-blueprint-altar-name = NeoTheology altar
 oxyd-nt-blueprint-biogenerator-name = biogenerator
+oxyd-nt-blueprint-biomatter-reclaimer-name = biomatter reclaimer
 oxyd-nt-blueprint-biomass-container-name = biomass container
 oxyd-nt-blueprint-bioreactor-name = bioreactor
 oxyd-nt-blueprint-cloner-name = cruciform cloner

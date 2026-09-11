@@ -45,6 +45,24 @@
     amount: 5
 
 - type: oxydNtBlueprint
+  id: OxydNtBlueprintBiomatterReclaimer
+  name: oxyd-nt-blueprint-biomatter-reclaimer-name
+  build: OxydNtBiomatterReclaimer
+  buildTime: 10
+  # Fork-local entry: Eris has no biomass reclaimer (an Oxyd bridge to the upstream
+  # machine), and no fork map places one, so this is the only in-round path to it.
+  # Cost mirrors the upstream circuitboard plus the machine frame.
+  materials:
+  - stack: Steel
+    amount: 10
+  - stack: Glass
+    amount: 5
+  - stack: Cable
+    amount: 5
+  - stack: Gold
+    amount: 1
+
+- type: oxydNtBlueprint
   id: OxydNtBlueprintBiomassContainer
   name: oxyd-nt-blueprint-biomass-container-name
   build: OxydNtBiomassContainer

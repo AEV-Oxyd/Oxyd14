@@ -104,8 +104,10 @@
   category: Acolyte
   grantedBy: [OxydLitanyAcolyte]
   effect: Asacris
-  targetMode: Self
-  range: 0
+  # Eris rituals/priest.dm:73-91 targets the front/grabbed victim
+  # (`get_implant_from_victim`), so the litany strips another bearer's upgrades.
+  targetMode: AdjacentFollower
+  range: 1.5
   cost: 0
   effects:
   - !type:LitanyAsacrisEffect
