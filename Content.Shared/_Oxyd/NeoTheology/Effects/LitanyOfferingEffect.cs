@@ -21,7 +21,7 @@ public sealed partial class LitanyOfferingEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyEye))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -32,13 +32,16 @@ public sealed partial class LitanyOfferingEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         foreach (var target in context.Targets)
         {
             if (!system.IsLitanyEye(target))
                 continue;
 
-            var offering = new LitanyOfferingEvent(context.User, Offering, false);
+            var offering = new LitanyOfferingEvent(context.User, Offering, false, validateOnly);
             system.RaiseOn(target, ref offering);
             if (offering.Handled)
                 return true;

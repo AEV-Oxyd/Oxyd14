@@ -16,6 +16,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 public sealed class CruciformForgeSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly MaterialStorageSystem _materialStorage = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
@@ -31,7 +32,7 @@ public sealed class CruciformForgeSystem : EntitySystem
     /// </summary>
     private void OnLitanyForgeProduce(Entity<CruciformForgeComponent> ent, ref LitanyForgeProduceEvent args)
     {
-        args.Handled = TryProduce(ent.Owner, ent.Comp);
+        args.Handled = args.ValidateOnly ? CanProduce(ent.Owner, ent.Comp) : TryProduce(ent.Owner, ent.Comp);
     }
 
     public override void Update(float frameTime)
@@ -42,6 +43,12 @@ public sealed class CruciformForgeSystem : EntitySystem
         {
             if (!forge.Working || forge.StartedAt is not { } started)
                 continue;
+
+            if (!_machines.IsOperational(uid))
+            {
+                forge.StartedAt += TimeSpan.FromSeconds(frameTime);
+                continue;
+            }
 
             if (now - started < forge.WorkTime)
                 continue;
@@ -57,9 +64,9 @@ public sealed class CruciformForgeSystem : EntitySystem
     /// <summary>
     /// Spends the recipe and starts a work run. Refuses, spending nothing, if any material is short.
     /// </summary>
-    public bool TryProduce(EntityUid uid, CruciformForgeComponent? forge = null)
+    public bool CanProduce(EntityUid uid, CruciformForgeComponent? forge = null)
     {
-        if (!Resolve(uid, ref forge) || forge.Working)
+        if (!Resolve(uid, ref forge) || forge.Working || !_machines.IsOperational(uid))
             return false;
 
         if (!TryComp<MaterialStorageComponent>(uid, out var storage))
@@ -71,8 +78,16 @@ public sealed class CruciformForgeSystem : EntitySystem
                 return false;
         }
 
+        return true;
+    }
+
+    public bool TryProduce(EntityUid uid, CruciformForgeComponent? forge = null)
+    {
+        if (!Resolve(uid, ref forge) || !CanProduce(uid, forge))
+            return false;
+
         foreach (var (material, amount) in forge.Needed)
-            _materialStorage.TryChangeMaterialAmount(uid, material, -amount, storage);
+            _materialStorage.TryChangeMaterialAmount(uid, material, -amount);
 
         forge.Working = true;
         forge.StartedAt = _timing.CurTime;

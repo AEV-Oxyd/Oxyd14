@@ -73,12 +73,10 @@ public record struct LitanyWriteSoulSnapshotEvent(EntityUid Target, bool Handled
 /// <summary>
 /// Bridge for Resurrection: raised on the NeoTheology cloner among the litany's machine targets;
 /// the server <c>CruciformReaderSystem</c> reads the soul out of <see cref="Reader"/>, starts
-/// upstream <c>CloningPodSystem</c>'s own job for the dead wearer and sets
-/// <see cref="Handled"/>. A false <see cref="Handled"/> means the soul, the corpse, the client
-/// session or the pod's biomatter was not available.
+/// a pod job from the saved body profile. Validation checks the soul, session, machines, and biomatter without changing them.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled);
+public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for MakeCruciform: raised on the NeoTheology forge among the litany's machine targets;
@@ -87,7 +85,7 @@ public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader,
 /// short of its recipe.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyForgeProduceEvent(EntityUid Forge, bool Handled);
+public record struct LitanyForgeProduceEvent(EntityUid Forge, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for RepairDoor: raised on the holy door; the server <c>NeoTheologyDoorSystem</c>
@@ -95,7 +93,7 @@ public record struct LitanyForgeProduceEvent(EntityUid Forge, bool Handled);
 /// A false <see cref="Handled"/> means the door was undamaged or no biomatter was in reach.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyRepairDoorEvent(EntityUid Door, EntityUid User, bool Handled);
+public record struct LitanyRepairDoorEvent(EntityUid Door, EntityUid User, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for PowerBiogenerator: raised on the NeoTheology biogenerator; the server
@@ -111,7 +109,7 @@ public record struct LitanyToggleBiogeneratorEvent(EntityUid Biogenerator, bool 
 /// means the chamber was open or breached.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyPumpBioreactorEvent(EntityUid Bioreactor, bool Handled);
+public record struct LitanyPumpBioreactorEvent(EntityUid Bioreactor, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for BioreactorChamber: raised on the bioreactor; the server <c>BioreactorSystem</c>
@@ -119,7 +117,7 @@ public record struct LitanyPumpBioreactorEvent(EntityUid Bioreactor, bool Handle
 /// means the door was still jammed or the chamber still held solution.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bool Handled);
+public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for Scrying: raised on the scried body; the server <c>ScryingSystem</c> binds
@@ -128,7 +126,7 @@ public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bo
 /// already had a live session.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, TimeSpan Duration, bool Handled);
+public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, TimeSpan Duration, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for the offering litanies (DivineIntervention, HolyGuidance): raised on the Eye of the
@@ -138,7 +136,7 @@ public record struct LitanyScryingEvent(EntityUid Caster, EntityUid Target, Time
 /// was under-stocked.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, bool Handled);
+public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for OrderArmaments: raised on the armaments printer; the server
@@ -146,7 +144,7 @@ public record struct LitanyOfferingEvent(EntityUid User, string OfferingKey, boo
 /// <see cref="Handled"/>. A false <see cref="Handled"/> means the UI could not be opened.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyOpenArmamentsEvent(EntityUid User, bool Handled);
+public record struct LitanyOpenArmamentsEvent(EntityUid User, bool Handled, bool ValidateOnly = false);
 
 /// <summary>
 /// Bridge for Initiation: raised on the target follower; the server <c>CruciformSystem</c>

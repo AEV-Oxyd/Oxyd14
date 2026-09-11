@@ -1,6 +1,11 @@
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.Timing;
+using Robust.Shared.Player;
+using Robust.Server.Player;
+using Robust.Shared.Enums;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Systems;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
@@ -13,14 +18,19 @@ namespace Content.Server._Oxyd.NeoTheology;
 public sealed class ScryingSystem : EntitySystem
 {
     [Dependency] private readonly SharedEyeSystem _eye = default!;
+    [Dependency] private readonly IPlayerManager _players = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly MobStateSystem _mobState = default!;
 
     public override void Initialize()
     {
         base.Initialize();
+        _players.PlayerStatusChanged += OnPlayerStatusChanged;
 
         SubscribeLocalEvent<ScryingSessionComponent, ComponentShutdown>(OnSessionShutdown);
         SubscribeLocalEvent<LitanyScryingEvent>(OnLitanyScrying);
+        SubscribeLocalEvent<ScryingSessionComponent, MobStateChangedEvent>(OnMobStateChanged);
+        SubscribeLocalEvent<ScryingSessionComponent, PlayerDetachedEvent>(OnPlayerDetached);
     }
 
     /// <summary>
@@ -30,7 +40,40 @@ public sealed class ScryingSystem : EntitySystem
     /// </summary>
     private void OnLitanyScrying(ref LitanyScryingEvent args)
     {
-        args.Handled = TryStartSession(args.Caster, args.Target, args.Duration);
+        args.Handled = args.ValidateOnly
+            ? CanStartSession(args.Caster, args.Target)
+            : TryStartSession(args.Caster, args.Target, args.Duration);
+    }
+
+    public override void Shutdown()
+    {
+        _players.PlayerStatusChanged -= OnPlayerStatusChanged;
+        base.Shutdown();
+    }
+
+    private void OnPlayerStatusChanged(object? sender, SessionStatusEventArgs args)
+    {
+        if (args.NewStatus is SessionStatus.Disconnected or SessionStatus.Zombie &&
+            args.Session.AttachedEntity is { } body)
+            RemComp<ScryingSessionComponent>(body);
+    }
+
+    private void OnMobStateChanged(Entity<ScryingSessionComponent> ent, ref MobStateChangedEvent args)
+    {
+        if (args.NewMobState == MobState.Dead)
+            RemComp<ScryingSessionComponent>(ent.Owner);
+    }
+
+    private void OnPlayerDetached(Entity<ScryingSessionComponent> ent, ref PlayerDetachedEvent args)
+    {
+        RemComp<ScryingSessionComponent>(ent.Owner);
+    }
+
+    public bool CanStartSession(EntityUid caster, EntityUid target)
+    {
+        return !TerminatingOrDeleted(caster) && !TerminatingOrDeleted(target) &&
+               HasComp<EyeComponent>(caster) && !_mobState.IsDead(caster) &&
+               !HasComp<ScryingSessionComponent>(caster);
     }
 
     public override void Update(float frameTime)
@@ -52,17 +95,14 @@ public sealed class ScryingSystem : EntitySystem
     /// </summary>
     public bool TryStartSession(EntityUid caster, EntityUid target, TimeSpan duration)
     {
-        if (!TryComp<EyeComponent>(caster, out var casterEye))
-            return false;
-
-        if (HasComp<ScryingSessionComponent>(caster))
+        if (!CanStartSession(caster, target) || !TryComp<EyeComponent>(caster, out var casterEye))
             return false;
 
         var marker = SpawnAtPosition(null, Transform(target).Coordinates);
-        _eye.SetTarget(caster, marker, casterEye);
-
         var session = EnsureComp<ScryingSessionComponent>(caster);
+        session.PreviousTarget = casterEye.Target;
         session.Marker = marker;
+        _eye.SetTarget(caster, marker, casterEye);
         session.EndsAt = _timing.CurTime + duration;
         Dirty(caster, session);
         return true;
@@ -71,7 +111,12 @@ public sealed class ScryingSystem : EntitySystem
     private void OnSessionShutdown(Entity<ScryingSessionComponent> ent, ref ComponentShutdown args)
     {
         if (TryComp<EyeComponent>(ent.Owner, out var eye))
-            _eye.SetTarget(ent.Owner, null, eye);
+        {
+            var previous = ent.Comp.PreviousTarget;
+            if (previous is { } target && TerminatingOrDeleted(target))
+                previous = null;
+            _eye.SetTarget(ent.Owner, previous, eye);
+        }
 
         if (ent.Comp.Marker is { } marker)
             QueueDel(marker);

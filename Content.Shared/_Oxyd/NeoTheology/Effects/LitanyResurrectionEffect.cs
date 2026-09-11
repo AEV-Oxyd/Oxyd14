@@ -5,10 +5,8 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
 /// Eris <c>rituals/machinery.dm:13-42</c> (resurrection): the cloner starts a soul-safe job for
-/// the soul the reader holds. The reader lookup, the corpse and the pod's biomass are all
-/// server-side, so the effect validates that both machines are among the litany's targets and
-/// raises <see cref="LitanyResurrectionEvent"/> on the cloner; the server
-/// <c>CruciformReaderSystem</c> does the work.
+/// the soul in the reader. The server checks the saved profile, mind, machines, and biomass before payment.
+/// The effect raises <see cref="LitanyResurrectionEvent"/> on the cloner for validation and execution.
 /// </summary>
 public sealed partial class LitanyResurrectionEffect : LitanyEffect
 {
@@ -17,8 +15,7 @@ public sealed partial class LitanyResurrectionEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyCloner) ||
-            !context.Targets.Any(system.IsLitanyReader))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -29,6 +26,9 @@ public sealed partial class LitanyResurrectionEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         var reader = EntityUid.Invalid;
         foreach (var target in context.Targets)
@@ -48,7 +48,7 @@ public sealed partial class LitanyResurrectionEffect : LitanyEffect
             if (!system.IsLitanyCloner(target))
                 continue;
 
-            var start = new LitanyResurrectionEvent(target, reader, false);
+            var start = new LitanyResurrectionEvent(target, reader, false, validateOnly);
             system.RaiseOn(target, ref start);
             if (start.Handled)
                 return true;

@@ -40,7 +40,7 @@ public sealed partial class AltarSystem : EntitySystem
         if (!TryFindAltar(args.User, out var altar))
             return;
 
-        args.Handled = TryMakeOffering(altar, eye, args.OfferingKey, out _);
+        args.Handled = TryMakeOffering(altar, eye, args.OfferingKey, out _, args.ValidateOnly);
     }
 
     /// <summary>The first altar within ritual reach of <paramref name="near"/>, uid-ordered for determinism.</summary>
@@ -90,7 +90,7 @@ public sealed partial class AltarSystem : EntitySystem
     /// altar's turf and, only when every requirement is met, consumes them and banks the
     /// observation on <paramref name="eye"/>. A partial match consumes nothing.
     /// </summary>
-    public bool TryMakeOffering(EntityUid altar, EntityUid eye, string offeringKey, out int accepted)
+    public bool TryMakeOffering(EntityUid altar, EntityUid eye, string offeringKey, out int accepted, bool validateOnly = false)
     {
         accepted = 0;
 
@@ -123,6 +123,9 @@ public sealed partial class AltarSystem : EntitySystem
             if (remaining > 0)
                 return false; // under-stocked: consume nothing
         }
+
+        if (validateOnly)
+            return true;
 
         foreach (var (item, amount) in plan)
         {

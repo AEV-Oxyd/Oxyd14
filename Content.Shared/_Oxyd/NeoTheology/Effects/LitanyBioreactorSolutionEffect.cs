@@ -16,7 +16,7 @@ public sealed partial class LitanyBioreactorSolutionEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyBioreactor))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -27,13 +27,16 @@ public sealed partial class LitanyBioreactorSolutionEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         foreach (var target in context.Targets)
         {
             if (!system.IsLitanyBioreactor(target))
                 continue;
 
-            var pump = new LitanyPumpBioreactorEvent(target, false);
+            var pump = new LitanyPumpBioreactorEvent(target, false, validateOnly);
             system.RaiseOn(target, ref pump);
             if (pump.Handled)
                 return true;

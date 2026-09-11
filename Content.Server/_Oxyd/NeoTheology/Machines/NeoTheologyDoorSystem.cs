@@ -33,12 +33,11 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
 
     /// <summary>
     /// RepairDoor bridge (Eris <c>rituals/machinery.dm:100-145</c>): the litany names the door and
-    /// its caster; the damage check and the biomatter burn are <see cref="TryRepair"/>'s. Eris
-    /// fails an undamaged door here, not at begin time, so a refused repair still commits the cast.
+    /// its caster. Validation checks damage and biomatter before the cast spends power.
     /// </summary>
     private void OnLitanyRepairDoor(Entity<NeoTheologyDoorComponent> ent, ref LitanyRepairDoorEvent args)
     {
-        args.Handled = TryRepair(ent.Owner, args.User, RepairCost);
+        args.Handled = TryRepair(ent.Owner, args.User, RepairCost, args.ValidateOnly);
     }
 
     /// <summary>
@@ -50,7 +49,7 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
     /// (litany or interaction) owns the do-after. Add a NeoTheology overlay only if
     /// players miss the feedback.
     /// </remarks>
-    public bool TryRepair(EntityUid door, EntityUid user, int amount)
+    public bool TryRepair(EntityUid door, EntityUid user, int amount, bool validateOnly = false)
     {
         if (!TryComp<DamageableComponent>(door, out var damageable) ||
             !TryComp<NeoTheologyDoorComponent>(door, out _))
@@ -59,17 +58,18 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
         if (!_damageable.TryGetDamageGreaterThan((door, damageable), FixedPoint2.Zero, out _))
             return false;
 
-        if (!TryConsumeBiomatter(user, amount))
+        if (!TryConsumeBiomatter(user, amount, validateOnly))
             return false;
 
-        _damageable.ClearAllDamage(door);
+        if (!validateOnly)
+            _damageable.ClearAllDamage(door);
         return true;
     }
 
     /// <summary>
     /// Eats <paramref name="amount"/> biomatter from the caster's tile or the tile they face.
     /// </summary>
-    public bool TryConsumeBiomatter(EntityUid user, int amount)
+    public bool TryConsumeBiomatter(EntityUid user, int amount, bool validateOnly = false)
     {
         var xform = Transform(user);
         var inFront = xform.Coordinates.Offset(xform.WorldRotation.ToVec());
@@ -81,7 +81,7 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
                 if (stack.StackTypeId != BiomatterStack || stack.Count < amount)
                     continue;
 
-                if (_stack.TryUse((item, (StackComponent?) stack), amount))
+                if (validateOnly || _stack.TryUse((item, (StackComponent?) stack), amount))
                     return true;
             }
         }

@@ -20,6 +20,7 @@ public sealed partial class BioreactorSystem : EntitySystem
     private static readonly EntProtoId BiomatterProto = "OxydNtBiomatter";
 
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
 
     public override void Initialize()
@@ -34,7 +35,7 @@ public sealed partial class BioreactorSystem : EntitySystem
     /// </summary>
     private void OnLitanyPumpBioreactor(Entity<BioreactorComponent> ent, ref LitanyPumpBioreactorEvent args)
     {
-        args.Handled = TryPumpSolution(ent.Owner, ent.Comp);
+        args.Handled = args.ValidateOnly ? CanPumpSolution(ent.Owner, ent.Comp) : TryPumpSolution(ent.Owner, ent.Comp);
     }
 
     /// <summary>
@@ -44,7 +45,7 @@ public sealed partial class BioreactorSystem : EntitySystem
     /// </summary>
     private void OnLitanyToggleBioreactorChamber(Entity<BioreactorComponent> ent, ref LitanyToggleBioreactorChamberEvent args)
     {
-        args.Handled = TryToggleChamber(ent.Owner, ent.Comp);
+        args.Handled = args.ValidateOnly ? CanToggleChamber(ent.Owner, ent.Comp) : TryToggleChamber(ent.Owner, ent.Comp);
     }
 
     public override void Update(float frameTime)
@@ -53,14 +54,17 @@ public sealed partial class BioreactorSystem : EntitySystem
 
         while (query.MoveNext(out var uid, out var reactor))
         {
-            // Eris only processes the platforms while the chamber is shut and unbreached.
-            if (!reactor.ChamberClosed || reactor.ChamberBreached)
+            if (!_machines.IsOperational(uid) || !reactor.ChamberClosed ||
+                reactor.ChamberBreached || !reactor.ChamberSolution)
                 continue;
 
             var coords = Transform(uid).Coordinates;
 
             foreach (var crop in _lookup.GetEntitiesInRange<ProduceComponent>(coords, reactor.ProcessingRadius))
             {
+                if (TerminatingOrDeleted(crop) || EntityManager.IsQueuedForDeletion(crop))
+                    continue;
+
                 var pile = Spawn(BiomatterProto, coords);
                 _stack.SetCount(pile, reactor.BiomatterPerEntity);
                 QueueDel(crop);
@@ -71,12 +75,15 @@ public sealed partial class BioreactorSystem : EntitySystem
     /// <summary>
     /// Fills or empties the chamber. Only a shut, unbreached chamber can be pumped.
     /// </summary>
+    public bool CanPumpSolution(EntityUid uid, BioreactorComponent? reactor = null)
+    {
+        return Resolve(uid, ref reactor) && _machines.IsOperational(uid) &&
+               reactor.ChamberClosed && !reactor.ChamberBreached;
+    }
+
     public bool TryPumpSolution(EntityUid uid, BioreactorComponent? reactor = null)
     {
-        if (!Resolve(uid, ref reactor))
-            return false;
-
-        if (!reactor.ChamberClosed || reactor.ChamberBreached)
+        if (!Resolve(uid, ref reactor) || !CanPumpSolution(uid, reactor))
             return false;
 
         reactor.ChamberSolution = !reactor.ChamberSolution;
@@ -88,15 +95,18 @@ public sealed partial class BioreactorSystem : EntitySystem
     /// Opens or shuts the platform door. Refuses while the door is still jammed or the chamber
     /// still holds solution.
     /// </summary>
+    public bool CanToggleChamber(EntityUid uid, BioreactorComponent? reactor = null)
+    {
+        return Resolve(uid, ref reactor) && _machines.IsOperational(uid) &&
+               !reactor.ChamberSolution && !IsBreached(uid, reactor);
+    }
+
     public bool TryToggleChamber(EntityUid uid, BioreactorComponent? reactor = null)
     {
-        if (!Resolve(uid, ref reactor))
+        if (!Resolve(uid, ref reactor) || !CanToggleChamber(uid, reactor))
             return false;
 
         ScanBreach(uid, reactor);
-
-        if (reactor.ChamberBreached || reactor.ChamberSolution)
-            return false;
 
         reactor.ChamberClosed = !reactor.ChamberClosed;
         Dirty(uid, reactor);
@@ -111,8 +121,13 @@ public sealed partial class BioreactorSystem : EntitySystem
         if (!Resolve(uid, ref reactor))
             return false;
 
-        var jammed = false;
+        reactor.ChamberBreached = IsBreached(uid, reactor);
+        Dirty(uid, reactor);
+        return reactor.ChamberBreached;
+    }
 
+    private bool IsBreached(EntityUid uid, BioreactorComponent reactor)
+    {
         foreach (var ent in _lookup.GetEntitiesInRange(Transform(uid).Coordinates, reactor.ProcessingRadius))
         {
             if (ent == uid)
@@ -121,13 +136,10 @@ public sealed partial class BioreactorSystem : EntitySystem
             // Bolted-down structures are what jam the door; loose crops get processed instead.
             if (!HasComp<ProduceComponent>(ent) && TryComp<TransformComponent>(ent, out var xform) && xform.Anchored)
             {
-                jammed = true;
-                break;
+                return true;
             }
         }
 
-        reactor.ChamberBreached = jammed;
-        Dirty(uid, reactor);
-        return jammed;
+        return false;
     }
 }

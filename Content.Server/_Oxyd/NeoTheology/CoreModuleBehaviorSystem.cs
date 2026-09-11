@@ -1,4 +1,8 @@
-using Content.Server.Preferences.Managers;
+using Content.Shared.Body;
+using Content.Shared.Humanoid;
+using Content.Shared.Preferences;
+using Robust.Shared.Physics.Components;
+using Robust.Shared.Serialization.Manager;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
@@ -22,7 +26,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
 {
     private static readonly ProtoId<CoreModulePrototype> CloningModule = "OxydNtModuleCloning";
 
-    [Dependency] private readonly IServerPreferencesManager _preferences = default!;
+    [Dependency] private readonly ISerializationManager _serialization = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
 
     public override void Initialize()
@@ -66,12 +70,41 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     /// </summary>
     public bool WriteSnapshot(EntityUid cruciform, CruciformComponent comp)
     {
-        if (comp.ImplantedEntity is not { } body)
+        if (comp.ImplantedEntity is not { } body || !TryComp<HumanoidProfileComponent>(body, out var humanoid))
             return false;
 
         var soul = EnsureComp<CruciformSoulComponent>(cruciform);
         soul.HasSnapshot = true;
         soul.Name = MetaData(body).EntityName;
+        soul.MindId = null;
+        soul.Ckey = null;
+        soul.BiomassCost = TryComp<PhysicsComponent>(body, out var physics)
+            ? Math.Max(1, (int) Math.Round(physics.FixturesMass))
+            : 100;
+
+        // Read the body, not the selected lobby character.
+        var profile = HumanoidCharacterProfile.DefaultWithSpecies(humanoid.Species, humanoid.Sex)
+            .WithAge(humanoid.Age).WithGender(humanoid.Gender).WithVoice(humanoid.Voice);
+        profile.Name = soul.Name;
+        var organs = EntityQueryEnumerator<OrganComponent>();
+        while (organs.MoveNext(out var organUid, out var organ))
+        {
+            if (organ.Body != body || organ.Category is not { } category)
+                continue;
+
+            if (TryComp<VisualOrganComponent>(organUid, out var visual))
+            {
+                var layer = visual.Layer;
+                if (layer.Equals(HumanoidVisualLayers.Chest))
+                    profile.Appearance.SkinColor = visual.Profile.SkinColor;
+                if (layer.Equals(HumanoidVisualLayers.Eyes))
+                    profile.Appearance.EyeColor = visual.Profile.EyeColor;
+            }
+
+            if (TryComp<VisualOrganMarkingsComponent>(organUid, out var markings))
+                profile.Appearance.Markings[category] = _serialization.CreateCopy(markings.Markings, notNullableOverride: true);
+        }
+        soul.Profile = profile;
 
         if (TryComp<MindContainerComponent>(body, out var container) &&
             container.Mind is { } mindId &&
@@ -79,15 +112,9 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
         {
             soul.MindId = mindId;
 
-            if (mind.CharacterName is { Length: > 0 } characterName)
-                soul.Name = characterName;
-
             if (mind.UserId is { } user && _player.TryGetSessionById(user, out var session))
             {
                 soul.Ckey = session.Name;
-
-                if (_preferences.TryGetCachedPreferences(user, out var prefs))
-                    soul.Profile = prefs.SelectedCharacter;
             }
         }
 

@@ -14,7 +14,10 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     public float Observation;
 
     [DataField]
-    public float MaxObservation = 10_000f;
+    public float MaxObservation = 1800f;
+
+    [DataField]
+    public float MinObservation = -100f;
 
     [DataField, AutoNetworkedField]
     public int ArmamentsPoints;
@@ -34,7 +37,10 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     public float ObservationRadius = 20f;
 
     [DataField]
-    public float ObservationPerFaithful = 10f;
+    public float ObservationPerFaithful = 20f;
+
+    [DataField]
+    public float ObservationPerNeutral = 10f;
 
     [DataField]
     public float ObservationPerFaithless = -15f;
@@ -62,7 +68,16 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     [ViewVariables]
     public TimeSpan NextMiracle;
 
-    /// <summary>Bearers already scanned this tick-window, so repeat scans do not re-award.</summary>
+    [ViewVariables]
+    public TimeSpan NextScan;
+
     [DataField]
-    public HashSet<EntityUid> Scanned = new();
+    public TimeSpan RescanInterval = TimeSpan.FromMinutes(10);
+
+    [ViewVariables]
+    public TimeSpan NextRescan;
+
+    /// <summary>One shared record for Eye scans and obelisk scans. Values store the original awards.</summary>
+    [ViewVariables]
+    public Dictionary<EntityUid, float> Scanned = new();
 }

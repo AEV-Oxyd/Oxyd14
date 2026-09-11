@@ -1,3 +1,6 @@
+using System.Linq;
+using Content.Server._Oxyd.NeoTheology.Machines;
+using Content.Shared.Humanoid;
 using Content.Server.Chat.Systems;
 using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
@@ -20,6 +23,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 public sealed class EyeOfTheProtectorSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
     [Dependency] private readonly SanitySystem _sanity = default!;
@@ -48,11 +52,6 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             cooldown));
     }
 
-    /// <summary>When each Eye next scans.</summary>
-    /// <remarks>ponytail: entries for deleted Eyes are never pruned. One Eye per station per the Eris
-    /// map, so the leak is bounded; prune with an EntityTerminating handler if that changes.</remarks>
-    private readonly Dictionary<EntityUid, TimeSpan> _nextScan = new();
-
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
@@ -61,13 +60,16 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         var query = EntityQueryEnumerator<EyeOfTheProtectorComponent>();
         while (query.MoveNext(out var uid, out var eye))
         {
-            TryMiracle(uid, eye); // self-gates on NextMiracle; runs even when the scan tick is skipped
-
-            if (_nextScan.TryGetValue(uid, out var next) && now < next)
+            if (!_machines.IsOperational(uid))
                 continue;
 
-            _nextScan[uid] = now + eye.ScanInterval;
-            eye.Scanned.Clear(); // new scan window: bearers can be re-awarded
+            ForgetOneObservation(uid, eye);
+            TryMiracle(uid, eye);
+
+            if (now < eye.NextScan)
+                continue;
+
+            eye.NextScan = now + eye.ScanInterval;
             Scan(uid, eye);
         }
     }
@@ -77,11 +79,47 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         if (!TryComp<EyeOfTheProtectorComponent>(eye, out var comp))
             return;
 
-        comp.Observation = Math.Clamp(comp.Observation + amount, 0f, comp.MaxObservation);
+        comp.Observation = Math.Clamp(comp.Observation + amount, comp.MinObservation, comp.MaxObservation);
         Dirty(eye, comp);
     }
 
-    /// <summary>One scan: award each active faithful in radius exactly once per window.</summary>
+    /// <summary>Reverse one recorded award each ten minutes, as Eris does.</summary>
+    private void ForgetOneObservation(EntityUid eye, EyeOfTheProtectorComponent comp)
+    {
+        if (_timing.CurTime < comp.NextRescan || comp.Scanned.Count == 0)
+            return;
+
+        var body = _random.Pick(comp.Scanned.Keys.ToList());
+        AddObservation(eye, -comp.Scanned[body]);
+        comp.Scanned.Remove(body);
+        comp.NextRescan = _timing.CurTime + comp.RescanInterval;
+    }
+
+    /// <summary>Eye and obelisks share this observation record.</summary>
+    public void ObserveArea(EntityUid eye, EntityUid source, float radius)
+    {
+        if (!TryComp<EyeOfTheProtectorComponent>(eye, out var comp) || !_machines.IsOperational(eye))
+            return;
+
+        var xform = Transform(source);
+        var humans = EntityQueryEnumerator<HumanoidProfileComponent, TransformComponent>();
+        while (humans.MoveNext(out var body, out _, out var bodyXform))
+        {
+            if (bodyXform.MapID != xform.MapID ||
+                (bodyXform.WorldPosition - xform.WorldPosition).Length() > radius || comp.Scanned.ContainsKey(body))
+                continue;
+
+            var faithful = TryComp<CruciformBearerComponent>(body, out var bearer) &&
+                bearer.Cruciform is { } implant && TryComp<CruciformComponent>(implant, out var state) && state.Active;
+            var before = comp.Observation;
+            AddObservation(eye, faithful ? comp.ObservationPerFaithful : comp.ObservationPerNeutral);
+            if (comp.Scanned.Count == 0)
+                comp.NextRescan = _timing.CurTime + comp.RescanInterval;
+            comp.Scanned.Add(body, comp.Observation - before);
+        }
+    }
+
+    /// <summary>Refresh blessings without awarding an observed body again.</summary>
     /// <remarks>
     /// ponytail: Eris also penalises mutants (<c>mutation_index</c>) and carrion (<c>is_carrion</c>)
     /// here via ObservationPerFaithless. Neither marker exists in this fork (only Botany plant
@@ -90,9 +128,11 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     /// </remarks>
     public void Scan(EntityUid eye, EyeOfTheProtectorComponent? comp = null)
     {
-        if (!Resolve(eye, ref comp))
+        if (!Resolve(eye, ref comp) || !_machines.IsOperational(eye))
             return;
 
+        ForgetOneObservation(eye, comp);
+        ObserveArea(eye, eye, comp.ObservationRadius);
         var xform = Transform(eye);
         var bearers = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
         while (bearers.MoveNext(out var body, out var bearer, out var bodyXform))
@@ -106,10 +146,6 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > comp.ObservationRadius)
                 continue;
 
-            if (!comp.Scanned.Add(body))
-                continue;
-
-            AddObservation(eye, comp.ObservationPerFaithful);
             _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
         }
 
@@ -127,7 +163,7 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
         var query = EntityQueryEnumerator<EyeOfTheProtectorComponent, TransformComponent>();
         while (query.MoveNext(out var uid, out _, out var xform))
         {
-            if (xform.MapID == map)
+            if (xform.MapID == map && _machines.IsOperational(uid))
                 return uid;
         }
 
@@ -164,7 +200,7 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     /// </summary>
     public void TryMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
     {
-        if (_timing.CurTime < comp.NextMiracle)
+        if (!_machines.IsOperational(eye) || _timing.CurTime < comp.NextMiracle)
             return;
 
         comp.NextMiracle = _timing.CurTime + comp.MiracleInterval;

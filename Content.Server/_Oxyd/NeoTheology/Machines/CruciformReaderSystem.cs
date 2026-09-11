@@ -1,5 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Server.Cloning;
+using Content.Server.Cloning.Components;
+using Content.Shared.Body;
+using Content.Shared.Ghost.Components;
+using Content.Shared.Humanoid;
+using Content.Shared.Humanoid.Prototypes;
+using Robust.Server.Player;
 using Content.Server.Materials;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
@@ -20,6 +26,12 @@ public sealed class CruciformReaderSystem : EntitySystem
     [Dependency] private readonly MaterialStorageSystem _materialStorage = default!;
     [Dependency] private readonly CloningPodSystem _cloningPod = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
+    [Dependency] private readonly SharedVisualBodySystem _visualBody = default!;
+    [Dependency] private readonly HumanoidProfileSystem _profile = default!;
+    [Dependency] private readonly MetaDataSystem _metadata = default!;
+    [Dependency] private readonly SharedContainerSystem _containers = default!;
+    [Dependency] private readonly IPlayerManager _players = default!;
 
     public override void Initialize()
     {
@@ -55,7 +67,7 @@ public sealed class CruciformReaderSystem : EntitySystem
     {
         soul = null;
 
-        if (!Resolve(uid, ref reader) || reader.ReaderImplant is not { } implant)
+        if (!Resolve(uid, ref reader) || !_machines.IsOperational(uid) || reader.ReaderImplant is not { } implant)
             return false;
 
         return TryComp<CruciformSoulComponent>(implant, out soul) && soul.HasSnapshot;
@@ -76,31 +88,62 @@ public sealed class CruciformReaderSystem : EntitySystem
         return _materialStorage.TryChangeMaterialAmount(cloner, pod.RequiredMaterial, -amount);
     }
 
-    /// <summary>
-    /// Resurrection bridge (Eris <c>rituals/machinery.dm:13-42</c>): the litany hands the cloner
-    /// a reader holding the stored soul, this reads it back out and lets upstream
-    /// <see cref="CloningPodSystem"/> grow the body. The dead wearer and the pod's biomatter are
-    /// upstream's own gates — TryCloning refuses a live mind and charges its cloningCost — so the
-    /// litany does not pre-charge and <see cref="TrySpendBiomass"/> stays unused on this path.
-    /// The stored mind moves as soon as the pod accepts the job (Eris <c>transfer_soul</c>
-    /// semantics) instead of waiting on upstream's accept dialog, which becomes a no-op.
-    /// </summary>
+    /// <summary>Check the saved soul and the pod without changing either machine.</summary>
+    public bool CanResurrect(EntityUid cloner, EntityUid reader)
+    {
+        if (!_machines.IsOperational(cloner) ||
+            !TryReadSoul(reader, out var soul) || soul.Profile == null || soul.BiomassCost <= 0 ||
+            soul.MindId is not { } mindId || !TryComp<MindComponent>(mindId, out var mind) ||
+            mind.UserId is not { } user || !_players.TryGetSessionById(user, out _) ||
+            !TryComp<CloningPodComponent>(cloner, out var pod) ||
+            HasComp<ActiveCloningPodComponent>(cloner) || pod.BodyContainer.ContainedEntity != null ||
+            !ProtoMan.HasIndex<SpeciesPrototype>(soul.Profile.Species) ||
+            _materialStorage.GetMaterialAmount(cloner, pod.RequiredMaterial) < soul.BiomassCost)
+            return false;
+
+        if (mind.OwnedEntity is { } body && !TerminatingOrDeleted(body) &&
+            !HasComp<GhostComponent>(body) && !_mobState.IsDead(body))
+            return false;
+
+        return !_cloningPod.ClonesWaitingForMind.TryGetValue(mind, out var clone) ||
+               TerminatingOrDeleted(clone) || _mobState.IsDead(clone);
+    }
+
     private void OnLitanyResurrection(Entity<CruciformClonerComponent> ent, ref LitanyResurrectionEvent args)
     {
-        if (!TryReadSoul(args.Reader, out var soul) ||
-            soul.MindId is not { } mindId ||
-            !TryComp<MindComponent>(mindId, out var mind) ||
-            mind.OwnedEntity is not { } body ||
-            !_mobState.IsDead(body) ||
-            !TryComp<CloningPodComponent>(ent.Owner, out var pod))
+        if (!CanResurrect(ent.Owner, args.Reader))
+            return;
+
+        args.Handled = true;
+        if (args.ValidateOnly)
+            return;
+
+        TryReadSoul(args.Reader, out var soul);
+        var profile = soul!.Profile!;
+        var mindId = soul.MindId!.Value;
+        var mind = Comp<MindComponent>(mindId);
+        var pod = Comp<CloningPodComponent>(ent.Owner);
+        var body = Spawn(ProtoMan.Index(profile.Species).Prototype, Transform(ent.Owner).Coordinates);
+        _visualBody.ApplyProfileTo(body, profile);
+        _profile.ApplyProfileTo(body, profile);
+        _metadata.SetEntityName(body, soul.Name);
+
+        if (!_containers.Insert(body, pod.BodyContainer))
         {
+            QueueDel(body);
+            args.Handled = false;
             return;
         }
 
-        if (!_cloningPod.TryCloning(ent.Owner, body, (mindId, mind), pod))
-            return;
-
+        TrySpendBiomass(ent.Owner, soul.BiomassCost, pod);
+        var beingCloned = AddComp<BeingClonedComponent>(body);
+        beingCloned.Mind = mind;
+        beingCloned.Parent = ent.Owner;
+        pod.UsedBiomass = soul.BiomassCost;
+        pod.CloningProgress = 0;
+        _cloningPod.ClonesWaitingForMind[mind] = body;
+        AddComp<ActiveCloningPodComponent>(ent.Owner);
         _cloningPod.TransferMindToClone(mindId, mind);
-        args.Handled = true;
+        _cloningPod.UpdateStatus(ent.Owner, CloningPodStatus.Cloning, pod);
     }
 }

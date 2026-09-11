@@ -1,3 +1,5 @@
+using Content.Shared.NPC.Prototypes;
+using Robust.Shared.Prototypes;
 using Robust.Shared.GameStates;
 
 namespace Content.Shared._Oxyd.NeoTheology.Components;
@@ -12,6 +14,13 @@ namespace Content.Shared._Oxyd.NeoTheology.Components;
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ObeliskComponent : Component
 {
+    /// <summary>Supported hostile fauna. Faction membership alone does not identify a mob as fauna.</summary>
+    [DataField]
+    public HashSet<ProtoId<NpcFactionPrototype>> HostileFactions = new() { "Carp", "SimpleHostile", "Xeno" };
+
+    [ViewVariables]
+    public TimeSpan NextPulse;
+
     [DataField]
     public float Radius = 7f;
 

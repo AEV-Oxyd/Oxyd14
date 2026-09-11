@@ -64,9 +64,10 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private readonly SharedStationSystem _stations = default!;
     [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
+    [Dependency] private readonly Content.Shared.Power.EntitySystems.SharedPowerReceiverSystem _power = default!;
 
-    /// <summary>Disconnected-fixture capture of private social litany notices.</summary>
-    private readonly Dictionary<EntityUid, List<string>> _testingSocialNotices = new();
+    /// <summary>Observers receive notices without retaining them in this system.</summary>
+    public event Action<EntityUid, string>? SocialNotice;
 
     public bool TryValidateEffects(
         EntityUid user,
@@ -100,19 +101,6 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return true;
     }
 
-    public void TestingClearSocialNotices()
-    {
-        _testingSocialNotices.Clear();
-    }
-
-    public IReadOnlyList<string> TestingGetSocialNotices(EntityUid recipient)
-    {
-        if (_testingSocialNotices.TryGetValue(recipient, out var list))
-            return list;
-
-        return Array.Empty<string>();
-    }
-
     public bool IsAlive(EntityUid uid)
     {
         return _mobState.IsAlive(uid);
@@ -137,9 +125,14 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     /// the state into <see cref="NeoTheologyDoorComponent.LitanyLocked"/>. Returns whether
     /// the bolt state changed.
     /// </summary>
+    public bool CanToggleLitanyDoor(EntityUid door)
+    {
+        return IsLitanyDoor(door) && _power.IsPowered(door);
+    }
+
     public bool TryToggleLitanyDoor(EntityUid door, EntityUid user)
     {
-        if (!TryComp<NeoTheologyDoorComponent>(door, out var litanyDoor) ||
+        if (!CanToggleLitanyDoor(door) || !TryComp<NeoTheologyDoorComponent>(door, out var litanyDoor) ||
             !TryComp<DoorBoltComponent>(door, out var bolt))
             return false;
 
@@ -593,13 +586,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
 
     public void DeliverSocialNotice(EntityUid recipient, string message)
     {
-        if (!_testingSocialNotices.TryGetValue(recipient, out var list))
-        {
-            list = [];
-            _testingSocialNotices[recipient] = list;
-        }
-
-        list.Add(message);
+        SocialNotice?.Invoke(recipient, message);
         _popup.PopupEntity(message, recipient, recipient, PopupType.MediumCaution);
     }
 }

@@ -23,4 +23,5 @@ public sealed partial class CruciformSoulComponent : Component
     [DataField] public EntityUid? MindId;
     [DataField] public string Name = string.Empty;
     [DataField] public HumanoidCharacterProfile? Profile;
+    [DataField] public int BiomassCost = 100;
 }

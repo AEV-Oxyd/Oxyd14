@@ -4,9 +4,11 @@ using Content.Shared.Botany.Components;
 using Content.Shared.Botany.Systems;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
+using Content.Shared.Humanoid;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.NPC.Components;
+using Content.Shared.NPC.Systems;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology.Machines;
@@ -25,10 +27,46 @@ public sealed class ObeliskSystem : EntitySystem
     [Dependency] private readonly SanitySystem _sanity = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
 
-    /// <summary>When each obelisk next pulses.</summary>
-    /// <remarks>ponytail: entries for deleted obelisks are never pruned. One obelisk per station per
-    /// the Eris map, so the leak is bounded; prune with an EntityTerminating handler if that changes.</remarks>
-    private readonly Dictionary<EntityUid, TimeSpan> _nextPulse = new();
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
+    [Dependency] private readonly NpcFactionSystem _factions = default!;
+
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<ObeliskComponent, ComponentShutdown>(OnShutdown);
+    }
+
+    private void OnShutdown(Entity<ObeliskComponent> ent, ref ComponentShutdown args)
+    {
+        RefreshRegeneration(ent.Owner);
+    }
+
+    /// <summary>Use the strongest operational aura. Never let one obelisk cancel another.</summary>
+    private void RefreshRegeneration(EntityUid? excluded = null)
+    {
+        var implants = EntityQueryEnumerator<CruciformComponent>();
+        while (implants.MoveNext(out var implant, out var state))
+        {
+            var wanted = 1f;
+            if (state.Active && state.ImplantedEntity is { } body && !TerminatingOrDeleted(body))
+            {
+                var xform = Transform(body);
+                var obelisks = EntityQueryEnumerator<ObeliskComponent, TransformComponent>();
+                while (obelisks.MoveNext(out var uid, out var obelisk, out var source))
+                {
+                    if (uid == excluded || !_machines.IsOperational(uid) || source.MapID != xform.MapID)
+                        continue;
+                    if ((source.WorldPosition - xform.WorldPosition).Length() <= obelisk.Radius)
+                        wanted = Math.Max(wanted, obelisk.RegenMultiplier);
+                }
+            }
+
+            if (Math.Abs(state.RegenerationMultiplier - wanted) < 0.001f)
+                continue;
+
+            state.RegenerationMultiplier = wanted;
+            _cruciform.RecomputeProfile(implant, state);
+        }
+    }
 
     /// <summary>How much regeneration a single aura pulse restores, and how much it hurts for.</summary>
     private const float SanityPerPulse = 1f;
@@ -40,14 +78,15 @@ public sealed class ObeliskSystem : EntitySystem
     {
         base.Update(frameTime);
 
+        RefreshRegeneration();
         var now = _timing.CurTime;
         var query = EntityQueryEnumerator<ObeliskComponent>();
         while (query.MoveNext(out var uid, out var obelisk))
         {
-            if (_nextPulse.TryGetValue(uid, out var next) && now < next)
+            if (now < obelisk.NextPulse && _machines.IsOperational(uid))
                 continue;
 
-            _nextPulse[uid] = now + obelisk.Interval;
+            obelisk.NextPulse = now + obelisk.Interval;
             Tick(uid, obelisk);
         }
     }
@@ -58,8 +97,19 @@ public sealed class ObeliskSystem : EntitySystem
         if (!Resolve(uid, ref obelisk))
             return;
 
+        RefreshRegeneration();
+        if (!_machines.IsOperational(uid))
+        {
+            obelisk.Active = false;
+            Dirty(uid, obelisk);
+            return;
+        }
+
         var xform = Transform(uid);
         var faithful = 0;
+        var eye = _eye.FindEye(uid);
+        if (eye is { } observer)
+            _eye.ObserveArea(observer, uid, obelisk.Radius);
 
         // Buff in range, and just as importantly un-buff on the way out: the multiplier is an input
         // to RecomputeProfile, so writing it is all "stop outside the radius" needs.
@@ -81,28 +131,21 @@ public sealed class ObeliskSystem : EntitySystem
                     _sanity.ApplySanityDelta((body, sanity), SanitySource.Belief, SanityPerPulse);
             }
 
-            var wanted = inRange ? obelisk.RegenMultiplier : 1f;
-            if (Math.Abs(state.RegenerationMultiplier - wanted) < 0.001f)
-                continue;
-
-            state.RegenerationMultiplier = wanted;
-            _cruciform.RecomputeProfile(cruciform, state);
         }
 
         obelisk.Active = faithful > 0;
 
-        // An obelisk with no Eye on its map is legal; it simply banks nothing.
-        if (faithful > 0 && _eye.FindEye(uid) is { } eye &&
-            TryComp<EyeOfTheProtectorComponent>(eye, out var eyeComp))
-            _eye.AddObservation(eye, eyeComp.ObservationPerFaithful * faithful);
+        Dirty(uid, obelisk);
 
-        DamageHostiles(uid, obelisk, xform);
-        WeedTrays(xform, obelisk);
+        if (obelisk.Active)
+        {
+            DamageHostiles(uid, obelisk, xform);
+            WeedTrays(xform, obelisk);
+        }
     }
 
     /// <summary>
-    /// Eris hits "hostiles" — live non-humans. The fork's marker for a simple mob is
-    /// <see cref="NpcFactionMemberComponent"/>; crew and the faithful are never targeted.
+    /// Target hostile fauna factions only. Humans and faithful never qualify.
     /// </summary>
     private void DamageHostiles(EntityUid uid, ObeliskComponent obelisk, TransformComponent xform)
     {
@@ -111,7 +154,7 @@ public sealed class ObeliskSystem : EntitySystem
 
         var hit = 0;
         var mobs = EntityQueryEnumerator<MobStateComponent, NpcFactionMemberComponent, TransformComponent>();
-        while (mobs.MoveNext(out var mob, out var mobState, out _, out var mobXform))
+        while (mobs.MoveNext(out var mob, out var mobState, out var faction, out var mobXform))
         {
             if (hit >= obelisk.MaxTargets)
                 break;
@@ -121,7 +164,8 @@ public sealed class ObeliskSystem : EntitySystem
                 continue;
             if (!_mobState.IsAlive(mob, mobState))
                 continue;
-            if (HasComp<CruciformBearerComponent>(mob))
+            if (HasComp<CruciformBearerComponent>(mob) || HasComp<HumanoidProfileComponent>(mob) ||
+                !_factions.IsMemberOfAny((mob, faction), obelisk.HostileFactions))
                 continue;
 
             if (_damageable.TryChangeDamage(mob, damage, origin: uid))

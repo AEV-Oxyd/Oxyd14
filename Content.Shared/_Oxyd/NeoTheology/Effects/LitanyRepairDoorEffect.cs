@@ -17,7 +17,7 @@ public sealed partial class LitanyRepairDoorEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyDoor))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -28,13 +28,16 @@ public sealed partial class LitanyRepairDoorEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         foreach (var target in context.Targets)
         {
             if (!system.IsLitanyDoor(target))
                 continue;
 
-            var repair = new LitanyRepairDoorEvent(target, context.User, false);
+            var repair = new LitanyRepairDoorEvent(target, context.User, false, validateOnly);
             system.RaiseOn(target, ref repair);
             if (repair.Handled)
                 return true;

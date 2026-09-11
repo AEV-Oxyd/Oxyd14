@@ -1,5 +1,14 @@
 # NeoTheology machines (P2). No NT RSI exists in this fork, so sprites are borrowed from real machines.
 - type: entity
+  parent: BiomassReclaimer
+  id: OxydNtBiomatterReclaimer
+  name: biomatter reclaimer
+  description: Reclaims organic matter for NeoTheology machines.
+  components:
+  - type: BiomassReclaimer
+    outputMaterial: Biomatter
+
+- type: entity
   parent: [ BaseMachinePowered ]
   id: OxydNtCruciformForge
   name: cruciform forge

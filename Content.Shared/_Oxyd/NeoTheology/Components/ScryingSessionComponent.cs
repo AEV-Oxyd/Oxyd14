@@ -13,6 +13,10 @@ public sealed partial class ScryingSessionComponent : Component
     [DataField]
     public EntityUid? Marker;
 
+    /// <summary>The eye target before the session starts.</summary>
+    [DataField]
+    public EntityUid? PreviousTarget;
+
     /// <summary>When the session lapses and the eye is restored to the caster.</summary>
     [DataField]
     public TimeSpan EndsAt;

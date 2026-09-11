@@ -13,7 +13,7 @@ public sealed partial class LitanyActivateDoorEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyDoor))
+        if (!context.Targets.Any(system.CanToggleLitanyDoor))
         {
             failure = "oxyd-litany-no-target";
             return false;

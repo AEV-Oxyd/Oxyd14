@@ -16,7 +16,7 @@ public sealed partial class LitanyMakeCruciformEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyForge))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -27,13 +27,16 @@ public sealed partial class LitanyMakeCruciformEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         foreach (var target in context.Targets)
         {
             if (!system.IsLitanyForge(target))
                 continue;
 
-            var produce = new LitanyForgeProduceEvent(target, false);
+            var produce = new LitanyForgeProduceEvent(target, false, validateOnly);
             system.RaiseOn(target, ref produce);
             if (produce.Handled)
                 return true;

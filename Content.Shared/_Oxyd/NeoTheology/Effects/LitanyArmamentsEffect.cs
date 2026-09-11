@@ -16,7 +16,7 @@ public sealed partial class LitanyArmamentsEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (!context.Targets.Any(system.IsLitanyArmamentsPrinter))
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -27,13 +27,16 @@ public sealed partial class LitanyArmamentsEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         foreach (var target in context.Targets)
         {
             if (!system.IsLitanyArmamentsPrinter(target))
                 continue;
 
-            var open = new LitanyOpenArmamentsEvent(context.User, false);
+            var open = new LitanyOpenArmamentsEvent(context.User, false, validateOnly);
             system.RaiseOn(target, ref open);
             if (open.Handled)
                 return true;

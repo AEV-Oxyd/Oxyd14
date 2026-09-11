@@ -17,6 +17,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 public sealed class ArmamentsPrinterSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
+    [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
@@ -37,7 +38,20 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
     /// </summary>
     private void OnLitanyOpenArmaments(EntityUid uid, ArmamentsPrinterComponent component, ref LitanyOpenArmamentsEvent args)
     {
-        args.Handled = _ui.TryOpenUi(uid, ArmamentsPrinterUiKey.Key, args.User);
+        if (!_machines.IsOperational(uid) ||
+            !_ui.TryGetInterfaceData(uid, ArmamentsPrinterUiKey.Key, out var data))
+            return;
+
+        if (data.RequireInputValidation)
+        {
+            var attempt = new BoundUserInterfaceMessageAttempt(args.User, uid, ArmamentsPrinterUiKey.Key, new OpenBoundInterfaceMessage());
+            RaiseLocalEvent(attempt);
+            RaiseLocalEvent(uid, attempt);
+            if (attempt.Cancelled)
+                return;
+        }
+
+        args.Handled = args.ValidateOnly || _ui.TryOpenUi(uid, ArmamentsPrinterUiKey.Key, args.User);
     }
 
     private void OnUiOpened(EntityUid uid, ArmamentsPrinterComponent component, AfterActivatableUIOpenEvent args)
@@ -93,7 +107,7 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
     /// </summary>
     public bool TryPurchase(EntityUid printer, EntityUid user, string armamentId)
     {
-        if (!TryComp<ArmamentsPrinterComponent>(printer, out var component))
+        if (!_machines.IsOperational(printer) || !TryComp<ArmamentsPrinterComponent>(printer, out var component))
             return false;
 
         if (!ProtoMan.TryIndex<ArmamentPrototype>(armamentId, out var armament))

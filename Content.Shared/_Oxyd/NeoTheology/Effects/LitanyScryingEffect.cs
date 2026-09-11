@@ -18,7 +18,7 @@ public sealed partial class LitanyScryingEffect : LitanyEffect
         LitanyEffectContext context,
         out LocId? failure)
     {
-        if (context.Targets.Count == 0)
+        if (!Execute(system, context, true))
         {
             failure = "oxyd-litany-no-target";
             return false;
@@ -29,6 +29,9 @@ public sealed partial class LitanyScryingEffect : LitanyEffect
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+        => Execute(system, context, false);
+
+    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
     {
         if (context.Targets.Count == 0)
             return false;
@@ -40,7 +43,7 @@ public sealed partial class LitanyScryingEffect : LitanyEffect
             ? context.Litany.EffectDuration
             : FallbackDuration;
 
-        var ev = new LitanyScryingEvent(context.User, target, duration, false);
+        var ev = new LitanyScryingEvent(context.User, target, duration, false, validateOnly);
         system.RaiseOn(target, ref ev);
         return ev.Handled;
     }
