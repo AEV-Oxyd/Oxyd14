@@ -243,6 +243,7 @@
         - id: CrateWeaponSecure
         - id: CrateArmoryLaser
         - id: CrateArmoryPistols
+        - id: CrateArmoryMartin
         - id: CrateTrainingBombs
         - id: CrateTrackingImplants
         - id: CrateSecurityTrackingMindshieldImplants

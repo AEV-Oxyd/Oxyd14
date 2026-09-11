@@ -1,0 +1,13 @@
+- type: entity
+  parent: WeaponPistolMk58
+  id: WeaponPistolMk58Ironhammer
+  name: Ironhammer Mk 58
+  description: The NT Mk58 is a cheap, ubiquitous sidearm, produced by a NanoTrasen subsidiary. Uses standard .35 and high-capacity magazines.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/mk58_sec.rsi
+    layers:
+    - state: base
+      map: ["enum.GunVisualLayers.Base"]
+    - state: mag-0
+      map: ["enum.GunVisualLayers.Mag"]

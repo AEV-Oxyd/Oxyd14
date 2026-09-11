@@ -1,0 +1,317 @@
+# Ironhammer job variants.
+# These intentionally use unique prototype IDs so upstream job definitions can
+# continue to evolve without this port modifying the same YAML prototypes.
+
+- type: job
+  id: IronhammerHeadOfSecurity
+  name: job-name-ironhammer-hos
+  description: job-description-ironhammer-hos
+  playTimeTracker: JobIronhammerHeadOfSecurity
+  requirements:
+  - !type:RoleTimeRequirement
+    role: JobIronhammerWarden
+    time: 3h
+  - !type:RoleTimeRequirement
+    role: JobIronhammerDetective
+    time: 1h
+  - !type:RoleTimeRequirement
+    role: JobIronhammerSecurityOfficer
+    time: 5h
+  - !type:DepartmentTimeRequirement
+    department: IronhammerSecurity
+    time: 10h
+  startingGear: IronhammerHeadOfSecurityGear
+  icon: JobIconIronhammerCommander
+  supervisors: job-supervisors-captain
+  access:
+  - HeadOfSecurity
+  - Command
+  - Brig
+  - Security
+  - Armory
+  - Maintenance
+  - External
+  - Detective
+  - Cryogenics
+  - GenpopEnter
+  - GenpopLeave
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+  - !type:AddComponentSpecial
+    components:
+    - type: CommandStaff
+
+- type: startingGear
+  id: IronhammerHeadOfSecurityGear
+  equipment:
+    eyes: erisport_Ironhammer_tactical_HUD
+    id: HoSPDA
+    gloves: ClothingHandsGlovesCombat
+    ears: ClothingHeadsetAltSecurity
+    pocket1: WeaponPistolLamia
+  storage:
+    back:
+    - Flash
+    - WeaponPDWMartin
+    - MagazineMagnum
+
+- type: chameleonOutfit
+  id: IronhammerHeadOfSecurityChameleonOutfit
+  job: IronhammerHeadOfSecurity
+  hasMindShield: true
+  equipment:
+    head: erisport_Commander_beret
+    mask: erisport_Ironhammer_gasmask
+    neck: ClothingNeckCloakHos
+
+- type: job
+  id: IronhammerWarden
+  name: job-name-ironhammer-warden
+  description: job-description-ironhammer-warden
+  playTimeTracker: JobIronhammerWarden
+  requirements:
+  - !type:RoleTimeRequirement
+    role: JobIronhammerSecurityOfficer
+    time: 5h
+  - !type:DepartmentTimeRequirement
+    department: IronhammerSecurity
+    time: 10h
+  startingGear: IronhammerWardenGear
+  icon: JobIconIronhammerWarden
+  supervisors: job-supervisors-ironhammer-commander
+  access:
+  - Security
+  - Brig
+  - Armory
+  - Maintenance
+  - External
+  - Detective
+  - Cryogenics
+  - GenpopEnter
+  - GenpopLeave
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+
+- type: startingGear
+  id: IronhammerWardenGear
+  equipment:
+    eyes: erisport_Ironhammer_tactical_HUD
+    id: WardenPDA
+    ears: ClothingHeadsetSecurity
+    pocket1: WeaponPistolMk58Ironhammer
+  storage:
+    back:
+    - Flash
+    - WeaponPDWMartin
+    - MagazinePistol
+
+- type: chameleonOutfit
+  id: IronhammerWardenChameleonOutfit
+  job: IronhammerWarden
+  hasMindShield: true
+  equipment:
+    head: erisport_IH_sergeant_cap
+    mask: erisport_Ironhammer_gasmask
+    outerClothing: erisport_Wardens_overcoat
+    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+    neck: Dinkystar
+    belt: ClothingBeltSecurity
+    gloves: ClothingHandsGlovesCombat
+    shoes: ClothingShoesBootsJack
+
+- type: job
+  id: IronhammerSecurityOfficer
+  name: job-name-ironhammer-security
+  description: job-description-ironhammer-security
+  playTimeTracker: JobIronhammerSecurityOfficer
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: IronhammerSecurity
+    time: 4h
+  startingGear: IronhammerSecurityOfficerGear
+  icon: JobIconIronhammerOperative
+  supervisors: job-supervisors-ironhammer-commander
+  access:
+  - Security
+  - Brig
+  - Maintenance
+  - External
+  - Cryogenics
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+
+- type: startingGear
+  id: IronhammerSecurityOfficerGear
+  equipment:
+    eyes: erisport_Ironhammer_tactical_HUD
+    ears: ClothingHeadsetSecurity
+    pocket1: WeaponPistolMk58Ironhammer
+  storage:
+    back:
+    - Flash
+    - WeaponPDWMartin
+    - MagazinePistol
+
+- type: chameleonOutfit
+  id: IronhammerSecurityOfficerChameleonOutfit
+  job: IronhammerSecurityOfficer
+  hasMindShield: true
+  equipment:
+    head: erisport_old_security_beret
+    mask: erisport_tactical_balaclava
+    neck: Dinkystar
+    gloves: ClothingHandsGlovesColorBlack
+
+- type: job
+  id: IronhammerDetective
+  name: job-name-ironhammer-detective
+  description: job-description-ironhammer-detective
+  playTimeTracker: JobIronhammerDetective
+  requirements:
+  - !type:RoleTimeRequirement
+    role: JobIronhammerSecurityOfficer
+    time: 5h
+  startingGear: IronhammerDetectiveGear
+  icon: JobIconIronhammerInspector
+  supervisors: job-supervisors-ironhammer-commander
+  access:
+  - Security
+  - Brig
+  - Maintenance
+  - Detective
+  - Cryogenics
+  - External
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+
+- type: startingGear
+  id: IronhammerDetectiveGear
+  equipment:
+    eyes: erisport_Ironhammer_tactical_HUD
+    id: DetectivePDA
+    ears: ClothingHeadsetSecurity
+    belt: ClothingBeltHolsterFilled
+  storage:
+    back:
+    - Flash
+    - ForensicPad
+    - ForensicScanner
+    - WeaponPDWMartin
+
+- type: chameleonOutfit
+  id: IronhammerDetectiveChameleonOutfit
+  job: IronhammerDetective
+  hasMindShield: true
+  equipment:
+    head: ClothingHeadHatFedoraBrown
+    mask: ClothingMaskGasSecurity
+    neck: ClothingNeckTieDet
+    gloves: ClothingHandsGlovesForensic
+
+- type: job
+  id: IronhammerSecurityCadet
+  name: job-name-ironhammer-cadet
+  description: job-description-ironhammer-cadet
+  playTimeTracker: JobIronhammerSecurityCadet
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 10h
+  - !type:DepartmentTimeRequirement
+    department: IronhammerSecurity
+    time: 10h
+    inverted: true
+  startingGear: IronhammerSecurityCadetGear
+  icon: JobIconIronhammerCadet
+  supervisors: job-supervisors-ironhammer-security
+  access:
+  - Security
+  - Brig
+  - Maintenance
+  - External
+  - Cryogenics
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+
+- type: startingGear
+  id: IronhammerSecurityCadetGear
+  equipment:
+    shoes: ClothingShoesBootsJackFilled
+    outerClothing: erisport_operator_armor
+    id: SecurityCadetPDA
+    ears: ClothingHeadsetSecurity
+    belt: ClothingBeltSecurityFilled
+    pocket1: WeaponPistolMk58Ironhammer
+    pocket2: BookSecurity
+  storage:
+    back:
+    - Flash
+    - WeaponPDWMartin
+    - MagazinePistol
+
+- type: chameleonOutfit
+  id: IronhammerSecurityCadetChameleonOutfit
+  job: IronhammerSecurityCadet
+  hasMindShield: true
+  equipment:
+    head: erisport_IH_field_cap
+    eyes: erisport_Ironhammer_tactical_HUD
+    mask: erisport_tactical_balaclava
+    neck: ClothingNeckScarfStripedRed
+    belt: ClothingBeltSecurity
+    gloves: ClothingHandsGlovesColorBlack
+
+- type: job
+  id: IronhammerMedicalSpecialist
+  name: job-name-ironhammer-medspec
+  description: job-description-ironhammer-medspec
+  playTimeTracker: JobIronhammerMedicalSpecialist
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: IronhammerSecurity
+    time: 2h
+  - !type:DepartmentTimeRequirement
+    department: Medical
+    time: 2h
+  startingGear: IronhammerMedicalSpecialistGear
+  icon: JobIconIronhammerMedicalSpecialist
+  supervisors: job-supervisors-ironhammer-commander
+  access:
+  - Security
+  - Brig
+  - Medical
+  - Detective
+  - Maintenance
+  - External
+  - Cryogenics
+  special:
+  - !type:AddImplantSpecial
+    implants: [ MindShieldImplant ]
+
+- type: startingGear
+  id: IronhammerMedicalSpecialistGear
+  equipment:
+    eyes: erisport_Ironhammer_medical_HUD
+    ears: ClothingHeadsetSecurity
+    pocket1: WeaponPistolMk58Ironhammer
+    id: SecurityPDA
+  storage:
+    back:
+    - Flash
+    - WeaponPDWMartin
+    - MagazinePistol
+
+- type: chameleonOutfit
+  id: IronhammerMedicalSpecialistChameleonOutfit
+  job: IronhammerMedicalSpecialist
+  hasMindShield: true
+  equipment:
+    jumpsuit: erisport_Medical_Specialists_jumpsuit
+    outerClothing: erisport_medical_specialists_labcoat
+    mask: erisport_Ironhammer_gasmask
+    belt: ClothingBeltSecurity
+    gloves: ClothingHandsGlovesColorBlack
