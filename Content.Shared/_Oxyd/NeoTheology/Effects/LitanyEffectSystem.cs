@@ -141,7 +141,6 @@ public sealed partial class LitanyEffectSystem : EntitySystem
             return false;
 
         litanyDoor.LitanyLocked = locked;
-        Dirty(door, litanyDoor);
         return true;
     }
 

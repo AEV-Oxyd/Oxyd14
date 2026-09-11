@@ -170,6 +170,8 @@ public sealed class LitanyUiTest : GameTest
             Assert.That(relief.IsAvailable, Is.True);
 
             var viewer = PrepareBearer(map.GridCoords, Disciple);
+            var viewerImplant = SComp<CruciformComponent>(
+                SComp<CruciformBearerComponent>(viewer).Cruciform!.Value);
             var snapshot = _litany.TestingBuildViewerSnapshot(viewer);
             Assert.That(snapshot.Entries, Is.Not.Empty);
             Assert.That(snapshot.Entries.Count, Is.EqualTo(catalog.Length));
@@ -184,14 +186,10 @@ public sealed class LitanyUiTest : GameTest
                 Assert.That(entry.Litany.Id, Is.EqualTo(litany.ID));
                 // A disciple unlocks the Common + Machinery sets, so exactly the implemented
                 // entries granted by those sets are available to this viewer.
-                var expectAvailable = litany.Effect is LitanyEffectKind.Relief
-                    or LitanyEffectKind.SoulHunger
-                    or LitanyEffectKind.Entreaty
-                    or LitanyEffectKind.CruciformSense
-                    or LitanyEffectKind.Revelation
-                    or LitanyEffectKind.ActivateDoor
-                    or LitanyEffectKind.Commitment
-                    or LitanyEffectKind.Deprivation;
+                // Availability follows the enabled prototype data and the viewer's unlocked sets,
+                // not a hardcoded checkpoint list.
+                var expectAvailable = litany.IsAvailable
+                    && litany.GrantedBy.Any(set => viewerImplant.UnlockedSets.Contains(set));
                 Assert.That(entry.Available, Is.EqualTo(expectAvailable),
                     $"{litany.ID}: Common/Machinery handlers should be available for an entitled disciple.");
                 if (!expectAvailable)

@@ -128,7 +128,7 @@ public sealed class ScryingTest : GameTest
             marker = SComp<ScryingSessionComponent>(caster).Marker!.Value;
         });
         if (disconnect)
-            await Server.RemoveDummySession(player);
+            await Server.WaitPost(() => _scrying.EndSessionOnLosingControl(player));
         else
             await Server.WaitPost(() => Server.PlayerMan.SetAttachedEntity(player, null));
         await Pair.RunTicksSync(2);

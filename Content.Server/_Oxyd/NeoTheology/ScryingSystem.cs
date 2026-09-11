@@ -53,8 +53,17 @@ public sealed class ScryingSystem : EntitySystem
 
     private void OnPlayerStatusChanged(object? sender, SessionStatusEventArgs args)
     {
-        if (args.NewStatus is SessionStatus.Disconnected or SessionStatus.Zombie &&
-            args.Session.AttachedEntity is { } body)
+        if (args.NewStatus is SessionStatus.Disconnected or SessionStatus.Zombie)
+            EndSessionOnLosingControl(args.Session);
+    }
+
+    /// <summary>
+    /// Ends the caster's session when the controlling player disconnects or leaves.
+    /// Public so tests can exercise the disconnect path without a database-cached session.
+    /// </summary>
+    public void EndSessionOnLosingControl(ICommonSession session)
+    {
+        if (session.AttachedEntity is { } body)
             RemComp<ScryingSessionComponent>(body);
     }
 

@@ -117,7 +117,8 @@ public sealed class LitanyEffectsScryingTest : GameTest
             var cooldowns = bearer.PersonalCooldowns.Count;
             var result = _litany.TryBeginLitany(caster, Scrying, LitanyCastOrigin.ManualSpeech);
             Assert.That(result.Success, Is.False);
-            Assert.That(implant.Holiness, Is.EqualTo(holiness));
+            // A refused repeat must not debit the cost; natural regeneration only raises the value.
+            Assert.That(implant.Holiness, Is.GreaterThanOrEqualTo(holiness));
             Assert.That(bearer.PersonalCooldowns, Has.Count.EqualTo(cooldowns));
             Assert.That(session.Marker, Is.EqualTo(marker));
             Assert.That(_litany.TestingPendingCount, Is.Zero);
