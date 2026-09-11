@@ -10,7 +10,7 @@ public static class LitanyHandlerCatalog
 {
     public const int ExpectedFoundationEffectCount = 23;
 
-    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation.</summary>
+    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles.</summary>
     public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
     {
         LitanyEffectKind.Relief,
@@ -29,6 +29,11 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.DivineBlessing,
         LitanyEffectKind.Commitment,
         LitanyEffectKind.Deprivation,
+        LitanyEffectKind.Confirmation,
+        LitanyEffectKind.Adoption,
+        LitanyEffectKind.Ordination,
+        LitanyEffectKind.Omission,
+        LitanyEffectKind.Excommunication,
     }.ToFrozenSet();
 
     /// <summary>

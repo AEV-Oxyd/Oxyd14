@@ -53,6 +53,11 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.DivineBlessing,
         LitanyEffectKind.Commitment,
         LitanyEffectKind.Deprivation,
+        LitanyEffectKind.Confirmation,
+        LitanyEffectKind.Adoption,
+        LitanyEffectKind.Ordination,
+        LitanyEffectKind.Omission,
+        LitanyEffectKind.Excommunication,
     ];
 
     [Test]

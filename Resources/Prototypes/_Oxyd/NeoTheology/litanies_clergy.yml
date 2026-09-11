@@ -236,8 +236,9 @@
   cooldownKey: OxydLitanyConfirmation
   cooldownScope: Personal
   cooldownDuration: 60
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyConfirmationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyAdoption
@@ -247,11 +248,14 @@
   category: Priest
   grantedBy: [OxydLitanyPriest]
   effect: Adoption
-  targetMode: AdjacentFollower
+  # Eris Adoption only raises an existing implant's clearance; the plan makes it "baptize a
+  # non-believer", so the target must be able to be the first cruciform's bearer.
+  targetMode: AdjacentLiving
   range: 1.5
   cost: 15
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyAdoptionEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyOrdination
@@ -264,8 +268,9 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 15
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyOrdinationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyOmission
@@ -278,8 +283,9 @@
   targetMode: AdjacentFollower
   range: 1.5
   cost: 30
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyOmissionEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyExcommunication
@@ -295,8 +301,9 @@
   cooldownKey: OxydLitanyExcommunication
   cooldownScope: Personal
   cooldownDuration: 300
-  enabled: false
-  unavailableReason: oxyd-litany-unavailable-foundation
+  effects:
+  - !type:LitanyExcommunicationEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyOrderArmaments

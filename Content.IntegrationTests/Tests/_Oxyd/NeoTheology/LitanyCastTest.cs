@@ -282,6 +282,11 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyDivineBlessing",
                 "OxydLitanyCommitment",
                 "OxydLitanyDeprivation",
+                "OxydLitanyConfirmation",
+                "OxydLitanyAdoption",
+                "OxydLitanyOrdination",
+                "OxydLitanyOmission",
+                "OxydLitanyExcommunication",
             }));
         });
     }

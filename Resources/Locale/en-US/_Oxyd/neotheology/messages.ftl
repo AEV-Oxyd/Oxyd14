@@ -35,5 +35,7 @@ oxyd-litany-deprivation-alive = Deprivation does not work upon the living.
 oxyd-litany-entreaty-notice = { $name }, faithful cruciform follower, cries for salvation at { $location }!
 oxyd-litany-cruciform-sense-notice = { $name } has a cruciform installed.
 oxyd-litany-revelation-vision = A vision of the divine floods your mind.
+oxyd-litany-no-authority = You don't have the authority for this rite.
+oxyd-litany-excommunication-notice = You have been spiritually separated from the Church and the community of the faithful.
 
 oxyd-eotp-miracle = The Eye of the Protector radiates a miracle across the station.

@@ -423,10 +423,13 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     /// Raises a by-ref event on a target on behalf of an effect. Effects are prototype data
     /// with no bus access; server-only handlers own the authoritative side (sanity delta,
     /// cruciform activation) and set <c>Handled</c>.
+    /// The raise is a local broadcast: a bridge target need not carry any component the
+    /// handler could subscribe on (Adoption's non-believer has no bearer component at all).
+    /// Component-scoped subscribers are still reached through the regular directed dispatch.
     /// </summary>
     public void RaiseOn<TEvent>(EntityUid target, ref TEvent args) where TEvent : notnull
     {
-        RaiseLocalEvent(target, ref args);
+        RaiseLocalEvent(target, ref args, broadcast: true);
     }
 
     public string GetName(EntityUid uid, EntityUid? viewer = null)

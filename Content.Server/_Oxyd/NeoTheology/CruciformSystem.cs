@@ -46,6 +46,8 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
         SubscribeLocalEvent<CruciformBearerComponent, EntityTerminatingEvent>(OnBearerTerminating);
         SubscribeLocalEvent<CruciformBearerComponent, GetAccessTagsEvent>(OnGetAccessTags);
         SubscribeLocalEvent<CruciformBearerComponent, LitanyActivateCruciformEvent>(OnLitanyActivateCruciform);
+        SubscribeLocalEvent<CruciformBearerComponent, LitanySetRankEvent>(OnLitanySetRank);
+        SubscribeLocalEvent<LitanyGrantCruciformEvent>(OnLitanyGrantCruciform);
         SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
     }
 
@@ -57,6 +59,33 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     private void OnLitanyActivateCruciform(Entity<CruciformBearerComponent> ent, ref LitanyActivateCruciformEvent args)
     {
         args.Handled = Activate(ent.Owner);
+    }
+
+    /// <summary>
+    /// Conversion-role bridge (Confirmation, Ordination, Omission, Excommunication): the effect
+    /// cannot call <see cref="MakeRank"/> itself, so it raises <see cref="LitanySetRankEvent"/> on
+    /// the target. Profile and rank modules are swapped together; the revision bump keeps the
+    /// litany UI in step.
+    /// </summary>
+    private void OnLitanySetRank(Entity<CruciformBearerComponent> ent, ref LitanySetRankEvent args)
+    {
+        if (!TryGetCruciformEntity(ent.Owner, out var cruciform, out var component))
+            return;
+
+        MakeRank(cruciform, component, args.Profile);
+        Dirty(cruciform, component);
+        BumpRevision(ent.Owner, ent.Comp);
+        args.Handled = true;
+    }
+
+    /// <summary>
+    /// Adoption bridge: raised on the target, who has no bearer component yet, so this
+    /// subscription is a local broadcast rather than a component one. <c>Handled</c> stays false
+    /// when the body already carries a cruciform.
+    /// </summary>
+    private void OnLitanyGrantCruciform(ref LitanyGrantCruciformEvent args)
+    {
+        args.Handled = GrantCruciform(args.Target, args.Profile);
     }
 
     public override void Update(float frameTime)
