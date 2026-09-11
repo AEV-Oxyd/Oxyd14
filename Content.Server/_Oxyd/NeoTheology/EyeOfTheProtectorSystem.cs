@@ -63,8 +63,8 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             if (!_machines.IsOperational(uid))
                 continue;
 
+            UpdatePower(uid, eye);
             ForgetOneObservation(uid, eye);
-            TryMiracle(uid, eye);
 
             if (now < eye.NextScan)
                 continue;
@@ -149,9 +149,6 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
             _statusEffects.TryAddStatusEffectDuration(body, "OxydNtEyeBlessing", comp.FaithfulBlessingDuration);
         }
 
-        // P3.5: accrue armament points from the observation bank each scan. This diverges from Eris
-        // (which adds a fixed +125 per miracle, not observation/100 per scan) — flagged, not silent.
-        comp.ArmamentsPoints = Math.Min(comp.MaxArmamentsPoints, comp.ArmamentsPoints + (int)(comp.Observation / 100f));
         Dirty(eye, comp);
     }
 
@@ -195,20 +192,35 @@ public sealed class EyeOfTheProtectorSystem : EntitySystem
     };
 
     /// <summary>
-    /// P3.6: fire a miracle when the observation bank can fund one. Gated on <c>NextMiracle</c>
-    /// (cadence) and a 1000-point observation cost, mirroring Eris <c>power_release()</c>.
+    /// Eris <c>updatePower()</c>: bank power from the observation level plus one per faithful
+    /// in range, and release a miracle whenever the bank fills.
     /// </summary>
-    public void TryMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
+    public void UpdatePower(EntityUid eye, EyeOfTheProtectorComponent comp)
     {
-        if (!_machines.IsOperational(eye) || _timing.CurTime < comp.NextMiracle)
+        if (!_machines.IsOperational(eye) || _timing.CurTime < comp.NextPowerUpdate)
             return;
 
-        comp.NextMiracle = _timing.CurTime + comp.MiracleInterval;
+        comp.NextPowerUpdate = _timing.CurTime + comp.PowerInterval;
+        comp.NextMiracle = comp.NextPowerUpdate;
 
-        if (comp.Observation < 1000f)
-            return;
+        var gain = comp.PowerGainBase +
+            Math.Clamp(comp.Observation, comp.MinObservation, comp.MaxObservation) / 100f;
+        gain += FaithfulInRange(eye, comp).Count;
+        comp.Power += gain;
 
-        comp.Observation -= 1000f;
+        while (comp.Power >= comp.MaxPower)
+        {
+            comp.Power -= comp.MaxPower;
+            ReleaseMiracle(eye, comp);
+        }
+
+        Dirty(eye, comp);
+    }
+
+    /// <summary>Eris <c>power_release()</c>: bank armament points, then fire one random reward.</summary>
+    private void ReleaseMiracle(EntityUid eye, EyeOfTheProtectorComponent comp)
+    {
+        comp.ArmamentsPoints = Math.Min(comp.ArmamentsPoints + comp.ArmamentsRate, comp.MaxArmamentsPoints);
         FireRandomMiracle(eye, comp);
     }
 

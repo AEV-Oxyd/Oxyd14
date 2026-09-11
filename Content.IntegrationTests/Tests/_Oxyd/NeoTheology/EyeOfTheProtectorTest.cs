@@ -180,7 +180,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
     }
 
     [Test]
-    public async Task MiracleRequiresObservationBank()
+    public async Task PowerAccruesWithoutSpendingObservation()
     {
         var map = await Pair.CreateTestMap();
 
@@ -190,20 +190,29 @@ public sealed class EyeOfTheProtectorTest : GameTest
             var eye = SpawnEye(map.GridCoords);
             var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
             eyeComp.Observation = 500f;
-            eyeComp.NextMiracle = TimeSpan.Zero;
-            var before = eyeComp.NextMiracle;
+            eyeComp.NextPowerUpdate = TimeSpan.Zero;
 
-            _eye.TryMiracle(eye, eyeComp);
+            _eye.UpdatePower(eye, eyeComp);
 
-            Assert.That(eyeComp.NextMiracle, Is.GreaterThan(before),
-                "NextMiracle must advance even when the bank cannot fund a miracle.");
+            Assert.That(eyeComp.NextPowerUpdate, Is.GreaterThan(TimeSpan.Zero),
+                "The power update must reschedule itself.");
+            Assert.That(eyeComp.NextMiracle, Is.EqualTo(eyeComp.NextPowerUpdate),
+                "The UI cooldown must follow the power update.");
+            Assert.That(eyeComp.Power, Is.EqualTo(7f).Within(1e-6),
+                "Power gains 2 + observation/100 while below max.");
             Assert.That(eyeComp.Observation, Is.EqualTo(500f),
-                "An unfunded miracle must not spend observation.");
+                "Power accrual must not spend the observation bank.");
+            Assert.That(eyeComp.ArmamentsPoints, Is.Zero,
+                "Armament points only arrive on a miracle release.");
+
+            _eye.UpdatePower(eye, eyeComp);
+            Assert.That(eyeComp.Power, Is.EqualTo(7f).Within(1e-6),
+                "A second update inside the interval must not accrue again.");
         });
     }
 
     [Test]
-    public async Task MiracleSpendsObservation()
+    public async Task PowerReleaseBanksArmamentsAndCaps()
     {
         var map = await Pair.CreateTestMap();
 
@@ -213,15 +222,21 @@ public sealed class EyeOfTheProtectorTest : GameTest
             var eye = SpawnEye(map.GridCoords);
             var eyeComp = SComp<EyeOfTheProtectorComponent>(eye);
             eyeComp.Observation = 1500f;
-            eyeComp.NextMiracle = TimeSpan.Zero;
-            var before = eyeComp.NextMiracle;
+            eyeComp.Power = eyeComp.MaxPower - 1f;
+            eyeComp.NextPowerUpdate = TimeSpan.Zero;
 
-            _eye.TryMiracle(eye, eyeComp);
+            _eye.UpdatePower(eye, eyeComp);
 
-            Assert.That(eyeComp.Observation, Is.EqualTo(500f).Within(1e-6),
-                "A funded miracle must spend exactly 1000 observation.");
-            Assert.That(eyeComp.NextMiracle, Is.GreaterThan(before),
-                "NextMiracle must advance when a miracle fires.");
+            Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(125),
+                "A release banks the Eris armaments_rate.");
+            Assert.That(eyeComp.Power, Is.EqualTo(16f).Within(1e-6),
+                "Max power is spent on release; the remainder stays.");
+
+            eyeComp.Power = eyeComp.MaxPower;
+            eyeComp.NextPowerUpdate = TimeSpan.Zero;
+            _eye.UpdatePower(eye, eyeComp);
+            Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(150),
+                "Armament points cap at the Eris maximum.");
         });
     }
 
@@ -234,7 +249,7 @@ public sealed class EyeOfTheProtectorTest : GameTest
     }
 
     [Test]
-    public async Task ScanAccruesArmamentPointsFromObservation()
+    public async Task ScanDoesNotAccrueArmamentPoints()
     {
         var map = await Pair.CreateTestMap();
 
@@ -246,8 +261,8 @@ public sealed class EyeOfTheProtectorTest : GameTest
 
             _eye.Scan(eye);
 
-            Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(2),
-                "A scan must accrue (int)(Observation / 100) armament points.");
+            Assert.That(eyeComp.ArmamentsPoints, Is.Zero,
+                "Armament points come from miracle releases, not scans.");
         });
     }
 

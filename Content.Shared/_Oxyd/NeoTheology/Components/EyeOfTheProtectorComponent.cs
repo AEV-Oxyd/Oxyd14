@@ -23,7 +23,7 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     public int ArmamentsPoints;
 
     [DataField]
-    public int MaxArmamentsPoints = 300;
+    public int MaxArmamentsPoints = 150;
 
     /// <summary>Eris <c>max_increase</c>: the first purchase of an armament lifts the ceiling.</summary>
     [ViewVariables]
@@ -55,8 +55,28 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     [DataField]
     public TimeSpan FaithfulBlessingDuration = TimeSpan.FromSeconds(5);
 
+    /// <summary>Eris <c>power_cooldown</c>: how often power accrues.</summary>
     [DataField]
-    public TimeSpan MiracleInterval = TimeSpan.FromMinutes(6);
+    public TimeSpan PowerInterval = TimeSpan.FromMinutes(1);
+
+    /// <summary>Eris <c>power_gaine</c> base: 2 + clamp(observation)/100 per interval.</summary>
+    [DataField]
+    public float PowerGainBase = 2f;
+
+    /// <summary>Eris <c>max_power</c>: reaching it releases a miracle.</summary>
+    [DataField]
+    public float MaxPower = 120f;
+
+    /// <summary>Eris <c>armaments_rate</c>: points added per released miracle.</summary>
+    [DataField]
+    public int ArmamentsRate = 125;
+
+    /// <summary>Eris <c>power</c>: the accumulated miracle fuel.</summary>
+    [ViewVariables]
+    public float Power;
+
+    [ViewVariables]
+    public TimeSpan NextPowerUpdate;
 
     [DataField]
     public TimeSpan ScanInterval = TimeSpan.FromSeconds(5);
@@ -65,6 +85,7 @@ public sealed partial class EyeOfTheProtectorComponent : Component
     [DataField]
     public List<EntProtoId> OddityRewards = new();
 
+    /// <summary>UI cooldown: the next power update.</summary>
     [ViewVariables]
     public TimeSpan NextMiracle;
 
