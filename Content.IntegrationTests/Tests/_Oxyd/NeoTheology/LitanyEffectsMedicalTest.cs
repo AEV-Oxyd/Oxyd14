@@ -73,6 +73,11 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
         LitanyEffectKind.Resurrection,
+        LitanyEffectKind.MakeCruciform,
+        LitanyEffectKind.RepairDoor,
+        LitanyEffectKind.PowerBiogenerator,
+        LitanyEffectKind.BioreactorSolution,
+        LitanyEffectKind.BioreactorChamber,
     ];
 
     public override PoolSettings PoolSettings => new()

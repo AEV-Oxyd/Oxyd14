@@ -37,6 +37,11 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
         LitanyEffectKind.Resurrection,
+        LitanyEffectKind.MakeCruciform,
+        LitanyEffectKind.RepairDoor,
+        LitanyEffectKind.PowerBiogenerator,
+        LitanyEffectKind.BioreactorSolution,
+        LitanyEffectKind.BioreactorChamber,
     ];
 
     private static readonly LitanyEffectKind[] ImplementedEffects =
@@ -66,6 +71,11 @@ public sealed class LitanyCatalogPolicyTest
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
         LitanyEffectKind.Resurrection,
+        LitanyEffectKind.MakeCruciform,
+        LitanyEffectKind.RepairDoor,
+        LitanyEffectKind.PowerBiogenerator,
+        LitanyEffectKind.BioreactorSolution,
+        LitanyEffectKind.BioreactorChamber,
     ];
 
     [Test]

@@ -1,5 +1,6 @@
 using Content.Server.Materials;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Materials;
 using Robust.Shared.Timing;
@@ -18,6 +19,20 @@ public sealed class CruciformForgeSystem : EntitySystem
     [Dependency] private readonly MaterialStorageSystem _materialStorage = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
+
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<CruciformForgeComponent, LitanyForgeProduceEvent>(OnLitanyForgeProduce);
+    }
+
+    /// <summary>
+    /// MakeCruciform bridge (Eris <c>rituals/machinery.dm:43-75</c>): the litany asks the forge to
+    /// start its own produce run; the recipe check and the spend are <see cref="TryProduce"/>'s.
+    /// </summary>
+    private void OnLitanyForgeProduce(Entity<CruciformForgeComponent> ent, ref LitanyForgeProduceEvent args)
+    {
+        args.Handled = TryProduce(ent.Owner, ent.Comp);
+    }
 
     public override void Update(float frameTime)
     {

@@ -170,6 +170,24 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return HasComp<CruciformReaderComponent>(uid);
     }
 
+    /// <summary>True when <paramref name="uid"/> is a NeoTheology forge the MakeCruciform litany drives.</summary>
+    public bool IsLitanyForge(EntityUid uid)
+    {
+        return HasComp<CruciformForgeComponent>(uid);
+    }
+
+    /// <summary>True when <paramref name="uid"/> is a NeoTheology biogenerator the PowerBiogenerator litany drives.</summary>
+    public bool IsLitanyBiogenerator(EntityUid uid)
+    {
+        return HasComp<BiogeneratorComponent>(uid);
+    }
+
+    /// <summary>True when <paramref name="uid"/> is a bioreactor — the machine the two bioreactor litanies drive.</summary>
+    public bool IsLitanyBioreactor(EntityUid uid)
+    {
+        return HasComp<BioreactorComponent>(uid);
+    }
+
     /// <summary>True when the target is a living mob that can carry skill buffs.</summary>
     public bool CanReceiveSkillBuff(EntityUid uid)
     {

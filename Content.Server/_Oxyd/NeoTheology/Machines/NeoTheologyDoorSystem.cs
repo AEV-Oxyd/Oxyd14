@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Damage.Components;
 using Content.Shared.Damage.Systems;
 using Content.Shared.FixedPoint;
@@ -24,6 +25,21 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
     private const float ScanRadius = 0.6f;
 
     private static readonly ProtoId<StackPrototype> BiomatterStack = "Biomatter";
+
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<NeoTheologyDoorComponent, LitanyRepairDoorEvent>(OnLitanyRepairDoor);
+    }
+
+    /// <summary>
+    /// RepairDoor bridge (Eris <c>rituals/machinery.dm:100-145</c>): the litany names the door and
+    /// its caster; the damage check and the biomatter burn are <see cref="TryRepair"/>'s. Eris
+    /// fails an undamaged door here, not at begin time, so a refused repair still commits the cast.
+    /// </summary>
+    private void OnLitanyRepairDoor(Entity<NeoTheologyDoorComponent> ent, ref LitanyRepairDoorEvent args)
+    {
+        args.Handled = TryRepair(ent.Owner, args.User, RepairCost);
+    }
 
     /// <summary>
     /// Eris <c>repair_door</c>: burns <paramref name="amount"/> biomatter to fully heal a

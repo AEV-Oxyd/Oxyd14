@@ -24,9 +24,9 @@
   targetMode: NearbyMachine
   range: 1.5
   cost: 0
-  enabled: false
-  dependency: ForgeMaterials
-  unavailableReason: oxyd-litany-unavailable-forge
+  effects:
+  - !type:LitanyMakeCruciformEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyActivateDoor
@@ -55,9 +55,9 @@
   range: 1.5
   cost: 0
   extraDelay: 5
-  enabled: false
-  dependency: BiomatterMaterials
-  unavailableReason: oxyd-litany-unavailable-biomatter
+  effects:
+  - !type:LitanyRepairDoorEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyPowerBiogenerator
@@ -70,9 +70,9 @@
   targetMode: NearbyMachine
   range: 4
   cost: 0
-  enabled: false
-  dependency: Biogenerator
-  unavailableReason: oxyd-litany-unavailable-biogenerator
+  effects:
+  - !type:LitanyPowerBiogeneratorEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyBioreactorSolution
@@ -85,9 +85,9 @@
   targetMode: NearbyMachine
   range: 4
   cost: 0
-  enabled: false
-  dependency: Bioreactor
-  unavailableReason: oxyd-litany-unavailable-bioreactor
+  effects:
+  - !type:LitanyBioreactorSolutionEffect
+  enabled: true
 
 - type: oxydLitany
   id: OxydLitanyBioreactorChamber
@@ -100,6 +100,6 @@
   targetMode: NearbyMachine
   range: 4
   cost: 0
-  enabled: false
-  dependency: Bioreactor
-  unavailableReason: oxyd-litany-unavailable-bioreactor
+  effects:
+  - !type:LitanyBioreactorChamberEffect
+  enabled: true

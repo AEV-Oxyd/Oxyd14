@@ -291,6 +291,11 @@ public sealed class LitanyCastTest : GameTest
                 "OxydLitanyUninstallUpgrade",
                 "OxydLitanyReincarnation",
                 "OxydLitanyResurrection",
+                "OxydLitanyMakeCruciform",
+                "OxydLitanyRepairDoor",
+                "OxydLitanyPowerBiogenerator",
+                "OxydLitanyBioreactorSolution",
+                "OxydLitanyBioreactorChamber",
             }));
         });
     }

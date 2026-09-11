@@ -79,3 +79,44 @@ public record struct LitanyWriteSoulSnapshotEvent(EntityUid Target, bool Handled
 /// </summary>
 [ByRefEvent]
 public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled);
+
+/// <summary>
+/// Bridge for MakeCruciform: raised on the NeoTheology forge among the litany's machine targets;
+/// the server <c>CruciformForgeSystem</c> starts the forge's own produce run and sets
+/// <see cref="Handled"/>. A false <see cref="Handled"/> means the forge was already working or
+/// short of its recipe.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyForgeProduceEvent(EntityUid Forge, bool Handled);
+
+/// <summary>
+/// Bridge for RepairDoor: raised on the holy door; the server <c>NeoTheologyDoorSystem</c>
+/// heals it and burns <paramref name="User"/>'s biomatter, then sets <see cref="Handled"/>.
+/// A false <see cref="Handled"/> means the door was undamaged or no biomatter was in reach.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyRepairDoorEvent(EntityUid Door, EntityUid User, bool Handled);
+
+/// <summary>
+/// Bridge for PowerBiogenerator: raised on the NeoTheology biogenerator; the server
+/// <c>BiogeneratorSystem</c> flips its working state and sets <see cref="Handled"/>. Eris
+/// toggles the multistructure either way, so <see cref="Handled"/> is always true once reached.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyToggleBiogeneratorEvent(EntityUid Biogenerator, bool Handled);
+
+/// <summary>
+/// Bridge for BioreactorSolution: raised on the bioreactor; the server <c>BioreactorSystem</c>
+/// pumps its chamber in or out and sets <see cref="Handled"/>. A false <see cref="Handled"/>
+/// means the chamber was open or breached.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyPumpBioreactorEvent(EntityUid Bioreactor, bool Handled);
+
+/// <summary>
+/// Bridge for BioreactorChamber: raised on the bioreactor; the server <c>BioreactorSystem</c>
+/// opens or shuts the chamber door and sets <see cref="Handled"/>. A false <see cref="Handled"/>
+/// means the door was still jammed or the chamber still held solution.
+/// </summary>
+[ByRefEvent]
+public record struct LitanyToggleBioreactorChamberEvent(EntityUid Bioreactor, bool Handled);

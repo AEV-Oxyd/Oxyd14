@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Botany.Items.Components;
 using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
@@ -20,6 +21,31 @@ public sealed partial class BioreactorSystem : EntitySystem
 
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
+
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<BioreactorComponent, LitanyPumpBioreactorEvent>(OnLitanyPumpBioreactor);
+        SubscribeLocalEvent<BioreactorComponent, LitanyToggleBioreactorChamberEvent>(OnLitanyToggleBioreactorChamber);
+    }
+
+    /// <summary>
+    /// BioreactorSolution bridge (Eris <c>rituals/machinery.dm:200-213</c>): the litany pumps the
+    /// chamber in or out; the shut/unbreached gate is <see cref="TryPumpSolution"/>'s.
+    /// </summary>
+    private void OnLitanyPumpBioreactor(Entity<BioreactorComponent> ent, ref LitanyPumpBioreactorEvent args)
+    {
+        args.Handled = TryPumpSolution(ent.Owner, ent.Comp);
+    }
+
+    /// <summary>
+    /// BioreactorChamber bridge (Eris <c>rituals/machinery.dm:219-236</c>): the litany opens or
+    /// shuts the platform door; the breach re-scan and the solution gate are
+    /// <see cref="TryToggleChamber"/>'s.
+    /// </summary>
+    private void OnLitanyToggleBioreactorChamber(Entity<BioreactorComponent> ent, ref LitanyToggleBioreactorChamberEvent args)
+    {
+        args.Handled = TryToggleChamber(ent.Owner, ent.Comp);
+    }
 
     public override void Update(float frameTime)
     {

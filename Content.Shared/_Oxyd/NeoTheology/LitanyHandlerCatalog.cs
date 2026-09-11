@@ -8,9 +8,9 @@ namespace Content.Shared._Oxyd.NeoTheology;
 /// </summary>
 public static class LitanyHandlerCatalog
 {
-    public const int ExpectedFoundationEffectCount = 27;
+    public const int ExpectedFoundationEffectCount = 32;
 
-    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles; P4.8: the attachments; P4.9: Reincarnation, Resurrection.</summary>
+    /// <summary>Effects with an actual commit handler. Packet B+C: Relief, SoulHunger, Entreaty, CruciformSense; P4.3: ActivateDoor; P4.5: the medical four; P4.6: the short boosts; P4.4: Revelation, Epiphany, DivineBlessing; P4.2: Commitment, Deprivation; P4.7: the conversion roles; P4.8: the attachments; P4.9: Reincarnation, Resurrection; P4.10: MakeCruciform, RepairDoor, PowerBiogenerator, BioreactorSolution, BioreactorChamber.</summary>
     public static readonly FrozenSet<LitanyEffectKind> Implemented = new HashSet<LitanyEffectKind>
     {
         LitanyEffectKind.Relief,
@@ -38,6 +38,11 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
         LitanyEffectKind.Resurrection,
+        LitanyEffectKind.MakeCruciform,
+        LitanyEffectKind.RepairDoor,
+        LitanyEffectKind.PowerBiogenerator,
+        LitanyEffectKind.BioreactorSolution,
+        LitanyEffectKind.BioreactorChamber,
     }.ToFrozenSet();
 
     /// <summary>
@@ -73,6 +78,11 @@ public static class LitanyHandlerCatalog
         LitanyEffectKind.UninstallUpgrade,
         LitanyEffectKind.Reincarnation,
         LitanyEffectKind.Resurrection,
+        LitanyEffectKind.MakeCruciform,
+        LitanyEffectKind.RepairDoor,
+        LitanyEffectKind.PowerBiogenerator,
+        LitanyEffectKind.BioreactorSolution,
+        LitanyEffectKind.BioreactorChamber,
     }.ToFrozenSet();
 
     public static bool HasHandler(LitanyEffectKind effect)
