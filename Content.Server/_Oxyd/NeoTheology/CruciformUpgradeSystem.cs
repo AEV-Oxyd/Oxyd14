@@ -2,6 +2,7 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.Movement.Systems;
 using Robust.Shared.Containers;
 
 namespace Content.Server._Oxyd.NeoTheology;
@@ -21,6 +22,7 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
     [Dependency] private readonly CruciformSystem _cruciform = default!;
     [Dependency] private readonly LitanyEffectSystem _effects = default!;
     [Dependency] private readonly SharedContainerSystem _containers = default!;
+    [Dependency] private readonly MovementSpeedModifierSystem _movement = default!;
 
     public override void Initialize()
     {
@@ -69,6 +71,7 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
 
         comp.Upgrade = upgradeItem;
         _cruciform.RecomputeProfile(cruciform, comp);
+        RefreshSpeed(comp);
         return true;
     }
 
@@ -79,6 +82,7 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
 
         comp.Upgrade = null;
         _cruciform.RecomputeProfile(cruciform, comp);
+        RefreshSpeed(comp);
 
         // Eris uninstall(): forceMove(get_turf(wearer)) — right back onto the altar tile.
         var destination = (comp.ImplantedEntity is { } body ? Transform(body) : Transform(cruciform)).Coordinates;
@@ -89,5 +93,12 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
         }
 
         return true;
+    }
+
+    /// <summary>Applies or removes the movement-speed behaviour the moment the slot changes.</summary>
+    private void RefreshSpeed(CruciformComponent comp)
+    {
+        if (comp.ImplantedEntity is { } body)
+            _movement.RefreshMovementSpeedModifiers(body);
     }
 }
