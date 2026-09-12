@@ -1,0 +1,95 @@
+- type: entity
+  parent: BaseSubdermalImplant
+  id: OxydNtCruciform
+  name: cruciform
+  description: A dormant NeoTheology implant.
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: SubdermalImplant
+    whitelist:
+      components:
+      - MobState
+  - type: Cruciform
+  - type: Tag
+    tags:
+    - SubdermalImplant
+    - HideContextMenu
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtBible
+  name: NeoTheology litany book
+  description: A reference book for spoken NeoTheology litanies.
+  components:
+  - type: LitanyBook
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+    sprite: Objects/Specific/Chapel/bible.rsi
+  - type: ActivatableUI
+    key: enum.LitanyUiKey.Book
+    inHandsOnly: true
+    requireActiveHand: true
+    requiresComplex: true
+    singleUser: true
+    blockSpectators: true
+  - type: UserInterface
+    interfaces:
+      enum.LitanyUiKey.Book:
+        type: LitanyBoundUserInterface
+  - type: Tag
+    tags:
+    - Book
+
+
+- type: entity
+  parent: OxydNtBible
+  id: OxydNtClergyBible
+  name: NeoTheology clergy litany book
+  description: A clergy reference book for spoken NeoTheology litanies.
+
+- type: entity
+  parent: BaseStructure
+  id: OxydNtAltar
+  name: NeoTheology altar
+  description: A place for cruciform rites.
+  components:
+  - type: NeoTheologyAltar
+  - type: InteractionOutline
+
+- type: entity
+  parent: Airlock
+  id: OxydNtHolyDoor
+  name: NeoTheology holy door
+  description: A door secured by NeoTheology clearance.
+  components:
+  - type: NeoTheologyDoor
+  - type: AccessReader
+    access:
+    - [ OxydNtFollower ]
+
+# P3.0: Eris's NT OBG ("Holy Grail") is a focused blast (explosion_power = 500). The fork's
+# HolyHandGrenade is a macrobomb (totalIntensity 3500) and is also sold in the uplink, so it is
+# not retuned in place. This child overrides only the Explosive block; every other field (sprite,
+# timer, trigger) is inherited unchanged.
+- type: entity
+  parent: HolyHandGrenade
+  id: OxydNtHolyHandGrenade
+  components:
+  - type: Explosive
+    totalIntensity: 500
+
+# P3.4: the faithful in the Eye's radius are blessed each scan. The blessing's stat benefit is a
+# deferred balance decision (see the plan) — this only wires the apply/lapse mechanism, no stat
+# change yet.
+- type: entity
+  parent: MobStatusEffectBase
+  id: OxydNtEyeBlessing
+  name: eye blessing
+  components:
+  - type: StatusEffect
+    whitelist:
+      components:
+      - MobState

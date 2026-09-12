@@ -1,0 +1,176 @@
+# NeoTheology machines (P2). No NT RSI exists in this fork, so sprites are borrowed from real machines.
+- type: entity
+  parent: BiomassReclaimer
+  id: OxydNtBiomatterReclaimer
+  name: biomatter reclaimer
+  description: Reclaims organic matter for NeoTheology machines.
+  components:
+  - type: BiomassReclaimer
+    outputMaterial: Biomatter
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtCruciformForge
+  name: cruciform forge
+  description: Prints cruciforms from biomatter, plasteel and gold.
+  components:
+  - type: CruciformForge
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/seed_extractor.rsi
+    state: seedextractor
+  # P2.10a: MaterialStorage is the forge's single store. storageLimit is a *total* cap (there is no
+  # per-material field); 10050 = 50 sheets of each recipe material in volume units (biomatter 1/sheet,
+  # plasteel/gold 100/sheet).
+  - type: MaterialStorage
+    storageLimit: 10050
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBiogenerator
+  name: biogenerator
+  description: Burns biomatter to feed the power network.
+  components:
+  - type: Biogenerator
+  - type: NodeContainer
+    nodes:
+      output_mv:
+        !type:CableDeviceNode
+        nodeGroupID: MVPower
+  - type: PowerSupplier
+    supplyRampRate: 5000
+    supplyRampTolerance: 1500
+  - type: MaterialStorage
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/biofabricator.rsi
+    state: icon
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBioreactor
+  name: bioreactor
+  description: Processes crops left in its sealed chamber into biomatter.
+  components:
+  - type: Bioreactor
+  - type: ApcPowerReceiver
+    powerLoad: 150
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/gasrecycler.rsi
+    state: icon
+
+# P2.12: reader + cloner + biomass tank. Plan says the tank is a Solution; biomatter is a
+# MaterialPrototype in this port (P2.3), not a reagent, and P2.10a's rule is one store — so the tank
+# and the cloner both use MaterialStorage, the same store the forge and biogenerator use.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtCruciformReader
+  name: cruciform reader
+  description: Reads the soul a cruciform carries.
+  components:
+  - type: CruciformReader
+  - type: ItemSlots
+    slots:
+      cruciform:
+        name: cruciform
+        whitelist:
+          components:
+          - Cruciform
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/artifact_analyzer.rsi
+    state: icon
+
+# Upstream cloning pod (body growth is its job) with the module's own biomass and the reader link.
+- type: entity
+  parent: [ CloningPod ]
+  id: OxydNtCloner
+  name: cruciform cloner
+  description: Grows a body for a soul read off a cruciform.
+  components:
+  - type: CruciformCloner
+  - type: CloningPod
+    requiredMaterial: Biomatter
+  - type: MaterialStorage
+    materialWhiteList:
+    - Biomatter
+    storageLimit: 300
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtBiomassContainer
+  name: biomass container
+  description: Holds biomatter for the cloner.
+  components:
+  - type: MaterialStorage
+    materialWhiteList:
+    - Biomatter
+    storageLimit: 1000
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Storage/tanks.rsi
+    state: generictank-1
+
+# P2.14: the obelisk's aura (P2.13). Observation payout is a no-op until Phase 3's Eye lands.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtObelisk
+  name: NeoTheology obelisk
+  description: Projects the faith of the faithful, purging the unclean around it.
+  components:
+  - type: Obelisk
+  - type: ApcPowerReceiver
+    powerLoad: 30
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/tech_disk_printer.rsi
+    state: icon
+
+# P2.16: the armory. Points are local until P3.5 rebases them onto the Eye.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtArmamentsPrinter
+  name: NeoTheology armaments printer
+  description: Spends the faith's armament points to print gear for the faithful.
+  components:
+  - type: ArmamentsPrinter
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/uniform_printer.rsi
+    state: icon
+  - type: ActivatableUI
+    key: enum.ArmamentsPrinterUiKey.Key
+  - type: UserInterface
+    interfaces:
+      enum.ArmamentsPrinterUiKey.Key:
+        type: ArmamentsPrinterBoundUserInterface
+
+# P3.7: the Eye of the Protector (Eris obj/machinery/power/eotp). Its status UI is read-only:
+# the server pushes a snapshot on open; no client messages, no buttons.
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydNtEyeOfTheProtector
+  name: Eye of the Protector
+  description: Watches over the faithful, banking observation and armament points for their miracles.
+  components:
+  - type: EyeOfTheProtector
+  - type: ApcPowerReceiver
+    # Eris idle is 30W; active draw is 2500W during a miracle, which is not modelled here.
+    powerLoad: 30
+  - type: Appearance
+  - type: Sprite
+    sprite: Structures/Machines/tech_disk_printer.rsi
+    state: icon
+  - type: ActivatableUI
+    key: enum.EyeOfTheProtectorUiKey.Key
+  - type: UserInterface
+    interfaces:
+      enum.EyeOfTheProtectorUiKey.Key:
+        type: EyeOfTheProtectorBoundUserInterface

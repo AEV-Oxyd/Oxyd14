@@ -1,0 +1,194 @@
+- type: oxydLitany
+  id: OxydLitanyPenance
+  name: oxyd-litany-penance-name
+  description: oxyd-litany-penance-desc
+  phrase: "Mihi vindicta [Target human]."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Penance
+  targetMode: VisibleFollower
+  range: 7
+  cost: 35
+  effects:
+  - !type:LitanyPainEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyConvalescence
+  name: oxyd-litany-convalescence-name
+  description: oxyd-litany-convalescence-desc
+  phrase: "Dominus autem dirigat corda vestra in caritate Dei et patientia Christi."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Convalescence
+  targetMode: Self
+  range: 0
+  cost: 25
+  cooldownKey: OxydNtInquisitorHealing
+  cooldownScope: Personal
+  cooldownDuration: 10
+  effectDuration: 20
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanySuccour
+  name: oxyd-litany-succour-name
+  description: oxyd-litany-succour-desc
+  phrase: "Venite ad me, omnes qui laboratis, et onerati estis et ego reficiam vos."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Succour
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 35
+  cooldownKey: OxydNtInquisitorHealing
+  cooldownScope: Personal
+  cooldownDuration: 10
+  extraDelay: 4
+  effectDuration: 20
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyScrying
+  name: oxyd-litany-scrying-name
+  description: oxyd-litany-scrying-desc
+  phrase: "Ecce ego ad te et ad caelum. Scio omnes absconditis tuis. Vos can abscondere, tu es coram me: nudus."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Scrying
+  targetMode: StationFollower
+  range: 0
+  cost: 100
+  effectDuration: 30
+  selectTarget: true
+  effects:
+  - !type:LitanyScryingEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanySending
+  name: oxyd-litany-sending-name
+  description: oxyd-litany-sending-desc
+  phrase: "Audit, me audit vocationem. Ego nuntius vobis."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Sending
+  targetMode: StationFollower
+  range: 0
+  cost: 30
+  selectTarget: true
+  allowPlainText: true
+  effects:
+  - !type:LitanySendingEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyInitiation
+  name: oxyd-litany-initiation-name
+  description: oxyd-litany-initiation-desc
+  phrase: "Habe fiduciam in Domino ex toto corde tuo et ne innitaris prudentiae tuae, in omnibus viis tuis cogita illum et ipse diriget gressus tuos."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Initiation
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 100
+  effects:
+  - !type:LitanyInitiationEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyKnowledge
+  name: oxyd-litany-knowledge-name
+  description: oxyd-litany-knowledge-desc
+  phrase: "Cor sapientis quaerit doctrinam, et os stultorum pascetur inperitia."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Knowledge
+  targetMode: Self
+  range: 0
+  cost: 0
+  effects:
+  - !type:LitanyKnowledgeEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyBounty
+  name: oxyd-litany-bounty-name
+  description: oxyd-litany-bounty-desc
+  phrase: "Supra Domini, bona de te peto. Audi me, et libera vocationem ad me munera tua."
+  category: Inquisitor
+  grantedBy: [OxydLitanyInquisitor]
+  effect: Bounty
+  targetMode: Self
+  range: 0
+  cost: 20
+  effects:
+  - !type:LitanyBountyEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyEternalBrotherhood
+  name: oxyd-litany-eternal-brotherhood-name
+  description: oxyd-litany-eternal-brotherhood-desc
+  phrase: "Ita multi unum corpus sumus in Christo singuli autem alter alterius membra."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: EternalBrotherhood
+  targetMode: Self
+  range: 0
+  cost: 0
+  effects:
+  - !type:LitanyEternalBrotherhoodEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyCallToBattle
+  name: oxyd-litany-call-to-battle-name
+  description: oxyd-litany-call-to-battle-desc
+  phrase: "Si exieritis ad bellum de terra vestra contra hostes qui dimicant adversum vos clangetis ululantibus tubis et erit recordatio vestri coram Domino Deo vestro ut eruamini de manibus inimicorum vestrorum."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: CallToBattle
+  targetMode: Self
+  range: 0
+  cost: 0
+  cooldownKey: OxydLitanyCallToBattle
+  cooldownScope: Personal
+  cooldownDuration: 600
+  effectDuration: 600
+  effects:
+  - !type:LitanyCallToBattleEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanySearingRevelation
+  name: oxyd-litany-searing-revelation-name
+  description: oxyd-litany-searing-revelation-desc
+  phrase: "Per fidem enim ambulamus et non per speciem."
+  category: Crusader
+  grantedBy: [OxydLitanyCrusader]
+  effect: SearingRevelation
+  targetMode: Self
+  range: 0
+  cost: 0
+  cooldownKey: OxydLitanySearingRevelation
+  cooldownScope: Personal
+  cooldownDuration: 120
+  effects:
+  - !type:LitanySearingRevelationEffect
+  enabled: true

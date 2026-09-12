@@ -21,4 +21,14 @@ public sealed partial class PlantGrowthComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public float NutrientConsumption = 0.75f;
+
+    /// <summary>
+    /// Multiplier on the aging rate. NeoTheology Accelerated Growth raises it above 1.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public float GrowthMultiplier = 1f;
+
+    /// <summary>When <see cref="GrowthMultiplier"/> lapses back to 1.</summary>
+    [DataField, AutoNetworkedField]
+    public TimeSpan GrowthBoostExpiresAt;
 }

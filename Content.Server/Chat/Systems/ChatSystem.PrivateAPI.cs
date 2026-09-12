@@ -87,7 +87,7 @@ public sealed partial class ChatSystem
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Local, message, finalMessages[k][1], GetNetEntity(msg.speaker), null, MessageRangeHideChatForReplay(msg.range)));
         
 
-        var ev = new EntitySpokeEvent(msg.speaker, message, null, null);
+        var ev = new EntitySpokeEvent(msg.speaker, message, null, null, msg);
         RaiseLocalEvent(msg.speaker, ev, true);
 
         // To avoid logging any messages sent by entities that are not players, like vendors, cloning, etc.
@@ -192,8 +192,9 @@ public sealed partial class ChatSystem
 
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Whisper, message, finalMessages[k][0], GetNetEntity(msg.speaker), null, MessageRangeHideChatForReplay(msg.range)));
 
-        var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage);
+        var ev = new EntitySpokeEvent(msg.speaker, message, channel, obfuscatedMessage, msg);
         RaiseLocalEvent(msg.speaker, ev, true);
+
         if (!hideLog)
             if (msg.raw == message)
             {

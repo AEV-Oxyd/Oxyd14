@@ -1,0 +1,611 @@
+- type: oxydLitany
+  id: OxydLitanyAcceleratedGrowth
+  name: oxyd-litany-accelerated-growth-name
+  description: oxyd-litany-accelerated-growth-desc
+  phrase: "Plantae crescere in divinum lumen tua."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: AcceleratedGrowth
+  targetMode: VisibleArea
+  range: 7
+  cost: 10
+  cooldownKey: OxydLitanyAcceleratedGrowth
+  cooldownScope: Global
+  cooldownDuration: 300
+  effectDuration: 300
+  effects:
+  - !type:LitanyAcceleratedGrowthEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyHandOfMercy
+  name: oxyd-litany-hand-of-mercy-name
+  description: oxyd-litany-hand-of-mercy-desc
+  phrase: "Non est verus dolor."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: HandOfMercy
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 5
+  effectDuration: 120
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Blunt: -10
+        Heat: -10
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyAbsolutionOfWounds
+  name: oxyd-litany-absolution-name
+  description: oxyd-litany-absolution-desc
+  phrase: "Surge et ambula."
+  category: Agrolyte
+  grantedBy: [OxydLitanyAgrolyte]
+  effect: AbsolutionOfWounds
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 10
+  effects:
+  - !type:LitanyHealEffect
+    damage:
+      types:
+        Brute: -20
+        Heat: -20
+        Asphyxiation: -40
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyWordsOfPurging
+  name: oxyd-litany-words-of-purging-name
+  description: oxyd-litany-words-of-purging-desc
+  phrase: "Purificati a peccatis et in remissionem peccatorum."
+  category: Custodian
+  grantedBy: [OxydLitanyCustodian]
+  effect: WordsOfPurging
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 5
+  effects:
+  - !type:LitanyWordsOfPurgingEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyEpiphany
+  name: oxyd-litany-epiphany-name
+  description: oxyd-litany-epiphany-desc
+  phrase: "In nomine Patris et Filii et Spiritus sancti."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Epiphany
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 0
+  effects:
+  - !type:LitanyEpiphanyEffect
+  enabled: true
+
+# ponytail: deferred — Eris asacris (priest.dm:73-91) removes the cruciform's upgrade *items*
+# (`for(var/obj/item/coreimplant_upgrade/CU in CI.upgrades) CU.remove()`), which this fork
+# already ships as the enabled UninstallUpgrade litany (one attachment slot, P4.8); it is not
+# the "Acolyte resurrection litany" the dependency map calls it. The shipped scope here
+# ("remove supported removable core modules", locale + porting plan §9.3/§10.3) needs
+# capability the module host lacks: a removable/supported marker on oxydCoreModule, module
+# items in an nt-core-modules container, and the Preacher Ascension Kit — CoreModuleSystem
+# only has add/remove-by-id over a bare set, and stripping every installed module would take
+# the bearer's rank sets with it. Revisit with the Initiation/uplink packet (P4.13).
+- type: oxydLitany
+  id: OxydLitanyAsacris
+  name: oxyd-litany-asacris-name
+  description: oxyd-litany-asacris-desc
+  phrase: "A caelo usque ad centrum."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Asacris
+  # Eris rituals/priest.dm:73-91 targets the front/grabbed victim
+  # (`get_implant_from_victim`), so the litany strips another bearer's upgrades.
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 0
+  effects:
+  - !type:LitanyAsacrisEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyGraceOfPerseverance
+  name: oxyd-litany-grace-name
+  description: oxyd-litany-grace-desc
+  phrase: "Domine petra mea et robur meum et salvator meus Deus meus fortis meus sperabo in eo scutum meum et cornu salutis meae susceptor meus."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: GraceOfPerseverance
+  targetMode: VisibleArea
+  range: 7
+  cost: 30
+  cooldownKey: OxydNtShortBoost
+  cooldownScope: Global
+  cooldownDuration: 120
+  effectDuration: 900
+  effects:
+  - !type:LitanySkillEffect
+    amounts:
+      Mec: 10
+      Cog: 10
+      Bio: 10
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyUpholdHolyWord
+  name: oxyd-litany-uphold-name
+  description: oxyd-litany-uphold-desc
+  phrase: "In Deo laudabo verbum in Domino praedicabo sermonem in Deo speravi non timebo quid faciat homo mihi."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: UpholdHolyWord
+  targetMode: VisibleArea
+  range: 7
+  cost: 30
+  cooldownKey: OxydNtShortBoost
+  cooldownScope: Global
+  cooldownDuration: 120
+  effectDuration: 900
+  effects:
+  - !type:LitanySkillEffect
+    amounts:
+      Rob: 10
+      Tgh: 10
+      Vig: 10
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyAtonement
+  name: oxyd-litany-atonement-name
+  description: oxyd-litany-atonement-desc
+  phrase: "Piaculo sit [Target human]!"
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Atonement
+  targetMode: VisibleFollower
+  range: 7
+  cost: 45
+  effects:
+  - !type:LitanyPainEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyBaptismalRecord
+  name: oxyd-litany-baptismal-record-name
+  description: oxyd-litany-baptismal-record-desc
+  phrase: "Memento nomina..."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: BaptismalRecord
+  targetMode: FrontMachine
+  range: 1.5
+  cost: 30
+  effects:
+  - !type:LitanyBaptismalRecordEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyDivineIntervention
+  name: oxyd-litany-divine-intervention-name
+  description: oxyd-litany-divine-intervention-desc
+  phrase: "Auxilium instaurarent domum tuam."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: DivineIntervention
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 15
+  effects:
+  - !type:LitanyOfferingEffect
+    offering: OxydNtOfferingDivineIntervention
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyHolyGuidance
+  name: oxyd-litany-holy-guidance-name
+  description: oxyd-litany-holy-guidance-desc
+  phrase: "Domine deus, lux via."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: HolyGuidance
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 15
+  effects:
+  - !type:LitanyOfferingEffect
+    offering: OxydNtOfferingHolyGuidance
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyDivineBlessing
+  name: oxyd-litany-divine-blessing-name
+  description: oxyd-litany-divine-blessing-desc
+  phrase: "Corpus Deus."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: DivineBlessing
+  targetMode: Self
+  range: 0
+  cost: 30
+  effects:
+  - !type:LitanyDivineBlessingEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyConfirmation
+  name: oxyd-litany-confirmation-name
+  description: oxyd-litany-confirmation-desc
+  phrase: "Misericordia et veritas non te deserant circumda eas gutturi tuo et describe in tabulis cordis tui..."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Confirmation
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 80
+  designationChoices: [OxydNtAcolyte, OxydNtAgrolyte, OxydNtCustodian]
+  cooldownKey: OxydLitanyConfirmation
+  cooldownScope: Personal
+  cooldownDuration: 60
+  effects:
+  - !type:LitanyConfirmationEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyAdoption
+  name: oxyd-litany-adoption-name
+  description: oxyd-litany-adoption-desc
+  phrase: "Dervans semitas iustitiae et vias sanctorum custodiens."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Adoption
+  # Eris Adoption only raises an existing implant's clearance; the plan makes it "baptize a
+  # non-believer", so the target must be able to be the first cruciform's bearer.
+  targetMode: AdjacentLiving
+  range: 1.5
+  cost: 15
+  effects:
+  - !type:LitanyAdoptionEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyOrdination
+  name: oxyd-litany-ordination-name
+  description: oxyd-litany-ordination-desc
+  phrase: "Gloriam sapientes possidebunt stultorum exaltatio ignominia."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Ordination
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 15
+  effects:
+  - !type:LitanyOrdinationEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyOmission
+  name: oxyd-litany-omission-name
+  description: oxyd-litany-omission-desc
+  phrase: "Via impiorum tenebrosa nesciunt ubi corruant."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Omission
+  targetMode: AdjacentFollower
+  range: 1.5
+  cost: 30
+  effects:
+  - !type:LitanyOmissionEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyExcommunication
+  name: oxyd-litany-excommunication-name
+  description: oxyd-litany-excommunication-desc
+  phrase: "Excommunicatio [Target human]!"
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: Excommunication
+  targetMode: StationFollower
+  range: 0
+  cost: 60
+  cooldownKey: OxydLitanyExcommunication
+  cooldownScope: Personal
+  cooldownDuration: 300
+  effects:
+  - !type:LitanyExcommunicationEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyOrderArmaments
+  name: oxyd-litany-order-armaments-name
+  description: oxyd-litany-order-armaments-desc
+  phrase: "Et qui non habet, vendat tunicam suam et emat gladium."
+  category: Priest
+  grantedBy: [OxydLitanyPriest]
+  effect: OrderArmaments
+  targetMode: NearbyMachine
+  range: 1.5
+  cost: 20
+  effects:
+  - !type:LitanyArmamentsEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyDivineGuidance
+  name: oxyd-litany-divine-guidance-name
+  description: oxyd-litany-divine-guidance-desc
+  phrase: "Dirige me in veritate tua, et doce me, quia tu es Deus salvator meus, et te sustinui tota die."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: DivineGuidance
+  targetMode: FrontTile
+  range: 1.5
+  cost: 0
+  selectBlueprint: true
+  effects:
+  - !type:LitanyDivineGuidanceEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyManifestation
+  name: oxyd-litany-manifestation-name
+  description: oxyd-litany-manifestation-desc
+  phrase: "Omnia autem quae arguuntur a lumine manifestantur omne enim quod manifestatur lumen est."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Manifestation
+  targetMode: FrontTile
+  range: 1.5
+  cost: 40
+  extraDelay: 5
+  selectBlueprint: true
+  effects:
+  - !type:LitanyManifestationEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyUproot
+  name: oxyd-litany-uproot-name
+  description: oxyd-litany-uproot-desc
+  phrase: "Dominus dedit, Dominus abstulit."
+  category: Acolyte
+  grantedBy: [OxydLitanyAcolyte]
+  effect: Uproot
+  targetMode: FrontTile
+  range: 1.5
+  cost: 40
+  extraDelay: 5
+  effects:
+  - !type:LitanyUprootEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyPoundingWhisper
+  name: oxyd-litany-pounding-whisper-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Omnia haec tractavi in corde meo ut curiose intellegerem sunt iusti atque sapientes et opera eorum in manu Dei et tamen nescit homo utrum amore an odio dignus sit."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: PoundingWhisper
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Omnia haec tractavi in corde meo ut curiose intellegerem sunt iusti atque sapientes et opera eorum in manu Dei et tamen nescit homo utrum amore an odio dignus sit."
+  - "Sed omnia in futuro servantur incerta eo quod universa aeque eveniant iusto et impio bono et malo mundo et inmundo immolanti victimas et sacrificia contemnenti sicut bonus sic et peccator ut periurus ita et ille qui verum deierat."
+  - "Hoc est pessimum inter omnia quae sub sole fiunt quia eadem cunctis eveniunt unde et corda filiorum hominum implentur malitia et contemptu in vita sua et post haec ad inferos deducentur."
+  - "Nemo est qui semper vivat et qui huius rei habeat fiduciam melior est canis vivens leone mortuo."
+  - "Viventes enim sciunt se esse morituros mortui vero nihil noverunt amplius nec habent ultra mercedem quia oblivioni tradita est memoria eorum."
+  - "Amor quoque et odium et invidia simul perierunt nec habent partem in hoc saeculo et in opere quod sub sole geritur."
+  - "Vade ergo et comede in laetitia panem tuum et bibe cum gaudio vinum tuum quia Deo placent opera tua."
+  - "Omni tempore sint vestimenta tua candida et oleum de capite tuo non deficiat."
+  - "Perfruere vita cum uxore quam diligis cunctis diebus vitae instabilitatis tuae qui dati sunt tibi sub sole omni tempore vanitatis tuae haec est enim pars in vita et in labore tuo quod laboras sub sole."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Mec
+    message: oxyd-litany-group-stat-smarter
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyRevelationOfSecrets
+  name: oxyd-litany-revelation-secrets-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Dedit quoque Deus sapientiam Salomoni et prudentiam multam nimis et latitudinem cordis quasi harenam quae est in litore maris."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: RevelationOfSecrets
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Dedit quoque Deus sapientiam Salomoni et prudentiam multam nimis et latitudinem cordis quasi harenam quae est in litore maris."
+  - "Et praecedebat sapientia Salomonis sapientiam omnium Orientalium et Aegyptiorum."
+  - "Et erat sapientior cunctis hominibus sapientior Aethan Ezraita et Heman et Chalcal et Dorda filiis Maol et erat nominatus in universis gentibus per circuitum."
+  - "Locutus est quoque Salomon tria milia parabolas et fuerunt carmina eius quinque et mille."
+  - "Et disputavit super lignis a cedro quae est in Libano usque ad hysopum quae egreditur de pariete et disseruit de iumentis et volucribus et reptilibus et piscibus."
+  - "Et veniebant de cunctis populis ad audiendam sapientiam Salomonis et ab universis regibus terrae qui audiebant sapientiam eius."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Cog
+    message: oxyd-litany-group-stat-smarter
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyLispOfVitae
+  name: oxyd-litany-lisp-vitae-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Convocatis autem duodecim apostolis dedit illis virtutem et potestatem super omnia daemonia et ut languores curarent."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: LispOfVitae
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Convocatis autem duodecim apostolis dedit illis virtutem et potestatem super omnia daemonia et ut languores curarent."
+  - "Et misit illos praedicare regnum Dei et sanare infirmos."
+  - "Et ait ad illos nihil tuleritis in via neque virgam neque peram neque panem neque pecuniam neque duas tunicas habeatis."
+  - "Et in quamcumque domum intraveritis ibi manete et inde ne exeatis."
+  - "Et quicumque non receperint vos exeuntes de civitate illa etiam pulverem pedum vestrorum excutite in testimonium supra illos."
+  - "Egressi autem circumibant per castella evangelizantes et curantes ubique."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Bio
+    message: oxyd-litany-group-stat-smarter
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyCantoOfCourage
+  name: oxyd-litany-canto-courage-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Audi Israhel tu transgredieris hodie Iordanem ut possideas nationes maximas et fortiores te civitates ingentes et ad caelum usque muratas."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: CantoOfCourage
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Audi Israhel tu transgredieris hodie Iordanem ut possideas nationes maximas et fortiores te civitates ingentes et ad caelum usque muratas."
+  - "Populum magnum atque sublimem filios Enacim quos ipse vidisti et audisti quibus nullus potest ex adverso resistere."
+  - "Scies ergo hodie quod Dominus Deus tuus ipse transibit ante te ignis devorans atque consumens qui conterat eos et deleat atque disperdat ante faciem tuam velociter sicut locutus est tibi."
+  - "Ne dicas in corde tuo cum deleverit eos Dominus Deus tuus in conspectu tuo propter iustitiam meam introduxit me Dominus ut terram hanc possiderem cum propter impietates suas istae deletae sint nationes."
+  - "Neque enim propter iustitias tuas et aequitatem cordis tui ingredieris ut possideas terras eorum sed quia illae egerunt impie te introeunte deletae sunt et ut conpleret verbum suum Dominus quod sub iuramento pollicitus est patribus tuis Abraham Isaac et Iacob."
+  - "Scito igitur quod non propter iustitias tuas Dominus Deus tuus dederit tibi terram hanc optimam in possessionem cum durissimae cervicis sis populus."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Rob
+    message: oxyd-litany-group-stat-stronger
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyChantOfObservance
+  name: oxyd-litany-chant-observance-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "Vigilia exemplum imitari debemus."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: ChantOfObservance
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Vigilia exemplum imitari debemus."
+  - "Pater nos tuetur ac curae."
+  - "Novit Patrem nos dirigit in viam rectam."
+  - "Patris nostri et benedicet tuetur."
+  - "Pater amat et tuetur."
+  - "Patrem tuetur et protegit."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Vig
+    message: oxyd-litany-group-stat-vigilant
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyReclamationOfEndurance
+  name: oxyd-litany-reclamation-endurance-name
+  description: oxyd-litany-group-stat-desc
+  phrase: "In finem psalmus David."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: ReclamationOfEndurance
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "In finem psalmus David."
+  - "Caeli enarrant gloriam Dei et opera manuum eius adnuntiat firmamentum."
+  - "Dies diei eructat verbum et nox nocti indicat scientiam."
+  - "Non sunt loquellae neque sermones quorum non audiantur voces eorum."
+  - "In omnem terram exivit sonus eorum et in fines orbis terrae verba eorum."
+  - "In sole posuit tabernaculum suum et ipse tamquam sponsus procedens de thalamo suo exultavit ut gigans ad currendam viam."
+  - "A summo caeli egressio eius et occursus eius usque ad summum eius nec est qui se abscondat a calore eius."
+  - "Amen."
+  effects:
+  - !type:LitanyGroupStatEffect
+    skill: Tgh
+    message: oxyd-litany-group-stat-sturdier
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanySanctify
+  name: oxyd-litany-sanctify-name
+  description: oxyd-litany-sanctify-desc
+  phrase: "Benedicite loco isto."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: Sanctify
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Benedicite loco isto."
+  - "Benedic hoc petimus Patris."
+  - "Nos obsecro te removere percula huius loci."
+  - "Ne malorum tangere terram"
+  - "Frase quinta"
+  - "Frase sexta"
+  - "Frase septima"
+  effects:
+  - !type:LitanySanctifyEffect
+  enabled: true
+
+- type: oxydLitany
+  id: OxydLitanyCrusade
+  name: oxyd-litany-crusade-name
+  description: oxyd-litany-crusade-desc
+  phrase: "Locutus est Dominus ad Mosen dicens."
+  category: Group
+  grantedBy: [OxydLitanyGroup]
+  effect: Crusade
+  targetMode: Ceremony
+  range: 7
+  cost: 0
+  cooldownKey: OxydLitanyCeremony
+  cooldownScope: Personal
+  cooldownDuration: 1
+  ceremonyPhrases:
+  - "Locutus est Dominus ad Mosen dicens."
+  - "Fac tibi duas tubas argenteas ductiles quibus convocare possis multitudinem quando movenda sunt castra."
+  - "Cumque increpueris tubis congregabitur ad te omnis turba ad ostium foederis tabernaculi."
+  - "Si semel clangueris venient ad te principes et capita multitudinis Israhel."
+  - "Sin autem prolixior atque concisus clangor increpuerit movebunt castra primi qui sunt ad orientalem plagam."
+  - "In secundo autem sonitu et pari ululatu tubae levabunt tentoria qui habitant ad meridiem et iuxta hunc modum reliqui facient ululantibus tubis in profectione."
+  - "Quando autem congregandus est populus simplex tubarum clangor erit et non concise ululabunt."
+  - "Filii Aaron sacerdotes clangent tubis eritque hoc legitimum sempiternum in generationibus vestris."
+  - "Si exieritis ad bellum de terra vestra contra hostes qui dimicant adversum vos clangetis ululantibus tubis et erit recordatio vestri coram Domino Deo vestro ut eruamini de manibus inimicorum vestrorum."
+  effects:
+  - !type:LitanyCrusadeEffect
+  enabled: true

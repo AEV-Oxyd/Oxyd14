@@ -1,0 +1,13 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-armaments-printer-title'}"
+               MinSize="420 380"
+               SetSize="460 420">
+    <BoxContainer Orientation="Vertical" Margin="8" SeparationOverride="6">
+        <Label Name="PointsLabel"/>
+        <ItemList Name="ArmamentList" VerticalExpand="True"/>
+        <RichTextLabel Name="DescriptionLabel" MinHeight="48"/>
+        <Label Name="StatusLabel"/>
+        <Button Name="PurchaseButton" Text="{Loc 'oxyd-armaments-printer-purchase'}" Disabled="True"/>
+    </BoxContainer>
+</controls:FancyWindow>

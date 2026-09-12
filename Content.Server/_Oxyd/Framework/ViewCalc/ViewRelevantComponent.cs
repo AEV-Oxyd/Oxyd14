@@ -1,5 +1,3 @@
-using Robust.Shared.Map;
-
 namespace Content.Server._Oxyd.Framework.ViewCalc;
 
 /// <summary>
@@ -17,8 +15,8 @@ public sealed partial class ViewRelevantComponent : Component
 [RegisterComponent]
 public sealed partial class ViewTickerComponent : Component
 {
-    public TimeSpan lastTickTime = TimeSpan.Zero;
-    public MapCoordinates lastTickPosition =  new MapCoordinates();
+    [DataField]
     public float range = 8f;
-    public HashSet<EntityUid> lastSeen;
+
+    public HashSet<EntityUid> lastSeen = new();
 }

@@ -1,0 +1,93 @@
+# Eris /obj/item/cruciform_upgrade/* ported as installable attachments.
+# Deltas come straight from upgrades.dm OnInstall/OnUninstall pairs:
+#   faiths_shield  brute_mod -0.2, burn_mod -0.2   -> damagedModifierDelta -0.2
+#   wrath_of_god   damage_multiplier +0.2, all resists +0.1 -> damagedModifierDelta 0.1
+# The behavioural upgrades carry one marker component each; CruciformUpgradeBehaviorSystem
+# runs the aura tick, the martyr burst, the movement modifier and the melee bonus.
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeNaturesBlessing
+  name: nature's blessing
+  description: This upgrade stabilizes the Faithful and nurtures the plants near the follower. Useful for Agrolytes.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeAura
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeFaithsShield
+  name: faith's shield
+  description: This upgrade will slightly increase follower resistance to physical and burn injuries from any source.
+  components:
+  - type: CruciformUpgrade
+    damagedModifierDelta: -0.2
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeCleansingPresence
+  name: cleansing presence
+  description: This upgrade cleans the tiles the follower walks upon and slowly withers space vines and maint-shrooms in their presence. Useful for Custodians.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeAura
+    plantHealPerSecond: 0
+    cleanPuddles: true
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeMartyrGift
+  name: martyr's gift
+  description: On the death of the follower this upgrade bursts, burning any non-cruciformed creatures nearby while leaving terrain and the Faithful intact. It destroys itself in the process; the cruciform survives.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeMartyr
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeWrathOfGod
+  name: wrath of god
+  description: This upgrade makes the follower deal more damage in melee, but also receive slightly more damage from all sources.
+  components:
+  - type: CruciformUpgrade
+    damagedModifierDelta: 0.1
+  - type: CruciformUpgradeMelee
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeSpeedOfTheChosen
+  name: speed of the chosen
+  description: This upgrade increases the movement speed of the follower.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeSpeed
+  - type: Sprite
+    sprite: Objects/Specific/Chapel/bible.rsi
+    state: icon
+  - type: Item
+    size: Small

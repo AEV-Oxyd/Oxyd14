@@ -62,16 +62,27 @@ public sealed class EntitySpokeEvent : EntityEventArgs
     public readonly string? ObfuscatedMessage; // not null if this was a whisper
 
     /// <summary>
+    /// The message before speech transformation (stuttering, accents). Equal to
+    /// <see cref="Message"/> when nothing transformed it. Recognition features that
+    /// must ignore stuttering compare against this.
+    /// </summary>
+    public string OriginalMessage => Data?.raw ?? Message;
+
+    /// <summary>The source message, including its language blocks and transmission settings.</summary>
+    public readonly MessageData? Data;
+
+    /// <summary>
     /// If the entity was trying to speak into a radio, this was the channel they were trying to access. If a radio
     /// message gets sent on this channel, this should be set to null to prevent duplicate messages.
     /// </summary>
     public RadioChannelPrototype? Channel;
 
-    public EntitySpokeEvent(EntityUid source, string message, RadioChannelPrototype? channel, string? obfuscatedMessage)
+    public EntitySpokeEvent(EntityUid source, string message, RadioChannelPrototype? channel, string? obfuscatedMessage, MessageData? data = null)
     {
         Source = source;
         Message = message;
         Channel = channel;
         ObfuscatedMessage = obfuscatedMessage;
+        Data = data;
     }
 }

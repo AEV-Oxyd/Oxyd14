@@ -2,7 +2,7 @@
   parent: ClothingMaskBase
   id: erisport_fake_moustache
   name: fake moustache
-  description: Warning: moustache is fake.
+  description: "Warning: moustache is fake."
   components:
   - type: Sprite
     sprite: Oxyd/erisported/clothing/fake_moustache.rsi
