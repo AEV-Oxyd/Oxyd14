@@ -184,6 +184,54 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 | Eye blessing stat payoff | `OxydNtEyeBlessing` is mechanism-only; no stat numbers assigned. |
 | Addiction model | Replaced by the reagent purge above. |
 
+## PR #33 maintainer follow-up
+
+This pass addresses the September 11 and September 12 review requests.
+The earlier profile, UI, ceremony, choice, and EntityEffects fixes remain in place.
+
+| Request | Change |
+| --- | --- |
+| Reuse the ray filter. Refresh every view ticker. | `ViewCalcSystem` creates one filter per scan. Every ticker scans once per second, even without movement. |
+| Remove `ViewCadenceEvent`. Use visible targets. | Obelisks and healing auras consume `ViewTickEvent.seen`. Mobs receive `ViewRelevantComponent` at startup. Trays receive it at initialization. |
+| Keep the cheaper plant lookup. | Upgrade effects keep `EntityLookupSystem` for plants, trays, and local puddles. Obelisks use visible trays. |
+| Check the plant health limit. | Healing uses `PlantHolderSystem.AdjustsHealth`. It clamps health to `PlantComponent.Endurance`. The fixed aura limit no longer exists. |
+| Use nearby entity queries. | `BearersInRange` uses `EntityLookupSystem`, an exact range check, and the validated implant link. Eye scans also use `EntityLookupSystem`. |
+| Keep state on components. | Obelisks and cruciforms track overlapping regeneration contributions. The strongest source applies. Computed regeneration does not persist across serialization. |
+| Explain `EverActivated`. | Death and extraction clear `Active`. They must not make a used implant count as unused. Activation history controls revival and reimplantation. |
+| Use a frozen faction set. | The foundation system uses a static `FrozenSet`. The optional singleton entity adds no necessary behavior. |
+| Undo the shared skill change. | An existing unique buff retains its amount. Only a matching amount refreshes its expiry. |
+| Use subscription attributes. | NeoTheology systems use `[SubscribeLocalEvent]`. Other initialization remains in place. |
+| Keep the original speech object. | `EntitySpokeEvent.Data` holds `MessageData`. Speak and whisper pass the original object. The stutter regression checks its identity. |
+| Move Revelation's sanity handler. | `LitanySystem` handles `LitanySanityDeltaEvent` through its `SanitySystem` dependency. |
+| Sell design disks, not equipment. | All three armaments use existing `DigitalDataLathe` disks. Each disk permits one lathe print. Shop IDs and prices remain unchanged. |
+| Make disk recipes usable. | The lathe refreshes permitted materials when a disk enters or leaves. |
+
+New regressions cover stationary visibility, wall occlusion, healing targets, plant lookup and health limits,
+nearby bearer filtering, obelisk target selection, and all three disk purchases and prints.
+Existing regressions cover aura overlap, movement, power loss, removal, and activation history.
+
+### Follow-up check results
+
+- The integration build succeeded. All 206 NeoTheology integration tests passed. No tests skipped.
+- All 21 selected unit tests passed: 17 NeoTheology tests and four shared-skill tests. The runner skipped no tests.
+- The shared-skill tests now check the restored behavior that the maintainer requested.
+- All three disk cases ran. The selected-rules debit-tolerance regression also ran.
+- `git diff --check` reported no whitespace errors.
+- The YAML check failed outside this change. The log includes imported IDs, gun fields, localization, and bundle references.
+
+Commands:
+
+```sh
+dotnet test Content.IntegrationTests/Content.IntegrationTests.csproj --no-restore --filter 'FullyQualifiedName~NeoTheology'
+dotnet test Content.Tests/Content.Tests.csproj --no-restore --filter 'FullyQualifiedName~NeoTheology|FullyQualifiedName~SharedSkillSystemTests'
+dotnet run --project Content.YAMLLinter/Content.YAMLLinter.csproj --no-restore
+```
+
+The test reports are `/tmp/oxyd33-results/neotheology-review.trx` and
+`/tmp/oxyd33-results/neotheology-and-skills-review.trx`.
+The logs are `/tmp/oxyd33-tests6.log`, `/tmp/oxyd33-unit-publish.log`, and `/tmp/oxyd33-yaml-final.log`.
+The owner requested commits, a branch push, and a concise PR comment after these checks.
+
 ## Historical validation evidence
 
 - Baseline recorded RobustToolbox `af2a7d0406` and SDK `10.0.203`.
@@ -207,13 +255,12 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 
 ## Release state and open items
 
-- The NeoTheology suite is green: unit 21/21 and integration 199/199 with zero
-  skips on the final tree.
-- Pre-existing, not NeoTheology: the station-map load tests fail on this branch
-  with `Duplicate chunk entity` (`ChunkEntitySystem.AddChunk`), and the YAML
-  linter reports 8 field/localization errors in unrelated fork prototypes
-  (`newGuns.yml`, `auto.yml`, `restingObjectives.yml`, `bundle.yml`). Both are
-  owned by the map/engine and gun workstreams.
+- The latest checks passed: 21/21 selected unit tests and 206/206 NeoTheology integration tests. The runner skipped no tests.
+- The YAML linter still fails on unrelated prototypes. This pass did not change those files.
+  The log includes imported clothing, `newGuns.yml`, `auto.yml`, `restingObjectives.yml`, and `bundle.yml`.
+  It also reports unresolved `BaseBundle` references.
+- Earlier station-map checks reported `Duplicate chunk entity` (`ChunkEntitySystem.AddChunk`).
+  This pass did not rerun those checks.
 - The `Oxyd14-port-eris-ironhammer` gitlink stays out of the NeoTheology
   commits; its ` m` working-tree state is owned by the Ironhammer port.
 - The `.freebuff` preview files are removed from the branch.
