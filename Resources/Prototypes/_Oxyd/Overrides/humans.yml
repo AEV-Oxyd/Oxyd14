@@ -10,6 +10,8 @@
         - Universal
       understanding:
         - Universal
+    - type: Inventory
+      templateId: oxydhuman
 
 - type: entity
   parent: MobHumanOxyd

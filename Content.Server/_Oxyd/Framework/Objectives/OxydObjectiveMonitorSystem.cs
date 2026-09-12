@@ -13,7 +13,7 @@ public class ObjectiveCompletedEvent : EntityEventArgs
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class OxydObjectiveMonitorSystem : EntitySystem
+public sealed partial class OxydObjectiveMonitorSystem : EntitySystem
 {
     [Dependency] private ObjectivesSystem objsys = default!;
 

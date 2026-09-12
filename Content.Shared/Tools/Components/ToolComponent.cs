@@ -6,22 +6,22 @@ using Robust.Shared.Utility;
 
 namespace Content.Shared.Tools.Components;
 
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ToolComponent : Component
 {
-    [DataField]
-    public HashSet<ProtoId<ToolQualityPrototype>> Qualities  = [];
+    [DataField, AutoNetworkedField]
+    public HashSet<ProtoId<ToolQualityPrototype>> Qualities = [];
 
     [DataField] // Eris Port
     public Dictionary<ProtoId<ToolQualityPrototype>, int> ToolLevels = new Dictionary<ProtoId<ToolQualityPrototype>, int>();
 
     /// <summary>
-    ///     For tool interactions that have a delay before action this will modify the rate, time to wait is divided by this value
+    /// For tool interactions that have a delay before action this will modify the rate, time to wait is divided by this value
     /// </summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public float SpeedModifier = 1f;
 
-    [DataField]
+    [DataField, AutoNetworkedField]
     public SoundSpecifier? UseSound;
 }
 

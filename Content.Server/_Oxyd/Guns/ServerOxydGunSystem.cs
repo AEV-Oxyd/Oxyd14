@@ -70,7 +70,6 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydMagazineChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydMagazineComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
-        SubscribeLocalEvent<OxydChamberExtensionComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
@@ -206,10 +205,12 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref MapInitEvent args)
     {
         var cnt = _containerSystem.GetContainer(ent, oxydContents);
+        /*
         foreach (var bullet in cnt.ContainedEntities)
         {
             ent.Comp.loadedBullets.Push(GetNetEntity(bullet));
         }
+        */
         Dirty(ent);
     }
 
@@ -234,13 +235,13 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             state.shooterSession = null;
         }
         Dirty(target);
-        foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(target.Owner))
+        foreach(var comp in AllComps<BaseGunProvider>(target.Owner))
             Dirty(target.Owner, comp);
         foreach (var container in _containerSystem.GetAllContainers(target))
         {
             foreach (var ent in container.ContainedEntities)
             {
-                foreach(var comp in EntityManager.GetComponents<OxydGunProvidersComponent>(ent))
+                foreach(var comp in AllComps<BaseGunProvider>(ent))
                     Dirty(ent, comp);
             }
         }

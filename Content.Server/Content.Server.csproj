@@ -32,4 +32,7 @@
   <Import Project="..\RobustToolbox\Imports\Server.props" />
   <Import Project="..\RobustToolbox\Imports\Shared.props" />
   <Import Project="..\RobustToolbox\Imports\Packaging.props" />
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);EXCEPTION_TOLERANCE</DefineConstants>
+  </PropertyGroup>
 </Project>

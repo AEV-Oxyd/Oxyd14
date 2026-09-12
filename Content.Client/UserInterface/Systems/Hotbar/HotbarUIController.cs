@@ -1,4 +1,6 @@
-﻿using Content.Client.UserInterface.Systems.Gameplay;
+﻿using Content.Client._Oxyd.Framework;
+using Content.Client._Oxyd.UI;
+using Content.Client.UserInterface.Systems.Gameplay;
 using Content.Client.UserInterface.Systems.Hands;
 using Content.Client.UserInterface.Systems.Hands.Controls;
 using Content.Client.UserInterface.Systems.Hotbar.Widgets;
@@ -31,7 +33,7 @@ public sealed class HotbarUIController : UIController
         ReloadHotbar();
     }
 
-    public void Setup(HandsContainer handsContainer)
+    public void Setup()
     {
         _inventory = UIManager.GetUIController<InventoryUIController>();
         _hands = UIManager.GetUIController<HandsUIController>();
@@ -45,6 +47,7 @@ public sealed class HotbarUIController : UIController
             return;
         }
 
+        
         if (UIManager.ActiveScreen.GetWidget<HotbarGui>() is { } hotbar)
         {
             foreach (var container in GetAllItemSlotContainers(hotbar))
@@ -56,6 +59,10 @@ public sealed class HotbarUIController : UIController
 
         _hands?.ReloadHands();
         _inventory?.ReloadSlots();
+
+        if (!ClientOxydHelpers.FindControl<GridMapping>(UIManager.ActiveScreen, "inventory", out var f))
+            return;
+        _inventory?.RegisterSlotGroupContainer(f, "Default");
 
         //todo move this over to its own hellhole
         var inventory = UIManager.ActiveScreen.GetWidget<InventoryGui>();
@@ -70,7 +77,7 @@ public sealed class HotbarUIController : UIController
             container.SlotGroup = container.SlotGroup;
         }
 
-        _inventory?.RegisterInventoryBarContainer(inventory.InventoryHotbar);
+        //_inventory?.RegisterInventoryBarContainer(inventory.InventoryHotbar);
     }
 
     private static IEnumerable<ItemSlotButtonContainer> GetAllItemSlotContainers(Control gui)

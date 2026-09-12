@@ -13,8 +13,47 @@ namespace Content.Client.UserInterface.Controls
     /// </summary>
     public sealed partial class MainViewport : UIWidget
     {
-        [Dependency] private IConfigurationManager _cfg = default!;
         [Dependency] private ViewportManager _vpManager = default!;
+
+        [ViewVariables(VVAccess.ReadWrite)] bool ViewportStretch
+        {
+            get;
+            set
+            {
+                field = value;
+                UpdateCfg();
+            }
+        } = false;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewPortSnapToleranceMargin { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } } = 32;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewportSnapToleranceClip { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } } = 16;
+        [ViewVariables(VVAccess.ReadWrite)] public int ViewportFixedScaleFactor { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= 2;
+        [ViewVariables(VVAccess.ReadWrite)] public bool ViewportRenderScaleUp { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= true;
+        [ViewVariables(VVAccess.ReadWrite)] public bool ViewportVerticalFit { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= true;
+        [ViewVariables(VVAccess.ReadWrite)] public string ViewportScalingFilterMode { get; set
+        {
+            field = value;
+            UpdateCfg();
+        } }= "bilinear";
 
         public ScalingViewport Viewport { get; }
 
@@ -26,12 +65,13 @@ namespace Content.Client.UserInterface.Controls
             {
                 AlwaysRender = true,
                 RenderScaleMode = ScalingViewportRenderScaleMode.CeilInt,
-                MouseFilter = MouseFilterMode.Stop
+                MouseFilter = MouseFilterMode.Stop,
+                RectDrawClipMargin = 0,
+                RectClipContent = false,
             };
 
             AddChild(Viewport);
-
-            _cfg.OnValueChanged(CCVars.ViewportScalingFilterMode, _ => UpdateCfg(), true);
+            UpdateCfg();
         }
 
         protected override void EnteredTree()
@@ -50,11 +90,11 @@ namespace Content.Client.UserInterface.Controls
 
         public void UpdateCfg()
         {
-            var stretch = _cfg.GetCVar(CCVars.ViewportStretch);
-            var renderScaleUp = _cfg.GetCVar(CCVars.ViewportScaleRender);
-            var fixedFactor = _cfg.GetCVar(CCVars.ViewportFixedScaleFactor);
-            var verticalFit = _cfg.GetCVar(CCVars.ViewportVerticalFit);
-            var filterMode = _cfg.GetCVar(CCVars.ViewportScalingFilterMode);
+            var stretch = ViewportStretch;
+            var renderScaleUp = ViewportRenderScaleUp;
+            var fixedFactor = ViewportFixedScaleFactor;
+            var verticalFit = ViewportVerticalFit;
+            var filterMode = ViewportScalingFilterMode;
 
             if (stretch)
             {
@@ -109,12 +149,12 @@ namespace Content.Client.UserInterface.Controls
         {
             // Margin tolerance is tolerance of "the window is too big"
             // where we add a margin to the viewport to make it fit.
-            var cfgToleranceMargin = _cfg.GetCVar(CCVars.ViewportSnapToleranceMargin);
+            var cfgToleranceMargin = ViewPortSnapToleranceMargin;
             // Clip tolerance is tolerance of "the window is too small"
             // where we are clipping the viewport to make it fit.
-            var cfgToleranceClip = _cfg.GetCVar(CCVars.ViewportSnapToleranceClip);
+            var cfgToleranceClip = ViewportSnapToleranceClip;
 
-            var cfgVerticalFit = _cfg.GetCVar(CCVars.ViewportVerticalFit);
+            var cfgVerticalFit = ViewportVerticalFit;
 
             // Calculate if the viewport, when rendered at an integer scale,
             // is close enough to the control size to enable "snapping" to NN,

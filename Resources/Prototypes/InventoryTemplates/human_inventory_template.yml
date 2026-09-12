@@ -63,8 +63,7 @@
     - name: pocket1
       slotTexture: pocket
       fullTextureName: template_small
-      slotFlags: POCKET
-      slotGroup: MainHotbar
+      slotFlags: POCKET, DEPENDANTRENDER
       stripTime: 3
       uiWindowPos: 0,3
       strippingWindowPos: 0,4
@@ -74,8 +73,7 @@
     - name: pocket2
       slotTexture: pocket
       fullTextureName: template_small
-      slotFlags: POCKET
-      slotGroup: MainHotbar
+      slotFlags: POCKET, DEPENDANTRENDER
       stripTime: 3
       uiWindowPos: 2,3
       strippingWindowPos: 1,4
@@ -84,8 +82,7 @@
       stripHidden: true
     - name: suitstorage
       slotTexture: suit_storage
-      slotFlags:   SUITSTORAGE
-      slotGroup: MainHotbar
+      slotFlags: SUITSTORAGE, DEPENDANTRENDER
       stripTime: 3
       uiWindowPos: 2,0
       strippingWindowPos: 2,5

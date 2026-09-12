@@ -36,6 +36,7 @@ public sealed partial class StatusPanelSystem : EntitySystem
     [Dependency] private IUserInterfaceManager _uiManager = default!;
     [Dependency] private IStateManager _stateManager = default!;
     [Dependency] private IConfigurationManager configurationManager = default!;
+    private OxTagController tagger = default!;
     private StatPanel? panel => _uiManager.GetActiveUIWidgetOrNull<StatPanel>();
     public Dictionary<string, Control> panelContent = new();
     public RadioOptions<string> buttons = null!;
@@ -109,6 +110,7 @@ public sealed partial class StatusPanelSystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
+        tagger = _uiManager.GetUIController<OxTagController>();
         base.Initialize();
         SubscribeLocalEvent<SetStatPanel>(ev =>
         {

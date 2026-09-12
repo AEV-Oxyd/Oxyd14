@@ -26,7 +26,7 @@ namespace Content.Client.Inventory
         [Dependency] private ExamineSystem _examine = default!;
         [Dependency] private PointingSystem _pointing = default!;
 
-        public Action<SlotData>? EntitySlotUpdate = null;
+        public Action<SlotDataAction>? EntitySlotUpdate = null;
         public Action<SlotData>? OnSlotAdded = null;
         public Action<SlotData>? OnSlotRemoved = null;
         public Action<EntityUid, InventorySlotsComponent>? OnLinkInventorySlots = null;
@@ -49,6 +49,7 @@ namespace Content.Client.Inventory
                 _equipEventsQueue.Enqueue((comp, args)));
             SubscribeLocalEvent<InventorySlotsComponent, DidUnequipEvent>((_, comp, args) =>
                 _equipEventsQueue.Enqueue((comp, args)));
+            OxydInit();
         }
 
         public override void Update(float frameTime)
@@ -145,8 +146,13 @@ namespace Content.Client.Inventory
         {
             var oldData = component.SlotData[slotName];
             var newData = component.SlotData[slotName] = new SlotData(oldData, state);
+            var actm = new SlotDataAction()
+            {
+                data = newData,
+                componentOwner = owner
+            };
             if (owner == _playerManager.LocalEntity)
-                EntitySlotUpdate?.Invoke(newData);
+                EntitySlotUpdate?.Invoke(actm);
         }
 
         public void UpdateSlot(EntityUid owner, InventorySlotsComponent component, string slotName,
@@ -167,8 +173,13 @@ namespace Content.Client.Inventory
 
             var newData = component.SlotData[slotName] =
                 new SlotData(component.SlotData[slotName], newHighlight, newBlocked);
+            var actm = new SlotDataAction()
+            {
+                data = newData,
+                componentOwner = owner
+            };
             if (owner == _playerManager.LocalEntity)
-                EntitySlotUpdate?.Invoke(newData);
+                EntitySlotUpdate?.Invoke(actm);
         }
 
         public bool TryAddSlotData(Entity<InventorySlotsComponent> ent, SlotData newSlotData)
@@ -286,7 +297,7 @@ namespace Content.Client.Inventory
                 ReloadInventory(inventorySlots);
         }
 
-        public sealed class SlotData
+        public class SlotData
         {
             [ViewVariables] public SlotDefinition SlotDef;
             [ViewVariables] public EntityUid? HeldEntity => Container?.ContainedEntity;

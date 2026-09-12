@@ -61,8 +61,10 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
         {
+            /*
             if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
                 args.suffix += "mag";
+                */
         }
     }
 
@@ -213,6 +215,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
             if (!_gameTiming.IsFirstTimePredicted)
                 return false;
             if (ev.self.activeHeld != obj.Owner)
+                return false;
+            if (ev.self.clickCoords == EntityCoordinates.Invalid)
                 return false;
             if (!TryComp<OxydGunComponent>(obj, out var gun))
             {

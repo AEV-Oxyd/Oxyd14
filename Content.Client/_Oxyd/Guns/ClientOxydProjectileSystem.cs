@@ -26,7 +26,7 @@ namespace Content.Client._Oxyd.OxydGunSystem;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientOxydProjectileSystem : SharedOxydProjectileSystem
+public sealed partial class ClientOxydProjectileSystem : SharedOxydProjectileSystem
 {
     [Dependency] private  ColorFlashEffectSystem _colorFlashEffect = default!;
     [Dependency] private  FixClientsidePhysicsSystem _patcher = default!;

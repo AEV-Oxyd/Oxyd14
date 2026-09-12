@@ -79,6 +79,7 @@ public partial class ClientOxydGunSystem
         var magComp = CompOrNull<OxydMagazineChamberComponent>(target.Owner);
         if (magComp is not null)
         {
+            /*
             var i = _spriteSystem.LayerMapGet(target.Owner, magComp.magAbove ? GVis.MagAbove : GVis.MagUnder);
             _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
             var magaz = magComp.magazineSlot.FirstOrDefault();
@@ -92,6 +93,7 @@ public partial class ClientOxydGunSystem
             {
                 _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
             }
+            */
         }
 
         items.VisualsChanged(target.Owner);

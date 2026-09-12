@@ -18,11 +18,8 @@ namespace Content.Client._Oxyd.Skills;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class ClientSkillSystem : SharedSkillSystem
+public sealed partial class ClientSkillSystem : SharedSkillSystem
 {
-    [Dependency] private IPlayerManager playMan = default!;
-    [Dependency] private StatusPanelSystem statPanel = default!;
-    [Dependency] private IUserInterfaceManager interfaceManager = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {
