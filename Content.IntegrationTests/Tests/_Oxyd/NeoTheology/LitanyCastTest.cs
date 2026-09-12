@@ -57,7 +57,7 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
 
             _litany.TestingHandleSpeech(new EntitySpokeEvent(
-                body, phrase, null, null, phrase));
+                body, phrase, null, null));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(1));
             Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Not.Null);
@@ -133,8 +133,11 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var garbled = "S-s-semper invicta.";
 
-            _litany.TestingHandleSpeech(new EntitySpokeEvent(
-                body, garbled, null, null, phrase));
+            var message = new MessageData(body, ChatTransmitRange.Normal, InGameICChatType.Speak,
+                phrase, [], [], new());
+            var spoke = new EntitySpokeEvent(body, garbled, null, null, message);
+            Assert.That(spoke.Data, Is.SameAs(message));
+            _litany.TestingHandleSpeech(spoke);
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(1));
         });
@@ -151,7 +154,7 @@ public sealed class LitanyCastTest : GameTest
             var before = _cruciform.GetHoliness(body);
 
             _litany.TestingHandleSpeech(new EntitySpokeEvent(
-                body, phrase, _prototypes.Index<RadioChannelPrototype>("Common"), phrase, phrase));
+                body, phrase, _prototypes.Index<RadioChannelPrototype>("Common"), phrase));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(before));
@@ -174,7 +177,7 @@ public sealed class LitanyCastTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var before = _cruciform.GetHoliness(npc);
 
-            _litany.TestingHandleSpeech(new EntitySpokeEvent(npc, phrase, null, null, phrase));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(npc, phrase, null, null));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(npc), Is.EqualTo(before));

@@ -395,7 +395,7 @@ public sealed class LitanyCeremonyTest : GameTest
 
     private void Speak(EntityUid speaker, string phrase)
     {
-        _litany.TestingHandleSpeech(new EntitySpokeEvent(speaker, phrase, null, null, phrase));
+        _litany.TestingHandleSpeech(new EntitySpokeEvent(speaker, phrase, null, null));
     }
 
     private void AssertBuff(EntityUid body, string skill, int amount, string? why = null)

@@ -51,7 +51,7 @@ public sealed class LitanySecurityTest : GameTest
             var phrase = _prototypes.Index(Relief).Phrase;
             var beforeOther = _cruciform.GetHoliness(other);
 
-            _litany.TestingHandleSpeech(new EntitySpokeEvent(other, phrase, null, null, phrase));
+            _litany.TestingHandleSpeech(new EntitySpokeEvent(other, phrase, null, null));
 
             Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
             Assert.That(_cruciform.GetHoliness(other), Is.EqualTo(beforeOther));
