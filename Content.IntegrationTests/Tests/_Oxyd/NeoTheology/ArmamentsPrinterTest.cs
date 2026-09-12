@@ -8,6 +8,12 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
 using Content.Server.Power.Components;
+using Content.Server.Lathe;
+using Content.Shared._Oxyd;
+using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Lathe;
+using Content.Shared.Materials;
+using Content.Shared.Research.Prototypes;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -25,7 +31,7 @@ public sealed class ArmamentsPrinterTest : GameTest
     private static readonly EntProtoId PrinterProto = "OxydNtArmamentsPrinter";
     private static readonly EntProtoId CruciformProto = "OxydNtCruciform";
     private static readonly EntProtoId HumanProto = "MobHuman";
-    private static readonly EntProtoId ArmamentPath = "OxydNtBible";
+    private static readonly EntProtoId ArmamentPath = "OxydNtRitualBookDesignDisk";
     private const string ArmamentId = "OxydNtArmamentRitualBook";
 
     public override PoolSettings PoolSettings => PsDisconnected;
@@ -72,10 +78,58 @@ public sealed class ArmamentsPrinterTest : GameTest
                 "A stocked armory must sell to a faithful buyer in reach.");
             Assert.That(eyeComp.ArmamentsPoints, Is.EqualTo(10), "The sale must debit the Eye exactly its price.");
 
-            var spawned = Armaments().Single();
+            var spawned = EntitiesOfPrototype(ArmamentPath).Single();
             Assert.That(SComp<TransformComponent>(spawned).Coordinates,
                 Is.EqualTo(SComp<TransformComponent>(printer).Coordinates),
                 "The armament must appear on the printer's turf.");
+        });
+    }
+
+    [TestCase("OxydNtArmamentRitualBook", "OxydNtBible")]
+    [TestCase("OxydNtArmamentEnergyCrossbow", "WeaponEnergyCrossbow")]
+    [TestCase("OxydNtArmamentHolyGrenade", "OxydNtHolyHandGrenade")]
+    public async Task PurchasedDiskUnlocksExactlyOneLathePrint(string armamentId, string result)
+    {
+        var map = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var printer = SSpawnAtPosition(PrinterProto, map.GridCoords);
+            SComp<ApcPowerReceiverComponent>(printer).Powered = true;
+            var eye = SpawnEye(map.GridCoords);
+            var buyer = ActiveBearer(map.GridCoords);
+            var armament = SProtoMan.Index<ArmamentPrototype>(armamentId);
+            SComp<EyeOfTheProtectorComponent>(eye).ArmamentsPoints = armament.Cost;
+            Assert.That(_printer.TryPurchase(printer, buyer, armamentId), Is.True);
+            var disk = EntitiesOfPrototype(armament.Path).Single();
+            Assert.That(EntitiesOfPrototype(result), Is.Empty);
+            var file = SComp<DigitalDataHolderComponent>(disk).getFileByData<DigitalDataLathe>().Single();
+            var recipe = SProtoMan.Index(file.recipes.Single());
+            Assert.That(recipe.Result?.Id, Is.EqualTo(result));
+
+            var lathe = SSpawnAtPosition("OxydLathe", map.GridCoords);
+            SComp<ApcPowerReceiverComponent>(lathe).Powered = true;
+            var component = SComp<LatheComponent>(lathe);
+            var originalMaterials = SComp<MaterialStorageComponent>(lathe).MaterialWhiteList;
+            component.TimeMultiplier = 0;
+            component.MaterialUseMultiplier = 1;
+            var system = SEntMan.System<LatheSystem>();
+            Assert.That(system.GetAvailableRecipes(lathe, component), Does.Not.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
+            Assert.That(SEntMan.System<ItemSlotsSystem>().TryInsert(lathe, SharedLatheSystem.diskSlot, disk, null), Is.True);
+            Assert.That(system.GetAvailableRecipes(lathe, component), Does.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
+            foreach (var (material, amount) in recipe.Materials)
+                Assert.That(SEntMan.System<SharedMaterialStorageSystem>().TryChangeMaterialAmount(lathe, material, amount * 2), Is.True);
+
+            Assert.That(system.TryAddToQueue(lathe, recipe, 2), Is.False);
+            Assert.That(file.uses, Is.EqualTo(1));
+            Assert.That(system.TryAddToQueue(lathe, recipe, 1), Is.True);
+            Assert.That(file.uses, Is.Zero);
+            Assert.That(system.TryAddToQueue(lathe, recipe, 1), Is.False);
+            Assert.That(system.TryStartProducing(lathe), Is.True);
+            Assert.That(EntitiesOfPrototype(result), Has.Count.EqualTo(1));
+            Assert.That(SEntMan.System<ItemSlotsSystem>().TryEject(lathe, SharedLatheSystem.diskSlot, null, out var ejected), Is.True);
+            Assert.That(ejected, Is.EqualTo(disk));
+            Assert.That(system.GetAvailableRecipes(lathe, component), Does.Not.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
+            Assert.That(SComp<MaterialStorageComponent>(lathe).MaterialWhiteList, Is.EquivalentTo(originalMaterials));
         });
     }
 
@@ -96,18 +150,18 @@ public sealed class ArmamentsPrinterTest : GameTest
         return body;
     }
 
-    private List<EntityUid> Armaments()
+    private List<EntityUid> EntitiesOfPrototype(EntProtoId prototype)
     {
         var found = new List<EntityUid>();
         var query = SEntMan.AllEntityQueryEnumerator<MetaDataComponent>();
         while (query.MoveNext(out var uid, out var meta))
         {
-            if (meta.EntityPrototype?.ID == ArmamentPath.Id)
+            if (meta.EntityPrototype?.ID == prototype.Id)
                 found.Add(uid);
         }
 
         return found;
     }
 
-    private int CountArmaments() => Armaments().Count;
+    private int CountArmaments() => EntitiesOfPrototype(ArmamentPath).Count;
 }
