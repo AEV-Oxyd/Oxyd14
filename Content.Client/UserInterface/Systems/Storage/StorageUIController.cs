@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Examine;
 using Content.Client.Hands.Systems;
 using Content.Client.Interaction;
@@ -23,6 +24,7 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Configuration;
 using Robust.Shared.Input;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Client.UserInterface.Systems.Storage;
 
@@ -41,6 +43,7 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
     [Dependency] private IInputManager _input = default!;
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private CloseRecentWindowUIController _closeRecentWindowUIController = default!;
+    [Dependency] private OxTagController tags = default!;
     [UISystemDependency] private readonly StorageSystem _storage = default!;
     [UISystemDependency] private readonly UserInterfaceSystem _ui = default!;
     [UISystemDependency] private readonly Pointing.PointingSystem _pointing = default!;
@@ -127,31 +130,9 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
                     return;
                 child.SetPositionInParent(invisibleIndex);
             };
-
-            if (hotbar != null)
-            {
-                hotbar.DoubleStorageContainer.Visible = _openStorageLimit == 2;
-                hotbar.SingleStorageContainer.Visible = _openStorageLimit != 2;
-            }
-
-            if (_openStorageLimit == 2)
-            {
-                if (hotbar?.LeftStorageContainer.Children.Any(c => c.Visible) == false) // we're comparing booleans because it's bool? and not bool from the optional chaining
-                {
-                    hotbar?.LeftStorageContainer.AddChild(window);
-                    reorder(hotbar?.LeftStorageContainer, window);
-                }
-                else
-                {
-                    hotbar?.RightStorageContainer.AddChild(window);
-                    reorder(hotbar?.RightStorageContainer, window);
-                }
-            }
-            else
-            {
-                hotbar?.SingleStorageContainer.AddChild(window);
-                reorder(hotbar?.SingleStorageContainer, window);
-            }
+            if (!tags.map.TryGetValue("DynamicPanel", out var ctrls) || !ctrls.TryFirstOrDefault(out var panel))
+                return window;
+            var ctrl = tags.map["DynamicPanel"];
             _closeRecentWindowUIController.SetMostRecentlyInteractedWindow(window);
         }
         else

@@ -9,46 +9,22 @@
     HorizontalExpand="True"
     Orientation="Vertical"
     HorizontalAlignment="Center">
-    <BoxContainer Orientation="Vertical" VerticalAlignment="Top">
-        <BoxContainer Name="SingleStorageContainer"
-                      Access="Public"
-                      HorizontalAlignment="Center"
-                      HorizontalExpand="True">
-        </BoxContainer>
-        <BoxContainer Name="DoubleStorageContainer"
-                      Access="Public"
-                      HorizontalAlignment="Stretch"
-                      HorizontalExpand="True">
-            <BoxContainer Name="LeftStorageContainer"
-                          Access="Public"
-                          HorizontalAlignment="Left"
-                          HorizontalExpand="True"
-                          VerticalAlignment="Bottom">
-            </BoxContainer>
-            <BoxContainer Name="RightStorageContainer"
-                          Access="Public"
-                          HorizontalAlignment="Right"
-                          HorizontalExpand="True"
-                          VerticalAlignment="Bottom">
-            </BoxContainer>
-        </BoxContainer>
-        <BoxContainer Orientation="Horizontal" Name="Hotbar" HorizontalAlignment="Center" VerticalAlignment="Top" VerticalExpand="True" >
-            <inventory:ItemStatusPanel
-                Name="StatusPanelRight"
-                HorizontalAlignment="Center" Margin="0 0 -2 2"
-                SetWidth="125"
-                SetHeight="48"/>
-            <hands:HandsContainer
-                Name="HandContainer"
-                Access="Public"
-                HorizontalAlignment="Center"
-                HorizontalExpand="False"
-                ColumnLimit="6"/>
-            <inventory:ItemStatusPanel
-                Name="StatusPanelLeft"
-                HorizontalAlignment="Center" Margin="-2 0 0 2"
-                SetWidth="125"
-                SetHeight="48"/>
-        </BoxContainer>
+    <BoxContainer Orientation="Horizontal" Name="Hotbar" HorizontalAlignment="Center" VerticalAlignment="Top" VerticalExpand="True" >
+        <inventory:ItemStatusPanel
+            Name="StatusPanelRight"
+            HorizontalAlignment="Center" Margin="0 0 -2 2"
+            SetWidth="125"
+            SetHeight="48"/>
+        <hands:HandsContainer
+            Name="HandContainer"
+            Access="Public"
+            HorizontalAlignment="Center"
+            HorizontalExpand="False"
+            ColumnLimit="6"/>
+        <inventory:ItemStatusPanel
+            Name="StatusPanelLeft"
+            HorizontalAlignment="Center" Margin="-2 0 0 2"
+            SetWidth="125"
+            SetHeight="48"/>
     </BoxContainer>
 </widgets:HotbarGui>

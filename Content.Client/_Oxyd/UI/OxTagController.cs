@@ -9,7 +9,7 @@ namespace Content.Client._Oxyd.UI;
 /// </summary>
 public sealed partial class OxTagController : UIController
 {
-    [ViewVariables(VVAccess.ReadOnly)] Dictionary<string, List<Control>> map = new();
+    [ViewVariables(VVAccess.ReadOnly)] public Dictionary<string, List<Control>> map = new();
     
     public Action<string, Control>? Added;
     public Action<string, Control>? Removed;

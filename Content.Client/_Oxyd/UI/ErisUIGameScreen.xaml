@@ -22,6 +22,9 @@
                 <actions:ActionsBar Name="Actions" Access="Protected" />
                 <alerts:AlertsUI Name="Alerts" Access="Protected" />
                 <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
+                <BoxContainer MinWidth="435" MinHeight="600">
+                    <ui:OxTag tag="DynamicPanel"/>
+                </BoxContainer>
                 <ui:GridMapping Name="inventory" MinWidth="435" MinHeight="128">
                    <ui:OxTag tag="inventory"/>
                 </ui:GridMapping>
