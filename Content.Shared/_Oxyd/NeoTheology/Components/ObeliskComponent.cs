@@ -56,4 +56,7 @@ public sealed partial class ObeliskComponent : Component
     /// <see cref="Active"/> stays the computed state; the tick ORs this deadline in.
     /// </summary>
     public TimeSpan ForceActiveUntil;
+
+    /// <summary>Implants affected by the last view tick. Used to remove expired aura contributions.</summary>
+    public HashSet<EntityUid> AffectedCruciforms = new();
 }

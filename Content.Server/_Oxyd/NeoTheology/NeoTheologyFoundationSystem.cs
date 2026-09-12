@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Linq;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
@@ -43,29 +44,14 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     [Dependency] private readonly IRobustRandom _random = default!;
 
     /// <summary>Hostile fauna, matching the obelisk's set (the fork's simple-hostile marker).</summary>
-    private static readonly HashSet<ProtoId<NpcFactionPrototype>> HostileFauna = new()
-    {
-        "Dragon",
-        "SimpleHostile",
-        "Xeno",
-    };
-
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<MobStateComponent, LitanyRejectForeignBodyEvent>(OnRejectForeignBody);
-        SubscribeLocalEvent<MobStateComponent, LitanyRevealAdversariesEvent>(OnRevealAdversaries);
-        SubscribeLocalEvent<MobStateComponent, LitanyPurgeAddictionEvent>(OnPurgeAddiction);
-        SubscribeLocalEvent<MobStateComponent, LitanyPainEvent>(OnPain);
-        SubscribeLocalEvent<MobStateComponent, LitanyRemoveUpgradesEvent>(OnRemoveUpgrades);
-        SubscribeLocalEvent<MobStateComponent, LitanyAcceleratedGrowthEvent>(OnAcceleratedGrowth);
-    }
+    private static readonly FrozenSet<ProtoId<NpcFactionPrototype>> HostileFauna =
+        new ProtoId<NpcFactionPrototype>[] { "Dragon", "SimpleHostile", "Xeno" }.ToFrozenSet();
 
     /// <summary>
     /// Eris <c>rituals/base.dm:64-90</c>. The fork has no external limbs, so this removes every
     /// non-cruciform implant and applies the limb-damage rider as brute damage.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnRejectForeignBody(Entity<MobStateComponent> ent, ref LitanyRejectForeignBodyEvent args)
     {
         if (args.Handled)
@@ -99,6 +85,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     /// The fork's trap marker is <see cref="LandMineComponent"/>. Eris also hides a 20 percent
     /// false-negative chance; kept for fidelity.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnRevealAdversaries(Entity<MobStateComponent> ent, ref LitanyRevealAdversariesEvent args)
     {
         if (args.Handled)
@@ -138,6 +125,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     /// Eris <c>rituals/custodian.dm:7-40</c>. The fork has no addiction model; purge the
     /// habit-forming reagents instead (named divergence) and keep the Eris painkiller message.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnPurgeAddiction(Entity<MobStateComponent> ent, ref LitanyPurgeAddictionEvent args)
     {
         if (args.Handled)
@@ -164,6 +152,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     /// Eris <c>rituals/priest.dm:173-211</c> and <c>rituals/inquisitor.dm:33-65</c>:
     /// <c>adjustHalLoss(50)</c>. Mapped to stamina damage; no real harm.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnPain(Entity<MobStateComponent> ent, ref LitanyPainEvent args)
     {
         if (args.Handled)
@@ -175,6 +164,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     }
 
     /// <summary>Eris <c>rituals/priest.dm:68-90</c> (Asacris): strip every cruciform upgrade.</summary>
+    [SubscribeLocalEvent]
     private void OnRemoveUpgrades(Entity<MobStateComponent> ent, ref LitanyRemoveUpgradesEvent args)
     {
         if (args.Handled)
@@ -196,6 +186,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     /// Eris <c>rituals/agrolyte.dm:10-45</c>: every plant in view is boosted for five minutes.
     /// Fails when no plant is around, which lets the atomic commit refund the cast.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnAcceleratedGrowth(Entity<MobStateComponent> ent, ref LitanyAcceleratedGrowthEvent args)
     {
         if (args.Handled)

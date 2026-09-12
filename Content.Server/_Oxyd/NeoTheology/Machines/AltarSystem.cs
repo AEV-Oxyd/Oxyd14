@@ -24,19 +24,12 @@ public sealed partial class AltarSystem : EntitySystem
     /// <summary>How far from the caster an altar still counts as theirs — the litany's own reach.</summary>
     private const float RitualReach = 1.5f;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<EyeOfTheProtectorComponent, LitanyOfferingEvent>(OnLitanyOffering);
-        SubscribeLocalEvent<NeoTheologyAltarComponent, LitanyBaptismalRecordEvent>(OnLitanyBaptismalRecord);
-    }
-
     /// <summary>
     /// BaptismalRecord bridge (Eris <c>rituals/priest.dm:213-230</c>): a paper listing the
     /// parishioners slides out of the altar. Eris prints the global disciple list; this fork has
     /// no registry, so the record is a live scan of active cruciform bearers, name-sorted.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyBaptismalRecord(Entity<NeoTheologyAltarComponent> ent, ref LitanyBaptismalRecordEvent args)
     {
         if (args.Handled)
@@ -67,6 +60,7 @@ public sealed partial class AltarSystem : EntitySystem
     /// itself; the fork's altar is the offering surface, so the handler takes the altar within the
     /// caster's ritual reach and lets <see cref="TryMakeOffering"/> own the item math.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyOffering(EntityUid eye, EyeOfTheProtectorComponent component, ref LitanyOfferingEvent args)
     {
         if (!TryFindAltar(args.User, out var altar))

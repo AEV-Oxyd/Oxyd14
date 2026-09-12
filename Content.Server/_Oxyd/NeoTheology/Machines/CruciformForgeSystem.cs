@@ -13,7 +13,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 /// <see cref="MaterialStorageComponent"/>); once the recipe is stocked, it spends
 /// <see cref="CruciformForgeComponent.WorkTime"/> to forge a cruciform.
 /// </summary>
-public sealed class CruciformForgeSystem : EntitySystem
+public sealed partial class CruciformForgeSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
@@ -21,15 +21,11 @@ public sealed class CruciformForgeSystem : EntitySystem
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<CruciformForgeComponent, LitanyForgeProduceEvent>(OnLitanyForgeProduce);
-    }
-
     /// <summary>
     /// MakeCruciform bridge (Eris <c>rituals/machinery.dm:43-75</c>): the litany asks the forge to
     /// start its own produce run; the recipe check and the spend are <see cref="TryProduce"/>'s.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyForgeProduce(Entity<CruciformForgeComponent> ent, ref LitanyForgeProduceEvent args)
     {
         args.Handled = args.ValidateOnly ? CanProduce(ent.Owner, ent.Comp) : TryProduce(ent.Owner, ent.Comp);

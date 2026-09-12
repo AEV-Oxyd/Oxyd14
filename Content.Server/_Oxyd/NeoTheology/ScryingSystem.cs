@@ -15,7 +15,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// duration, and removal (timer, death, disconnect, or an explicit <c>RemComp</c>) restores the eye
 /// and deletes the marker through the one <see cref="OnSessionShutdown"/> handler.
 /// </summary>
-public sealed class ScryingSystem : EntitySystem
+public sealed partial class ScryingSystem : EntitySystem
 {
     [Dependency] private readonly SharedEyeSystem _eye = default!;
     [Dependency] private readonly IPlayerManager _players = default!;
@@ -27,10 +27,6 @@ public sealed class ScryingSystem : EntitySystem
         base.Initialize();
         _players.PlayerStatusChanged += OnPlayerStatusChanged;
 
-        SubscribeLocalEvent<ScryingSessionComponent, ComponentShutdown>(OnSessionShutdown);
-        SubscribeLocalEvent<LitanyScryingEvent>(OnLitanyScrying);
-        SubscribeLocalEvent<ScryingSessionComponent, MobStateChangedEvent>(OnMobStateChanged);
-        SubscribeLocalEvent<ScryingSessionComponent, PlayerDetachedEvent>(OnPlayerDetached);
     }
 
     /// <summary>
@@ -38,6 +34,7 @@ public sealed class ScryingSystem : EntitySystem
     /// <see cref="LitanyScryingEvent"/> on the target body. Reuses the same bounded session the
     /// P3.9 API exposes; a caster mid-session (or without an eye) stays unhandled.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyScrying(ref LitanyScryingEvent args)
     {
         args.Handled = args.ValidateOnly
@@ -67,12 +64,14 @@ public sealed class ScryingSystem : EntitySystem
             RemComp<ScryingSessionComponent>(body);
     }
 
+    [SubscribeLocalEvent]
     private void OnMobStateChanged(Entity<ScryingSessionComponent> ent, ref MobStateChangedEvent args)
     {
         if (args.NewMobState == MobState.Dead)
             RemComp<ScryingSessionComponent>(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnPlayerDetached(Entity<ScryingSessionComponent> ent, ref PlayerDetachedEvent args)
     {
         RemComp<ScryingSessionComponent>(ent.Owner);
@@ -117,6 +116,7 @@ public sealed class ScryingSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnSessionShutdown(Entity<ScryingSessionComponent> ent, ref ComponentShutdown args)
     {
         if (TryComp<EyeComponent>(ent.Owner, out var eye))

@@ -25,11 +25,6 @@ public sealed partial class CruciformUpgradeAuraComponent : Component
     /// <summary>Eris cleansing_presence also wipes blood off the bearer's own tile.</summary>
     [DataField] public bool CleanPuddles;
 
-    /// <summary>
-    /// Eris heals a plant only below its own cap. The fork has no max-health field on the
-    /// plant holder, so the aura carries the cap.
-    /// </summary>
-    [DataField] public float PlantHealthCap = 100f;
 }
 
 /// <summary>

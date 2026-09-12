@@ -14,6 +14,10 @@ public sealed partial class CruciformComponent : Component
     [ViewVariables, AutoNetworkedField]
     public EntityUid? ImplantedEntity;
 
+    /// <summary>
+    /// Records prior activation. Death and extraction clear Active, but do not make an implant unused.
+    /// Reimplantation and revival restore activation only when this flag is true.
+    /// </summary>
     [DataField, AutoNetworkedField]
     public bool EverActivated;
 
@@ -34,8 +38,11 @@ public sealed partial class CruciformComponent : Component
     /// an input to <see cref="CruciformSystem.RecomputeProfile"/> alongside profile ∪ modules ∪
     /// upgrade, so repeated aura ticks can never compound and an out-of-aura reset is exact.
     /// </summary>
-    [DataField]
+    [ViewVariables]
     public double RegenerationMultiplier = 1.0;
+
+    /// <summary>Active obelisk contributions. Only the strongest multiplier applies.</summary>
+    public Dictionary<EntityUid, float> ObeliskRegeneration = new();
 
     [DataField, AutoNetworkedField]
     public ProtoId<NeoTheologyProfilePrototype> Profile = "OxydNtDisciple";

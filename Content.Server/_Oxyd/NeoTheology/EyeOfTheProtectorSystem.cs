@@ -104,17 +104,24 @@ public sealed partial class EyeOfTheProtectorSystem : EntitySystem
         var xform = Transform(source);
         foreach (var (body, _) in _lookup.GetEntitiesInRange<HumanoidProfileComponent>(xform.Coordinates, radius))
         {
-            if (comp.Scanned.ContainsKey(body))
-                continue;
-
-            var faithful = TryComp<CruciformBearerComponent>(body, out var bearer) &&
-                bearer.Cruciform is { } implant && TryComp<CruciformComponent>(implant, out var state) && state.Active;
-            var before = comp.Observation;
-            AddObservation(eye, faithful ? comp.ObservationPerFaithful : comp.ObservationPerNeutral);
-            if (comp.Scanned.Count == 0)
-                comp.NextRescan = _timing.CurTime + comp.RescanInterval;
-            comp.Scanned.Add(body, comp.Observation - before);
+            ObserveEntity(eye, body, comp);
         }
+    }
+
+    /// <summary>Records one visible human. Obelisks supply targets from their view tick.</summary>
+    public void ObserveEntity(EntityUid eye, EntityUid body, EyeOfTheProtectorComponent? comp = null)
+    {
+        if (!Resolve(eye, ref comp) || !_machines.IsOperational(eye) ||
+            !HasComp<HumanoidProfileComponent>(body) || comp.Scanned.ContainsKey(body))
+            return;
+
+        var faithful = TryComp<CruciformBearerComponent>(body, out var bearer) &&
+            bearer.Cruciform is { } implant && TryComp<CruciformComponent>(implant, out var state) && state.Active;
+        var before = comp.Observation;
+        AddObservation(eye, faithful ? comp.ObservationPerFaithful : comp.ObservationPerNeutral);
+        if (comp.Scanned.Count == 0)
+            comp.NextRescan = _timing.CurTime + comp.RescanInterval;
+        comp.Scanned.Add(body, comp.Observation - before);
     }
 
     /// <summary>Refresh blessings without awarding an observed body again.</summary>

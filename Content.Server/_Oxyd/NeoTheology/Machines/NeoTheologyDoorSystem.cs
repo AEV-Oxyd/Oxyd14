@@ -26,15 +26,11 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
 
     private static readonly ProtoId<StackPrototype> BiomatterStack = "Biomatter";
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<NeoTheologyDoorComponent, LitanyRepairDoorEvent>(OnLitanyRepairDoor);
-    }
-
     /// <summary>
     /// RepairDoor bridge (Eris <c>rituals/machinery.dm:100-145</c>): the litany names the door and
     /// its caster. Validation checks damage and biomatter before the cast spends power.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyRepairDoor(Entity<NeoTheologyDoorComponent> ent, ref LitanyRepairDoorEvent args)
     {
         args.Handled = TryRepair(ent.Owner, args.User, RepairCost, args.ValidateOnly);

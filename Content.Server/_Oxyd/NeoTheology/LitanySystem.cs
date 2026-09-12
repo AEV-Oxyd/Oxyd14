@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Server.Chat.Systems;
+using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
@@ -44,6 +45,7 @@ public sealed partial class LitanySystem : EntitySystem
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly SanitySystem _sanity = default!;
 
     private readonly Dictionary<string, PendingLitanyCast> _pendingByRequest = new(StringComparer.Ordinal);
     private readonly Dictionary<EntityUid, ActorRateState> _rateByActor = new();
@@ -62,6 +64,16 @@ public sealed partial class LitanySystem : EntitySystem
             subs.Event<BeginLitanyMessage>(OnBeginLitanyMessage);
             subs.Event<CancelLitanyMessage>(OnCancelLitanyMessage);
         });
+    }
+
+    [SubscribeLocalEvent]
+    private void OnLitanySanityDelta(Entity<SanityComponent> ent, ref LitanySanityDeltaEvent args)
+    {
+        if (args.Handled)
+            return;
+
+        _sanity.ApplySanityDelta(ent, SanitySource.Belief, args.Amount);
+        args.Handled = true;
     }
 
     public override void Update(float frameTime)

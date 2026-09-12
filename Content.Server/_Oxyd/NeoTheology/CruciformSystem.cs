@@ -141,16 +141,16 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     }
 
     /// <summary>
-    /// The aura upgrade needs the view cadence, and the martyr upgrade needs a death marker.
+    /// The aura upgrade needs view ticks. The martyr upgrade needs a death marker.
     /// Neither can live on the implant, so the body carries them; rebuild the pair whenever the
     /// implant lands or leaves, or the upgrade slot changes.
     /// </summary>
     public void RefreshUpgradeBehaviors(EntityUid body, CruciformComponent component)
     {
-        if (component.Upgrade is { } aura && HasComp<CruciformUpgradeAuraComponent>(aura) &&
-            !HasComp<ViewTickerComponent>(body))
+        if (component.Upgrade is { } upgrade && TryComp<CruciformUpgradeAuraComponent>(upgrade, out var aura))
         {
-            EnsureComp<ViewTickerComponent>(body).trackSeen = false;
+            var ticker = EnsureComp<ViewTickerComponent>(body);
+            ticker.range = Math.Max(ticker.range, aura.Radius);
         }
 
         if (component.ImplantedEntity == body &&

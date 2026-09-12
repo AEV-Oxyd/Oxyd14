@@ -32,13 +32,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly NtUplinkSystem _uplink = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<CruciformComponent, CoreModuleInstalledEvent>(OnModuleInstalled);
-        SubscribeLocalEvent<CruciformComponent, CoreModuleUninstalledEvent>(OnModuleUninstalled);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyWriteSoulSnapshotEvent>(OnLitanyWriteSoulSnapshot);
-    }
-
+    [SubscribeLocalEvent]
     private void OnModuleInstalled(EntityUid cruciform, CruciformComponent comp, ref CoreModuleInstalledEvent args)
     {
         if (args.Module == CloningModule)
@@ -47,6 +41,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
             _uplink.OnUplinkInstalled(cruciform);
     }
 
+    [SubscribeLocalEvent]
     private void OnModuleUninstalled(EntityUid cruciform, CruciformComponent comp, ref CoreModuleUninstalledEvent args)
     {
         if (args.Module == CloningModule)
@@ -60,6 +55,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
     /// stored soul from the living wearer onto their installed cruciform. Raised on the body, so
     /// the handler resolves the implant from the bearer link first.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyWriteSoulSnapshot(EntityUid body, CruciformBearerComponent bearer, ref LitanyWriteSoulSnapshotEvent args)
     {
         if (bearer.Cruciform is not { } cruciform ||

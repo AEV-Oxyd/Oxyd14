@@ -11,7 +11,6 @@ using Content.Server.Objectives;
 using Content.Server.Storage.EntitySystems;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared._Oxyd.Framework.RadialMenu;
-using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mind;
@@ -51,19 +50,7 @@ public sealed partial class SanitySystem : EntitySystem
         SubscribeLocalEvent<InfluenceSanityOnTasteComponent, FlavorProfileModificationEvent>(OnBite);
         SubscribeLocalEvent<ObjectiveGiveInsightComponent, ObjectiveCompletedEvent>(ObjectiveGiveInsight);
         SubscribeLocalEvent<ObjectiveGiveRestComponent, ObjectiveCompletedEvent>(ObjectiveGiveRest);
-        SubscribeLocalEvent<SanityComponent, LitanySanityDeltaEvent>(OnLitanySanityDelta);
         influenceQuery = GetEntityQuery<InfluenceSanityOnViewComponent>();
-    }
-
-    /// <summary>
-    /// Revelation bridge: the shared litany effect cannot call this server system, so it
-    /// raises <see cref="LitanySanityDeltaEvent"/> on the target body. Only a handler sets
-    /// <c>Handled</c>, so a target without sanity stays the effect's failure path.
-    /// </summary>
-    private void OnLitanySanityDelta(Entity<SanityComponent> ent, ref LitanySanityDeltaEvent args)
-    {
-        ApplySanityDelta(ent, SanitySource.Belief, args.Amount);
-        args.Handled = true;
     }
 
     private void OnBite(Entity<InfluenceSanityOnTasteComponent> ent, ref FlavorProfileModificationEvent args)
@@ -197,8 +184,7 @@ public sealed partial class SanitySystem : EntitySystem
             ent.Comp.modifiers[f][(int)SanIndex.deltaMult] = 1f;
         }
 
-        // The sanity scan owns the seen set; an aura ticker on the same body must not disable it.
-        EnsureComp<ViewTickerComponent>(ent).trackSeen = true;
+        EnsureComp<ViewTickerComponent>(ent);
     }
 
 

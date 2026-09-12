@@ -34,19 +34,16 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly PlantTraySystem _plantTray = default!;
-    [Dependency] private readonly ViewCalcSystem _viewCalc = default!;
+    [Dependency] private readonly PlantHolderSystem _plantHolder = default!;
     [Dependency] private readonly SharedTransformSystem _xform = default!;
     [Dependency] private readonly IPrototypeManager _prototypes = default!;
 
     private static readonly ProtoId<DamageGroupPrototype> BruteGroup = "Brute";
     private static readonly ProtoId<DamageGroupPrototype> BurnGroup = "Burn";
 
-    /// <summary>
-    /// The aura fires on the view cadence, the same one-second heartbeat the bearer already
-    /// gets for sight. No private timer and no full bearer scan.
-    /// </summary>
+    /// <summary>Applies the aura to the visible targets from the bearer's view tick.</summary>
     [SubscribeLocalEvent]
-    private void OnCadence(Entity<CruciformBearerComponent> ent, ref ViewCadenceEvent args)
+    private void OnViewTick(Entity<CruciformBearerComponent> ent, ref ViewTickEvent args)
     {
         if (!_cruciform.TryGetCruciformEntity(ent.Owner, out _, out var component) || !component.Active)
             return;
@@ -55,7 +52,7 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
             !TryComp<CruciformUpgradeAuraComponent>(upgrade, out var aura))
             return;
 
-        ApplyAura(ent.Owner, aura);
+        ApplyAura(ent.Owner, aura, args.seen);
     }
 
     /// <summary>
@@ -76,62 +73,61 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
         TriggerMartyr(ent.Owner, cruciform, component, upgrade, martyr);
     }
 
-    private void ApplyAura(EntityUid body, CruciformUpgradeAuraComponent aura)
+    private void ApplyAura(EntityUid body, CruciformUpgradeAuraComponent aura, HashSet<EntityUid> seen)
     {
         if (aura.Radius <= 0)
             return;
 
-        var coordinates = Transform(body).Coordinates;
         var origin = _xform.GetMapCoordinates(body);
-
-        // Eris heals only wounded faithful in view and only above the threshold.
-        foreach (var (target, damageable) in _lookup.GetEntitiesInRange<DamageableComponent>(coordinates, aura.Radius))
+        foreach (var target in seen)
         {
-            if (target == body || _mobState.IsDead(target) || !HasComp<CruciformBearerComponent>(target))
-                continue;
-            if (!_viewCalc.InLineOfSight(origin, target))
+            if (TerminatingOrDeleted(target))
                 continue;
 
-            var groups = _damageable.GetDamagePerGroup((target, damageable));
-            var heal = new DamageSpecifier();
+            var coordinates = _xform.GetMapCoordinates(target);
+            if (!origin.InRange(coordinates, aura.Radius))
+                continue;
 
-            if (groups.GetValueOrDefault(BruteGroup) > aura.HealThreshold)
-                AddGroupHeal(heal, damageable, BruteGroup, aura.BruteHealPerSecond);
-            if (groups.GetValueOrDefault(BurnGroup) > aura.HealThreshold)
-                AddGroupHeal(heal, damageable, BurnGroup, aura.BurnHealPerSecond);
-
-            if (heal.DamageDict.Count > 0)
-                _damageable.TryChangeDamage(target, heal);
+            if (target != body && !_mobState.IsDead(target) && _cruciform.IsActiveBearer(target) &&
+                TryComp<DamageableComponent>(target, out var damageable))
+            {
+                var groups = _damageable.GetDamagePerGroup((target, damageable));
+                var heal = new DamageSpecifier();
+                if (groups.GetValueOrDefault(BruteGroup) > aura.HealThreshold)
+                    AddGroupHeal(heal, damageable, BruteGroup, aura.BruteHealPerSecond);
+                if (groups.GetValueOrDefault(BurnGroup) > aura.HealThreshold)
+                    AddGroupHeal(heal, damageable, BurnGroup, aura.BurnHealPerSecond);
+                if (heal.DamageDict.Count > 0)
+                    _damageable.TryChangeDamage(target, heal);
+            }
         }
 
+        // Plants use the cheaper spatial lookup.
+        var position = Transform(body).Coordinates;
         if (aura.PlantHealPerSecond > 0)
         {
-            foreach (var (plant, holder) in _lookup.GetEntitiesInRange<PlantHolderComponent>(coordinates, aura.Radius))
+            foreach (var (plant, holder) in _lookup.GetEntitiesInRange<PlantHolderComponent>(position, aura.Radius))
             {
-                if (holder.Dead || holder.Health >= aura.PlantHealthCap)
-                    continue;
-
-                holder.Health = MathF.Min(aura.PlantHealthCap, holder.Health + aura.PlantHealPerSecond);
+                if (!holder.Dead)
+                    _plantHolder.AdjustsHealth((plant, holder), aura.PlantHealPerSecond);
             }
         }
 
         if (aura.WeedReducePerSecond > 0)
         {
-            foreach (var (tray, trayComponent) in _lookup.GetEntitiesInRange<PlantTrayComponent>(coordinates, aura.Radius))
+            foreach (var (tray, component) in _lookup.GetEntitiesInRange<PlantTrayComponent>(position, aura.Radius))
             {
-                if (trayComponent.WeedLevel <= 0)
-                    continue;
-
-                _plantTray.AdjustWeed((tray, trayComponent), -aura.WeedReducePerSecond);
+                if (component.WeedLevel > 0)
+                    _plantTray.AdjustWeed((tray, component), -aura.WeedReducePerSecond);
             }
         }
 
-        if (!aura.CleanPuddles)
-            return;
-
         // Eris clean_blood() only wipes the bearer's own tile.
-        foreach (var (puddle, _) in _lookup.GetEntitiesInRange<PuddleComponent>(coordinates, 0.5f))
-            QueueDel(puddle);
+        if (aura.CleanPuddles)
+        {
+            foreach (var (puddle, _) in _lookup.GetEntitiesInRange<PuddleComponent>(position, 0.5f))
+                QueueDel(puddle);
+        }
     }
 
     /// <summary>

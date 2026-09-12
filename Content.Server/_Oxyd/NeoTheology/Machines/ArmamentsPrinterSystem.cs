@@ -14,7 +14,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 /// P3.5: points and purchase counters live on the Eye, so the printer only validates the buyer and
 /// routes the debit through <see cref="EyeOfTheProtectorSystem.TrySpendArmaments"/>.
 /// </summary>
-public sealed class ArmamentsPrinterSystem : EntitySystem
+public sealed partial class ArmamentsPrinterSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
     [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
@@ -22,20 +22,12 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<ArmamentsPrinterComponent, AfterActivatableUIOpenEvent>(OnUiOpened);
-        SubscribeLocalEvent<ArmamentsPrinterComponent, PurchaseArmamentMessage>(OnPurchaseMessage);
-        SubscribeLocalEvent<ArmamentsPrinterComponent, LitanyOpenArmamentsEvent>(OnLitanyOpenArmaments);
-    }
-
     /// <summary>
     /// OrderArmaments bridge (Eris <c>rituals/priest.dm:492-520</c>): the priest opens the shop
     /// from the machine; Eris opened the EOTP's own armory UI, the fork's shop is this printer
     /// (P2.16), so the handler opens the printer's existing BUI for the caster.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyOpenArmaments(EntityUid uid, ArmamentsPrinterComponent component, ref LitanyOpenArmamentsEvent args)
     {
         if (!_machines.IsOperational(uid) ||
@@ -54,11 +46,13 @@ public sealed class ArmamentsPrinterSystem : EntitySystem
         args.Handled = args.ValidateOnly || _ui.TryOpenUi(uid, ArmamentsPrinterUiKey.Key, args.User);
     }
 
+    [SubscribeLocalEvent]
     private void OnUiOpened(EntityUid uid, ArmamentsPrinterComponent component, AfterActivatableUIOpenEvent args)
     {
         UpdateUi(uid);
     }
 
+    [SubscribeLocalEvent]
     private void OnPurchaseMessage(EntityUid uid, ArmamentsPrinterComponent component, PurchaseArmamentMessage args)
     {
         TryPurchase(uid, args.Actor, args.ArmamentId);

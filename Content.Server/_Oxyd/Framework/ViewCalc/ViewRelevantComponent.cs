@@ -1,5 +1,3 @@
-using Robust.Shared.Map;
-
 namespace Content.Server._Oxyd.Framework.ViewCalc;
 
 /// <summary>
@@ -17,16 +15,8 @@ public sealed partial class ViewRelevantComponent : Component
 [RegisterComponent]
 public sealed partial class ViewTickerComponent : Component
 {
-    public TimeSpan lastTickTime = TimeSpan.Zero;
-    public MapCoordinates lastTickPosition =  new MapCoordinates();
+    [DataField]
     public float range = 8f;
-
-    /// <summary>
-    /// When true, <see cref="ViewCalcSystem"/> computes the seen set and raises
-    /// <see cref="ViewTickEvent"/>. When false, the ticker pays for nothing beyond
-    /// the <see cref="ViewCadenceEvent"/> heartbeat.
-    /// </summary>
-    public bool trackSeen = true;
 
     public HashSet<EntityUid> lastSeen = new();
 }

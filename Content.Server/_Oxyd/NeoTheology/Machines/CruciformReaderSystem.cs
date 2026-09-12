@@ -21,7 +21,7 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 /// cruciform whose soul (P2.11) is read back out, and the cloner pays its biomass up front before
 /// upstream <see cref="CloningPodSystem"/> grows the body.
 /// </summary>
-public sealed class CruciformReaderSystem : EntitySystem
+public sealed partial class CruciformReaderSystem : EntitySystem
 {
     [Dependency] private readonly MaterialStorageSystem _materialStorage = default!;
     [Dependency] private readonly CloningPodSystem _cloningPod = default!;
@@ -33,13 +33,7 @@ public sealed class CruciformReaderSystem : EntitySystem
     [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly IPlayerManager _players = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<CruciformReaderComponent, EntInsertedIntoContainerMessage>(OnInserted);
-        SubscribeLocalEvent<CruciformReaderComponent, EntRemovedFromContainerMessage>(OnRemoved);
-        SubscribeLocalEvent<CruciformClonerComponent, LitanyResurrectionEvent>(OnLitanyResurrection);
-    }
-
+    [SubscribeLocalEvent]
     private void OnInserted(EntityUid uid, CruciformReaderComponent reader, EntInsertedIntoContainerMessage args)
     {
         if (args.Container.ID != reader.SlotId)
@@ -49,6 +43,7 @@ public sealed class CruciformReaderSystem : EntitySystem
         Dirty(uid, reader);
     }
 
+    [SubscribeLocalEvent]
     private void OnRemoved(EntityUid uid, CruciformReaderComponent reader, EntRemovedFromContainerMessage args)
     {
         if (args.Container.ID != reader.SlotId)
@@ -109,6 +104,7 @@ public sealed class CruciformReaderSystem : EntitySystem
                TerminatingOrDeleted(clone) || _mobState.IsDead(clone);
     }
 
+    [SubscribeLocalEvent]
     private void OnLitanyResurrection(Entity<CruciformClonerComponent> ent, ref LitanyResurrectionEvent args)
     {
         if (!CanResurrect(ent.Owner, args.Reader))

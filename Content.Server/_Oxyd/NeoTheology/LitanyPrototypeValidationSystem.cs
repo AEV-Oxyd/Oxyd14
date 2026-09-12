@@ -11,7 +11,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// Validates the loaded NeoTheology catalog before entity systems can use it and
 /// maintains the server-side phrase/prototype index used by future cast systems.
 /// </summary>
-public sealed class LitanyPrototypeValidationSystem : EntitySystem
+public sealed partial class LitanyPrototypeValidationSystem : EntitySystem
 {
     private readonly Dictionary<string, LitanyPrototype> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, LitanyPrototype> _byPhrase = new(StringComparer.Ordinal);
@@ -21,7 +21,6 @@ public sealed class LitanyPrototypeValidationSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<PrototypesReloadedEventArgs>(OnPrototypesReloaded);
         ValidateAndIndex(initialLoad: true);
     }
 
@@ -75,6 +74,7 @@ public sealed class LitanyPrototypeValidationSystem : EntitySystem
         return _byId.Values.Where(IsCastable);
     }
 
+    [SubscribeLocalEvent]
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs args)
     {
         // Reloads happen after initial startup. Fail closed rather than allowing a

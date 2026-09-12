@@ -11,6 +11,9 @@ namespace Content.Shared._Oxyd.NeoTheology;
 /// </summary>
 public partial class SharedCruciformSystem : EntitySystem
 {
+    [Dependency] private readonly EntityLookupSystem _lookup = default!;
+    [Dependency] private readonly SharedTransformSystem _transform = default!;
+
     public bool TryGetLinkedBearer(EntityUid body, EntityUid cruciform, out CruciformComponent component)
     {
         component = null!;
@@ -58,27 +61,19 @@ public partial class SharedCruciformSystem : EntitySystem
 
     /// <summary>
     /// Active cruciform bearers within <paramref name="range"/> of <paramref name="origin"/>.
-    /// ponytail: linear scan per call. Fine for ≤100 players; add a spatial index if a
-    /// ceremony ever runs per-tick on a 200-pop server.
     /// </summary>
     public IEnumerable<(EntityUid Body, EntityUid Cruciform, CruciformComponent CruciformState)> BearersInRange(
         EntityUid origin, float range)
     {
-        var xform = Transform(origin);
-        var query = EntityQueryEnumerator<CruciformBearerComponent, TransformComponent>();
+        if (range <= 0)
+            yield break;
 
-        while (query.MoveNext(out var body, out var bearer, out var bodyXform))
+        var coordinates = Transform(origin).Coordinates;
+        foreach (var (body, _) in _lookup.GetEntitiesInRange<CruciformBearerComponent>(coordinates, range))
         {
-            if (bodyXform.MapID != xform.MapID)
-                continue;
-            if ((bodyXform.WorldPosition - xform.WorldPosition).Length() > range)
-                continue;
-            if (bearer.Cruciform is not { } cruciform)
-                continue;
-            if (!TryComp<CruciformComponent>(cruciform, out var comp) || !comp.Active)
-                continue;
-
-            yield return (body, cruciform, comp);
+            if (_transform.InRange(coordinates, Transform(body).Coordinates, range) &&
+                TryGetCruciform(body, out var cruciform, out var comp))
+                yield return (body, cruciform, comp);
         }
     }
 }

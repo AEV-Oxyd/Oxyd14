@@ -2,6 +2,9 @@ using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
+using Content.Server._Oxyd.Framework.ViewCalc;
+using Content.Shared.Botany.Components;
+using Content.Shared.Botany.Systems;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Implants;
@@ -169,6 +172,7 @@ public sealed class ObeliskTest : GameTest
             transform.SetCoordinates(second, map.GridCoords);
             SComp<ObeliskComponent>(second).RegenMultiplier = 3;
             _obelisk.Tick(first);
+            _obelisk.Tick(second);
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 3));
             SEntMan.DeleteEntity(second);
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
@@ -202,6 +206,32 @@ public sealed class ObeliskTest : GameTest
             receiver.Powered = true;
             SEntMan.System<SharedTransformSystem>().Unanchor(obelisk);
             _obelisk.Tick(obelisk);
+            Assert.That(SComp<ObeliskComponent>(obelisk).Active, Is.False);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
+        });
+    }
+
+    [Test]
+    public async Task ViewTickAffectsOnlyItsVisibleTargets()
+    {
+        var map = await Pair.CreateMachineTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var obelisk = SpawnObelisk(map.GridCoords);
+            var body = ActiveBearer(map.GridCoords);
+            var normal = _cruciform.GetRegenerationPerSecond(body);
+            var visible = SSpawnAtPosition(HostileProto, map.GridCoords);
+            var hidden = SSpawnAtPosition(HostileProto, map.GridCoords);
+            var tray = SSpawnAtPosition("HydroponicsTrayEmpty", map.GridCoords);
+            SEntMan.System<PlantTraySystem>().AdjustWeed((tray, SComp<PlantTrayComponent>(tray)), 10);
+
+            SEntMan.EventBus.RaiseLocalEvent(obelisk, new ViewTickEvent { seen = [body, visible, tray] });
+            Assert.That(DamageOf(visible), Is.GreaterThan(0));
+            Assert.That(DamageOf(hidden), Is.Zero);
+            Assert.That(SComp<PlantTrayComponent>(tray).WeedLevel, Is.Zero);
+            Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal * 2));
+
+            SEntMan.EventBus.RaiseLocalEvent(obelisk, new ViewTickEvent { seen = [] });
             Assert.That(SComp<ObeliskComponent>(obelisk).Active, Is.False);
             Assert.That(_cruciform.GetRegenerationPerSecond(body), Is.EqualTo(normal));
         });

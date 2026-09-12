@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Shared._Oxyd.NeoTheology.Components;
@@ -13,180 +14,135 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology.Machines;
 
-/// <summary>
-/// P2.13: the obelisk's aura. A <see cref="ViewCadenceEvent"/> drives one pulse per second; the
-/// work lives in <see cref="Tick"/> so tests drive it without waiting out the cadence.
-/// </summary>
+/// <summary>Applies the obelisk aura to the visible targets from each view tick.</summary>
 public sealed partial class ObeliskSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
     [Dependency] private readonly EyeOfTheProtectorSystem _eye = default!;
     [Dependency] private readonly DamageableSystem _damageable = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly PlantTraySystem _tray = default!;
     [Dependency] private readonly SanitySystem _sanity = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
-
+    [Dependency] private readonly ViewCalcSystem _view = default!;
+    [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly NpcFactionSystem _factions = default!;
 
     [SubscribeLocalEvent]
     private void OnInit(Entity<ObeliskComponent> ent, ref ComponentInit args)
     {
-        var ticker = EnsureComp<ViewTickerComponent>(ent);
-        // The aura runs its own broad phase. It does not need the raycast seen set.
-        ticker.trackSeen = false;
+        EnsureComp<ViewTickerComponent>(ent).range = ent.Comp.Radius;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnMobStartup(Entity<MobStateComponent> ent, ref ComponentStartup args)
+    {
+        EnsureComp<ViewRelevantComponent>(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnTrayInit(Entity<PlantTrayComponent> ent, ref ComponentInit args)
+    {
+        EnsureComp<ViewRelevantComponent>(ent);
     }
 
     [SubscribeLocalEvent]
     private void OnShutdown(Entity<ObeliskComponent> ent, ref ComponentShutdown args)
     {
-        RefreshRegeneration(ent.Owner);
+        foreach (var implant in ent.Comp.AffectedCruciforms)
+            SetRegeneration(implant, ent, null);
+        ent.Comp.AffectedCruciforms.Clear();
     }
 
     [SubscribeLocalEvent]
-    private void OnCadence(Entity<ObeliskComponent> ent, ref ViewCadenceEvent args)
+    private void OnViewTick(Entity<ObeliskComponent> ent, ref ViewTickEvent args)
     {
-        Tick(ent);
+        Tick(ent, ent.Comp, args.seen);
     }
 
-    /// <summary>
-    /// Publish the strongest active aura to every bearer. One lookup per obelisk replaces the
-    /// nested scan over every cruciform and every obelisk.
-    /// </summary>
-    private void RefreshRegeneration(EntityUid? excluded = null)
+    private void SetRegeneration(EntityUid implant, EntityUid source, float? multiplier)
     {
-        var wanted = new Dictionary<EntityUid, float>();
-        var obelisks = EntityQueryEnumerator<ObeliskComponent, TransformComponent>();
-        while (obelisks.MoveNext(out var uid, out var obelisk, out var source))
-        {
-            if (uid == excluded || !_machines.IsOperational(uid))
-                continue;
+        if (!TryComp<CruciformComponent>(implant, out var state))
+            return;
 
-            if (obelisk.Radius <= 0)
-                continue;
+        if (multiplier is { } value)
+            state.ObeliskRegeneration[source] = value;
+        else
+            state.ObeliskRegeneration.Remove(source);
 
-            foreach (var (body, bearer) in _lookup.GetEntitiesInRange<CruciformBearerComponent>(source.Coordinates, obelisk.Radius))
-            {
-                if (bearer.Cruciform is not { } cruciform ||
-                    !TryComp<CruciformComponent>(cruciform, out var state) ||
-                    !state.Active)
-                    continue;
+        var strongest = Math.Max(1f, state.ObeliskRegeneration.Values.DefaultIfEmpty(1f).Max());
+        if (Math.Abs(state.RegenerationMultiplier - strongest) < 0.001f)
+            return;
 
-                wanted[body] = Math.Max(wanted.GetValueOrDefault(body, 1f), obelisk.RegenMultiplier);
-            }
-        }
-
-        // Reset every bearer that no longer stands in an active aura. RecomputeProfile consumes the value.
-        var implants = EntityQueryEnumerator<CruciformComponent>();
-        while (implants.MoveNext(out var implant, out var state))
-        {
-            var value = 1f;
-            if (state.ImplantedEntity is { } body && !TerminatingOrDeleted(body))
-                value = wanted.GetValueOrDefault(body, 1f);
-
-            if (Math.Abs(state.RegenerationMultiplier - value) < 0.001f)
-                continue;
-
-            state.RegenerationMultiplier = value;
-            _cruciform.RecomputeProfile(implant, state);
-        }
+        state.RegenerationMultiplier = strongest;
+        _cruciform.RecomputeProfile(implant, state);
     }
 
-    /// <summary>One aura pulse: buff the faithful in range, punish the hostiles, kill the weeds.</summary>
-    public void Tick(EntityUid uid, ObeliskComponent? obelisk = null)
+    /// <summary>Runs one pulse. Direct callers request a fresh view; event handlers reuse the supplied view.</summary>
+    public void Tick(EntityUid uid, ObeliskComponent? obelisk = null, HashSet<EntityUid>? seen = null)
     {
         if (!Resolve(uid, ref obelisk))
             return;
 
-        RefreshRegeneration();
-        if (!_machines.IsOperational(uid))
+        var affected = new HashSet<EntityUid>();
+        var operational = _machines.IsOperational(uid);
+        var origin = _transform.GetMapCoordinates(uid);
+        if (operational)
         {
-            obelisk.Active = false;
-            Dirty(uid, obelisk);
-            return;
-        }
-
-        var xform = Transform(uid);
-        var faithful = 0;
-
-        // Sanctify's forced window lapses on its own; Eris counts force_active down per tick.
-        if (obelisk.ForceActiveUntil > TimeSpan.Zero && _timing.CurTime >= obelisk.ForceActiveUntil)
-            obelisk.ForceActiveUntil = TimeSpan.Zero;
-
-        var eye = _eye.FindEye(uid);
-        if (eye is { } observer)
-            _eye.ObserveArea(observer, uid, obelisk.Radius);
-
-        if (obelisk.Radius > 0)
-        {
-            foreach (var (body, bearer) in _lookup.GetEntitiesInRange<CruciformBearerComponent>(xform.Coordinates, obelisk.Radius))
+            seen ??= _view.GetEntsInView(origin, obelisk.Radius);
+            var eye = _eye.FindEye(uid);
+            foreach (var target in seen)
             {
-                if (bearer.Cruciform is not { } cruciform ||
-                    !TryComp<CruciformComponent>(cruciform, out var state) ||
-                    !state.Active)
+                if (TerminatingOrDeleted(target) ||
+                    !origin.InRange(_transform.GetMapCoordinates(target), obelisk.Radius))
                     continue;
 
-                faithful++;
+                if (eye is { } observer)
+                    _eye.ObserveEntity(observer, target);
 
-                if (TryComp<SanityComponent>(body, out var sanity))
-                    _sanity.ApplySanityDelta((body, sanity), SanitySource.Belief, obelisk.SanityPerSecond);
+                if (!_cruciform.TryGetCruciform(target, out var implant, out _))
+                    continue;
+
+                affected.Add(implant);
+                SetRegeneration(implant, uid, obelisk.RegenMultiplier);
+                if (TryComp<SanityComponent>(target, out var sanity))
+                    _sanity.ApplySanityDelta((target, sanity), SanitySource.Belief, obelisk.SanityPerSecond);
             }
         }
 
-        obelisk.Active = faithful > 0 || obelisk.ForceActiveUntil > _timing.CurTime;
-
-        Dirty(uid, obelisk);
-
-        if (obelisk.Active)
+        foreach (var implant in obelisk.AffectedCruciforms)
         {
-            DamageHostiles(uid, obelisk, xform);
-            WeedTrays(xform, obelisk);
+            if (!affected.Contains(implant))
+                SetRegeneration(implant, uid, null);
         }
-    }
+        obelisk.AffectedCruciforms = affected;
 
-    /// <summary>
-    /// Target hostile fauna factions only. Humans and faithful never qualify.
-    /// </summary>
-    private void DamageHostiles(EntityUid uid, ObeliskComponent obelisk, TransformComponent xform)
-    {
-        if (obelisk.Radius <= 0)
+        if (_timing.CurTime >= obelisk.ForceActiveUntil)
+            obelisk.ForceActiveUntil = TimeSpan.Zero;
+
+        obelisk.Active = operational && (affected.Count > 0 || obelisk.ForceActiveUntil > _timing.CurTime);
+        Dirty(uid, obelisk);
+        if (!obelisk.Active || seen == null)
             return;
 
         var hit = 0;
-        foreach (var (mob, mobState) in _lookup.GetEntitiesInRange<MobStateComponent>(xform.Coordinates, obelisk.Radius))
+        foreach (var target in seen)
         {
-            if (hit >= obelisk.MaxTargets)
-                break;
-            if (!_mobState.IsAlive(mob, mobState))
-                continue;
-            if (!TryComp<NpcFactionMemberComponent>(mob, out var faction))
-                continue;
-            if (HasComp<CruciformBearerComponent>(mob) || HasComp<HumanoidProfileComponent>(mob) ||
-                !_factions.IsMemberOfAny((mob, faction), obelisk.HostileFactions))
+            if (TerminatingOrDeleted(target) ||
+                !origin.InRange(_transform.GetMapCoordinates(target), obelisk.Radius))
                 continue;
 
-            if (_damageable.TryChangeDamage(mob, obelisk.HostileDamage, origin: uid))
+            if (hit < obelisk.MaxTargets &&
+                TryComp<MobStateComponent>(target, out var mobState) && _mobState.IsAlive(target, mobState) &&
+                TryComp<NpcFactionMemberComponent>(target, out var faction) &&
+                !HasComp<CruciformBearerComponent>(target) && !HasComp<HumanoidProfileComponent>(target) &&
+                _factions.IsMemberOfAny((target, faction), obelisk.HostileFactions) &&
+                _damageable.TryChangeDamage(target, obelisk.HostileDamage, origin: uid))
                 hit++;
-        }
-    }
 
-    /// <summary>
-    /// Eris tears up the weeds in range. The fork has no free-standing weed entity — weeds are a
-    /// level on <see cref="PlantTrayComponent"/> — so trays in range are weeded instead.
-    /// </summary>
-    private void WeedTrays(TransformComponent xform, ObeliskComponent obelisk)
-    {
-        if (obelisk.Radius <= 0)
-            return;
-
-        foreach (var (tray, trayComp) in _lookup.GetEntitiesInRange<PlantTrayComponent>(xform.Coordinates, obelisk.Radius))
-        {
-            if (trayComp.WeedLevel <= 0)
-                continue;
-
-            _tray.AdjustWeed((tray, trayComp), -obelisk.WeedRemovalPerSecond);
+            if (TryComp<PlantTrayComponent>(target, out var tray) && tray.WeedLevel > 0)
+                _tray.AdjustWeed((target, tray), -obelisk.WeedRemovalPerSecond);
         }
     }
 }

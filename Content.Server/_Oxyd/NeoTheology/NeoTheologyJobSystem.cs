@@ -10,11 +10,7 @@ public sealed partial class NeoTheologyJobSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<PlayerSpawnCompleteEvent>(OnSpawnComplete);
-    }
-
+    [SubscribeLocalEvent]
     private void OnSpawnComplete(PlayerSpawnCompleteEvent args)
     {
         if (args.JobId is not { } jobId)

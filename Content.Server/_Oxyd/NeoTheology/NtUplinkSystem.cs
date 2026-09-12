@@ -36,14 +36,6 @@ public sealed partial class NtUplinkSystem : EntitySystem
     [Dependency] private readonly StoreSystem _store = default!;
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<NtUplinkComponent, ComponentShutdown>(OnUplinkShutdown);
-        SubscribeLocalEvent<NtUplinkComponent, ImplantRemovedEvent>(OnImplantRemoved);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyUplinkReportEvent>(OnReport);
-        SubscribeLocalEvent<CruciformBearerComponent, LitanyUplinkOpenEvent>(OnOpen);
-    }
-
     /// <summary>The module install hook from <see cref="CoreModuleBehaviorSystem"/>.</summary>
     public void OnUplinkInstalled(EntityUid cruciform)
     {
@@ -115,12 +107,14 @@ public sealed partial class NtUplinkSystem : EntitySystem
         return storeUid;
     }
 
+    [SubscribeLocalEvent]
     private void OnUplinkShutdown(EntityUid uid, NtUplinkComponent component, ComponentShutdown args)
     {
         BankBalance(component);
         component.Store = null;
     }
 
+    [SubscribeLocalEvent]
     private void OnImplantRemoved(Entity<NtUplinkComponent> ent, ref ImplantRemovedEvent args)
     {
         BankBalance(ent.Comp);
@@ -149,6 +143,7 @@ public sealed partial class NtUplinkSystem : EntitySystem
     /// Knowledge (Eris <c>check_telecrystals</c>): report the remaining telecrystals, or the
     /// absence of an uplink. The validation pass only checks that the module is installed.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnReport(EntityUid body, CruciformBearerComponent bearer, ref LitanyUplinkReportEvent args)
     {
         if (bearer.Cruciform is not { } cruciform || !TryGetUplink(cruciform, out var uplink))
@@ -174,6 +169,7 @@ public sealed partial class NtUplinkSystem : EntitySystem
     /// Bounty (Eris <c>spawn_item</c>): open the hidden uplink's store interface. The uplink sits
     /// inside the cruciform, so the interface opens from anywhere.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnOpen(EntityUid body, CruciformBearerComponent bearer, ref LitanyUplinkOpenEvent args)
     {
         if (bearer.Cruciform is not { } cruciform || !TryGetUplink(cruciform, out var uplink))

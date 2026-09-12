@@ -1,7 +1,12 @@
+using System.Linq;
 using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
+using Content.IntegrationTests.Utility;
 using Content.Server._Oxyd.NeoTheology;
+using Content.Server._Oxyd.Framework.ViewCalc;
+using Content.Shared.Botany.Components;
+using Content.Shared.Botany.Systems;
 using Content.Server.Atmos.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
@@ -24,6 +29,16 @@ namespace Content.IntegrationTests.Tests._Oxyd.NeoTheology;
 
 public sealed class LitanyAuditRegressionTest : GameTest
 {
+    [TestPrototypes]
+    private const string Prototypes = """
+        - type: entity
+          parent: WheatPlants
+          id: TestNtFragilePlant
+          components:
+          - type: Plant
+            endurance: 10
+        """;
+
     public override PoolSettings PoolSettings => new() { Connected = false, DummyTicker = false };
     [SidedDependency(Side.Server)] private readonly CruciformSystem _cruciform = default!;
     [SidedDependency(Side.Server)] private readonly CruciformUpgradeSystem _upgrades = default!;
@@ -93,6 +108,91 @@ public sealed class LitanyAuditRegressionTest : GameTest
         await RunSeconds(3f);
         await Server.WaitAssertion(() =>
             Assert.That(_damage.GetTotalDamage(target).Float(), Is.LessThan(60f)));
+    }
+
+    [Test]
+    public async Task AuraUsesViewTargetsForHealingAndLookupForPlants()
+    {
+        var map = await Pair.CreateMachineTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var bearer = Bearer(map.GridCoords);
+            var visible = Bearer(map.GridCoords.Offset(new Vector2(2, 0)));
+            var hidden = Bearer(map.GridCoords.Offset(new Vector2(2, 0)));
+            var outside = Bearer(map.GridCoords.Offset(new Vector2(20, 0)));
+            var tray = SSpawnAtPosition("HydroponicsTrayEmpty", map.GridCoords);
+            var plant = SSpawnAtPosition("TestNtFragilePlant", map.GridCoords);
+            var health = SComp<PlantHolderComponent>(plant);
+            health.Health = 9.95f;
+            Install(bearer, "OxydNtUpgradeNaturesBlessing");
+            foreach (var target in new[] { visible, hidden, outside })
+                _damage.TryChangeDamage(target, new DamageSpecifier { DamageDict = { ["Slash"] = 60 } });
+            SEntMan.System<PlantTraySystem>().AdjustWeed((tray, SComp<PlantTrayComponent>(tray)), 10);
+
+            SEntMan.EventBus.RaiseLocalEvent(bearer, new ViewTickEvent { seen = [visible, outside] });
+            Assert.That(_damage.GetTotalDamage(visible).Float(), Is.LessThan(60));
+            Assert.That(_damage.GetTotalDamage(hidden).Float(), Is.EqualTo(60));
+            Assert.That(_damage.GetTotalDamage(outside).Float(), Is.EqualTo(60));
+            Assert.That(SComp<PlantTrayComponent>(tray).WeedLevel, Is.LessThan(10));
+            Assert.That(health.Health, Is.EqualTo(SComp<PlantComponent>(plant).Endurance));
+        });
+    }
+
+    [Test]
+    public async Task StationaryViewTickerRefreshesTargetsAndRespectsWalls()
+    {
+        var map = await Pair.CreateMachineTestMap();
+        EntityUid observer = default;
+        EntityUid target = default;
+        EntityUid wall = default;
+        await Server.WaitAssertion(() =>
+        {
+            var origin = map.GridCoords.Offset(new Vector2(0.5f, 0.5f));
+            observer = SSpawnAtPosition(null, origin);
+            SEntMan.AddComponent<ViewTickerComponent>(observer);
+            target = Bearer(origin.Offset(new Vector2(2, 0)));
+            wall = SSpawnAtPosition("WallSolid", origin.Offset(new Vector2(1, 0)));
+            var view = SEntMan.System<ViewCalcSystem>();
+            Assert.That(SEntMan.HasComponent<ViewRelevantComponent>(target), Is.True);
+            Assert.That(view.GetEntsInView(_transform.GetMapCoordinates(observer), 8), Does.Not.Contain(target));
+        });
+        await RunSeconds(1.2f);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SComp<ViewTickerComponent>(observer).lastSeen, Does.Not.Contain(target));
+            SEntMan.DeleteEntity(wall);
+        });
+        await RunSeconds(1.2f);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SComp<ViewTickerComponent>(observer).lastSeen, Does.Contain(target));
+            _transform.SetCoordinates(target, map.GridCoords.Offset(new Vector2(20, 0)));
+        });
+        await RunSeconds(1.2f);
+        await Server.WaitAssertion(() =>
+            Assert.That(SComp<ViewTickerComponent>(observer).lastSeen, Does.Not.Contain(target)));
+    }
+
+    [Test]
+    public async Task NearbyBearerLookupExcludesOtherMapsInactiveAndBrokenLinks()
+    {
+        var map = await Pair.CreateTestMap();
+        var otherMap = await Pair.CreateTestMap();
+        await Server.WaitAssertion(() =>
+        {
+            var origin = SSpawnAtPosition(null, map.GridCoords);
+            var nearby = Bearer(map.GridCoords.Offset(new Vector2(1, 0)));
+            Bearer(map.GridCoords.Offset(new Vector2(7.1f, 0)));
+            Bearer(otherMap.GridCoords);
+            var inactive = SSpawnAtPosition("MobHuman", map.GridCoords);
+            Assert.That(_implants.AddImplant(inactive, "OxydNtCruciform"), Is.Not.Null);
+            var broken = Bearer(map.GridCoords);
+            Assert.That(_cruciform.TryGetCruciform(broken, out _, out var state), Is.True);
+            state.ImplantedEntity = null;
+
+            Assert.That(_cruciform.BearersInRange(origin, 7).Select(entry => entry.Body), Is.EquivalentTo(new[] { nearby }));
+            Assert.That(_cruciform.BearersInRange(origin, 0), Is.Empty);
+        });
     }
 
     [Test]

@@ -23,16 +23,11 @@ public sealed partial class BioreactorSystem : EntitySystem
     [Dependency] private readonly NeoTheologyMachineSystem _machines = default!;
     [Dependency] private readonly SharedStackSystem _stack = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<BioreactorComponent, LitanyPumpBioreactorEvent>(OnLitanyPumpBioreactor);
-        SubscribeLocalEvent<BioreactorComponent, LitanyToggleBioreactorChamberEvent>(OnLitanyToggleBioreactorChamber);
-    }
-
     /// <summary>
     /// BioreactorSolution bridge (Eris <c>rituals/machinery.dm:200-213</c>): the litany pumps the
     /// chamber in or out; the shut/unbreached gate is <see cref="TryPumpSolution"/>'s.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyPumpBioreactor(Entity<BioreactorComponent> ent, ref LitanyPumpBioreactorEvent args)
     {
         args.Handled = args.ValidateOnly ? CanPumpSolution(ent.Owner, ent.Comp) : TryPumpSolution(ent.Owner, ent.Comp);
@@ -43,6 +38,7 @@ public sealed partial class BioreactorSystem : EntitySystem
     /// shuts the platform door; the breach re-scan and the solution gate are
     /// <see cref="TryToggleChamber"/>'s.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnLitanyToggleBioreactorChamber(Entity<BioreactorComponent> ent, ref LitanyToggleBioreactorChamberEvent args)
     {
         args.Handled = args.ValidateOnly ? CanToggleChamber(ent.Owner, ent.Comp) : TryToggleChamber(ent.Owner, ent.Comp);

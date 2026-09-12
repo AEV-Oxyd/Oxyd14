@@ -34,15 +34,6 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
     /// <summary>Reach that still counts as "on the tile the caster faces" (the tile is 1 m away).</summary>
     private const float ScanRadius = 1.6f;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<LitanyBlueprintInfoEvent>(OnBlueprintInfo);
-        SubscribeLocalEvent<LitanyManifestationEvent>(OnManifestation);
-        SubscribeLocalEvent<LitanyUprootEvent>(OnUproot);
-    }
-
     /// <summary>
     /// DivineGuidance (Eris <c>blueprint_check</c>): prints what the chosen blueprint needs.
     /// Exposed so tests can assert the list without scraping a popup.
@@ -59,6 +50,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnBlueprintInfo(ref LitanyBlueprintInfoEvent args)
     {
         if (!_prototypes.TryIndex(args.Blueprint, out NeoTheologyBlueprintPrototype? blueprint))
@@ -75,6 +67,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
     /// Manifestation (Eris <c>construction</c>): checks the front tile, spends the materials
     /// and raises the structure. A validate-only call must not mutate.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnManifestation(ref LitanyManifestationEvent args)
     {
         if (!_prototypes.TryIndex(args.Blueprint, out NeoTheologyBlueprintPrototype? blueprint))
@@ -117,6 +110,7 @@ public sealed partial class NeoTheologyConstructionSystem : EntitySystem
     /// Uproot (Eris <c>deconstruction</c>): returns the materials of the blueprint construct on
     /// the front tile, then deletes it. A validate-only call must not mutate.
     /// </summary>
+    [SubscribeLocalEvent]
     private void OnUproot(ref LitanyUprootEvent args)
     {
         if (!TryGetFrontTile(args.User, out _, out var frontTile))
