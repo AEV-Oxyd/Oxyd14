@@ -84,7 +84,7 @@
       slotTexture: suit_storage
       slotFlags: SUITSTORAGE, DEPENDANTRENDER
       stripTime: 3
-      uiWindowPos: 2,2
+      uiWindowPos: 2,4
       strippingWindowPos: 2,5
       dependsOn: outerClothing
       dependsOnComponents:
@@ -104,7 +104,7 @@
       fullTextureName: template_small
       slotFlags: BELT
       stripTime: 6
-      uiWindowPos: 2,3
+      uiWindowPos: 2,2
       strippingWindowPos: 1,5
       displayName: Belt
     - name: back
@@ -112,7 +112,7 @@
       fullTextureName: template_small
       slotFlags: BACK
       stripTime: 6
-      uiWindowPos: 2,4
+      uiWindowPos: 2,3
       strippingWindowPos: 0,5
       displayName: Back
       blacklist:
