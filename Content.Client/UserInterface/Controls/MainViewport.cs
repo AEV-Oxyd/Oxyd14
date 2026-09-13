@@ -15,6 +15,16 @@ namespace Content.Client.UserInterface.Controls
     {
         [Dependency] private ViewportManager _vpManager = default!;
 
+        [ViewVariables(VVAccess.ReadWrite)] bool ViewportControlSize
+        {
+            get;
+            set
+            {
+                field = value;
+                UpdateCfg();
+            }
+        } = true;
+
         [ViewVariables(VVAccess.ReadWrite)] bool ViewportStretch
         {
             get;
@@ -23,7 +33,7 @@ namespace Content.Client.UserInterface.Controls
                 field = value;
                 UpdateCfg();
             }
-        } = false;
+        } = true;
         [ViewVariables(VVAccess.ReadWrite)] public int ViewPortSnapToleranceMargin { get; set
         {
             field = value;
@@ -53,7 +63,7 @@ namespace Content.Client.UserInterface.Controls
         {
             field = value;
             UpdateCfg();
-        } }= "bilinear";
+        } }= "nearest";
 
         public ScalingViewport Viewport { get; }
 
@@ -95,6 +105,9 @@ namespace Content.Client.UserInterface.Controls
             var fixedFactor = ViewportFixedScaleFactor;
             var verticalFit = ViewportVerticalFit;
             var filterMode = ViewportScalingFilterMode;
+            
+            if (ViewportControlSize)
+                Viewport.FixedStretchSize = (Vector2i)Size;
 
             if (stretch)
             {
@@ -128,8 +141,11 @@ namespace Content.Client.UserInterface.Controls
                 fixedFactor = snapFactor.Value;
             }
 
-            Viewport.FixedStretchSize = Viewport.ViewportSize * fixedFactor;
-            Viewport.StretchMode = ScalingViewportStretchMode.Nearest;
+            if (!ViewportControlSize)
+            {
+                Viewport.FixedStretchSize = Viewport.ViewportSize * fixedFactor;
+                Viewport.StretchMode = ScalingViewportStretchMode.Nearest;
+            }
 
             if (renderScaleUp)
             {

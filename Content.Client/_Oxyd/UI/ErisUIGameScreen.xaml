@@ -51,13 +51,13 @@
                 </VBox>
             </PanelContainer>
         </HBox>
-        <HBox SizeFlagsStretchRatio="1" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
+        <HBox SizeFlagsStretchRatio="1" HorizontalAlignment="Stretch" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
             <PanelContainer HorizontalExpand="True" VerticalExpand="True">
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
                 <widgets:GhostGui Name="Ghost" Access="Protected"/>
-                <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True"/>
+                <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" MinWidth="600"/>
             </PanelContainer>
         </HBox>
     </VBox>

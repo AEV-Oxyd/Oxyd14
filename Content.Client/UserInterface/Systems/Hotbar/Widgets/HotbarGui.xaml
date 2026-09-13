@@ -8,8 +8,8 @@
     VerticalAlignment="Top"
     HorizontalExpand="True"
     Orientation="Vertical"
-    HorizontalAlignment="Center">
-    <BoxContainer Orientation="Horizontal" Name="Hotbar" HorizontalAlignment="Center" VerticalAlignment="Top" VerticalExpand="True" HorizontalExpand="True" >
+    HorizontalAlignment="Stretch">
+    <BoxContainer Orientation="Horizontal" Name="Hotbar" HorizontalAlignment="Center" VerticalAlignment="Stretch" VerticalExpand="True" HorizontalExpand="True" >
         <inventory:ItemStatusPanel
             Name="StatusPanelRight"
             HorizontalAlignment="Center"
