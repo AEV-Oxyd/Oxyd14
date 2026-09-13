@@ -109,30 +109,12 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
         {
             OnPieceUnpressed(args, window, piece);
         };
+        
 
-        if (StaticStorageUIEnabled)
+        if (StaticStorageUIEnabled && tags.map.TryGetValue("DynamicPanel", out var list) && list.Count != 0)
         {
-            var hotbar = UIManager.GetActiveUIWidgetOrNull<HotbarGui>();
-            // this lambda handles the nested storage case
-            // during nested storage, a parent window hides and a child window is
-            // immediately inserted to the end of the list
-            // we can reorder the newly inserted to the same index as the invisible
-            // window in order to prevent an invisible window from being replaced
-            // with a visible one in a different position
-            Action<Control?, Control> reorder = (parent, child) =>
-            {
-                if (parent is null)
-                    return;
-
-                var parentChildren = parent.Children.ToList();
-                var invisibleIndex = parentChildren.FindIndex(c => c.Visible == false);
-                if (invisibleIndex == -1)
-                    return;
-                child.SetPositionInParent(invisibleIndex);
-            };
-            if (!tags.map.TryGetValue("DynamicPanel", out var ctrls) || !ctrls.TryFirstOrDefault(out var panel))
-                return window;
-            var ctrl = tags.map["DynamicPanel"];
+            var c = list.First();
+            c.Children.Add(window);
             _closeRecentWindowUIController.SetMostRecentlyInteractedWindow(window);
         }
         else

@@ -17,22 +17,27 @@
     VerticalAlignment="Bottom"
     HorizontalAlignment="Center">
     <VBox>
-        <HBox MinHeight="1032" MinWidth="1920">
-            <VBox SetWidth="435" MinHeight="1032" VerticalExpand="True" Name="LeftSplit" HorizontalAlignment="Left">
-                <actions:ActionsBar Name="Actions" Access="Protected" />
-                <alerts:AlertsUI Name="Alerts" Access="Protected" />
-                <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
-                <BoxContainer MinWidth="435" MinHeight="600">
-                    <ui:OxTag tag="DynamicPanel"/>
-                </BoxContainer>
-                <ui:GridMapping Name="inventory" MinWidth="435" MinHeight="128">
-                   <ui:OxTag tag="inventory"/>
-                </ui:GridMapping>
+        <HBox MinHeight="1016" MinWidth="1920">
+            <PanelContainer MinWidth="435" SetWidth="435" MinHeight="1016">
+                <PanelContainer.PanelOverride>
+                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
+                </PanelContainer.PanelOverride>
+                <VBox SetWidth="435" MinHeight="1032" Name="LeftSplit">
+                    <actions:ActionsBar Name="Actions" Access="Protected" />
+                    <alerts:AlertsUI Name="Alerts" Access="Protected" />
+                    <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
+                    <BoxContainer MinWidth="435" MinHeight="500">
+                        <ui:OxTag tag="DynamicPanel"/>
+                    </BoxContainer>
+                    <ui:GridMapping Name="inventory" MinWidth="435" MinHeight="128">
+                       <ui:OxTag tag="inventory"/>
+                    </ui:GridMapping>
+                </VBox>
+            </PanelContainer>
+            <VBox MinWidth="1032" MinHeight="1016" SetHeight="1016" SetWidth="1016" Name="ViewportContainer">
+                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True"/>
             </VBox>
-            <VBox MinWidth="1032" MinHeight="1032" SetHeight="1032" SetWidth="1032" Name="ViewportContainer">
-                <controls:MainViewport SetHeight="1032" SetWidth="1032" MinHeight="1032" MinWidth="1032" HorizontalExpand="True" VerticalExpand="True"/>
-            </VBox>
-            <PanelContainer Name="SeparatedChatPanel" MinWidth="435" SetWidth="435">
+            <PanelContainer MinWidth="435" SetWidth="435">
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
@@ -44,9 +49,9 @@
                 </BoxContainer>
             </PanelContainer>
         </HBox>
-        <HBox SetHeight="48" MinWidth="1920" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
+        <HBox MinHeight="64" SetHeight="64" MinWidth="1920" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
             <widgets:GhostGui Name="Ghost" Access="Protected"/>
-            <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" SetHeight="48"/>
+            <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" SetHeight="64"/>
         </HBox>
     </VBox>
 </ui:ErisUIGameScreen>
