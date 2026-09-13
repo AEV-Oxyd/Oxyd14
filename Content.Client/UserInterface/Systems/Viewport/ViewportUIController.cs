@@ -57,7 +57,7 @@ public sealed partial class ViewportUIController : UIController
             width = CCVars.ViewportWidth.DefaultValue;
         }
 
-        Viewport.Viewport.ViewportSize = (EyeManager.PixelsPerMeter * 16, EyeManager.PixelsPerMeter * 16);
+        Viewport.Viewport.ViewportSize = (EyeManager.PixelsPerMeter * 17, EyeManager.PixelsPerMeter * 17);
         Viewport.UpdateCfg();
     }
 

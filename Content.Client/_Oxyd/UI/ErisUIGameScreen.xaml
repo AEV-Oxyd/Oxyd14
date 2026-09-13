@@ -12,17 +12,17 @@
     xmlns:inventory="clr-namespace:Content.Client.UserInterface.Systems.Inventory.Widgets"
     xmlns:ui="clr-namespace:Content.Client._Oxyd.UI"
     xmlns:oxyd="clr-namespace:Content.Client._Oxyd"
-    Name="SeparatedChatHud"
-    VerticalExpand="False"
-    VerticalAlignment="Bottom"
-    HorizontalAlignment="Center">
-    <VBox>
-        <HBox MinHeight="1016" MinWidth="1920">
-            <PanelContainer MinWidth="435" SetWidth="435" MinHeight="1016">
+    VerticalExpand="True"
+    HorizontalExpand="True"
+    VerticalAlignment="Top"
+    HorizontalAlignment="Left">
+    <VBox HorizontalExpand="True" VerticalExpand="True" MinHeight="1080" MinWidth="1920">
+        <HBox SizeFlagsStretchRatio="16.875" VerticalExpand="True" HorizontalExpand="True">
+            <PanelContainer>
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
-                <VBox SetWidth="435" MinHeight="1032" Name="LeftSplit">
+                <VBox Name="LeftSplit" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1">
                     <actions:ActionsBar Name="Actions" Access="Protected" />
                     <alerts:AlertsUI Name="Alerts" Access="Protected" />
                     <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
@@ -34,28 +34,30 @@
                     </ui:GridMapping>
                 </VBox>
             </PanelContainer>
-            <VBox MinWidth="1032" MinHeight="1016" SetHeight="1016" SetWidth="1016" Name="ViewportContainer">
-                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True"/>
+            <VBox Name="ViewportContainer" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
+                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True">
+                    <ui:OxTag tag="FitToParentViewport"/>
+                </controls:MainViewport>
             </VBox>
             <PanelContainer MinWidth="435" SetWidth="435">
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
-                <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="10">
-                    <ui:StatPanel MinHeight="300" MinWidth="435">
+                <VBox HorizontalExpand="True" VerticalExpand="True" SeparationOverride="10" SizeFlagsStretchRatio="1">
+                    <ui:StatPanel HorizontalExpand="True" MinHeight="300">
                         <ui:OxTag tag="ControlPanel"/>
                     </ui:StatPanel>
                     <chat:ChatBox StyleClasses="ChatOutput" VerticalExpand="True" HorizontalExpand="True" Name="Chat" Access="Protected" MinSize="0 0"/>
-                </BoxContainer>
+                </VBox>
             </PanelContainer>
         </HBox>
-        <HBox MinHeight="64" SetHeight="64" MinWidth="1920" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
-            <PanelContainer>
+        <HBox SizeFlagsStretchRatio="1" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
+            <PanelContainer HorizontalExpand="True" VerticalExpand="True">
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
                 <widgets:GhostGui Name="Ghost" Access="Protected"/>
-                <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True"/>
             </PanelContainer>
         </HBox>
     </VBox>

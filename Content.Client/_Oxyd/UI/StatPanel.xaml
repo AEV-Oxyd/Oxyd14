@@ -7,8 +7,8 @@
            VerticalAlignment="Top"
            SeparationOverride="1"
 >
-    <BoxContainer Orientation="Horizontal" Name="StatMenus" Access="Public" VerticalExpand="True" HorizontalExpand="True"/>
-    <PanelContainer Name="SeparatedChatPanel" VerticalExpand="True" HorizontalExpand="True">
+    <BoxContainer Orientation="Horizontal" Name="StatMenus" Access="Public" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="1"/>
+    <PanelContainer Name="SeparatedChatPanel" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="16">
         <PanelContainer.PanelOverride>
             <graphics:StyleBoxFlat BackgroundColor="#35353B" />
         </PanelContainer.PanelOverride>
