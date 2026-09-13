@@ -50,8 +50,13 @@
             </PanelContainer>
         </HBox>
         <HBox MinHeight="64" SetHeight="64" MinWidth="1920" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
-            <widgets:GhostGui Name="Ghost" Access="Protected"/>
-            <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" SetHeight="64"/>
+            <PanelContainer>
+                <PanelContainer.PanelOverride>
+                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
+                </PanelContainer.PanelOverride>
+                <widgets:GhostGui Name="Ghost" Access="Protected"/>
+                <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+            </PanelContainer>
         </HBox>
     </VBox>
 </ui:ErisUIGameScreen>
