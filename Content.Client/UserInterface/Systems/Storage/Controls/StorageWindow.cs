@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Hands.Systems;
 using Content.Client.Items.Systems;
 using Content.Client.Storage;
@@ -24,6 +25,7 @@ namespace Content.Client.UserInterface.Systems.Storage.Controls;
 public sealed partial class StorageWindow : BaseWindow
 {
     [Dependency] private IEntityManager _entity = default!;
+    private OxTagController tags = default!;
     private readonly StorageUIController _storageController;
 
     public EntityUid? StorageEntity;
@@ -38,6 +40,7 @@ public sealed partial class StorageWindow : BaseWindow
     // Needs to be nullable in case a piece is in default spot.
     private readonly Dictionary<EntityUid, (ItemStorageLocation? Loc, ItemGridPiece Control)> _pieces = new();
     private readonly List<Control> _controlGrid = new();
+    private List<QuickInventoryStorage> quickWindows = new();
 
     private ValueList<EntityUid> _contained = new();
     private ValueList<EntityUid> _toRemove = new();
@@ -79,6 +82,7 @@ public sealed partial class StorageWindow : BaseWindow
         Resizable = false;
 
         _storageController = UserInterfaceManager.GetUIController<StorageUIController>();
+        tags = UserInterfaceManager.GetUIController<OxTagController>();
 
         OnThemeUpdated();
 
@@ -176,10 +180,32 @@ public sealed partial class StorageWindow : BaseWindow
 
     public void UpdateContainer(Entity<StorageComponent>? entity)
     {
+        if (entity?.Owner != StorageEntity)
+        {
+            quickWindows.ForEach(t => t.Orphan());
+            quickWindows.Clear();
+        }
         Visible = entity != null;
         StorageEntity = entity;
         if (entity == null)
             return;
+        if (!quickWindows.Any())
+        {
+            foreach (var t in tags.getControls("quickStorage"))
+            {
+                var q = new QuickInventoryStorage(); 
+                q.UpdateContainer(entity);
+                t.AddChild(q);
+                quickWindows.Add(q);
+            }
+        }
+        else
+        {
+            foreach (var t in quickWindows)
+            {
+                t.UpdateContainer(entity);
+            }
+        }
 
         if (UserInterfaceManager.GetUIController<StorageUIController>().WindowTitle)
         {

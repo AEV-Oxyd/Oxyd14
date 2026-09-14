@@ -32,6 +32,9 @@
                     <ui:GridMapping Name="inventory" MinWidth="435" MinHeight="128">
                        <ui:OxTag tag="inventory"/>
                     </ui:GridMapping>
+                    <HBox MinHeight="64" MinWidth="435">
+                        
+                    </HBox>
                 </VBox>
             </PanelContainer>
             <VBox Name="ViewportContainer" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
@@ -57,7 +60,11 @@
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
                 </PanelContainer.PanelOverride>
                 <widgets:GhostGui Name="Ghost" Access="Protected"/>
+                <ui:QuickInventorySelector/>
                 <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" MinWidth="600"/>
+                <HBox HorizontalAlignment="Left" VerticalAlignment="Center" MinHeight="64">
+                    <ui:OxTag tag="quickStorage"></ui:OxTag>
+                </HBox>
             </PanelContainer>
         </HBox>
     </VBox>

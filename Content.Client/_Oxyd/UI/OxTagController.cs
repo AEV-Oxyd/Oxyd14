@@ -14,6 +14,14 @@ public sealed partial class OxTagController : UIController
     public Action<string, Control>? Added;
     public Action<string, Control>? Removed;
 
+    public IEnumerable<Control> getControls(string key)
+    {
+        if (!map.TryGetValue(key, out var lst))
+            yield break;
+        foreach (var control in lst)
+            yield return control;
+    }
+
     public void RegisterControl(string tag, Control parent, bool unique = false)
     {
         if (!map.ContainsKey(tag))

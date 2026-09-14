@@ -474,7 +474,10 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
     {
         Log.Info($"Registering slot group {key} with {map.Slots.Count} slots");
         if (_slotGroups.TryAdd(key, map))
+        {
+            ReloadSlots();
             return true;
+        }
 
         return false;
     }
