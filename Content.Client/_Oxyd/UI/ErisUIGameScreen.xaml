@@ -63,7 +63,7 @@
                 <ui:QuickInventorySelector/>
                 <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" MinWidth="600"/>
                 <HBox HorizontalAlignment="Left" VerticalAlignment="Center" MinHeight="64">
-                    <ui:OxTag tag="quickStorage"></ui:OxTag>
+                    <ui:OxTag tag="quickStorage"/>
                 </HBox>
             </PanelContainer>
         </HBox>

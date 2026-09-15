@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using Content.Client.Animations;
+using Content.Client.Inventory;
 using Content.Shared.Hands;
 using Content.Shared.Storage;
 using Content.Shared.Storage.EntitySystems;
@@ -16,6 +17,7 @@ public sealed partial class StorageSystem : SharedStorageSystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private EntityPickupAnimationSystem _entityPickupAnimation = default!;
+    [Dependency] private ClientInventorySystem oxydInv = default!;
 
     private Dictionary<EntityUid, ItemStorageLocation> _oldStoredItems = new();
 
@@ -92,6 +94,8 @@ public sealed partial class StorageSystem : SharedStorageSystem
         {
             sBui.Refresh();
         }
+        if(Resolve(entity.Owner, ref entity.Comp, false))
+            oxydInv.UpdateUI((entity.Owner, entity.Comp));
     }
 
     protected override void HideStorageWindow(EntityUid uid, EntityUid actor)

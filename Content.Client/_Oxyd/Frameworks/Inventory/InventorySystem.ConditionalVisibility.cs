@@ -13,10 +13,11 @@ public sealed class SlotDataAction
 public sealed partial class ClientInventorySystem
 {
     [Dependency] private IGameTiming _timing = default!;
-    public void OxydInit()
+    public void OxydInitVis()
     {
         EntitySlotUpdate -= CheckForDependencyUpdates;
         EntitySlotUpdate += CheckForDependencyUpdates;
+        
     }
 
     public void CheckForDependencyUpdates(SlotDataAction args)

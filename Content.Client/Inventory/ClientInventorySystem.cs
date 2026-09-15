@@ -49,7 +49,8 @@ namespace Content.Client.Inventory
                 _equipEventsQueue.Enqueue((comp, args)));
             SubscribeLocalEvent<InventorySlotsComponent, DidUnequipEvent>((_, comp, args) =>
                 _equipEventsQueue.Enqueue((comp, args)));
-            OxydInit();
+            OxydInitVis();
+            OxydInitQuickStorage();
         }
 
         public override void Update(float frameTime)

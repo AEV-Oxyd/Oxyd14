@@ -36,6 +36,7 @@ public sealed class QuickInventoryStorage : BoxContainer
             return;
         storage = entity.Value;
         containerRender.SetEntity(storage.Owner);
+        containerRender.Stretch = SpriteView.StretchMode.Fill;
         UpdateContained();
     }
 
@@ -50,13 +51,12 @@ public sealed class QuickInventoryStorage : BoxContainer
             if (existing.TryGetValue(ent, out var _))
                 continue;
             var b = new Button();
-            b.MinHeight = 64;
-            b.MinWidth = 32;
-            b.AddChild(new SpriteView(ent, entityManager) );
+            b.ModulateSelfOverride = Color.Transparent;
+            b.AddChild(new SpriteView(ent, entityManager) {Scale = new Vector2(2f)} );
             b.OnButtonDown += (_) =>
             {
                 entityManager.RaisePredictiveEvent(new StorageInteractWithItemEvent(entityManager.GetNetEntity(ent), entityManager.GetNetEntity(storage)));
-                UpdateContained();
+                //UpdateContained();
             };
             AddChild(b);
             existing[ent] = b;
@@ -69,12 +69,5 @@ public sealed class QuickInventoryStorage : BoxContainer
             RemoveChild(ctrl);
             existing.Remove(ent);
         }
-    }
-
-    protected override Vector2 ArrangeOverride(Vector2 finalSize)
-    {
-        var mod = base.ArrangeOverride(finalSize);
-        containerRender.Arrange(Rect);
-        return mod;
     }
 }
