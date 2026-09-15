@@ -33,7 +33,6 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
     IOnSystemChanged<ClientInventorySystem>, IOnSystemChanged<HandsSystem>
 {
     [Dependency] private IEntityManager _entities = default!;
-    [Dependency] private OxTagController tagging = default!;
 
     [UISystemDependency] private readonly ClientInventorySystem _inventorySystem = default!;
     [UISystemDependency] private readonly HandsSystem _handsSystem = default!;

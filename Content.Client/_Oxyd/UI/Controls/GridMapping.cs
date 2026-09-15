@@ -7,7 +7,7 @@ using Robust.Client.UserInterface.Controls;
 
 namespace Content.Client._Oxyd.UI;
 
-public sealed class GridMapping : Container
+public class GridMapping : Container
 {
     [ViewVariables] public Dictionary<Vector2i, GridSlot> Slots = new();
     public Vector2 gridsize = new(64,64);
