@@ -19,8 +19,9 @@
     <VBox HorizontalExpand="True" VerticalExpand="True" MinHeight="1080" MinWidth="1920" >
         <HBox SizeFlagsStretchRatio="16.875" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer>
+                <ui:OxTag tag="ErisStyleInit"/>
                 <PanelContainer.PanelOverride>
-                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
+                    <graphics:StyleBoxTexture/>
                 </PanelContainer.PanelOverride>
                 <VBox Name="LeftSplit" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1">
                     <actions:ActionsBar Name="Actions" Access="Protected" />
