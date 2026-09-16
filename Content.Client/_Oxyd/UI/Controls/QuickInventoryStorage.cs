@@ -16,14 +16,17 @@ namespace Content.Client._Oxyd.UI;
 public sealed class QuickInventoryStorage : Container
 {
     [Dependency] private IEntityManager entityManager = default!;
+    private UIStyler styler = default!;
     public Entity<StorageComponent> storage = new Entity<StorageComponent>();
     public Dictionary<EntityUid, SpriteView> existing = new ();
     public List<EntityUid> contained = new List<EntityUid>();
     public SpriteView containerRender;
+    
 
     public QuickInventoryStorage()
     {
         IoCManager.InjectDependencies(this);
+        styler = IoCManager.Resolve<IUserInterfaceManager>().GetUIController<UIStyler>();
         containerRender = new SpriteView(storage.Owner, entityManager) {Scale = new Vector2(2f)};
         AddChild(containerRender);
     }
@@ -78,14 +81,14 @@ public sealed class QuickInventoryStorage : Container
     protected override Vector2 MeasureOverride(Vector2 availableSize)
     {
         var c = contained.Count;
-        Vector2 desired = new Vector2(Math.Max((c/2 + c%2)* 32f, 64f), 64f);
+        Vector2 desired = new Vector2(Math.Max((c/2 + c%2)* 32f, 64f) + styler.sideTextWidth*2, 64f);
         return desired;
     }
 
     protected override Vector2 ArrangeOverride(Vector2 finalSize)
     {
         int bc = 0;
-        Vector2 posOffset = Vector2.Zero;
+        Vector2 posOffset = new Vector2(styler.sideTextWidth, 0);
         foreach (var elem in Children)
         {
             if (elem is SpriteView x)
@@ -115,15 +118,24 @@ public sealed class QuickInventoryStorage : Container
 
             }
         }
-        var finalBox = new UIBox2(0f, 0f, Math.Max((bc/2+bc%2 ) * 32f, 64f), 64);
+        var finalBox = new UIBox2(0f, 0f, Math.Max((bc/2+bc%2 ) * 32f + styler.sideTextWidth * 2, 64f), 64);
         containerRender.Arrange(finalBox);
         return finalBox.BottomRight;
     }
 
     protected override void Draw(DrawingHandleScreen handle)
     {
+        Vector2 offset = Vector2.Zero;
+        handle.DrawTexture(styler.leftText, offset);
+        offset.X += styler.sideTextWidth;
+        while (offset.X < PixelWidth - styler.sideTextWidth)
+        {
+            handle.DrawTexture(styler.middleText, offset);
+            offset.X += 32;
+        }
+        handle.DrawTexture(styler.RightText, offset);
         base.Draw(handle);
-        handle.DrawRect(new UIBox2(Vector2.One*2, Rect.BottomRight - Rect.TopLeft - new Vector2(2,2)), Color.FromHex("#16161e"), false);
+        handle.DrawRect(new UIBox2(Vector2.One*2, Rect.BottomRight - Rect.TopLeft - Vector2.One*2), Color.FromHex("#16161e"), false);
         
     }
 }

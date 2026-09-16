@@ -18,7 +18,7 @@
     HorizontalAlignment="Left">
     <VBox HorizontalExpand="True" VerticalExpand="True" MinHeight="1080" MinWidth="1920" >
         <HBox SizeFlagsStretchRatio="16.875" VerticalExpand="True" HorizontalExpand="True">
-            <PanelContainer>
+            <PanelContainer MaxHeight="1016">
                 <ui:OxTag tag="ErisStyleInit"/>
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxTexture/>
