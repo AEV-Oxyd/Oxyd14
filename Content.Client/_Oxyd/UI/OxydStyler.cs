@@ -8,7 +8,7 @@ using Robust.Client.UserInterface.Controls;
 
 namespace Content.Client;
 
-public sealed class UIStyler : UIController
+public sealed class OxydStyler : UIController
 {
     [Dependency] private OxTagController tags = default!;
     [Dependency] private IResourceCache res = default!;
@@ -30,24 +30,40 @@ public sealed class UIStyler : UIController
         foreach (var t in tags.getControls("ErisStyleInit"))
         {
             if(t is PanelContainer target)
-                InitTextureEris(target);
+                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
+        }
+
+        foreach (var t in tags.getControls("ErisStyleDigitalInit"))
+        {
+            if (t is PanelContainer target)
+                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
         }
         tags.Added += (s, control) =>
         {
-            if (s == "ErisStyleInit" && control is PanelContainer target)
-                InitTextureEris(target);
+            if (control is PanelContainer target)
+            {
+                switch (s)
+                {
+                    case "ErisStyleInit":
+                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
+                        break;
+                    case "ErisStyleDigitalInit":
+                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
+                        break;
+                }
+            }
         };
     }
 
-    public void InitTextureEris(PanelContainer target)
+    public void InitTextureEris(PanelContainer target, string path, int patchmargin = 0, int scale = 1)
     {
-        var text = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle.png");
+        var text = res.GetTexture(path);
         var style = new StyleBoxTexture()
         {
             Texture = text,
         };
-        style.SetPatchMargin(StyleBox.Margin.All, 8);
-        style.TextureScale = Vector2.One * 3;
+        style.SetPatchMargin(StyleBox.Margin.All, patchmargin);
+        style.TextureScale = Vector2.One * scale;
         style.Mode = StyleBoxTexture.StretchMode.Tile;
         target.PanelOverride = style;
     }
