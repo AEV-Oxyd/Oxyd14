@@ -32,7 +32,7 @@ public partial class ClientSanityUIHandler : EntitySystem
     private void OnPanelRequest(Entity<SanityComponent> ent,ref CollectEntityPanels ev)
     {
         Log.Debug("OnPanelRequest");
-        if(ClientOxydHelpers.FindControl<Button>(panels.panelContent["IC"], focusInsightButtonId, out _))
+        if(ev.panels.ContainsKey("IC") && ClientOxydHelpers.FindControl<Button>(panels.panelContent["IC"], focusInsightButtonId, out _))
         {
             return;
         }

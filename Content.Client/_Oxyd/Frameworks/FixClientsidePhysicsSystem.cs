@@ -115,7 +115,7 @@ public sealed partial  class FixClientsidePhysicsSystem : VirtualController
         base.UpdateAfterSolve(prediction, frameTime);
         if (!_timing.IsFirstTimePredicted)
             return;
-        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        var qery = AllEntityQuery<FixClientsidePhysicsComponent>();
         while (qery.MoveNext(out var uid, out var comp))
         {
             var t = Transform(uid);
@@ -140,7 +140,7 @@ public sealed partial  class FixClientsidePhysicsSystem : VirtualController
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
-        var qery = EntityManager.AllEntityQueryEnumerator<FixClientsidePhysicsComponent>();
+        var qery = AllEntityQuery<FixClientsidePhysicsComponent>();
         while (qery.MoveNext(out var uid, out var comp))
         {
             if (_timing.CurTime - comp.lastProcessed >= _timing.TickPeriod * 2)

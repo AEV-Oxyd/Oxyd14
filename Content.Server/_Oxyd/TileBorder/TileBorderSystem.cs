@@ -1,12 +1,16 @@
 using System.Collections.Frozen;
+using System.Linq;
 using System.Numerics;
 using Content.Server.Decals;
+using Content.Server.GameTicking;
+using Content.Server.GameTicking.Events;
 using Content.Shared._Oxyd.TileBorder;
 using Content.Shared.Decals;
 using Content.Shared.Maps;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.TileBorder;
 
@@ -38,18 +42,16 @@ public sealed partial class TileBorderSystem : EntitySystem
         base.Initialize();
         RebuildIndex();
     }
-
+    
     [SubscribeLocalEvent]
-    private void OnGridInit(GridInitializeEvent ev)
+    private void OnGridInit(Entity<MapGridComponent> grid,ref  MapInitEvent args)
     {
-        EnsureIndex();
-        RebuildGrid(ev.EntityUid, ev.Grid);
+        RebuildGrid(grid, grid.Comp);
     }
 
     [SubscribeLocalEvent]
     private void OnTileChanged(ref TileChangedEvent args)
     {
-        EnsureIndex();
         var grid = args.Entity.Owner;
         if (!_gridQuery.TryComp(grid, out var gridComp))
             return;
@@ -81,7 +83,6 @@ public sealed partial class TileBorderSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnGridSplit(ref PostGridSplitEvent ev)
     {
-        EnsureIndex();
         if (_gridQuery.TryComp(ev.OldGrid, out var oldGrid))
             RebuildGrid(ev.OldGrid, oldGrid);
 
@@ -106,30 +107,15 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private void RebuildGrid(EntityUid grid, MapGridComponent gridComp)
     {
-        foreach (var tile in _map.GetAllTiles(grid, gridComp))
+        foreach (var tile in _map.GetAllTiles(grid, gridComp, false))
         {
             StripGeneratedAt(grid, tile.GridIndices);
-        }
-
-        foreach (var tile in _map.GetAllTiles(grid, gridComp))
-        {
             EmitRims(grid, gridComp, tile.GridIndices);
         }
     }
 
     /// <summary>
-    /// Tile definitions / decal prototypes can register after system Initialize (e.g. the
-    /// integration-test harness), which would otherwise leave the rim caches permanently
-    /// empty and skip every emission silently. Rebuild the index lazily on first use.
-    /// </summary>
-    private void EnsureIndex()
-    {
-        if (_byTypeId.Count == 0)
-            RebuildIndex();
-    }
-
-    /// <summary>
-    /// RebuildIndex ONLY from Initialize, PrototypesReloaded and EnsureIndex — never from Update.
+    /// RebuildIndex ONLY from Initialize and PrototypesReloaded — never from Update.
     /// </summary>
     private void RebuildIndex()
     {
@@ -159,7 +145,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
     private void EmitRims(EntityUid grid, MapGridComponent gridComp, Vector2i pos)
     {
-        if (!_map.TryGetTile(gridComp, pos, out var tile) || tile.IsEmpty)
+        if (!_map.TryGetTile(gridComp, pos, out var tile))
             return;
 
         if (!_byTypeId.TryGetValue(tile.TypeId, out var def))
@@ -170,7 +156,7 @@ public sealed partial class TileBorderSystem : EntitySystem
 
         var mask = TileBorderMask.Compute(pos, group, neighbour =>
         {
-            if (!_map.TryGetTile(gridComp, neighbour, out var other) || other.IsEmpty)
+            if (!_map.TryGetTile(gridComp, neighbour, out var other))
                 return null;
 
             // Same borderGroup always links (floors and lattices).

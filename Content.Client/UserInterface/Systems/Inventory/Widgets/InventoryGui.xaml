@@ -8,12 +8,12 @@
     VerticalAlignment="Bottom"
     Orientation="Horizontal"
     HorizontalAlignment="Center">
-    <Control HorizontalAlignment="Center">
+    <Control HorizontalAlignment="Left">
         <!-- Needs to default to invisible because if we attach to a non-slots entity this will never get unset -->
         <controls:SlotButton
             Name="InventoryButton"
             Access="Public"
-            Visible="False"
+            Visible="True"
             VerticalAlignment="Bottom"
             HorizontalExpand="False"
             VerticalExpand="False"
@@ -21,12 +21,13 @@
         <inventory:ItemSlotButtonContainer
             Name="InventoryHotbar"
             Access="Public"
-            Visible="False"
-            MaxColumns="3"
+            Visible="True"
             SlotGroup="Default"
             ExpandBackwards="True"
             VerticalExpand="True"
-            HorizontalAlignment="Center"
+            HorizontalAlignment="Left"
+            Columns = "4"
+            Rows="4"
         />
     </Control>
 </widgets:InventoryGui>

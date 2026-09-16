@@ -1947,7 +1947,12 @@ public abstract partial class SharedStorageSystem : EntitySystem
         // This would automatically validate that the UI is open & that the user can interact.
         // However, we still need to manually validate that items being used are in the users hands or in the storage.
         if (!UI.IsUiOpen(storageUid.Value, StorageComponent.StorageUiKey.Key, playerUid))
-            return false;
+        {
+            // This might allow cheaters to be more creative in the future, SPCR 2026
+            // Allow any interaction to still go if the storage item is on a slot that the player entity has.
+            if(!_inventory.TryGetContainingSlot((storageUid.Value,null,null), out var slot) || !_inventory.TryGetSlot(playerUid, slot.Name, out var _))
+                return false;
+        }
 
         if (!ActionBlocker.CanInteract(playerUid, storageUid))
             return false;

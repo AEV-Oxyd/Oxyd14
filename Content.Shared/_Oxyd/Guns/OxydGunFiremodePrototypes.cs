@@ -11,26 +11,14 @@ namespace Content.Shared._Oxyd.OxydGunSystem;
 public sealed partial class GunFiremodePrototype : IPrototype
 {
      // TECHNICAL
-    [IdDataField]
-    public string ID { get; private set; } = default!;
-    [ViewVariables]
-    public int currentStep = 0;
-    [ViewVariables]
-    public int maxSteps => Effects.Count;
+    [IdDataField] public string ID { get; private set; } = default!;
+    [ViewVariables] public int currentStep = 0;
+    [ViewVariables] public int maxSteps => Effects.Count;
     // prevent changing fire modes whilst this is true.
-    [ViewVariables]
-    public bool Active = false;
-    [ViewVariables]
-    public OxydGunProvidersComponent AmmoProviders = default!;
-    // which ammo provider index we pull from(used to set the AmmoProvidersat init)
-    [DataField]
-    public int providerId = 0;
+    [ViewVariables] public bool Active = false;
     // type of ammo provider(same as above)
-    [DataField("provider")]
-    public string providerComp = "";
-    [ViewVariables]
-    public TimeSpan totalWait = TimeSpan.Zero;
-
+    [DataField("providerId")] public string providerId = "";
+    [ViewVariables] public TimeSpan totalWait = TimeSpan.Zero;
     [ViewVariables, NonSerialized]
     // the time budget we receive ( = tickTime + losses due to networkng/ skipped ticks on client)
     public TimeSpan timeBudget = TimeSpan.Zero;
@@ -41,22 +29,16 @@ public sealed partial class GunFiremodePrototype : IPrototype
 
 
     // SPRITE
-    [DataField("icon", required: false)]
-    public SpriteSpecifier icon = default!;
-
+    [DataField("icon", required: false)] public SpriteSpecifier icon = default!;
     // SOUND
-    [DataField("fireSound")]
-    public SoundSpecifier fireSound = default!;
+    [DataField("fireSound")] public SoundSpecifier fireSound = default!;
 
     // GAME
     // firemodePrototype specific speed mult
-    [DataField]
-    public float SpeedMultiplier = 1;
-    [ViewVariables]
+    [DataField] public float SpeedMultiplier = 1;
     // firing positions handled here.
-    public int shootingPosIndex = 0;
-    [DataField]
-    public List<Vector2> shootingPosOffsets = new List<Vector2>();
+    [ViewVariables] public int shootingPosIndex = 0;
+    [DataField] public List<Vector2> shootingPosOffsets = new List<Vector2>();
 
     [DataField]
     // Always added inaccuracy
@@ -96,7 +78,6 @@ public sealed partial class GunFiremodePrototype : IPrototype
         {
             throw new InvalidOperationException("Firemode prototype has no clean clone, cannot apply mods");
         }
-        providerComp = cleanClone.providerComp;
         providerId = cleanClone.providerId;
         SpeedMultiplier = cleanClone.SpeedMultiplier * mods.speedMult;
         baseInaccuracy = cleanClone.baseInaccuracy;

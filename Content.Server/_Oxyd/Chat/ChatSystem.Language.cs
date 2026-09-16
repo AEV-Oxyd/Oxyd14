@@ -4,6 +4,7 @@ using System.Text;
 using Content.Server.GameTicking.Events;
 using Content.Shared._Oxyd;
 using Content.Shared.Chat;
+using Content.Shared.GameTicking;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -78,7 +79,7 @@ public sealed partial class ChatSystem
     [Dependency] private EntityQuery<LanguageKnowledgeComponent> langquery = default!;
 
     private RobustRandom random = new();
-    private LanguageDataCoreComponent data => Single<LanguageDataCoreComponent>().Comp;
+    private LanguageDataCoreComponent data => Comp<LanguageDataCoreComponent>(core);
 
     public ProtoId<LanguagePrototype> standardLanguage = "Universal";
 
@@ -94,6 +95,12 @@ public sealed partial class ChatSystem
         core = single;
         EnsureComp<LanguageDataCoreComponent>(single);
         LanguagePrototypesInitialize();
+    }
+    
+    [SubscribeLocalEvent]
+    public void LanguageInitialize(RoundEndMessageEvent ev)
+    {
+        core = EntityUid.Invalid;
     }
     
 
@@ -234,18 +241,16 @@ public sealed partial class ChatSystem
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
-        // Core is spawned on RoundStartingEvent; lobby and integration tests have none.
-        if (!TrySingle<LanguageDataCoreComponent>(out var ent))
+        // happens when ending round , stupid , SPCR 2026
+        if (TerminatingOrDeleted(core))
             return;
-
-        var coreData = ent.Value.Comp;
-        coreData.unbakedTime += TimeSpan.FromSeconds(frameTime);
-        if (coreData.unbakedTime > TimeSpan.FromMinutes(5))
+        data.unbakedTime += TimeSpan.FromSeconds(frameTime);
+        if (data.unbakedTime > TimeSpan.FromMinutes(5))
         {
-            var count = coreData.wordMappingCache.Values.Sum(x => x.Count);
+            var count = data.wordMappingCache.Values.Sum(x => x.Count);
             if (count > 100)
                 LanguageCachesBake(count);
-            coreData.unbakedTime = TimeSpan.Zero;
+            data.unbakedTime = TimeSpan.Zero;
         }
     }
 }

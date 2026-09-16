@@ -12,9 +12,9 @@ public sealed class ItemSlotButtonContainer : ItemSlotUIContainer<SlotControl>
         get => _slotGroup;
         set
         {
-            _inventoryController.RemoveSlotGroup(SlotGroup);
+            //_inventoryController.RemoveSlotGroup(SlotGroup);
             _slotGroup = value;
-            _inventoryController.RegisterSlotGroupContainer(this);
+            //_inventoryController.RegisterSlotGroupContainer(this);
         }
     }
 
