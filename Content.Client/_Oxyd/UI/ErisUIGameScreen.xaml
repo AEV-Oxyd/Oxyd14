@@ -16,7 +16,7 @@
     HorizontalExpand="True"
     VerticalAlignment="Top"
     HorizontalAlignment="Left">
-    <VBox HorizontalExpand="True" VerticalExpand="True" MinHeight="1080" MinWidth="1920">
+    <VBox HorizontalExpand="True" VerticalExpand="True" MinHeight="1080" MinWidth="1920" >
         <HBox SizeFlagsStretchRatio="16.875" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer>
                 <PanelContainer.PanelOverride>

@@ -13,7 +13,7 @@ using Robust.Shared.Input;
 
 namespace Content.Client._Oxyd.UI;
 
-public sealed class QuickInventoryStorage : GridMapping
+public sealed class QuickInventoryStorage : Container
 {
     [Dependency] private IEntityManager entityManager = default!;
     public Entity<StorageComponent> storage = new Entity<StorageComponent>();
@@ -52,7 +52,7 @@ public sealed class QuickInventoryStorage : GridMapping
                 continue;
             var c = new SpriteView(ent, entityManager) {Scale = new Vector2(2f)};
             c.MouseFilter = MouseFilterMode.Pass;
-            c.MinSize = new Vector2(64, 64);
+            c.MinSize = new Vector2(32, 32);
             c.OnKeyBindDown += (args) =>
             {
                 if(args.Function ==  EngineKeyFunctions.UIClick )
@@ -71,44 +71,59 @@ public sealed class QuickInventoryStorage : GridMapping
             existing.Remove(ent);
         }
 
-        containerRender.MinWidth = existing.Keys.Count()/4f * 64;
+        containerRender.MinWidth = existing.Keys.Count() * 32;
         containerRender.MinHeight = 64;
     }
 
     protected override Vector2 MeasureOverride(Vector2 availableSize)
     {
-        Vector2 desired = new Vector2(0, 0);
-        desired.Y = Children.Max(x =>
-        {
-            if(x != containerRender)
-                return x.Height;
-            return 0;
-        });
-        desired.X = Children.Sum(x =>
-        {
-            if(x != containerRender)
-                return x.Width;
-            return 0;
-        });
+        var c = contained.Count;
+        Vector2 desired = new Vector2(Math.Max((c/2 + c%2)* 32f, 64f), 64f);
         return desired;
     }
 
     protected override Vector2 ArrangeOverride(Vector2 finalSize)
     {
-        float arrangeX = 0;
-        float arrangeY = 0;
-        int items = contained.Count;
+        int bc = 0;
+        Vector2 posOffset = Vector2.Zero;
         foreach (var elem in Children)
         {
             if (elem is SpriteView x)
             {
                 if (x == containerRender)
                     continue;
-                x.Arrange(new UIBox2(arrangeX, 0, arrangeX + x.MinWidth, x.MinHeight));
-                arrangeX += x.Width;
+                x.Arrange(new UIBox2(posOffset.X, posOffset.Y,  posOffset.X + 32f, posOffset.Y + 32f));
+                switch(bc%4)
+                {
+                    case 0:
+                        posOffset.Y += 32;
+                        break;
+                    case 1:
+                        posOffset.Y -= 32;
+                        posOffset.X += 32;
+                        break;
+                    case 2:
+                        posOffset.Y += 32;
+                        break;
+                    case 3:
+                        posOffset.X += 32;
+                        posOffset.Y -= 32;
+                        break;
+                }
+
+                bc++;
+
             }
         }
-        containerRender.Arrange(new UIBox2(0, 0, arrangeX, 64));
-        return finalSize;
+        var finalBox = new UIBox2(0f, 0f, Math.Max((bc/2+bc%2 ) * 32f, 64f), 64);
+        containerRender.Arrange(finalBox);
+        return finalBox.BottomRight;
+    }
+
+    protected override void Draw(DrawingHandleScreen handle)
+    {
+        base.Draw(handle);
+        handle.DrawRect(new UIBox2(Vector2.One*2, Rect.BottomRight - Rect.TopLeft - new Vector2(2,2)), Color.FromHex("#16161e"), false);
+        
     }
 }
