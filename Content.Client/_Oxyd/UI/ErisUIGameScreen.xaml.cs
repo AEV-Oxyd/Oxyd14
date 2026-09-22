@@ -21,6 +21,8 @@ public sealed partial class ErisUIGameScreen : InGameScreen
         RobustXamlLoader.Load(this);
 
         AutoscaleMaxResolution = new Vector2i(1080, 770);
+        SetAnchorPreset(MainViewport, LayoutPreset.Wide);
+        SetAnchorPreset(ViewportContainer, LayoutPreset.Wide);
         
     }
 

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Content.Client.Items;
 using Content.Shared.Hands.Components;
 using Content.Shared.IdentityManagement;
@@ -70,6 +71,7 @@ public sealed partial class ItemStatusPanel : Control
 
         var panel = (StyleBoxTexture) Panel.PanelOverride!;
         panel.Texture = texture;
+        panel.TextureScale = new Vector2(2, 2);
         panel.SetPatchMargin(cutOut, patchMargin.Left);
         panel.SetPatchMargin(flat, patchMargin.Right);
         panel.SetPatchMargin(StyleBox.Margin.Top, patchMargin.Top);
@@ -77,6 +79,7 @@ public sealed partial class ItemStatusPanel : Control
 
         var panelHighlight = (StyleBoxTexture) HighlightPanel.PanelOverride!;
         panelHighlight.Texture = textureHighlight;
+        panelHighlight.TextureScale = new Vector2(2,2);
         panelHighlight.SetPatchMargin(cutOut, patchMargin.Left);
         panelHighlight.SetPatchMargin(flat, patchMargin.Right);
         panelHighlight.SetPatchMargin(StyleBox.Margin.Top, patchMargin.Top);

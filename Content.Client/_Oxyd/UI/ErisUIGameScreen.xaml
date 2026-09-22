@@ -41,12 +41,12 @@
                     </HBox>
                 </VBox>
             </PanelContainer>
-            <VBox HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
-                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True" Name="ViewportContainer">
+            <PanelContainer Name="ViewportContainer" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
+                <controls:MainViewport Name="MainViewport" HorizontalExpand="True" VerticalExpand="True">
                     <ui:OxTag tag="FitToParentViewport"/>
                     <ui:OxTag tag="Viewport"/>
                 </controls:MainViewport>
-            </VBox>
+            </PanelContainer>
             <PanelContainer MinWidth="435" SetWidth="435">
                 <PanelContainer.PanelOverride>
                     <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />

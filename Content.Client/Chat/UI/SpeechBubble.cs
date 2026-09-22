@@ -1,8 +1,10 @@
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Chat.Managers;
 using Content.Shared.CCVar;
 using Content.Shared.Chat;
 using Content.Shared.Speech;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
@@ -18,6 +20,7 @@ namespace Content.Client.Chat.UI
         [Dependency] private IEyeManager _eyeManager = default!;
         [Dependency] private IEntityManager _entityManager = default!;
         [Dependency] protected IConfigurationManager ConfigManager = default!;
+        protected OxTagController tags = default!;
         private readonly SharedTransformSystem _transformSystem;
 
         public enum SpeechType : byte
@@ -88,6 +91,7 @@ namespace Content.Client.Chat.UI
         public SpeechBubble(ChatMessage message, EntityUid senderEntity, string speechStyleClass, Color? fontColor = null)
         {
             IoCManager.InjectDependencies(this);
+            tags = UserInterfaceManager.GetUIController<OxTagController>();
             _senderEntity = senderEntity;
             _transformSystem = _entityManager.System<SharedTransformSystem>();
 
@@ -154,8 +158,10 @@ namespace Content.Client.Chat.UI
 
             var offset = (-_eyeManager.CurrentEye.Rotation).ToWorldVec() * -(EntityVerticalOffset + baseOffset);
             var worldPos = _transformSystem.GetWorldPosition(xform) + offset;
+            // shit fix for shit issue locked behind engine. Viewport doesn't return a position with its GlobalPixelPos(which is what is expected here)
+            // SPCR 2026
+            var lowerCenter = _eyeManager.WorldToScreen(worldPos) / UIScale - tags.getControl("Viewport").GlobalPosition;
 
-            var lowerCenter = _eyeManager.WorldToScreen(worldPos) / UIScale;
             var screenPos = lowerCenter - new Vector2(ContentSize.X / 2, ContentSize.Y + _verticalOffsetAchieved);
             // Round to nearest 0.5
             screenPos = (screenPos * 2).Rounded() / 2;
