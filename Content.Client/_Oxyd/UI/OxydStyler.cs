@@ -8,8 +8,13 @@ using Robust.Client.UserInterface.Controls;
 
 namespace Content.Client;
 
+// this exists because Sheetlets are a CSS larper mess that doesn't let you set textures
+// Horrid , SPCR 2026
 public sealed class OxydStyler : UIController
 {
+    public const string DefaultTexture = "ErisStyleInit";
+    public const string DigitalTexture = "ErisStyleDigitalInit";
+    public const string ItemSlotTexture = "ErisItemSlot";
     [Dependency] private OxTagController tags = default!;
     [Dependency] private IResourceCache res = default!;
     
@@ -27,16 +32,21 @@ public sealed class OxydStyler : UIController
         leftText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64LeftPane.png");
         middleText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64MiddlePane.png");
         RightText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64RightPane.png");
-        foreach (var t in tags.getControls("ErisStyleInit"))
+        foreach (var t in tags.getControls(DefaultTexture))
         {
             if(t is PanelContainer target)
                 InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
         }
-
-        foreach (var t in tags.getControls("ErisStyleDigitalInit"))
+        foreach (var t in tags.getControls(DigitalTexture))
         {
             if (t is PanelContainer target)
                 InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
+        }
+
+        foreach (var t in tags.getControls(ItemSlotTexture))
+        {
+            if(t is PanelContainer target)
+                InitTextureEris(target,"/Textures/Oxyd/erisported/UI/ErisItemSlot.png",4,2);
         }
         tags.Added += (s, control) =>
         {
@@ -44,11 +54,14 @@ public sealed class OxydStyler : UIController
             {
                 switch (s)
                 {
-                    case "ErisStyleInit":
+                    case DefaultTexture:
                         InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
                         break;
-                    case "ErisStyleDigitalInit":
+                    case DigitalTexture:
                         InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
+                        break;
+                    case ItemSlotTexture:
+                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisItemSlot.png", 4, 2);
                         break;
                 }
             }
