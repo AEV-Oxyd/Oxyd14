@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Client.Gameplay;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
@@ -20,6 +21,11 @@ public sealed partial class OxTagController : UIController
             yield break;
         foreach (var control in lst)
             yield return control;
+    }
+
+    public Control getControl(string key)
+    {
+        return map[key].First();
     }
 
     public void RegisterControl(string tag, Control parent, bool unique = false)

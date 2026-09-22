@@ -17,12 +17,16 @@ public sealed class HandButton : SlotControl
 
     private void SetBackground(HandLocation handLoc)
     {
-        ButtonTexturePath = handLoc switch
+        var path = handLoc switch
         {
-            HandLocation.Left => "Slots/hand_l",
-            HandLocation.Middle => "Slots/hand_m",
-            HandLocation.Right => "Slots/hand_r",
+            HandLocation.Left => "hand_l",
+            HandLocation.Middle => "hand_m",
+            HandLocation.Right => "hand_r",
             _ => ButtonTexturePath
         };
+        ButtonTexturePath = $"Slots/{path}";
+        HighlightTexturePath = $"Slots/{path}_highlight";
     }
+    
+    
 }

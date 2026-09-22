@@ -41,9 +41,10 @@
                     </HBox>
                 </VBox>
             </PanelContainer>
-            <VBox Name="ViewportContainer" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
-                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True">
+            <VBox HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1.82">
+                <controls:MainViewport HorizontalExpand="True" VerticalExpand="True" Name="ViewportContainer">
                     <ui:OxTag tag="FitToParentViewport"/>
+                    <ui:OxTag tag="Viewport"/>
                 </controls:MainViewport>
             </VBox>
             <PanelContainer MinWidth="435" SetWidth="435">
@@ -60,9 +61,7 @@
         </HBox>
         <HBox SizeFlagsStretchRatio="1" HorizontalAlignment="Stretch" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
             <PanelContainer HorizontalExpand="True" VerticalExpand="True">
-                <PanelContainer.PanelOverride>
-                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
-                </PanelContainer.PanelOverride>
+                <ui:OxTag tag="ErisStyleDisplay"/>
                 <widgets:GhostGui Name="Ghost" Access="Protected"/>
                 <ui:QuickInventorySelector/>
                 <hotbar:HotbarGui Name="Hotbar" Access="Protected" HorizontalAlignment="Center" VerticalAlignment="Top" HorizontalExpand="True" MinWidth="600"/>

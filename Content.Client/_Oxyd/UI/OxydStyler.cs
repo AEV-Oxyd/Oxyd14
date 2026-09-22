@@ -15,6 +15,7 @@ public sealed class OxydStyler : UIController
     public const string DefaultTexture = "ErisStyleInit";
     public const string DigitalTexture = "ErisStyleDigitalInit";
     public const string ItemSlotTexture = "ErisItemSlot";
+    public const string DisplayTexture = "ErisStyleDisplay";
     [Dependency] private OxTagController tags = default!;
     [Dependency] private IResourceCache res = default!;
     
@@ -48,6 +49,12 @@ public sealed class OxydStyler : UIController
             if(t is PanelContainer target)
                 InitTextureEris(target,"/Textures/Oxyd/erisported/UI/ErisItemSlot.png",4,2);
         }
+
+        foreach (var t in tags.getControls(DisplayTexture))
+        {
+            if (t is PanelContainer target)
+                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDisplay.png", 0, 2);
+        }
         tags.Added += (s, control) =>
         {
             if (control is PanelContainer target)
@@ -62,6 +69,9 @@ public sealed class OxydStyler : UIController
                         break;
                     case ItemSlotTexture:
                         InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisItemSlot.png", 4, 2);
+                        break;
+                    case DisplayTexture:
+                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDisplay.png", 0, 2);
                         break;
                 }
             }
