@@ -245,9 +245,9 @@ public static class LitanyCatalogValidator
     {
         runtimeHandlers ??= LitanyHandlerCatalog.Implemented;
         if (isAvailable && requireRuntimeHandler && !runtimeHandlers.Contains(effect))
-            return [$"{id} is enabled without a registered runtime handler for {effect}."];
+            return new List<string> { $"{id} is enabled without a registered runtime handler for {effect}." };
 
-        return [];
+        return new List<string>();
     }
 
     private static void ValidateLitany(
