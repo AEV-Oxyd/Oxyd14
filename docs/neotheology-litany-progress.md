@@ -40,7 +40,7 @@ parity. The current merged build still needs a live-round check.
 | Client build | 0 errors, 250 warnings. |
 | NeoTheology integration tests | 231 passed, 0 failed, 0 skipped. |
 | NeoTheology and shared-skill unit tests | 21 passed, 0 failed, 0 skipped. |
-| Live gameplay on merged code | Not checked yet. A prior PR build reached `InGame` before this merge, but its startup logs still had prototype and sprite errors. |
+| Merged client and server smoke check | The server reached `Ready` on port 1212. The client reached `InGame`. Startup still reported prototype and sprite errors. No litany cast was checked. |
 | Full YAML linter | Stopped at the existing syntax error in `Resources/Prototypes/_Oxyd/erisPorted/mask/fake_moustache.yml` (line 5). The litany PR does not change that file. |
 
 These are counts for the merged checkout. Earlier test counts in past commits
