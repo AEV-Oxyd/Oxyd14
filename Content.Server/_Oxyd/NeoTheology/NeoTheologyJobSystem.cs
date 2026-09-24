@@ -1,4 +1,6 @@
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.GameTicking;
+using Content.Shared.Mind.Components;
 
 namespace Content.Server._Oxyd.NeoTheology;
 
@@ -9,6 +11,17 @@ namespace Content.Server._Oxyd.NeoTheology;
 public sealed partial class NeoTheologyJobSystem : EntitySystem
 {
     [Dependency] private readonly CruciformSystem _cruciform = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+        SubscribeLocalEvent<NeoTheologyTestRoleComponent, MindAddedMessage>(OnTestRoleTaken);
+    }
+
+    private void OnTestRoleTaken(EntityUid uid, NeoTheologyTestRoleComponent component, MindAddedMessage args)
+    {
+        _cruciform.GrantCruciform(uid, component.Profile);
+    }
 
     [SubscribeLocalEvent]
     private void OnSpawnComplete(PlayerSpawnCompleteEvent args)

@@ -21,10 +21,13 @@ parity. The current merged build still needs a live-round check.
   The book supplies target and blueprint choices. Speech uses a fixed fallback
   when a choice is necessary.
 - The six profiles exist in `profiles.yml`. Only Chaplain maps to
-  `OxydNtPreacher` in `rules.yml`. There are no NeoTheology ghost-role
-  spawners or dedicated test mobs. Chaplain does not receive `OxydNtBible`
-  automatically. The other profiles need a developer-controlled bearer for
-  live tests; they do not add production station jobs or job slots.
+  `OxydNtPreacher` in `rules.yml`. Six development-only
+  `RandomHumanoidSpawnerOxydNt*` markers in `test_roles.yml` create test ghost
+  roles. Each role receives its matching cruciform when a mind takes it and
+  starts with `OxydNtBible`. An administrator must spawn a marker in a live
+  round before the role appears in the ghost-role list. These roles do not
+  add station jobs or job slots. Chaplain still does not receive
+  `OxydNtBible` automatically.
 - Medical rites use local reagents, pain, addiction, implants, robotic organs,
   and the cloner. Altar procedures check position, restraint, posture, and
   clothing as applicable. `Asacris` removes installed upgrades, not rank
@@ -38,7 +41,8 @@ parity. The current merged build still needs a live-round check.
 | --- | --- |
 | Server build | 0 errors, 496 warnings. |
 | Client build | 0 errors, 250 warnings. |
-| NeoTheology integration tests | 231 passed, 0 failed, 0 skipped. |
+| NeoTheology integration tests after test-role fix | 232 passed, 0 failed, 0 skipped. |
+| Client build after test-role fix | 0 errors. |
 | NeoTheology and shared-skill unit tests | 21 passed, 0 failed, 0 skipped. |
 | Merged client and server smoke check | The server reached `Ready` on port 1212. The client reached `InGame`. Startup still reported prototype and sprite errors. No litany cast was checked. |
 | Full YAML linter | Stopped at the existing syntax error in `Resources/Prototypes/_Oxyd/erisPorted/mask/fake_moustache.yml` (line 5). The litany PR does not change that file. |
@@ -81,8 +85,10 @@ NeoTheology files from the PR with older upstream versions.
 
 ## Open gaps and live-round checks
 
-1. Provide a developer-controlled bearer for each of the six profiles.
-   Provide `OxydNtBible` separately. Check the book UI with the new game UI.
+1. Spawn each `RandomHumanoidSpawnerOxydNt*` marker with administrator tools
+   in a live round. Take the ghost role. Check its cruciform, rank, Bible,
+   and book UI with the new game UI. The focused test checks role creation,
+   mind transfer, implants, and books; it does not check live client use.
 2. Check spoken phrases, front and grabbed targets, book choices, costs,
    cooldowns, failed casts, and target privacy with two players.
 3. Check healing, local NT reagents, addiction recovery, pain, and
@@ -99,6 +105,6 @@ NeoTheology files from the PR with older upstream versions.
    Inquisitor access, and Chaplain Bible access. These gaps still need work;
    the passing focused tests do not close them.
 
-The six test profiles do not create ghost roles. Add development-only spawners
-only after their mind-attachment flow grants each cruciform once and supplies
-an appropriate Bible. Do not add production jobs or job slots for the tests.
+The six test ghost roles require administrator-spawned markers. They are not
+round-start jobs. Check each role with a real ghost in a live round before
+claiming that the test path or its litanies work in the client.
