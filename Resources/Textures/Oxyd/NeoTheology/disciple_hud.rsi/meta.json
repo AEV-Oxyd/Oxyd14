@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Taken from CEV-Eris at https://github.com/discordia-space/CEV-Eris/blob/master/icons/mob/hud.dmi (state hudcyberchristian).",
+  "size": {
+    "x": 10,
+    "y": 10
+  },
+  "states": [
+    {
+      "name": "disciple"
+    }
+  ]
+}

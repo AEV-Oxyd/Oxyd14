@@ -207,7 +207,7 @@ public sealed class ChangelingSlimeTests : InteractionTest
     {
         var uid = ToClient(target);
         var hotbar = GetWidget<HotbarGui>();
-        var storageContainer = GetControlFromField<Control>(nameof(HotbarGui.SingleStorageContainer), hotbar);
+        var storageContainer = GetControlFromField<Control>("SingleStorageContainer", hotbar);
         return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, storageContainer);
     }
 }

@@ -1,11 +1,17 @@
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Storage;
+using Content.Shared.Materials;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server.Medical.BiomassReclaimer
 {
     [RegisterComponent]
     public sealed partial class BiomassReclaimerComponent : Component
     {
+        /// <summary>The output material. NeoTheology reclaimers use biomatter.</summary>
+        [DataField]
+        public ProtoId<MaterialPrototype> OutputMaterial = "Biomass";
+
         /// <summary>
         /// This gets set for each mob it processes.
         /// When it hits 0, there is a chance for the reclaimer to either spill blood or throw an item.

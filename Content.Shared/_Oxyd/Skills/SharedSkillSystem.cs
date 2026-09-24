@@ -122,7 +122,8 @@ public abstract partial class SharedSkillSystem : EntitySystem
             return;
         if (!ent.Comp.buffSources[proto].ContainsKey(id))
             return;
-        ent.Comp.buffSources[proto][id].Remove(target);
+        if (ent.Comp.buffSources[proto][id].Remove(target))
+            RecalculateBuffs(ent);
     }
 
     public void RecalculateBuffs(Entity<MobSkillComponent> ent)

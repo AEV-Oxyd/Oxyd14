@@ -1,0 +1,52 @@
+# Eris MATERIAL_BIOMATTER, ported as a normal SS14 material stack.
+# Produced by the biomass reclaimer (P2.4) and the bioreactor (P2.9);
+# consumed by holy-door repair (P2.5) and the cruciform forge (P2.6).
+
+- type: stack
+  parent: BaseVeryLargeStack
+  id: Biomatter
+  name: stack-biomatter
+  icon: { sprite: /Textures/Objects/Materials/materials.rsi, state: monkeyhide }
+  spawn: OxydNtBiomatterStack1
+
+- type: material
+  id: Biomatter
+  name: biomatter
+  unit: materials-unit-sheet
+  stackEntity: OxydNtBiomatterStack1
+  icon: { sprite: Objects/Materials/materials.rsi, state: monkeyhide }
+  color: '#7a4f2a'
+  price: 0.05
+
+- type: entity
+  parent: MaterialBase
+  id: OxydNtBiomatter
+  name: biomatter
+  suffix: Full
+  components:
+  - type: Material
+  - type: PhysicalComposition
+    materialComposition:
+      Biomatter: 1
+  - type: Stack
+    stackType: Biomatter
+    count: 10
+  - type: Sprite
+    sprite: Objects/Materials/materials.rsi
+    state: monkeyhide
+
+- type: entity
+  parent: OxydNtBiomatter
+  id: OxydNtBiomatterStack10
+  suffix: 10
+  components:
+  - type: Stack
+    count: 10
+
+- type: entity
+  parent: OxydNtBiomatter
+  id: OxydNtBiomatterStack1
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1

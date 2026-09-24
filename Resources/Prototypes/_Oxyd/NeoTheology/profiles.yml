@@ -1,0 +1,105 @@
+# Eris access story:
+#   Disciple/Acolyte/Agrolyte/Custodian: OxydNtFollower + OxydNtCommon (from modules)
+#   Preacher/Inquisitor:                 OxydNtFollower + OxydNtCommon + OxydNtClergy
+# litanySets mirror the union of the RankModules table in CruciformSystem so a profile
+# swap and a module swap unlock exactly the same sets.
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtDisciple
+  name: oxyd-neotheology-profile-disciple
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAcolyte
+  name: oxyd-neotheology-profile-acolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  - OxydLitanyAcolyte
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAgrolyte
+  name: oxyd-neotheology-profile-agrolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  - OxydLitanyAgrolyte
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtCustodian
+  name: oxyd-neotheology-profile-custodian
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  - OxydLitanyCustodian
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtPreacher
+  name: oxyd-neotheology-profile-preacher
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  - OxydNtClergy
+  cruciformCapacity: 80
+  regenerationMultiplier: 1.15
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  - OxydLitanyAcolyte
+  - OxydLitanyPriest
+  canChannel: true
+  countsAsChannelingFollower: false
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtInquisitor
+  name: oxyd-neotheology-profile-inquisitor
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  - OxydNtClergy
+  cruciformCapacity: 100
+  regenerationMultiplier: 1.25
+  litanySets:
+  - OxydLitanyCommon
+  - OxydLitanyMachinery
+  - OxydLitanyGroup
+  - OxydLitanyAcolyte
+  - OxydLitanyPriest
+  - OxydLitanyInquisitor
+  canChannel: true
+  countsAsChannelingFollower: false

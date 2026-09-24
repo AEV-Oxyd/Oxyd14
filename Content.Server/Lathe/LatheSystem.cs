@@ -95,6 +95,7 @@ namespace Content.Server.Lathe
                         return;
                     if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
                         return;
+                    _materialStorage.UpdateMaterialWhitelist(ent);
                     UpdateUserInterfaceState(ent, comp);
                 }
             }
@@ -111,6 +112,7 @@ namespace Content.Server.Lathe
                         return;
                     if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
                         return;
+                    _materialStorage.UpdateMaterialWhitelist(ent);
                     UpdateUserInterfaceState(ent, comp);
                 }
             }
