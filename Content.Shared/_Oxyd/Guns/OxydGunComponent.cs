@@ -1,7 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Numerics;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DoAfter;
+using Content.Shared.Weapons.Ranged.Components;
+using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
@@ -9,8 +12,23 @@ using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
-
 namespace Content.Shared._Oxyd.OxydGunSystem;
+
+[Flags, Serializable, NetSerializable]
+public enum COM // Chamber Operating Mode
+{
+    None = 0, // No special operation mode
+    Boltable = 1<<0, // is a bolting weapon.
+    BoltLoad = 1<<1, // will load on bolt
+    BoltUnload = 1<<2, // will remove casing on unbolt
+    BoltClosedAutoload = 1<<3, // will keep auto-loading if bolt is closed
+    Pumpable = 1<<4, // will chamber on pump
+    PumpableLoad= 1<<5, // will add a casing if chamber's empty
+    PumpableUnload = 1<<6, // will remove a casing on pump
+    Auto = 1<<7, // always loads after every fire/insertion
+}
+
+
 [Serializable, NetSerializable]
 public sealed partial class UnjamGunEvent : SimpleDoAfterEvent
 {
@@ -56,8 +74,8 @@ public sealed partial class OxydGunComponent : Component
 
     public TimeSpan lastNetMouseUpdate = TimeSpan.Zero;
     public bool mouseDown = false;
-    // how many states are we expecting/waiting to receive from the client?
-    public int stateCounter = 0;
+
+    [ViewVariables, AutoNetworkedField] public Dictionary<string, uint> originalCapacityCounts = new();
 
     public Vector2 getShootingOffset()
     {
@@ -73,149 +91,84 @@ public sealed partial class OxydActiveFiremodeUpdatingComponent : Component
     public Entity<OxydGunComponent> gun;
     public EntityUid? shooter;
 }
+
 [RegisterComponent]
-public sealed partial class OxydHandheldGunComponent : Component
-{
-}
+public sealed partial class OxydHandheldGunComponent : Component;
 
-public abstract partial class OxydGunProvidersComponent : Component
+public abstract partial class BaseGunProvider : Component
 {
-    public override bool SessionSpecific => true;
+    public abstract List<string> getKeys();
+}
+public abstract partial class OxydGunProvidersComponent<T> : BaseGunProvider
+{
+    [DataField] public Dictionary<string, T> providers = new();
+
+    public override List<string> getKeys() => providers.Keys.ToList();
+
 };
-
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public partial class OxydChamberComponent : OxydGunProvidersComponent
+[Serializable, NetSerializable, DataDefinition]
+public partial class ChamberData
 {
-
-    [DataField("bulletSlot")]
-    public List<ItemSlot> bulletSlot = new();
-    // actual bullet is pulled from here , bulletSlot is synced to what is in here
-    // because ItemSlots fight between server-client , causing client to fire the same bullet multiple times.
-    [ViewVariables, AutoNetworkedField]
-    public List<EntityUid> realBullet = new List<EntityUid>();
-    [ViewVariables, AutoNetworkedField]
-    public bool silenceAutoInsert = false;
-
-
+    [ViewVariables] public string store = string.Empty;
+    [DataField] public COM operatingMode = COM.None;
+    [ViewVariables] public bool state = false; // used by bolties
+    [DataField] public bool pushback = false; // Default is Queue-based, if true, Stack-based
+    [DataField] public int capacity = 1;
+    [DataField] public int basecapacity = 1;
+    [DataField] public EntityWhitelist whitelist = new();
 }
-[RegisterComponent,NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydMagazineChamberComponent : OxydChamberComponent
-{
-    [DataField("magazineSlot"), CheckForGunUpdate(true)]
-    public List<ItemSlot> magazineSlot = new();
 
+[Serializable, NetSerializable, DataDefinition]
+public partial class MagazineData : ChamberData
+{
+    [ViewVariables] public string magstore = string.Empty;
+    [DataField] public EntityWhitelist magwhitelist = new();
+}
+
+[RegisterComponent, NetworkedComponent]
+public partial class OxydChamberComponent : OxydGunProvidersComponent<ChamberData>;
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class OxydMagazineChamberComponent : OxydGunProvidersComponent<MagazineData>
+{
     [DataField]
     // wheter to draw mags above or below gun layer
     public bool magAbove = false;
-
     [DataField]
     public bool MagInhands = false;
 }
 
-[RegisterComponent,NetworkedComponent]
-public sealed partial class OxydPredictedGunStorageComponent : OxydGunProvidersComponent
+[Serializable, NetSerializable, DataDefinition]
+public partial class RevolverData
 {
-    [DataField] public List<string> storeKeys = new() {"base"};
-
+    [ViewVariables] public string store = string.Empty;
+    // array for keeping track of actually loaded bullets.
+    [ViewVariables, NonSerialized] public EntityUid[] loaded = Array.Empty<EntityUid>();
+    [DataField] public int index = 0;
+    [DataField] public int capacity = 0;
+    [DataField] public int basecapacity = 1;
+    [DataField] public EntityWhitelist whitelist = new();
 }
 
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
-public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent
+[Serializable, NetSerializable, DataDefinition]
+public partial class RevolverNetworkData
 {
-    // used to define what kind of bullets will fit in the gun . Won't actually be initialized!
-    [DataField("bulletSlot")]
-    public ItemSlot bulletSlot = new();
-    public override bool SessionSpecific => true;
-    [NetSerializable, Serializable, DataDefinition]
-    public sealed partial class RevolvingData
-    {
-        [ViewVariables]
-        public int index = 0;
-        [DataField]
-        public int count
-        {
-            get;
-            set
-            {
-                loaded = new NetEntity[value];
-                field = value;
-            }
-        }
-
-        [ViewVariables]
-        public NetEntity[] loaded;
-
-        public void increment()
-        {
-            index = (index + 1) % count;
-        }
-        // gets the next position
-        public int getIncrement()
-        {
-            return (index + 1) % count;
-        }
-
-        public int getIncrement(int i)
-        {
-            return (i+1) % count;
-        }
-        // returns -1 for no slots open
-        public int getFreeSpot()
-        {
-            if (seek() == NetEntity.Invalid)
-                return index;
-            int starting = index;
-            int cur = getIncrement(starting);
-            while (cur != starting)
-            {
-                if (loaded[cur] == NetEntity.Invalid)
-                    return cur;
-                cur = getIncrement(cur);
-            }
-
-            return -1;
-        }
-
-        public NetEntity get()
-        {
-            var tng = loaded[index];
-            increment();
-            return tng;
-        }
-
-        public NetEntity seek()
-        {
-            return loaded[index];
-        }
-    }
-    [CheckForGunUpdate(true), DataField, AutoNetworkedField]
-    public List<RevolvingData> revolvingSlots;
-}
-// acts as a buffer between magazines / loading if present
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
-public sealed partial class OxydChamberExtensionComponent : Component
-{
-    public override bool SessionSpecific => true;
-    [ViewVariables, AutoNetworkedField]
-    // will be null for every firemode index present unless set
-    //  array length defines how many extra bullet slots are given
-    public List<List<NetEntity>?> extending = new();
+    public required RevolverData data;
+    public NetEntity[] loadedNet = Array.Empty<NetEntity>();
 }
 
-[Serializable, NetSerializable]
-public sealed class OxydChamberExtensionComponentState : ComponentState
+[Serializable, NetSerializable, DataDefinition]
+public partial class RevolverDataState : IgnorableComponentState
 {
-    public readonly List<List<NetEntity>?> Extending;
-
-    public OxydChamberExtensionComponentState(List<List<NetEntity>?> extending)
-    {
-        Extending = extending;
-    }
+    public Dictionary<string, RevolverNetworkData> providers = new();
 }
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class OxydRevolvingChamberComponent : OxydGunProvidersComponent<RevolverData>;
 
 [DataDefinition]
 [Serializable, NetSerializable]
-public sealed partial class LaserAmmoDef
+public sealed partial class LaserData
 {
     [DataField]
     public EntProtoId laser = default!;
@@ -225,16 +178,8 @@ public sealed partial class LaserAmmoDef
 
 }
 
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public partial class OxydGunLaserProviderComponent : OxydGunProvidersComponent
-{
-
-
-    [DataField("laserProto"), AutoNetworkedField]
-    public List<LaserAmmoDef> laserProto = new();
-
-
-}
+[RegisterComponent, NetworkedComponent]
+public partial class OxydGunLaserProviderComponent : OxydGunProvidersComponent<LaserData>;
 
 [RegisterComponent]
 public sealed partial class OxydBulletComponent : Component
@@ -249,31 +194,19 @@ public sealed partial class OxydBulletComponent : Component
 }
 
 [RegisterComponent]
-public sealed partial class OxydHitscanProjectileComponent : Component
+public sealed partial class OxydHitscanProjectileComponent : Component;
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydMagazineComponent : Component
 {
+    [DataField] public string storeKey = string.Empty;
+    [DataField("capacity"), AutoNetworkedField] public uint maxBullets = 1;
+    [DataField] public EntityWhitelist whitelist = new();
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydMagazineComponent : OxydGunProvidersComponent
+public sealed partial class OxydChargeComponent : Component
 {
-    public override bool SessionSpecific => true;
-
-    [DataField("capacity"), AutoNetworkedField]
-    public int maxBullets = 1;
-
-    [ViewVariables, AutoNetworkedField]
-    public Stack<NetEntity> loadedBullets;
-
-    public OxydMagazineComponent()
-    {
-        loadedBullets = new(maxBullets);
-    }
-}
-
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydChargeComponent : OxydGunProvidersComponent
-{
-    public override bool SessionSpecific => true;
     [DataField, AutoNetworkedField]
     public float charge = 0;
 }

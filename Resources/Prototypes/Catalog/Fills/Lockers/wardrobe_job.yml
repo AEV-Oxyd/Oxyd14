@@ -285,13 +285,13 @@
   id: FillWardrobeSecurity
   table: !type:AllSelector
     children:
-    - id: ClothingUniformJumpsuitSec
-    - id: ClothingBackpackSecurity
+    - id: erisport_Ironhammer_Operatives_jumpsuit
+    - id: erisport_security_backpack
     - id: ClothingShoesBootsJack
     - id: ClothingEyesGlassesSunglasses
-    - id: ClothingHeadHelmetBasic
-    - id: ClothingOuterArmorBasic
-    - id: ClothingUniformJumpskirtSec
+    - id: erisport_operator_helmet
+    - id: erisport_operator_armor
+    - id: erisport_Ironhammer_Operatives_jumpskirt
 
 - type: entity
   id: WardrobeCargoFilled

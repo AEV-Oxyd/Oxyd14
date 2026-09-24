@@ -120,7 +120,7 @@ namespace Content.Client.Decals.Overlays
             // Clyde only flushes WorldSpaceGrids overlays before the next grid
             // when this is set; otherwise shuttle/station decals can draw over
             // the other grid's tiles.
-            RequiresFlush = true;
+            //RequiresFlush = true;
         }
 
         private static int CompareDecalIndex(DecalIndex x, DecalIndex y)

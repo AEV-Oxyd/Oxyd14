@@ -1,5 +1,5 @@
 - type: entity
-  parent: ClothingEyesBase
+  parent: [ClothingEyesBase, ShowMedicalIcons]
   id: erisport_Ironhammer_medical_HUD
   name: Ironhammer medical HUD
   description: Goggles with inbuilt medical information. They provide minor flash resistance.
@@ -9,9 +9,13 @@
   - type: Clothing
     sprite: Oxyd/erisported/clothing/Ironhammer_medical_HUD.rsi
     quickEquip: true
+  - type: FlashImmunity
+  - type: EyeProtection
+    protectionTime: 5
   - type: Tag
     tags:
     - ClothMade
     - Recyclable
     - WhitelistChameleon
+    - HudMedical
 

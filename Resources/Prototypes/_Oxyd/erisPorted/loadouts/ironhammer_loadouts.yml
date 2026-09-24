@@ -1,0 +1,339 @@
+# Ironhammer-specific loadout prototypes. These are separate from the
+# upstream Security loadout files so upstream changes remain conflict-free.
+
+# Head of Security
+- type: loadoutEffectGroup
+  id: IronhammerMasterHeadOfSecurity
+  effects:
+  - !type:JobRequirementLoadoutEffect
+    requirement:
+      !type:RoleTimeRequirement
+      role: JobIronhammerHeadOfSecurity
+      time: 20h
+
+- type: loadout
+  id: IronhammerHeadOfSecurityJumpsuit
+  equipment:
+    jumpsuit: erisport_Ironhammer_Commanders_jumpsuit
+  groupBy: "jumpsuit"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityJumpskirt
+  equipment:
+    jumpsuit: erisport_Ironhammer_Commanders_jumpskirt
+  groupBy: "jumpskirt"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityTurtleneck
+  equipment:
+    jumpsuit: erisport_ironhammer_formal_uniform
+  groupBy: "jumpsuit"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityTurtleneckSkirt
+  equipment:
+    jumpsuit: erisport_Ironhammer_Commanders_jumpskirt
+  groupBy: "jumpskirt"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityFormalSuit
+  equipment:
+    jumpsuit: erisport_ironhammer_formal_uniform
+  groupBy: "jumpsuit"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityFormalSkirt
+  equipment:
+    jumpsuit: ClothingUniformJumpskirtHosFormal
+  groupBy: "jumpskirt"
+
+- type: loadout
+  id: IronhammerHeadOfSecurityHead
+  equipment:
+    head: erisport_Ironhammer_Commander_Hat
+
+- type: loadout
+  id: IronhammerHeadOfSecurityBeret
+  equipment:
+    head: erisport_Commander_beret
+
+- type: loadout
+  id: IronhammerHeadOfSecurityCloak
+  equipment:
+    neck: ClothingNeckCloakHos
+
+- type: loadout
+  id: IronhammerHeadOfSecurityMantle
+  equipment:
+    neck: ClothingNeckMantleHOS
+  effects:
+  - !type:GroupLoadoutEffect
+    proto: IronhammerMasterHeadOfSecurity
+
+- type: startingGear
+  id: IronhammerHeadOfSecurityMantle
+  equipment:
+    neck: ClothingNeckMantleHOS
+
+- type: loadout
+  id: IronhammerHeadOfSecurityCoat
+  equipment:
+    outerClothing: erisport_greatcoat_ironhammer
+
+- type: loadout
+  id: IronhammerHeadOfSecurityWinterCoat
+  equipment:
+    outerClothing: ClothingOuterWinterHoS
+
+# Warden
+- type: loadout
+  id: IronhammerWardenHead
+  equipment:
+    head: erisport_IH_sergeant_cap
+
+- type: loadout
+  id: IronhammerWardenBeret
+  equipment:
+    head: erisport_Sergeant_beret
+
+- type: loadout
+  id: IronhammerWardenJumpsuit
+  equipment:
+    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+
+- type: loadout
+  id: IronhammerWardenJumpskirt
+  equipment:
+    jumpsuit: erisport_Gunnery_Sergeant_jumpskirt
+
+- type: loadout
+  id: IronhammerWardenCoat
+  equipment:
+    outerClothing: erisport_Wardens_overcoat
+
+- type: loadout
+  id: IronhammerWardenArmoredWinterCoat
+  equipment:
+    outerClothing: ClothingOuterWinterWarden
+
+# Security officer
+- type: loadoutEffectGroup
+  id: IronhammerSeniorOfficer
+  effects:
+  - !type:JobRequirementLoadoutEffect
+    requirement:
+      !type:RoleTimeRequirement
+      role: JobIronhammerWarden
+      time: 6h
+  - !type:JobRequirementLoadoutEffect
+    requirement:
+      !type:DepartmentTimeRequirement
+      department: IronhammerSecurity
+      time: 60h
+
+- type: loadout
+  id: IronhammerSecurityHelmet
+  equipment:
+    head: erisport_operator_helmet
+
+- type: loadout
+  id: IronhammerSecurityHat
+  equipment:
+    head: erisport_IH_field_cap
+
+- type: loadout
+  id: IronhammerSecurityBeret
+  equipment:
+    head: erisport_Operative_beret
+
+- type: loadout
+  id: IronhammerTrooperHat
+  equipment:
+    head: ClothingHeadHatSecurityTrooper
+
+- type: loadout
+  id: IronhammerSecurityJumpsuit
+  equipment:
+    jumpsuit: erisport_Ironhammer_Operatives_jumpsuit
+
+- type: loadout
+  id: IronhammerSecurityJumpskirt
+  equipment:
+    jumpsuit: erisport_Ironhammer_Operatives_jumpskirt
+
+- type: loadout
+  id: IronhammerSecurityJumpsuitGrey
+  equipment:
+    jumpsuit: erisport_Ironhammer_Operatives_turtleneck
+
+- type: loadout
+  id: IronhammerSecurityJumpskirtGrey
+  equipment:
+    jumpsuit: erisport_Ironhammer_Operatives_turtleneck
+
+- type: loadout
+  id: IronhammerTrooperUniform
+  equipment:
+    jumpsuit: ClothingUniformSecurityTrooper
+
+- type: loadout
+  id: IronhammerSeniorOfficerJumpsuit
+  effects:
+  - !type:GroupLoadoutEffect
+    proto: IronhammerSeniorOfficer
+  equipment:
+    jumpsuit: erisport_Gunnery_Sergeant_jumpsuit
+
+- type: loadout
+  id: IronhammerSeniorOfficerJumpskirt
+  effects:
+  - !type:GroupLoadoutEffect
+    proto: IronhammerSeniorOfficer
+  equipment:
+    jumpsuit: erisport_Gunnery_Sergeant_jumpskirt
+
+- type: loadout
+  id: IronhammerSecurityBackpack
+  equipment:
+    back: erisport_security_backpack
+
+- type: loadout
+  id: IronhammerSecuritySatchel
+  equipment:
+    back: erisport_security_satchel
+
+- type: loadout
+  id: IronhammerSecurityDuffel
+  equipment:
+    back: ClothingBackpackDuffelSecurity
+
+- type: loadout
+  id: IronhammerSecurityBelt
+  equipment:
+    belt: ClothingBeltSecurityFilled
+
+- type: loadout
+  id: IronhammerSecurityWebbing
+  equipment:
+    belt: ClothingBeltSecurityWebbingFilled
+
+- type: loadout
+  id: IronhammerArmorVest
+  equipment:
+    outerClothing: erisport_full_operator_armor
+
+- type: loadout
+  id: IronhammerArmorVestSlim
+  equipment:
+    outerClothing: erisport_operator_armor
+
+- type: loadout
+  id: IronhammerSecurityOfficerWintercoat
+  equipment:
+    outerClothing: ClothingOuterWinterSec
+
+- type: loadout
+  id: IronhammerSecurityPDA
+  equipment:
+    id: SecurityPDA
+
+- type: loadout
+  id: IronhammerSeniorOfficerPDA
+  effects:
+  - !type:GroupLoadoutEffect
+    proto: IronhammerSeniorOfficer
+  equipment:
+    id: SeniorOfficerPDA
+
+# Detective
+- type: loadout
+  id: IronhammerDetectiveFedora
+  equipment:
+    head: ClothingHeadHatFedoraBrown
+
+- type: loadout
+  id: IronhammerDetectiveFedoraGrey
+  equipment:
+    head: ClothingHeadHatFedoraGrey
+
+- type: loadout
+  id: IronhammerDetectiveTie
+  equipment:
+    neck: ClothingNeckTieDet
+
+- type: loadout
+  id: IronhammerDetectiveJumpsuit
+  equipment:
+    jumpsuit: erisport_inspectors_suit
+
+- type: loadout
+  id: IronhammerDetectiveJumpskirt
+  equipment:
+    jumpsuit: ClothingUniformJumpskirtDetective
+
+- type: loadout
+  id: IronhammerNoirJumpsuit
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitDetectiveGrey
+
+- type: loadout
+  id: IronhammerNoirJumpskirt
+  equipment:
+    jumpsuit: ClothingUniformJumpskirtDetectiveGrey
+
+- type: loadout
+  id: IronhammerDetectiveArmorVest
+  equipment:
+    outerClothing: ClothingOuterVestDetective
+
+- type: loadout
+  id: IronhammerDetectiveCoat
+  equipment:
+    outerClothing: erisport_inspectors_brown_armored_trenchcoat
+
+- type: loadout
+  id: IronhammerDetectiveCoatGrey
+  equipment:
+    outerClothing: erisport_inspectors_grey_armored_trenchcoat
+
+# Cadet
+- type: loadout
+  id: IronhammerRedJumpsuit
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitColorRed
+
+- type: loadout
+  id: IronhammerRedJumpskirt
+  equipment:
+    jumpsuit: erisport_Ironhammer_Cadets_jumpskirt
+
+- type: loadout
+  id: IronhammerCadetFieldCap
+  equipment:
+    head: erisport_IH_field_cap
+
+- type: loadout
+  id: IronhammerCadetBeret
+  equipment:
+    head: erisport_old_security_beret
+
+# Medical Specialist
+- type: loadout
+  id: IronhammerMedicalSpecialistJumpsuit
+  equipment:
+    jumpsuit: erisport_Medical_Specialists_jumpsuit
+
+- type: loadout
+  id: IronhammerMedicalSpecialistJumpskirt
+  equipment:
+    jumpsuit: erisport_Medical_Specialists_jumpskirt
+
+- type: loadout
+  id: IronhammerMedicalSpecialistOuterClothing
+  equipment:
+    outerClothing: erisport_medical_specialists_labcoat
+
+- type: loadout
+  id: IronhammerMedicalSpecialistBelt
+  equipment:
+    belt: erisport_medical_belt_filled

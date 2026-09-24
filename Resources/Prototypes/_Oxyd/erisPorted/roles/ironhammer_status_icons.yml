@@ -1,0 +1,61 @@
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerCommander
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: HeadOfSecurity
+  jobName: job-name-ironhammer-hos
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerWarden
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Warden
+  jobName: job-name-ironhammer-warden
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerOperative
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: SecurityOfficer
+  jobName: job-name-ironhammer-security
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerInspector
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Detective
+  jobName: job-name-ironhammer-detective
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerCadet
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: SecurityCadet
+  jobName: job-name-ironhammer-cadet
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconIronhammerMedicalSpecialist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Brigmedic
+  jobName: job-name-ironhammer-medspec
+
+- type: jobIconGroup
+  id: IronhammerSecurityIconGroup
+  groupName: job-icon-group-ironhammer-security
+  sprite:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: SecurityOfficer
+  icons:
+  - JobIconIronhammerCommander
+  - JobIconIronhammerWarden
+  - JobIconIronhammerOperative
+  - JobIconIronhammerInspector
+  - JobIconIronhammerCadet
+  - JobIconIronhammerMedicalSpecialist

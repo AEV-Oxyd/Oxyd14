@@ -1,0 +1,831 @@
+- type: gameMap
+  id: IronhammerBagel
+  mapName: 'Bagel Station'
+  mapPath: /Maps/bagel.yml
+  jobWeights: Ironhammer
+  minPlayers: 45 #removing max players since server already has a max doesnt matter
+  stations:
+    Bagel:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Bagel Station {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_lox.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service (8-11)
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 2 ]
+            Reporter: [ 1, 2 ]
+            #engineering (6-8)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical (8-8)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ]
+            #science (6-6)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security (9-10)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 5, 5 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply (6)
+            SalvageSpecialist: [ 3, 3 ]
+            CargoTechnician: [ 3, 3 ]
+            #civilian (2-3 + overflow)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon (3)
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerBox
+  mapName: 'Box Station'
+  mapPath: /Maps/box.yml
+  jobWeights: Ironhammer
+  minPlayers: 45
+  stations:
+    Boxstation:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Box Station {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: 'TG'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_box.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service (8-10)
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            Reporter: [ 1, 1 ]
+            #engineering (6-8)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical (8-8)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ]
+            #science (6-6)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security (10-11)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 5, 5 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply (6)
+            SalvageSpecialist: [ 3, 3 ]
+            CargoTechnician: [ 3, 3 ]
+            #civilian (2-3 + overflow)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon (3)
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerElkridge
+  mapName: 'Elkridge Depot'
+  mapPath: /Maps/elkridge.yml
+  jobWeights: Ironhammer
+  minPlayers: 25
+  maxPlayers: 44
+  stations:
+    Elkridge:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Elkridge Depot {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: 'DS'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_elkridge.yml
+        - type: StationCargoShuttle
+          path: /Maps/Shuttles/cargo_elkridge.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service 7-11
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 1, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            Reporter: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            #engineering 7-8
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 3, 3 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical 7-9
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            MedicalIntern: [ 2, 2 ]
+            Paramedic: [ 1, 1 ]
+            Psychologist: [ 0, 1 ]
+            #science 5-6
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security 6-8
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 4, 4 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply 4
+            SalvageSpecialist: [ 2, 2 ]
+            CargoTechnician: [ 2, 2 ]
+            #civilian 2-3 + overflow
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon 3
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerExo
+  mapName: 'Exo'
+  mapPath: /Maps/exo.yml
+  jobWeights: Ironhammer
+  minPlayers: 45
+  stations:
+    Exo:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: 'Exomorph Vessel "Conquest" EXO-{1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_exo.yml
+        - type: StationCargoShuttle
+          path: /Maps/Shuttles/cargo_exo.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service (8-10)
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 2 ]
+            Reporter: [ 1, 1 ]
+            #engineering (6-8)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical (8-8)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ]
+            #science (6-6)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security (10-11)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 5, 5 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply (6)
+            SalvageSpecialist: [ 3, 3 ]
+            CargoTechnician: [ 3, 3 ]
+            #civilian (2-3 + overflow)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon (3)
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerMarathon
+  mapName: 'Marathon Station'
+  mapPath: /Maps/marathon.yml
+  jobWeights: Ironhammer
+  minPlayers: 45
+  stations:
+    Marathon:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Marathon Station {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_rod.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service (7-9)
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            #engineering (6-8)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical (8-8)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ]
+            #science (6-6)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security (10-11)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 5, 5 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply (6)
+            SalvageSpecialist: [ 3, 3 ]
+            CargoTechnician: [ 3, 3 ]
+            #civilian (2-3 + overflow)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon (3)
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+
+- type: gameMap
+  id: IronhammerPacked
+  mapName: 'Packed'
+  mapPath: /Maps/packed.yml
+  jobWeights: Ironhammer
+  minPlayers: 0
+  maxPlayers: 24
+  stations:
+    Packed:
+      stationProto: StandardNanotrasenStation
+      components:
+      - type: StationNameSetup
+        mapNameTemplate: '{0} Packed {1}'
+        nameGenerator:
+          !type:NanotrasenNameGenerator
+          prefixCreator: 'VG'
+      - type: StationEmergencyShuttle
+        emergencyShuttlePath: /Maps/Shuttles/emergency_crimson.yml
+      - type: StationJobs
+        availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service 7-7
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 1, 1 ]
+            Chaplain: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            #engineering 6-6
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 3, 3 ]
+            TechnicalAssistant: [ 1, 1 ]
+            #medical 7-7
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 2, 2 ]
+            MedicalIntern: [ 2, 2 ]
+            Paramedic: [ 1, 1 ]
+            #science 3-3
+            Scientist: [ 2, 2 ]
+            ResearchAssistant: [ 1, 1 ]
+            #security 4-7
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 3, 3 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply 4
+            SalvageSpecialist: [ 2, 2 ]
+            CargoTechnician: [ 2, 2 ]
+            #civilian 2-3 + overflow
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon 3
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerPlasma
+  mapName: 'Plasma'
+  mapPath: /Maps/plasma.yml
+  jobWeights: Ironhammer
+  minPlayers: 25
+  maxPlayers: 44
+  stations:
+    Plasma:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Plasma {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_plasma.yml
+        - type: StationCargoShuttle
+          path: /Maps/Shuttles/cargo_plasma.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service 7-11
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            Reporter: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            #engineering 7-8
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical 7-9
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 2, 2 ]
+            MedicalIntern: [ 2, 2 ]
+            Paramedic: [ 1, 1 ]
+            Psychologist: [ 0, 1 ]
+            #science 5-6
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security 6-8
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 4, 4 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply 4
+            SalvageSpecialist: [ 2, 2 ]
+            CargoTechnician: [ 2, 2 ]
+            #civilian 2-3 + overflow
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon 3
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerRelic
+  mapName: 'Relic'
+  mapPath: /Maps/relic.yml
+  jobWeights: Ironhammer
+  maxRandomOffset: 0
+  randomRotation: false
+  minPlayers: 15
+  maxPlayers: 35
+  stations:
+    Relic:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Relic Station SS13'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: 'OG'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_relic.yml
+        - type: StationArrivals
+          shuttlePath: /Maps/Shuttles/arrivals_relic.yml
+        - type: StationCargoShuttle
+          path: /Maps/Shuttles/cargo_relic.yml
+        - type: GridSpawn
+          groups:
+            trade: !type:GridSpawnGroup
+              minCount: 0
+              maxCount: 0
+              paths:
+                - /Maps/Shuttles/trading_outpost.yml
+        - type: StationJobs
+          availableJobs:
+            #command (6)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            #service (1)
+            Chaplain: [ 1, 1 ]
+            #engineering (4)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 2, 2 ]
+            TechnicalAssistant: [ 2, 2 ] #intern, not counted
+            #medical (4)
+            Chemist: [ 1, 1 ]
+            MedicalDoctor: [ 2, 2 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ] #intern, not counted
+            #science (1 - 2)
+            Scientist: [ 1, 2 ]
+            ResearchAssistant: [ 2, 2 ] #intern, not counted
+            #security (4 - 5)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 1, 2 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ] #intern, not counted
+            Lawyer: [ 1, 1 ]
+            #supply (0)
+            #civilian (0+)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            #silicon (1)
+            StationAi: [ 1, 1 ]
+
+- type: gameMap
+  id: IronhammerSaltern
+  mapName: 'Saltern'
+  mapPath: /Maps/saltern.yml
+  jobWeights: Ironhammer
+  minPlayers: 0
+  maxPlayers: 35
+  fallback: true
+  stations:
+    Saltern:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Saltern {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationJobs
+          availableJobs: # 45 jobs total w/o latejoins & interns, 62 jobs total w/ latejoins & interns
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service (8 - 9)
+            Bartender: [ 1, 1 ]
+            Botanist: [ 1, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 1, 1 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 2, 2 ]
+            #engineering (6)
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 4, 4 ] #intern, not counted
+            #medical (6)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            MedicalIntern: [ 4, 4 ] #intern, not counted
+            Paramedic: [ 1, 1 ]
+            #science (4)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ] #intern, not counted
+            #security (6)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 4, 4 ]
+            IronhammerSecurityCadet: [ 4, 4 ] #intern, not counted
+            #supply (3 - 5)
+            SalvageSpecialist: [ 1, 3 ]
+            CargoTechnician: [ 2, 2 ]
+            #civilian (3+)
+            Passenger: [ -1, -1 ] #infinite, not counted
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon (2)
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerSnowball
+  mapName: 'Snowball Station'
+  mapPath: /Maps/snowball.yml
+  jobWeights: Ironhammer
+  minPlayers: 5
+  maxPlayers: 24
+  stations:
+    Snowball:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Snowball Station {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_rod.yml
+        - type: StationJobs
+          availableJobs:
+            #command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            #service 6-10
+            Bartender: [ 1, 1 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 1, 1 ]
+            Janitor: [ 1, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            #engineering 7-8
+            AtmosphericTechnician: [ 2, 2 ]
+            StationEngineer: [ 3, 3 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical 7-9
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            MedicalIntern: [ 2, 2 ]
+            Paramedic: [ 1, 1 ]
+            #science 5-6
+            Scientist: [ 3, 3 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security 6-8
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 3, 3 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 1 ]
+            #supply 4
+            SalvageSpecialist: [ 2, 2 ]
+            CargoTechnician: [ 2, 2 ]
+            #civilian 2-3 + overflow
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            #silicon 3
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+- type: gameMap
+  id: IronhammerSushi
+  mapName: 'Sushi Station'
+  mapPath: /Maps/sushi.yml
+  jobWeights: Ironhammer
+  minPlayers: 45
+  maxPlayers: 70
+  stations:
+    Sushi:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: '{0} Sushi Station {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_sushi.yml
+        - type: StationJobs
+          availableJobs:
+            # Command (7)
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            ChiefMedicalOfficer: [ 1, 1 ]
+            ChiefEngineer: [ 1, 1 ]
+            ResearchDirector: [ 1, 1 ]
+            Quartermaster: [ 1, 1 ]
+            # Service (11-13)
+            Bartender: [ 2, 2 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 2, 2 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            Reporter: [ 1, 1 ]
+            ServiceWorker: [ 1, 2 ]
+            # Engineering (7-9)
+            AtmosphericTechnician: [ 3, 3 ]
+            StationEngineer: [ 4, 4 ]
+            TechnicalAssistant: [ 2, 2 ]
+            # Medical (8-10)
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 4, 4 ]
+            Paramedic: [ 1, 1 ]
+            MedicalIntern: [ 2, 2 ]
+            Psychologist: [ 1, 1 ]
+            # Science (4-6)
+            Scientist: [ 4, 4 ]
+            ResearchAssistant: [ 2, 2 ]
+            # Security (9-11)
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 5, 5 ]
+            IronhammerDetective: [ 1, 1 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 2, 2 ]
+            # Supply (6)
+            SalvageSpecialist: [ 3, 3 ]
+            CargoTechnician: [ 3, 3 ]
+            # Civilian (3+)
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            # Silicon (4)
+            StationAi: [ 1, 1 ]
+            Borg: [ 3, 3 ]
+
+- type: gameMap
+  id: IronhammerTram2
+  mapName: 'Tram2'
+  mapPath: /Maps/tram2.yml
+  jobWeights: Ironhammer
+  maxRandomOffset: 0
+  minPlayers: 45
+  maxPlayers: 65
+  stations:
+    Tram2:
+      stationProto: StandardNanotrasenStation
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: 'Tram2'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationEmergencyShuttle
+          emergencyShuttlePath: /Maps/Shuttles/emergency_accordia.yml
+        - type: StationJobs
+          availableJobs:
+            #service 13-15
+            Captain: [ 1, 1 ]
+            HeadOfPersonnel: [ 1, 1 ]
+            Bartender: [ 1, 2 ]
+            Botanist: [ 2, 2 ]
+            Chef: [ 2, 2 ]
+            Janitor: [ 2, 2 ]
+            Chaplain: [ 1, 1 ]
+            Librarian: [ 1, 1 ]
+            ServiceWorker: [ 1, 1 ]
+            IronhammerDetective: [ 1, 2 ]
+            TramDriver: [ 1, 1 ]
+            #engineering 9
+            ChiefEngineer: [ 1, 1 ]
+            AtmosphericTechnician: [ 3, 3 ]
+            StationEngineer: [ 3, 3 ]
+            TechnicalAssistant: [ 2, 2 ]
+            #medical 10
+            ChiefMedicalOfficer: [ 1, 1 ]
+            Chemist: [ 2, 2 ]
+            MedicalDoctor: [ 3, 3 ]
+            MedicalIntern: [ 2, 2 ]
+            Paramedic: [ 1, 2 ]
+            Psychologist: [1, 1]
+            #science 6
+            ResearchDirector: [ 1, 1 ]
+            Scientist: [ 3, 3 ]
+            ResearchAssistant: [ 2, 2 ]
+            #security 8-9
+            IronhammerHeadOfSecurity: [ 1, 1 ]
+            IronhammerWarden: [ 1, 1 ]
+            IronhammerMedicalSpecialist: [ 1, 1 ]
+            IronhammerSecurityOfficer: [ 3, 3 ]
+            IronhammerSecurityCadet: [ 2, 2 ]
+            Lawyer: [ 1, 2 ]
+            #supply 6
+            Quartermaster: [ 1, 1 ]
+            SalvageSpecialist: [ 2, 2 ]
+            CargoTechnician: [ 3, 3 ]
+            #civilian 4+
+            Passenger: [ -1, -1 ]
+            Clown: [ 1, 1 ]
+            Mime: [ 1, 1 ]
+            Musician: [ 1, 1 ]
+            Reporter: [ 1, 1 ]
+            #silicon 3
+            StationAi: [ 1, 1 ]
+            Borg: [ 2, 2 ]
+
+# Use this pool when running the additive Ironhammer station variants.
+- type: gameMapPool
+  id: IronhammerMapPool
+  maps:
+  - IronhammerBagel
+  - IronhammerBox
+  - IronhammerElkridge
+  - IronhammerExo
+  - IronhammerMarathon
+  - IronhammerPacked
+  - IronhammerPlasma
+  - IronhammerRelic
+  - IronhammerSaltern
+  - IronhammerSnowball
+  - IronhammerSushi
+  - IronhammerTram2

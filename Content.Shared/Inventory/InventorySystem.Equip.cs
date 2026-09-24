@@ -286,28 +286,20 @@ public abstract partial class InventorySystem
         DebugTools.Assert(slotDefinition.Name == slot);
         if (slotDefinition.DependsOn != null)
         {
+            if (!HasDependenciesFulfilled(target, slotDefinition, inventory))
+                return false;
             if (!TryGetSlotEntity(target, slotDefinition.DependsOn, out EntityUid? slotEntity, inventory))
                 return false;
-
-            if (slotDefinition.DependsOnComponents is { } componentRegistry)
-            {
-                foreach (var (_, entry) in componentRegistry)
-                {
-                    if (!HasComp(slotEntity, entry.Component.GetType()))
-                        return false;
-
-                    if (TryComp<AllowSuitStorageComponent>(slotEntity, out var comp) &&
-                        _whitelistSystem.IsWhitelistFailOrNull(comp.Whitelist, itemUid))
-                        return false;
-                }
-            }
+            if (TryComp<AllowSuitStorageComponent>(slotEntity, out var comp) &&
+                _whitelistSystem.IsWhitelistFailOrNull(comp.Whitelist, itemUid))
+                return false;
         }
 
         var fittingInPocket = slotDefinition.SlotFlags.HasFlag(SlotFlags.POCKET) &&
                               item != null &&
                               _item.GetSizePrototype(item.Size) <= _item.GetSizePrototype(PocketableItemSize);
         if (clothing == null && !fittingInPocket
-            || clothing != null && !clothing.Slots.HasFlag(slotDefinition.SlotFlags) && !fittingInPocket)
+            || clothing != null && !clothing.Slots.HasFlag(slotDefinition.SlotFlags & SlotFlags.SLOTIDS) && !fittingInPocket)
         {
             reason = "inventory-component-can-equip-does-not-fit";
             return false;

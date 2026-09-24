@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Client.Hands.Systems;
 using Content.Client.Items.Systems;
 using Content.Client.Storage;
@@ -24,6 +25,7 @@ namespace Content.Client.UserInterface.Systems.Storage.Controls;
 public sealed partial class StorageWindow : BaseWindow
 {
     [Dependency] private IEntityManager _entity = default!;
+    private OxTagController tags = default!;
     private readonly StorageUIController _storageController;
 
     public EntityUid? StorageEntity;
@@ -79,6 +81,7 @@ public sealed partial class StorageWindow : BaseWindow
         Resizable = false;
 
         _storageController = UserInterfaceManager.GetUIController<StorageUIController>();
+        tags = UserInterfaceManager.GetUIController<OxTagController>();
 
         OnThemeUpdated();
 

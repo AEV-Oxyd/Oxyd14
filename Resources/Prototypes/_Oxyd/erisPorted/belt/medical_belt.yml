@@ -1,5 +1,5 @@
 - type: entity
-  parent: ClothingBeltBase
+  parent: ClothingBeltMedicalEMT
   id: erisport_medical_belt
   name: medical belt
   description: Can hold various medical equipment.
@@ -17,3 +17,21 @@
   - type: Item
     size: Normal
 
+- type: entity
+  parent: erisport_medical_belt
+  id: erisport_medical_belt_filled
+  suffix: Filled
+  components:
+  - type: EntityTableContainerFill
+    containers:
+      storagebase: !type:AllSelector
+        children:
+        - id: Bloodpack
+          amount: 2
+        - id: Gauze
+        - id: ChemistryBottleInaprovaline
+          amount: 2
+        - id: ChemistryBottleHaloperidol
+        - id: ChemistryBottleEthylredoxazine
+        - id: ChemistryBottleIpecac
+        - id: ChemistryBottleCharcoal

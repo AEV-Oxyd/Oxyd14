@@ -1,26 +1,25 @@
 - type: vendingMachineInventory
   id: SecDrobeInventory
   startingInventory:
-    ClothingBackpackSecurity: 3
-    ClothingBackpackSatchelSecurity: 3
+    erisport_security_backpack: 3
+    erisport_security_satchel: 3
     ClothingBackpackDuffelSecurity: 3
-    ClothingUniformJumpsuitSec: 3
+    erisport_Ironhammer_Operatives_jumpsuit: 3
     ClothingShoesBootsJack: 3
-    ClothingHeadHatBeretSecurity: 3
-    ClothingHeadHatSecsoft: 3
+    erisport_Operative_beret: 3
+    erisport_IH_field_cap: 3
     ClothingHeadBandRed: 3
     ClothingMaskNeckGaiterRed: 3
     ClothingHandsGlovesColorBlack: 3
     ClothingHandsGlovesFingerless: 3
-    ClothingUniformJumpskirtSec: 3
-    ClothingUniformJumpsuitSecGrey: 3
-    ClothingUniformJumpskirtSecGrey: 3
-    ClothingUniformJumpsuitSecBlue: 3
+    erisport_Ironhammer_Operatives_jumpskirt: 3
+    erisport_Ironhammer_Operatives_turtleneck: 3
+    erisport_Gunnery_Sergeant_jumpsuit: 3
     ClothingHeadsetSecurity: 3
     ClothingOuterWinterSec: 2
-    ClothingOuterArmorBasic: 2
+    erisport_operator_armor: 2
     ClothingNeckScarfStripedRed: 3
-    ClothingOuterArmorBasicSlim: 2
+    erisport_full_operator_armor: 2
     ClothingEyesBlindfold: 1
     ClothingShoesBootsCombat: 1
     ClothingShoesBootsWinterSec: 2

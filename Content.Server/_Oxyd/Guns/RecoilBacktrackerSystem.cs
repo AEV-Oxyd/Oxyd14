@@ -9,9 +9,9 @@ namespace Content.Server._Oxyd.Guns;
 /// <summary>
 /// This handles...
 /// </summary>
-public sealed class RecoilBacktrackerSystem : EntitySystem
+public sealed partial class RecoilBacktrackerSystem : EntitySystem
 {
-    [Dependency] public readonly IGameTiming _timing = default!;
+    [Dependency] public IGameTiming _timing = default!;
     /// <inheritdoc/>
     public override void Initialize()
     {

@@ -72,7 +72,7 @@
   parent: BaseStationTile
   name: tiles-plastic-floor
   sprite: /Textures/Tiles/Basic/Gray/gray-plastic.png
-  itemDrop: FloorTileItemSteel
+  itemDrop: FloorTileItemPlastic
 
 - type: tile
   id: FloorSteelDamaged
@@ -162,7 +162,7 @@
   sprite: /Textures/Tiles/Basic/White/white-plastic.png
   footstepSounds:
     collection: FootstepTile
-  itemDrop: FloorTileItemWhite
+  itemDrop: FloorTileItemWhitePlastic
 
 ### DARK
 - type: tile
@@ -244,7 +244,7 @@
   sprite: /Textures/Tiles/Basic/Dark/dark-plastic.png
   footstepSounds:
     collection: FootstepTile
-  itemDrop: FloorTileItemDark
+  itemDrop: FloorTileItemDarkPlastic
 
 - type: tile
   id: FloorTechMaintDark

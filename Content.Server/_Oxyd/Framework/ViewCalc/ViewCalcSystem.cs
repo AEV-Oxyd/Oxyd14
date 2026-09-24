@@ -17,7 +17,6 @@ public sealed class ViewCalcSystem : EntitySystem
     [Dependency] private RayCastSystem raycaster = default!;
     [Dependency] private TransformSystem transform = default!;
     [Dependency] private EntityLookupSystem entlook = default!;
-
     private float passed;
 
     public HashSet<EntityUid> GetEntsInView(MapCoordinates point, float range)

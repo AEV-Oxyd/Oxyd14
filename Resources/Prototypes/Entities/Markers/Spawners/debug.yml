@@ -11,4 +11,4 @@
       state: full
   - type: ConditionalSpawner
     prototypes:
-    - MobHuman
+    - MobHumanOxyd

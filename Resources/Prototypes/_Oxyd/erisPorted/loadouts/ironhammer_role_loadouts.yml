@@ -1,0 +1,87 @@
+# Role loadouts for the additive Ironhammer job prototypes.
+
+- type: roleLoadout
+  id: JobIronhammerHeadOfSecurity
+  groups:
+  - IronhammerHeadOfSecurityHead
+  - IronhammerHeadOfSecurityNeck
+  - IronhammerHeadOfSecurityJumpsuit
+  - IronhammerSecurityBackpack
+  - IronhammerSecurityBelt
+  - IronhammerHeadOfSecurityOuterClothing
+  - IronhammerSecurityShoes
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - IronhammerHeadOfSecurityJobTrinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobIronhammerWarden
+  groups:
+  - IronhammerWardenHead
+  - IronhammerWardenJumpsuit
+  - IronhammerSecurityBackpack
+  - IronhammerSecurityBelt
+  - IronhammerWardenOuterClothing
+  - IronhammerSecurityShoes
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - IronhammerWardenJobTrinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobIronhammerSecurityOfficer
+  groups:
+  - IronhammerSecurityHead
+  - IronhammerSecurityJumpsuit
+  - IronhammerSecurityBackpack
+  - IronhammerSecurityOuterClothing
+  - IronhammerSecurityShoes
+  - IronhammerSecurityPDA
+  - IronhammerSecurityBelt
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - SecurityJobTrinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobIronhammerDetective
+  groups:
+  - IronhammerDetectiveHead
+  - IronhammerDetectiveNeck
+  - IronhammerDetectiveJumpsuit
+  - IronhammerSecurityBackpack
+  - IronhammerDetectiveOuterClothing
+  - IronhammerSecurityShoes
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - IronhammerDetectiveJobTrinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobIronhammerSecurityCadet
+  groups:
+  - IronhammerSecurityCadetHead
+  - IronhammerSecurityCadetJumpsuit
+  - IronhammerSecurityBackpack
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - GroupSpeciesBreathToolSecurity
+
+- type: roleLoadout
+  id: JobIronhammerMedicalSpecialist
+  groups:
+  - IronhammerMedicalSpecialistJumpsuit
+  - IronhammerSecurityBackpack
+  - IronhammerMedicalSpecialistBelt
+  - IronhammerMedicalSpecialistOuterClothing
+  - IronhammerSecurityShoes
+  - AssistiveItems
+  - SurvivalSecurity
+  - Trinkets
+  - GroupSpeciesBreathToolSecurity

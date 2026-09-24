@@ -1,0 +1,26 @@
+- type: entity
+  parent: ClothingOuterBase
+  id: erisport_greatcoat_ironhammer
+  name: Ironhammer greatcoat
+  description: A heavy armored greatcoat in Ironhammer Security colors, worn by the commander of the regiment.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/clothing/Ironhammer_greatcoat.rsi
+  - type: Clothing
+    sprite: Oxyd/erisported/clothing/Ironhammer_greatcoat.rsi
+    quickEquip: true
+  - type: Tag
+    tags:
+    - ClothMade
+    - Recyclable
+    - WhitelistChameleon
+  - type: Armor
+    modifiers:
+      coefficients:
+        Blunt: 0.65
+        Slash: 0.65
+        Piercing: 0.60
+        Heat: 0.70
+        Caustic: 0.75
+  - type: Item
+    size: Normal

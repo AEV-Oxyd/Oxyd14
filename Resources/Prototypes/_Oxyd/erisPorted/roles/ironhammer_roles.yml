@@ -1,0 +1,51 @@
+- type: playTimeTracker
+  id: JobIronhammerHeadOfSecurity
+
+- type: playTimeTracker
+  id: JobIronhammerWarden
+
+- type: playTimeTracker
+  id: JobIronhammerSecurityOfficer
+
+- type: playTimeTracker
+  id: JobIronhammerDetective
+
+- type: playTimeTracker
+  id: JobIronhammerSecurityCadet
+
+- type: playTimeTracker
+  id: JobIronhammerMedicalSpecialist
+
+- type: department
+  id: IronhammerSecurity
+  name: department-IronhammerSecurity
+  description: department-IronhammerSecurity-description
+  color: "#DE3A3A"
+  weight: 20
+  roles:
+  - IronhammerHeadOfSecurity
+  - IronhammerMedicalSpecialist
+  - IronhammerSecurityCadet
+  - IronhammerSecurityOfficer
+  - IronhammerDetective
+  - IronhammerWarden
+
+- type: department
+  id: IronhammerCommand
+  name: department-IronhammerCommand
+  description: department-IronhammerCommand-description
+  color: "#334E6D"
+  primary: false
+  weight: 100
+  roles:
+  - IronhammerHeadOfSecurity
+
+- type: jobWeight
+  id: Ironhammer
+  weights:
+    IronhammerHeadOfSecurity: 10
+    IronhammerWarden: 5
+    IronhammerSecurityOfficer: 0
+    IronhammerDetective: 0
+    IronhammerSecurityCadet: 0
+    IronhammerMedicalSpecialist: 0

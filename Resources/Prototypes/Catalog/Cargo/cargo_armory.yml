@@ -69,6 +69,16 @@
   group: market
 
 - type: cargoProduct
+  id: ArmoryMartin
+  icon:
+    sprite: Oxyd/erisported/martin_sec.rsi
+    state: stun
+  product: CrateArmoryMartin
+  cost: 5000
+  category: cargoproduct-category-name-armory
+  group: market
+
+- type: cargoProduct
   id: ArmoryRifle
   icon:
     sprite: Objects/Weapons/Guns/Rifles/lecter.rsi
