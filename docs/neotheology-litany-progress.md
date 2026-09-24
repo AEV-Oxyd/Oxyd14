@@ -55,10 +55,10 @@ two issues and fixed both:
    live round. Eris has no reclaimer (it bridges the upstream machine), so no
    Eris blueprint is displaced.
 
-The audit also fixed two pre-existing YAML syntax errors in
+The audit found two pre-existing YAML syntax errors in
 `Resources/Prototypes/_Oxyd/erisPorted/mask/` (`fake_moustache.yml`,
-`Vapour_mask.yml`) that stopped the prototype loader and the map tests from
-starting.
+`Vapour_mask.yml`). Their fixes were excluded from PR #33 to keep unrelated
+prototype changes out. Commit `5da2a280c5` restores the files to `aev/master`.
 
 ## Review remediation
 
@@ -255,13 +255,13 @@ The owner requested commits, a branch push, and a concise PR comment after these
 
 ## Release state and open items
 
-- The latest checks passed: 21/21 selected unit tests and 206/206 NeoTheology integration tests. The runner skipped no tests.
+- Before scope cleanup commit `5da2a280c5`, 21/21 selected unit tests and 206/206 NeoTheology integration tests passed. The runner skipped no tests.
+- The scope cleanup changes only the gitlink and unrelated mask files. Tests were not rerun after that commit.
 - The YAML linter still fails on unrelated prototypes. This pass did not change those files.
   The log includes imported clothing, `newGuns.yml`, `auto.yml`, `restingObjectives.yml`, and `bundle.yml`.
   It also reports unresolved `BaseBundle` references.
 - Earlier station-map checks reported `Duplicate chunk entity` (`ChunkEntitySystem.AddChunk`).
   This pass did not rerun those checks.
-- The `Oxyd14-port-eris-ironhammer` gitlink stays out of the NeoTheology
-  commits; its ` m` working-tree state is owned by the Ironhammer port.
+- Commit `5da2a280c5` removes the `Oxyd14-port-eris-ironhammer` gitlink. The PR diff contains no IronHammer or `_Oxyd/erisPorted/mask/` paths.
 - The `.freebuff` preview files are removed from the branch.
 - Owner approval covers the branch push and the PR #33 update.
