@@ -184,6 +184,13 @@ public abstract partial class SharedBuckleSystem
             args.Cancel();
     }
 
+    /// <summary>Checks both ends of a buckle link.</summary>
+    public bool IsBuckledTo(EntityUid uid, EntityUid strap, BuckleComponent? component = null)
+    {
+        return Resolve(uid, ref component, false) && component.BuckledTo == strap &&
+               TryComp<StrapComponent>(strap, out var seat) && seat.BuckledEntities.Contains(uid);
+    }
+
     public bool IsBuckled(EntityUid uid, BuckleComponent? component = null)
     {
         return Resolve(uid, ref component, false) && component.Buckled;

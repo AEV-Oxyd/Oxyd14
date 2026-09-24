@@ -43,6 +43,7 @@ public sealed partial class LitanySystem : EntitySystem
     [Dependency] private readonly LitanyPrototypeValidationSystem _catalog = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private SharedTransformSystem _xform = default!;
     [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly SanitySystem _sanity = default!;

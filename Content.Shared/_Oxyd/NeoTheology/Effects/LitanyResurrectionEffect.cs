@@ -48,7 +48,7 @@ public sealed partial class LitanyResurrectionEffect : LitanyEffect
             if (!system.IsLitanyCloner(target))
                 continue;
 
-            var start = new LitanyResurrectionEvent(target, reader, false, validateOnly);
+            var start = new LitanyResurrectionEvent(target, reader, false, validateOnly, context.User);
             system.RaiseOn(target, ref start);
             if (start.Handled)
                 return true;

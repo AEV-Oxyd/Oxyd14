@@ -15,11 +15,9 @@
   ignoreStuttering: true
   effectDuration: 60
   effects:
-  - !type:LitanyHealEffect
-    damage:
-      types:
-        Blunt: -5
-        Heat: -5
+  - !type:LitanyInjectReagentsEffect
+    reagents:
+      OxydNtAngelsBalm: 15
   enabled: true
 
 - type: oxydLitany

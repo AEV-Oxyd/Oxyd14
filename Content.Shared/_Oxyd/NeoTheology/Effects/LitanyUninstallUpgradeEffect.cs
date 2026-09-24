@@ -27,13 +27,12 @@ public sealed partial class LitanyUninstallUpgradeEffect : LitanyEffect
             return false;
         }
 
-        failure = null;
-        return true;
+        return system.TryGetProcedureAltar(context.Targets[0], false, out _, out failure);
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
     {
-        if (context.Targets.Count == 0)
+        if (!CanApply(system, context, out _))
             return false;
 
         var uninstall = new LitanyUninstallUpgradeEvent(context.Targets[0], false);

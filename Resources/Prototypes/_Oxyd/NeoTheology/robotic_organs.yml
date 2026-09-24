@@ -1,0 +1,59 @@
+# Native organs and relations support these replacements without a second body model.
+# Human sprites are placeholders until dedicated prosthetic art exists.
+- type: entity
+  id: OxydOrganRobotic
+  parent: OrganBase
+  abstract: true
+  description: An artificial replacement for a human limb.
+  components:
+  - type: RoboticOrgan
+  - type: VisualOrganMarkings
+    markingData:
+      group: Human
+  - type: Sprite
+    sprite: Mobs/Species/Human/parts.rsi
+    color: "#A0A0A0"
+  - type: VisualOrgan
+    data:
+      sprite: Mobs/Species/Human/parts.rsi
+      color: "#A0A0A0"
+
+- type: entity
+  id: OxydOrganRoboticArmLeft
+  parent: [OrganBaseArmLeft, OxydOrganRobotic]
+  name: robotic left arm
+
+- type: entity
+  id: OxydOrganRoboticArmRight
+  parent: [OrganBaseArmRight, OxydOrganRobotic]
+  name: robotic right arm
+
+- type: entity
+  id: OxydOrganRoboticHandLeft
+  parent: [OrganBaseHandLeft, OxydOrganRobotic]
+  name: robotic left hand
+
+- type: entity
+  id: OxydOrganRoboticHandRight
+  parent: [OrganBaseHandRight, OxydOrganRobotic]
+  name: robotic right hand
+
+- type: entity
+  id: OxydOrganRoboticLegLeft
+  parent: [OrganBaseLegLeft, OxydOrganRobotic]
+  name: robotic left leg
+
+- type: entity
+  id: OxydOrganRoboticLegRight
+  parent: [OrganBaseLegRight, OxydOrganRobotic]
+  name: robotic right leg
+
+- type: entity
+  id: OxydOrganRoboticFootLeft
+  parent: [OrganBaseFootLeft, OxydOrganRobotic]
+  name: robotic left foot
+
+- type: entity
+  id: OxydOrganRoboticFootRight
+  parent: [OrganBaseFootRight, OxydOrganRobotic]
+  name: robotic right foot

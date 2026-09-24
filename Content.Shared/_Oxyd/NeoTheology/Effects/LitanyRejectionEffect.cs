@@ -3,10 +3,9 @@ using Content.Shared._Oxyd.NeoTheology.Events;
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// Eris <c>rituals/base.dm:64-90</c> (Rejection): the caster sheds every foreign implant.
-/// The purge is server-side, so the effect raises <see cref="LitanyRejectForeignBodyEvent"/>.
-/// Eris also tears robotic limbs; the fork has no external-limb model, so the server handler
-/// removes non-cruciform implants and damages the body instead.
+/// Eris <c>rituals/base.dm:64-90</c> (Rejection): the caster sheds robotic organs and foreign implants.
+/// The server handles <see cref="LitanyRejectForeignBodyEvent"/> through native body and container APIs.
+/// It preserves the detached entities, natural organs, and cruciform.
 /// </summary>
 public sealed partial class LitanyRejectionEffect : LitanyEffect
 {

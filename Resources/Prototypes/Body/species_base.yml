@@ -165,6 +165,7 @@
   id: BaseSpeciesMobOrganic
   save: false
   components:
+  - type: Pain
   - type: Satiation
     satiations:
       Hunger:

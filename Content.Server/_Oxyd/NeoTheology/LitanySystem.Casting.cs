@@ -667,11 +667,12 @@ public sealed partial class LitanySystem
         {
             if (mob == actor)
                 continue;
-            if (!_mobState.IsAlive(mob) && !(allowDead && _mobState.IsDead(mob)))
+            // Critical patients are living targets too.
+            if (_mobState.IsDead(mob) && !allowDead)
                 continue;
             if (followersOnly && !_cruciform.IsActiveBearer(mob))
                 continue;
-            if (!IsOnTile(mob, ownTile) && !IsOnTile(mob, frontTile))
+            if (!IsOnTile(mob, actor, ownTile) && !IsOnTile(mob, actor, frontTile))
                 continue;
 
             results.Add(mob);
@@ -708,7 +709,7 @@ public sealed partial class LitanySystem
         var range = proto.Range > 0 ? proto.Range : 1.5f;
         foreach (var uid in _lookup.GetEntitiesInRange(Transform(actor).Coordinates, range))
         {
-            if (uid != actor && IsLitanyMachine(uid) && IsOnTile(uid, frontTile))
+            if (uid != actor && IsLitanyMachine(uid) && IsOnTile(uid, actor, frontTile))
                 results.Add(uid);
         }
 
@@ -782,14 +783,14 @@ public sealed partial class LitanySystem
     }
 
     /// <summary>
-    /// True when the entity's local tile matches. Candidates already come from a
-    /// world-range lookup, so the local tile stays inside the litany's reach.
+    /// Compares tiles in the actor's coordinate space, including patients parented to an altar.
     /// </summary>
-    private bool IsOnTile(EntityUid uid, Vector2i tile)
+    private bool IsOnTile(EntityUid uid, EntityUid actor, Vector2i tile)
     {
         if (!TryComp(uid, out TransformComponent? xform))
             return false;
 
-        return xform.MapID != MapId.Nullspace && xform.Coordinates.Position.Floored() == tile;
+        return xform.MapID != MapId.Nullspace &&
+               _xform.WithEntityId(xform.Coordinates, Transform(actor).ParentUid).Position.Floored() == tile;
     }
 }

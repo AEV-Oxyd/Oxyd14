@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Linq;
-using Content.Server._Oxyd.NeoTheology;
+using Content.Server._Oxyd.Medical;
+using Content.Shared._Oxyd.Medical;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Body.Components;
@@ -17,6 +18,7 @@ using Content.Shared.NPC.Components;
 using Content.Shared.NPC.Prototypes;
 using Content.Shared.NPC.Systems;
 using Content.Shared.Popups;
+using Robust.Shared.Containers;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -37,9 +39,10 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     [Dependency] private readonly NpcFactionSystem _factions = default!;
     [Dependency] private readonly PlantGrowthSystem _plantGrowth = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly SharedSolutionContainerSystem _solution = default!;
-    [Dependency] private readonly SharedStaminaSystem _stamina = default!;
-    [Dependency] private readonly SharedSubdermalImplantSystem _implants = default!;
+    [Dependency] private readonly AddictionSystem _addiction = default!;
+    [Dependency] private readonly PainSystem _pain = default!;
+    [Dependency] private readonly RoboticOrganSystem _roboticOrgans = default!;
+    [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
 
@@ -48,8 +51,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
         new ProtoId<NpcFactionPrototype>[] { "Dragon", "SimpleHostile", "Xeno" }.ToFrozenSet();
 
     /// <summary>
-    /// Eris <c>rituals/base.dm:64-90</c>. The fork has no external limbs, so this removes every
-    /// non-cruciform implant and applies the limb-damage rider as brute damage.
+    /// Eris Rejection: detach robotic limbs and expel foreign implants. Preserve the cruciform and natural organs.
     /// </summary>
     [SubscribeLocalEvent]
     private void OnRejectForeignBody(Entity<MobStateComponent> ent, ref LitanyRejectForeignBodyEvent args)
@@ -59,25 +61,24 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
 
         args.Handled = true;
 
-        if (!TryComp<ImplantedComponent>(ent.Owner, out var implanted))
-            return;
-
-        var damage = new DamageSpecifier();
-        damage.DamageDict.Add("Blunt", 20f);
-
-        var shed = 0;
-        foreach (var implant in implanted.ImplantContainer.ContainedEntities.ToArray())
+        var shed = _roboticOrgans.Reject(ent.Owner);
+        if (TryComp<ImplantedComponent>(ent.Owner, out var implanted))
         {
-            if (HasComp<CruciformComponent>(implant))
-                continue;
-
-            _implants.ForceRemove((ent.Owner, implanted), implant);
-            _damageable.TryChangeDamage(ent.Owner, damage, origin: ent.Owner);
-            shed++;
+            foreach (var implant in implanted.ImplantContainer.ContainedEntities.ToArray())
+            {
+                if (!HasComp<CruciformComponent>(implant) &&
+                    _containers.Remove(implant, implanted.ImplantContainer, force: true,
+                        destination: Transform(ent.Owner).Coordinates))
+                    shed++;
+            }
         }
 
         if (shed > 0)
+        {
+            _damageable.TryChangeDamage(ent.Owner,
+                new DamageSpecifier { DamageDict = { ["Blunt"] = 20f * shed } }, origin: ent.Owner);
             _popup.PopupEntity(Loc.GetString("oxyd-litany-rejection-shed"), ent.Owner, ent.Owner, PopupType.LargeCaution);
+        }
     }
 
     /// <summary>
@@ -122,8 +123,7 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
     }
 
     /// <summary>
-    /// Eris <c>rituals/custodian.dm:7-40</c>. The fork has no addiction model; purge the
-    /// habit-forming reagents instead (named divergence) and keep the Eris painkiller message.
+    /// Advances addiction recovery without deleting blood reagents.
     /// </summary>
     [SubscribeLocalEvent]
     private void OnPurgeAddiction(Entity<MobStateComponent> ent, ref LitanyPurgeAddictionEvent args)
@@ -133,24 +133,15 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
 
         args.Handled = true;
 
-        if (!_solution.TryGetSolution(ent.Owner, BloodstreamComponent.DefaultBloodSolutionName,
-                out var solutionEnt, out var solution))
-            return;
-
-        foreach (var reagent in solution.Contents.ToArray())
-        {
-            if (!args.Reagents.Contains(reagent.Reagent.Prototype))
-                continue;
-
-            _solution.RemoveReagent(solutionEnt.Value, reagent.Reagent, reagent.Quantity);
-        }
+        _addiction.AdvanceRecovery(ent.Owner, 15);
+        _pain.SuppressPain(ent.Owner, "WordsOfPurging", 15, 2);
 
         _popup.PopupEntity(Loc.GetString("oxyd-litany-purging"), ent.Owner, ent.Owner);
     }
 
     /// <summary>
     /// Eris <c>rituals/priest.dm:173-211</c> and <c>rituals/inquisitor.dm:33-65</c>:
-    /// <c>adjustHalLoss(50)</c>. Mapped to stamina damage; no real harm.
+    /// <c>adjustHalLoss(50)</c>. Adds temporary pain without wound or stamina damage.
     /// </summary>
     [SubscribeLocalEvent]
     private void OnPain(Entity<MobStateComponent> ent, ref LitanyPainEvent args)
@@ -159,11 +150,11 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
             return;
 
         args.Handled = true;
-        _stamina.TakeStaminaDamage(ent.Owner, args.Amount, visual: true);
+        _pain.AddPain(ent.Owner, args.Amount);
         _popup.PopupEntity(Loc.GetString("oxyd-litany-pain"), ent.Owner, ent.Owner, PopupType.LargeCaution);
     }
 
-    /// <summary>Eris <c>rituals/priest.dm:68-90</c> (Asacris): strip every cruciform upgrade.</summary>
+    /// <summary>Eris <c>rituals/priest.dm:68-90</c> (Asacris): strip installed upgrade modules, not rank modules.</summary>
     [SubscribeLocalEvent]
     private void OnRemoveUpgrades(Entity<MobStateComponent> ent, ref LitanyRemoveUpgradesEvent args)
     {

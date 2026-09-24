@@ -414,6 +414,10 @@ public static class LitanyCatalogValidator
                     if (heal.Damage.Empty)
                         errors.Add($"{litany.ID} has an empty healing effect.");
                     break;
+                case LitanyInjectReagentsEffect injection:
+                    if (injection.Reagents.Count == 0 || injection.Reagents.Values.Any(amount => amount <= 0))
+                        errors.Add($"{litany.ID} requires positive reagent doses.");
+                    break;
                 case LitanySoulHungerEffect soulHunger:
                     if (!soulHunger.Damage.DamageDict.TryGetValue("Heat", out var heat) || heat.Value <= 0)
                         errors.Add($"{litany.ID} requires a positive Heat damage parameter.");
@@ -434,6 +438,10 @@ public static class LitanyCatalogValidator
         {
             case LitanyEffectKind.Relief:
             case LitanyEffectKind.HandOfMercy:
+            case LitanyEffectKind.AbsolutionOfWounds:
+                if (!litany.Effects.OfType<LitanyInjectReagentsEffect>().Any())
+                    errors.Add($"{litany.ID} requires a LitanyInjectReagentsEffect.");
+                break;
             case LitanyEffectKind.Convalescence:
             case LitanyEffectKind.Succour:
                 if (!litany.Effects.OfType<LitanyHealEffect>().Any())

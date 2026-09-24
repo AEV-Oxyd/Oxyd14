@@ -92,7 +92,7 @@ public record struct LitanyRevealAdversariesEvent(EntityUid User, bool Handled);
 /// from the target's bloodstream.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyPurgeAddictionEvent(EntityUid Target, IReadOnlyList<ProtoId<ReagentPrototype>> Reagents, bool Handled);
+public record struct LitanyPurgeAddictionEvent(EntityUid Target, bool Handled);
 
 /// <summary>
 /// Bridge for Atonement and Penance: raised on the target; the server applies the Eris pain
@@ -132,7 +132,7 @@ public record struct LitanyBaptismalRecordEvent(EntityUid Altar, bool Handled);
 /// a pod job from the saved body profile. Validation checks the soul, session, machines, and biomatter without changing them.
 /// </summary>
 [ByRefEvent]
-public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled, bool ValidateOnly = false);
+public record struct LitanyResurrectionEvent(EntityUid Cloner, EntityUid Reader, bool Handled, bool ValidateOnly = false, EntityUid? Caster = null);
 
 /// <summary>
 /// Bridge for MakeCruciform: raised on the NeoTheology forge among the litany's machine targets;

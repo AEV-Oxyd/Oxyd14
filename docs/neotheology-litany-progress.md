@@ -1,6 +1,6 @@
 # NeoTheology litany progress
 
-Status: **Complete.** All 60 catalog entries are enabled on `neotheology/fix-pass`
+Status: **Catalog complete; gameplay parity in progress.** All 60 catalog entries are enabled
 and the Stage 6 catalog audit is done. The divergence register is below; the full
 source-by-source audit is `.hermes/review/neotheology-catalog-audit.md`.
 
@@ -134,14 +134,14 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 **Payload reductions and substitutions (with reason):**
 
 - `Relief`, `Hand of Mercy`, `Absolution of Wounds`, `Convalescence`, `Succour`:
-  the Eris NT reagents (`angelsbalm`, `deusblessing`, `holyinaprovaline`,
-  `holydexalin`) do not exist in the fork, so these heal the matching damage
-  channels. `Convalescence`/`Succour` keep the exact Eris amounts.
-- `Atonement`, `Penance`: Eris `adjustHalLoss(50)` becomes 50 stamina damage
-  (no pain value exists).
-- `Words of Purging`: no addiction model; purges habit-forming reagents. The
-  Eris painkiller message stays.
-- `Rejection`: no external limbs; strips implants and applies the brute rider.
+  the Eris NT reagents now have local reagent prototypes and use native metabolism.
+  Direct healing rites also use the local pain system. Exact metabolism timing
+  and Eris reagent behavior still need live-round checks.
+- `Atonement`, `Penance`: Eris `adjustHalLoss(50)` now uses the local pain system.
+- `Words of Purging`: the local addiction model advances recovery without
+  removing blood reagents. The rite also grants pain relief.
+- `Rejection`: detaches robotic organs and foreign implants with native body
+  and container APIs. Natural organs and the cruciform remain intact.
 - `Reveal Adversaries`: `NpcFactionMember` scan and `LandMineComponent`; the
   hidden 20 % miss and the wire-splicing entity do not exist.
 - `Offerings`: observation (1000 / 500) instead of the Eris miracle list; the
@@ -155,8 +155,9 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
   because the fork has no separate clearance field.
 - `Initiation`: single ritual instead of the two-stage ascension kit; promotes to
   Preacher, as the Eris `priest_convert` profile says.
-- `Commitment` / `Install Upgrade` / `Uninstall Upgrade`: the lying-on-altar and
-  undressed gates are not implemented.
+- `Commitment` / `Install Upgrade` / `Uninstall Upgrade`: the procedures now
+  check altar restraint, posture, and position. `Commitment` and
+  `Install Upgrade` also require the target to remove clothing.
 - `Reincarnation` / `Resurrection`: upstream cloning pod grows the stored
   profile; the Eris per-rank `clone_damage` is not applied.
 - Machinery: the multi-part biogenerator/bioreactor commands map onto the
@@ -182,7 +183,7 @@ declared intent. The eight group ceremonies carry a shared 1 s per-starter key
 | Oddity entity | No prototype carries `OddityComponent`, so `Divine Blessing` fails closed and the Eye `ODDITY` miracle no-ops. |
 | Faithless / mutant / carrion penalties | `ObservationPerFaithless` is unused; the fork has no marker. |
 | Eye blessing stat payoff | `OxydNtEyeBlessing` is mechanism-only; no stat numbers assigned. |
-| Addiction model | Replaced by the reagent purge above. |
+| Addiction model | Local dependence and recovery now work. Eris drug-specific balance still needs live checks. |
 
 ## PR #33 maintainer follow-up
 
@@ -232,6 +233,16 @@ The test reports are `/tmp/oxyd33-results/neotheology-review.trx` and
 The logs are `/tmp/oxyd33-tests6.log`, `/tmp/oxyd33-unit-publish.log`, and `/tmp/oxyd33-yaml-final.log`.
 The owner requested commits, a branch push, and a concise PR comment after these checks.
 
+## Recovery pass checks
+
+- The server build passed with 0 errors. The build reported 514 warnings.
+- Focused NeoTheology integration tests passed: 231/231, with no skipped tests.
+- Selected unit tests passed: 21/21, with no skipped tests.
+- The YAML linter stopped at the unrelated existing syntax error in
+  `Resources/Prototypes/_Oxyd/erisPorted/mask/fake_moustache.yml`.
+- These checks use the recovered work in the PR worktree. They do not replace
+  the historical results below or establish live-round gameplay parity.
+
 ## Historical validation evidence
 
 - Baseline recorded RobustToolbox `af2a7d0406` and SDK `10.0.203`.
@@ -253,10 +264,10 @@ The owner requested commits, a branch push, and a concise PR comment after these
 - Litany audit fix: unit 21/21; integration 199/199, zero skips. The six audit
   regressions are permanent in `LitanyAuditRegressionTest.cs`.
 
-## Release state and open items
+## Earlier release state and open items
 
 - Before scope cleanup commit `5da2a280c5`, 21/21 selected unit tests and 206/206 NeoTheology integration tests passed. The runner skipped no tests.
-- The scope cleanup changes only the gitlink and unrelated mask files. Tests were not rerun after that commit.
+- The scope cleanup changed only the gitlink and unrelated mask files. Tests did not run again at that checkpoint. The recovery pass results appear above.
 - The YAML linter still fails on unrelated prototypes. This pass did not change those files.
   The log includes imported clothing, `newGuns.yml`, `auto.yml`, `restingObjectives.yml`, and `bundle.yml`.
   It also reports unresolved `BaseBundle` references.

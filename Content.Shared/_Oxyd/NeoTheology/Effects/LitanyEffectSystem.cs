@@ -48,9 +48,6 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
     private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
     private static readonly ProtoId<SpeciesPrototype> HumanSpecies = "Human";
 
-    /// <summary>How far from the target a NeoTheology altar still counts as "their altar".</summary>
-    private const float AltarSearchRadius = 1.5f;
-
     [Dependency] private readonly SharedCruciformSystem _cruciform = default!;
     [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly DamageableSystem _damageable = default!;
@@ -398,24 +395,19 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
     /// </summary>
     public bool TryFindAltarCruciform(EntityUid target, out EntityUid altar, out EntityUid cruciform)
     {
-        altar = EntityUid.Invalid;
         cruciform = EntityUid.Invalid;
-        if (!TryComp(target, out TransformComponent? targetXform))
+        if (!TryGetProcedureAltar(target, true, out altar, out _))
             return false;
 
-        var altars = _lookup.GetEntitiesInRange<NeoTheologyAltarComponent>(targetXform.Coordinates, AltarSearchRadius);
-        foreach (var candidate in altars.OrderBy(entry => entry.Owner))
+        var items = _lookup.GetEntitiesInRange<CruciformComponent>(Transform(altar).Coordinates,
+            Comp<NeoTheologyAltarComponent>(altar).Radius);
+        foreach (var item in items.OrderBy(entry => entry.Owner))
         {
-            var items = _lookup.GetEntitiesInRange<CruciformComponent>(Transform(candidate.Owner).Coordinates, candidate.Comp.Radius);
-            foreach (var item in items.OrderBy(entry => entry.Owner))
-            {
-                if (!IsLooseNeverActivatedCruciform(item.Owner, item.Comp))
-                    continue;
+            if (!IsLooseNeverActivatedCruciform(item.Owner, item.Comp))
+                continue;
 
-                altar = candidate.Owner;
-                cruciform = item.Owner;
-                return true;
-            }
+            cruciform = item.Owner;
+            return true;
         }
 
         return false;
@@ -440,24 +432,19 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
     /// </summary>
     public bool TryFindAltarUpgrade(EntityUid target, out EntityUid altar, out EntityUid upgradeItem)
     {
-        altar = EntityUid.Invalid;
         upgradeItem = EntityUid.Invalid;
-        if (!TryComp(target, out TransformComponent? targetXform))
+        if (!TryGetProcedureAltar(target, true, out altar, out _))
             return false;
 
-        var altars = _lookup.GetEntitiesInRange<NeoTheologyAltarComponent>(targetXform.Coordinates, AltarSearchRadius);
-        foreach (var candidate in altars.OrderBy(entry => entry.Owner))
+        var items = _lookup.GetEntitiesInRange<CruciformUpgradeComponent>(Transform(altar).Coordinates,
+            Comp<NeoTheologyAltarComponent>(altar).Radius);
+        foreach (var item in items.OrderBy(entry => entry.Owner))
         {
-            var items = _lookup.GetEntitiesInRange<CruciformUpgradeComponent>(Transform(candidate.Owner).Coordinates, candidate.Comp.Radius);
-            foreach (var item in items.OrderBy(entry => entry.Owner))
-            {
-                if (_containers.IsEntityInContainer(item.Owner))
-                    continue;
+            if (_containers.IsEntityInContainer(item.Owner))
+                continue;
 
-                altar = candidate.Owner;
-                upgradeItem = item.Owner;
-                return true;
-            }
+            upgradeItem = item.Owner;
+            return true;
         }
 
         return false;

@@ -3,8 +3,10 @@ using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server.Atmos.Components;
+using Content.Server.Body.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared.Buckle;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
 using Content.Shared.Damage.Systems;
@@ -54,7 +56,7 @@ public sealed class LitanyEffectsCommitmentTest : GameTest
     [Test]
     public async Task Commitment_ImplantsTheLooseAltarCruciformAndDeals25Blunt()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid caster = default;
         EntityUid target = default;
         EntityUid cruciform = default;
@@ -67,8 +69,8 @@ public sealed class LitanyEffectsCommitmentTest : GameTest
             target = SSpawnAtPosition(HumanProto, origin.Offset(new Vector2(1f, 0f)));
             StabilizeNeeds(target);
 
-            // The loose implant rests beside the altar; the altar is beside the target.
-            SSpawnAtPosition(AltarProto, origin.Offset(new Vector2(1f, 0.7f)));
+            var altar = SSpawnAtPosition(AltarProto, origin.Offset(Vector2.UnitX));
+            Assert.That(SEntMan.System<SharedBuckleSystem>().TryBuckle(target, null, altar), Is.True);
             cruciform = SSpawnAtPosition(CruciformProto, origin.Offset(new Vector2(1f, 1f)));
 
             bluntBefore = DamageOf(target, "Blunt");
@@ -228,6 +230,7 @@ public sealed class LitanyEffectsCommitmentTest : GameTest
 
         SEntMan.RemoveComponent<SatiationDamageComponent>(body);
         SEntMan.RemoveComponent<BarotraumaComponent>(body);
+        SEntMan.RemoveComponent<RespiratorComponent>(body);
     }
 
     private FixedPoint2 DamageOf(EntityUid body, string type)

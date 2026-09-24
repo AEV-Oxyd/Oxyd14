@@ -4,8 +4,10 @@ using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.NeoTheology.Machines;
 using Content.Server.Atmos.Components;
+using Content.Server.Body.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared.Buckle;
 using Content.Shared.Implants;
 using Content.Shared.Nutrition.Components;
 using Content.Shared.Nutrition.EntitySystems;
@@ -51,7 +53,7 @@ public sealed class LitanyEffectsUpgradeTest : GameTest
     [Test]
     public async Task InstallUpgrade_MovesTheAltarUpgradeIntoTheCruciformAndRaisesMaxHoliness()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid caster = default;
         EntityUid follower = default;
         EntityUid upgrade = default;
@@ -62,7 +64,8 @@ public sealed class LitanyEffectsUpgradeTest : GameTest
             var origin = TileCentre(map.GridCoords);
             caster = PrepareCaster(origin);
             follower = SpawnFollower(origin.Offset(new Vector2(1f, 0f)));
-            SSpawnAtPosition(AltarProto, origin.Offset(new Vector2(1f, 0.7f)));
+            var altar = SSpawnAtPosition(AltarProto, origin.Offset(Vector2.UnitX));
+            Assert.That(SEntMan.System<SharedBuckleSystem>().TryBuckle(follower, null, altar), Is.True);
             upgrade = SpawnAltarUpgrade(origin.Offset(new Vector2(1f, 1f)));
 
             Assert.That(_cruciform.TryGetCruciform(follower, out _, out var component), Is.True);
@@ -91,7 +94,7 @@ public sealed class LitanyEffectsUpgradeTest : GameTest
     [Test]
     public async Task UninstallUpgrade_ReturnsTheItemToTheAltarAndRevertsStatsExactly()
     {
-        var map = await Pair.CreateTestMap();
+        var map = await Pair.CreateMachineTestMap();
         EntityUid caster = default;
         EntityUid follower = default;
         EntityUid altar = default;
@@ -103,7 +106,8 @@ public sealed class LitanyEffectsUpgradeTest : GameTest
             var origin = TileCentre(map.GridCoords);
             caster = PrepareCaster(origin);
             follower = SpawnFollower(origin.Offset(new Vector2(1f, 0f)));
-            altar = SSpawnAtPosition(AltarProto, origin.Offset(new Vector2(1f, 0.7f)));
+            altar = SSpawnAtPosition(AltarProto, origin.Offset(Vector2.UnitX));
+            Assert.That(SEntMan.System<SharedBuckleSystem>().TryBuckle(follower, null, altar), Is.True);
             upgrade = SpawnAltarUpgrade(origin.Offset(new Vector2(1f, 1f)));
 
             Assert.That(_cruciform.TryGetCruciform(follower, out var cruciform, out var component), Is.True);
@@ -191,6 +195,7 @@ public sealed class LitanyEffectsUpgradeTest : GameTest
 
         SEntMan.RemoveComponent<SatiationDamageComponent>(body);
         SEntMan.RemoveComponent<BarotraumaComponent>(body);
+        SEntMan.RemoveComponent<RespiratorComponent>(body);
     }
 
     /// <summary>Waits out the chant DoAfter until no pending cast remains.</summary>

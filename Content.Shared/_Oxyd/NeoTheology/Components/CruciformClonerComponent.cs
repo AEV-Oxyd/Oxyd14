@@ -1,4 +1,6 @@
+using Content.Shared.Damage;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Components;
 
@@ -14,4 +16,13 @@ public sealed partial class CruciformClonerComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public EntityUid? Reader;
+
+    [DataField]
+    public DamageSpecifier ResurrectionDamage = new() { DamageDict = { ["Cellular"] = 60 } };
+
+    [DataField]
+    public HashSet<ProtoId<NeoTheologyProfilePrototype>> DamageExemptProfiles = new()
+    {
+        "OxydNtInquisitor", "OxydNtPreacher", "OxydNtAcolyte",
+    };
 }

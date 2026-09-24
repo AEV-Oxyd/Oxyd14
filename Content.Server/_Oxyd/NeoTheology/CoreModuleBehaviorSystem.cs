@@ -5,6 +5,7 @@ using Robust.Shared.Physics.Components;
 using Robust.Shared.Serialization.Manager;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Medical;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Mind;
 using Content.Shared.Mind.Components;
@@ -79,6 +80,7 @@ public sealed partial class CoreModuleBehaviorSystem : EntitySystem
         var soul = EnsureComp<CruciformSoulComponent>(cruciform);
         soul.HasSnapshot = true;
         soul.Name = MetaData(body).EntityName;
+        soul.AtheistMutation = HasComp<AtheistMutationComponent>(body);
         soul.MindId = null;
         soul.Ckey = null;
         soul.BiomassCost = TryComp<PhysicsComponent>(body, out var physics)

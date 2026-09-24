@@ -34,7 +34,7 @@ public sealed partial class LitanyCommitmentEffect : LitanyEffect
             return false;
         }
 
-        if (!system.IsAlive(target))
+        if (system.IsDead(target))
         {
             failure = "oxyd-litany-commitment-too-late";
             return false;
@@ -52,24 +52,22 @@ public sealed partial class LitanyCommitmentEffect : LitanyEffect
             return false;
         }
 
+        if (!system.TryGetProcedureAltar(target, true, out _, out failure))
+            return false;
+
         if (!system.TryFindAltarCruciform(target, out _, out _))
         {
             failure = "oxyd-litany-commitment-no-cruciform";
             return false;
         }
 
-        // Deferred (§7.1): the target must be buckled to the selected altar and its jumpsuit,
-        // outer clothing, head, mask, gloves and shoes slots must be empty. The altar entity
-        // has no StrapComponent today and the inventory check is not modelled.
-        // ponytail: add the buckle + clothing gates when the altar gains a strap seat and the
-        // inventory hook exists; until then any adjacent live human at an altar is eligible.
         failure = null;
         return true;
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
     {
-        if (context.Targets.Count == 0)
+        if (!CanApply(system, context, out _))
             return false;
 
         var target = context.Targets[0];

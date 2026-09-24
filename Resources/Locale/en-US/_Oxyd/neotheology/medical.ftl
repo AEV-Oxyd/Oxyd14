@@ -1,0 +1,17 @@
+oxyd-medical-effect-analgesic = Suppresses { $strength } pain without healing wounds.
+oxyd-medical-effect-addictive = Can cause dependence. Withdrawal continues until recovery.
+oxyd-medical-addiction-craving = You crave { $reagent }.
+oxyd-medical-addiction-recovered = You no longer need { $reagent }.
+oxyd-reagent-angels-balm = Angel's Balm
+oxyd-reagent-angels-balm-desc = A holy painkiller. Large doses cause poisoning.
+oxyd-reagent-deus-blessing = Deus' Blessing
+oxyd-reagent-deus-blessing-desc = A strong holy painkiller. Large doses cause poisoning and confusion.
+oxyd-reagent-holy-inaprovaline = holy inaprovaline
+oxyd-reagent-holy-inaprovaline-desc = A holy stabilizer that relieves pain, reduces bleeding, and treats oxygen loss in critical patients.
+oxyd-reagent-holy-dexalin = holy dexalin
+oxyd-reagent-holy-dexalin-desc = A holy medicine that treats oxygen loss. Large doses cause poisoning.
+oxyd-trait-atheist-mutation = Biological rejection
+oxyd-trait-atheist-mutation-desc = Your altered biology rejects Hand of Mercy, Words of Purging, and Revelation. This trait does not set your beliefs.
+oxyd-litany-biological-rejection = The target's altered biology rejects this litany.
+oxyd-litany-procedure-posture = The target must lie on the altar.
+oxyd-litany-procedure-clothing = The target must remove worn clothing.

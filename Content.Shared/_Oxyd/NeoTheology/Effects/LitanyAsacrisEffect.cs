@@ -3,8 +3,9 @@ using Content.Shared._Oxyd.NeoTheology.Events;
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// Eris <c>rituals/priest.dm:68-90</c> (Asacris): every upgrade attached to the target's
-/// cruciform is removed. The removal is server-side, so the effect raises
+/// Eris <c>rituals/priest.dm:68-90</c> (Asacris): removable upgrade modules attached to
+/// the target's cruciform are removed. Rank modules and physical upgrades remain.
+/// The removal is server-side, so the effect raises
 /// <see cref="LitanyRemoveUpgradesEvent"/> on the body.
 /// </summary>
 public sealed partial class LitanyAsacrisEffect : LitanyEffect

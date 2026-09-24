@@ -121,9 +121,9 @@ public sealed class LitanyPrototypeTest : GameTest
 
         var relief = litanies["OxydLitanyRelief"];
         Assert.That(relief.Effects, Has.Count.EqualTo(1), "Relief must declare exactly one effect.");
-        Assert.That(relief.Effects[0], Is.InstanceOf<LitanyHealEffect>());
-        Assert.That(((LitanyHealEffect) relief.Effects[0]).Damage.DamageDict["Blunt"],
-            Is.EqualTo(FixedPoint2.New(-5)), "Relief Blunt heal value drifted.");
+        Assert.That(relief.Effects[0], Is.InstanceOf<LitanyInjectReagentsEffect>());
+        Assert.That(((LitanyInjectReagentsEffect) relief.Effects[0]).Reagents["OxydNtAngelsBalm"],
+            Is.EqualTo(FixedPoint2.New(15)), "Relief must provide fifteen units of Angel's Balm.");
 
         var soulHunger = litanies["OxydLitanySoulHunger"];
         Assert.That(soulHunger.Effects, Has.Count.EqualTo(1));

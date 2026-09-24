@@ -24,4 +24,7 @@ public sealed partial class CruciformSoulComponent : Component
     [DataField] public string Name = string.Empty;
     [DataField] public HumanoidCharacterProfile? Profile;
     [DataField] public int BiomassCost = 100;
+
+    /// <summary>The saved body's biological rejection, not the player's beliefs.</summary>
+    [DataField] public bool AtheistMutation;
 }

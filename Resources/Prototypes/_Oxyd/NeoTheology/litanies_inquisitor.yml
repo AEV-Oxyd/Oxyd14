@@ -30,6 +30,7 @@
   effectDuration: 20
   effects:
   - !type:LitanyHealEffect
+    painkillerStrength: 20
     damage:
       types:
         Brute: -20
@@ -55,6 +56,7 @@
   effectDuration: 20
   effects:
   - !type:LitanyHealEffect
+    painkillerStrength: 20
     damage:
       types:
         Brute: -20

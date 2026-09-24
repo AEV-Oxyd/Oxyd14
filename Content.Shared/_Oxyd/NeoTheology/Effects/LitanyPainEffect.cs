@@ -4,9 +4,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
 /// Eris <c>rituals/priest.dm:173-211</c> (Atonement) and <c>rituals/inquisitor.dm:33-65</c>
-/// (Penance): extreme pain with no real harm. The fork has no nonphysical pain value, so the
-/// server handler maps the Eris <c>adjustHalLoss(50)</c> rider to stamina damage — a named
-/// divergence from the plan's "new capability" row.
+/// (Penance): <c>adjustHalLoss(50)</c> adds temporary pain without wound or stamina damage.
 /// </summary>
 public sealed partial class LitanyPainEffect : LitanyEffect
 {

@@ -2,12 +2,14 @@ using System.Diagnostics.CodeAnalysis;
 using Content.Server.Cloning;
 using Content.Server.Cloning.Components;
 using Content.Shared.Body;
+using Content.Shared.Damage.Systems;
 using Content.Shared.Ghost.Components;
 using Content.Shared.Humanoid;
 using Content.Shared.Humanoid.Prototypes;
 using Robust.Server.Player;
 using Content.Server.Materials;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Medical;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Cloning;
 using Content.Shared.Mind;
@@ -32,6 +34,8 @@ public sealed partial class CruciformReaderSystem : EntitySystem
     [Dependency] private readonly MetaDataSystem _metadata = default!;
     [Dependency] private readonly SharedContainerSystem _containers = default!;
     [Dependency] private readonly IPlayerManager _players = default!;
+    [Dependency] private DamageableSystem _damage = default!;
+    [Dependency] private CruciformSystem _cruciform = default!;
 
     [SubscribeLocalEvent]
     private void OnInserted(EntityUid uid, CruciformReaderComponent reader, EntInsertedIntoContainerMessage args)
@@ -123,6 +127,8 @@ public sealed partial class CruciformReaderSystem : EntitySystem
         _visualBody.ApplyProfileTo(body, profile);
         _profile.ApplyProfileTo(body, profile);
         _metadata.SetEntityName(body, soul.Name);
+        if (soul.AtheistMutation)
+            EnsureComp<AtheistMutationComponent>(body);
 
         if (!_containers.Insert(body, pod.BodyContainer))
         {
@@ -139,6 +145,11 @@ public sealed partial class CruciformReaderSystem : EntitySystem
         pod.CloningProgress = 0;
         _cloningPod.ClonesWaitingForMind[mind] = body;
         AddComp<ActiveCloningPodComponent>(ent.Owner);
+        if (args.Caster is not { } caster ||
+            !_cruciform.TryGetCruciformEntity(caster, out _, out var cruciform) ||
+            !ent.Comp.DamageExemptProfiles.Contains(cruciform.Profile))
+            _damage.TryChangeDamage(body, ent.Comp.ResurrectionDamage, ignoreResistances: true);
+
         _cloningPod.TransferMindToClone(mindId, mind);
         _cloningPod.UpdateStatus(ent.Owner, CloningPodStatus.Cloning, pod);
     }

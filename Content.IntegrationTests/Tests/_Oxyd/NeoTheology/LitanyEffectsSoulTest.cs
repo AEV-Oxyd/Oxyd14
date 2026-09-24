@@ -10,9 +10,11 @@ using Content.Shared.Preferences;
 using Content.Shared.Body;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.Medical;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Cloning;
+using Content.Shared.Damage.Systems;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Implants;
 using Content.Shared.Mind;
@@ -46,7 +48,7 @@ public sealed class LitanyEffectsSoulTest : GameTest
     private const string SoulSessionName = "soul_litany_test";
     private const string RebornName = "Reborn Test Subject";
 
-    public override PoolSettings PoolSettings => PsDisconnected;
+    public override PoolSettings PoolSettings => new() { InLobby = true };
 
     [SidedDependency(Side.Server)] private readonly LitanySystem _litany = default!;
     [SidedDependency(Side.Server)] private readonly LitanyEffectSystem _effects = default!;
@@ -98,9 +100,16 @@ public sealed class LitanyEffectsSoulTest : GameTest
         });
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public async Task Resurrection_GrowsTheSavedBodyDespiteCorpseChangesOrDeletion(bool deleteCorpse)
+    [TestCase(false, "OxydNtDisciple", 60)]
+    [TestCase(true, "OxydNtDisciple", 60)]
+    [TestCase(false, "OxydNtAgrolyte", 60)]
+    [TestCase(false, "OxydNtCustodian", 60)]
+    [TestCase(false, "OxydNtAcolyte", 0)]
+    [TestCase(false, "OxydNtPreacher", 0)]
+    [TestCase(false, "OxydNtInquisitor", 0)]
+    [TestCase(true, "OxydNtDisciple", 60, true)]
+    public async Task Resurrection_GrowsTheSavedBodyDespiteCorpseChangesOrDeletion(
+        bool deleteCorpse, string casterProfile, int cellularDamage, bool biologicalRejection = false)
     {
         var map = await Pair.CreateMachineTestMap();
         var session = await Server.AddDummySession(SoulSessionName);
@@ -118,6 +127,8 @@ public sealed class LitanyEffectsSoulTest : GameTest
             var caster = SpawnBearer(origin);
             _litany.TestingTreatAsActor(caster);
 
+            if (casterProfile != "OxydNtDisciple")
+                Assert.That(_cruciform.TrySetProfile(caster, casterProfile), Is.True);
             var reader = SSpawnAtPosition(ReaderProto, origin.Offset(new Vector2(1f, 0f)));
             cloner = SSpawnAtPosition(ClonerProto, origin.Offset(new Vector2(0f, 1f)));
             foreach (var machine in new[] { reader, cloner })
@@ -135,6 +146,8 @@ public sealed class LitanyEffectsSoulTest : GameTest
             SEntMan.System<HumanoidProfileSystem>().ApplyProfileTo(victim, savedProfile);
             SEntMan.System<SharedVisualBodySystem>().ApplyProfileTo(victim, savedProfile);
             _meta.SetEntityName(victim, RebornName);
+            if (biologicalRejection)
+                SEntMan.AddComponent<AtheistMutationComponent>(victim);
             var implant = _implants.AddImplant(victim, CruciformProto);
             Assert.That(implant, Is.Not.Null, "Setup: a cruciform must be implantable.");
             Assert.That(_cruciform.Activate(victim), Is.True, "Setup: the victim must be active.");
@@ -154,6 +167,8 @@ public sealed class LitanyEffectsSoulTest : GameTest
             });
 
             victimName = ServerName(victim);
+            Assert.That(soul.AtheistMutation, Is.EqualTo(biologicalRejection));
+            SEntMan.RemoveComponent<AtheistMutationComponent>(victim);
             Assert.That(soul.Profile!.Age, Is.EqualTo(55));
             Assert.That(soul.Profile.Appearance.EyeColor, Is.EqualTo(Color.Blue));
             _meta.SetEntityName(victim, "Changed after snapshot");
@@ -215,7 +230,10 @@ public sealed class LitanyEffectsSoulTest : GameTest
                 Assert.That(visual.Profile.EyeColor, Is.EqualTo(Color.Blue));
             }
             Assert.That(eyesFound, Is.True);
+            Assert.That(SEntMan.HasComponent<AtheistMutationComponent>(clone), Is.EqualTo(biologicalRejection));
 
+            SEntMan.System<DamageableSystem>().GetAllDamage(clone).DamageDict.TryGetValue("Cellular", out var injury);
+            Assert.That(injury.Float(), Is.EqualTo(cellularDamage), "The caster's rank must determine the resurrection injury.");
             var pod = SComp<CloningPodComponent>(cloner);
             Assert.That(pod.BodyContainer.ContainedEntity, Is.EqualTo(clone),
                 "The new body must grow in the selected pod.");
@@ -230,6 +248,8 @@ public sealed class LitanyEffectsSoulTest : GameTest
             var clone = SComp<MindComponent>(mindId).OwnedEntity;
             Assert.That(clone, Is.Not.Null);
             Assert.That(ServerName(clone!.Value), Is.EqualTo(victimName));
+            SEntMan.System<DamageableSystem>().GetAllDamage(clone.Value).DamageDict.TryGetValue("Cellular", out var injury);
+            Assert.That(injury.Float(), Is.EqualTo(cellularDamage), "Normal pod ejection must not erase the injury.");
         });
     }
 

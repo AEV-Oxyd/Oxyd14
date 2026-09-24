@@ -9,6 +9,8 @@ using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.Body.Components;
+using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
 using Content.Shared.Damage.Prototypes;
@@ -125,7 +127,7 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     [SidedDependency(Side.Server)] private readonly IGameTiming _timing = default!;
 
     [Test]
-    public async Task Relief_HealsBluntAndHeat_NoStatusEffect()
+    public async Task Relief_InjectsAngelsBalmWithoutHealingWounds()
     {
         var map = await Pair.CreateTestMap();
         EntityUid body = default;
@@ -138,10 +140,8 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             var proto = _prototypes.Index(Relief);
             Assert.That(proto.Cost, Is.EqualTo(20));
             Assert.That(proto.IgnoreStuttering, Is.True);
-            var heal = proto.Effects.OfType<LitanyHealEffect>().Single();
-            Assert.That(heal.Damage.DamageDict.TryGetValue("Blunt", out var blunt) && blunt < FixedPoint2.Zero,
-                Is.True,
-                "Relief must heal through a negative Blunt damage value.");
+            var injection = proto.Effects.OfType<LitanyInjectReagentsEffect>().Single();
+            Assert.That(injection.Reagents["OxydNtAngelsBalm"].Float(), Is.EqualTo(15));
 
             // Seed Blunt + Heat so the heal has something to remove.
             _damageable.SetDamage(body, new DamageSpecifier
@@ -169,10 +169,9 @@ public sealed class LitanyEffectsMedicalTest : GameTest
         {
             var bluntHealed = bluntBefore.Float() - DamageOf(body, "Blunt").Float();
             var heatHealed = heatBefore.Float() - DamageOf(body, "Heat").Float();
-            Assert.That(bluntHealed, Is.EqualTo(5f).Within(0.75f),
-                "Relief must heal ~5 Blunt via the negative damage specifier.");
-            Assert.That(heatHealed, Is.EqualTo(5f).Within(0.75f),
-                "Relief must heal ~5 Heat via the negative damage specifier.");
+            Assert.That(bluntHealed, Is.EqualTo(0f).Within(0.75f), "Relief must not heal wounds.");
+            Assert.That(heatHealed, Is.EqualTo(0f).Within(0.75f), "Relief must not heal burns.");
+            Assert.That(BloodDose(body, "OxydNtAngelsBalm"), Is.EqualTo(15f).Within(0.1f));
             Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(30).Within(0.01),
                 "Disciple 50 capacity - Relief 20 cost once.");
         });
@@ -251,6 +250,38 @@ public sealed class LitanyEffectsMedicalTest : GameTest
                 "Interrupted cast must refund / never charge.");
             Assert.That(cancel.Success, Is.False); // cancel returns Fail("cancelled") by M3 contract
         });
+    }
+
+    [Test]
+    public async Task Relief_RejectsAFullBloodstreamAndRechecksItBeforePayment()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid caster = default;
+        await Server.WaitAssertion(() =>
+        {
+            caster = PrepareCaster(map.GridCoords, Relief);
+            var solutions = SEntMan.System<SharedSolutionContainerSystem>();
+            Assert.That(solutions.TryGetSolution(caster, BloodstreamComponent.DefaultBloodSolutionName,
+                out var blood, out var solution), Is.True);
+            var added = solution.AvailableVolume;
+            Assert.That(solutions.TryAddReagent(blood.Value, "Water", added), Is.True);
+            Assert.That(_litany.TryBeginLitany(caster, Relief, LitanyCastOrigin.ManualSpeech).Success, Is.False);
+            Assert.That(_cruciform.GetHoliness(caster), Is.EqualTo(50));
+            foreach (var content in solution.Contents.ToArray())
+            {
+                if (content.Reagent.Prototype == "Water")
+                    solutions.RemoveReagent(blood.Value, content.Reagent, added);
+            }
+        });
+        await Pair.RunTicksSync(60);
+        await Server.WaitAssertion(() =>
+        {
+            var begin = _litany.TryBeginLitany(caster, Relief, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.True, begin.Reason?.Id);
+            SEntMan.RemoveComponent<BloodstreamComponent>(caster);
+        });
+        await AdvancePastCast();
+        await Server.WaitAssertion(() => Assert.That(_cruciform.GetHoliness(caster), Is.EqualTo(50)));
     }
 
     [Test]
@@ -506,21 +537,14 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     }
 
 
-    // P4.5: the four medical litanies heal through their negative damage blocks. The heal
-    // applies through the casting body; adjacent helper bodies exist only where the target
-    // mode requires a recipient (HandOfMercy / Absolution: adjacent living, Succour: adjacent
-    // active follower). Seeds exceed the budget but stay below the mob's 100-damage critical
-    // threshold, so the asserted delta proves the heal is capped: the Brute-group entry spends
-    // 20 across Blunt/Slash, not 20 per subtype.
-    [Test]
-    public async Task HandOfMercy_HealsBlunt10Heat10() =>
-        await AssertLitanyHealsExactDelta(HandOfMercy, Agrolyte, adjacentLiving: true, adjacentFollower: false,
-            ("Blunt", 20f, 10f), ("Heat", 20f, 10f));
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task HandOfMercy_InjectsTheSelectedPatient(bool critical) =>
+        await AssertLitanyInjectsDose(HandOfMercy, "OxydNtDeusBlessing", 15, critical);
 
     [Test]
-    public async Task AbsolutionOfWounds_HealsBrute20Heat20Asphyxiation40() =>
-        await AssertLitanyHealsExactDelta(AbsolutionOfWounds, Agrolyte, adjacentLiving: true, adjacentFollower: false,
-            ("Blunt", 11f, 10f), ("Slash", 11f, 10f), ("Heat", 22f, 20f), ("Asphyxiation", 41f, 40f));
+    public async Task AbsolutionOfWounds_InjectsTheSelectedPatient() =>
+        await AssertLitanyInjectsDose(AbsolutionOfWounds, "OxydNtHolyInaprovaline", 10);
 
     [Test]
     public async Task Convalescence_HealsBrute20Heat20Asphyxiation40() =>
@@ -531,6 +555,37 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     public async Task Succour_HealsBrute20Heat20Asphyxiation40() =>
         await AssertLitanyHealsExactDelta(Succour, Inquisitor, adjacentLiving: false, adjacentFollower: true,
             ("Blunt", 11f, 10f), ("Slash", 11f, 10f), ("Heat", 22f, 20f), ("Asphyxiation", 41f, 40f));
+
+    private float BloodDose(EntityUid body, string reagent)
+    {
+        Assert.That(SEntMan.System<SharedSolutionContainerSystem>().TryGetSolution(body,
+            BloodstreamComponent.DefaultBloodSolutionName, out _, out var blood), Is.True);
+        return blood.GetTotalPrototypeQuantity(reagent).Float();
+    }
+
+    private async Task AssertLitanyInjectsDose(ProtoId<LitanyPrototype> litany, string reagent, float dose, bool critical = false)
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid caster = default;
+        EntityUid patient = default;
+        await Server.WaitAssertion(() =>
+        {
+            caster = PrepareCaster(map.GridCoords, litany);
+            Assert.That(_cruciform.TrySetProfile(caster, Agrolyte), Is.True);
+            patient = SSpawnAtPosition(HumanProto, map.GridCoords.Offset(Vector2.UnitX));
+            StabilizeNeeds(patient);
+            if (critical)
+                _damageable.SetDamage(patient, new DamageSpecifier { DamageDict = { ["Blunt"] = 120 } });
+            var begin = _litany.TryBeginLitany(caster, litany, LitanyCastOrigin.ManualSpeech);
+            Assert.That(begin.Success, Is.True, begin.Reason?.Id);
+        });
+        await AdvancePastCast();
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(BloodDose(patient, reagent), Is.EqualTo(dose).Within(0.25f));
+            Assert.That(BloodDose(caster, reagent), Is.Zero);
+        });
+    }
 
     /// <summary>
     /// Seeds each listed damage type above its heal budget, casts <paramref name="litany"/>
@@ -545,6 +600,7 @@ public sealed class LitanyEffectsMedicalTest : GameTest
     {
         var map = await Pair.CreateTestMap();
         EntityUid body = default;
+        EntityUid patient = default;
         var before = new Dictionary<string, float>();
 
         await Server.WaitAssertion(() =>
@@ -553,9 +609,11 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             Assert.That(_cruciform.TrySetProfile(body, profile), Is.True,
                 $"{litany.Id} requires the {profile.Id} profile's litany set.");
 
+            patient = body;
             if (adjacentLiving || adjacentFollower)
             {
                 var neighbour = SSpawnAtPosition(HumanProto, map.GridCoords.Offset(new Vector2(1f, 0f)));
+                patient = neighbour;
                 if (adjacentFollower)
                 {
                     Assert.That(_implants.AddImplant(neighbour, CruciformProto), Is.Not.Null);
@@ -566,12 +624,12 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             var seed = new DamageSpecifier();
             foreach (var (type, amount, _) in expected)
                 seed.DamageDict[type] = FixedPoint2.New(amount);
-            _damageable.SetDamage(body, seed);
+            _damageable.SetDamage(patient, seed);
 
-            StabilizeNeeds(body);
+            StabilizeNeeds(patient);
             foreach (var (type, _, _) in expected)
             {
-                before[type] = DamageOf(body, type).Float();
+                before[type] = DamageOf(patient, type).Float();
                 Assert.That(before[type], Is.GreaterThan(0f), $"{litany.Id} seed missing for {type}.");
             }
 
@@ -587,7 +645,7 @@ public sealed class LitanyEffectsMedicalTest : GameTest
             var after = new Dictionary<string, float>();
             foreach (var (type, _, _) in expected)
             {
-                after[type] = DamageOf(body, type).Float();
+                after[type] = DamageOf(patient, type).Float();
                 observed[type] = before[type] - after[type];
             }
 

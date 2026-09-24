@@ -46,7 +46,8 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnLitanyUninstallUpgrade(Entity<CruciformBearerComponent> ent, ref LitanyUninstallUpgradeEvent args)
     {
-        if (!_cruciform.TryGetCruciformEntity(ent.Owner, out var cruciform, out var component))
+        if (args.Handled || !_effects.TryGetProcedureAltar(ent.Owner, false, out _, out _) ||
+            !_cruciform.TryGetCruciformEntity(ent.Owner, out var cruciform, out var component))
             return;
 
         args.Handled = TryUninstallUpgrade(cruciform, component);

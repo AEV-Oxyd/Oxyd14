@@ -30,11 +30,10 @@
   cost: 5
   effectDuration: 120
   effects:
-  - !type:LitanyHealEffect
-    damage:
-      types:
-        Blunt: -10
-        Heat: -10
+  - !type:LitanyInjectReagentsEffect
+    checkBiologicalRejection: true
+    reagents:
+      OxydNtDeusBlessing: 15
   enabled: true
 
 - type: oxydLitany
@@ -49,12 +48,10 @@
   range: 1.5
   cost: 10
   effects:
-  - !type:LitanyHealEffect
-    damage:
-      types:
-        Brute: -20
-        Heat: -20
-        Asphyxiation: -40
+  - !type:LitanyInjectReagentsEffect
+    reagents:
+      OxydNtHolyInaprovaline: 10
+      OxydNtHolyDexalin: 10
   enabled: true
 
 - type: oxydLitany
@@ -87,15 +84,8 @@
   - !type:LitanyEpiphanyEffect
   enabled: true
 
-# ponytail: deferred — Eris asacris (priest.dm:73-91) removes the cruciform's upgrade *items*
-# (`for(var/obj/item/coreimplant_upgrade/CU in CI.upgrades) CU.remove()`), which this fork
-# already ships as the enabled UninstallUpgrade litany (one attachment slot, P4.8); it is not
-# the "Acolyte resurrection litany" the dependency map calls it. The shipped scope here
-# ("remove supported removable core modules", locale + porting plan §9.3/§10.3) needs
-# capability the module host lacks: a removable/supported marker on oxydCoreModule, module
-# items in an nt-core-modules container, and the Preacher Ascension Kit — CoreModuleSystem
-# only has add/remove-by-id over a bare set, and stripping every installed module would take
-# the bearer's rank sets with it. Revisit with the Initiation/uplink packet (P4.13).
+# Eris removes installed coreimplant_upgrade items. This fork removes installed
+# upgrade modules, not rank modules or physical implant upgrades.
 - type: oxydLitany
   id: OxydLitanyAsacris
   name: oxyd-litany-asacris-name

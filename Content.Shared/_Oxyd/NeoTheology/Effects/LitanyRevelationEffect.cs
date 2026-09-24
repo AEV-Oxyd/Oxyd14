@@ -27,13 +27,19 @@ public sealed partial class LitanyRevelationEffect : LitanyEffect
             return false;
         }
 
+        if (system.RejectsHolyInfluence(context.Targets[0]))
+        {
+            failure = "oxyd-litany-biological-rejection";
+            return false;
+        }
+
         failure = null;
         return true;
     }
 
     public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
     {
-        if (context.Targets.Count == 0)
+        if (!CanApply(system, context, out _))
             return false;
 
         var target = context.Targets[0];
