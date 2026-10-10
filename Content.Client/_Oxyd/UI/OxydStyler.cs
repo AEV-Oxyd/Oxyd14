@@ -42,12 +42,12 @@ public sealed class OxydStyler : UIController
                 new Vector2(1024,64),
                 new Vector2(1024,576)
             ] },
-        {1.53f,[ // min window size : ( 1280, 896)
-            new Vector2(256,768),
-            new Vector2(768,768),
-            new Vector2(256,768),
-            new Vector2(1280,128),
-            new Vector2(1280,896)
+        {1.53f,[ // min window size : ( 1344, 896)
+            new Vector2(256,832),
+            new Vector2(832,832),
+            new Vector2(256,832),
+            new Vector2(1280,64),
+            new Vector2(1344,896)
         ] }
     };
     public Vector2 lastSize = Vector2.Zero;
@@ -161,6 +161,6 @@ public sealed class OxydStyler : UIController
 
         }
 
-        Log.Debug(UIManager.RootControl.UIScale.ToString());
+        //Log.Debug(UIManager.RootControl.UIScale.ToString());
     }
 }
