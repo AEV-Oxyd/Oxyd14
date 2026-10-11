@@ -1,5 +1,5 @@
-using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -10,39 +10,43 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <c>NeoTheologyDoorSystem</c> calls its own <c>TryRepair</c> with the caster and the ritual
 /// cost.
 /// </summary>
-public sealed partial class LitanyRepairDoorEffect : LitanyEffect
+public sealed partial class LitanyRepairDoorEffect : LitanyEffect<LitanyRepairDoorEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyRepairDoorEffect()
     {
-        if (!Execute(system, context, true))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyRepairableDoorCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
+/// <summary>Raised once on the caster: the first repairable holy door gets healed.</summary>
+public sealed partial class LitanyRepairDoorEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyRepairDoorEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyRepairDoorEffect> args)
     {
-        foreach (var target in context.Targets)
+        var handled = false;
+        if (args.User is { } user && _litany.GetCastContext(user) is { } context)
         {
-            if (!system.IsLitanyDoor(target))
-                continue;
+            foreach (var target in context.Targets)
+            {
+                if (!_litany.IsLitanyDoor(target))
+                    continue;
 
-            var repair = new LitanyRepairDoorEvent(target, context.User, false, validateOnly);
-            system.RaiseOn(target, ref repair);
-            if (repair.Handled)
-                return true;
+                var repair = new LitanyRepairDoorEvent(target, user, false, false);
+                _litany.RaiseOn(target, ref repair);
+                if (repair.Handled)
+                {
+                    handled = true;
+                    break;
+                }
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

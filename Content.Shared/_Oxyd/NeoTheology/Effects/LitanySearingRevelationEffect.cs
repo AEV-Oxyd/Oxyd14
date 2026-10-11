@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -8,7 +9,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// knockdown are server gameplay, so the effect raises
 /// <see cref="LitanySearingRevelationEvent"/> on the caster.
 /// </summary>
-public sealed partial class LitanySearingRevelationEffect : LitanyEffect
+public sealed partial class LitanySearingRevelationEffect : LitanyEffect<LitanySearingRevelationEffect>
 {
     /// <summary>Eris scans <c>view(user)</c>; the fork scans this radius.</summary>
     [DataField]
@@ -21,20 +22,19 @@ public sealed partial class LitanySearingRevelationEffect : LitanyEffect
     /// <summary>Eris <c>flash</c>: the others fall.</summary>
     [DataField]
     public TimeSpan VictimKnockdown = TimeSpan.FromSeconds(5);
+}
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
-    {
-        failure = null;
-        return system.CanReceiveSkillBuff(context.User);
-    }
+/// <summary>Raised once on the caster: the psy-wave knocks down the cruciform-less in view.</summary>
+public sealed partial class LitanySearingRevelationEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanySearingRevelationEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanySearingRevelationEffect> args)
     {
-        var flash = new LitanySearingRevelationEvent(context.User, Radius, SelfKnockdown, VictimKnockdown, false);
-        system.RaiseOn(context.User, ref flash);
-        return flash.Handled;
+        var flash = new LitanySearingRevelationEvent(
+            entity, args.Effect.Radius, args.Effect.SelfKnockdown, args.Effect.VictimKnockdown, false);
+        _litany.RaiseOn(entity, ref flash);
+        _litany.ReportApplyResult(args.User, flash.Handled);
     }
 }

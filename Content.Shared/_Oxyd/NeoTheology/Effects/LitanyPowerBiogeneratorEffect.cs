@@ -1,5 +1,5 @@
-using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -9,36 +9,43 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <see cref="LitanyToggleBiogeneratorEvent"/> on the machine; the server
 /// <c>BiogeneratorSystem</c> flips its working state.
 /// </summary>
-public sealed partial class LitanyPowerBiogeneratorEffect : LitanyEffect
+public sealed partial class LitanyPowerBiogeneratorEffect : LitanyEffect<LitanyPowerBiogeneratorEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyPowerBiogeneratorEffect()
     {
-        if (!context.Targets.Any(system.IsLitanyBiogenerator))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyBiogeneratorPresentCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raised once on the caster: the first biogenerator in the resolved targets toggles.</summary>
+public sealed partial class LitanyPowerBiogeneratorEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyPowerBiogeneratorEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyPowerBiogeneratorEffect> args)
     {
-        foreach (var target in context.Targets)
+        var handled = false;
+        if (_litany.GetCastContext(args.User) is { } context)
         {
-            if (!system.IsLitanyBiogenerator(target))
-                continue;
+            foreach (var target in context.Targets)
+            {
+                if (!_litany.IsLitanyBiogenerator(target))
+                    continue;
 
-            var toggle = new LitanyToggleBiogeneratorEvent(target, false);
-            system.RaiseOn(target, ref toggle);
-            if (toggle.Handled)
-                return true;
+                var toggle = new LitanyToggleBiogeneratorEvent(target, false);
+                _litany.RaiseOn(target, ref toggle);
+                if (toggle.Handled)
+                {
+                    handled = true;
+                    break;
+                }
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

@@ -1,5 +1,5 @@
-using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -10,43 +10,47 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// and the server <c>AltarSystem</c> runs its own <c>TryMakeOffering</c>. One class serves
 /// DivineIntervention and HolyGuidance — they differ only in their offering prototype.
 /// </summary>
-public sealed partial class LitanyOfferingEffect : LitanyEffect
+public sealed partial class LitanyOfferingEffect : LitanyEffect<LitanyOfferingEffect>
 {
     /// <summary>The <c>oxydOffering</c> prototype this litany makes, e.g. <c>OxydNtOfferingDivineIntervention</c>.</summary>
     [DataField(required: true)]
     public string Offering = string.Empty;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyOfferingEffect()
     {
-        if (!Execute(system, context, true))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyOfferingReadyCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
+/// <summary>Raised once on the caster: the first Eye that accepts banks the offering.</summary>
+public sealed partial class LitanyOfferingEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyOfferingEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyOfferingEffect> args)
     {
-        foreach (var target in context.Targets)
+        var handled = false;
+        if (args.User is { } user && _litany.GetCastContext(user) is { } context)
         {
-            if (!system.IsLitanyEye(target))
-                continue;
+            foreach (var target in context.Targets)
+            {
+                if (!_litany.IsLitanyEye(target))
+                    continue;
 
-            var offering = new LitanyOfferingEvent(context.User, Offering, false, validateOnly);
-            system.RaiseOn(target, ref offering);
-            if (offering.Handled)
-                return true;
+                var offering = new LitanyOfferingEvent(user, args.Effect.Offering, false, false);
+                _litany.RaiseOn(target, ref offering);
+                if (offering.Handled)
+                {
+                    handled = true;
+                    break;
+                }
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

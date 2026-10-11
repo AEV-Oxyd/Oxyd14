@@ -1,6 +1,6 @@
-using System.Linq;
-using Content.Shared.Database;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.Database;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -9,47 +9,48 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// the soul in the reader. The server checks the saved profile, mind, machines, and biomass before payment.
 /// The effect raises <see cref="LitanyResurrectionEvent"/> on the cloner for validation and execution.
 /// </summary>
-public sealed partial class LitanyResurrectionEffect : LitanyEffect
+public sealed partial class LitanyResurrectionEffect : LitanyEffect<LitanyResurrectionEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyResurrectionEffect()
     {
-        if (!Execute(system, context, true))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyResurrectionReadyCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
+/// <summary>Raised once on the caster: the first cloner/reader pair starts the job.</summary>
+public sealed partial class LitanyResurrectionEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyResurrectionEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyResurrectionEffect> args)
     {
-        // Eris utters the prayer over the cloner in front. The reader is the one linked
-        // to that cloner, or the nearest reader beside it.
-        foreach (var target in context.Targets)
+        var handled = false;
+        if (args.User is { } user && _litany.GetCastContext(user) is { } context)
         {
-            if (!system.IsLitanyCloner(target) ||
-                !system.TryResolveResurrectionReader(target, context.Targets, out var reader))
-                continue;
-
-            var start = new LitanyResurrectionEvent(target, reader, false, validateOnly, context.User);
-            system.RaiseOn(target, ref start);
-            if (start.Handled)
+            // Eris utters the prayer over the cloner in front. The reader is the one linked
+            // to that cloner, or the nearest reader beside it.
+            foreach (var target in context.Targets)
             {
-                if (!validateOnly)
-                    system.AdminLog(LogType.Action, LogImpact.High, context.User,
+                if (!_litany.IsLitanyCloner(target) ||
+                    !_litany.TryResolveResurrectionReader(target, context.Targets, out var reader))
+                    continue;
+
+                var start = new LitanyResurrectionEvent(target, reader, false, false, user);
+                _litany.RaiseOn(target, ref start);
+                if (start.Handled)
+                {
+                    _litany.AdminLog(LogType.Action, LogImpact.High, user,
                         $"started resurrection via {context.Litany.ID} on", target);
-                return true;
+                    handled = true;
+                    break;
+                }
             }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }
