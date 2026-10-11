@@ -1,6 +1,7 @@
 using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared.Access;
 using Content.Shared.Chemistry.Reagent;
+using Content.Shared.Damage.Prototypes;
 using Content.Shared.Materials;
 using Content.Shared.Metabolism;
 using Content.Shared.Stacks;
@@ -47,6 +48,13 @@ public static class NeoTheologyPrototypes
     public const string NarcoticsReagentGroup = "Narcotics";
     public static readonly ProtoId<MetabolismStagePrototype> BloodstreamStage = "Bloodstream";
     public static readonly ProtoId<MetabolismStagePrototype> DigestionStage = "Digestion";
+
+    // Damage types used by litany effects and foundation rites.
+    public static readonly ProtoId<DamageTypePrototype> DamageBlunt = "Blunt";
+    public static readonly ProtoId<DamageTypePrototype> DamageHeat = "Heat";
+    public static readonly ProtoId<DamageTypePrototype> DamageCellular = "Cellular";
+    public static readonly ProtoId<DamageTypePrototype> DamageAsphyxiation = "Asphyxiation";
+    public static readonly ProtoId<DamageTypePrototype> DamageRadiation = "Radiation";
 
     // Materials / stacks.
     public static readonly ProtoId<MaterialPrototype> BiomatterMaterial = "Biomatter";

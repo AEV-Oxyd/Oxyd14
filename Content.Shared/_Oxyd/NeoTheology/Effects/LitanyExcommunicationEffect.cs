@@ -13,7 +13,6 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyExcommunicationEffect : LitanyEffect<LitanyExcommunicationEffect>
 {
-    private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
 
     /// <summary>The pipeline delivers each resolved bearer; there is no pick-one fallback.</summary>
     public override bool PerTarget => true;
@@ -24,7 +23,7 @@ public sealed partial class LitanyExcommunicationEffect : LitanyEffect<LitanyExc
         [
             new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             // Eris: `if(CI.get_module(CRUCIFORM_INQUISITOR)) fail("You don't have the authority for this.")`.
-            new LitanyProfileDiffersCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
+            new LitanyProfileDiffersCondition { Profile = NeoTheologyPrototypes.InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
             new LitanyGodbloodFreeCondition { FailureId = "oxyd-litany-godblood" },
         ];
     }

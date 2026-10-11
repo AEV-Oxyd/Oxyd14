@@ -52,7 +52,7 @@ public sealed partial class LitanyDeprivationEntityEffectSystem
         // Eris order: the 15 Blunt lands first; abort before any mutation if it cannot.
         if (!_litany.TryApplyDamage(
                 entity,
-                new DamageSpecifier { DamageDict = { ["Blunt"] = FixedPoint2.New(LitanyDeprivationEffect.EjectDamage) } }))
+                new DamageSpecifier { DamageDict = { [NeoTheologyPrototypes.DamageBlunt] = FixedPoint2.New(LitanyDeprivationEffect.EjectDamage) } }))
         {
             _litany.ReportApplyResult(args.User, false);
             return;

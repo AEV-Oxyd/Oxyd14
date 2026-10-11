@@ -87,6 +87,6 @@ public sealed partial class LitanyCommitmentEntityEffectSystem
         _litany.ReportApplyResult(args.User,
             _litany.TryApplyDamage(
                 entity,
-                new DamageSpecifier { DamageDict = { ["Blunt"] = FixedPoint2.New(LitanyCommitmentEffect.InstallDamage) } }));
+                new DamageSpecifier { DamageDict = { [NeoTheologyPrototypes.DamageBlunt] = FixedPoint2.New(LitanyCommitmentEffect.InstallDamage) } }));
     }
 }

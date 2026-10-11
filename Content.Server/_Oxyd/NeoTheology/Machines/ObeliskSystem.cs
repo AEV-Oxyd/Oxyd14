@@ -9,7 +9,9 @@ using Content.Shared.Humanoid;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.NPC.Components;
+using Content.Shared.NPC.Prototypes;
 using Content.Shared.NPC.Systems;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.NeoTheology.Machines;
@@ -149,7 +151,10 @@ public sealed partial class ObeliskSystem : EntitySystem
                 TryComp<MobStateComponent>(target, out var mobState) && _mobState.IsAlive(target, mobState) &&
                 TryComp<NpcFactionMemberComponent>(target, out var faction) &&
                 !HasComp<CruciformBearerComponent>(target) && !HasComp<HumanoidProfileComponent>(target) &&
-                _factions.IsMemberOfAny((target, faction), obelisk.HostileFactions) &&
+                _factions.IsMemberOfAny((target, faction),
+                    obelisk.HostileFactions.Count > 0
+                        ? (IEnumerable<ProtoId<NpcFactionPrototype>>) obelisk.HostileFactions
+                        : _cruciform.GetRules()?.HostileFactions ?? new List<ProtoId<NpcFactionPrototype>>()) &&
                 _damageable.TryChangeDamage(target, obelisk.HostileDamage, origin: uid))
             {
                 hit++;

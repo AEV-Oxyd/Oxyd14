@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Linq;
 using Content.Server._Oxyd.Medical;
 using Content.Shared._Oxyd.Medical;
+using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.Effects;
@@ -37,6 +38,13 @@ namespace Content.Server._Oxyd.NeoTheology;
 /// </summary>
 public sealed partial class NeoTheologyFoundationSystem : EntitySystem
 {
+    private const float ShedBluntPerStack = 20f;
+    private const int AtheistHeatMin = 5, AtheistHeatMax = 25;
+    private const int EjectCellularMin = 55, EjectCellularMax = 60;
+    private const int EjectAsphyxiationMin = 100, EjectAsphyxiationMax = 150;
+    private const int EjectHeatMin = 100, EjectHeatMax = 175;
+    private const int EjectRadiationMin = 40, EjectRadiationMax = 60;
+
     [Dependency] private CruciformSystem _cruciform = default!;
     [Dependency] private LitanyEffectSystem _effects = default!;
     [Dependency] private CruciformUpgradeSystem _upgrades = default!;
@@ -115,14 +123,14 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
         if (shed > 0)
         {
             _damageable.TryChangeDamage(body,
-                new DamageSpecifier { DamageDict = { ["Blunt"] = 20f * shed } }, origin: body);
+                new DamageSpecifier { DamageDict = { [NeoTheologyPrototypes.DamageBlunt] = ShedBluntPerStack * shed } }, origin: body);
             _popup.PopupEntity(Loc.GetString("oxyd-litany-rejection-shed"), body, body, PopupType.LargeCaution);
         }
         if (cleanseMutation && HasComp<AtheistMutationComponent>(body))
         {
             RemComp<AtheistMutationComponent>(body);
             _damageable.TryChangeDamage(body,
-                new DamageSpecifier { DamageDict = { ["Heat"] = _random.Next(5, 26) } });
+                new DamageSpecifier { DamageDict = { [NeoTheologyPrototypes.DamageHeat] = _random.Next(AtheistHeatMin, AtheistHeatMax + 1) } });
         }
         return shed;
     }
@@ -153,8 +161,10 @@ public sealed partial class NeoTheologyFoundationSystem : EntitySystem
             {
                 DamageDict =
                 {
-                    ["Cellular"] = _random.Next(55, 61), ["Asphyxiation"] = _random.Next(100, 151),
-                    ["Heat"] = _random.Next(100, 176), ["Radiation"] = _random.Next(40, 61),
+                    [NeoTheologyPrototypes.DamageCellular] = _random.Next(EjectCellularMin, EjectCellularMax + 1),
+                    [NeoTheologyPrototypes.DamageAsphyxiation] = _random.Next(EjectAsphyxiationMin, EjectAsphyxiationMax + 1),
+                    [NeoTheologyPrototypes.DamageHeat] = _random.Next(EjectHeatMin, EjectHeatMax + 1),
+                    [NeoTheologyPrototypes.DamageRadiation] = _random.Next(EjectRadiationMin, EjectRadiationMax + 1),
                 },
             }, ignoreResistances: true);
         return true;

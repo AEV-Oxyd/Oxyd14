@@ -15,10 +15,12 @@ namespace Content.Shared._Oxyd.NeoTheology.Components;
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ObeliskComponent : Component
 {
-    /// <summary>Supported hostile fauna. Faction membership alone does not identify a mob as fauna.
-    /// Carp are in the <c>Dragon</c> faction (Resources/Prototypes/Entities/Mobs/NPCs/carp.yml).</summary>
+    /// <summary>Per-obelisk hostile-faction override; empty means the rules prototype's
+    /// <c>hostileFactions</c> (the single source of truth for NeoTheology fauna lists).
+    /// Faction membership alone does not identify a mob as fauna — carp are in the
+    /// <c>Dragon</c> faction (Resources/Prototypes/Entities/Mobs/NPCs/carp.yml).</summary>
     [DataField]
-    public HashSet<ProtoId<NpcFactionPrototype>> HostileFactions = new() { "Dragon", "SimpleHostile", "Xeno" };
+    public HashSet<ProtoId<NpcFactionPrototype>> HostileFactions = new();
 
     [DataField]
     public float Radius = 7f;
