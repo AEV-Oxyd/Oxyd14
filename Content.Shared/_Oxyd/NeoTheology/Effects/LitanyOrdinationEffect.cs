@@ -14,7 +14,7 @@ public sealed partial class LitanyOrdinationEffect : LitanyEffect<LitanyOrdinati
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyFirstTargetActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
         ];
     }
 }

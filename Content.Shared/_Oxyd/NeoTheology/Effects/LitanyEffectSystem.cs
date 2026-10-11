@@ -167,12 +167,16 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         var context = PushCastContext(user, litany, targets, selectedTokens, selectedText,
             designation, selectedBlueprint, ceremonyParticipants);
 
-        var subjects = context.Targets.Count > 0 ? context.Targets : new List<EntityUid> { user };
         try
         {
             foreach (var effect in litany.Effects)
             {
-                var eval = effect is ILitanyEffect { PerTarget: true } ? context.Targets : subjects;
+                // Conditions always see the entity the effect will be raised on: each resolved
+                // target for per-target effects, the caster for cast-scoped ones — matching the
+                // apply pass in TryApplyEffects.
+                var eval = effect is ILitanyEffect { PerTarget: true }
+                    ? context.Targets
+                    : new List<EntityUid> { user };
                 var valid = eval.Count == 0
                     ? _conditions.TryConditions(user, effect.Conditions, user)
                     : eval.Any(t => !TerminatingOrDeleted(t) &&
