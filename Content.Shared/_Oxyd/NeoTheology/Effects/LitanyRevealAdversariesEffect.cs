@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -7,27 +8,22 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// and traps nearby. The scan is server-side, so the effect raises
 /// <see cref="LitanyRevealAdversariesEvent"/> on the caster.
 /// </summary>
-public sealed partial class LitanyRevealAdversariesEffect : LitanyEffect
+public sealed partial class LitanyRevealAdversariesEffect : LitanyEffect<LitanyRevealAdversariesEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
-    {
-        failure = null;
-        return context.Targets.Count > 0;
-    }
+    /// <summary>Each resolved target gets the adversary scan (the self rite resolves the caster).</summary>
+    public override bool PerTarget => true;
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        var handled = false;
-        foreach (var target in context.Targets)
-        {
-            var reveal = new LitanyRevealAdversariesEvent(target, false);
-            system.RaiseOn(target, ref reveal);
-            handled |= reveal.Handled;
-        }
+/// <summary>Raises the reveal bridge on each resolved target.</summary>
+public sealed partial class LitanyRevealAdversariesEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyRevealAdversariesEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-        return handled;
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyRevealAdversariesEffect> args)
+    {
+        var reveal = new LitanyRevealAdversariesEvent(entity, false);
+        _litany.RaiseOn(entity, ref reveal);
+        _litany.ReportApplyResult(args.User, reveal.Handled);
     }
 }

@@ -1,4 +1,6 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
+using Content.Shared.Mobs.Components;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -9,49 +11,48 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// and receives one vision message. The sanity apply lives on the server-only SanitySystem,
 /// reached through <see cref="LitanySanityDeltaEvent"/>.
 /// </summary>
-public sealed partial class LitanyRevelationEffect : LitanyEffect
+public sealed partial class LitanyRevelationEffect : LitanyEffect<LitanyRevelationEffect>
 {
-    /// <summary>Eris <c>rand(0,10)</c> upper bound for the Belief gain.</summary>
-    public const int MaxSanityGain = 10;
+    /// <summary>Each resolved human takes the vision.</summary>
+    public override bool PerTarget => true;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyRevelationEffect()
     {
-        if (context.Targets.Count == 0 ||
-            !system.IsAlive(context.Targets[0]) ||
-            !system.CanReceiveSanityDelta(context.Targets[0]))
-        {
-            failure = "oxyd-litany-no-sanity";
-            return false;
-        }
-
-        if (system.RejectsHolyInfluence(context.Targets[0]))
-        {
-            failure = "oxyd-litany-biological-rejection";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanySanityCapableCondition { FailureId = "oxyd-litany-no-sanity" },
+            new LitanyHolyInfluenceAcceptedCondition { FailureId = "oxyd-litany-biological-rejection" },
+        ];
     }
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+    /// <summary>Eris <c>rand(0,10)</c> upper bound for the Belief gain.</summary>
+    public const int MaxSanityGain = 10;
+}
+
+/// <summary>Applies the sanity gain and delivers the vision on each resolved target.</summary>
+public sealed partial class LitanyRevelationEntityEffectSystem
+    : EntityEffectSystem<MobStateComponent, LitanyRevelationEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<MobStateComponent> entity, ref EntityEffectEvent<LitanyRevelationEffect> args)
     {
-        if (!CanApply(system, context, out _))
-            return false;
-
-        var target = context.Targets[0];
-        var amount = system.RollInclusive(0, MaxSanityGain);
-        var delta = new LitanySanityDeltaEvent(target, amount, false);
-        system.RaiseOn(target, ref delta);
+        var amount = _litany.RollInclusive(0, LitanyRevelationEffect.MaxSanityGain);
+        var delta = new LitanySanityDeltaEvent(entity, amount, false);
+        _litany.RaiseOn(entity, ref delta);
         if (!delta.Handled)
-            return false;
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
-        var revelation = new NeoTheologyRevelationEvent(context.User, target);
-        system.RaiseOn(context.User, ref revelation);
-        system.DeliverSocialNotice(target, Loc.GetString("oxyd-litany-revelation-vision"));
-        return true;
+        if (args.User is { } user)
+        {
+            var revelation = new NeoTheologyRevelationEvent(user, entity);
+            _litany.RaiseOn(user, ref revelation);
+        }
+
+        _litany.DeliverSocialNotice(entity, Loc.GetString("oxyd-litany-revelation-vision"));
+        _litany.ReportApplyResult(args.User, true);
     }
 }

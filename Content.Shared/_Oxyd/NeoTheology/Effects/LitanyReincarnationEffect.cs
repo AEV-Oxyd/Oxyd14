@@ -1,39 +1,41 @@
-using Content.Shared.Database;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.Database;
+using Content.Shared.EntityEffects;
+using Content.Shared.Mobs.Components;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>Eris Reincarnation: transfer the saved soul into a matching, inactive implanted body.</summary>
-public sealed partial class LitanyReincarnationEffect : LitanyEffect
+public sealed partial class LitanyReincarnationEffect : LitanyEffect<LitanyReincarnationEffect>
 {
     // The rite revives the dead: corpses must reach the soul-transfer check.
     public override bool AllowsDeadTarget => true;
 
-    public override bool CanApply(LitanyEffectSystem system, LitanyEffectContext context, out LocId? failure)
+    /// <summary>Each resolved body whose stored soul validates gets the transfer.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyReincarnationEffect()
     {
-        failure = "oxyd-litany-soul-lost";
-        if (context.Targets.Count == 0)
-            return false;
-
-        var check = new LitanyReincarnationEvent(context.Targets[0], false, ValidateOnly: true);
-        system.RaiseOn(context.Targets[0], ref check);
-        if (!check.Handled)
-            return false;
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyReincarnatableCondition { FailureId = "oxyd-litany-soul-lost" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raises the soul-transfer bridge on each resolved body.</summary>
+public sealed partial class LitanyReincarnationEntityEffectSystem
+    : EntityEffectSystem<MobStateComponent, LitanyReincarnationEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<MobStateComponent> entity, ref EntityEffectEvent<LitanyReincarnationEffect> args)
     {
-        if (context.Targets.Count == 0)
-            return false;
-
-        var transfer = new LitanyReincarnationEvent(context.Targets[0], false);
-        system.RaiseOn(context.Targets[0], ref transfer);
-        if (transfer.Handled)
-            system.AdminLog(LogType.Mind, LogImpact.High, context.User,
-                $"reincarnated via {context.Litany.ID} into", context.Targets[0]);
-        return transfer.Handled;
+        var transfer = new LitanyReincarnationEvent(entity, false);
+        _litany.RaiseOn(entity, ref transfer);
+        if (transfer.Handled && args.User is { } user)
+            _litany.AdminLog(LogType.Mind, LogImpact.High, user,
+                $"reincarnated via {_litany.GetCastContext(user)?.Litany.ID} into", entity);
+        _litany.ReportApplyResult(args.User, transfer.Handled);
     }
 }
