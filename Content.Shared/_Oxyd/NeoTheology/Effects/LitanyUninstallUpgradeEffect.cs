@@ -1,4 +1,6 @@
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -8,35 +10,32 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// effect raises <see cref="LitanyUninstallUpgradeEvent"/> on the target and the server
 /// CruciformUpgradeSystem detaches the item and drops it at the bearer's coordinates.
 /// </summary>
-public sealed partial class LitanyUninstallUpgradeEffect : LitanyEffect
+public sealed partial class LitanyUninstallUpgradeEffect : LitanyEffect<LitanyUninstallUpgradeEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>Each resolved follower lying on an altar gets their upgrade detached.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyUninstallUpgradeEffect()
     {
-        if (context.Targets.Count == 0 || !system.TryGetInstalledCruciform(context.Targets[0], out var cruciform))
-        {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
-        }
-
-        if (cruciform.Upgrade is null)
-        {
-            failure = "oxyd-litany-upgrade-not-installed";
-            return false;
-        }
-
-        return system.TryGetProcedureAltar(context.Targets[0], false, out _, out failure);
+        Conditions =
+        [
+            new LitanyInstalledCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyCruciformUpgradeInstalledCondition { FailureId = "oxyd-litany-upgrade-not-installed" },
+            new LitanyProcedureAltarCondition { Undressed = false },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raises the uninstall-upgrade bridge on each resolved follower.</summary>
+public sealed partial class LitanyUninstallUpgradeEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyUninstallUpgradeEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyUninstallUpgradeEffect> args)
     {
-        if (!CanApply(system, context, out _))
-            return false;
-
-        var uninstall = new LitanyUninstallUpgradeEvent(context.Targets[0], false);
-        system.RaiseOn(context.Targets[0], ref uninstall);
-        return uninstall.Handled;
+        var uninstall = new LitanyUninstallUpgradeEvent(entity, false);
+        _litany.RaiseOn(entity, ref uninstall);
+        _litany.ReportApplyResult(args.User, uninstall.Handled);
     }
 }

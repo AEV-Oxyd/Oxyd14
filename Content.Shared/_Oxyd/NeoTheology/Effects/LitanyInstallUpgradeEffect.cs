@@ -1,4 +1,6 @@
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -9,45 +11,33 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// the server CruciformUpgradeSystem does the work.
 /// The target must occupy the altar, lie down, and remove worn clothing.
 /// </summary>
-public sealed partial class LitanyInstallUpgradeEffect : LitanyEffect
+public sealed partial class LitanyInstallUpgradeEffect : LitanyEffect<LitanyInstallUpgradeEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>Each resolved follower lying on an altar gets the upgrade beside them installed.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyInstallUpgradeEffect()
     {
-        if (context.Targets.Count == 0 || !system.TryGetActiveCruciform(context.Targets[0], out var cruciform))
-        {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
-        }
-
-        if (cruciform.Upgrade is not null)
-        {
-            failure = "oxyd-litany-upgrade-present";
-            return false;
-        }
-
-        if (!system.TryGetProcedureAltar(context.Targets[0], true, out _, out failure))
-            return false;
-
-        if (!system.TryFindAltarUpgrade(context.Targets[0], out _, out _))
-        {
-            failure = "oxyd-litany-upgrade-missing";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyCruciformUpgradeFreeCondition { FailureId = "oxyd-litany-upgrade-present" },
+            new LitanyProcedureAltarCondition { Undressed = true },
+            new LitanyAltarUpgradePresentCondition { FailureId = "oxyd-litany-upgrade-missing" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raises the install-upgrade bridge on each resolved follower.</summary>
+public sealed partial class LitanyInstallUpgradeEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyInstallUpgradeEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyInstallUpgradeEffect> args)
     {
-        if (!CanApply(system, context, out _))
-            return false;
-
-        var install = new LitanyInstallUpgradeEvent(context.Targets[0], false);
-        system.RaiseOn(context.Targets[0], ref install);
-        return install.Handled;
+        var install = new LitanyInstallUpgradeEvent(entity, false);
+        _litany.RaiseOn(entity, ref install);
+        _litany.ReportApplyResult(args.User, install.Handled);
     }
 }
