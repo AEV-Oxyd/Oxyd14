@@ -135,6 +135,16 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
                 component.NextPurity = _timing.CurTime + component.PurityInterval;
                 _foundation.Purify(body, cleanseMutation: true);
             }
+
+            // Followers moving in or out of channeling range do not raise the activity
+            // event, so recount the roster on a slow schedule (Eris counts in-view
+            // followers, matching the range lookup used everywhere else).
+            if (component is { Active: true, Channeling: true } &&
+                _timing.CurTime >= component.NextRosterCheck)
+            {
+                component.NextRosterCheck = _timing.CurTime + component.RosterCheckInterval;
+                RecomputeRegeneration(component);
+            }
         }
     }
 

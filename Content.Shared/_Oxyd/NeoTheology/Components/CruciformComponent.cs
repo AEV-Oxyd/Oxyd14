@@ -104,6 +104,10 @@ public sealed partial class CruciformComponent : Component
     [DataField] public TimeSpan PurityInterval = TimeSpan.FromSeconds(5);
     public TimeSpan NextPurity;
 
+    /// <summary>Next time the channeling follower roster (and thus regeneration) is recounted.</summary>
+    [DataField] public TimeSpan RosterCheckInterval = TimeSpan.FromSeconds(1);
+    public TimeSpan NextRosterCheck;
+
     /// <summary>Each Eye energy miracle adds one source base regeneration, not current holiness.</summary>
     [DataField] public int EnergyMiracles;
 
