@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Content.Client._Oxyd.Framework;
 using Content.Client._Oxyd.UI;
+using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
@@ -8,6 +9,7 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameStates;
 using Robust.Shared.Player;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.NeoTheology;
 
@@ -21,6 +23,7 @@ public sealed partial class NtHolinessPanelSystem : EntitySystem
 {
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private StatusPanelSystem _panels = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     private const string Category = "IC";
     private const string PanelName = "NtHoliness";
@@ -105,8 +108,11 @@ public sealed partial class NtHolinessPanelSystem : EntitySystem
         }
 
         _row.Visible = true;
+        // The server settles comp.Holiness lazily without dirtying it — extrapolate
+        // regen locally instead of rendering the (frozen) networked value.
+        var holiness = NeoTheologyHoliness.Extrapolate(comp, _timing.CurTime);
         var max = Math.Max(1.0, comp.MaxHoliness);
-        _bar.SetValue((float)(comp.Holiness / max), ErisNanoColors.BarDefault,
-            $"{comp.Holiness:0} / {comp.MaxHoliness:0}");
+        _bar.SetValue((float)(holiness / max), ErisNanoColors.BarDefault,
+            $"{holiness:0} / {comp.MaxHoliness:0}");
     }
 }

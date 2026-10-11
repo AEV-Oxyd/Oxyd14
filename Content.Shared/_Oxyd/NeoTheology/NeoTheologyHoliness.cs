@@ -1,3 +1,5 @@
+using Content.Shared._Oxyd.NeoTheology.Components;
+
 namespace Content.Shared._Oxyd.NeoTheology;
 
 /// <summary>
@@ -6,6 +8,45 @@ namespace Content.Shared._Oxyd.NeoTheology;
 /// </summary>
 public static class NeoTheologyHoliness
 {
+    /// <summary>
+    /// Projection of the holiness a cruciform holds at <paramref name="curTime"/>. The
+    /// server settles <see cref="CruciformComponent.Holiness"/> lazily and deliberately
+    /// without dirtying it, so client readers must extrapolate from the networked
+    /// (Holiness, LastHolinessUpdate, RegenerationPerSecond) fields instead of reading
+    /// the stored value directly.
+    /// </summary>
+    public static double Extrapolate(CruciformComponent comp, TimeSpan curTime)
+    {
+        return Extrapolate(
+            comp.Holiness,
+            comp.RegenerationPerSecond,
+            comp.LastHolinessUpdate,
+            curTime,
+            comp.MaxHoliness,
+            comp.Active);
+    }
+
+    /// <summary>
+    /// Field-level variant for snapshot readers (e.g. litany window) that carry the
+    /// sampled values rather than the component itself.
+    /// </summary>
+    public static double Extrapolate(
+        double holiness,
+        double regenerationPerSecond,
+        TimeSpan sampledAt,
+        TimeSpan curTime,
+        double maxHoliness,
+        bool active = true)
+    {
+        var value = ClampResource(holiness, maxHoliness);
+        if (!active || sampledAt == default || regenerationPerSecond <= 0)
+            return value;
+        var elapsed = (curTime - sampledAt).TotalSeconds;
+        if (!double.IsFinite(elapsed) || elapsed <= 0)
+            return value;
+        return ClampResource(value + regenerationPerSecond * elapsed, maxHoliness);
+    }
+
     public static int CognitionSteps(int effectiveCog)
     {
         return Math.Max(0, (int)Math.Floor(Math.Max(effectiveCog, 0) / 4d + 0.5d));

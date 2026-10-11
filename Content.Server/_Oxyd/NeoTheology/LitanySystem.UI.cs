@@ -439,7 +439,8 @@ public sealed partial class LitanySystem
             regen,
             role,
             entries,
-            busy);
+            busy,
+            cruciformComp?.LastHolinessUpdate ?? default);
     }
 
     private List<LitanyViewerEntry> BuildViewerEntries(EntityUid viewer, CruciformComponent? cruciform, bool active)

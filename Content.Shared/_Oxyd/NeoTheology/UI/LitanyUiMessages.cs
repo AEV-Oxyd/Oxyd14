@@ -27,6 +27,8 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
     public double Holiness { get; }
     public double Cap { get; }
     public double RegenerationPerSecond { get; }
+    /// <summary>Simulation time <see cref="Holiness"/> was settled at; clients extrapolate regen from it.</summary>
+    public TimeSpan HolinessSampledAt { get; }
     public ProtoId<NeoTheologyProfilePrototype>? Profile { get; }
     public bool Active { get; }
     public List<LitanyViewerEntry> Entries { get; }
@@ -40,12 +42,14 @@ public sealed class LitanyViewerSnapshot : BoundUserInterfaceState
         bool active,
         List<LitanyViewerEntry> entries,
         string? busyReason,
-        double cap = 0d)
+        double cap = 0d,
+        TimeSpan holinessSampledAt = default)
     {
         Revision = revision;
         Holiness = holiness;
         Cap = cap;
         RegenerationPerSecond = regenerationPerSecond;
+        HolinessSampledAt = holinessSampledAt;
         Profile = profile;
         Active = active;
         Entries = entries;
@@ -157,6 +161,8 @@ public sealed class LitanyViewerSnapshotMessage : BoundUserInterfaceMessage
     public double Holiness { get; }
     public double Cap { get; }
     public double RegenerationPerSecond { get; }
+    /// <summary>Simulation time <see cref="Holiness"/> was settled at; clients extrapolate regen from it.</summary>
+    public TimeSpan HolinessSampledAt { get; }
     public LitanyRolePresentation RolePresentation { get; }
     public List<LitanyViewerEntry> Entries { get; }
     public LitanyBusyState? BusyState { get; }
@@ -168,12 +174,14 @@ public sealed class LitanyViewerSnapshotMessage : BoundUserInterfaceMessage
         double regenerationPerSecond,
         LitanyRolePresentation rolePresentation,
         List<LitanyViewerEntry> entries,
-        LitanyBusyState? busyState = null)
+        LitanyBusyState? busyState = null,
+        TimeSpan holinessSampledAt = default)
     {
         Revision = revision;
         Holiness = holiness;
         Cap = cap;
         RegenerationPerSecond = regenerationPerSecond;
+        HolinessSampledAt = holinessSampledAt;
         RolePresentation = rolePresentation;
         Entries = entries;
         BusyState = busyState;

@@ -241,6 +241,56 @@ public sealed class CruciformLifecycleTest : GameTest
         });
     }
 
+    /// <summary>
+    /// N1 regression: holiness settles lazily without dirtying, so the client must
+    /// extrapolate from (Holiness, LastHolinessUpdate, RegenerationPerSecond). Assert
+    /// the projection grows with time while the stored field stays put, and that it
+    /// agrees with a server settle at the same instant.
+    /// </summary>
+    [Test]
+    public async Task ExtrapolatedHolinessTracksServerSettle()
+    {
+        var map = await Pair.CreateTestMap();
+        EntityUid body = default;
+        EntityUid implant = default;
+        double stored = 0d;
+        double regen = 0d;
+        TimeSpan sampledAt = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            body = SSpawnAtPosition(HumanProto, map.GridCoords);
+            implant = Implant(body);
+            Assert.That(_cruciform.Activate(body), Is.True);
+            Assert.That(_cruciform.TrySpend(body, 30d), Is.True);
+
+            var comp = SComp<CruciformComponent>(implant);
+            stored = comp.Holiness;
+            regen = comp.RegenerationPerSecond;
+            sampledAt = comp.LastHolinessUpdate;
+            Assert.That(regen, Is.GreaterThan(0d));
+        });
+
+        await Pair.RunTicksSync(30);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SComp<CruciformComponent>(implant);
+            var now = _timing.CurTime;
+
+            // The stored field did not advance on its own — this is what the client sees.
+            Assert.That(comp.Holiness, Is.EqualTo(stored).Within(1e-9));
+
+            var nowValue = NeoTheologyHoliness.Extrapolate(stored, regen, sampledAt, now, comp.MaxHoliness, true);
+            var laterValue = NeoTheologyHoliness.Extrapolate(stored, regen, sampledAt, now + TimeSpan.FromSeconds(30), comp.MaxHoliness, true);
+            Assert.That(nowValue, Is.GreaterThan(stored));
+            Assert.That(laterValue, Is.GreaterThan(nowValue));
+
+            // The projection must agree with a server settle at the same instant.
+            Assert.That(_cruciform.GetHoliness(body), Is.EqualTo(nowValue).Within(0.01));
+        });
+    }
+
     [Test]
     public async Task DeathDeactivatesAndReimplantationWaitsForTheStoredSoul()
     {

@@ -139,7 +139,8 @@ public sealed partial class LitanyWindow : FancyWindow
             role.Active,
             snapshot.Entries,
             null,
-            snapshot.Cap));
+            snapshot.Cap,
+            snapshot.HolinessSampledAt));
 
         // UpdateState also supports the legacy state path and clears this
         // marker, so apply the actor-targeted role presentation after it runs.
@@ -253,6 +254,9 @@ public sealed partial class LitanyWindow : FancyWindow
     {
         base.FrameUpdate(args);
         UpdateProgressPresentation();
+        // The holiness snapshot is settled lazily server-side; extrapolate regen
+        // locally so the readout keeps moving between pushes.
+        UpdateHolinessPresentation();
         if (_selectedEntry is { } entry && TryGetLitany(entry, out var litany))
             UpdateCooldownLabel(entry, litany);
         if (_choiceRequestId is not null)
@@ -415,8 +419,9 @@ public sealed partial class LitanyWindow : FancyWindow
         var profileName = profile is null ? "—" : Loc.GetString(profile.Name);
         var maximumHoliness = snapshot.Cap > 0 ? snapshot.Cap : GetMaximumHoliness(profile);
 
+        var holiness = EffectiveHoliness(snapshot, maximumHoliness);
         HolinessLabel.Text = Loc.GetString("oxyd-cruciform-holiness",
-            ("current", snapshot.Holiness.ToString("0.##")),
+            ("current", holiness.ToString("0.##")),
             ("maximum", maximumHoliness.ToString("0.##")));
         RegenerationLabel.Text = $"Regeneration: {snapshot.RegenerationPerSecond.ToString("0.####", CultureInfo.CurrentCulture)}/s";
 
@@ -435,9 +440,38 @@ public sealed partial class LitanyWindow : FancyWindow
             ("clearance", hasCruciform ? clearanceName : "—"));
 
         var holinessMax = maximumHoliness > 0 ? maximumHoliness : 1;
-        var holinessValue = double.IsFinite(snapshot.Holiness)
-            ? Math.Clamp(snapshot.Holiness, 0d, holinessMax)
-            : 0d;
+        var holinessValue = EffectiveHoliness(snapshot, holinessMax);
+        HolinessBar.SetValue((float) (holinessValue / holinessMax),
+            ErisNanoColors.BarDefault,
+            $"{holinessValue:0.##} / {holinessMax:0.##}");
+    }
+
+    /// <summary>
+    /// Holiness projected to now from the snapshot's sampled value; the server settles
+    /// the stored value lazily without dirtying, so the raw field freezes between pushes.
+    /// </summary>
+    private double EffectiveHoliness(LitanyViewerSnapshot snapshot, double maxHoliness)
+    {
+        return NeoTheologyHoliness.Extrapolate(
+            snapshot.Holiness,
+            snapshot.RegenerationPerSecond,
+            snapshot.HolinessSampledAt,
+            _gameTiming.CurTime,
+            maxHoliness,
+            active: true);
+    }
+
+    /// <summary>Per-frame holiness readout refresh (label + bar only).</summary>
+    private void UpdateHolinessPresentation()
+    {
+        if (_snapshot is not { } snapshot)
+            return;
+        var maximumHoliness = snapshot.Cap > 0 ? snapshot.Cap : GetMaximumHoliness(GetProfile(snapshot.Profile));
+        var holinessMax = maximumHoliness > 0 ? maximumHoliness : 1;
+        var holinessValue = EffectiveHoliness(snapshot, holinessMax);
+        HolinessLabel.Text = Loc.GetString("oxyd-cruciform-holiness",
+            ("current", holinessValue.ToString("0.##")),
+            ("maximum", holinessMax.ToString("0.##")));
         HolinessBar.SetValue((float) (holinessValue / holinessMax),
             ErisNanoColors.BarDefault,
             $"{holinessValue:0.##} / {holinessMax:0.##}");
@@ -662,10 +696,12 @@ public sealed partial class LitanyWindow : FancyWindow
             || _choiceRequestId is not null
             || !string.IsNullOrWhiteSpace(snapshot.BusyReason))
             return false;
-        if (!double.IsFinite(snapshot.Holiness) || !double.IsFinite(litany.Cost) || litany.Cost < 0)
+        var maxHoliness = snapshot.Cap > 0 ? snapshot.Cap : GetMaximumHoliness(GetProfile(snapshot.Profile));
+        var holiness = EffectiveHoliness(snapshot, maxHoliness > 0 ? maxHoliness : 1);
+        if (!double.IsFinite(holiness) || !double.IsFinite(litany.Cost) || litany.Cost < 0)
             return false;
 
-        return snapshot.Holiness + HolinessTolerance >= litany.Cost;
+        return holiness + HolinessTolerance >= litany.Cost;
     }
 
     private void UpdateChoiceExpiryLabel()
