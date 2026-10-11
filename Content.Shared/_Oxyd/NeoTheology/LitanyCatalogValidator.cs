@@ -2,6 +2,8 @@ using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Effects;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Damage;
+using Content.Shared.EntityConditions;
+using Content.Shared.EntityEffects;
 using Robust.Shared.Localization;
 using Robust.Shared.Prototypes;
 
@@ -361,10 +363,34 @@ public static class LitanyCatalogValidator
         ValidateEffects(litany, errors);
     }
 
+    private static bool ConditionsDivergeFromCtor(EntityEffect effect)
+    {
+        EntityEffect fresh;
+        try
+        {
+            if (Activator.CreateInstance(effect.GetType()) is not EntityEffect created)
+                return false;
+            fresh = created;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+        var declared = effect.Conditions ?? Array.Empty<EntityCondition>();
+        var intrinsic = fresh.Conditions ?? Array.Empty<EntityCondition>();
+        return !declared.Select(c => c.GetType()).SequenceEqual(intrinsic.Select(c => c.GetType()));
+    }
+
     private static void ValidateEffects(LitanyPrototype litany, List<string> errors)
     {
         foreach (var effect in litany.Effects)
         {
+            // A YAML conditions: list replaces the intrinsic guards the effect type
+            // installs in its constructor. Declared condition types must match a fresh
+            // instance exactly — anything else means YAML overwrote the ctor guards.
+            if (ConditionsDivergeFromCtor(effect))
+                errors.Add($"{litany.ID} declares conditions: on litany effect {effect.GetType().Name}; intrinsic guards own gating.");
+
             switch (effect)
             {
                 case LitanyHealEffect heal:

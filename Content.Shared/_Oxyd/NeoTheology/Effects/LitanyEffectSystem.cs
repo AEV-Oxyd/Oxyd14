@@ -74,7 +74,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
 
-    /// <summary>Observers receive notices without retaining them in this system.</summary>
+    /// <summary>OXYD test-only: integration fixtures subscribe to verify notice delivery.</summary>
     public event Action<EntityUid, string>? SocialNotice;
 
     /// <summary>Admin-log a litany mutation: actor did <paramref name="action"/> to target.</summary>
@@ -92,6 +92,12 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     /// <see cref="GetCastContext"/>; the component is wiped when the pass ends so a stale
     /// context never outlives its cast.
     /// </summary>
+    /// <remarks>
+    /// Must be paired with <see cref="PopCastContext"/> on the same path. A nested cast
+    /// re-stamps the fields, so pushes are depth-counted and the innermost pop only
+    /// removes the component once the outermost pass also ends — the outer frame's
+    /// stamped fields are still clobbered, so nested casts remain unsupported.
+    /// </remarks>
     public LitanyCastContextComponent PushCastContext(
         EntityUid user,
         LitanyPrototype litany,
@@ -112,7 +118,10 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         context.Designation = designation;
         context.SelectedBlueprint = selectedBlueprint;
         context.CeremonyParticipants = ceremonyParticipants;
-        context.LastApplySucceeded = true;
+        if (context.CastDepth > 0)
+            Log.Warning($"nested litany cast context on {ToPrettyString(user)}; inner cast clobbers the outer frame's stamped fields");
+        context.CastDepth++;
+        context.LastApplySucceeded = false;
         context.ApplyFailed = false;
         context.ValidationFailure = null;
         return context;
@@ -124,10 +133,19 @@ public sealed partial class LitanyEffectSystem : EntitySystem
         return user is { } uid && TryComp(uid, out LitanyCastContextComponent? context) ? context : null;
     }
 
-    /// <summary>Clears the stamped context once a validate/apply pass finishes.</summary>
+    /// <summary>
+    /// Clears the stamped context once a validate/apply pass finishes. Only the matching
+    /// outermost pop removes the component; a pop without a push logs and returns.
+    /// </summary>
     public void PopCastContext(EntityUid user)
     {
-        RemComp<LitanyCastContextComponent>(user);
+        if (!TryComp(user, out LitanyCastContextComponent? context) || context.CastDepth <= 0)
+        {
+            Log.Warning($"litany cast context pop without a matching push on {ToPrettyString(user)}");
+            return;
+        }
+        if (--context.CastDepth == 0)
+            RemComp<LitanyCastContextComponent>(user);
     }
 
     /// <summary>Handler result channel: an effect handler reports whether its apply succeeded.</summary>
@@ -236,8 +254,11 @@ public sealed partial class LitanyEffectSystem : EntitySystem
                         if (TerminatingOrDeleted(target))
                             continue;
 
-                        context.LastApplySucceeded = true;
-                        applied |= _entityEffects.TryApplyEffect(target, effect, 1f, user);
+                        // Reset to failure before the raise: a raise that never reports —
+                        // no handler ran — must not be mistaken for a successful apply.
+                        context.LastApplySucceeded = false;
+                        applied |= _entityEffects.TryApplyEffect(target, effect, 1f, user) &&
+                                   context.LastApplySucceeded;
                     }
 
                     if (!applied || context.ApplyFailed)
@@ -245,9 +266,9 @@ public sealed partial class LitanyEffectSystem : EntitySystem
                 }
                 else
                 {
-                    context.LastApplySucceeded = true;
+                    context.LastApplySucceeded = false;
                     var raised = _entityEffects.TryApplyEffect(user, effect, 1f, user);
-                    if (!raised || context.ApplyFailed)
+                    if (!raised || !context.LastApplySucceeded || context.ApplyFailed)
                         success = false;
                 }
             }

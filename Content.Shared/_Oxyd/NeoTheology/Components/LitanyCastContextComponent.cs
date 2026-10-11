@@ -12,8 +12,9 @@ namespace Content.Shared._Oxyd.NeoTheology.Components;
 /// </summary>
 /// <remarks>
 /// Not networked and never serialized: the component exists only for the duration of a
-/// cast on this side of the wire. A litany that triggers a nested cast overwrites it for
-/// the remainder of that tick, matching the old system-field semantics.
+/// cast on this side of the wire. <see cref="CastDepth"/> pairs Push/Pop calls so the
+/// component survives until the outermost pass ends; a nested cast still re-stamps the
+/// fields, so nested casts are unsupported and warned on.
 /// </remarks>
 [RegisterComponent]
 public sealed partial class LitanyCastContextComponent : Component
@@ -47,4 +48,7 @@ public sealed partial class LitanyCastContextComponent : Component
 
     /// <summary>First validation failure a condition reported, surfaced to the caster as the reason.</summary>
     public LocId? ValidationFailure;
+
+    /// <summary>Number of unmatched <c>PushCastContext</c> calls; the component is removed at 0.</summary>
+    public int CastDepth;
 }
