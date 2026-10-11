@@ -15,7 +15,7 @@ namespace Content.Shared._Oxyd.Medical;
 /// the host's bloodstream, paralyzing victims, and reproduction. Scoped-down port:
 /// infestation, secretion, paralysis, reproduction — no mind-control/assumption.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState, AutoGenerateComponentPause]
 public sealed partial class OxydBorerComponent : Component
 {
     /// <summary>Eris `chemicals`: the resource pool all abilities draw from.</summary>
@@ -119,8 +119,8 @@ public sealed partial class OxydBorerComponent : Component
     [DataField]
     public float UpdateInterval = 1f;
 
-    [ViewVariables]
-    public float UpdateRemaining;
+    [ViewVariables, AutoPausedField]
+    public TimeSpan NextUpdate;
 
     // ------------------------------------------------------------------
     // Assume control (Eris assume_control / detach / release_control)

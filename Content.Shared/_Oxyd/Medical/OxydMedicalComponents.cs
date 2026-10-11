@@ -19,7 +19,7 @@ public sealed partial class OxydTimeOfDeathComponent : Component
 /// inflicts toxin damage until the load subsides. Eris tracks contribution per reagent datum;
 /// here the server system rebuilds contributions each tick from blood reagent metabolism data.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState, AutoGenerateComponentPause]
 public sealed partial class OxydNsaComponent : Component
 {
     /// <summary>Eris: nerve_system_accumulation threshold at which overload effects start.</summary>
@@ -45,7 +45,8 @@ public sealed partial class OxydNsaComponent : Component
     [DataField]
     public float UpdateInterval = 1f;
 
-    public float UpdateRemaining;
+    [AutoPausedField]
+    public TimeSpan NextUpdate;
 }
 
 /// <summary>Sleeper: stasis bed with a fixed injection menu (Eris Sleeper.dm). Bed occupancy uses the

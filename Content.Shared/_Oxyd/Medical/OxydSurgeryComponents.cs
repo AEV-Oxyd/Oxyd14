@@ -1,4 +1,6 @@
+using Content.Shared.Body;
 using Content.Shared.DoAfter;
+using Content.Shared.Item;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -192,4 +194,22 @@ public sealed partial class OxydSurgeryDoAfterEvent : SimpleDoAfterEvent
     private OxydSurgeryDoAfterEvent()
     {
     }
+}
+
+/// <summary>OrganCategoryPrototype ids referenced by the medical systems (oxygen-bar
+/// organs, pulse source).</summary>
+public static class OxydOrganCategories
+{
+    public static readonly ProtoId<OrganCategoryPrototype> Brain = "Brain";
+    public static readonly ProtoId<OrganCategoryPrototype> Lungs = "Lungs";
+    public static readonly ProtoId<OrganCategoryPrototype> Heart = "Heart";
+}
+
+/// <summary>Item sizes a retracted cavity accepts through the click path (Eris w_class check).</summary>
+public static class OxydItemSizes
+{
+    public static readonly HashSet<ProtoId<ItemSizePrototype>> Implantable = new()
+    {
+        "Tiny", "Small",
+    };
 }
