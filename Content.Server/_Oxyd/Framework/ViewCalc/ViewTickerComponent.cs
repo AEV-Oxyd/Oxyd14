@@ -16,9 +16,6 @@ public sealed partial class ViewTickerComponent : Component
 
     public HashSet<EntityUid> lastSeen = new();
 
-    /// <summary>Value of the view epoch when <see cref="lastSeen"/> was computed.</summary>
-    public int lastSeenEpoch = -1;
-
     /// <summary>When the last view calculation ran for this ticker.</summary>
     public TimeSpan lastTickTime;
 
