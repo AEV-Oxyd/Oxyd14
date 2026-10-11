@@ -116,6 +116,9 @@ public sealed class ArmamentsPrinterTest : GameTest
             Assert.That(system.GetAvailableRecipes(lathe, component), Does.Not.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
             Assert.That(SEntMan.System<ItemSlotsSystem>().TryInsert(lathe, SharedLatheSystem.diskSlot, disk, null), Is.True);
             Assert.That(system.GetAvailableRecipes(lathe, component), Does.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
+            // Regenerate the runtime whitelist now the disk is inserted so its
+            // recipe's materials are accepted.
+            SEntMan.System<SharedMaterialStorageSystem>().UpdateMaterialWhitelist(lathe);
             foreach (var (material, amount) in recipe.Materials)
                 Assert.That(SEntMan.System<SharedMaterialStorageSystem>().TryChangeMaterialAmount(lathe, material, amount * 2), Is.True);
 
@@ -129,6 +132,7 @@ public sealed class ArmamentsPrinterTest : GameTest
             Assert.That(SEntMan.System<ItemSlotsSystem>().TryEject(lathe, SharedLatheSystem.diskSlot, null, out var ejected), Is.True);
             Assert.That(ejected, Is.EqualTo(disk));
             Assert.That(system.GetAvailableRecipes(lathe, component), Does.Not.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
+            SEntMan.System<SharedMaterialStorageSystem>().UpdateMaterialWhitelist(lathe);
             Assert.That(SComp<MaterialStorageComponent>(lathe).MaterialWhiteList, Is.EquivalentTo(originalMaterials));
         });
     }
