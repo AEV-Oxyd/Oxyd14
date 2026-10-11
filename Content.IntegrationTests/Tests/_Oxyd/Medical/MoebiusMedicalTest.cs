@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.Medical;
 using Content.Server.Stack;
 using Content.Shared._Oxyd.Medical;
+using Content.Shared.Body;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Systems;
 using Content.Shared.Chemistry.Components;
@@ -16,6 +18,7 @@ using Content.Shared.DoAfter;
 using Content.Shared.DragDrop;
 using Content.Shared.EntityEffects;
 using Content.Shared.FixedPoint;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Mind;
 using Content.Shared.Mobs;
 using Content.Shared.Mobs.Components;
@@ -62,6 +65,8 @@ public sealed class MoebiusMedicalTest : GameTest
     [SidedDependency(Side.Server)] private readonly ServerContainers.ContainerSystem _container = default!;
     [SidedDependency(Side.Server)] private readonly StackSystem _stack = default!;
     [SidedDependency(Side.Server)] private readonly IGameTiming _timing = default!;
+    [SidedDependency(Side.Server)] private readonly SharedHandsSystem _hands = default!;
+    [SidedDependency(Side.Server)] private readonly DetachableOrganSystem _detach = default!;
 
     private Content.Shared.DoAfter.DoAfter FakeDoAfter(DoAfterEvent ev, EntityUid user,
         EntityUid? target, EntityUid? used = null)
@@ -418,6 +423,95 @@ public sealed class MoebiusMedicalTest : GameTest
             Assert.That(surg.OrganDamage, Is.EqualTo(0f),
                 "An organ inside stasis must take zero decay damage.");
             Assert.That(surg.Decayed, Is.False);
+        });
+    }
+
+    /// <summary>Q3: severing a limb (the head) packs its child organs into the
+    /// detached-body shell, and re-attaching the shell through the AttachOrgan
+    /// step restores them to the patient's body — organ ownership (OrganComponent.Body)
+    /// resolves back to the patient and the empty shell is consumed.</summary>
+    [Test]
+    public async Task LimbReattachRestoresOrgans()
+    {
+        var map = await Pair.CreateTestMap();
+        var origin = TileCentre(map.GridCoords);
+        EntityUid patient = default, surgeon = default, torso = default,
+            head = default, brain = default, shell = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            patient = SSpawnAtPosition(HumanProto, origin);
+            surgeon = SSpawnAtPosition(HumanProto, origin.Offset(new Vector2(1f, 0f)));
+
+            // The AttachOrgan roll is quality(100) - difficulty(35) = 65% — a laser
+            // scalpel in hand makes the loop converge in a few attempts.
+            var laser = SSpawnAtPosition("OxydSurgicalScalpelLaser", origin);
+            Assert.That(_hands.TryForcePickupAnyHand(surgeon, laser), Is.True);
+
+            var organs = _wounds.GetOrgans(patient);
+            torso = organs.Find(o => o.Organ.Category is { } c && c.Id == "Torso").Uid;
+            head = organs.Find(o => o.Organ.Category is { } c && c.Id == "Head").Uid;
+            brain = organs.Find(o => o.Organ.Category is { } c && c.Id == "Brain").Uid;
+            Assert.Multiple(() =>
+            {
+                Assert.That(torso.IsValid(), Is.True, "MobHumanOxyd must have a torso organ.");
+                Assert.That(head.IsValid(), Is.True, "MobHumanOxyd must have a head organ.");
+                Assert.That(brain.IsValid(), Is.True, "MobHumanOxyd must have a brain organ.");
+            });
+
+            // Open site for the reattach step.
+            var surg = SComp<OxydOrganSurgeryComponent>(torso);
+            surg.Incision = OxydIncisionStage.Retracted;
+            SEntMan.Dirty(torso, surg);
+
+            // Sever the head: it and its child organs (brain, eyes, tongue, ears)
+            // must leave the patient inside the detached-body shell.
+            shell = _detach.Detach(head) ?? EntityUid.Invalid;
+            Assert.Multiple(() =>
+            {
+                Assert.That(shell.IsValid(), Is.True,
+                    "Detaching the head must spawn a detached-body shell.");
+                Assert.That(_container.TryGetContainer(shell, BodyComponent.ContainerID,
+                        out var shellBox) && shellBox.ContainedEntities.Contains(brain), Is.True,
+                    "The brain must travel with the severed head.");
+                Assert.That(_wounds.GetOrgans(patient).Any(o => o.Uid == brain), Is.False,
+                    "The brain must leave the patient's body.");
+            });
+        });
+
+        // Step attempts: each is a 5s do-after; on a failed roll the organ takes
+        // malpractice damage and the shell survives for the next try.
+        for (var attempt = 0; attempt < 8 && SEntMan.EntityExists(shell); attempt++)
+        {
+            await Server.WaitAssertion(() =>
+            {
+                var sessions = SEntMan.EnsureComponent<OxydSurgerySessionComponent>(patient);
+                sessions.Sessions[surgeon] = new OxydSurgerySession { Tool = shell };
+                var msg = new OxydSurgerySelectStepMessage(
+                    SEntMan.GetNetEntity(torso), OxydSurgeryStep.AttachOrgan)
+                {
+                    Actor = surgeon,
+                };
+                SEntMan.EventBus.RaiseLocalEvent(patient, msg);
+            });
+
+            await Pair.RunTicksSync(300);
+        }
+
+        await Server.WaitAssertion(() =>
+        {
+            var organs = _wounds.GetOrgans(patient);
+            Assert.Multiple(() =>
+            {
+                Assert.That(organs.Any(o => o.Uid == brain), Is.True,
+                    "The brain must be restored to the patient's body.");
+                Assert.That(organs.Any(o => o.Uid == head), Is.True,
+                    "The head must be restored to the patient's body.");
+                Assert.That(SComp<OrganComponent>(brain).Body, Is.EqualTo(patient),
+                    "The restored brain must be owned by the patient again.");
+                Assert.That(SEntMan.Deleted(shell), Is.True,
+                    "The emptied detached-body shell must be consumed.");
+            });
         });
     }
 }
