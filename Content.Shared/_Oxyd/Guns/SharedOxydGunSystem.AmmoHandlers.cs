@@ -1,5 +1,6 @@
 
 using System.Linq;
+using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
@@ -256,6 +257,62 @@ public abstract partial class SharedOxydGunSystem
         args.ammo = target;
         args.projectile = bullet.projectileEntity;
     }
-    
-    
+
+    [SubscribeLocalEvent]
+    public void ChamberHasAmmo(Entity<OxydChamberComponent> gun, ref GunHasAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp)) 
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Boltable) && !gcomp.bolted)
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
+            return;
+        args.hasAmmo = cont.contained.Any();
+    }
+
+    [SubscribeLocalEvent]
+    public void ChamberGetAmmo(Entity<OxydChamberComponent> gun, ref GunTryGetAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Boltable) && !gcomp.bolted)
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
+            return;
+        EntityUid target = EntityUid.Invalid;
+        if (!args.prediction)
+            if (cont.contained.Any())
+                target = cont.contained.First();
+            else
+                return;
+        conts.removeEntity(gun, cont, ref target, null, null, args.prediction);
+        if (!TryComp<OxydBulletComponent>(target, out var bullet))
+            return;
+        gcomp.bolted = false;
+        gcomp.pumped = false;
+        args.ammo = target;
+        args.projectile = bullet.projectileEntity;
+    }
+
+    [SubscribeLocalEvent]
+    public void ChamberAfterAmmo(Entity<OxydChamberComponent> gun, ref GunAfterUseAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if(FH.hasAll(data.operatingMode, COM.Boltable & COM.BoltClosedAutoload))
+    }
+
+
 }
