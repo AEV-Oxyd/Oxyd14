@@ -176,6 +176,12 @@ public sealed partial class OxydSurgerySystem : EntitySystem
             return;
         }
 
+        // Only surgical-relevant items take over the click (transplants and
+        // w_class-small implants) — cuffs, zipties, IDs and everything else keep
+        // their normal interaction on the body.
+        if (!IsTransplantItem(args.Used) && !CanImplant(args.Used))
+            return;
+
         if (FindOrgan(uid, o => o.Surg.Incision != OxydIncisionStage.None).Valid)
         {
             args.Handled = true;
