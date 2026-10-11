@@ -11,6 +11,15 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanySearingRevelationEffect : LitanyEffect<LitanySearingRevelationEffect>
 {
+    public LitanySearingRevelationEffect()
+    {
+        Conditions =
+        [
+            // Eris CanApply checked only system.CanReceiveSkillBuff(context.User).
+            new LitanyCanReceiveSkillBuffCondition(),
+        ];
+    }
+
     /// <summary>Eris scans <c>view(user)</c>; the fork scans this radius.</summary>
     [DataField]
     public float Radius = 7f;

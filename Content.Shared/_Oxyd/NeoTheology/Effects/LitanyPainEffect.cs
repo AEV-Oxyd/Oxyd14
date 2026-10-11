@@ -1,6 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.EntityEffects;
-using Content.Shared.Mobs.Components;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -10,13 +9,11 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyPainEffect : LitanyEffect<LitanyPainEffect>
 {
-    /// <summary>Each resolved follower takes the pain rider.</summary>
-    public override bool PerTarget => true;
-
     public LitanyPainEffect()
     {
         Conditions =
         [
+            new LitanyHasTargetsCondition { FailureId = "oxyd-litany-no-target" },
             new LitanyPainAllowedCondition { FailureId = "oxyd-litany-godblood" },
         ];
     }
@@ -29,16 +26,23 @@ public sealed partial class LitanyPainEffect : LitanyEffect<LitanyPainEffect>
     public bool RefuseGodblood;
 }
 
-/// <summary>Raises the pain bridge on each resolved follower.</summary>
+/// <summary>Raised once on the caster: the first resolved follower takes the pain rider.</summary>
 public sealed partial class LitanyPainEntityEffectSystem
-    : EntityEffectSystem<MobStateComponent, LitanyPainEffect>
+    : EntityEffectSystem<TransformComponent, LitanyPainEffect>
 {
     [Dependency] private LitanyEffectSystem _litany = default!;
 
-    protected override void Effect(Entity<MobStateComponent> entity, ref EntityEffectEvent<LitanyPainEffect> args)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyPainEffect> args)
     {
-        var pain = new LitanyPainEvent(entity, args.Effect.Amount, false);
-        _litany.RaiseOn(entity, ref pain);
-        _litany.ReportApplyResult(args.User, pain.Handled);
+        // The cast layer has already narrowed a named rite to one follower.
+        var handled = false;
+        if (_litany.GetCastContext(args.User)?.Targets.FirstOrDefault() is { } target)
+        {
+            var pain = new LitanyPainEvent(target, args.Effect.Amount, false);
+            _litany.RaiseOn(target, ref pain);
+            handled = pain.Handled;
+        }
+
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

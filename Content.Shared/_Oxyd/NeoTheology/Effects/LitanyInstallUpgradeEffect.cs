@@ -1,4 +1,3 @@
-using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.EntityEffects;
 
@@ -13,9 +12,6 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyInstallUpgradeEffect : LitanyEffect<LitanyInstallUpgradeEffect>
 {
-    /// <summary>Each resolved follower lying on an altar gets the upgrade beside them installed.</summary>
-    public override bool PerTarget => true;
-
     public LitanyInstallUpgradeEffect()
     {
         Conditions =
@@ -28,16 +24,22 @@ public sealed partial class LitanyInstallUpgradeEffect : LitanyEffect<LitanyInst
     }
 }
 
-/// <summary>Raises the install-upgrade bridge on each resolved follower.</summary>
+/// <summary>Raised once on the caster: installs the altar upgrade on the first resolved follower.</summary>
 public sealed partial class LitanyInstallUpgradeEntityEffectSystem
-    : EntityEffectSystem<CruciformBearerComponent, LitanyInstallUpgradeEffect>
+    : EntityEffectSystem<TransformComponent, LitanyInstallUpgradeEffect>
 {
     [Dependency] private LitanyEffectSystem _litany = default!;
 
-    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyInstallUpgradeEffect> args)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyInstallUpgradeEffect> args)
     {
-        var install = new LitanyInstallUpgradeEvent(entity, false);
-        _litany.RaiseOn(entity, ref install);
-        _litany.ReportApplyResult(args.User, install.Handled);
+        var handled = false;
+        if (_litany.GetCastContext(args.User)?.Targets.FirstOrDefault() is { } target)
+        {
+            var install = new LitanyInstallUpgradeEvent(target, false);
+            _litany.RaiseOn(target, ref install);
+            handled = install.Handled;
+        }
+
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

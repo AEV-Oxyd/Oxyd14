@@ -1,4 +1,3 @@
-using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Database;
 using Content.Shared.EntityEffects;
@@ -14,9 +13,6 @@ public sealed partial class LitanyOmissionEffect : LitanyEffect<LitanyOmissionEf
 {
     private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
 
-    /// <summary>Each resolved follower gets their clearance set to None.</summary>
-    public override bool PerTarget => true;
-
     public LitanyOmissionEffect()
     {
         Conditions =
@@ -29,19 +25,25 @@ public sealed partial class LitanyOmissionEffect : LitanyEffect<LitanyOmissionEf
     }
 }
 
-/// <summary>Raises the clearance bridge on each resolved follower.</summary>
+/// <summary>Raised once on the caster: clears the first resolved follower's clearance.</summary>
 public sealed partial class LitanyOmissionEntityEffectSystem
-    : EntityEffectSystem<CruciformBearerComponent, LitanyOmissionEffect>
+    : EntityEffectSystem<TransformComponent, LitanyOmissionEffect>
 {
     [Dependency] private LitanyEffectSystem _litany = default!;
 
-    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyOmissionEffect> args)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyOmissionEffect> args)
     {
-        var clearance = new LitanySetClearanceEvent(entity, NeoTheologyClearance.None, false);
-        _litany.RaiseOn(entity, ref clearance);
-        if (clearance.Handled && args.User is { } user)
-            _litany.AdminLog(LogType.Action, LogImpact.Medium, user,
-                $"omitted clearance via {_litany.GetCastContext(user)?.Litany.ID} on", entity);
-        _litany.ReportApplyResult(args.User, clearance.Handled);
+        var handled = false;
+        if (_litany.GetCastContext(args.User)?.Targets.FirstOrDefault() is { } target)
+        {
+            var clearance = new LitanySetClearanceEvent(target, NeoTheologyClearance.None, false);
+            _litany.RaiseOn(target, ref clearance);
+            if (clearance.Handled && args.User is { } user)
+                _litany.AdminLog(LogType.Action, LogImpact.Medium, user,
+                    $"omitted clearance via {_litany.GetCastContext(user)?.Litany.ID} on", target);
+            handled = clearance.Handled;
+        }
+
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

@@ -1,6 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.EntityEffects;
-using Content.Shared.Mobs.Components;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -13,9 +12,6 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyRevelationEffect : LitanyEffect<LitanyRevelationEffect>
 {
-    /// <summary>Each resolved human takes the vision.</summary>
-    public override bool PerTarget => true;
-
     public LitanyRevelationEffect()
     {
         Conditions =
@@ -29,17 +25,23 @@ public sealed partial class LitanyRevelationEffect : LitanyEffect<LitanyRevelati
     public const int MaxSanityGain = 10;
 }
 
-/// <summary>Applies the sanity gain and delivers the vision on each resolved target.</summary>
+/// <summary>Raised once on the caster: the first resolved human takes the vision.</summary>
 public sealed partial class LitanyRevelationEntityEffectSystem
-    : EntityEffectSystem<MobStateComponent, LitanyRevelationEffect>
+    : EntityEffectSystem<TransformComponent, LitanyRevelationEffect>
 {
     [Dependency] private LitanyEffectSystem _litany = default!;
 
-    protected override void Effect(Entity<MobStateComponent> entity, ref EntityEffectEvent<LitanyRevelationEffect> args)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyRevelationEffect> args)
     {
+        if (_litany.GetCastContext(args.User)?.Targets.FirstOrDefault() is not { } target)
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
+
         var amount = _litany.RollInclusive(0, LitanyRevelationEffect.MaxSanityGain);
-        var delta = new LitanySanityDeltaEvent(entity, amount, false);
-        _litany.RaiseOn(entity, ref delta);
+        var delta = new LitanySanityDeltaEvent(target, amount, false);
+        _litany.RaiseOn(target, ref delta);
         if (!delta.Handled)
         {
             _litany.ReportApplyResult(args.User, false);
@@ -48,11 +50,11 @@ public sealed partial class LitanyRevelationEntityEffectSystem
 
         if (args.User is { } user)
         {
-            var revelation = new NeoTheologyRevelationEvent(user, entity);
+            var revelation = new NeoTheologyRevelationEvent(user, target);
             _litany.RaiseOn(user, ref revelation);
         }
 
-        _litany.DeliverSocialNotice(entity, Loc.GetString("oxyd-litany-revelation-vision"));
+        _litany.DeliverSocialNotice(target, Loc.GetString("oxyd-litany-revelation-vision"));
         _litany.ReportApplyResult(args.User, true);
     }
 }

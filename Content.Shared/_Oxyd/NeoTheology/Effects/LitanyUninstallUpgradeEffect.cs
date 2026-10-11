@@ -1,4 +1,3 @@
-using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.EntityEffects;
 
@@ -12,30 +11,33 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyUninstallUpgradeEffect : LitanyEffect<LitanyUninstallUpgradeEffect>
 {
-    /// <summary>Each resolved follower lying on an altar gets their upgrade detached.</summary>
-    public override bool PerTarget => true;
-
     public LitanyUninstallUpgradeEffect()
     {
         Conditions =
         [
-            new LitanyInstalledCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyFirstTargetInstalledCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             new LitanyCruciformUpgradeInstalledCondition { FailureId = "oxyd-litany-upgrade-not-installed" },
             new LitanyProcedureAltarCondition { Undressed = false },
         ];
     }
 }
 
-/// <summary>Raises the uninstall-upgrade bridge on each resolved follower.</summary>
+/// <summary>Raised once on the caster: detaches the first resolved follower's upgrade.</summary>
 public sealed partial class LitanyUninstallUpgradeEntityEffectSystem
-    : EntityEffectSystem<CruciformBearerComponent, LitanyUninstallUpgradeEffect>
+    : EntityEffectSystem<TransformComponent, LitanyUninstallUpgradeEffect>
 {
     [Dependency] private LitanyEffectSystem _litany = default!;
 
-    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyUninstallUpgradeEffect> args)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyUninstallUpgradeEffect> args)
     {
-        var uninstall = new LitanyUninstallUpgradeEvent(entity, false);
-        _litany.RaiseOn(entity, ref uninstall);
-        _litany.ReportApplyResult(args.User, uninstall.Handled);
+        var handled = false;
+        if (_litany.GetCastContext(args.User)?.Targets.FirstOrDefault() is { } target)
+        {
+            var uninstall = new LitanyUninstallUpgradeEvent(target, false);
+            _litany.RaiseOn(target, ref uninstall);
+            handled = uninstall.Handled;
+        }
+
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

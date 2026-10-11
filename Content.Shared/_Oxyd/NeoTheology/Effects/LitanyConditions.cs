@@ -102,46 +102,71 @@ public sealed partial class LitanySelfTargetConditionSystem
     }
 }
 
-/// <summary>Target has an installed cruciform that is also active.</summary>
+/// <summary>Base for conditions that apply the old CanApply's target[0] check to the first resolved target.</summary>
+public abstract partial class LitanyFirstTargetConditionSystem<TCon>
+    : LitanyConditionSystem<TransformComponent, TCon>
+    where TCon : LitanyCondition<TCon>
+{
+    protected bool CheckFirstTarget(EntityUid? sourceEnt, TCon condition, Func<EntityUid, bool> predicate)
+    {
+        var target = Litany.GetCastContext(sourceEnt)?.Targets.FirstOrDefault();
+        return Check(sourceEnt, condition, target is { } uid && predicate(uid));
+    }
+}
+
+/// <summary>First resolved target has an installed cruciform that is also active.</summary>
 public sealed partial class LitanyActiveCruciformCondition : LitanyCondition<LitanyActiveCruciformCondition>;
 
 public sealed partial class LitanyActiveCruciformConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyActiveCruciformCondition>
+    : LitanyFirstTargetConditionSystem<LitanyActiveCruciformCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyActiveCruciformCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.TryGetActiveCruciform(entity, out _));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryGetActiveCruciform(target, out _));
     }
 }
 
-/// <summary>Target's active cruciform has no attached upgrade (InstallUpgrade's free-slot check).</summary>
+/// <summary>First resolved target's active cruciform has no attached upgrade (InstallUpgrade's free-slot check).</summary>
 public sealed partial class LitanyCruciformUpgradeFreeCondition : LitanyCondition<LitanyCruciformUpgradeFreeCondition>;
 
 public sealed partial class LitanyCruciformUpgradeFreeConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyCruciformUpgradeFreeCondition>
+    : LitanyFirstTargetConditionSystem<LitanyCruciformUpgradeFreeCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyCruciformUpgradeFreeCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.TryGetActiveCruciform(entity, out var cruciform) && cruciform.Upgrade is null);
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryGetActiveCruciform(target, out var cruciform) && cruciform.Upgrade is null);
     }
 }
 
-/// <summary>Target's installed cruciform carries an attached upgrade (UninstallUpgrade).</summary>
+/// <summary>First resolved target's installed cruciform carries an attached upgrade (UninstallUpgrade).</summary>
 public sealed partial class LitanyCruciformUpgradeInstalledCondition : LitanyCondition<LitanyCruciformUpgradeInstalledCondition>;
 
 public sealed partial class LitanyCruciformUpgradeInstalledConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyCruciformUpgradeInstalledCondition>
+    : LitanyFirstTargetConditionSystem<LitanyCruciformUpgradeInstalledCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyCruciformUpgradeInstalledCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.TryGetInstalledCruciform(entity, out var cruciform) && cruciform.Upgrade is not null);
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryGetInstalledCruciform(target, out var cruciform) && cruciform.Upgrade is not null);
     }
 }
 
-/// <summary>Target's cruciform profile differs from the barred one (Omission bars the Inquisitor).</summary>
+/// <summary>First resolved target has an installed cruciform (UninstallUpgrade's gate; stock per-target variant needs CruciformBearer).</summary>
+public sealed partial class LitanyFirstTargetInstalledCruciformCondition : LitanyCondition<LitanyFirstTargetInstalledCruciformCondition>;
+
+public sealed partial class LitanyFirstTargetInstalledCruciformConditionSystem
+    : LitanyFirstTargetConditionSystem<LitanyFirstTargetInstalledCruciformCondition>
+{
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyFirstTargetInstalledCruciformCondition> args)
+    {
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryGetInstalledCruciform(target, out _));
+    }
+}
+
+/// <summary>First resolved target's cruciform profile differs from the barred one (Omission bars the Inquisitor).</summary>
 public sealed partial class LitanyNotProfileCondition : LitanyCondition<LitanyNotProfileCondition>
 {
     /// <summary>The profile the target's cruciform must not carry.</summary>
@@ -150,13 +175,13 @@ public sealed partial class LitanyNotProfileCondition : LitanyCondition<LitanyNo
 }
 
 public sealed partial class LitanyNotProfileConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyNotProfileCondition>
+    : LitanyFirstTargetConditionSystem<LitanyNotProfileCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyNotProfileCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.TryGetActiveCruciform(entity, out var cruciform) &&
-            cruciform.Profile != args.Condition.Profile);
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryGetActiveCruciform(target, out var cruciform) &&
+                cruciform.Profile != args.Condition.Profile);
     }
 }
 
@@ -164,23 +189,38 @@ public sealed partial class LitanyNotProfileConditionSystem
 public sealed partial class LitanyNoGodbloodCondition : LitanyCondition<LitanyNoGodbloodCondition>;
 
 public sealed partial class LitanyNoGodbloodConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyNoGodbloodCondition>
+    : LitanyFirstTargetConditionSystem<LitanyNoGodbloodCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyNoGodbloodCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition, !Litany.HasGodblood(entity));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => !Litany.HasGodblood(target));
     }
 }
 
-/// <summary>Target does not reject holy influence (no atheist mutation).</summary>
+/// <summary>First resolved target does not reject holy influence (no atheist mutation).</summary>
 public sealed partial class LitanyHolyInfluenceAcceptedCondition : LitanyCondition<LitanyHolyInfluenceAcceptedCondition>;
 
 public sealed partial class LitanyHolyInfluenceAcceptedConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyHolyInfluenceAcceptedCondition>
+    : LitanyFirstTargetConditionSystem<LitanyHolyInfluenceAcceptedCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyHolyInfluenceAcceptedCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition, !Litany.RejectsHolyInfluence(entity));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => !Litany.RejectsHolyInfluence(target));
+    }
+}
+
+/// <summary>No resolved target rejects holy influence (Words of Purging refuses the whole rite).</summary>
+public sealed partial class LitanyNoTargetRejectsHolyCondition : LitanyCondition<LitanyNoTargetRejectsHolyCondition>;
+
+public sealed partial class LitanyNoTargetRejectsHolyConditionSystem
+    : LitanyConditionSystem<TransformComponent, LitanyNoTargetRejectsHolyCondition>
+{
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyNoTargetRejectsHolyCondition> args)
+    {
+        var rejects = Litany.GetCastContext(args.SourceEnt)?.Targets.Any(Litany.RejectsHolyInfluence) ?? true;
+        args.Result = Check(args.SourceEnt, args.Condition, !rejects);
     }
 }
 
@@ -200,7 +240,9 @@ public sealed partial class LitanyProcedureAltarConditionSystem
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyProcedureAltarCondition> args)
     {
-        if (Litany.TryGetProcedureAltar(entity, args.Condition.Undressed, out _, out var failure))
+        var target = Litany.GetCastContext(args.SourceEnt)?.Targets.FirstOrDefault();
+        if (target is { } uid &&
+            Litany.TryGetProcedureAltar(uid, args.Condition.Undressed, out _, out var failure))
         {
             args.Result = true;
             return;
@@ -216,25 +258,25 @@ public sealed partial class LitanyProcedureAltarConditionSystem
 public sealed partial class LitanyAltarUpgradePresentCondition : LitanyCondition<LitanyAltarUpgradePresentCondition>;
 
 public sealed partial class LitanyAltarUpgradePresentConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyAltarUpgradePresentCondition>
+    : LitanyFirstTargetConditionSystem<LitanyAltarUpgradePresentCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyAltarUpgradePresentCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.TryFindAltarUpgrade(entity, out _, out _));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.TryFindAltarUpgrade(target, out _, out _));
     }
 }
 
-/// <summary>Target is a living mob that can take a sanity delta (Revelation's Belief gain).</summary>
+/// <summary>First resolved target is a living mob that can take a sanity delta (Revelation's Belief gain).</summary>
 public sealed partial class LitanySanityCapableCondition : LitanyCondition<LitanySanityCapableCondition>;
 
 public sealed partial class LitanySanityCapableConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanySanityCapableCondition>
+    : LitanyFirstTargetConditionSystem<LitanySanityCapableCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanySanityCapableCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition,
-            Litany.IsAlive(entity) && Litany.CanReceiveSanityDelta(entity));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => Litany.IsAlive(target) && Litany.CanReceiveSanityDelta(target));
     }
 }
 
@@ -251,7 +293,7 @@ public sealed partial class LitanySkillBuffRecipientConditionSystem
     }
 }
 
-/// <summary>Target's hunger is below its maximum (SoulHunger's paired-injury gate).</summary>
+/// <summary>Target's hunger is below its maximum (SoulHunger's paired-injury gate; per-target — the rite is Self).</summary>
 public sealed partial class LitanyHungerNotFullCondition : LitanyCondition<LitanyHungerNotFullCondition>;
 
 public sealed partial class LitanyHungerNotFullConditionSystem
@@ -268,28 +310,34 @@ public sealed partial class LitanyHungerNotFullConditionSystem
 public sealed partial class LitanyPainAllowedCondition : LitanyCondition<LitanyPainAllowedCondition>;
 
 public sealed partial class LitanyPainAllowedConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyPainAllowedCondition>
+    : LitanyFirstTargetConditionSystem<LitanyPainAllowedCondition>
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyPainAllowedCondition> args)
     {
         var refuses = Litany.GetCastContext(args.SourceEnt)
             ?.Litany.Effects.OfType<LitanyPainEffect>().FirstOrDefault()?.RefuseGodblood ?? false;
-        args.Result = Check(args.SourceEnt, args.Condition,
-            !refuses || !Litany.HasGodblood(entity));
+        args.Result = CheckFirstTarget(args.SourceEnt, args.Condition,
+            target => !refuses || !Litany.HasGodblood(target));
     }
 }
 
-/// <summary>The dead body validates for soul transfer (Reincarnation validate-only event).</summary>
+/// <summary>The first resolved body validates for soul transfer (Reincarnation validate-only event).</summary>
 public sealed partial class LitanyReincarnatableCondition : LitanyCondition<LitanyReincarnatableCondition>;
 
 public sealed partial class LitanyReincarnatableConditionSystem
-    : LitanyConditionSystem<MobStateComponent, LitanyReincarnatableCondition>
+    : LitanyConditionSystem<TransformComponent, LitanyReincarnatableCondition>
 {
-    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyReincarnatableCondition> args)
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyReincarnatableCondition> args)
     {
-        var check = new LitanyReincarnationEvent(entity, false, ValidateOnly: true);
-        Litany.RaiseOn(entity, ref check);
-        args.Result = Check(args.SourceEnt, args.Condition, check.Handled);
+        var handled = false;
+        if (Litany.GetCastContext(args.SourceEnt)?.Targets.FirstOrDefault() is { } target)
+        {
+            var check = new LitanyReincarnationEvent(target, false, ValidateOnly: true);
+            Litany.RaiseOn(target, ref check);
+            handled = check.Handled;
+        }
+
+        args.Result = Check(args.SourceEnt, args.Condition, handled);
     }
 }
 
@@ -530,5 +578,16 @@ public sealed partial class LitanyUprootableConditionSystem
         if (!check.Handled && check.Failure is { } failure)
             Litany.ReportValidationFailure(user, failure);
         args.Result = check.Handled;
+    }
+}
+/// <summary>Caster can receive a skill buff (SearingRevelation's lone CanApply check).</summary>
+public sealed partial class LitanyCanReceiveSkillBuffCondition : LitanyCondition<LitanyCanReceiveSkillBuffCondition>;
+
+public sealed partial class LitanyCanReceiveSkillBuffConditionSystem
+    : LitanyConditionSystem<TransformComponent, LitanyCanReceiveSkillBuffCondition>
+{
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyCanReceiveSkillBuffCondition> args)
+    {
+        args.Result = Check(args.SourceEnt, args.Condition, Litany.CanReceiveSkillBuff(entity));
     }
 }

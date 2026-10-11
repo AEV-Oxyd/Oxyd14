@@ -15,14 +15,13 @@ public sealed partial class LitanyWordsOfPurgingEffect : LitanyEffect<LitanyWord
         Conditions =
         [
             new LitanyHasTargetsCondition { FailureId = "oxyd-litany-no-target" },
+            // Eris refuses the whole rite when ANY resolved target rejects holy influence.
+            new LitanyNoTargetRejectsHolyCondition { FailureId = "oxyd-litany-biological-rejection" },
         ];
     }
 }
 
-/// <summary>
-/// Raised once on the caster: Eris refuses the whole rite when ANY resolved target rejects
-/// holy influence — checked before any purge runs so a rejected cast mutates nothing.
-/// </summary>
+/// <summary>Raised once on the caster: eases the addiction of every resolved target.</summary>
 public sealed partial class LitanyWordsOfPurgingEntityEffectSystem
     : EntityEffectSystem<TransformComponent, LitanyWordsOfPurgingEffect>
 {
@@ -30,30 +29,18 @@ public sealed partial class LitanyWordsOfPurgingEntityEffectSystem
 
     protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyWordsOfPurgingEffect> args)
     {
-        if (_litany.GetCastContext(args.User) is not { } context)
-        {
-            _litany.ReportApplyResult(args.User, false);
-            return;
-        }
-
-        foreach (var target in context.Targets)
-        {
-            if (_litany.RejectsHolyInfluence(target))
-            {
-                _litany.ReportApplyResult(args.User, false);
-                return;
-            }
-        }
-
         var handled = false;
-        foreach (var target in context.Targets)
+        if (_litany.GetCastContext(args.User) is { } context)
         {
-            var purge = new LitanyPurgeAddictionEvent(target, false);
-            _litany.RaiseOn(target, ref purge);
-            if (purge.Handled && args.User is { } user)
-                _litany.AdminLog(LogType.Action, LogImpact.Medium, user,
-                    $"purged addictions via {context.Litany.ID} on", target);
-            handled |= purge.Handled;
+            foreach (var target in context.Targets)
+            {
+                var purge = new LitanyPurgeAddictionEvent(target, false);
+                _litany.RaiseOn(target, ref purge);
+                if (purge.Handled && args.User is { } user)
+                    _litany.AdminLog(LogType.Action, LogImpact.Medium, user,
+                        $"purged addictions via {context.Litany.ID} on", target);
+                handled |= purge.Handled;
+            }
         }
 
         _litany.ReportApplyResult(args.User, handled);
