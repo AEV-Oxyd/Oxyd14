@@ -107,12 +107,12 @@ public sealed partial class LitanySelfTargetConditionSystem
 }
 
 /// <summary>Target bears an installed, ACTIVE cruciform (Adoption/Confirmation/Excommunication/Initiation gates).</summary>
-public sealed partial class LitanyActiveCruciformCondition : LitanyCondition<LitanyActiveCruciformCondition>;
+public sealed partial class LitanyHasActiveCruciformCondition : LitanyCondition<LitanyHasActiveCruciformCondition>;
 
-public sealed partial class LitanyActiveCruciformConditionSystem
-    : LitanyConditionSystem<MobStateComponent, LitanyActiveCruciformCondition>
+public sealed partial class LitanyHasActiveCruciformConditionSystem
+    : LitanyConditionSystem<MobStateComponent, LitanyHasActiveCruciformCondition>
 {
-    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyActiveCruciformCondition> args)
+    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyHasActiveCruciformCondition> args)
     {
         args.Result = Check(args.SourceEnt, args.Condition,
             Litany.TryGetActiveCruciform(entity, out _));
@@ -195,17 +195,17 @@ public sealed partial class LitanySpeciesConditionSystem
 }
 
 /// <summary>Target is buckled, lying down on a NeoTheology altar (optionally undressed).</summary>
-public sealed partial class LitanyProcedureAltarCondition : LitanyCondition<LitanyProcedureAltarCondition>
+public sealed partial class LitanyOnProcedureAltarCondition : LitanyCondition<LitanyOnProcedureAltarCondition>
 {
     /// <summary>Require the patient to carry no clothing (Commitment's install).</summary>
     [DataField]
     public bool Undressed = true;
 }
 
-public sealed partial class LitanyProcedureAltarConditionSystem
-    : LitanyConditionSystem<MobStateComponent, LitanyProcedureAltarCondition>
+public sealed partial class LitanyOnProcedureAltarConditionSystem
+    : LitanyConditionSystem<MobStateComponent, LitanyOnProcedureAltarCondition>
 {
-    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyProcedureAltarCondition> args)
+    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyOnProcedureAltarCondition> args)
     {
         var passes = Litany.TryGetProcedureAltar(entity, args.Condition.Undressed, out _, out var failure);
         if (!passes && failure is { } reason)
@@ -229,17 +229,17 @@ public sealed partial class LitanyAltarCruciformConditionSystem
 }
 
 /// <summary>Target's installed cruciform profile differs from the given one (Excommunication's inquisitor veto).</summary>
-public sealed partial class LitanyNotProfileCondition : LitanyCondition<LitanyNotProfileCondition>
+public sealed partial class LitanyProfileDiffersCondition : LitanyCondition<LitanyProfileDiffersCondition>
 {
     /// <summary>The refused profile.</summary>
     [DataField(required: true)]
     public ProtoId<NeoTheologyProfilePrototype> Profile;
 }
 
-public sealed partial class LitanyNotProfileConditionSystem
-    : LitanyConditionSystem<MobStateComponent, LitanyNotProfileCondition>
+public sealed partial class LitanyProfileDiffersConditionSystem
+    : LitanyConditionSystem<MobStateComponent, LitanyProfileDiffersCondition>
 {
-    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyNotProfileCondition> args)
+    protected override void Condition(Entity<MobStateComponent> entity, ref EntityConditionEvent<LitanyProfileDiffersCondition> args)
     {
         args.Result = Check(args.SourceEnt, args.Condition,
             Litany.TryGetInstalledCruciformEntity(entity, out _, out var cruciform) &&
@@ -282,12 +282,12 @@ public sealed partial class LitanyCruciformModuleConditionSystem
 }
 
 /// <summary>Target does not carry the godblood mutation (Excommunication refuses Godblood bearers).</summary>
-public sealed partial class LitanyNoGodbloodCondition : LitanyCondition<LitanyNoGodbloodCondition>;
+public sealed partial class LitanyGodbloodFreeCondition : LitanyCondition<LitanyGodbloodFreeCondition>;
 
-public sealed partial class LitanyNoGodbloodConditionSystem
-    : LitanyConditionSystem<TransformComponent, LitanyNoGodbloodCondition>
+public sealed partial class LitanyGodbloodFreeConditionSystem
+    : LitanyConditionSystem<TransformComponent, LitanyGodbloodFreeCondition>
 {
-    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyNoGodbloodCondition> args)
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyGodbloodFreeCondition> args)
     {
         args.Result = Check(args.SourceEnt, args.Condition,
             !HasComp<GodbloodMutationComponent>(entity));
@@ -307,13 +307,13 @@ public sealed partial class LitanyNotAtheistConditionSystem
     }
 }
 
-/// <summary>Target is a live mob that can carry skill buffs (Call to Battle).</summary>
-public sealed partial class LitanyCanReceiveSkillBuffCondition : LitanyCondition<LitanyCanReceiveSkillBuffCondition>;
+/// <summary>The entity the condition runs on is a live mob that can carry skill buffs.</summary>
+public sealed partial class LitanySkillBuffableCondition : LitanyCondition<LitanySkillBuffableCondition>;
 
-public sealed partial class LitanyCanReceiveSkillBuffConditionSystem
-    : LitanyConditionSystem<MobSkillComponent, LitanyCanReceiveSkillBuffCondition>
+public sealed partial class LitanySkillBuffableConditionSystem
+    : LitanyConditionSystem<TransformComponent, LitanySkillBuffableCondition>
 {
-    protected override void Condition(Entity<MobSkillComponent> entity, ref EntityConditionEvent<LitanyCanReceiveSkillBuffCondition> args)
+    protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanySkillBuffableCondition> args)
     {
         args.Result = Check(args.SourceEnt, args.Condition, Litany.CanReceiveSkillBuff(entity));
     }
@@ -390,8 +390,9 @@ public sealed partial class LitanySeesFollowersConditionSystem
 }
 
 /// <summary>
-/// Subject is a toggleable holy door. Broken doors report the door-off reason; other
-/// ineligible machines report no-target (Activate Door's two failures).
+/// Cast-scoped: any resolved target is a toggleable holy door. A broken faced door vetoes the
+/// rite with door-off; nothing toggleable reports no-target (Activate Door's two failures).
+/// Evaluates on the caster, so it reads the resolved targets out of the cast context.
 /// </summary>
 public sealed partial class LitanyDoorToggleableCondition : LitanyCondition<LitanyDoorToggleableCondition>;
 
@@ -400,19 +401,29 @@ public sealed partial class LitanyDoorToggleableConditionSystem
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyDoorToggleableCondition> args)
     {
-        if (Litany.CanToggleLitanyDoor(entity))
+        var targets = Litany.GetCastContext(args.SourceEnt)?.Targets;
+        if (targets is { } faced && faced.Any(Litany.IsHolyDoorBroken))
+        {
+            Litany.ReportValidationFailure(args.SourceEnt, "oxyd-litany-door-off");
+            args.Result = false;
+            return;
+        }
+
+        if (targets is { } doors && doors.Any(Litany.CanToggleLitanyDoor))
         {
             args.Result = true;
             return;
         }
 
-        Litany.ReportValidationFailure(args.SourceEnt,
-            Litany.IsHolyDoorBroken(entity) ? "oxyd-litany-door-off" : "oxyd-litany-no-target");
+        Litany.ReportValidationFailure(args.SourceEnt, "oxyd-litany-no-target");
         args.Result = false;
     }
 }
 
-/// <summary>Subject is a NeoTheology altar (Baptismal Record).</summary>
+/// <summary>
+/// Cast-scoped: at least one resolved target is a NeoTheology altar (Baptismal Record).
+/// Evaluates on the caster, so it reads the resolved targets out of the cast context.
+/// </summary>
 public sealed partial class LitanyIsAltarCondition : LitanyCondition<LitanyIsAltarCondition>;
 
 public sealed partial class LitanyIsAltarConditionSystem
@@ -420,11 +431,16 @@ public sealed partial class LitanyIsAltarConditionSystem
 {
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyIsAltarCondition> args)
     {
-        args.Result = Check(args.SourceEnt, args.Condition, Litany.IsLitanyAltar(entity));
+        args.Result = Check(args.SourceEnt, args.Condition,
+            Litany.GetCastContext(args.SourceEnt)?.Targets.Any(Litany.IsLitanyAltar) ?? false);
     }
 }
 
-/// <summary>Subject is an Eye of the Protector that can host the armaments shop (validate probe).</summary>
+/// <summary>
+/// Cast-scoped: a resolved target is an Eye of the Protector that can host the armaments shop
+/// (validate probe raised on each eye). Evaluates on the caster, so it reads the resolved
+/// targets out of the cast context.
+/// </summary>
 public sealed partial class LitanyArmamentsEyeCondition : LitanyCondition<LitanyArmamentsEyeCondition>;
 
 public sealed partial class LitanyArmamentsEyeConditionSystem
@@ -433,18 +449,32 @@ public sealed partial class LitanyArmamentsEyeConditionSystem
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyArmamentsEyeCondition> args)
     {
         var passes = false;
-        if (Litany.IsLitanyEye(entity))
+        if (Litany.GetCastContext(args.SourceEnt)?.Targets is { } targets)
         {
-            var probe = new LitanyOpenArmamentsEvent(args.SourceEnt ?? entity.Owner, false, ValidateOnly: true);
-            Litany.RaiseOn(entity.Owner, ref probe);
-            passes = probe.Handled;
+            foreach (var target in targets)
+            {
+                if (!Litany.IsLitanyEye(target))
+                    continue;
+
+                var probe = new LitanyOpenArmamentsEvent(args.SourceEnt ?? entity.Owner, false, ValidateOnly: true);
+                Litany.RaiseOn(target, ref probe);
+                if (probe.Handled)
+                {
+                    passes = true;
+                    break;
+                }
+            }
         }
 
         args.Result = Check(args.SourceEnt, args.Condition, passes);
     }
 }
 
-/// <summary>Subject is a bioreactor whose chamber door can toggle (validate probe).</summary>
+/// <summary>
+/// Cast-scoped: a resolved target is a bioreactor whose chamber door can toggle (validate
+/// probe raised on each reactor). Evaluates on the caster, so it reads the resolved targets
+/// out of the cast context.
+/// </summary>
 public sealed partial class LitanyBioreactorChamberCondition : LitanyCondition<LitanyBioreactorChamberCondition>;
 
 public sealed partial class LitanyBioreactorChamberConditionSystem
@@ -453,18 +483,32 @@ public sealed partial class LitanyBioreactorChamberConditionSystem
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyBioreactorChamberCondition> args)
     {
         var passes = false;
-        if (Litany.IsLitanyBioreactor(entity))
+        if (Litany.GetCastContext(args.SourceEnt)?.Targets is { } targets)
         {
-            var probe = new LitanyToggleBioreactorChamberEvent(entity.Owner, false, ValidateOnly: true);
-            Litany.RaiseOn(entity.Owner, ref probe);
-            passes = probe.Handled;
+            foreach (var target in targets)
+            {
+                if (!Litany.IsLitanyBioreactor(target))
+                    continue;
+
+                var probe = new LitanyToggleBioreactorChamberEvent(target, false, ValidateOnly: true);
+                Litany.RaiseOn(target, ref probe);
+                if (probe.Handled)
+                {
+                    passes = true;
+                    break;
+                }
+            }
         }
 
         args.Result = Check(args.SourceEnt, args.Condition, passes);
     }
 }
 
-/// <summary>Subject is a bioreactor whose chamber solution can pump (validate probe).</summary>
+/// <summary>
+/// Cast-scoped: a resolved target is a bioreactor whose chamber solution can pump (validate
+/// probe raised on each reactor). Evaluates on the caster, so it reads the resolved targets
+/// out of the cast context.
+/// </summary>
 public sealed partial class LitanyBioreactorPumpCondition : LitanyCondition<LitanyBioreactorPumpCondition>;
 
 public sealed partial class LitanyBioreactorPumpConditionSystem
@@ -473,11 +517,21 @@ public sealed partial class LitanyBioreactorPumpConditionSystem
     protected override void Condition(Entity<TransformComponent> entity, ref EntityConditionEvent<LitanyBioreactorPumpCondition> args)
     {
         var passes = false;
-        if (Litany.IsLitanyBioreactor(entity))
+        if (Litany.GetCastContext(args.SourceEnt)?.Targets is { } targets)
         {
-            var probe = new LitanyPumpBioreactorEvent(entity.Owner, false, ValidateOnly: true);
-            Litany.RaiseOn(entity.Owner, ref probe);
-            passes = probe.Handled;
+            foreach (var target in targets)
+            {
+                if (!Litany.IsLitanyBioreactor(target))
+                    continue;
+
+                var probe = new LitanyPumpBioreactorEvent(target, false, ValidateOnly: true);
+                Litany.RaiseOn(target, ref probe);
+                if (probe.Handled)
+                {
+                    passes = true;
+                    break;
+                }
+            }
         }
 
         args.Result = Check(args.SourceEnt, args.Condition, passes);

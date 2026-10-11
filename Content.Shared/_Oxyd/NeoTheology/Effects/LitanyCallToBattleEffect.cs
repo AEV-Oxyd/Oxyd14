@@ -47,7 +47,7 @@ public sealed partial class LitanyCallToBattleEffect : LitanyEffect<LitanyCallTo
         Conditions =
         [
             // The caster must be a living mob that can carry skill buffs.
-            new LitanyCanReceiveSkillBuffCondition { FailureId = "oxyd-litany-no-target" },
+            new LitanySkillBuffableCondition { FailureId = "oxyd-litany-no-target" },
         ];
     }
 }

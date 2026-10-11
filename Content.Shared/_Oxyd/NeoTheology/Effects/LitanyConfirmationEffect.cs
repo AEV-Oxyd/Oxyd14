@@ -25,7 +25,7 @@ public sealed partial class LitanyConfirmationEffect : LitanyEffect<LitanyConfir
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
         ];
     }
 }

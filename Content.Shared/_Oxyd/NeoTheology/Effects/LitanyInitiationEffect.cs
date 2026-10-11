@@ -24,7 +24,7 @@ public sealed partial class LitanyInitiationEffect : LitanyEffect<LitanyInitiati
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             // Eris: "The target is already a preacher."
             new LitanyNotPreacherCondition { FailureId = "oxyd-litany-initiation-already-preacher" },
             new LitanyCruciformModuleCondition

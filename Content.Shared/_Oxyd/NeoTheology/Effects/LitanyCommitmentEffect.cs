@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Components;
 using Content.Shared.EntityEffects;
@@ -34,7 +35,7 @@ public sealed partial class LitanyCommitmentEffect : LitanyEffect<LitanyCommitme
             new LitanyAliveCondition { FailureId = "oxyd-litany-commitment-too-late" },
             new LitanyNoInstalledCruciformCondition { FailureId = "oxyd-litany-commitment-has-cruciform" },
             new LitanyCanReceiveDamageCondition { FailureId = "oxyd-litany-no-effect" },
-            new LitanyProcedureAltarCondition { Undressed = true },
+            new LitanyOnProcedureAltarCondition { Undressed = true },
             new LitanyAltarCruciformCondition { FailureId = "oxyd-litany-commitment-no-cruciform" },
         ];
     }
@@ -42,15 +43,18 @@ public sealed partial class LitanyCommitmentEffect : LitanyEffect<LitanyCommitme
     void ISerializationHooks.AfterDeserialization()
     {
         // The species gate reads a DataField, so it can only be installed once values load.
-        // It precedes every other gate to match the Eris check order.
-        if (RequiredSpecies is { } species)
-        {
-            Conditions =
+        // It precedes every other gate to match the Eris check order. The rebuild is
+        // idempotent: round-tripped data may already carry a derived species gate, which is
+        // stripped before the fresh one is prepended — otherwise every write-read-write
+        // cycle would append another copy.
+        var kept = Conditions?.Where(condition => condition is not LitanySpeciesCondition).ToArray() ?? [];
+        Conditions = RequiredSpecies is { } species
+            ?
             [
                 new LitanySpeciesCondition { Species = species, FailureId = "oxyd-litany-not-human" },
-                .. Conditions ?? [],
-            ];
-        }
+                .. kept,
+            ]
+            : kept;
     }
 }
 
