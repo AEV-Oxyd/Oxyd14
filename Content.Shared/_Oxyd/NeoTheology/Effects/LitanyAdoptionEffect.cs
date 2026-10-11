@@ -18,7 +18,7 @@ public sealed partial class LitanyAdoptionEffect : LitanyEffect<LitanyAdoptionEf
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
         ];
     }
 }

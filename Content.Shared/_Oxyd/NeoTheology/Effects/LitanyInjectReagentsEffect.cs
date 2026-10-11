@@ -25,19 +25,22 @@ public sealed partial class LitanyInjectReagentsEffect : LitanyEffect<LitanyInje
     {
         // Both gates read DataFields (the rejection flag, the summed dose volume), so they can
         // only be installed once values load. Rejection precedes the dose check to match the
-        // Eris order.
+        // Eris order. The rebuild is idempotent: round-tripped data may already carry the
+        // derived gates, which are stripped before the fresh ones are built — otherwise every
+        // write-read-write cycle would append another copy.
+        var kept = Conditions?.Where(condition =>
+                condition is not LitanyCanInjectCondition and not LitanyNotAtheistCondition)
+            .ToArray() ?? [];
+
         var amount = Reagents.Values.Aggregate(FixedPoint2.Zero, (sum, dose) => sum + dose);
-        var conditions = new List<EntityCondition>
-        {
-            new LitanyCanInjectCondition { MinVolume = amount, FailureId = "oxyd-litany-no-effect" },
-        };
+        var derived = new List<EntityCondition>();
         if (CheckBiologicalRejection)
         {
-            conditions.Insert(0,
-                new LitanyNotAtheistCondition { FailureId = "oxyd-litany-biological-rejection" });
+            derived.Add(new LitanyNotAtheistCondition { FailureId = "oxyd-litany-biological-rejection" });
         }
 
-        Conditions = conditions.ToArray();
+        derived.Add(new LitanyCanInjectCondition { MinVolume = amount, FailureId = "oxyd-litany-no-effect" });
+        Conditions = [.. derived, .. kept];
     }
 }
 

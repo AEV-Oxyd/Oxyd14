@@ -2,7 +2,6 @@ using Content.Shared.Database;
 using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
-using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -16,8 +15,6 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyConfirmationEffect : LitanyEffect<LitanyConfirmationEffect>
 {
-    internal static readonly ProtoId<NeoTheologyProfilePrototype> AcolyteProfile = "OxydNtAcolyte";
-
     /// <summary>The pipeline delivers each resolved bearer; there is no pick-one fallback.</summary>
     public override bool PerTarget => true;
 
@@ -25,7 +22,7 @@ public sealed partial class LitanyConfirmationEffect : LitanyEffect<LitanyConfir
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
         ];
     }
 }
@@ -38,7 +35,7 @@ public sealed partial class LitanyConfirmationEntityEffectSystem
 
     protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyConfirmationEffect> args)
     {
-        var profile = _litany.GetCastContext(args.User)?.Designation ?? LitanyConfirmationEffect.AcolyteProfile;
+        var profile = _litany.GetCastContext(args.User)?.Designation ?? NeoTheologyPrototypes.AcolyteProfile;
         var rank = new LitanySetRankEvent(entity.Owner, profile, false);
         _litany.RaiseOn(entity.Owner, ref rank);
         if (rank.Handled && _litany.GetCastContext(args.User) is { } ctx)

@@ -22,10 +22,10 @@ public sealed partial class LitanyExcommunicationEffect : LitanyEffect<LitanyExc
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyHasActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             // Eris: `if(CI.get_module(CRUCIFORM_INQUISITOR)) fail("You don't have the authority for this.")`.
-            new LitanyNotProfileCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
-            new LitanyNoGodbloodCondition { FailureId = "oxyd-litany-godblood" },
+            new LitanyProfileDiffersCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
+            new LitanyGodbloodFreeCondition { FailureId = "oxyd-litany-godblood" },
         ];
     }
 }
