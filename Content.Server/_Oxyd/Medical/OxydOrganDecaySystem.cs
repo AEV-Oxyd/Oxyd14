@@ -1,6 +1,7 @@
 using Content.Shared._Oxyd.Medical;
 using Content.Shared.Body;
 using Content.Shared.Examine;
+using Content.Shared.Random.Helpers;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -14,7 +15,6 @@ namespace Content.Server._Oxyd.Medical;
 /// </summary>
 public sealed partial class OxydOrganDecaySystem : EntitySystem
 {
-    [Dependency] private IRobustRandom _random = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     private const float TickInterval = 2f;
@@ -58,7 +58,9 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
             if (InStasis(uid))
                 continue;
 
-            if (!_random.Prob(DecayChance / 100f))
+            // OXYD: per-organ scheduled roll on a predicted stream so it doesn't
+            // shift the global RNG sequence mid-frame.
+            if (!SharedRandomExtensions.PredictedProb(_timing, DecayChance / 100f, GetNetEntity(uid)))
                 continue;
 
             OxydWoundSystem.AddOrganDamage(surg, DecayDamage);

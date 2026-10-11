@@ -10,6 +10,7 @@ using Content.Shared.Mobs.Systems;
 using Content.Shared.Popups;
 using Content.Shared.Rejuvenate;
 using Robust.Shared.Prototypes;
+using Content.Shared.Random.Helpers;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -140,7 +141,9 @@ public sealed partial class AddictionSystem : EntitySystem
                     continue;
                 }
 
-                if (state.Progress <= 0 || !_random.Prob(comp.CravingChance))
+                // OXYD: scheduled craving roll on a predicted stream so it doesn't
+                // shift the global RNG sequence mid-frame.
+                if (state.Progress <= 0 || !SharedRandomExtensions.PredictedProb(_timing, comp.CravingChance, GetNetEntity(uid)))
                     continue;
 
                 _popup.PopupEntity(Loc.GetString("oxyd-medical-addiction-craving",

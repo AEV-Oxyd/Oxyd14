@@ -3,6 +3,7 @@ using Content.Shared.Body;
 using Content.Shared.Medical;
 using Content.Shared.Popups;
 using Content.Shared.Stunnable;
+using Content.Shared.Random.Helpers;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -17,7 +18,6 @@ namespace Content.Server._Oxyd.Medical;
 /// </summary>
 public sealed partial class OxydAppendixSystem : EntitySystem
 {
-    [Dependency] private IRobustRandom _random = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedStunSystem _stun = default!;
@@ -46,10 +46,14 @@ public sealed partial class OxydAppendixSystem : EntitySystem
             if (organ.Body is not { } body)
                 continue;
 
+            // OXYD: tick-scheduled rolls use a predicted stream keyed on the organ
+            // so they don't shift the global RNG sequence mid-frame.
+            var roll = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(uid));
+
             // Spontaneous onset (Eris spontaneous_appendicitis event).
             if (app.Inflamed <= 0f)
             {
-                if (_random.Prob(SpontaneousPerMinute / 60f * 2f)) // per-2s tick
+                if (roll.Prob(SpontaneousPerMinute / 60f * 2f)) // per-2s tick
                     app.Inflamed = 1f;
                 continue;
             }
@@ -57,10 +61,10 @@ public sealed partial class OxydAppendixSystem : EntitySystem
             app.Inflamed += 2f;
 
             // Eris prob(5) sting + wince at all stages.
-            if (_random.Prob(0.05f))
+            if (roll.Prob(0.05f))
                 _popup.PopupEntity(Loc.GetString("oxyd-appendix-sting"), body, body, PopupType.MediumCaution);
 
-            if (app.Inflamed > DamageStage && _random.Prob(0.03f))
+            if (app.Inflamed > DamageStage && roll.Prob(0.03f))
             {
                 var surg = EnsureComp<OxydOrganSurgeryComponent>(uid);
                 OxydWoundSystem.AddOrganDamage(surg, 10f);
@@ -69,14 +73,14 @@ public sealed partial class OxydAppendixSystem : EntitySystem
                 _popup.PopupEntity(Loc.GetString("oxyd-appendix-wince"), body, body, PopupType.SmallCaution);
             }
 
-            if (app.Inflamed > VomitStage && _random.Prob(0.01f))
+            if (app.Inflamed > VomitStage && roll.Prob(0.01f))
             {
                 _popup.PopupEntity(Loc.GetString("oxyd-appendix-gag"), body, body, PopupType.LargeCaution);
                 _stun.TryKnockdown(body, TimeSpan.FromSeconds(10), force: true);
                 _vomit.Vomit(body, force: true); // no-op without a stomach, like Eris
             }
 
-            if (app.Inflamed > RuptureStage && _random.Prob(0.01f))
+            if (app.Inflamed > RuptureStage && roll.Prob(0.01f))
             {
                 _popup.PopupEntity(Loc.GetString("oxyd-appendix-rupture"), body, body, PopupType.LargeCaution);
                 _stun.TryKnockdown(body, TimeSpan.FromSeconds(10), force: true);
