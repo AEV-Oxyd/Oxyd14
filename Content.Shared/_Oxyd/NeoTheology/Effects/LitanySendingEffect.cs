@@ -1,4 +1,5 @@
 using Content.Shared.Database;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -6,42 +7,48 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// Eris <c>rituals/inquisitor.dm:233-252</c> (Sending): a telepathic message to the faithful —
 /// anonymous unless the sender reveals themself. Eris lets the caster pick one disciple and
 /// type free text; the book UI now offers the same target pick and a text box, carried by
-/// <see cref="LitanyEffectContext.Designation"/>'s sibling fields
-/// <see cref="LitanyEffectContext.SelectedText"/>. Manual-speech casts have no picker, so the
+/// <see cref="LitanyCastContextComponent.SelectedText"/>. Manual-speech casts have no picker, so the
 /// historical prepared notice reaches every same-station follower (flagged fallback).
 /// Delivery rides the shared social-notice helper Entreaty established.
 /// </summary>
-public sealed partial class LitanySendingEffect : LitanyEffect
+public sealed partial class LitanySendingEffect : LitanyEffect<LitanySendingEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanySendingEffect()
     {
-        if (context.Targets.Count == 0)
+        Conditions =
+        [
+            new LitanyHasTargetsCondition { FailureId = "oxyd-litany-no-target" },
+        ];
+    }
+}
+
+/// <summary>Raised once on the caster: delivers the sending notice to every resolved recipient.</summary>
+public sealed partial class LitanySendingEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanySendingEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanySendingEffect> args)
+    {
+        if (_litany.GetCastContext(args.User) is not { } context)
         {
-            failure = "oxyd-litany-no-target";
-            return false;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
         var delivered = false;
         foreach (var recipient in context.Targets)
         {
             var message = context.SelectedText is { Length: > 0 } text
                 ? Loc.GetString("oxyd-litany-private-sending-text", ("text", text))
                 : Loc.GetString("oxyd-litany-private-sending");
-            system.DeliverSocialNotice(recipient, message);
-            system.AdminLog(LogType.Chat, LogImpact.Low, context.User,
-                $"sent \"{context.SelectedText}\" via {context.Litany.ID} to", recipient);
+            _litany.DeliverSocialNotice(recipient, message);
+            if (args.User is { } user)
+                _litany.AdminLog(LogType.Chat, LogImpact.Low, user,
+                    $"sent \"{context.SelectedText}\" via {context.Litany.ID} to", recipient);
             delivered = true;
         }
 
-        return delivered;
+        _litany.ReportApplyResult(args.User, delivered);
     }
 }

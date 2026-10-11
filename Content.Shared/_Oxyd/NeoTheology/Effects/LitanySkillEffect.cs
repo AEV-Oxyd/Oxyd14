@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.Skills;
+using Content.Shared.EntityEffects;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -9,40 +10,39 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// buff by (skill, source), so recasting the same chant refreshes this effect's entry
 /// instead of stacking; expiry is owned by the skill system.
 /// </summary>
-public sealed partial class LitanySkillEffect : LitanyEffect
+public sealed partial class LitanySkillEffect : LitanyEffect<LitanySkillEffect>
 {
-    [DataField]
-    public Dictionary<ProtoId<SkillPrototype>, int> Amounts = new();
+    /// <summary>Each resolved member eligible for the buff gets it independently.</summary>
+    public override bool PerTarget => true;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanySkillEffect()
     {
-        foreach (var target in context.Targets)
-        {
-            if (system.CanReceiveSkillBuff(target) && !system.RejectsHolyInfluence(target))
-            {
-                failure = null;
-                return true;
-            }
-        }
-
-        failure = "oxyd-litany-no-target";
-        return false;
+        Conditions =
+        [
+            new LitanySkillBuffRecipientCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        var applied = false;
-        foreach (var target in context.Targets)
-        {
-            if (system.RejectsHolyInfluence(target))
-                continue;
+    [DataField]
+    public Dictionary<ProtoId<SkillPrototype>, int> Amounts = new();
+}
 
-            applied |= system.TryApplySkillBuff(target, context.Litany.ID, Amounts, context.Litany.EffectDuration);
+/// <summary>Applies or refreshes the litany-keyed buffs on each resolved target.</summary>
+public sealed partial class LitanySkillEntityEffectSystem
+    : EntityEffectSystem<MobSkillComponent, LitanySkillEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<MobSkillComponent> entity, ref EntityEffectEvent<LitanySkillEffect> args)
+    {
+        if (_litany.GetCastContext(args.User) is not { } context)
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        return applied;
+        var applied = _litany.TryApplySkillBuff(
+            entity, context.Litany.ID, args.Effect.Amounts, context.Litany.EffectDuration);
+        _litany.ReportApplyResult(args.User, applied);
     }
 }
