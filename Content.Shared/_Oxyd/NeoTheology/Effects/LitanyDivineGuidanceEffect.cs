@@ -1,3 +1,4 @@
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -7,25 +8,27 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// NeoTheology blueprint, and the ritual prints that blueprint's material list. The
 /// server <c>NeoTheologyConstructionSystem</c> owns the catalog and the message.
 /// </summary>
-public sealed partial class LitanyDivineGuidanceEffect : LitanyEffect
+public sealed partial class LitanyDivineGuidanceEffect : LitanyEffect<LitanyDivineGuidanceEffect>;
+
+/// <summary>
+/// Cast-scoped: prints the picked blueprint's material list. The first validation pass runs
+/// before the caster picks a blueprint, so the effect carries no conditions.
+/// </summary>
+public sealed partial class LitanyDivineGuidanceEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyDivineGuidanceEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
-    {
-        // The first validation pass runs before the caster picks a blueprint.
-        failure = null;
-        return true;
-    }
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyDivineGuidanceEffect> args)
     {
-        if (context.SelectedBlueprint is not { } blueprint)
-            return false;
+        if (_litany.GetCastContext(args.User)?.SelectedBlueprint is not { } blueprint)
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
-        var info = new LitanyBlueprintInfoEvent(context.User, blueprint, false);
-        system.RaiseOn(context.User, ref info);
-        return info.Handled;
+        var info = new LitanyBlueprintInfoEvent(entity.Owner, blueprint, false);
+        _litany.RaiseOn(entity.Owner, ref info);
+        _litany.ReportApplyResult(args.User, info.Handled);
     }
 }
