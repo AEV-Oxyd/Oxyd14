@@ -1,5 +1,7 @@
-using Content.Shared.Database;
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.Database;
+using Content.Shared.EntityEffects;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -8,49 +10,38 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// Eris <c>rituals/priest.dm:427-449</c>: set clearance to None. Rank modules stay.
 /// An Inquisitor or a Godblood bearer is refused.
 /// </summary>
-public sealed partial class LitanyOmissionEffect : LitanyEffect
+public sealed partial class LitanyOmissionEffect : LitanyEffect<LitanyOmissionEffect>
 {
     private static readonly ProtoId<NeoTheologyProfilePrototype> InquisitorProfile = "OxydNtInquisitor";
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>Each resolved follower gets their clearance set to None.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyOmissionEffect()
     {
-        if (context.Targets.Count == 0 || !system.TryGetActiveCruciform(context.Targets[0], out var cruciform))
-        {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
-        }
-
-        // Eris: `if(CI.get_module(CRUCIFORM_INQUISITOR)) fail("You don't have the authority for this.")`.
-        if (cruciform.Profile == InquisitorProfile)
-        {
-            failure = "oxyd-litany-no-authority";
-            return false;
-        }
-
-        if (system.HasGodblood(context.Targets[0]))
-        {
-            failure = "oxyd-litany-godblood";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            // Eris: `if(CI.get_module(CRUCIFORM_INQUISITOR)) fail("You don't have the authority for this.")`.
+            new LitanyNotProfileCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
+            new LitanyNoGodbloodCondition { FailureId = "oxyd-litany-godblood" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raises the clearance bridge on each resolved follower.</summary>
+public sealed partial class LitanyOmissionEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyOmissionEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyOmissionEffect> args)
     {
-        if (context.Targets.Count == 0)
-            return false;
-
-        var target = context.Targets[0];
-        var clearance = new LitanySetClearanceEvent(target, NeoTheologyClearance.None, false);
-        system.RaiseOn(target, ref clearance);
-        if (clearance.Handled)
-            system.AdminLog(LogType.Action, LogImpact.Medium, context.User,
-                $"omitted clearance via {context.Litany.ID} on", target);
-        return clearance.Handled;
+        var clearance = new LitanySetClearanceEvent(entity, NeoTheologyClearance.None, false);
+        _litany.RaiseOn(entity, ref clearance);
+        if (clearance.Handled && args.User is { } user)
+            _litany.AdminLog(LogType.Action, LogImpact.Medium, user,
+                $"omitted clearance via {_litany.GetCastContext(user)?.Litany.ID} on", entity);
+        _litany.ReportApplyResult(args.User, clearance.Handled);
     }
 }
