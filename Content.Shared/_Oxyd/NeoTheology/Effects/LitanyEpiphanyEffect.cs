@@ -1,3 +1,5 @@
+using Content.Shared.EntityEffects;
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -8,43 +10,33 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// gameplay, so the effect raises <see cref="LitanyActivateCruciformEvent"/> on the target
 /// and the server CruciformSystem does the work.
 /// </summary>
-public sealed partial class LitanyEpiphanyEffect : LitanyEffect
+public sealed partial class LitanyEpiphanyEffect : LitanyEffect<LitanyEpiphanyEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>The pipeline delivers each resolved candidate; there is no pick-one fallback.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyEpiphanyEffect()
     {
-        if (context.Targets.Count == 0 || !system.IsAlive(context.Targets[0]))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        if (!system.TryGetInstalledCruciform(context.Targets[0], out var cruciform))
-        {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
-        }
-
-        if (cruciform.Active)
-        {
-            failure = "oxyd-litany-already-active";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyAliveCondition { FailureId = "oxyd-litany-no-target" },
+            // Reports no-cruciform when no implant sits in the body, already-active when it
+            // has fired before — matching the Eris gate order.
+            new LitanyInactiveCruciformCondition(),
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Activates each resolved body's dormant cruciform.</summary>
+public sealed partial class LitanyEpiphanyEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyEpiphanyEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyEpiphanyEffect> args)
     {
-        if (context.Targets.Count == 0)
-            return false;
-
-        var target = context.Targets[0];
-        var activate = new LitanyActivateCruciformEvent(target, false);
-        system.RaiseOn(target, ref activate);
-        return activate.Handled;
+        var activate = new LitanyActivateCruciformEvent(entity.Owner, false);
+        _litany.RaiseOn(entity.Owner, ref activate);
+        _litany.ReportApplyResult(args.User, activate.Handled);
     }
 }
