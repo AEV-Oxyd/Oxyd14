@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -9,43 +10,37 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// reduction rides <see cref="Content.Shared._Oxyd.Skills.SharedSkillSystem.SetUniqueBuff"/>
 /// with a negative amount and the litany's ID as the unique key.
 /// </summary>
-public sealed partial class LitanyDivineBlessingEffect : LitanyEffect
+public sealed partial class LitanyDivineBlessingEffect : LitanyEffect<LitanyDivineBlessingEffect>
 {
     /// <summary>Eris <c>rand(1,8)</c> oddity gain bounds.</summary>
     public const int MinGain = 1;
     public const int MaxGain = 8;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyDivineBlessingEffect()
     {
-        if (!system.TryGetHeldOddity(context.User, out var item, out var oddity))
-        {
-            failure = "oxyd-litany-no-oddity";
-            return false;
-        }
-
-        if (system.IsOddityBlessed(item))
-        {
-            failure = "oxyd-litany-oddity-blessed";
-            return false;
-        }
-
-        if (!oddity.giving.Values.Any(value => value != 0))
-        {
-            failure = "oxyd-litany-no-effect";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            // Held, unblessed, giving-capable oddity — reports the Eris failure lines.
+            new LitanyBlessableOddityCondition(),
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Cast-scoped: blesses the caster's held oddity and debits the caster's skills.</summary>
+public sealed partial class LitanyDivineBlessingEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyDivineBlessingEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyDivineBlessingEffect> args)
     {
-        if (!system.TryGetHeldOddity(context.User, out var item, out var oddity) || system.IsOddityBlessed(item))
-            return false;
+        var sourceId = _litany.GetCastContext(args.User)?.Litany.ID ?? string.Empty;
+        if (!_litany.TryGetHeldOddity(entity.Owner, out var item, out var oddity) ||
+            _litany.IsOddityBlessed(item))
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
         var blessed = false;
         foreach (var (skill, value) in oddity.giving.ToArray())
@@ -53,18 +48,18 @@ public sealed partial class LitanyDivineBlessingEffect : LitanyEffect
             if (value == 0)
                 continue;
 
-            var gain = system.RollInclusive(MinGain, MaxGain);
+            var gain = _litany.RollInclusive(LitanyDivineBlessingEffect.MinGain, LitanyDivineBlessingEffect.MaxGain);
             oddity.giving[skill] = value + gain;
 
             // The blessing penalty rides the litany's unique key: recasting refreshes
             // it instead of stacking without bound.
-            system.TryAddTimedSkill(context.User, context.Litany.ID, skill, -Math.Max((gain + 1) / 2, 1));
+            _litany.TryAddTimedSkill(entity.Owner, sourceId, skill, -Math.Max((gain + 1) / 2, 1));
             blessed = true;
         }
 
         if (blessed)
-            system.MarkOddityBlessed(item);
+            _litany.MarkOddityBlessed(item);
 
-        return blessed;
+        _litany.ReportApplyResult(args.User, blessed);
     }
 }

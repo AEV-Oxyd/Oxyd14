@@ -1,4 +1,4 @@
-using System.Linq;
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -9,39 +9,49 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// the effect raises <see cref="LitanyToggleBioreactorChamberEvent"/> on the reactor; the server
 /// <c>BioreactorSystem</c> calls its own <c>TryToggleChamber</c>.
 /// </summary>
-public sealed partial class LitanyBioreactorChamberEffect : LitanyEffect
+public sealed partial class LitanyBioreactorChamberEffect : LitanyEffect<LitanyBioreactorChamberEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyBioreactorChamberEffect()
     {
-        if (!Execute(system, context, true))
+        Conditions =
+        [
+            // The validate probe runs the same jam check the toggle does.
+            new LitanyBioreactorChamberCondition { FailureId = "oxyd-litany-no-target" },
+        ];
+    }
+}
+
+/// <summary>
+/// Cast-scoped: toggles the chamber on the first workable bioreactor among the resolved
+/// machine targets.
+/// </summary>
+public sealed partial class LitanyBioreactorChamberEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyBioreactorChamberEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyBioreactorChamberEffect> args)
+    {
+        if (_litany.GetCastContext(args.User) is not { } ctx)
         {
-            failure = "oxyd-litany-no-target";
-            return false;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
-
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
-    {
-        foreach (var target in context.Targets)
+        foreach (var target in ctx.Targets)
         {
-            if (!system.IsLitanyBioreactor(target))
+            if (!_litany.IsLitanyBioreactor(target))
                 continue;
 
-            var toggle = new LitanyToggleBioreactorChamberEvent(target, false, validateOnly);
-            system.RaiseOn(target, ref toggle);
+            var toggle = new LitanyToggleBioreactorChamberEvent(target, false);
+            _litany.RaiseOn(target, ref toggle);
             if (toggle.Handled)
-                return true;
+            {
+                _litany.ReportApplyResult(args.User, true);
+                return;
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, false);
     }
 }

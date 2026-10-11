@@ -1,4 +1,6 @@
 using Content.Shared.Database;
+using Content.Shared.EntityEffects;
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.Prototypes;
 
@@ -8,41 +10,43 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// Eris <c>rituals/priest.dm:361-393</c> (Confirmation: Disciple → Acolyte / Agrolyte /
 /// Custodian). Eris pops an <c>alert()</c> offering the three designations and calls the
 /// matching <c>make_*()</c>. The book UI now offers the same three profile choices;
-/// <see cref="LitanyEffectContext.Designation"/> carries the pick. Manual-speech casts
+/// the cast context's designation carries the pick. Manual-speech casts
 /// have no picker and keep the historical Acolyte fallback. The rank swap is server-only,
 /// reached through <see cref="LitanySetRankEvent"/>.
 /// </summary>
-public sealed partial class LitanyConfirmationEffect : LitanyEffect
+public sealed partial class LitanyConfirmationEffect : LitanyEffect<LitanyConfirmationEffect>
 {
     private static readonly ProtoId<NeoTheologyProfilePrototype> AcolyteProfile = "OxydNtAcolyte";
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>The pipeline delivers each resolved bearer; there is no pick-one fallback.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyConfirmationEffect()
     {
-        if (context.Targets.Count == 0 || !system.TryGetActiveCruciform(context.Targets[0], out _))
+        Conditions =
+        [
+            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+        ];
+    }
+}
+
+/// <summary>Swaps each resolved bearer's rank to the picked (or default) profile.</summary>
+public sealed partial class LitanyConfirmationEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyConfirmationEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyConfirmationEffect> args)
+    {
+        var profile = _litany.GetCastContext(args.User)?.Designation ?? LitanyConfirmationEffect.AcolyteProfile;
+        var rank = new LitanySetRankEvent(entity.Owner, profile, false);
+        _litany.RaiseOn(entity.Owner, ref rank);
+        if (rank.Handled && _litany.GetCastContext(args.User) is { } ctx)
         {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
+            _litany.AdminLog(LogType.Action, LogImpact.Medium, args.User ?? entity.Owner,
+                $"confirmed via {ctx.Litany.ID} as {profile} on", entity.Owner);
         }
 
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        if (context.Targets.Count == 0)
-            return false;
-
-        var target = context.Targets[0];
-        var profile = context.Designation ?? AcolyteProfile;
-        var rank = new LitanySetRankEvent(target, profile, false);
-        system.RaiseOn(target, ref rank);
-        if (rank.Handled)
-            system.AdminLog(LogType.Action, LogImpact.Medium, context.User,
-                $"confirmed via {context.Litany.ID} as {profile} on", target);
-        return rank.Handled;
+        _litany.ReportApplyResult(args.User, rank.Handled);
     }
 }

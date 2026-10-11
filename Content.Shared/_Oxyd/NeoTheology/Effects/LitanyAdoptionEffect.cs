@@ -1,4 +1,6 @@
 using Content.Shared.Database;
+using Content.Shared.EntityEffects;
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.Prototypes;
 
@@ -7,34 +9,36 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <summary>
 /// Eris <c>rituals/priest.dm:395-409</c>: set an existing cruciform's clearance to Common.
 /// </summary>
-public sealed partial class LitanyAdoptionEffect : LitanyEffect
+public sealed partial class LitanyAdoptionEffect : LitanyEffect<LitanyAdoptionEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    /// <summary>The pipeline delivers each resolved bearer; there is no pick-one fallback.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyAdoptionEffect()
     {
-        if (context.Targets.Count == 0 ||
-            !system.TryGetActiveCruciform(context.Targets[0], out _))
+        Conditions =
+        [
+            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+        ];
+    }
+}
+
+/// <summary>Grants Common clearance on each resolved bearer's cruciform.</summary>
+public sealed partial class LitanyAdoptionEntityEffectSystem
+    : EntityEffectSystem<CruciformBearerComponent, LitanyAdoptionEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<CruciformBearerComponent> entity, ref EntityEffectEvent<LitanyAdoptionEffect> args)
+    {
+        var grant = new LitanySetClearanceEvent(entity.Owner, NeoTheologyClearance.Common, false);
+        _litany.RaiseOn(entity.Owner, ref grant);
+        if (grant.Handled && _litany.GetCastContext(args.User) is { } ctx)
         {
-            failure = "oxyd-litany-no-cruciform";
-            return false;
+            _litany.AdminLog(LogType.Action, LogImpact.Medium, args.User ?? entity.Owner,
+                $"converted via {ctx.Litany.ID} to Common clearance on", entity.Owner);
         }
 
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        if (context.Targets.Count == 0)
-            return false;
-
-        var grant = new LitanySetClearanceEvent(context.Targets[0], NeoTheologyClearance.Common, false);
-        system.RaiseOn(context.Targets[0], ref grant);
-        if (grant.Handled)
-            system.AdminLog(LogType.Action, LogImpact.Medium, context.User,
-                $"converted via {context.Litany.ID} to Common clearance on", context.Targets[0]);
-        return grant.Handled;
+        _litany.ReportApplyResult(args.User, grant.Handled);
     }
 }

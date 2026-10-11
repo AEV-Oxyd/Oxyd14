@@ -1,3 +1,4 @@
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -7,30 +8,28 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// and orders supplies. The server <c>NtUplinkSystem</c> owns the store and opens its interface
 /// from anywhere, because the uplink itself lives inside the cruciform.
 /// </summary>
-public sealed partial class LitanyBountyEffect : LitanyEffect
+public sealed partial class LitanyBountyEffect : LitanyEffect<LitanyBountyEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyBountyEffect()
     {
-        var probe = new LitanyUplinkOpenEvent(context.User, true, false);
-        system.RaiseOn(context.User, ref probe);
-
-        if (probe.Handled)
-        {
-            failure = null;
-            return true;
-        }
-
-        failure = probe.Failure ?? "oxyd-litany-uplink-none";
-        return false;
+        Conditions =
+        [
+            // The validate probe reports the uplink's own failure reason.
+            new LitanyUplinkOpenCondition(),
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Cast-scoped: opens the caster's hidden uplink.</summary>
+public sealed partial class LitanyBountyEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyBountyEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyBountyEffect> args)
     {
-        var open = new LitanyUplinkOpenEvent(context.User, false, false);
-        system.RaiseOn(context.User, ref open);
-        return open.Handled;
+        var open = new LitanyUplinkOpenEvent(entity.Owner, ValidateOnly: false, Handled: false);
+        _litany.RaiseOn(entity.Owner, ref open);
+        _litany.ReportApplyResult(args.User, open.Handled);
     }
 }

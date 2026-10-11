@@ -16,9 +16,9 @@ public sealed partial class LitanyInstallUpgradeEffect : LitanyEffect<LitanyInst
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyFirstTargetActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             new LitanyCruciformUpgradeFreeCondition { FailureId = "oxyd-litany-upgrade-present" },
-            new LitanyProcedureAltarCondition { Undressed = true },
+            new LitanyFirstTargetProcedureAltarCondition { Undressed = true },
             new LitanyAltarUpgradePresentCondition { FailureId = "oxyd-litany-upgrade-missing" },
         ];
     }

@@ -1,39 +1,44 @@
 using System.Linq;
+using Content.Shared.EntityEffects;
 using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>Reports every cruciform-bearing body the caster can see within the litany range.</summary>
-public sealed partial class LitanyCruciformSenseEffect : LitanyEffect
+public sealed partial class LitanyCruciformSenseEffect : LitanyEffect<LitanyCruciformSenseEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyCruciformSenseEffect()
     {
-        if (system.CollectVisibleActiveFollowers(context.User, system.GetSenseRange(context.Litany)).Count == 0)
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanySeesFollowersCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Cast-scoped: narrates every cruciform bearer the caster can see.</summary>
+public sealed partial class LitanyCruciformSenseEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyCruciformSenseEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyCruciformSenseEffect> args)
     {
-        var visible = system.CollectVisibleActiveFollowers(context.User, system.GetSenseRange(context.Litany));
+        var range = _litany.GetCastContext(args.User) is { } ctx ? _litany.GetSenseRange(ctx.Litany) : 0f;
+        var visible = _litany.CollectVisibleActiveFollowers(entity.Owner, range);
         if (visible.Count == 0)
-            return false;
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
         foreach (var follower in visible.OrderBy(uid => uid))
         {
-            var escaped = FormattedMessage.EscapeText(system.GetName(follower, context.User));
-            system.DeliverSocialNotice(context.User,
+            var escaped = FormattedMessage.EscapeText(_litany.GetName(follower, entity.Owner));
+            _litany.DeliverSocialNotice(entity.Owner,
                 Loc.GetString("oxyd-litany-cruciform-sense-notice", ("name", escaped)));
         }
 
-        return true;
+        _litany.ReportApplyResult(args.User, true);
     }
 }

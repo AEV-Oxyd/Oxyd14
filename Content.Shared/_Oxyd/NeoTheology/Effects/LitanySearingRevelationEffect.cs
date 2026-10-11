@@ -16,7 +16,7 @@ public sealed partial class LitanySearingRevelationEffect : LitanyEffect<LitanyS
         Conditions =
         [
             // Eris CanApply checked only system.CanReceiveSkillBuff(context.User).
-            new LitanyCanReceiveSkillBuffCondition(),
+            new LitanyFirstTargetCanReceiveSkillBuffCondition(),
         ];
     }
 

@@ -17,10 +17,10 @@ public sealed partial class LitanyOmissionEffect : LitanyEffect<LitanyOmissionEf
     {
         Conditions =
         [
-            new LitanyActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
+            new LitanyFirstTargetActiveCruciformCondition { FailureId = "oxyd-litany-no-cruciform" },
             // Eris: `if(CI.get_module(CRUCIFORM_INQUISITOR)) fail("You don't have the authority for this.")`.
-            new LitanyNotProfileCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
-            new LitanyNoGodbloodCondition { FailureId = "oxyd-litany-godblood" },
+            new LitanyFirstTargetNotProfileCondition { Profile = InquisitorProfile, FailureId = "oxyd-litany-no-authority" },
+            new LitanyFirstTargetNoGodbloodCondition { FailureId = "oxyd-litany-godblood" },
         ];
     }
 }

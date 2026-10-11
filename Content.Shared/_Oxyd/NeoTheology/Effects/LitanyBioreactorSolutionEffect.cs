@@ -1,4 +1,4 @@
-using System.Linq;
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
@@ -9,39 +9,48 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <see cref="LitanyPumpBioreactorEvent"/> on the reactor; the server <c>BioreactorSystem</c>
 /// calls its own <c>TryPumpSolution</c>.
 /// </summary>
-public sealed partial class LitanyBioreactorSolutionEffect : LitanyEffect
+public sealed partial class LitanyBioreactorSolutionEffect : LitanyEffect<LitanyBioreactorSolutionEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyBioreactorSolutionEffect()
     {
-        if (!Execute(system, context, true))
+        Conditions =
+        [
+            // The validate probe runs the same pump check the apply path does.
+            new LitanyBioreactorPumpCondition { FailureId = "oxyd-litany-no-target" },
+        ];
+    }
+}
+
+/// <summary>
+/// Cast-scoped: pumps the first workable bioreactor among the resolved machine targets.
+/// </summary>
+public sealed partial class LitanyBioreactorSolutionEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyBioreactorSolutionEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyBioreactorSolutionEffect> args)
+    {
+        if (_litany.GetCastContext(args.User) is not { } ctx)
         {
-            failure = "oxyd-litany-no-target";
-            return false;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
-
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
-    {
-        foreach (var target in context.Targets)
+        foreach (var target in ctx.Targets)
         {
-            if (!system.IsLitanyBioreactor(target))
+            if (!_litany.IsLitanyBioreactor(target))
                 continue;
 
-            var pump = new LitanyPumpBioreactorEvent(target, false, validateOnly);
-            system.RaiseOn(target, ref pump);
+            var pump = new LitanyPumpBioreactorEvent(target, false);
+            _litany.RaiseOn(target, ref pump);
             if (pump.Handled)
-                return true;
+            {
+                _litany.ReportApplyResult(args.User, true);
+                return;
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, false);
     }
 }
