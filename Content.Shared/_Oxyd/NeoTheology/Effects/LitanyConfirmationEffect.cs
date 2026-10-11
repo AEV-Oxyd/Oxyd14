@@ -16,7 +16,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// </summary>
 public sealed partial class LitanyConfirmationEffect : LitanyEffect<LitanyConfirmationEffect>
 {
-    private static readonly ProtoId<NeoTheologyProfilePrototype> AcolyteProfile = "OxydNtAcolyte";
+    internal static readonly ProtoId<NeoTheologyProfilePrototype> AcolyteProfile = "OxydNtAcolyte";
 
     /// <summary>The pipeline delivers each resolved bearer; there is no pick-one fallback.</summary>
     public override bool PerTarget => true;

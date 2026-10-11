@@ -12,7 +12,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 public sealed partial class LitanyScryingEffect : LitanyEffect<LitanyScryingEffect>
 {
     /// <summary>Eris hard-codes 300 ds (30 s); the YAML effectDuration carries the same value.</summary>
-    private static readonly TimeSpan FallbackDuration = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan FallbackDuration = TimeSpan.FromSeconds(30);
 
     public LitanyScryingEffect()
     {
@@ -40,7 +40,7 @@ public sealed partial class LitanyScryingEntityEffectSystem
             var target = context.Targets[0];
             var duration = context.Litany.EffectDuration > TimeSpan.Zero
                 ? context.Litany.EffectDuration
-                : FallbackDuration;
+                : LitanyScryingEffect.FallbackDuration;
 
             var ev = new LitanyScryingEvent(user, target, duration, false, false);
             _litany.RaiseOn(target, ref ev);
