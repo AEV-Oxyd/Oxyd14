@@ -31,10 +31,10 @@ public sealed partial class OxydNsaSystem : EntitySystem
         var query = EntityQueryEnumerator<OxydNsaComponent>();
         while (query.MoveNext(out var uid, out var comp))
         {
-            comp.UpdateRemaining -= frameTime;
-            if (comp.UpdateRemaining > 0)
+            var now = _timing.CurTime;
+            if (now < comp.NextUpdate)
                 continue;
-            comp.UpdateRemaining = comp.UpdateInterval;
+            comp.NextUpdate = now + TimeSpan.FromSeconds(comp.UpdateInterval);
 
             if (_mobs.IsDead(uid))
                 continue;

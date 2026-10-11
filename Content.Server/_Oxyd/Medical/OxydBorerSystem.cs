@@ -636,10 +636,10 @@ public sealed partial class OxydBorerSystem : EntitySystem
         var query = EntityQueryEnumerator<OxydBorerComponent, MobStateComponent>();
         while (query.MoveNext(out var uid, out var comp, out var mobState))
         {
-            comp.UpdateRemaining -= frameTime;
-            if (comp.UpdateRemaining > 0)
+            var now = _timing.CurTime;
+            if (now < comp.NextUpdate)
                 continue;
-            comp.UpdateRemaining += comp.UpdateInterval;
+            comp.NextUpdate = now + TimeSpan.FromSeconds(comp.UpdateInterval);
 
             if (mobState.CurrentState == MobState.Dead)
                 continue;
