@@ -62,12 +62,6 @@ public sealed partial class OxydSurgerySystem : EntitySystem
     private const string ImplantContainerId = "oxyd-surgery-implants";
     private static readonly ProtoId<TagPrototype> CableCoilTag = "CableCoil";
 
-    /// <summary>Item sizes a retracted cavity accepts through the click path (Eris w_class check).</summary>
-    private static readonly HashSet<ProtoId<ItemSizePrototype>> ImplantableSizes = new()
-    {
-        "Tiny", "Small",
-    };
-
     private record struct OrganEntry(EntityUid Uid, OrganComponent Organ, OxydOrganSurgeryComponent Surg)
     {
         public bool Valid => Uid.IsValid();
@@ -221,7 +215,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
     /// <summary>Only small items may be packed into a body cavity (Eris w_class check).</summary>
     private bool CanImplant(EntityUid item) =>
-        TryComp<ItemComponent>(item, out var ic) && ImplantableSizes.Contains(ic.Size);
+        TryComp<ItemComponent>(item, out var ic) && OxydItemSizes.Implantable.Contains(ic.Size);
 
     private List<OrganEntry> GetOrganEntries(EntityUid body) =>
         _wounds.GetOrgans(body).Select(o => new OrganEntry(o.Uid, o.Organ, o.Surgery)).ToList();
@@ -884,7 +878,9 @@ public sealed partial class OxydSurgerySystem : EntitySystem
                 MaxBlood = bloodMax,
                 // Respiratory/brain organs expose the patient's oxygen bar (Eris BP_BRAIN organs).
                 ShowOxygen = organ.Category is { } cat &&
-                             (cat.Id == "Brain" || cat.Id == "Lungs" || cat.Id == "Heart"),
+                             (cat.Id == OxydOrganCategories.Brain ||
+                              cat.Id == OxydOrganCategories.Lungs ||
+                              cat.Id == OxydOrganCategories.Heart),
             };
 
             foreach (var net in surg.EmbeddedItems)

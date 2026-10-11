@@ -75,7 +75,7 @@ public sealed partial class OxydWoundSystem : EntitySystem
             return OxydPulse.Thready;
         foreach (var (_, organ, surg) in GetOrgans(body))
         {
-            if (organ.Category is { Id: "Heart" } &&
+            if (organ.Category is { } cat && cat.Id == OxydOrganCategories.Heart &&
                 surg.OrganDamage >= OxydOrganSurgeryComponent.OrganMaxDamage * 0.2f)
                 return OxydPulse.Irregular;
         }
