@@ -363,22 +363,14 @@ public static class LitanyCatalogValidator
         ValidateEffects(litany, errors);
     }
 
-    private static bool ConditionsDivergeFromCtor(EntityEffect effect)
+    private static bool IsLitanyCondition(Type type)
     {
-        EntityEffect fresh;
-        try
+        for (var t = type; t != null; t = t.BaseType)
         {
-            if (Activator.CreateInstance(effect.GetType()) is not EntityEffect created)
-                return false;
-            fresh = created;
+            if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(LitanyCondition<>))
+                return true;
         }
-        catch (Exception)
-        {
-            return false;
-        }
-        var declared = effect.Conditions ?? Array.Empty<EntityCondition>();
-        var intrinsic = fresh.Conditions ?? Array.Empty<EntityCondition>();
-        return !declared.Select(c => c.GetType()).SequenceEqual(intrinsic.Select(c => c.GetType()));
+        return false;
     }
 
     private static void ValidateEffects(LitanyPrototype litany, List<string> errors)
@@ -386,9 +378,9 @@ public static class LitanyCatalogValidator
         foreach (var effect in litany.Effects)
         {
             // A YAML conditions: list replaces the intrinsic guards the effect type
-            // installs in its constructor. Declared condition types must match a fresh
-            // instance exactly — anything else means YAML overwrote the ctor guards.
-            if (ConditionsDivergeFromCtor(effect))
+            // installs via its ctor and serialization hooks. Every declared condition
+            // must be a litany condition type; anything else means YAML overwrote them.
+            if (effect.Conditions?.Any(c => !IsLitanyCondition(c.GetType())) == true)
                 errors.Add($"{litany.ID} declares conditions: on litany effect {effect.GetType().Name}; intrinsic guards own gating.");
 
             switch (effect)
