@@ -1,4 +1,6 @@
 using Content.Shared.Damage;
+using Content.Shared.Damage.Components;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -7,44 +9,47 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// configured injury. Eris stores the paired Heat damage as an injury, so
 /// <see cref="Damage"/> holds positive values.
 /// </summary>
-public sealed partial class LitanySoulHungerEffect : LitanyEffect
+public sealed partial class LitanySoulHungerEffect : LitanyEffect<LitanySoulHungerEffect>
 {
-    [DataField]
-    public DamageSpecifier Damage = new();
+    /// <summary>The self rite resolves the caster; each resolved body takes hunger and injury.</summary>
+    public override bool PerTarget => true;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanySoulHungerEffect()
     {
-        if (!system.TryGetHunger(context.User, out _, out var hunger, out var maxHunger) ||
-            hunger >= maxHunger)
-        {
-            failure = "oxyd-litany-no-hunger";
-            return false;
-        }
-
-        if (Damage.Empty || !system.CanReceiveDamage(context.User))
-        {
-            failure = "oxyd-litany-no-effect";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyHungerNotFullCondition { FailureId = "oxyd-litany-no-hunger" },
+            new LitanyCanReceiveDamageCondition { FailureId = "oxyd-litany-no-effect" },
+        ];
     }
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+    [DataField]
+    public DamageSpecifier Damage = new();
+}
+
+/// <summary>Applies the paired injury and the hunger fill on each resolved body.</summary>
+public sealed partial class LitanySoulHungerEntityEffectSystem
+    : EntityEffectSystem<DamageableComponent, LitanySoulHungerEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<DamageableComponent> entity, ref EntityEffectEvent<LitanySoulHungerEffect> args)
     {
-        if (!system.TryGetHunger(context.User, out var satiation, out var hunger, out var maxHunger) ||
+        if (!_litany.TryGetHunger(entity, out var satiation, out var hunger, out var maxHunger) ||
             hunger >= maxHunger)
-            return false;
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
         // Apply the paired injury first so a damage failure never mutates Hunger.
-        if (!system.TryApplyDamage(context.User, Damage))
-            return false;
+        if (!_litany.TryApplyDamage(entity, args.Effect.Damage))
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
 
-        system.AddHunger(satiation, LitanyEffectSystem.SoulHungerNutritionAmount);
-        return true;
+        _litany.AddHunger(satiation, LitanyEffectSystem.SoulHungerNutritionAmount);
+        _litany.ReportApplyResult(args.User, true);
     }
 }
