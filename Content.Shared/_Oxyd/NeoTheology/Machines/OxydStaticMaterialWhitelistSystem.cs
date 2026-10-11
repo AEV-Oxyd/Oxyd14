@@ -25,7 +25,10 @@ public sealed partial class OxydStaticMaterialWhitelistSystem : EntitySystem
         foreach (var id in comp.Recipes)
         {
             if (!_proto.Resolve(id, out var recipe))
+            {
+                Log.Error($"OxydStaticMaterialWhitelist on {ToPrettyString(uid)} references missing recipe '{id}'");
                 continue;
+            }
             args.Whitelist = args.Whitelist.Union(recipe.Materials.Keys).ToList();
         }
     }

@@ -144,6 +144,9 @@ public sealed class ChangelingSlimeTests : InteractionTest
         Assert.That(appleStoredLocation, Is.EqualTo(postTransformStoredLocation), "The stored item is no longer in the same location within the storage container after transforming between slimes.");
 
         // Actually pull the apple from the inventory.
+        // OXYD: self-activation no longer opens a mob's own storage upstream
+        // (CanAccess(actor, actor) fails inside BUI-open validation), so this
+        // assert currently fails — pre-existing master break, not from this PR.
         await Activate(Player);
         Assert.That(IsUiOpen(StorageComponent.StorageUiKey.Key), "Storage BUI did not open when activating the changeling.");
         var ctrl = GetStorageControl(apple);
@@ -206,8 +209,9 @@ public sealed class ChangelingSlimeTests : InteractionTest
     private ItemGridPiece GetStorageControl(NetEntity target)
     {
         var uid = ToClient(target);
-        var hotbar = GetWidget<HotbarGui>();
-        var storageContainer = GetControlFromField<Control>("SingleStorageContainer", hotbar);
-        return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, storageContainer);
+        // OXYD: the static storage UI nests the storage window inside the
+        // DynamicPanel instead of opening it as a top-level window, so search
+        // the whole UI tree for the item's grid piece.
+        return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, UiMan.RootControl);
     }
 }
