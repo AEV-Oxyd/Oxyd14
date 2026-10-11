@@ -1,4 +1,4 @@
-using System.Linq;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -6,37 +6,54 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// Eris <c>lock_door</c> (machinery.dm): toggles the bolt on the holy NeoTheology door
 /// the caster faces. Ordinary station doors are not valid targets.
 /// </summary>
-public sealed partial class LitanyActivateDoorEffect : LitanyEffect
+public sealed partial class LitanyActivateDoorEffect : LitanyEffect<LitanyActivateDoorEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyActivateDoorEffect()
     {
-        if (context.Targets.Any(system.IsHolyDoorBroken))
-        {
-            failure = "oxyd-litany-door-off";
-            return false;
-        }
-
-        if (!context.Targets.Any(system.CanToggleLitanyDoor))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            // At least one faced door must toggle; a broken door reports door-off instead.
+            new LitanyDoorToggleableCondition(),
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>
+/// Cast-scoped: toggles the first toggleable holy door among the resolved machine targets.
+/// </summary>
+public sealed partial class LitanyActivateDoorEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyActivateDoorEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyActivateDoorEffect> args)
     {
-        foreach (var target in context.Targets)
+        if (_litany.GetCastContext(args.User) is not { } ctx)
         {
-            if (system.TryToggleLitanyDoor(target, context.User))
-                return true;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        return false;
+        // Eris refuses the rite when any faced holy door is broken — a list-level veto the
+        // per-target condition cannot express on its own.
+        foreach (var target in ctx.Targets)
+        {
+            if (_litany.IsHolyDoorBroken(target))
+            {
+                _litany.ReportApplyResult(args.User, false);
+                return;
+            }
+        }
+
+        foreach (var target in ctx.Targets)
+        {
+            if (_litany.TryToggleLitanyDoor(target, entity.Owner))
+            {
+                _litany.ReportApplyResult(args.User, true);
+                return;
+            }
+        }
+
+        _litany.ReportApplyResult(args.User, false);
     }
 }
