@@ -1,5 +1,5 @@
-using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -9,39 +9,43 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// effect raises <see cref="LitanyForgeProduceEvent"/> on the forge; the server
 /// <c>CruciformForgeSystem</c> calls its own <c>TryProduce</c>.
 /// </summary>
-public sealed partial class LitanyMakeCruciformEffect : LitanyEffect
+public sealed partial class LitanyMakeCruciformEffect : LitanyEffect<LitanyMakeCruciformEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyMakeCruciformEffect()
     {
-        if (!Execute(system, context, true))
-        {
-            failure = "oxyd-litany-no-target";
-            return false;
-        }
-
-        failure = null;
-        return true;
+        Conditions =
+        [
+            new LitanyForgeReadyCondition { FailureId = "oxyd-litany-no-target" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-        => Execute(system, context, false);
+/// <summary>Raised once on the caster: the first forge that accepts starts its produce run.</summary>
+public sealed partial class LitanyMakeCruciformEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyMakeCruciformEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
 
-    private bool Execute(LitanyEffectSystem system, LitanyEffectContext context, bool validateOnly)
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyMakeCruciformEffect> args)
     {
-        foreach (var target in context.Targets)
+        var handled = false;
+        if (_litany.GetCastContext(args.User) is { } context)
         {
-            if (!system.IsLitanyForge(target))
-                continue;
+            foreach (var target in context.Targets)
+            {
+                if (!_litany.IsLitanyForge(target))
+                    continue;
 
-            var produce = new LitanyForgeProduceEvent(target, false, validateOnly);
-            system.RaiseOn(target, ref produce);
-            if (produce.Handled)
-                return true;
+                var produce = new LitanyForgeProduceEvent(target, false, false);
+                _litany.RaiseOn(target, ref produce);
+                if (produce.Handled)
+                {
+                    handled = true;
+                    break;
+                }
+            }
         }
 
-        return false;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }

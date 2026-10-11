@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -6,37 +7,37 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// Eris <c>rituals/construction.dm:45</c> (construction): the caster picks a blueprint,
 /// the ritual checks the materials lying on the tile in front, spends them and raises
 /// the structure. The server <c>NeoTheologyConstructionSystem</c> owns both halves, so
-/// <see cref="CanApply"/> raises a validate-only bridge event and
-/// <see cref="Apply"/> raises the real one.
+/// <see cref="LitanyManifestationReadyCondition"/> raises a validate-only bridge event and
+/// the handler raises the real one.
 /// </summary>
-public sealed partial class LitanyManifestationEffect : LitanyEffect
+public sealed partial class LitanyManifestationEffect : LitanyEffect<LitanyManifestationEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyManifestationEffect()
     {
-        // The first validation pass runs before the caster picks a blueprint. The
-        // post-choice pass (SubmitChoicesCore) revalidates with the selection.
-        if (context.SelectedBlueprint is not { } blueprint)
+        Conditions =
+        [
+            new LitanyManifestationReadyCondition(),
+        ];
+    }
+}
+
+/// <summary>Raised once on the caster: builds the picked blueprint on the tile in front.</summary>
+public sealed partial class LitanyManifestationEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyManifestationEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyManifestationEffect> args)
+    {
+        if (_litany.GetCastContext(args.User)?.SelectedBlueprint is not { } blueprint ||
+            args.User is not { } user)
         {
-            failure = null;
-            return true;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        var check = new LitanyManifestationEvent(context.User, blueprint, true, false);
-        system.RaiseOn(context.User, ref check);
-        failure = check.Failure;
-        return check.Handled;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        if (context.SelectedBlueprint is not { } blueprint)
-            return false;
-
-        var build = new LitanyManifestationEvent(context.User, blueprint, false, false);
-        system.RaiseOn(context.User, ref build);
-        return build.Handled;
+        var build = new LitanyManifestationEvent(user, blueprint, false, false);
+        _litany.RaiseOn(user, ref build);
+        _litany.ReportApplyResult(args.User, build.Handled);
     }
 }

@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.NeoTheology.Events;
+using Content.Shared.EntityEffects;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
@@ -7,24 +8,27 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// telecrystals remain in the hidden uplink. The server <c>NtUplinkSystem</c> owns the store
 /// and sends the count, or "no uplink" when the module is absent.
 /// </summary>
-public sealed partial class LitanyKnowledgeEffect : LitanyEffect
+public sealed partial class LitanyKnowledgeEffect : LitanyEffect<LitanyKnowledgeEffect>
 {
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyKnowledgeEffect()
     {
-        var probe = new LitanyUplinkReportEvent(context.User, true, false);
-        system.RaiseOn(context.User, ref probe);
-
-        failure = probe.Handled ? null : "oxyd-litany-uplink-none";
-        return probe.Handled;
+        Conditions =
+        [
+            new LitanyUplinkReadyCondition { FailureId = "oxyd-litany-uplink-none" },
+        ];
     }
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>Raised once on the caster: sends the uplink's telecrystal count.</summary>
+public sealed partial class LitanyKnowledgeEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyKnowledgeEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyKnowledgeEffect> args)
     {
-        var report = new LitanyUplinkReportEvent(context.User, false, false);
-        system.RaiseOn(context.User, ref report);
-        return report.Handled;
+        var report = new LitanyUplinkReportEvent(entity, false, false);
+        _litany.RaiseOn(entity, ref report);
+        _litany.ReportApplyResult(args.User, report.Handled);
     }
 }
