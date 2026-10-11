@@ -1,3 +1,4 @@
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
 
@@ -9,7 +10,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// participant, plus one extra per participant when the target carries the Channeling perk.
 /// Eris floors the payload at three participants and still completes the rite below it.
 /// </summary>
-public sealed partial class LitanyGroupStatEffect : LitanyCeremonyEffect
+public sealed partial class LitanyGroupStatEffect : LitanyCeremonyEffect<LitanyGroupStatEffect>
 {
     /// <summary>Eris <c>buff_value</c>.</summary>
     public const int BaseAmount = 3;
@@ -30,41 +31,52 @@ public sealed partial class LitanyGroupStatEffect : LitanyCeremonyEffect
 
     public override bool ConsumesMiraclePoint => true;
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
-    {
-        // Begin resolves no candidates: the followers join while the rite runs.
-        failure = null;
-        return true;
-    }
+    // Begin resolves no candidates: the followers join while the rite runs, so the effect
+    // carries no target conditions at all.
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>
+/// Cast-scoped ceremony payload: grants the rite's skill buff to every participant who does
+/// not reject holy influence. Below the floor it narrates the too-few line and still completes.
+/// </summary>
+public sealed partial class LitanyGroupStatEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyGroupStatEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyGroupStatEffect> args)
     {
-        if (context.CeremonyParticipants < MinimumParticipants)
+        if (_litany.GetCastContext(args.User) is not { } ctx)
         {
-            foreach (var target in context.Targets)
-                system.DeliverSocialNotice(target, Loc.GetString("oxyd-litany-ceremony-too-few"));
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
+
+        if (ctx.CeremonyParticipants < LitanyGroupStatEffect.MinimumParticipants)
+        {
+            foreach (var target in ctx.Targets)
+                _litany.DeliverSocialNotice(target, Loc.GetString("oxyd-litany-ceremony-too-few"));
 
             // Eris completes the rite and only skips the payload.
-            return true;
+            _litany.ReportApplyResult(args.User, true);
+            return;
         }
 
-        foreach (var target in context.Targets)
+        foreach (var target in ctx.Targets)
         {
-            var channeling = system.TryGetInstalledCruciform(target, out var cruciform) && cruciform.Channeling;
-            var amount = BaseAmount + PerParticipant * context.CeremonyParticipants;
+            var channeling = _litany.TryGetInstalledCruciform(target, out var cruciform) && cruciform.Channeling;
+            var amount = LitanyGroupStatEffect.BaseAmount +
+                         LitanyGroupStatEffect.PerParticipant * ctx.CeremonyParticipants;
             if (channeling)
-                amount += context.CeremonyParticipants;
+                amount += ctx.CeremonyParticipants;
 
-            if (system.RejectsHolyInfluence(target))
+            if (_litany.RejectsHolyInfluence(target))
                 continue;
 
-            system.TryAddTimedSkill(target, context.Litany.ID, Skill, amount);
-            system.DeliverSocialNotice(target, Loc.GetString(Message));
+            _litany.TryAddTimedSkill(target, ctx.Litany.ID, args.Effect.Skill, amount);
+            _litany.DeliverSocialNotice(target, Loc.GetString(args.Effect.Message));
         }
 
-        return true;
+        _litany.ReportApplyResult(args.User, true);
     }
 }
