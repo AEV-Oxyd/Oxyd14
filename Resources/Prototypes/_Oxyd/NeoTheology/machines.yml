@@ -31,6 +31,8 @@
   # plasteel/gold 100/sheet).
   - type: MaterialStorage
     storageLimit: 10050
+    # Static whitelist — exactly the materials the forge recipes consume.
+    materialWhiteList: [Biomatter, Plasteel, Gold]
 
 - type: entity
   parent: [ BaseMachinePowered ]

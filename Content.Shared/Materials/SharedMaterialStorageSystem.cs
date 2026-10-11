@@ -144,15 +144,7 @@ public abstract partial class SharedMaterialStorageSystem : EntitySystem
         if (ent.Comp.MaterialWhiteList == null)
             return true;
 
-        if (ent.Comp.MaterialWhiteList.Contains(material))
-            return true;
-
-        // OXYD: fall back to the live whitelist so materials needed only by
-        // disk-provided recipes are accepted without persisting them into
-        // MaterialWhiteList.
-        var ev = new GetMaterialWhitelistEvent(ent);
-        RaiseLocalEvent(ent, ref ev);
-        return ev.Whitelist.Contains(material);
+        return ent.Comp.MaterialWhiteList.Contains(material);
     }
 
     /// <summary>
