@@ -16,6 +16,7 @@ using Content.Shared.Body;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Systems;
 using Content.Shared.Chemistry.EntitySystems;
+using Content.Shared.Chemistry.Events;
 using Content.Shared.Damage;
 using Content.Shared.DragDrop;
 using Content.Shared.Interaction;
@@ -267,6 +268,19 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         if (drip.AttachedTo != null || !_transform.InRange(dripUid, patient, IvRange))
             return;
 
+        // Mirror the stock injector: inject blockers (jugsuits etc.) veto the jab
+        // before the do-after even starts.
+        var injectEv = new TargetBeforeInjectEvent(user, dripUid, patient);
+        RaiseLocalEvent(patient, ref injectEv);
+        if (injectEv.Cancelled)
+        {
+            var userMessage = Loc.GetString("injector-component-blocked-user");
+            var otherMessage = Loc.GetString("injector-component-blocked-other",
+                ("target", patient), ("user", user));
+            _popup.PopupEntity(userMessage, otherMessage, patient, user, PopupType.SmallCaution);
+            return;
+        }
+
         // Attach takes a do-after like an injector jab: it is not instant and the
         // patient can move away or be damaged out of it.
         _doAfter.TryStartDoAfter(new DoAfterArgs(EntityManager, user, drip.AttachDelay,
@@ -411,17 +425,29 @@ public sealed partial class OxydIvDripSystem : EntitySystem
             {
                 // Draw: pull blood out of the patient into the beaker. Capped by the
                 // beaker's free volume inside TryTransferSolution — nothing is lost.
-                _solutions.TryTransferSolution(beakerSolEnt.Value, blood, comp.TransferPerTick);
+                var before = blood.Volume;
+                if (!_solutions.TryTransferSolution(beakerSolEnt.Value, blood, comp.TransferPerTick))
+                    continue;
+                // TryTransferSolution refreshes the destination; the source entity
+                // needs its own UpdateChemicals for the client to see it shrink.
+                _solutions.UpdateChemicals(bloodEnt.Value);
+                var moved = before - blood.Volume;
+                _adminLogger.Add(LogType.ForceFeed, LogImpact.Low,
+                    $"{ToPrettyString(uid):using} drew {moved}u from {ToPrettyString(patient):target} " +
+                    $"into {ToPrettyString(beaker):used}");
             }
             else
             {
                 // Inject: push beaker contents into the bloodstream, capped by the
                 // bloodstream's free volume so overflow can't delete reagents.
+                var before = beakerSol.Volume;
                 if (!_solutions.TryTransferSolution(bloodEnt.Value, beakerSol, comp.TransferPerTick))
                     continue;
+                _solutions.UpdateChemicals(beakerSolEnt.Value);
+                var moved = before - beakerSol.Volume;
                 _adminLogger.Add(LogType.ForceFeed, LogImpact.Low,
                     $"{ToPrettyString(uid):using} injected {ToPrettyString(patient):target} " +
-                    $"with {comp.TransferPerTick}u from {ToPrettyString(beaker):used}");
+                    $"with {moved}u from {ToPrettyString(beaker):used}");
             }
         }
     }
