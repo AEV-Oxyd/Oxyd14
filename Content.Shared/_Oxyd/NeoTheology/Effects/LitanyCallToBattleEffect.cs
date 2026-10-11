@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Whitelist;
@@ -12,7 +13,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// ratio, for the litany's duration. Eris counts every human with an installed implant; the fork
 /// counts active bearers through the shared follower scan, narrowed by <see cref="BearerWhitelist"/>.
 /// </summary>
-public sealed partial class LitanyCallToBattleEffect : LitanyEffect
+public sealed partial class LitanyCallToBattleEffect : LitanyEffect<LitanyCallToBattleEffect>
 {
     /// <summary>Eris <c>count += 2</c> per bearer, the caster included.</summary>
     [DataField]
@@ -41,34 +42,44 @@ public sealed partial class LitanyCallToBattleEffect : LitanyEffect
         [NeoTheologySkills.Vigilance] = 0.5f,
     };
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+    public LitanyCallToBattleEffect()
     {
-        if (!system.CanReceiveSkillBuff(context.User))
+        Conditions =
+        [
+            // The caster must be a living mob that can carry skill buffs.
+            new LitanyCanReceiveSkillBuffCondition { FailureId = "oxyd-litany-no-target" },
+        ];
+    }
+}
+
+/// <summary>Cast-scoped: buffs the caster by the counted visible bearers.</summary>
+public sealed partial class LitanyCallToBattleEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyCallToBattleEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyCallToBattleEffect> args)
+    {
+        if (_litany.GetCastContext(args.User) is not { } ctx)
         {
-            failure = "oxyd-litany-no-target";
-            return false;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        failure = null;
-        return true;
-    }
+        var effect = args.Effect;
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
         // The caster bears an active cruciform to cast at all, so they count first.
-        var count = PointsPerBearer;
-        foreach (var bearer in system.CollectVisibleActiveFollowers(context.User, Radius))
+        var count = effect.PointsPerBearer;
+        foreach (var bearer in _litany.CollectVisibleActiveFollowers(entity.Owner, effect.Radius))
         {
-            if (BearerWhitelist != null && !system.IsWhitelisted(BearerWhitelist, bearer))
+            if (effect.BearerWhitelist != null && !_litany.IsWhitelisted(effect.BearerWhitelist, bearer))
                 continue;
 
-            count += PointsPerBearer;
+            count += effect.PointsPerBearer;
         }
 
-        var amounts = SkillRatios.ToDictionary(kv => kv.Key, kv => (int)(count * kv.Value));
-        return system.TryApplySkillBuff(context.User, context.Litany.ID, amounts, context.Litany.EffectDuration);
+        var amounts = effect.SkillRatios.ToDictionary(kv => kv.Key, kv => (int)(count * kv.Value));
+        _litany.ReportApplyResult(args.User,
+            _litany.TryApplySkillBuff(entity.Owner, ctx.Litany.ID, amounts, ctx.Litany.EffectDuration));
     }
 }
