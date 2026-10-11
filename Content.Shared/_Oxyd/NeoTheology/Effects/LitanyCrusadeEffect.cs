@@ -1,3 +1,4 @@
+using Content.Shared.EntityEffects;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Robust.Shared.Prototypes;
 
@@ -9,7 +10,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Effects;
 /// <c>known_rituals</c>; the fork grants the <c>OxydLitanyCrusader</c> set instead. Eris also
 /// flips the world crusade flag on faction items; the fork has no equivalent (named divergence).
 /// </summary>
-public sealed partial class LitanyCrusadeEffect : LitanyCeremonyEffect
+public sealed partial class LitanyCrusadeEffect : LitanyCeremonyEffect<LitanyCrusadeEffect>
 {
     /// <summary>Eris <c>success()</c> floor for teaching the crusader litanies.</summary>
     public const int MinimumParticipants = 6;
@@ -17,31 +18,45 @@ public sealed partial class LitanyCrusadeEffect : LitanyCeremonyEffect
     /// <summary>The set the rite reveals: Eternal Brotherhood, Call to Battle, Searing Revelation.</summary>
     public static readonly ProtoId<LitanySetPrototype> CrusaderSet = "OxydLitanyCrusader";
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
-    {
-        // Begin resolves no candidates: the followers join while the rite runs.
-        failure = null;
-        return true;
-    }
+    // Begin resolves no candidates: the followers join while the rite runs, so the effect
+    // carries no target conditions at all.
+}
 
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
+/// <summary>
+/// Cast-scoped: with enough participants, fires the crusade world flag and grants the
+/// crusader set to every participant bearer.
+/// </summary>
+public sealed partial class LitanyCrusadeEntityEffectSystem
+    : EntityEffectSystem<TransformComponent, LitanyCrusadeEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<TransformComponent> entity, ref EntityEffectEvent<LitanyCrusadeEffect> args)
     {
-        if (context.CeremonyParticipants < MinimumParticipants)
-            return true;
+        if (_litany.GetCastContext(args.User) is not { } ctx)
+        {
+            _litany.ReportApplyResult(args.User, false);
+            return;
+        }
+
+        if (ctx.CeremonyParticipants < LitanyCrusadeEffect.MinimumParticipants)
+        {
+            // Eris completes the rite and only skips the payload below the floor.
+            _litany.ReportApplyResult(args.User, true);
+            return;
+        }
 
         var crusade = new NeoTheologyCrusadeEvent();
-        system.RaiseOn(context.User, ref crusade);
+        _litany.RaiseOn(entity.Owner, ref crusade);
+
         var handled = false;
-        foreach (var target in context.Targets)
+        foreach (var target in ctx.Targets)
         {
-            var grant = new LitanyGrantLitanySetEvent(target, CrusaderSet, false);
-            system.RaiseOn(target, ref grant);
+            var grant = new LitanyGrantLitanySetEvent(target, LitanyCrusadeEffect.CrusaderSet, false);
+            _litany.RaiseOn(target, ref grant);
             handled |= grant.Handled;
         }
 
-        return handled;
+        _litany.ReportApplyResult(args.User, handled);
     }
 }
