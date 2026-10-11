@@ -407,7 +407,11 @@ public sealed partial class LitanySystem
             revision = bearer.UiRevision;
             holiness = _cruciform.GetHoliness(viewer);
             cap = _cruciform.GetMaximumHoliness(viewer);
-            regen = _cruciform.GetRegenerationPerSecond(viewer);
+            // The client extrapolates holiness from this rate — zero it when
+            // the server wouldn't accrue (inactive implant or dead bearer).
+            regen = active && !_mobState.IsDead(viewer)
+                ? _cruciform.GetRegenerationPerSecond(viewer)
+                : 0d;
             profile = cruciformComp.Profile;
 
             if (!string.IsNullOrEmpty(bearer.PendingRequestId) &&
