@@ -88,6 +88,8 @@ public sealed class ArmamentsPrinterTest : GameTest
     [TestCase("OxydNtArmamentRitualBook", "OxydNtBible")]
     [TestCase("OxydNtArmamentEnergyCrossbow", "WeaponEnergyCrossbow")]
     [TestCase("OxydNtArmamentHolyGrenade", "OxydNtHolyHandGrenade")]
+    [TestCase("OxydNtArmamentLightfall", "OxydNtLightfall")]
+    [TestCase("OxydNtArmamentDominion", "OxydNtDominion")]
     public async Task PurchasedDiskUnlocksExactlyOneLathePrint(string armamentId, string result)
     {
         var map = await Pair.CreateTestMap();
@@ -133,6 +135,45 @@ public sealed class ArmamentsPrinterTest : GameTest
             Assert.That(system.GetAvailableRecipes(lathe, component), Does.Not.Contain(new ProtoId<LatheRecipePrototype>(recipe.ID)));
             Assert.That(SComp<MaterialStorageComponent>(lathe).MaterialWhiteList, Is.EquivalentTo(originalMaterials));
         });
+    }
+
+    /// <summary>
+    /// Coverage guard: every material of every recipe carried on a purchasable
+    /// armament's disk must be inside OxydLathe's static whitelist — otherwise a
+    /// player pays points for a disk the lathe can never feed. Catches disks
+    /// added without extending <see cref="OxydStaticMaterialWhitelistComponent.Recipes"/>.
+    /// </summary>
+    [Test]
+    public void EveryArmamentDiskRecipeIsPrintableOnOxydLathe()
+    {
+        var latheProto = SProtoMan.Index<EntityPrototype>("OxydLathe");
+        Assert.That(latheProto.TryComp<OxydStaticMaterialWhitelistComponent>(out var staticWl, SEntMan.ComponentFactory), Is.True);
+        var accepted = new HashSet<ProtoId<MaterialPrototype>>();
+        foreach (var recipeId in staticWl!.Recipes)
+        {
+            foreach (var material in SProtoMan.Index(recipeId).Materials.Keys)
+                accepted.Add(material);
+        }
+
+        foreach (var armament in SProtoMan.EnumeratePrototypes<ArmamentPrototype>())
+        {
+            var diskProto = SProtoMan.Index<EntityPrototype>(armament.Path);
+            if (!diskProto.TryComp<DigitalDataHolderComponent>(out var holder, SEntMan.ComponentFactory))
+                continue;
+            foreach (var file in holder.files)
+            {
+                if (file is not DigitalDataLathe latheFile)
+                    continue;
+                foreach (var recipeId in latheFile.recipes)
+                {
+                    foreach (var material in SProtoMan.Index(recipeId).Materials.Keys)
+                    {
+                        Assert.That(accepted, Does.Contain(material),
+                            $"armament {armament.ID} disk recipe {recipeId} needs {material}, which OxydLathe rejects");
+                    }
+                }
+            }
+        }
     }
 
     private EntityUid SpawnEye(EntityCoordinates coords)

@@ -124,15 +124,15 @@ public sealed partial class LitanySystem : EntitySystem
         GlobalState.Cooldowns.Clear();
     }
 
-    /// <summary>
-    /// Integration-test helper so disconnected fixtures can exercise player-only
-    /// cast paths without a real <see cref="ActorComponent"/> session.
-    /// </summary>
     /// <summary>Armed only via the internal testing API — an admin <c>addcomp</c> of
     /// <see cref="LitanyTestingActorComponent"/> alone cannot fake a player cast.
     /// </summary>
     private bool _testingActorsArmed;
 
+    /// <summary>
+    /// Integration-test helper so disconnected fixtures can exercise player-only
+    /// cast paths without a real <see cref="ActorComponent"/> session.
+    /// </summary>
     internal void TestingTreatAsActor(EntityUid uid)
     {
         _testingActorsArmed = true;

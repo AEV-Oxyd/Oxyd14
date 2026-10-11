@@ -1,15 +1,18 @@
 using System.Linq;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Materials;
+using Robust.Shared.Prototypes;
 
-namespace Content.Server._Oxyd.NeoTheology.Machines;
+namespace Content.Shared._Oxyd.NeoTheology.Machines;
 
 /// <summary>
-/// Merges <see cref="OxydStaticMaterialWhitelistComponent.Materials"/> into the
-/// machine's material whitelist whenever it is rebuilt.
+/// Merges the material union of <see cref="OxydStaticMaterialWhitelistComponent.Recipes"/>
+/// into the machine's material whitelist whenever it is rebuilt.
 /// </summary>
 public sealed partial class OxydStaticMaterialWhitelistSystem : EntitySystem
 {
+    [Dependency] private IPrototypeManager _proto = default!;
+
     public override void Initialize()
     {
         SubscribeLocalEvent<OxydStaticMaterialWhitelistComponent, GetMaterialWhitelistEvent>(OnGetWhitelist);
@@ -19,6 +22,11 @@ public sealed partial class OxydStaticMaterialWhitelistSystem : EntitySystem
     {
         if (args.Storage != uid)
             return;
-        args.Whitelist = args.Whitelist.Union(comp.Materials).ToList();
+        foreach (var id in comp.Recipes)
+        {
+            if (!_proto.Resolve(id, out var recipe))
+                continue;
+            args.Whitelist = args.Whitelist.Union(recipe.Materials.Keys).ToList();
+        }
     }
 }

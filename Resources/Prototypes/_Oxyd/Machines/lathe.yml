@@ -14,9 +14,10 @@
           components:
             - DigitalDataHolder
       staticPacks: []
-    # Union of the armaments disk-recipe materials (ritual book, energy
-    # crossbow, holy grenade). Lathes rebuild MaterialWhiteList from
-    # GetMaterialWhitelistEvent at MapInit, so a plain materialWhiteList
-    # would be overwritten — this merges through the event instead.
+    # Recipes whose material union this lathe accepts — every armaments disk
+    # recipe. Lathes rebuild MaterialWhiteList from GetMaterialWhitelistEvent
+    # at MapInit, so a plain materialWhiteList would be overwritten; this
+    # merges through the event instead, keyed by recipe so material tweaks
+    # can't drift out of sync.
     - type: OxydStaticMaterialWhitelist
-      materials: [Cloth, Plastic, Steel, Glass, Gold, Plasma]
+      recipes: [OxydNtRitualBookRecipe, OxydNtEnergyCrossbowRecipe, OxydNtHolyGrenadeRecipe, OxydNtLightfallRecipe, OxydNtDominionRecipe]
