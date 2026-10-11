@@ -259,6 +259,24 @@ public abstract partial class SharedOxydGunSystem
     }
 
     [SubscribeLocalEvent]
+    public void ChamberLoadAmmo(Entity<OxydChamberComponent> gun, ref GunTryLoadAmmoEvent args)
+    {
+        if (args.handled)
+            return;
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (!conts.GetContainer(gun, data.store, out var cont))
+                continue;
+            if (!whitelist.IsWhitelistPass(data.whitelist, args.ammo))
+                continue;
+            var ammoR = args.ammo;
+            args.handled = conts.insertEntity(gun, cont, ref ammoR, null, args.prediction);
+            if (args.handled)
+                return;
+        }
+    }
+
+    [SubscribeLocalEvent]
     public void ChamberHasAmmo(Entity<OxydChamberComponent> gun, ref GunHasAmmoEvent args)
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
@@ -266,10 +284,6 @@ public abstract partial class SharedOxydGunSystem
         if (!conts.GetContainer(gun, data.store, out var cont))
             return;
         if (!TryComp<OxydGunComponent>(gun, out var gcomp)) 
-            return;
-        if (FH.hasAny(data.operatingMode, COM.Boltable) && !gcomp.bolted)
-            return;
-        if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
             return;
         args.hasAmmo = cont.contained.Any();
     }
@@ -307,11 +321,11 @@ public abstract partial class SharedOxydGunSystem
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
             return;
-        if (!conts.GetContainer(gun, data.store, out var cont))
-            return;
         if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
-        if(FH.hasAll(data.operatingMode, COM.Boltable & COM.BoltClosedAutoload))
+        if (FH.hasAll(data.operatingMode, COM.Boltable & COM.BoltClosedAutoload))
+            gcomp.bolted = true;
+        
     }
 
 
