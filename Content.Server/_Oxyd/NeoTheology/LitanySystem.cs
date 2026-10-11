@@ -108,18 +108,18 @@ public sealed partial class LitanySystem : EntitySystem
     /// Test helper: force a litany ID to be treated as available without shipping
     /// <c>enabled: true</c> in production YAML. Dependency-gated rows stay unavailable.
     /// </summary>
-    public void TestingSetAvailabilityOverride(string litanyId, bool available)
+    internal void TestingSetAvailabilityOverride(string litanyId, bool available)
     {
         GlobalState.AvailabilityOverrides[litanyId] = available;
     }
 
-    public void TestingClearAvailabilityOverrides()
+    internal void TestingClearAvailabilityOverrides()
     {
         GlobalState.AvailabilityOverrides.Clear();
     }
 
     /// <summary>Test helper: drops round-global cooldowns so recast contracts can be exercised.</summary>
-    public void TestingClearCooldowns()
+    internal void TestingClearCooldowns()
     {
         GlobalState.Cooldowns.Clear();
     }
@@ -128,12 +128,12 @@ public sealed partial class LitanySystem : EntitySystem
     /// Integration-test helper so disconnected fixtures can exercise player-only
     /// cast paths without a real <see cref="ActorComponent"/> session.
     /// </summary>
-    public void TestingTreatAsActor(EntityUid uid)
+    internal void TestingTreatAsActor(EntityUid uid)
     {
         EnsureComp<LitanyTestingActorComponent>(uid);
     }
 
-    public void TestingClearActors()
+    internal void TestingClearActors()
     {
         var query = EntityQueryEnumerator<LitanyTestingActorComponent>();
         while (query.MoveNext(out var uid, out _))
@@ -145,7 +145,7 @@ public sealed partial class LitanySystem : EntitySystem
         return HasComp<ActorComponent>(uid) || HasComp<LitanyTestingActorComponent>(uid);
     }
 
-    public bool TestingTryGetPending(string requestId, [NotNullWhen(true)] out PendingLitanyCast? cast)
+    internal bool TestingTryGetPending(string requestId, [NotNullWhen(true)] out PendingLitanyCast? cast)
     {
         var query = EntityQueryEnumerator<LitanyPendingCastComponent>();
         while (query.MoveNext(out _, out var pending))
@@ -161,7 +161,7 @@ public sealed partial class LitanySystem : EntitySystem
         return false;
     }
 
-    public int TestingPendingCount
+    internal int TestingPendingCount
     {
         get
         {

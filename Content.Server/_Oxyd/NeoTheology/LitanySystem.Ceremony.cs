@@ -344,7 +344,7 @@ public sealed partial class LitanySystem
     }
 
     /// <summary>Test helper: the live rite started by <paramref name="starter"/>.</summary>
-    public bool TestingTryGetCeremony(EntityUid starter, out ActiveCeremonyComponent? ceremony)
+    internal bool TestingTryGetCeremony(EntityUid starter, out ActiveCeremonyComponent? ceremony)
     {
         return TryComp(starter, out ceremony);
     }

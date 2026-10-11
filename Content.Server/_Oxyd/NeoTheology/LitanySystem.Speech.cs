@@ -8,7 +8,7 @@ namespace Content.Server._Oxyd.NeoTheology;
 
 public sealed partial class LitanySystem
 {
-    public void TestingHandleSpeech(EntitySpokeEvent args) => OnSpeechAccepted(args);
+    internal void TestingHandleSpeech(EntitySpokeEvent args) => OnSpeechAccepted(args);
 
     [SubscribeLocalEvent]
     private void OnSpeechAccepted(EntitySpokeEvent args)

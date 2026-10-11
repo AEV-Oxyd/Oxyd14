@@ -39,8 +39,8 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
     [Dependency] private PlantHolderSystem _plantHolder = default!;
     [Dependency] private SharedTransformSystem _xform = default!;
 
-    private const string BruteGroup = "Brute";
-    private const string BurnGroup = "Burn";
+    private static readonly ProtoId<DamageGroupPrototype> BruteGroup = "Brute";
+    private static readonly ProtoId<DamageGroupPrototype> BurnGroup = "Burn";
 
     /// <summary>Applies the aura to the visible targets from the bearer's view tick.</summary>
     [SubscribeLocalEvent]
@@ -200,6 +200,6 @@ public sealed partial class CruciformUpgradeBehaviorSystem : EntitySystem
     }
 
     /// <summary>Read-only weed reading used by tests to observe the aura output.</summary>
-    public float TestingGetWeedLevel(EntityUid tray)
+    internal float TestingGetWeedLevel(EntityUid tray)
         => TryComp<PlantTrayComponent>(tray, out var component) ? component.WeedLevel : 0f;
 }

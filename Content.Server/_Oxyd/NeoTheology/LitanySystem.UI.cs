@@ -75,9 +75,9 @@ public sealed partial class LitanySystem
             busyRequestId);
     }
 
-    public int TestingSnapshotSendCount { get; private set; }
+    internal int TestingSnapshotSendCount { get; private set; }
 
-    public bool TestingTryGetLastSnapshot(EntityUid viewer, [NotNullWhen(true)] out LitanyViewerSnapshotMessage? snapshot)
+    internal bool TestingTryGetLastSnapshot(EntityUid viewer, [NotNullWhen(true)] out LitanyViewerSnapshotMessage? snapshot)
     {
         if (TryComp(viewer, out LitanyTestingSnapshotComponent? capture) && capture.Last is { } last)
         {
@@ -89,7 +89,7 @@ public sealed partial class LitanySystem
         return false;
     }
 
-    public void TestingClearSnapshotCapture()
+    internal void TestingClearSnapshotCapture()
     {
         var query = EntityQueryEnumerator<LitanyTestingSnapshotComponent>();
         while (query.MoveNext(out var uid, out _))
@@ -101,7 +101,7 @@ public sealed partial class LitanySystem
     /// Builds the private viewer snapshot for one actor without requiring an open BUI.
     /// Integration tests use this to assert two-viewer privacy without a connected client.
     /// </summary>
-    public LitanyViewerSnapshotMessage TestingBuildViewerSnapshot(EntityUid viewer)
+    internal LitanyViewerSnapshotMessage TestingBuildViewerSnapshot(EntityUid viewer)
     {
         return BuildViewerSnapshot(viewer);
     }
@@ -110,7 +110,7 @@ public sealed partial class LitanySystem
     /// Opens the book UI for <paramref name="actor"/> (server-side) and sends the
     /// private snapshot. Used by Packet A tests and stretch closed/drop coverage.
     /// </summary>
-    public bool TestingOpenBookUi(EntityUid book, EntityUid actor)
+    internal bool TestingOpenBookUi(EntityUid book, EntityUid actor)
     {
         if (!HasComp<LitanyBookComponent>(book))
             return false;
@@ -123,7 +123,7 @@ public sealed partial class LitanySystem
     /// Simulates a begin message attributed to <paramref name="actor"/>. Rejects
     /// forged actors who do not have this book's UI open — no debit or pending cast.
     /// </summary>
-    public LitanyActionResult TestingHandleBeginMessage(EntityUid book, EntityUid actor, BeginLitanyMessage message)
+    internal LitanyActionResult TestingHandleBeginMessage(EntityUid book, EntityUid actor, BeginLitanyMessage message)
     {
         return HandleBeginLitany(book, actor, message);
     }
@@ -229,7 +229,7 @@ public sealed partial class LitanySystem
     }
 
     /// <summary>Test entry that mirrors the BUI choice submission without a connected client.</summary>
-    public LitanyActionResult TestingSubmitChoices(EntityUid actor, string requestId, List<string> tokens,
+    internal LitanyActionResult TestingSubmitChoices(EntityUid actor, string requestId, List<string> tokens,
         string? plainText = null)
     {
         var result = SubmitChoicesCore(actor, requestId, tokens, recipeId: null, plainText, expectBook: null);

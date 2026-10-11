@@ -29,7 +29,7 @@ public sealed partial class LitanyRateLimitComponent : Component
 /// it stays component state; the entity is spawned lazily and deleted on round cleanup.
 /// </summary>
 [RegisterComponent]
-public sealed partial class LitanyGlobalStateComponent : Component
+internal sealed partial class LitanyGlobalStateComponent : Component
 {
     public Dictionary<string, TimeSpan> Cooldowns = new(StringComparer.Ordinal);
     public Dictionary<string, bool> AvailabilityOverrides = new(StringComparer.Ordinal);
@@ -40,11 +40,11 @@ public sealed partial class LitanyGlobalStateComponent : Component
 /// body so player-only cast paths treat it as an actor.
 /// </summary>
 [RegisterComponent]
-public sealed partial class LitanyTestingActorComponent : Component;
+internal sealed partial class LitanyTestingActorComponent : Component;
 
 /// <summary>Test-only: captures the last actor-targeted snapshot for this viewer.</summary>
 [RegisterComponent]
-public sealed partial class LitanyTestingSnapshotComponent : Component
+internal sealed partial class LitanyTestingSnapshotComponent : Component
 {
     public LitanyViewerSnapshotMessage? Last;
 }
