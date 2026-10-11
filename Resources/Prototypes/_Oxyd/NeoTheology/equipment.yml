@@ -1,0 +1,149 @@
+# Source NT products on native weapon/body systems. Fire modes/projectiles are explicit SS14 adaptations.
+- type: entity
+  parent: CombatKnife
+  id: OxydNtRitualBlade
+  name: ritual blade
+  description: A sanctified NeoTheology blade for altar procedures and field work.
+
+- type: entity
+  parent: WeaponLaserGun
+  id: OxydNtLightfall
+  name: NT LG "Lightfall"
+  description: A NeoTheology laser carbine. Deadly and radiant, like the ire of God it represents.
+  components:
+  - type: BatteryAmmoProvider
+    proto: RedLaser
+    fireCost: 50
+  - type: StaticPrice
+    price: 2500
+
+- type: entity
+  parent: WeaponLaserGun
+  id: OxydNtHalicon
+  name: NT IR "Halicon"
+  description: A NeoTheology ion rifle that disables mechanical threats.
+  components:
+  - type: BatteryAmmoProvider
+    proto: OxydNtIonBolt
+    fireCost: 200
+  - type: StaticPrice
+    price: 3000
+
+- type: entity
+  parent: BulletGrenadeEMP
+  id: OxydNtIonBolt
+  name: ion bolt
+  categories: [HideSpawnMenu]
+  components:
+  - type: EmpOnTrigger
+    range: 2
+    energyConsumption: 50000
+    disableDuration: 10
+
+- type: entity
+  parent: WeaponPulseCarbine
+  id: OxydNtDominion
+  name: NT PR "Dominion"
+  description: A NeoTheology plasma rifle, adapted to native pulse-weapon mechanics.
+  components:
+  - type: StaticPrice
+    price: 4500
+
+- type: entity
+  parent: WeaponPulseRifle
+  id: OxydNtPurger
+  name: NT PR "Purger"
+  description: A NeoTheology plasma cannon, adapted to native pulse-weapon mechanics.
+  components:
+  - type: StaticPrice
+    price: 4500
+
+- type: entity
+  parent: WeaponEnergyCrossbow
+  id: OxydNtNemesis
+  name: S EC "Nemesis"
+  description: A discontinued Syndicate miniature energy crossbow.
+  components:
+  - type: StaticPrice
+    price: 2500
+
+- type: entity
+  parent: WeaponEnergyCrossbow
+  id: OxydNtThemis
+  name: NT EC "Themis"
+  description: A NeoTheology infiltration-team energy crossbow.
+  components:
+  - type: Item
+    size: Large
+  - type: StaticPrice
+    price: 4000
+
+- type: entity
+  parent: WeaponLaserCannon
+  id: OxydNtValkyrie
+  name: NT MER "Valkyrie"
+  description: A NeoTheology marksman rifle, adapted to native heavy laser mechanics.
+  components:
+  - type: Gun
+    fireRate: 0.285714
+  - type: BatteryAmmoProvider
+    proto: RedHeavyLaser
+    fireCost: 300
+  - type: StaticPrice
+    price: 5000
+
+- type: entity
+  parent: OxydNtPreacherAscensionKit
+  id: OxydNtObeyKit
+  name: Obey core upgrade
+  description: An optional core upgrade that binds a soul to its installer's Inquisition laws after cruciform activation.
+  components:
+  - type: CruciformCoreUpgrade
+    module: OxydNtModuleObey
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtOddity
+  name: High Inquisitor's Seal
+  description: An honorary badge given to the most devout by the High Inquisitor.
+  components:
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/oddity.rsi
+    state: nt_seal
+  - type: Oddity
+    giving: {Cog: 12, Vig: 12, Rob: 8}
+  - type: NeoTheologySeal
+  - type: StaticPrice
+    price: 8000
+
+- type: entity
+  parent: [BaseSword, BaseItem]
+  id: OxydNtSwordOfTruth
+  name: Sword of Truth
+  description: A sword of unknown alloy, humming with an unknown power source. Wield and activate to unleash holy light.
+  components:
+  - type: SwordOfTruth
+  - type: NeoTheologyFactionItem
+  - type: Wieldable
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/faction_items.rsi
+    state: nt_sword_truth
+  - type: MeleeWeapon
+    damage:
+      types: {Slash: 30}
+  - type: StaticPrice
+    price: 20000
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtLastShelter
+  name: Last Shelter
+  description: A scanner that recovers a loose lost cruciform once every fifteen minutes. It never removes an implanted or contained cruciform.
+  components:
+  - type: LastShelter
+  - type: NeoTheologyFactionItem
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/faction_items.rsi
+    state: last_shelter
+  - type: StaticPrice
+    price: 20000

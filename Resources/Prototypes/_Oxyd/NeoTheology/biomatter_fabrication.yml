@@ -1,0 +1,169 @@
+# Native SS14 material-storage/lathe counterparts to the Eris liquid canister/solidifier/bioprinter.
+# Bulk biomatter uses the existing Biomatter material, not a second incompatible biomass currency.
+- type: entity
+  parent: BaseItem
+  id: OxydNtBiomatterCanister
+  name: biomatter canister
+  description: A bulk biomatter reservoir. Use on a machine to fill it, or release sheets with the alternative verb.
+  components:
+  - type: BiomatterReservoir
+  - type: MaterialStorage
+    materialWhiteList: [Biomatter]
+    storageLimit: 1000
+  - type: Item
+    size: Large
+  - type: Sprite
+    sprite: Objects/Specific/Chemistry/jug.rsi
+    state: icon_empty
+
+- type: entity
+  parent: OxydNtBiomatterCanister
+  id: OxydNtBiomatterCanisterLarge
+  name: large biomatter canister
+  components:
+  - type: MaterialStorage
+    storageLimit: 2000
+  - type: Item
+    size: Huge
+
+- type: entity
+  parent: Biogenerator
+  id: OxydNtBioprinter
+  name: biomatter printer
+  description: Fabricates organic materials and NeoTheology upgrade kits from biomatter.
+  components:
+  - type: MaterialStorage
+    materialWhiteList: [Biomatter, Gold, Plastic, Plasteel]
+  - type: ProduceMaterialExtractor
+    extractedMaterial: Biomatter
+  - type: Lathe
+    staticPacks: [OxydNtBioprinterRecipes]
+    dynamicPacks: []
+  - type: EmagLatheRecipes
+    emagStaticPacks: []
+
+- type: entity
+  parent: OxydNtBioprinter
+  id: OxydNtBiomatterSolidifier
+  name: biomatter solidifier
+  description: Converts bulk biomatter into portable biomatter sheets.
+  components:
+  - type: MaterialStorage
+    materialWhiteList: [Biomatter]
+  - type: Lathe
+    staticPacks: [OxydNtSolidifierRecipes]
+
+- type: latheRecipePack
+  id: OxydNtBioprinterRecipes
+  recipes:
+  - OxydNtPaperRecipe
+  - OxydNtClothRecipe
+  - OxydNtAscensionKitRecipe
+  - OxydNtObeyKitRecipe
+  - OxydNtNaturesBlessingRecipe
+  - OxydNtFaithsShieldRecipe
+  - OxydNtCleansingPresenceRecipe
+  - OxydNtMartyrGiftRecipe
+  - OxydNtWrathOfGodRecipe
+  - OxydNtSpeedOfTheChosenRecipe
+
+- type: latheRecipePack
+  id: OxydNtSolidifierRecipes
+  recipes: [OxydNtBiomatterSheetRecipe]
+
+- type: latheRecipe
+  id: OxydNtBiomatterSheetRecipe
+  result: OxydNtBiomatterStack1
+  categories: [Materials]
+  completetime: 1
+  materials:
+    Biomatter: 1
+
+- type: latheRecipe
+  id: OxydNtPaperRecipe
+  result: Paper
+  categories: [Materials]
+  completetime: 1
+  materials:
+    Biomatter: 2
+
+- type: latheRecipe
+  id: OxydNtClothRecipe
+  result: MaterialCloth1
+  categories: [Materials]
+  completetime: 1
+  materials:
+    Biomatter: 10
+
+# Ascension-kit fabrication is an explicit native acquisition path; costs are local balance data.
+- type: latheRecipe
+  id: OxydNtAscensionKitRecipe
+  result: OxydNtPreacherAscensionKit
+  categories: [Tools]
+  completetime: 10
+  materials:
+    Biomatter: 50
+    Gold: 500
+    Plastic: 200
+
+- type: latheRecipe
+  id: OxydNtNaturesBlessingRecipe
+  result: OxydNtUpgradeNaturesBlessing
+  categories: [Tools]
+  completetime: 5
+  materials:
+    Biomatter: 100
+    Gold: 500
+    Plasteel: 500
+
+- type: latheRecipe
+  parent: OxydNtNaturesBlessingRecipe
+  id: OxydNtFaithsShieldRecipe
+  result: OxydNtUpgradeFaithsShield
+  materials:
+    Biomatter: 50
+    Gold: 500
+    Plasteel: 1000
+
+- type: latheRecipe
+  parent: OxydNtNaturesBlessingRecipe
+  id: OxydNtCleansingPresenceRecipe
+  result: OxydNtUpgradeCleansingPresence
+  materials:
+    Biomatter: 50
+    Gold: 500
+    Plasteel: 500
+
+- type: latheRecipe
+  parent: OxydNtNaturesBlessingRecipe
+  id: OxydNtMartyrGiftRecipe
+  result: OxydNtUpgradeMartyrGift
+  materials:
+    Biomatter: 50
+    Gold: 500
+    Plasteel: 500
+    Plasma: 500
+
+- type: latheRecipe
+  parent: OxydNtNaturesBlessingRecipe
+  id: OxydNtWrathOfGodRecipe
+  result: OxydNtUpgradeWrathOfGod
+  materials:
+    Biomatter: 50
+    Gold: 500
+    Plasteel: 1500
+
+- type: latheRecipe
+  parent: OxydNtNaturesBlessingRecipe
+  id: OxydNtSpeedOfTheChosenRecipe
+  result: OxydNtUpgradeSpeedOfTheChosen
+  materials:
+    Biomatter: 120
+    Gold: 500
+    Plasteel: 500
+
+# Local fabrication cost for the optional source Obey core upgrade.
+- type: latheRecipe
+  parent: OxydNtAscensionKitRecipe
+  id: OxydNtObeyKitRecipe
+  result: OxydNtObeyKit

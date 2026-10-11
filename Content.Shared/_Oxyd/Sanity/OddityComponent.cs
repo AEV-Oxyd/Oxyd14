@@ -9,5 +9,6 @@ namespace Content.Server._Oxyd.SanityInsightAndResting;
 [RegisterComponent]
 public sealed partial class OddityComponent : Component
 {
+    [DataField]
     public Dictionary<ProtoId<SkillPrototype>, int> giving =  new Dictionary<ProtoId<SkillPrototype>, int>();
 }

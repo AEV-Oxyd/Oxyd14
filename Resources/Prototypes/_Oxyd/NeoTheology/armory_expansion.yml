@@ -1,0 +1,92 @@
+# Source armaments.dm: finished Themis/Purger/grenade products and single-use weapon disks.
+- type: oxydArmament
+  id: OxydNtArmamentThemis
+  name: oxyd-armament-themis
+  path: OxydNtThemis
+  cost: 125
+  minCost: 50
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentPurger
+  name: oxyd-armament-purger
+  path: OxydNtPurger
+  cost: 325
+  minCost: 200
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentGrenade
+  name: oxyd-armament-holy-grenade
+  path: OxydNtHolyHandGrenade
+  cost: 275
+  minCost: 200
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentLightfall
+  name: oxyd-armament-lightfall
+  path: OxydNtLightfallDesignDisk
+  cost: 275
+  minCost: 200
+  discountIncrease: 25
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentDominion
+  name: oxyd-armament-dominion
+  path: OxydNtDominionDesignDisk
+  cost: 225
+  minCost: 125
+  discountIncrease: 25
+  maxPointsIncrease: 25
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydNtLightfallDesignDisk
+  name: Lightfall design disk
+  description: A single-use NeoTheology laser-carbine license.
+  components:
+  - type: Sprite
+    state: neotheology
+  - type: DigitalDataHolder
+    files:
+    - !type:DigitalDataLathe
+      name: Lightfall
+      uses: 1
+      recipes: [OxydNtLightfallRecipe]
+
+- type: entity
+  parent: OxydNtLightfallDesignDisk
+  id: OxydNtDominionDesignDisk
+  name: Dominion design disk
+  components:
+  - type: DigitalDataHolder
+    files:
+    - !type:DigitalDataLathe
+      name: Dominion
+      uses: 1
+      recipes: [OxydNtDominionRecipe]
+
+- type: latheRecipe
+  parent: BaseWeaponRecipe
+  id: OxydNtLightfallRecipe
+  result: OxydNtLightfall
+  pointUsage: 1
+  materials:
+    Plasteel: 2000
+    Wood: 800
+    Silver: 500
+
+- type: latheRecipe
+  parent: OxydNtLightfallRecipe
+  id: OxydNtDominionRecipe
+  result: OxydNtDominion
+  materials:
+    Plasteel: 2000
+    Wood: 800
+    Silver: 700
+    Uranium: 800

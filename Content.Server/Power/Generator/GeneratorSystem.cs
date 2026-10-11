@@ -201,6 +201,21 @@ public sealed partial class GeneratorSystem : SharedGeneratorSystem
         Dirty(uid, generator);
     }
 
+    // OXYD: NeoTheology biogenerator holy-fuel tuning writes target power through this.
+    /// <summary>
+    /// Sets the generator's target power in watts, clamped to its configured range.
+    /// <see cref="FuelGeneratorComponent"/> restricts writes to this system, so systems that
+    /// derate a generator (fouling, damage) go through here instead of the UI message.
+    /// </summary>
+    public void SetFuelGeneratorTargetPower(EntityUid uid, float targetPower, FuelGeneratorComponent? generator = null)
+    {
+        if (!Resolve(uid, ref generator))
+            return;
+
+        generator.TargetPower = Math.Clamp(targetPower, generator.MinTargetPower, generator.MaxTargetPower);
+        Dirty(uid, generator);
+    }
+
     public override void Update(float frameTime)
     {
         var query = EntityQueryEnumerator<FuelGeneratorComponent, PowerSupplierComponent>();

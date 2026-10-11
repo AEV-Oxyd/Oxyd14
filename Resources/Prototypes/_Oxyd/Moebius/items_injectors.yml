@@ -1,0 +1,192 @@
+# Eris Moebius injectors. Eris source: code/modules/reagents/reagent_containers/hypospray.dm.
+# Eris autoinjectors are single-use 5u hyposprays; empty ones refuse refills in Eris
+# (modeled here by giving them inject-only modes and a small internal volume).
+
+- type: entity
+  abstract: true
+  parent: [ BaseHypoInjector, BaseItem ]
+  id: OxydErisAutoinjectorBase
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+    layers:
+    - state: autoinjector
+      map: ["enum.SolutionContainerLayers.Base"]
+    - state: autoinjector
+      map: ["enum.SolutionContainerLayers.Fill"]
+      visible: false
+  - type: Item
+    size: Tiny
+  - type: Solution
+    solution:
+      maxVol: 5
+  - type: Injector
+    allowedModes:
+    - HyposprayInjectMode
+    activeModeProtoId: HyposprayInjectMode
+  - type: SolutionContainerVisuals
+    maxFillLevels: 1
+    fillBaseName: autoinjector
+    solutionName: hypospray
+    emptySpriteName: autoinjector0
+  - type: Appearance
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorInaprovaline
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Inaprovaline
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorAntitoxin
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Dylovene
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorTricordrazine
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Tricordrazine
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorKelotane
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Kelotane
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorBicaridine
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Bicaridine
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorDexalin
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Dexalin
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorSpaceacillin
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedSpaceacillin
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorTramadol
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedTramadol
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorOxycodone
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedOxycodone
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorPolystem
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedPolystem
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorMeralyne
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedMeralyne
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorRyetalyn
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedRyetalyn
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorBloodclot
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedQuickclot
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorHyperzine
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydDrugHyperzine
+        Quantity: 5
+
+# Eris Moebius hypospray (reusable, 30u in Eris; native volume kept at 20).
+- type: entity
+  parent: Hypospray
+  id: OxydErisHypospray
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+    layers:
+    - state: hypospray
+      map: ["enum.SolutionContainerLayers.Base"]
+    - state: hypospray
+      map: ["enum.SolutionContainerLayers.Fill"]
+      visible: false
+  - type: Item
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+  - type: SolutionContainerVisuals
+    maxFillLevels: 1
+    fillBaseName: hypospray
+    solutionName: hypospray

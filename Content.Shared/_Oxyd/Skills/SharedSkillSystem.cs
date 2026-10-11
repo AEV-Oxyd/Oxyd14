@@ -141,6 +141,7 @@ public abstract partial class SharedSkillSystem : EntitySystem
             }
         }
         Dirty(ent);
+        RaiseLocalEvent(ent, new SkillsRecalculatedEvent(), broadcast: true);
     }
 
     public override void Update(float frameTime)
@@ -166,3 +167,10 @@ public abstract partial class SharedSkillSystem : EntitySystem
         }
     }
 }
+
+/// <summary>
+/// Broadcast after <see cref="SharedSkillSystem.RecalculateBuffs"/> writes new skill totals so
+/// systems that derive stats from skills (e.g. cruciform cognition → holiness regeneration)
+/// can refresh on the change instead of polling.
+/// </summary>
+public sealed class SkillsRecalculatedEvent : EntityEventArgs;

@@ -1,0 +1,41 @@
+- type: objectiveIssuer
+  id: NeoTheology
+  name: oxyd-nt-objective-issuer
+
+- type: entity
+  parent: BaseObjective
+  id: OxydNtConvertObjective
+  description: Induct the named person into NeoTheology by installing a cruciform.
+  components:
+  - type: Objective
+    difficulty: 1
+    issuer: NeoTheology
+  - type: ObjectiveEventOnComplete
+  - type: ObjectiveGiveInsight
+    amount: 20
+  - type: NeoTheologyObjective
+    kind: Convert
+
+- type: entity
+  parent: OxydNtConvertObjective
+  id: OxydNtRevealObjective
+  description: Perform Revelation on the named person.
+  components:
+  - type: NeoTheologyObjective
+    kind: Reveal
+
+- type: entity
+  parent: OxydNtConvertObjective
+  id: OxydNtSanctifyObjective
+  description: Sanctify the named location with the group ceremony.
+  components:
+  - type: NeoTheologyObjective
+    kind: Sanctify
+
+- type: entity
+  parent: OxydNtConvertObjective
+  id: OxydNtDestroyObjective
+  description: Destroy the named heretical faction artifact with the Sword of Truth.
+  components:
+  - type: NeoTheologyObjective
+    kind: Destroy

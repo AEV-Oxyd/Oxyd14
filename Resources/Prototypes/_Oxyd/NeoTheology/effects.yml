@@ -1,0 +1,32 @@
+# NeoTheology litany VFX — spawnable flash/glow markers for rite feedback.
+# Sounds reuse stock RT collections (BibleHeal=holy.ogg, ChurchBell=church_bell1-4).
+
+# Soft gold glow + holy chime on a successful cast (solo or each ceremony participant).
+- type: entity
+  id: OxydNtCastGlow
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: PointLight
+    radius: 2.5
+    energy: 1.6
+    color: "#e9c183"
+  - type: TimedDespawn
+    lifetime: 4
+  - type: EmitSoundOnSpawn
+    sound:
+      collection: BibleHeal
+
+# Bright flash + church bell the moment a cruciform first awakens (Epiphany).
+- type: entity
+  id: OxydNtEpiphanyFlash
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: PointLight
+    radius: 5
+    energy: 3
+    color: "#fff2c8"
+  - type: TimedDespawn
+    lifetime: 6
+  - type: EmitSoundOnSpawn
+    sound:
+      collection: ChurchBell

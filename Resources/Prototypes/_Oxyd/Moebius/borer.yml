@@ -1,0 +1,71 @@
+# Cortical borer ported from Eris (mob/living/simple_animal/borer).
+# A small sluglike parasite that burrows into a host's ear canal and lives inside
+# them, trading its regenerating chemical pool for medical/drug secretions into the
+# host's bloodstream, paralysis bites, and reproduction (mob approach - not an organ).
+
+- type: entity
+  id: OxydBorer
+  parent: BaseSimpleMob
+  components:
+  - type: OxydBorer
+  - type: NameIdentifier
+    group: GenericNumber
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeCircle
+          radius: 0.2
+        density: 15
+        mask:
+        - SmallMobMask
+        layer:
+        - SmallMobLayer
+  - type: Sprite
+    drawdepth: SmallMobs
+    layers:
+    - map: ["enum.DamageStateVisualLayers.Base"]
+      state: slug
+      sprite: Mobs/Animals/headslug.rsi
+  - type: DamageStateVisuals
+    states:
+      Alive:
+        Base: slug
+      Critical:
+        Base: slug_dead
+      Dead:
+        Base: slug_dead
+  - type: MobThresholds
+    thresholds:
+      0: Alive
+      15: Critical
+      30: Dead
+  - type: MovementSpeedModifier
+    baseWalkSpeed: 4
+    baseSprintSpeed: 6
+  - type: GhostRole
+    makeSentient: true
+    allowSpeech: true
+    allowMovement: true
+    name: oxyd-borer-ghostrole-name
+    description: oxyd-borer-ghostrole-description
+    rules: oxyd-borer-ghostrole-rules
+    mindRoles:
+    - MindRoleGhostRoleNeutral
+  - type: GhostTakeoverAvailable
+  - type: Tag
+    tags:
+    - CannotSuicide
+
+# The displaced host mind lives here while the borer drives the body
+# (Eris /mob/living/captive_brain inside the borer).
+- type: entity
+  id: OxydBorerCaptiveBrain
+  parent: BaseItem
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: OxydBorerCaptive
+  - type: Sprite
+    sprite: Mobs/Animals/headslug.rsi
+    state: slug_dead
+    drawdepth: SmallMobs

@@ -1,0 +1,145 @@
+# Eris Moebius surgical tools. Eris source: code/game/objects/items/weapons/tools/*.dm.
+# Tool qualities (QUALITY_CUTTING etc.) map onto OxydSurgeryTool flags; Speed mirrors
+# Eris tool tier (t3 basic, t4 advanced, t5 laser).
+
+- type: entity
+  abstract: true
+  parent: BaseItem
+  id: OxydMoebiusSurgicalBase
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_surgery_tools.rsi
+  - type: Item
+    size: Small
+  - type: OxydSurgeryTool
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalScalpel
+  components:
+  - type: Sprite
+    state: scalpel
+  - type: OxydSurgeryTool
+    tools: [ Scalpel ]
+    quality: 80
+  - type: MeleeWeapon
+    damage:
+      types:
+        Slash: 5
+    wideAnimationRotation: 60
+    angle: 0
+    attackRate: 1
+
+- type: entity
+  parent: OxydSurgicalScalpel
+  id: OxydSurgicalScalpelAdvanced
+  components:
+  - type: Sprite
+    state: scalpel_adv
+  - type: OxydSurgeryTool
+    tools: [ Scalpel ]
+    quality: 90
+    speed: 0.7
+
+- type: entity
+  parent: OxydSurgicalScalpel
+  id: OxydSurgicalScalpelLaser
+  components:
+  - type: Sprite
+    state: scalpel_laser
+  - type: OxydSurgeryTool
+    tools: [ Scalpel, Cautery ]
+    quality: 100
+    speed: 0.5
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalHemostat
+  components:
+  - type: Sprite
+    state: hemostat
+  - type: OxydSurgeryTool
+    tools: [ Hemostat ]
+    quality: 80
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalRetractor
+  components:
+  - type: Sprite
+    state: retractor
+  - type: OxydSurgeryTool
+    tools: [ Retractor ]
+    quality: 80
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalCautery
+  components:
+  - type: Sprite
+    state: cautery
+  - type: OxydSurgeryTool
+    tools: [ Cautery ]
+    quality: 80
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalBoneSetter
+  components:
+  - type: Sprite
+    state: bonesetter
+  - type: OxydSurgeryTool
+    tools: [ BoneSetter ]
+    quality: 75
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalSaw
+  components:
+  - type: Sprite
+    state: saw
+  - type: OxydSurgeryTool
+    tools: [ Saw ]
+    quality: 70
+  - type: Item
+    size: Normal
+  - type: MeleeWeapon
+    damage:
+      types:
+        Slash: 8
+    wideAnimationRotation: 60
+    angle: 0
+    attackRate: 1
+
+- type: entity
+  parent: OxydSurgicalSaw
+  id: OxydSurgicalSawCircular
+  components:
+  - type: Sprite
+    state: saw_circular
+  - type: OxydSurgeryTool
+    tools: [ Saw ]
+    quality: 85
+    speed: 0.7
+
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalDrill
+  components:
+  - type: Sprite
+    state: drill
+  - type: OxydSurgeryTool
+    tools: [ Drill ]
+    quality: 75
+
+# Tray for organ transport (Eris surgery tray).
+- type: entity
+  parent: OxydMoebiusSurgicalBase
+  id: OxydSurgicalTray
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    state: surgeon
+  - type: OxydSurgeryTool
+    tools: [ Tray ]
+    quality: 60

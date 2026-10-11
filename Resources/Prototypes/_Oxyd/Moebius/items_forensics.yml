@@ -1,0 +1,40 @@
+# Eris Moebius forensic/monitoring handhelds.
+# Eris source: objects/items/weapons/autopsy.dm, devices/scanners/mass_scpectrometer.dm.
+
+# Autopsy scanner: scan a cadaver, print a paper wound/toxin report.
+# Eris sprite lives on SS13's dmi; reuse the stock health analyzer sprite.
+- type: entity
+  parent: BaseItem
+  id: OxydErisAutopsyScanner
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/healthanalyzer.rsi
+    layers:
+    - state: icon
+    - state: analyzer
+      shader: unshaded
+  - type: Item
+    size: Small
+    heldPrefix: analyzer
+  - type: OxydAutopsyScanner
+
+# Mass spectrometer: private readout of a container's or patient's reagents.
+# Reuses the stock gas analyzer sprite for a handheld lab-instrument look.
+- type: entity
+  parent: BaseItem
+  id: OxydErisMassSpectrometer
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Atmos/gasanalyzer.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: OxydMassSpectrometer
+
+# Advanced model (Eris mass_spectrometer/adv): reports reagent amounts too.
+- type: entity
+  parent: OxydErisMassSpectrometer
+  id: OxydErisMassSpectrometerAdvanced
+  components:
+  - type: OxydMassSpectrometer
+    detailed: true

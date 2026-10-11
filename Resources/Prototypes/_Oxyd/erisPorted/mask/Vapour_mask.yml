@@ -2,7 +2,7 @@
   parent: ClothingMaskBase
   id: erisport_Vapour_mask
   name: Vapour mask
-  description: A classy and highly sophisticated electronic cigarette, for classy and dignified gentlemen. A warning label reads "Warning: Do not fill with flammable materials."
+  description: 'A classy and highly sophisticated electronic cigarette, for classy and dignified gentlemen. A warning label reads "Warning: Do not fill with flammable materials."'
   components:
   - type: Sprite
     sprite: Oxyd/erisported/clothing/Vapour_mask.rsi

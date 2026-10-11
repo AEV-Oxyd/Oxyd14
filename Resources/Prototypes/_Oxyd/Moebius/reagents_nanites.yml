@@ -1,0 +1,338 @@
+# Eris nanite reagents (code/modules/reagents/reagents/nanites.dm). Nanites are stronger but
+# pricier than medicines; overdose and purge mechanics ride the shared effects.
+# R2 sweep adds the inert uncapped-nanites base (Eris "uncap nanites"; a programming substrate
+# made by overclocking capped nanites, so it has no own effects).
+
+- type: reagent
+  id: OxydNanoArad
+  name: oxyd-reagent-arad
+  desc: oxyd-reagent-arad-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#88AA00"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -1
+            Slash: -1
+            Piercing: -1
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoImplantMedics
+  name: oxyd-reagent-implant-medics
+  desc: oxyd-reagent-implant-medics-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#446600"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealOrganDamage
+        amount: 0.4
+      - !type:HealthChange
+        damage:
+          types:
+            Heat: -0.5
+            Cold: -0.5
+            Shock: -0.5
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoNantidotes
+  name: oxyd-reagent-nantidotes
+  desc: oxyd-reagent-nantidotes-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#002244"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:CleanBloodstream
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -0.4
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoNanosymbiotes
+  name: oxyd-reagent-nanosymbiotes
+  desc: oxyd-reagent-nanosymbiotes-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#550077"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.015
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -0.4
+            Slash: -0.4
+            Piercing: -0.4
+            Heat: -0.4
+            Cold: -0.4
+            Shock: -0.4
+            Poison: -0.4
+            Asphyxiation: -0.4
+      - !type:Nsa
+        value: 3
+
+- type: reagent
+  id: OxydNanoOxyrush
+  name: oxyd-reagent-oxyrush
+  desc: oxyd-reagent-oxyrush-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#00FFEE"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Asphyxiation: -2
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoTraumaControl
+  name: oxyd-reagent-trauma-control
+  desc: oxyd-reagent-trauma-control-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#440000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicTraumaControl
+        strength: 40
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoPurgers
+  name: oxyd-reagent-purgers
+  desc: oxyd-reagent-purgers-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#222222"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.04
+      effects:
+      - !type:CleanBloodstream
+      - !type:ReduceAddiction
+        amount: 2
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydNanoControlBoosterUtility
+  name: oxyd-reagent-cbu
+  desc: oxyd-reagent-cbu-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#005599"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: cbu
+        skill: Mec
+        amount: 3
+      - !type:Stim
+        stimId: cbu
+        skill: Bio
+        amount: 3
+      - !type:Stim
+        stimId: cbu
+        skill: Cog
+        amount: 3
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydNanoControlBoosterUtility
+        threshold: 20
+        addictionChance: 0.15
+
+- type: reagent
+  id: OxydNanoControlBoosterCombat
+  name: oxyd-reagent-cbc
+  desc: oxyd-reagent-cbc-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#990033"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: cbc
+        skill: Vig
+        amount: 3
+      - !type:Stim
+        stimId: cbc
+        skill: Tgh
+        amount: 3
+      - !type:Stim
+        stimId: cbc
+        skill: Rob
+        amount: 3
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydNanoControlBoosterCombat
+        threshold: 20
+        addictionChance: 0.15
+
+- type: reagent
+  id: OxydNanoFbpRepair
+  name: oxyd-reagent-fbp-repair
+  desc: oxyd-reagent-fbp-repair-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#555555"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealOrganDamage
+        amount: 0.6
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydNanoFbpReplenish
+  name: oxyd-reagent-fbp-replenish
+  desc: oxyd-reagent-fbp-replenish-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#777777"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -0.3
+            Radiation: -0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydNanoCapped
+  name: oxyd-reagent-capped-nanites
+  desc: oxyd-reagent-capped-nanites-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#334455"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -0.5
+            Slash: -0.5
+            Piercing: -0.5
+            Heat: -0.5
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydNanoDead
+  name: oxyd-reagent-dead-nanites
+  desc: oxyd-reagent-dead-nanites-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-cloudy
+  flavor: medicine
+  color: "#333333"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.05
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.3
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydNanoVoiceMimic
+  name: oxyd-reagent-voice-mimic
+  desc: oxyd-reagent-voice-mimic-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#8833AA"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: 0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydNanoDynamicHandprints
+  name: oxyd-reagent-dynamic-handprints
+  desc: oxyd-reagent-dynamic-handprints-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#AA3388"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: 0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydNanoUncapped
+  name: oxyd-reagent-uncapped-nanites
+  desc: oxyd-reagent-uncapped-nanites-desc
+  group: Nanites
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#4a4a4a"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:Nsa
+        value: 0.5

@@ -1,0 +1,10 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-bioreactor-console-title'}"
+               MinSize="340 170"
+               SetSize="360 190">
+    <!-- Eris NanoUI dark skin (bioreactor.tmpl): flat body, gold itemLabel field names. -->
+    <PanelContainer Name="Body" VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Name="Content" Orientation="Vertical" Margin="8" SeparationOverride="6"/>
+    </PanelContainer>
+</controls:FancyWindow>

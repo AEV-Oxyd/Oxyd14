@@ -165,6 +165,14 @@
   id: BaseSpeciesMobOrganic
   save: false
   components:
+  - type: Pain
+  - type: OxydSideEffects
+  - type: UserInterface # OXYD: hosts patient-side BUIs (surgery, health scanner)
+    interfaces:
+      enum.OxydSurgeryUiKey.Key:
+        type: OxydSurgeryBoundUserInterface
+      enum.OxydScannerUiKey.Key:
+        type: OxydScannerBoundUserInterface
   - type: Satiation
     satiations:
       Hunger:

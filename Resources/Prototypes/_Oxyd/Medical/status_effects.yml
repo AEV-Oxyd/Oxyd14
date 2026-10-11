@@ -1,0 +1,75 @@
+# Analgesics are real status effects: each source is its own entity prototype so doses from
+# different sources combine while repeated doses of the same source refresh one instance.
+# The Analgesic component carries the suppressed pain amount; MobStatusEffectDebuff removes the
+# effect on rejuvenate and blocks it on godmode.
+- type: entity
+  parent: MobStatusEffectDebuff
+  abstract: true
+  id: OxydAnalgesicBase
+  components:
+  - type: Analgesic
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicWordsOfPurging
+  name: words of purging
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicAngelsBalm
+  name: angel's balm
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicDeusBlessing
+  name: deus blessing
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicHolyInaprovaline
+  name: holy inaprovaline
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicLitanyConvalescence
+  name: convalescence
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicLitanySuccour
+  name: succour
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicParacetamol
+  name: paracetamol
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicTramadol
+  name: tramadol
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicOxycodone
+  name: oxycodone
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicDiclofenac
+  name: diclofenac
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicAranecolmin
+  name: aranecolmin
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicTraumaControl
+  name: trauma control
+
+- type: entity
+  parent: OxydAnalgesicBase
+  id: OxydAnalgesicAdrenaline
+  name: adrenaline

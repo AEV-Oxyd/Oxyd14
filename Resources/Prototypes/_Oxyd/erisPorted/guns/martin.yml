@@ -5,9 +5,9 @@
   description: The FS PDW E "Martin" is essentially a downscaled Spider Rose, made for Ironhammer Marshals and civilians to use as a personal self-defence weapon. Its self-charging energy cell glows cyan on stun fire and red on lethal.
   components:
   - type: Sprite
-    sprite: Oxyd/erisported/martin_sec.rsi
+    sprite: Oxyd/erisported/pdw.rsi
     layers:
-    - state: stun
+    - state: PDW
       map: ["enum.GunVisualLayers.Base"]
   - type: Appearance
   - type: Gun
@@ -23,12 +23,16 @@
   - type: BatteryWeaponFireModes
     fireModes:
     - proto: BulletDisabler
-      visualState: stun
       fireCost: 62.5
       pacifismAllowedMode: true
     - proto: RedLaser
-      visualState: lethal
       fireCost: 62.5
+  - type: GenericVisualizer
+    visuals:
+      enum.BatteryWeaponFireModeVisuals.State:
+        enum.GunVisualLayers.Base:
+          BulletDisabler: { state: stun }
+          RedLaser: { state: lethal }
   - type: BatterySelfRecharger
     autoRechargeRate: 40
   - type: StaticPrice

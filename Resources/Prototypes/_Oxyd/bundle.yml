@@ -1,12 +1,13 @@
 - type: entity
   name: "bundle"
   id: BaseBundle
+  abstract: true
   parent: BaseItem
 
 - type: BundleGroup
   id: BundleGroup
   volume: 200
-  size: "small"
+  size: Small
   components:
   - type: BundleGenericInteraction
 

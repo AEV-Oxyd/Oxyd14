@@ -1,0 +1,155 @@
+# Eris Moebius misc medical items.
+# Eris source: devices/scanners/health.dm, objects/items/bodybag.dm,
+# objects/items/weapons/storage/firstaid.dm.
+
+# Moebius handheld health scanner (Eris health analyzer) - opens the organ/vitals UI.
+- type: entity
+  parent: BaseItem
+  id: OxydErisHealthScanner
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_healthscanner.rsi
+    state: health
+  - type: Item
+    size: Small
+  - type: OxydScannerItem
+  - type: Appearance
+
+# Stasis bag (Eris cryobag): one-use stasis container for critical patients.
+- type: entity
+  id: OxydErisStasisBag
+  components:
+  - type: Sprite
+    drawdepth: SmallObjects
+    sprite: Oxyd/erisported/eris_bodybags.rsi
+    state: stasis_open
+  - type: Icon
+    sprite: Oxyd/erisported/eris_bodybags.rsi
+    state: stasis_folded
+  - type: Clickable
+  - type: InteractionOutline
+  - type: Physics
+    bodyType: Dynamic
+  - type: Transform
+    noRot: true
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.25,-0.4,0.25,0.1"
+        density: 80
+        mask:
+        - ItemMask
+  - type: OxydStasisBag
+  - type: OxydOrganStasis
+  - type: Pullable
+  - type: Appearance
+
+# Eris body bag (reuses the native foldable body bag mechanics).
+- type: entity
+  parent: BodyBag
+  id: OxydErisBodyBag
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_bodybags.rsi
+    layers:
+    - state: bodybag_closed
+      map: ["unfoldedLayer", "enum.StorageVisualLayers.Base"]
+    - state: bodybag_folded
+      map: ["foldedLayer"]
+      visible: false
+    - state: bodybag_open
+      map: ["enum.StorageVisualLayers.Door"]
+  - type: Icon
+    sprite: Oxyd/erisported/eris_bodybags.rsi
+    state: bodybag_closed
+
+# First aid kits (Eris storage/firstaid.dm).
+- type: entity
+  parent: Medkit
+  id: OxydErisMedkit
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    state: firstaid
+  - type: Item
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    heldPrefix: firstaid
+  - type: EntityTableContainerFill
+    containers:
+      storagebase: !type:AllSelector
+        children:
+          - id: OxydErisBruisePack
+          - id: OxydErisOintment
+          - id: OxydErisAutoinjectorInaprovaline
+          - id: OxydErisAutoinjectorTricordrazine
+
+- type: entity
+  parent: Medkit
+  id: OxydErisMedkitAdvanced
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    state: advfirstaid
+  - type: Item
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    heldPrefix: advfirstaid
+  - type: EntityTableContainerFill
+    containers:
+      storagebase: !type:AllSelector
+        children:
+          - id: OxydErisTraumaKit
+          - id: OxydErisBurnKit
+          - id: OxydErisSplint
+          - id: OxydErisAutoinjectorTramadol
+          - id: OxydErisAutoinjectorBloodclot
+
+# Surgery kit: full Eris surgical toolset in a surgeon's bag.
+- type: entity
+  parent: Medkit
+  id: OxydErisSurgeryKit
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    state: surgeon
+  - type: Item
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    heldPrefix: surgeon
+  - type: Storage
+    maxItemSize: Normal
+    grid:
+    - 0,0,7,2
+  - type: EntityTableContainerFill
+    containers:
+      storagebase: !type:AllSelector
+        children:
+          - id: OxydSurgicalScalpel
+          - id: OxydSurgicalHemostat
+          - id: OxydSurgicalRetractor
+          - id: OxydSurgicalCautery
+          - id: OxydSurgicalBoneSetter
+          - id: OxydSurgicalSaw
+          - id: OxydSurgicalDrill
+          - id: OxydSurgicalTray
+
+# Organ freezer: slows decay of stored organs (Eris organ_freezer).
+- type: entity
+  parent: Medkit
+  id: OxydErisOrganFreezer
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    state: freezer
+  - type: Item
+    sprite: Oxyd/erisported/eris_medkits.rsi
+    heldPrefix: freezer
+  - type: OxydOrganFreezer
+  - type: OxydOrganStasis
+  - type: Storage
+    maxItemSize: Normal
+    grid:
+    - 0,0,4,2
+    whitelist:
+      components:
+      - Organ

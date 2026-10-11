@@ -1,0 +1,140 @@
+# Admin-spawned ghost roles for litany checks. These are not station jobs or map spawns.
+# Spawn a marker below after the round starts; its humanoid appears in the ghost-role list.
+- type: startingGear
+  id: OxydNtLitanyTestGear
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitChaplain
+    shoes: ClothingShoesColorBlack
+    belt: OxydNtBible
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestBase
+  parent: EventHumanoid
+  abstract: true
+  components:
+  - type: GhostRole
+    description: Test NeoTheology litanies with a cruciform and a litany book.
+    rules: Follow server rules. This role is for litany testing.
+  - type: Loadout
+    prototypes: [ OxydNtLitanyTestGear ]
+    roleLoadout: [ RoleSurvivalStandard ]
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtDisciple
+  name: NeoTheology disciple
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestDisciple
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestDisciple
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology disciple (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtDisciple
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtAcolyte
+  name: NeoTheology acolyte
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestAcolyte
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestAcolyte
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology acolyte (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtAcolyte
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtAgrolyte
+  name: NeoTheology agrolyte
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestAgrolyte
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestAgrolyte
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology agrolyte (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtAgrolyte
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtCustodian
+  name: NeoTheology custodian
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestCustodian
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestCustodian
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology custodian (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtCustodian
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtPreacher
+  name: NeoTheology preacher
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestPreacher
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestPreacher
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology preacher (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtPreacher
+
+- type: entity
+  id: RandomHumanoidSpawnerOxydNtInquisitor
+  name: NeoTheology inquisitor
+  suffix: Litany Test Ghost Role
+  components:
+  - type: Sprite
+    sprite: Markers/jobs.rsi
+    state: chaplain
+  - type: RandomHumanoidSpawner
+    settings: OxydNtLitanyTestInquisitor
+
+- type: randomHumanoidSettings
+  id: OxydNtLitanyTestInquisitor
+  parent: OxydNtLitanyTestBase
+  components:
+  - type: GhostRole
+    name: NeoTheology inquisitor (litany test)
+  - type: NeoTheologyTestRole
+    profile: OxydNtInquisitor

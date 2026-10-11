@@ -1,0 +1,56 @@
+# MIRC — Moebius Internal Reagent Catalogue (Eris modular_computers chem_catalog).
+# PDA program listing Moebius reagents and their synthesis recipes.
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydMircCartridge
+  name: MIRC cartridge
+  description: Moebius Internal Reagent Catalogue — a reference of Moebius reagents and how to mix them.
+  categories: [ HideSpawnMenu ]
+  components:
+    - type: Sprite
+      state: cart-med
+    - type: Icon
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-med
+    - type: Cartridge
+      programName: oxyd-mirc-program-name
+      icon:
+        sprite: Objects/Specific/Medical/healthanalyzer.rsi
+        state: icon
+    - type: UIFragment
+      ui: !type:OxydMircUi
+    - type: OxydMircCartridge
+
+# Moebius PDAs: same preinstalled set as BaseMedicalPDA plus the MIRC catalogue.
+# EntityTableContainerFill replaces the containers dict, so the full list is repeated.
+
+- type: entity
+  parent: MedicalPDA
+  id: OxydMoebiusPDA
+  components:
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: MedTekCartridge
+        - id: OxydMircCartridge
+
+- type: entity
+  parent: ChemistryPDA
+  id: OxydMoebiusChemistPDA
+  components:
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: MedTekCartridge
+        - id: OxydMircCartridge

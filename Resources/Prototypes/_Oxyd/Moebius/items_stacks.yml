@@ -1,0 +1,236 @@
+# Eris Moebius medical stack items. Eris source: code/game/objects/items/stacks/medical.dm.
+# Eris stack types; charged count maps onto the native Stack component.
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisBrutepack
+  name: oxyd-stack-brutepack
+  spawn: OxydErisBruisePackSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: brutepack }
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisOintment
+  name: oxyd-stack-ointment
+  spawn: OxydErisOintmentSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: ointment }
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisTraumakit
+  name: oxyd-stack-traumakit
+  spawn: OxydErisTraumaKitSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: traumakit }
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisBurnkit
+  name: oxyd-stack-burnkit
+  spawn: OxydErisBurnKitSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: burnkit }
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisSplint
+  name: oxyd-stack-splint
+  spawn: OxydErisSplintSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: splint }
+
+- type: stack
+  parent: BaseVerySmallStack
+  id: OxydErisNanopaste
+  name: oxyd-stack-nanopaste
+  spawn: OxydErisNanopasteSingle
+  icon: { sprite: /Textures/Oxyd/erisported/eris_medstacks.rsi, state: nanopaste }
+
+# Bruise pack: 5 charges, heals brute wounds (Eris brutepack).
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisBruisePack
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: brutepack
+  - type: Healing
+    damageContainers:
+    - Biological
+    damage:
+      types:
+        Blunt: -5
+        Slash: -5
+        Piercing: -5
+  - type: Stack
+    stackType: OxydErisBrutepack
+    count: 5
+  - type: OxydSurgeryTool
+    tools: [ TraumaKit ]
+    quality: 40
+
+# Ointment: 5 charges, heals burns (Eris ointment).
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisOintment
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: ointment
+  - type: Healing
+    damageContainers:
+    - Biological
+    damage:
+      types:
+        Heat: -5
+        Cold: -5
+        Shock: -5
+        Caustic: -1.5
+  - type: Stack
+    stackType: OxydErisOintment
+    count: 5
+  - type: OxydSurgeryTool
+    tools: [ BurnKit ]
+    quality: 40
+
+# Advanced trauma kit: stronger brute healing (Eris traumakit).
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisTraumaKit
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: traumakit
+  - type: Healing
+    damageContainers:
+    - Biological
+    damage:
+      types:
+        Blunt: -10
+        Slash: -10
+        Piercing: -10
+  - type: Stack
+    stackType: OxydErisTraumakit
+    count: 5
+  - type: OxydSurgeryTool
+    tools: [ TraumaKit ]
+    quality: 100
+
+# Advanced burn kit: stronger burn healing (Eris burnkit).
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisBurnKit
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: burnkit
+  - type: Healing
+    damageContainers:
+    - Biological
+    damage:
+      types:
+        Heat: -10
+        Cold: -10
+        Shock: -10
+        Caustic: -10
+  - type: Stack
+    stackType: OxydErisBurnkit
+    count: 5
+  - type: OxydSurgeryTool
+    tools: [ BurnKit ]
+    quality: 100
+
+# Splint: stabilises fractures while healing (Eris splint). Modeled as
+# modest brute heal; Eris fracture treatment lives in the surgery system.
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisSplint
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: splint
+  - type: Healing
+    damageContainers:
+    - Biological
+    damage:
+      types:
+        Blunt: -4
+        Slash: -2
+  - type: Stack
+    stackType: OxydErisSplint
+    count: 3
+
+# Nanopaste: repairs robotic organs/limbs; doubles as the "welder" tool for
+# robotic surgery steps (Eris nanopaste).
+- type: entity
+  parent: BaseHealingItem
+  id: OxydErisNanopaste
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_medstacks.rsi
+    state: nanopaste
+  - type: Healing
+    damageContainers:
+    - Biological
+    - Inorganic
+    damage:
+      types:
+        Blunt: -8
+        Slash: -8
+        Piercing: -8
+        Heat: -8
+        Shock: -8
+  - type: Stack
+    stackType: OxydErisNanopaste
+    count: 5
+  - type: OxydSurgeryTool
+    tools: [ Welder ]
+    speed: 0.8
+
+# Single-count entities spawned by the stack protos above (native stack
+# convention: StackPrototype.spawn -> count:1 item entity).
+
+- type: entity
+  parent: OxydErisBruisePack
+  id: OxydErisBruisePackSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
+
+- type: entity
+  parent: OxydErisOintment
+  id: OxydErisOintmentSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
+
+- type: entity
+  parent: OxydErisTraumaKit
+  id: OxydErisTraumaKitSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
+
+- type: entity
+  parent: OxydErisBurnKit
+  id: OxydErisBurnKitSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
+
+- type: entity
+  parent: OxydErisSplint
+  id: OxydErisSplintSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
+
+- type: entity
+  parent: OxydErisNanopaste
+  id: OxydErisNanopasteSingle
+  suffix: Single
+  components:
+  - type: Stack
+    count: 1
