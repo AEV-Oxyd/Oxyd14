@@ -104,11 +104,11 @@ public sealed partial class LitanyPrototype : IPrototype
     public bool SelectBlueprint { get; private set; }
 
     /// <summary>
-    /// Declarative effect list, instantiated from YAML as <c>!type:</c> entries.
-    /// Replaces the legacy parameter-block families.
+    /// Declarative effect list, instantiated from YAML as <c>!type:</c> entries — real
+    /// <see cref="EntityEffects.EntityEffect"/>s run by the shared pipeline.
     /// </summary>
     [DataField]
-    public List<LitanyEffect> Effects { get; private set; } = new();
+    public List<EntityEffects.EntityEffect> Effects { get; private set; } = new();
 
     [DataField]
     public NeoTheologyDependency Dependency { get; private set; }

@@ -1,16 +1,30 @@
 using Content.Shared.Damage;
+using Content.Shared.Damage.Components;
+using Content.Shared.EntityEffects;
 using Content.Shared.FixedPoint;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// Applies a negative <see cref="DamageSpecifier"/> to heal the selected patient. Entries naming a
+/// Applies a negative <see cref="DamageSpecifier"/> to the resolved patient. Entries naming a
 /// damage type ("Blunt") apply directly; entries naming a damage GROUP ("Brute") spread
 /// their budget over the group's present damage instead of healing each subtype fully.
 /// </summary>
-public sealed partial class LitanyHealEffect : LitanyEffect
+public sealed partial class LitanyHealEffect : LitanyEffect<LitanyHealEffect>
 {
+    /// <summary>The pipeline delivers each resolved patient; there is no pick-one fallback.</summary>
+    public override bool PerTarget => true;
+
+    public LitanyHealEffect()
+    {
+        Conditions =
+        [
+            new LitanyAliveCondition { FailureId = "oxyd-litany-denied-npc" },
+            new LitanyCanReceiveDamageCondition { FailureId = "oxyd-litany-no-effect" },
+        ];
+    }
+
     /// <summary>Negative values heal; the catalog validator rejects non-negative entries.</summary>
     [DataField]
     public DamageSpecifier Damage = new();
@@ -24,58 +38,40 @@ public sealed partial class LitanyHealEffect : LitanyEffect
     /// </summary>
     [DataField]
     public EntProtoId? AnalgesicEffect;
+}
 
-    public override bool CanApply(
-        LitanyEffectSystem system,
-        LitanyEffectContext context,
-        out LocId? failure)
+/// <summary>Applies <see cref="LitanyHealEffect"/> to each resolved patient.</summary>
+public sealed partial class LitanyHealEntityEffectSystem : EntityEffectSystem<DamageableComponent, LitanyHealEffect>
+{
+    [Dependency] private LitanyEffectSystem _litany = default!;
+
+    protected override void Effect(Entity<DamageableComponent> entity, ref EntityEffectEvent<LitanyHealEffect> args)
     {
-        if (Damage.Empty)
+        var effect = args.Effect;
+        if (effect.Damage.Empty)
         {
-            failure = "oxyd-litany-no-effect";
-            return false;
+            _litany.ReportApplyResult(args.User, false);
+            return;
         }
 
-        var target = system.MedicalTarget(context);
-        if (target == EntityUid.Invalid || system.IsDead(target))
-        {
-            failure = "oxyd-litany-denied-npc";
-            return false;
-        }
+        if (effect.PainkillerStrength > 0 && effect.AnalgesicEffect is { } analgesic)
+            _litany.RelievePain(entity, analgesic, effect.PainkillerStrength);
 
-        if (!system.CanReceiveDamage(target))
-        {
-            failure = "oxyd-litany-no-effect";
-            return false;
-        }
-
-        failure = null;
-        return true;
-    }
-
-    public override bool Apply(LitanyEffectSystem system, LitanyEffectContext context)
-    {
-        if (!CanApply(system, context, out _))
-            return false;
-
-        var target = system.MedicalTarget(context);
-        if (PainkillerStrength > 0 && AnalgesicEffect is { } analgesic)
-            system.RelievePain(target, analgesic, PainkillerStrength);
-        foreach (var (type, value) in Damage.DamageDict)
+        foreach (var (type, value) in effect.Damage.DamageDict)
         {
             if (value >= FixedPoint2.Zero)
                 continue;
 
-            if (system.IsDamageGroup(type))
+            if (_litany.IsDamageGroup(type))
             {
-                system.TryHealDamageGroup(target, type, value);
+                _litany.TryHealDamageGroup(entity, type, value);
                 continue;
             }
 
-            system.TryApplyDamage(target, new DamageSpecifier { DamageDict = { [type] = value } });
+            _litany.TryApplyDamage(entity, new DamageSpecifier { DamageDict = { [type] = value } });
         }
 
         // Eris permits healing an uninjured patient.
-        return true;
+        _litany.ReportApplyResult(args.User, true);
     }
 }

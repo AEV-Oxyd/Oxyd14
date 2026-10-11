@@ -35,7 +35,7 @@ public sealed partial class LitanySystem
     /// </summary>
     private static bool CeremonyRequiresClergy(LitanyPrototype litany)
     {
-        return litany.Effects.OfType<LitanyCeremonyEffect>().Any(effect => effect.RequiresClergy);
+        return litany.Effects.OfType<ILitanyCeremonyEffect>().Any(effect => effect.RequiresClergy);
     }
 
     /// <summary>
@@ -267,7 +267,7 @@ public sealed partial class LitanySystem
 
     private void ConsumeCeremonyMiraclePoint(LitanyPrototype litany)
     {
-        if (!litany.Effects.OfType<LitanyCeremonyEffect>().Any(effect => effect.ConsumesMiraclePoint))
+        if (!litany.Effects.OfType<ILitanyCeremonyEffect>().Any(effect => effect.ConsumesMiraclePoint))
             return;
 
         var query = EntityQueryEnumerator<EyeOfTheProtectorComponent>();

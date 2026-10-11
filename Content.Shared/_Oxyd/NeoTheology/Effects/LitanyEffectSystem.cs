@@ -12,6 +12,7 @@ using Content.Shared.Damage.Prototypes;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Doors.Components;
 using Content.Shared.Doors.Systems;
+using Content.Shared.EntityConditions;
 using Content.Shared.EntityEffects;
 using Content.Shared.Examine;
 using Content.Shared.FixedPoint;
@@ -36,11 +37,13 @@ using Robust.Shared.Utility;
 namespace Content.Shared._Oxyd.NeoTheology.Effects;
 
 /// <summary>
-/// Runs a litany's declarative effect list and exposes the shared helpers the
-/// <see cref="LitanyEffect"/> classes need. Server <c>LitanySystem</c> owns the
-/// cast transaction (cost, cooldown, speech); this system owns the effect phase.
+/// Helper service for litany effect/condition handlers plus the two entry points the cast
+/// transaction calls: <see cref="TryValidateEffects"/> evaluates each effect's
+/// <see cref="EntityEffect.Conditions"/> against the resolved targets, and
+/// <see cref="TryApplyEffects"/> raises the effect list through the shared EntityEffects
+/// pipeline once per resolved target (or once on the caster for cast-scoped effects).
 /// </summary>
-public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRaiser
+public sealed partial class LitanyEffectSystem : EntitySystem
 {
     /// <summary>Eris soul_hunger nutrition delta; Oxyd routes through SatiationSystem Hunger.</summary>
     public const float SoulHungerNutritionAmount = 100f;
@@ -67,25 +70,9 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
     [Dependency] private IRobustRandom _random = default!;
     [Dependency] private Content.Shared.Power.EntitySystems.SharedPowerReceiverSystem _power = default!;
     [Dependency] private SharedEntityEffectsSystem _entityEffects = default!;
+    [Dependency] private SharedEntityConditionsSystem _conditions = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
-
-    private LitanyEffectContext _context;
-    private bool _lastApplyResult = true;
-
-    /// <inheritdoc/>
-    public LitanyEffectSystem System => this;
-
-    /// <inheritdoc/>
-    public LitanyEffectContext Context => _context;
-
-    /// <inheritdoc/>
-    public void ReportResult(bool applied) => _lastApplyResult = applied;
-
-    /// <inheritdoc/>
-    public void RaiseEffectEvent<T>(EntityUid target, T effect, float scale, EntityUid? user)
-        where T : EntityEffectBase<T>
-        => _entityEffects.RaiseEffectEvent(target, effect, scale, user);
 
     /// <summary>Observers receive notices without retaining them in this system.</summary>
     public event Action<EntityUid, string>? SocialNotice;
@@ -99,6 +86,73 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
             _adminLogger.Add(type, impact, $"{ToPrettyString(actor):user} {action}");
     }
 
+    /// <summary>
+    /// Stamps the cast inputs on the caster's <see cref="LitanyCastContextComponent"/> for the
+    /// duration of one validate/apply pass. Handlers and conditions read it back through
+    /// <see cref="GetCastContext"/>; the component is wiped when the pass ends so a stale
+    /// context never outlives its cast.
+    /// </summary>
+    public LitanyCastContextComponent PushCastContext(
+        EntityUid user,
+        LitanyPrototype litany,
+        IReadOnlyList<EntityUid>? targets = null,
+        IReadOnlyList<string>? selectedTokens = null,
+        string? selectedText = null,
+        ProtoId<NeoTheologyProfilePrototype>? designation = null,
+        ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
+        int ceremonyParticipants = 0)
+    {
+        var context = EnsureComp<LitanyCastContextComponent>(user);
+        context.Litany = litany;
+        context.Targets.Clear();
+        if (targets != null)
+            context.Targets.AddRange(targets);
+        context.SelectedTokens = selectedTokens != null ? new List<string>(selectedTokens) : null;
+        context.SelectedText = selectedText;
+        context.Designation = designation;
+        context.SelectedBlueprint = selectedBlueprint;
+        context.CeremonyParticipants = ceremonyParticipants;
+        context.LastApplySucceeded = true;
+        context.ApplyFailed = false;
+        context.ValidationFailure = null;
+        return context;
+    }
+
+    /// <summary>The cast context the caster is currently stamped with; null between casts.</summary>
+    public LitanyCastContextComponent? GetCastContext(EntityUid? user)
+    {
+        return user is { } uid && TryComp(uid, out LitanyCastContextComponent? context) ? context : null;
+    }
+
+    /// <summary>Clears the stamped context once a validate/apply pass finishes.</summary>
+    public void PopCastContext(EntityUid user)
+    {
+        RemComp<LitanyCastContextComponent>(user);
+    }
+
+    /// <summary>Handler result channel: an effect handler reports whether its apply succeeded.</summary>
+    public void ReportApplyResult(EntityUid? user, bool succeeded)
+    {
+        if (GetCastContext(user) is not { } context)
+            return;
+
+        context.LastApplySucceeded = succeeded;
+        if (!succeeded)
+            context.ApplyFailed = true;
+    }
+
+    /// <summary>Condition failure channel: records the first reason for the validate pass to return.</summary>
+    public void ReportValidationFailure(EntityUid? user, LocId failure)
+    {
+        if (GetCastContext(user) is { } context)
+            context.ValidationFailure ??= failure;
+    }
+
+    /// <summary>
+    /// Pre-debit validation: every effect's <see cref="EntityEffect.Conditions"/> must pass on
+    /// at least one eligible entity — the resolved targets for target-scoped effects, the
+    /// caster for cast-scoped ones and whenever no target was resolved.
+    /// </summary>
     public bool TryValidateEffects(
         EntityUid user,
         LitanyPrototype litany,
@@ -110,18 +164,42 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
         ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
         int ceremonyParticipants = 0)
     {
-        var context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation, selectedBlueprint, ceremonyParticipants);
-        foreach (var effect in litany.Effects)
-        {
-            if (!effect.CanApply(this, context, out failure))
-                return false;
-        }
+        var context = PushCastContext(user, litany, targets, selectedTokens, selectedText,
+            designation, selectedBlueprint, ceremonyParticipants);
 
-        failure = null;
-        return true;
+        var subjects = context.Targets.Count > 0 ? context.Targets : new List<EntityUid> { user };
+        try
+        {
+            foreach (var effect in litany.Effects)
+            {
+                var eval = effect is ILitanyEffect { PerTarget: true } ? context.Targets : subjects;
+                var valid = eval.Count == 0
+                    ? _conditions.TryConditions(user, effect.Conditions, user)
+                    : eval.Any(t => !TerminatingOrDeleted(t) &&
+                                    _conditions.TryConditions(t, effect.Conditions, user));
+
+                if (!valid)
+                {
+                    failure = context.ValidationFailure ?? "oxyd-litany-no-effect";
+                    return false;
+                }
+            }
+
+            failure = null;
+            return true;
+        }
+        finally
+        {
+            PopCastContext(user);
+        }
     }
 
+    /// <summary>
+    /// Applies the litany through the shared EntityEffects pipeline: once per resolved target
+    /// for target-scoped effects, once on the caster for the rest. A handler that reports
+    /// failure — or an effect whose conditions pass on no target — fails the whole apply so
+    /// the caller can refund, keeping the cast atomic.
+    /// </summary>
     public bool TryApplyEffects(
         EntityUid user,
         LitanyPrototype litany,
@@ -132,24 +210,50 @@ public sealed partial class LitanyEffectSystem : EntitySystem, ILitanyEffectRais
         ProtoId<NeoTheologyBlueprintPrototype>? selectedBlueprint = null,
         int ceremonyParticipants = 0)
     {
-        _context = new LitanyEffectContext(user, litany, targets ?? Array.Empty<EntityUid>(),
-            selectedTokens, selectedText, designation, selectedBlueprint, ceremonyParticipants);
+        var context = PushCastContext(user, litany, targets, selectedTokens, selectedText,
+            designation, selectedBlueprint, ceremonyParticipants);
 
-        var success = true;
-        foreach (var effect in litany.Effects)
+        try
         {
-            _lastApplyResult = true;
+            var success = true;
+            foreach (var effect in litany.Effects)
+            {
+                if (effect is ILitanyEffect { PerTarget: true })
+                {
+                    // No resolved target: the rite still completes — it just skips its
+                    // payload (Eris ceremony semantics). A list whose targets all vanished
+                    // mid-chant fails instead so the cast refunds.
+                    if (context.Targets.Count == 0)
+                        continue;
 
-            // The caster anchors the shared pipeline (scale, probability, conditions, log).
-            // The effect receives the full cast context through this raiser.
-            if (!_entityEffects.TryApplyEffect(user, effect, 1f, user, this))
-                continue;
+                    var applied = false;
+                    foreach (var target in context.Targets)
+                    {
+                        if (TerminatingOrDeleted(target))
+                            continue;
 
-            if (!_lastApplyResult)
-                success = false;
+                        context.LastApplySucceeded = true;
+                        applied |= _entityEffects.TryApplyEffect(target, effect, 1f, user);
+                    }
+
+                    if (!applied || context.ApplyFailed)
+                        success = false;
+                }
+                else
+                {
+                    context.LastApplySucceeded = true;
+                    var raised = _entityEffects.TryApplyEffect(user, effect, 1f, user);
+                    if (!raised || context.ApplyFailed)
+                        success = false;
+                }
+            }
+
+            return success;
         }
-
-        return success;
+        finally
+        {
+            PopCastContext(user);
+        }
     }
 
     public bool IsAlive(EntityUid uid)

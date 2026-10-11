@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.Medical;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Systems;
@@ -19,8 +20,8 @@ public sealed partial class LitanyEffectSystem
 
     public bool HasGodblood(EntityUid uid) => HasComp<GodbloodMutationComponent>(uid);
 
-    public EntityUid MedicalTarget(LitanyEffectContext context) => context.Litany.TargetMode == LitanyTargetMode.Self
-        ? context.User
+    public EntityUid MedicalTarget(LitanyCastContextComponent context, EntityUid user) => context.Litany.TargetMode == LitanyTargetMode.Self
+        ? user
         : context.Targets.Count > 0 ? context.Targets[0] : EntityUid.Invalid;
 
     public bool CanInjectMedicine(EntityUid uid, FixedPoint2 amount) =>

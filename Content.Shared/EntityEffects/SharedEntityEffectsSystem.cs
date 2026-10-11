@@ -109,10 +109,8 @@ public sealed partial class SharedEntityEffectsSystem : EntitySystem, IEntityEff
     /// <param name="effect">Effect we're applying</param>
     /// <param name="scale">Optional scale multiplier for the effect.</param>
     /// <param name="user">The entity causing the effect.</param>
-    /// <param name="raiser">OXYD: the raiser that owns the effect data, when it is not this system.</param>
     /// <returns>True if all conditions pass!</returns>
-    public bool TryApplyEffect(EntityUid target, EntityEffect effect, float scale = 1f, EntityUid? user = null,
-        IEntityEffectRaiser? raiser = null)
+    public bool TryApplyEffect(EntityUid target, EntityEffect effect, float scale = 1f, EntityUid? user = null)
     {
         if (scale < effect.MinScale)
             return false;
@@ -121,11 +119,11 @@ public sealed partial class SharedEntityEffectsSystem : EntitySystem, IEntityEff
         if (effect.Probability <= 1f && !SharedRandomExtensions.PredictedProb(_timing, effect.Probability, GetNetEntity(target), GetNetEntity(user)))
                 return false;
 
-        // See if conditions apply
-        if (!_condition.TryConditions(target, effect.Conditions))
+        // See if conditions apply — OXYD: the user is the sourceEnt so conditions see the caster.
+        if (!_condition.TryConditions(target, effect.Conditions, user))
             return false;
 
-        ApplyEffect(target, effect, scale, user, raiser);
+        ApplyEffect(target, effect, scale, user);
         return true;
     }
 
@@ -137,9 +135,7 @@ public sealed partial class SharedEntityEffectsSystem : EntitySystem, IEntityEff
     /// <param name="effect">Effect we're applying</param>
     /// <param name="scale">Optional scale multiplier for the effect.</param>
     /// <param name="user">The entity causing the effect.</param>
-    /// <param name="raiser">OXYD: the raiser that owns the effect data, when it is not this system.</param>
-    public void ApplyEffect(EntityUid target, EntityEffect effect, float scale = 1f, EntityUid? user = null,
-        IEntityEffectRaiser? raiser = null)
+    public void ApplyEffect(EntityUid target, EntityEffect effect, float scale = 1f, EntityUid? user = null)
     {
         // Clamp the scale if the effect doesn't allow scaling.
         if (!effect.Scaling)
@@ -157,7 +153,7 @@ public sealed partial class SharedEntityEffectsSystem : EntitySystem, IEntityEff
             );
         }
 
-        effect.RaiseEvent(target, raiser ?? this, scale, user);
+        effect.RaiseEvent(target, this, scale, user);
     }
 
     /// <summary>

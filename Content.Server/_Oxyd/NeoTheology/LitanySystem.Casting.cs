@@ -739,7 +739,7 @@ public sealed partial class LitanySystem
     /// lookup circle (1 m default); the tile gate is what makes "adjacent" mean the
     /// tile in front. Followers-only additionally requires an active cruciform.
     /// §7.1: Dead mobs are excluded unless the litany is a dead-only flow (extraction,
-    /// resurrection) that declares <see cref="LitanyEffect.AllowsDeadTarget"/>.
+    /// resurrection) that declares <see cref="ILitanyEffect.AllowsDeadTarget"/>.
     /// </summary>
     private List<EntityUid> ResolveAdjacentMobs(EntityUid actor, LitanyPrototype proto, bool followersOnly)
     {
@@ -747,7 +747,7 @@ public sealed partial class LitanySystem
         if (!TryGetFrontTiles(actor, out var ownTile, out var frontTile))
             return results;
 
-        var allowDead = proto.Effects.Any(effect => effect.AllowsDeadTarget);
+        var allowDead = proto.Effects.OfType<ILitanyEffect>().Any(effect => effect.AllowsDeadTarget);
 
         var range = proto.Range > 0 ? proto.Range : 1f;
         if (TryComp<PullerComponent>(actor, out var puller) && puller.Pulling is { } grabbed &&
