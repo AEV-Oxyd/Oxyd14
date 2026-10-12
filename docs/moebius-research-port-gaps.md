@@ -122,6 +122,51 @@ The full Eris R&D loop was exercised on a live client session:
 - Xenoflora/xenobiology/xenoarchaeology
 - Antag content, map layout, AI/silicon stack, cosmetic tiles
 
+## Coverage
+
+Counted per discrete blueprint item (a machine, job, system, or item is
+one unit; an item is either ported or not).
+
+**Feature gap — ported 20 of 31 blueprint items → feature coverage
+64.5%, feature gap 35.5%.**
+
+Ported/adapted (20): Overseer/Scientist/Roboticist/Psychiatrist jobs (4),
+access levels, department wiring, R&D console + BUI, destructive
+analyzer, protolathe, circuit imprinter, exosuit fabricator, tech-tree
+system (7 trees/83 nodes), design recipe subset, research points disk,
+research data disk, network sync (console broadcast), science tool,
+explosion watcher, autopsy report item, machine boards.
+
+Not ported (11): cyborg/robot-part assembly chain, MMI + posibrain,
+maintenance drones, robot repair console, mech/exosuit vehicle,
+expedition/overmap shuttle, xenoflora, xenobiology (incl. slime-core
+experiment points), xenoarchaeology, symptom scans, mental imprinter —
+all marked SKIP/deferred in the blueprint.
+
+Borderline counted as ported: design subset (34 recipes, below the
+~60–80 target — excluded categories were blueprint SKIP calls), autopsy
+scanner (owned by the medical port; this branch ships the report item
+only), network sync (adapted to console broadcast; no dedicated server
+machine, as blueprinted).
+
+**Testing gap — live-verified 8 of 20 ported items → test coverage
+40%, testing gap 60%.**
+
+Live-verified in the running client (spawned + interacted + observed
+working): R&D console BUI (all four screens, state push, rescan-link),
+destructive analyzer (insert → deconstruct → points + levels + sheet
+refund), protolathe / circuit imprinter / mechfab (linked, device tabs,
+unlocked-design list + correct material gating — the final Queue→print
+hop was not exercised for any lathe), tech-tree system (free + paid
+unlocks, point deduction, level-ups, prereq cascades both directions),
+design recipe listing, research points disk (insert → +5000 → spent).
+
+Not live-verified — build/prototype-verified only (12): the 4 jobs
+(protos exist; not exercised through lobby join), access levels,
+department wiring, research data disk tech/design save-load ops,
+network sync broadcast, science tool scan→upload, explosion watcher
+bomb-banking, autopsy report upload, machine board construction path.
+
 ## Files
 
 - Blueprint: `docs/moebius-research-port-blueprint.md`
