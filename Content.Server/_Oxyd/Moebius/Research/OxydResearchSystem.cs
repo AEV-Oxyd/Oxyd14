@@ -18,13 +18,13 @@ namespace Content.Server._Oxyd.Moebius.Research;
 
 public sealed partial class OxydResearchSystem : EntitySystem
 {
-    [Dependency] private readonly ItemSlotsSystem _slots = default!;
-    [Dependency] private readonly LatheSystem _lathe = default!;
-    [Dependency] private readonly SharedMaterialStorageSystem _matStorage = default!;
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly PopupSystem _popup = default!;
-    [Dependency] private readonly IPrototypeManager _proto = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private ItemSlotsSystem _slots = default!;
+    [Dependency] private LatheSystem _lathe = default!;
+    [Dependency] private SharedMaterialStorageSystem _matStorage = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private PopupSystem _popup = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     /// <summary>Eris tech_points values per tree (destructive_analyzer.dm get_object_research_value).</summary>
     private static readonly Dictionary<string, int> TreePointValues = new()

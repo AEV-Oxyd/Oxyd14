@@ -152,7 +152,7 @@ public sealed partial class OxydResearchSystem
         UpdateUi(consoleEnt);
     }
 
-    [Dependency] private readonly StackSystem _stack = default!;
+    [Dependency] private StackSystem _stack = default!;
 
     private EntityUid? FindAnalyzerWithItem(Entity<OxydRdConsoleComponent> ent)
     {
