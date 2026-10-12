@@ -242,22 +242,24 @@ public sealed class OxydRdWindow : DefaultWindow
         var i = 0;
         foreach (var d in s.Designs)
         {
+            var cell = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
             var row = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 8, HorizontalExpand = true };
             var name = new Label { Text = d.Name, HorizontalExpand = true, FontColorOverride = ErisSurgeryColors.Text, ClipText = true };
             row.AddChild(name);
-            var detail = new Label
-            {
-                Text = d.CanPrint ? "ready" : $"needs {d.Missing}",
-                FontColorOverride = d.CanPrint ? ErisSurgeryColors.GoodText : ErisSurgeryColors.BadText,
-            };
-            row.AddChild(detail);
             var print = new ErisLink("Queue");
             if (!d.CanPrint)
                 print.SetDisabledLook();
             var rid = d.RecipeId;
             print.OnPressed += _ => Msg(new OxydRdPrintMessage { Recipe = rid, Device = s.SelectedDevice ?? default, Amount = 1 });
-            row.AddChild(print);
-            lcol.AddChild(ErisCandystripe.Wrap(row, i++));
+            cell.AddChild(row);
+            cell.AddChild(print);
+            cell.AddChild(new Label
+            {
+                Text = d.CanPrint ? "ready" : $"needs {d.Missing}",
+                FontColorOverride = d.CanPrint ? ErisSurgeryColors.GoodText : ErisSurgeryColors.BadText,
+                ClipText = true,
+            });
+            lcol.AddChild(ErisCandystripe.Wrap(cell, i++));
         }
         col.AddChild(list);
     }
@@ -287,6 +289,7 @@ public sealed class OxydRdWindow : DefaultWindow
         var i = 0;
         foreach (var n in s.Nodes)
         {
+            var cell = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
             var row = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 8, HorizontalExpand = true };
             var name = new Label { Text = $"{n.Name} ({n.Cost})", HorizontalExpand = true, FontColorOverride = ErisSurgeryColors.Text, ClipText = true };
             row.AddChild(name);
@@ -299,21 +302,29 @@ public sealed class OxydRdWindow : DefaultWindow
                 status = "not enough points";
             else
                 status = "available";
-            row.AddChild(new Label
+            cell.AddChild(row);
+            var sub = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 8, HorizontalExpand = true };
+            sub.AddChild(new Label
             {
                 Text = status,
                 FontColorOverride = n.State == 2 ? ErisSurgeryColors.GoodText :
                     n.State == 1 ? ErisSurgeryColors.Text : ErisSurgeryColors.BadText,
             });
             if (n.Unlocks.Count > 0)
-                row.AddChild(new ErisSubLabel($"unlocks: {string.Join(", ", n.Unlocks)}"));
+            {
+                var unlocks = new ErisSubLabel($"unlocks: {string.Join(", ", n.Unlocks)}");
+                unlocks.ClipText = true;
+                unlocks.HorizontalExpand = true;
+                sub.AddChild(unlocks);
+            }
+            cell.AddChild(sub);
             var go = new ErisLink("Research");
             if (n.State != 1)
                 go.SetDisabledLook();
             var nid = n.Id;
             go.OnPressed += _ => Msg(new OxydRdUnlockMessage { Node = nid });
-            row.AddChild(go);
-            lcol.AddChild(ErisCandystripe.Wrap(row, i++));
+            cell.AddChild(go);
+            lcol.AddChild(ErisCandystripe.Wrap(cell, i++));
         }
         col.AddChild(list);
     }

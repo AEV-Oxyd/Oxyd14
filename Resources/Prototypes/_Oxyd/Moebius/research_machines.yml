@@ -111,7 +111,13 @@
   components:
   - type: Sprite
     sprite: Structures/Machines/exosuit_fabricator.rsi
-    state: fab-idle
+    layers:
+    - state: fab-idle
+      map: ["enum.LatheVisualLayers.IsRunning"]
+    - state: fab-load
+      map: ["enum.MaterialStorageVisualLayers.Inserting"]
+    - state: fab-o
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
   - type: OxydRdLinkable
     kind: Mechfab
   - type: Lathe

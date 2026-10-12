@@ -48,6 +48,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     public override void Initialize()
     {
         SubscribeLocalEvent<OxydRdConsoleComponent, MapInitEvent>(OnConsoleMapInit);
+        SubscribeLocalEvent<OxydRdConsoleComponent, AfterActivatableUIOpenEvent>(OnConsoleUIOpen);
         SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdScreenMessage>(OnScreenMsg);
         SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdSelectTreeMessage>(OnSelectTree);
         SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdSelectDeviceMessage>(OnSelectDevice);
@@ -64,6 +65,9 @@ public sealed partial class OxydResearchSystem : EntitySystem
     // ---- linkage (Eris rdconsole auto-link on init + "Rescan" verb) ----
     private void OnConsoleMapInit(Entity<OxydRdConsoleComponent> ent, ref MapInitEvent args)
         => RescanDevices(ent);
+
+    private void OnConsoleUIOpen(Entity<OxydRdConsoleComponent> ent, ref AfterActivatableUIOpenEvent args)
+        => UpdateUi(ent);
 
     private void OnRescan(Entity<OxydRdConsoleComponent> ent, ref OxydRdRescanMessage args)
     {
