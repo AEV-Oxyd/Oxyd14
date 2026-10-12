@@ -1,0 +1,160 @@
+# Moebius research jobs (Eris code/game/jobs/job/science.dm).
+# Overseer is head of research+medical in Eris (DEPT COMMAND); scientist,
+# roboticist, psychiatrist map onto the Oxyd access levels in research_access.yml.
+
+- type: job
+  id: MoebiusExpeditionOverseer
+  name: job-name-moebius-overseer
+  description: job-description-moebius-overseer
+  playTimeTracker: JobMoebiusExpeditionOverseer
+  startingGear: MoebiusOverseerGear
+  icon: JobIconMoebiusOverseer
+  supervisors: job-supervisors-captain
+  access:
+  - ChiefMedicalOfficer
+  - Command
+  - Research
+  - ResearchDirector
+  - Medical
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusResearch
+  - OxydMoebiusResearchEquipment
+  - OxydMoebiusRobotics
+  - OxydMoebiusPsychiatrist
+  - OxydMoebiusOverseer
+  special:
+  - !type:AddComponentSpecial
+    components:
+    - type: CommandStaff
+
+- type: startingGear
+  id: MoebiusOverseerGear
+  outerClothing: erisport_labcoat
+  equipment:
+    jumpsuit: erisport_moebius_expedition_overseers_jumpsuit
+    id: OxydMoebiusPDA
+
+- type: startingGear
+  id: MoebiusOverseerChameleonOutfit
+  equipment:
+    jumpsuit: erisport_moebius_expedition_overseers_jumpsuit
+
+- type: job
+  id: MoebiusScientist
+  name: job-name-moebius-scientist
+  description: job-description-moebius-scientist
+  playTimeTracker: JobMoebiusScientist
+  startingGear: MoebiusScientistGear
+  icon: JobIconMoebiusScientist
+  supervisors: job-supervisors-moebius-overseer
+  access:
+  - Research
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusResearch
+  - OxydMoebiusResearchEquipment
+
+- type: startingGear
+  id: MoebiusScientistGear
+  outerClothing: erisport_moebius_scientist_labcoat
+  equipment:
+    jumpsuit: erisport_moebius_scientists_jumpsuit
+    id: OxydMoebiusPDA
+    belt: OxydScienceTool
+
+- type: startingGear
+  id: MoebiusScientistChameleonOutfit
+  equipment:
+    jumpsuit: erisport_moebius_scientists_jumpsuit
+
+- type: job
+  id: MoebiusRoboticist
+  name: job-name-moebius-roboticist
+  description: job-description-moebius-roboticist
+  playTimeTracker: JobMoebiusRoboticist
+  startingGear: MoebiusRoboticistGear
+  icon: JobIconMoebiusRoboticist
+  supervisors: job-supervisors-moebius-overseer
+  access:
+  - Research
+  - Robotics
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusResearch
+  - OxydMoebiusRobotics
+
+- type: startingGear
+  id: MoebiusRoboticistGear
+  equipment:
+    jumpsuit: erisport_roboticists_jumpsuit
+    id: OxydMoebiusPDA
+    belt: ClothingBeltUtility
+
+- type: startingGear
+  id: MoebiusRoboticistChameleonOutfit
+  equipment:
+    jumpsuit: erisport_roboticists_jumpsuit
+
+- type: job
+  id: MoebiusPsychiatrist
+  name: job-name-moebius-psychiatrist
+  description: job-description-moebius-psychiatrist
+  playTimeTracker: JobMoebiusPsychiatrist
+  startingGear: MoebiusPsychiatristGear
+  icon: JobIconMoebiusPsychiatrist
+  supervisors: job-supervisors-moebius-overseer
+  access:
+  - Medical
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusPsychiatrist
+
+- type: startingGear
+  id: MoebiusPsychiatristGear
+  equipment:
+    jumpsuit: erisport_moebius_psychologists_turtleneck
+    id: OxydMoebiusPDA
+
+- type: startingGear
+  id: MoebiusPsychiatristChameleonOutfit
+  equipment:
+    jumpsuit: erisport_moebius_psychologists_turtleneck
+
+# Job icons reuse stock states until Eris icons are extracted.
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusOverseer
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: ResearchDirector
+  jobName: job-name-moebius-overseer
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusScientist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Scientist
+  jobName: job-name-moebius-scientist
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusRoboticist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Roboticist
+  jobName: job-name-moebius-roboticist
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusPsychiatrist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Psychologist
+  jobName: job-name-moebius-psychiatrist

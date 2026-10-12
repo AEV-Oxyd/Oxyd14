@@ -1,0 +1,87 @@
+# Per-recipe packs granted by the R&D console on tech unlock (Eris unlocks_designs).
+# *_Static packs are loaded on machines directly (Eris free/basic designs).
+- type: latheRecipePack
+  id: OxydPackAdvanced
+  recipes:
+  - OxydRdAdvanced
+- type: latheRecipePack
+  id: OxydPackAirManagement
+  recipes:
+  - OxydRdAirManagement
+- type: latheRecipePack
+  id: OxydPackAtmosalerts
+  recipes:
+  - OxydRdAtmosalerts
+- type: latheRecipePack
+  id: OxydPackBiogenerator
+  recipes:
+  - OxydRdBiogenerator
+- type: latheRecipePack
+  id: OxydPackCircuitImprinter
+  recipes:
+  - OxydRdCircuitImprinter
+- type: latheRecipePack
+  id: OxydPackDestructiveAnalyzer
+  recipes:
+  - OxydRdDestructiveAnalyzer
+- type: latheRecipePack
+  id: OxydPackGps
+  recipes:
+  - OxydRdGps
+- type: latheRecipePack
+  id: OxydPackHyper
+  recipes:
+  - OxydRdHyper
+- type: latheRecipePack
+  id: OxydPackMechfab
+  recipes:
+  - OxydRdMechfab
+- type: latheRecipePack
+  id: OxydPackNuclear
+  recipes:
+  - OxydRdNuclear
+- type: latheRecipePack
+  id: OxydPackProtolathe
+  recipes:
+  - OxydRdProtolathe
+- type: latheRecipePack
+  id: OxydPackRdconsole
+  recipes:
+  - OxydRdRdconsole
+- type: latheRecipePack
+  id: OxydPackSuper
+  recipes:
+  - OxydRdSuper
+- type: latheRecipePack
+  id: OxydPackTeleconsole
+  recipes:
+  - OxydRdTeleconsole
+- type: latheRecipePack
+  id: OxydPackProtolatheStatic
+  recipes:
+  - OxydRdBasic
+  - OxydRdBasicSensor
+  - OxydRdHigh
+  - OxydRdMesons
+  - OxydRdMicroMani
+  - OxydRdMmi
+  - OxydRdNormal
+  - OxydRdScienceTool
+- type: latheRecipePack
+  id: OxydPackImprinterStatic
+  recipes:
+  - OxydRdAutolathe
+  - OxydRdMechRecharger
+  - OxydRdPowermonitor
+  - OxydRdRechargeStation
+- type: latheRecipePack
+  id: OxydPackMechfabStatic
+  recipes:
+  - OxydRdExoskeleton
+  - OxydRdHead
+  - OxydRdLArm
+  - OxydRdLLeg
+  - OxydRdPosibrain
+  - OxydRdRArm
+  - OxydRdRLeg
+  - OxydRdTorso
