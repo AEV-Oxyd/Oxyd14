@@ -12,7 +12,7 @@
   components:
   - type: Sprite
     sprite: Structures/Machines/computers.rsi
-    state: computer
+    state: rdcomp
   - type: OxydRdConsole
   - type: OxydRdLinkable
     kind: Protolathe
@@ -111,12 +111,14 @@
   components:
   - type: Sprite
     sprite: Structures/Machines/exosuit_fabricator.rsi
-    state: icon
+    state: fab-idle
   - type: OxydRdLinkable
     kind: Mechfab
   - type: Lathe
-    idleState: icon
-    runningState: building
+    idleState: fab-idle
+    runningState: fab-active
+    unlitIdleState: fab-o
+    unlitRunningState: fab-load
     staticPacks:
     - OxydPackMechfabStatic
     dynamicPacks: []
@@ -130,7 +132,7 @@
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: val_alarm
+    state: radio
   - type: OxydExplosionWatcher
   - type: Item
     size: Small
