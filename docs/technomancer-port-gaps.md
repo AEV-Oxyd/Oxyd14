@@ -53,3 +53,21 @@ but not fully exercised, **Skipped** = deliberately not ported this pass.
 - Interactive click-through of breaker/bridge/shield windows on a quieter box (spawn each alone on an empty lit tile).
 - `technomancer:` toolshed debug command (mirroring `litany:`) to spawn a clean labeled test-rig row — would have saved most of the verification friction.
 - Decide RCON / nanoforge / tool-quality scope with the orchestrator.
+
+## Coverage
+
+Measured against `docs/technomancer-port-blueprint.md` as the contract (discrete blueprint items: machines, jobs, systems, item groups — blueprint-Skip items included in the denominator as "not ported").
+
+### Feature coverage — ported 9 of 23 blueprint items (39.1% coverage, 60.9% gap)
+
+Ported/adapted (9): jobs+access+dept wiring (§1); SMES unit + NanoUI window (§2); breaker box (§3); pulsar console + starmap (§4); pulsar power bridge (§4); pulsar fuel tank (§4); ship shield generator + hull (§6); gravity/solar/misc kept stock per Adapt (§12); DMI→RSI worklist, 8 packs delivered (§13).
+
+Not ported (14): RCON console (§5 — Eris browse()/modular program, stock PowerMonitoringDevice analog kept); canister reskin (§7 — sprite converted, window kept stock per port-rule; counted not-ported since the skin was the work); omni filter/mixer (§7); pump/valve reskins (§7, blueprint-Skip); air alarm reskin (§7); atmos control console (§7); long-range scanner (§8, blueprint-Skip); nanoforge (§9 — recipe-model decision pending); duct tape (§10); advanced tool set (§10); RCD/RPD (§10); design disks (§10, blueprint-Skip); tool mods/complicator (§10, blueprint-Skip); modular-computer software suite (§11, blueprint-Skip).
+
+Borderline: canisters ship a converted RSI but no reskin → counted not-ported. §12 counted ported because its blueprint deliverable was literally "keep stock + note".
+
+### Testing coverage — live-verified 3 of 9 ported items (33.3% coverage, 66.7% gap)
+
+Verified live in running Oxyd client (spawned + interacted + observed): SMES window (opened via Toggle UI; output breaker toggled Offline; capacity/input/output/load rows all rendered); pulsar console window (opened; shield pill 70 recomputed effective power 74%→65%; orbit decay ticking; move refused at 0 fuel); RSI pack (all machine sprites rendered correctly in-world, incl. SMES red Eris cabinet after layer-map fix).
+
+Spawned + rendered but not interacted live (5): breaker box, pulsar power bridge, pulsar fuel tank, ship shield generator (all render + push BUI state; click-through not captured due to spawn:on 4× stacking + box lag); jobs (protos load clean, no live role join). Gravity/solar kept stock (not separately verified — no port artifact to exercise).
