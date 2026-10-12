@@ -147,6 +147,9 @@
   - type: OxydExplosionWatcher
   - type: Item
     size: Small
+  - type: Damageable
+  - type: Injurable
+    damageContainer: StructuralInorganic  # must accept Structural (explosion) damage
   - type: InteractionOutline
   - type: Clickable
 

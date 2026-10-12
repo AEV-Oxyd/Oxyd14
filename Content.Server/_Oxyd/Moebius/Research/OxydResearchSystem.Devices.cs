@@ -424,6 +424,7 @@ public sealed partial class OxydResearchSystem
     // ---- explosion watcher (Eris KES: banks points per explosion) ----
     private void OnWatcherDamaged(Entity<OxydExplosionWatcherComponent> ent, ref DamageChangedEvent args)
     {
+        Log.Info($"moebius-watcher: event on {ent}, delta={(args.DamageDelta == null ? "null" : args.DamageDelta.GetTotal().ToString())}, anchored={Transform(ent).Anchored}");
         if (args.DamageDelta == null || !Transform(ent).Anchored)
             return;
         var delta = args.DamageDelta.GetTotal().Int();

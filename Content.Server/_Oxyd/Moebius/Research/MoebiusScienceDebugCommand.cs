@@ -4,6 +4,8 @@
 // explosion watcher, lathe material feeds, forced node unlocks, point grants.
 using Content.Server.Administration;
 using Content.Shared.Administration;
+using Content.Shared.Interaction;
+using Content.Shared.Interaction.Events;
 using Content.Shared._Oxyd.Moebius.Research;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
@@ -24,6 +26,14 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     private SharedMaterialStorageSystem? _mat;
     private IPrototypeManager? _proto;
 
+    /// <summary>Anchors an entity in place (watcher/console verification).</summary>
+    [CommandImplementation("anchor")]
+    public void Anchor(IInvocationContext ctx, EntityUid ent)
+    {
+        Transform(ent).Anchored = true;
+        ctx.WriteLine($"moebius: anchored {ent}");
+    }
+
     /// <summary>Simulate a blast on an explosion watcher: deals Blast damage so
     /// the watcher's DamageChanged handler banks points (real explosions need
     /// atmos+bombs; the banking path is identical).</summary>
@@ -32,16 +42,10 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     {
         _dmg ??= GetSys<DamageableSystem>();
         var spec = new DamageSpecifier();
-        spec.DamageDict["Blast"] = amount;
-        if (_dmg.TryChangeDamage(watcher, spec) != null)
-        {
-            var banked = TryComp<OxydExplosionWatcherComponent>(watcher, out var w) ? w.BankedPoints : -1;
-            ctx.WriteLine($"moebius: dealt {amount} blast to {watcher}, bankedPoints={banked}");
-        }
-        else
-        {
-            ctx.WriteLine($"moebius: watcher {watcher} has no DamageableComponent");
-        }
+        spec.DamageDict["Structural"] = amount; // explosions deal Structural to inorganic objects
+        var done = _dmg.ChangeDamage(watcher, spec);
+        var banked = TryComp<OxydExplosionWatcherComponent>(watcher, out var w) ? w.BankedPoints : -1;
+        ctx.WriteLine($"moebius: dealt {done.GetTotal()} blast to {watcher}, bankedPoints={banked}");
     }
 
     /// <summary>Load a linked lathe with steel+glass so Queue can be exercised
@@ -68,6 +72,32 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
         }
         GetSys<OxydResearchSystem>().DebugForceUnlock(console, node);
         ctx.WriteLine($"moebius: unlocked {node} on {console} + synced linked lathes");
+    }
+
+    /// <summary>Raise UseInHandEvent on an item as if `user` activated it in-hand
+    /// (mental imprinter, drone shell deploy).</summary>
+    [CommandImplementation("use")]
+    public void Use(IInvocationContext ctx, EntityUid item, EntityUid user)
+    {
+        EntityManager.EventBus.RaiseLocalEvent(item, new UseInHandEvent(user));
+        ctx.WriteLine($"moebius: UseInHand {item} by {user}");
+    }
+
+    /// <summary>Raise ActivateInWorldEvent on a target (drone fabricator cycle).</summary>
+    [CommandImplementation("activate")]
+    public void Activate(IInvocationContext ctx, EntityUid target, EntityUid user)
+    {
+        EntityManager.EventBus.RaiseLocalEvent(target, new ActivateInWorldEvent(user, target, false));
+        ctx.WriteLine($"moebius: Activate {target} by {user}");
+    }
+
+    /// <summary>Raise AfterInteractUsingEvent on an item against a target
+    /// (slime extractor on slime, science tool on mob).</summary>
+    [CommandImplementation("useon")]
+    public void UseOn(IInvocationContext ctx, EntityUid item, EntityUid target, EntityUid user)
+    {
+        EntityManager.EventBus.RaiseLocalEvent(item, new AfterInteractUsingEvent(user, item, target, Transform(target).Coordinates, true));
+        ctx.WriteLine($"moebius: UseOn {item} -> {target} by {user}");
     }
 
     /// <summary>Grant research points to a console.</summary>
