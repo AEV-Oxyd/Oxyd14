@@ -131,6 +131,19 @@ public sealed partial class OxydResearchSystem : EntitySystem
             Dirty(device, lathe);
     }
 
+    /// <summary>Debug-command helper: force-unlock a node and sync every
+    /// linked lathe (moebiusscience:unlock — same effect as the BUI unlock
+    /// without point cost or prereq checks).</summary>
+    public void DebugForceUnlock(EntityUid console, string nodeId)
+    {
+        if (!TryComp<OxydRdConsoleComponent>(console, out var comp))
+            return;
+        comp.UnlockedNodes.Add(nodeId);
+        Dirty(console, comp);
+        foreach (var dev in comp.LinkedDevices)
+            SyncLatheRecipes((console, comp), dev);
+    }
+
     // ---- screen / selection ----
     private void OnScreenMsg(Entity<OxydRdConsoleComponent> ent, ref OxydRdScreenMessage args)
     {

@@ -34,9 +34,14 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
         var spec = new DamageSpecifier();
         spec.DamageDict["Blast"] = amount;
         if (_dmg.TryChangeDamage(watcher, spec) != null)
-            ctx.WriteLine($"moebius: dealt {amount} blast to {watcher}");
+        {
+            var banked = TryComp<OxydExplosionWatcherComponent>(watcher, out var w) ? w.BankedPoints : -1;
+            ctx.WriteLine($"moebius: dealt {amount} blast to {watcher}, bankedPoints={banked}");
+        }
         else
+        {
             ctx.WriteLine($"moebius: watcher {watcher} has no DamageableComponent");
+        }
     }
 
     /// <summary>Load a linked lathe with steel+glass so Queue can be exercised
@@ -56,13 +61,13 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     [CommandImplementation("unlock")]
     public void Unlock(IInvocationContext ctx, EntityUid console, string node)
     {
-        if (!TryComp<OxydRdConsoleComponent>(console, out var comp))
+        if (!TryComp<OxydRdConsoleComponent>(console, out _))
         {
             ctx.WriteLine($"moebius: {console} is not an Oxyd R&D console");
             return;
         }
-        comp.UnlockedNodes.Add(node);
-        ctx.WriteLine($"moebius: unlocked {node} on {console}");
+        GetSys<OxydResearchSystem>().DebugForceUnlock(console, node);
+        ctx.WriteLine($"moebius: unlocked {node} on {console} + synced linked lathes");
     }
 
     /// <summary>Grant research points to a console.</summary>
