@@ -57,8 +57,9 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     {
         _mat ??= GetSys<SharedMaterialStorageSystem>();
         var ok = _mat.TryChangeMaterialAmount(lathe, "Steel", amount)
-              && _mat.TryChangeMaterialAmount(lathe, "Glass", amount);
-        ctx.WriteLine(ok ? $"moebius: fed {amount} steel+glass to {lathe}"
+              && _mat.TryChangeMaterialAmount(lathe, "Glass", amount)
+              && _mat.TryChangeMaterialAmount(lathe, "Gold", amount);
+        ctx.WriteLine(ok ? $"moebius: fed {amount} steel+glass+gold to {lathe}"
                          : $"moebius: {lathe} has no MaterialStorageComponent");
     }
 
@@ -128,6 +129,49 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
         var hands = GetSys<SharedHandsSystem>();
         var ok = hands.TryPickupAnyHand(user, item);
         ctx.WriteLine($"moebius: hold {item} by {user} = {ok}");
+    }
+
+    /// <summary>Marks a spawned machine powered (spawned entities aren't wired
+    /// into an APC net, so ApcPowerReceiver.Powered stays false and lathes/BUIs
+    /// refuse to run).</summary>
+    [CommandImplementation("power")]
+    public void Power(IInvocationContext ctx, EntityUid ent)
+    {
+        if (TryComp<Content.Server.Power.Components.ApcPowerReceiverComponent>(ent, out var r))
+        {
+            r.Powered = true;
+            ctx.WriteLine($"moebius: powered {ent}");
+        }
+        else
+            ctx.WriteLine($"moebius: {ent} has no ApcPowerReceiverComponent");
+    }
+
+    /// <summary>Queues a recipe on a lathe and kicks production, replaying the
+    /// console Queue->print path server-side (same API the lathe BUI uses).</summary>
+    [CommandImplementation("queue")]
+    public void Queue(IInvocationContext ctx, EntityUid lathe, string recipeId)
+    {
+        _proto ??= IoCManager.Resolve<IPrototypeManager>();
+        var latheSys = GetSys<Content.Server.Lathe.LatheSystem>();
+        if (!_proto.TryIndex<Content.Shared.Research.Prototypes.LatheRecipePrototype>(recipeId, out var recipe))
+        {
+            ctx.WriteLine($"moebius: queue on {lathe}: no recipe '{recipeId}'");
+            return;
+        }
+        var queued = latheSys.TryAddToQueue(lathe, recipe, 1);
+        var started = queued && latheSys.TryStartProducing(lathe);
+        ctx.WriteLine($"moebius: queue '{recipeId}' on {lathe} queued={queued} started={started}");
+    }
+
+    /// <summary>Completes the current batch on a lathe now — same code path as
+    /// the producing timer's expiry (LatheSystem.FinishProducing), for runs where
+    /// no client is connected to tick game time.</summary>
+    [CommandImplementation("finish")]
+    public void Finish(IInvocationContext ctx, EntityUid lathe)
+    {
+        var latheSys = GetSys<Content.Server.Lathe.LatheSystem>();
+        latheSys.FinishProducing(lathe);
+        ctx.WriteLine($"moebius: finish {lathe}");
     }
 
     /// <summary>Grant research points to a console.</summary>
