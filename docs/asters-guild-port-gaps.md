@@ -3,6 +3,17 @@
 Live-verified in Oxyd14 (Dev map, sandbox, localhost admin) against `docs/asters-guild-port-blueprint.md`.
 Evidence screenshots: `docs/asters-guild/` captures + session recording frames.
 
+## Coverage
+
+Counted from `docs/asters-guild-port-blueprint.md` verdict rows (one row/bullet = one audited item; multi-machine rows counted per machine; mission-level exclusions not counted as audited items).
+
+- **FEATURE GAP — ported or adapted 28 of 33 audited items → feature coverage 84.8% (~85%), gap 15.2% (~15%).**
+  Missing (skipped by design): supply-shuttle/hangar plumbing, cave worldgen, bank/ATM/accounts web, disposal/delivery + supply shuttle, merchant perks/deal buffs.
+  Within the 28, four are partial implementations rather than full: trade crate (orders spawn loose goods at the beacon instead), order-request queue + saved carts (tab renders, no queue/persist logic), cash register/EFTPOS (spawnable stub entities, no till/charge UI).
+- **TESTING GAP — live-verified 13 of 28 ported items → test coverage 46.4% (~46%), gap 53.6% (~54%).**
+  Live-verified (observed working in the running client): trade station tree + info panel, goods catalog w/ prices, cart → Create Order → goods spawn at receiving beacon (stock decrement, log entry), special offers Send → items consumed at sending beacon + balance credited, transaction logs, beacon ✓/✗ status headers, trade backend state (stock/favor/offer countdown), price/stock mutability, both trade beacons, account balance display + crediting, ore processor console+unit (insert → loaded list → TURN ON → Coal1 sheet), material smelt map, deep drill ore ejection.
+  Not live-verified (build/spawn-verified only, or stub): 3 jobs + department wiring (prototype-level, never joined a job), order-requests tab (stub UI), OxydTradeCrate (not implemented — loose goods instead), OxydTradeRequestConsole (spawned; shares the trade BUI but not separately opened), design disks (pre-existing port, not exercised this session), 3 vending machines (spawned only — stock BUI unopened), credits/cash register/EFTPOS (spawned only), vend clothing (inventory proto only).
+
 ## Verified (works in-game, exercised end-to-end)
 
 | Blueprint item | Result |
