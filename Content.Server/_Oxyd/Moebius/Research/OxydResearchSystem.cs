@@ -117,6 +117,15 @@ public sealed partial class OxydResearchSystem : EntitySystem
                     changed = true;
                 }
             }
+            // whole stock packs (Eris mechfab design categories: borg modules, mech parts)
+            foreach (var packId in node.UnlocksPacks)
+            {
+                if (!lathe.DynamicPacks.Contains(packId))
+                {
+                    lathe.DynamicPacks.Add(packId);
+                    changed = true;
+                }
+            }
         }
         if (changed)
             Dirty(device, lathe);

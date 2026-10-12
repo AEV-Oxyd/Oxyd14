@@ -1,8 +1,11 @@
 // Eris Moebius research port: destructive analyzer + experiment sources.
 // Eris source: destructive_analyzer.dm, experiment.dm (science_tool,
 // autopsy_scanner, explosion_watcher, points disks).
+using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Server.Materials;
 using Content.Shared._Oxyd.Moebius.Research;
+using Content.Shared.Interaction.Events;
+using Content.Shared.Tools.Components;
 using Content.Shared.Containers.ItemSlots;
 using Content.Server.Stack;
 using Content.Shared.Damage;
@@ -29,7 +32,13 @@ public sealed partial class OxydResearchSystem
         SubscribeLocalEvent<OxydDestructiveAnalyzerComponent, EntInsertedIntoContainerMessage>(OnDaInsert);
         SubscribeLocalEvent<OxydScienceToolComponent, AfterInteractUsingEvent>(OnScienceToolUse);
         SubscribeLocalEvent<OxydExplosionWatcherComponent, DamageChangedEvent>(OnWatcherDamaged);
+        SubscribeLocalEvent<OxydMentalImprinterComponent, UseInHandEvent>(OnImprinterUse);
+        SubscribeLocalEvent<OxydDroneFabricatorComponent, ActivateInWorldEvent>(OnDroneFabricate);
+        SubscribeLocalEvent<OxydSlimeExtractorComponent, AfterInteractUsingEvent>(OnSlimeExtract);
+        SubscribeLocalEvent<OxydMaintenanceDroneShellComponent, UseInHandEvent>(OnDroneDeploy);
     }
+
+    [Dependency] private SanitySystem _sanity = default!;
 
     // ---- slot plumbing: refresh the UI when disks/tools change ----
     private void OnConsoleSlotInsert(Entity<OxydRdConsoleComponent> ent, ref EntInsertedIntoContainerMessage args) => UpdateUi(ent);
@@ -314,8 +323,27 @@ public sealed partial class OxydResearchSystem
         if (args.Handled || !args.CanReach)
             return;
         var target = args.Target;
-        if (target == null || !TryComp<OxydOriginTechComponent>(target.Value, out var origin) || origin.Techs.Count == 0)
+        if (target == null)
         {
+            _popup.PopupEntity("No research value detected.", ent, args.User);
+            return;
+        }
+        // Eris symptom scans (experiment.dm): scanning a specimen yields a
+        // datablock — vitals on the living, pathology on the dead.
+        if (!TryComp<OxydOriginTechComponent>(target.Value, out var origin) || origin.Techs.Count == 0)
+        {
+            if (HasComp<MobStateComponent>(target.Value))
+            {
+                var alive = Comp<MobStateComponent>(target.Value).CurrentState == Shared.Mobs.MobState.Alive;
+                var label = alive ? "vitals" : "pathology";
+                var svalue = alive ? 50 : 100;
+                ent.Comp.Blocks.Add(new OxydScanBlock { Subject = $"{label} sample: {Name(target.Value)}", Value = svalue });
+                ent.Comp.TotalValue += svalue;
+                Dirty(ent);
+                _popup.PopupEntity($"Symptom scan recorded: {Name(target.Value)} (+{svalue}).", ent, args.User);
+                args.Handled = true;
+                return;
+            }
             _popup.PopupEntity("No research value detected.", ent, args.User);
             return;
         }
@@ -327,6 +355,69 @@ public sealed partial class OxydResearchSystem
         Dirty(ent);
         _popup.PopupEntity($"Scan recorded: {Name(target.Value)} (+{value}).", ent, args.User);
         args.Handled = true;
+    }
+
+    // ---- mental imprinter (Eris mental_imprinter: eye-stab stat boost at
+    // a heavy sanity toll; adapted — no stat system, so it is flavor + cost) ----
+    private void OnImprinterUse(Entity<OxydMentalImprinterComponent> ent, ref UseInHandEvent args)
+    {
+        if (args.Handled)
+            return;
+        args.Handled = true;
+        if (TryComp<SanityComponent>(args.User, out var sanity))
+            _sanity.ApplySanityDelta((args.User, sanity), SanitySource.Mental, -ent.Comp.SanityDamage);
+        _popup.PopupEntity("You drive the imprinter needle into your eye. Design data floods your mind.", args.User, args.User);
+        QueueDel(ent);
+    }
+
+    // ---- drone fabricator (Eris drone_fabricator: produces drone shells on a
+    // cycle; shells can't be inhabited without a silicon stack) ----
+    private void OnDroneFabricate(Entity<OxydDroneFabricatorComponent> ent, ref ActivateInWorldEvent args)
+    {
+        if (args.Handled)
+            return;
+        args.Handled = true;
+        if (_timing.CurTime < ent.Comp.NextUse)
+        {
+            _popup.PopupEntity("The fabricator is still assembling a shell.", ent, args.User);
+            return;
+        }
+        ent.Comp.NextUse = _timing.CurTime + TimeSpan.FromSeconds(ent.Comp.CooldownSeconds);
+        Spawn(ent.Comp.ShellProto, Transform(ent).Coordinates);
+        _popup.PopupEntity("The fabricator deposits a folded drone shell.", ent, args.User);
+    }
+
+    // ---- slime core extraction (Eris xenobiology extract tooling: cores are
+    // research specimens; adapted — draws from any refinable biological mob) ----
+    private void OnSlimeExtract(Entity<OxydSlimeExtractorComponent> ent, ref AfterInteractUsingEvent args)
+    {
+        if (args.Handled || !args.CanReach || args.Target == null)
+            return;
+        if (!HasComp<MobStateComponent>(args.Target.Value) || !HasComp<ToolRefinableComponent>(args.Target.Value))
+            return;
+        args.Handled = true;
+        if (ent.Comp.Uses <= 0)
+        {
+            _popup.PopupEntity("The extractor is empty.", ent, args.User);
+            return;
+        }
+        ent.Comp.Uses--;
+        Spawn(ent.Comp.CoreProto, Transform(args.Target.Value).Coordinates);
+        _popup.PopupEntity($"You draw a specimen core from {Name(args.Target.Value)}.", ent, args.User);
+        if (ent.Comp.Uses <= 0)
+            QueueDel(ent);
+    }
+
+    // ---- maintenance drone shell (Eris maint drone folded form; unfolds into
+    // a non-player NPC — inhabited drones need a silicon stack) ----
+    private void OnDroneDeploy(Entity<OxydMaintenanceDroneShellComponent> ent, ref UseInHandEvent args)
+    {
+        if (args.Handled)
+            return;
+        args.Handled = true;
+        Spawn(ent.Comp.DroneProto, Transform(args.User).Coordinates);
+        _popup.PopupEntity("The shell unfolds into a maintenance drone.", args.User, args.User);
+        QueueDel(ent);
     }
 
 

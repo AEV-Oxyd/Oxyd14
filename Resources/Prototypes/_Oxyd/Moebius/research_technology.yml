@@ -785,6 +785,8 @@
   - OxydTechBasicRobotics
   unlocksRecipes:
   - OxydRdMechfab
+  unlocksPacks:
+  - MechParts
 - type: oxydTechNode
   id: OxydTechLightExoComponents
   tree: OxydTreeRobotics
@@ -851,6 +853,8 @@
   iconHint: cyborganalyzer
   requiredNodes:
   - OxydTechCheapExoComponents
+  unlocksPacks:
+  - MechEquipment
 - type: oxydTechNode
   id: OxydTechMechTeleporterModules
   tree: OxydTreeRobotics
@@ -929,3 +933,5 @@
   iconHint: rigscanner
   requiredNodes:
   - OxydTechCyborgRobo
+  unlocksPacks:
+  - BorgModules

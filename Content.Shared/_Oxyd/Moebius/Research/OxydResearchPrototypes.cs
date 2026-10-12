@@ -1,5 +1,6 @@
 // Eris Moebius research port: prototype declarations.
 // Eris source: code/modules/research/research.dm (/datum/tech, /datum/technology).
+using Content.Shared.Lathe.Prototypes;
 using Content.Shared.Research.Prototypes;
 using Robust.Shared.Prototypes;
 
@@ -50,4 +51,9 @@ public sealed partial class OxydTechNodePrototype : IPrototype
 
     /// <summary>Eris unlocks_designs: lathe recipes granted when this node unlocks.</summary>
     [DataField] public List<ProtoId<LatheRecipePrototype>> UnlocksRecipes = new();
+
+    /// <summary>Whole lathe recipe packs granted when this node unlocks —
+    /// used to hang stock SS14 packs (mech parts, borg modules) on Eris
+    /// robotics nodes without re-authoring their recipes.</summary>
+    [DataField] public List<ProtoId<LatheRecipePackPrototype>> UnlocksPacks = new();
 }

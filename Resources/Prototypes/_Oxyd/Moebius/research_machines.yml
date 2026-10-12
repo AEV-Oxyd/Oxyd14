@@ -126,7 +126,12 @@
     unlitIdleState: fab-o
     unlitRunningState: fab-load
     staticPacks:
+    # Eris mechfab baseline: robot parts + brains + basic modules (stock
+    # robotics packs — cyborg endoskeleton, limbs, MMI, posibrain).
     - OxydPackMechfabStatic
+    - RoboticsStatic
+    - BorgLimbsStatic
+    - BorgModulesStatic
     dynamicPacks: []
 
 # ---------------------------------------------------------------------------

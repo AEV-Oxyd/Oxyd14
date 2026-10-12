@@ -264,6 +264,43 @@ ent-OxydNanoManipulator = pico-manipulator
 ent-OxydCellPrototype = prototype power cell
     .desc = An experimental power cell created by the R&D department.
 
+# ---- entities: robotics / expansion ----
+ent-OxydRoboticsConsole = robotics control console
+    .desc = Monitors and administers the station's cyborgs.
+
+ent-OxydExpeditionConsole = expedition console
+    .desc = Coordinates Moebius away missions to salvage sites.
+
+ent-OxydDroneFabricator = drone fabricator
+    .desc = Assembles folded maintenance drone shells on a fabrication cycle.
+
+ent-OxydMaintenanceDroneShell = folded maintenance drone
+    .desc = A packaged maintenance drone. Activate to unfold it.
+
+ent-OxydMaintenanceDrone = maintenance drone
+    .desc = A small autonomous maintenance automaton.
+
+ent-OxydSlimeExtractor = specimen extractor
+    .desc = Draws research cores out of refinable biological specimens.
+
+ent-OxydSlimeCore = specimen core
+    .desc = A quivering biological core. Rich in xenobiological data.
+
+ent-OxydXenoSeedAmanita = packet of fly amanita seeds
+    .desc = Xenoflora specimen seeds for the research wing's planters.
+
+ent-OxydXenoSeedDeathnettle = packet of death nettle seeds
+    .desc = Xenoflora specimen seeds. Handle with gloves.
+
+ent-OxydXenoSeedGalaxythistle = packet of galaxythistle seeds
+    .desc = Xenoflora specimen seeds. Faintly luminous.
+
+ent-OxydStrangeArtifact = strange artifact
+    .desc = A xenoarchaeological specimen of unknown origin and purpose.
+
+ent-OxydMentalImprinter = mental imprinter
+    .desc = A slim device that burns design data straight into the optic nerve. Painful.
+
 # ---- access ----
 oxyd-access-moebius-research = Moebius Research
 oxyd-access-moebius-research-equipment = Moebius R&D
