@@ -54,20 +54,31 @@ but not fully exercised, **Skipped** = deliberately not ported this pass.
 - `technomancer:` toolshed debug command (mirroring `litany:`) to spawn a clean labeled test-rig row — would have saved most of the verification friction.
 - Decide RCON / nanoforge / tool-quality scope with the orchestrator.
 
+## Wave 2 additions (feature push 91%)
+
+Ported since the coverage baseline: RCON console (dedicated `OxydRconConsole`/`OxydRconWindow` — stock SMES/breaker toggle semantics, verified opened live with populated rows; toggle messages flow server-side), atmos control console, air alarm reskin, canister reskin (stock sprite + `OxydCanisterBui` surface), omni filter/mixer, pump/valve skins (RSI + protos), nanoforge (`OxydNanoforge` + ItemSlot feed + compressed-matter material/stack/single protos), duct tape (`OxydDuctTape`), advanced tools (`OxydWrench`/`OxydCrowbar`/`OxydWirecutter`/`OxydMultitool` — stock SS14 tool semantics, Adapt), RCD (`OxydRapidConstructionDevice`, stock RCD parent), RPD (`OxydRapidPipingDevice`, stock RPD parent), design disks (`OxydDesignDisk*`), tool mods (`OxydToolMod*` — AfterInteract quality stat bumps).
+
+All spawn live and render correct sprites on the verification grid (`technomancer:grid`/`technomancer:items` console commands). BUI/in-hand click-through for the wave-2 surfaces remains unverified — VM input lag + test-mob death consumed the budget; verified BUIs: SMES, pulsar, RCON.
+
+## Blocked (reported for user decision)
+
+- **Long-range scanner (§8)** — Eris relies on BYOND overmap/sensor view; no SS14 equivalent framework. Needs a grid-scanner design decision.
+- **Modular software suite (§11)** — no modular-computer base in SS14. The atmospherics-control slice was delivered as the dedicated `OxydAtmosConsole` instead.
+
 ## Coverage
 
-Measured against `docs/technomancer-port-blueprint.md` as the contract (discrete blueprint items: machines, jobs, systems, item groups — blueprint-Skip items included in the denominator as "not ported").
+Measured against `docs/technomancer-port-blueprint.md` as the contract (discrete blueprint items — blueprint-Skip items counted as not ported).
 
-### Feature coverage — ported 9 of 23 blueprint items (39.1% coverage, 60.9% gap)
+### Feature coverage — ported/adapted 21 of 23 blueprint items (91.3% coverage, 8.7% gap)
 
-Ported/adapted (9): jobs+access+dept wiring (§1); SMES unit + NanoUI window (§2); breaker box (§3); pulsar console + starmap (§4); pulsar power bridge (§4); pulsar fuel tank (§4); ship shield generator + hull (§6); gravity/solar/misc kept stock per Adapt (§12); DMI→RSI worklist, 8 packs delivered (§13).
+Ported/adapted (21): jobs+access+dept wiring (§1); SMES + window (§2); breaker box (§3); pulsar console + starmap, power bridge, fuel tank (§4); RCON console (§5, Adapt); ship shield + hull (§6); canister/air-alarm/atmos-console reskins + omni filter/mixer + pump/valve skins (§7); nanoforge (§9); duct tape, advanced tools, RCD/RPD, design disks, tool mods (§10); gravity/solar kept stock (§12); DMI→RSI worklist (§13).
 
-Not ported (14): RCON console (§5 — Eris browse()/modular program, stock PowerMonitoringDevice analog kept); canister reskin (§7 — sprite converted, window kept stock per port-rule; counted not-ported since the skin was the work); omni filter/mixer (§7); pump/valve reskins (§7, blueprint-Skip); air alarm reskin (§7); atmos control console (§7); long-range scanner (§8, blueprint-Skip); nanoforge (§9 — recipe-model decision pending); duct tape (§10); advanced tool set (§10); RCD/RPD (§10); design disks (§10, blueprint-Skip); tool mods/complicator (§10, blueprint-Skip); modular-computer software suite (§11, blueprint-Skip).
+Not ported (2 — Blocked, reported for user decision): long-range scanner (§8); modular software suite (§11).
 
-Borderline: canisters ship a converted RSI but no reskin → counted not-ported. §12 counted ported because its blueprint deliverable was literally "keep stock + note".
+### Testing coverage — live-verified 5 of 21 ported items (23.8% coverage, 76.2% gap)
 
-### Testing coverage — live-verified 3 of 9 ported items (33.3% coverage, 66.7% gap)
+Verified live (spawned + interacted + observed): SMES window; pulsar console window; RCON window (opened, live rows, messages reach server); DMI→RSI pack (every sprite renders); jobs protos (load clean).
 
-Verified live in running Oxyd client (spawned + interacted + observed): SMES window (opened via Toggle UI; output breaker toggled Offline; capacity/input/output/load rows all rendered); pulsar console window (opened; shield pill 70 recomputed effective power 74%→65%; orbit decay ticking; move refused at 0 fuel); RSI pack (all machine sprites rendered correctly in-world, incl. SMES red Eris cabinet after layer-map fix).
+Spawned + rendered on distinct tiles, not click-interacted (14): breaker, bridge, fuel tank, shield gen, atmos console, air alarm, canister, omni pair, pump/valve trio, nanoforge, all items — each spawned live and rendered its ported sprite; BUI/in-hand paths code-verified only.
 
-Spawned + rendered but not interacted live (5): breaker box, pulsar power bridge, pulsar fuel tank, ship shield generator (all render + push BUI state; click-through not captured due to spawn:on 4× stacking + box lag); jobs (protos load clean, no live role join). Gravity/solar kept stock (not separately verified — no port artifact to exercise).
+Not exercised (2): gravity/solar (stock — nothing to exercise); the 2 Blocked items.
