@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV Eris",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "red"
+    },
+    {
+      "name": "orange"
+    },
+    {
+      "name": "blue"
+    },
+    {
+      "name": "black"
+    },
+    {
+      "name": "grey"
+    },
+    {
+      "name": "can-open"
+    },
+    {
+      "name": "can-connector"
+    },
+    {
+      "name": "red-1"
+    },
+    {
+      "name": "orange-1"
+    },
+    {
+      "name": "black-1"
+    },
+    {
+      "name": "grey-1"
+    },
+    {
+      "name": "blue-1"
+    },
+    {
+      "name": "yellow"
+    },
+    {
+      "name": "yellow-1"
+    }
+  ]
+}

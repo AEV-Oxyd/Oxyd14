@@ -1,0 +1,323 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV Eris",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "base"
+    },
+    {
+      "name": "mixer"
+    },
+    {
+      "name": "mixer_glow",
+      "delays": [
+        [
+          0.5
+        ],
+        [
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "south_in"
+    },
+    {
+      "name": "west_in"
+    },
+    {
+      "name": "east_in"
+    },
+    {
+      "name": "north_in"
+    },
+    {
+      "name": "east_out"
+    },
+    {
+      "name": "north_out"
+    },
+    {
+      "name": "south_out"
+    },
+    {
+      "name": "west_out"
+    },
+    {
+      "name": "east_in_glow",
+      "delays": [
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ]
+      ]
+    },
+    {
+      "name": "west_in_glow",
+      "delays": [
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ]
+      ]
+    },
+    {
+      "name": "north_in_glow",
+      "delays": [
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ]
+      ]
+    },
+    {
+      "name": "south_in_glow",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "east_out_glow",
+      "delays": [
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ]
+      ]
+    },
+    {
+      "name": "west_out_glow",
+      "delays": [
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ],
+        [
+          0.2
+        ]
+      ]
+    },
+    {
+      "name": "north_out_glow",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "south_out_glow",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "north_filter",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "south_filter",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "east_filter",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "west_filter",
+      "delays": [
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ],
+        [
+          0.1
+        ]
+      ]
+    },
+    {
+      "name": "filter"
+    },
+    {
+      "name": "filter_glow",
+      "delays": [
+        [
+          0.5
+        ],
+        [
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "error",
+      "delays": [
+        [
+          0.5
+        ],
+        [
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "map_mixer"
+    },
+    {
+      "name": "map_filter"
+    }
+  ]
+}

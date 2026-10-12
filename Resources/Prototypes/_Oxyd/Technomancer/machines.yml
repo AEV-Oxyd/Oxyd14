@@ -1,0 +1,196 @@
+# Technomancer machines — CEV-Eris engineering ports.
+# Sprite work: Resources/Textures/_Oxyd/Technomancer/*.rsi converted from Eris DMIs.
+
+# SMES — Eris smes unit. Zero server code: stock BatteryInterfaceSystem drives it;
+# only the BUI + sprite + proto are new (see blueprint §2).
+- type: entity
+  parent: SMESBasic
+  id: OxydSmesUnit
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/power_engi.rsi
+    state: smes
+    drawdepth: Machines
+  - type: UserInterface
+    interfaces:
+      enum.BatteryUiKey.Key:
+        type: OxydSmesBui
+
+# Breaker box — Eris /obj/machinery/power/breakerbox circuit breaker.
+- type: entity
+  parent: BaseStructure
+  id: OxydBreakerBox
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/power_engi.rsi
+    state: term
+    drawdepth: Machines
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.35,-0.35,0.35,0.35"
+        density: 100
+        mask:
+        - MachineMask
+        layer:
+        - MachineLayer
+  - type: Anchorable
+  - type: OxydBreakerBox
+  - type: ApcPowerReceiver
+    load: 50
+  - type: UserInterface
+    interfaces:
+      enum.OxydBreakerUiKey.Key:
+        type: OxydBreakerBui
+  - type: ActivatableUI
+    key: enum.OxydBreakerUiKey.Key
+
+# Pulsar control console — Eris /obj/machinery/pulsar console.
+- type: entity
+  parent: BaseStructure
+  id: OxydPulsarConsole
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/pulsar_console.rsi
+    state: console
+    drawdepth: Machines
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.35,-0.35,0.35,0.35"
+        density: 100
+        mask:
+        - MachineMask
+        layer:
+        - MachineLayer
+  - type: Anchorable
+  - type: OxydPulsar
+  - type: UserInterface
+    interfaces:
+      enum.OxydPulsarUiKey.Key:
+        type: OxydPulsarBui
+  - type: ActivatableUI
+    key: enum.OxydPulsarUiKey.Key
+
+# Pulsar power bridge — injects effective power into the HV net.
+- type: entity
+  parent: BaseStructure
+  id: OxydPulsarPowerBridge
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/pulsar_power_bridge.rsi
+    state: bridge_on1
+    drawdepth: Machines
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.4,-0.4,0.4,0.4"
+        density: 100
+        mask:
+        - MachineMask
+        layer:
+        - MachineLayer
+  - type: Anchorable
+  - type: OxydPulsarBridge
+  # Backing store is effectively infinite while the satellite is on beam —
+  # Eris PULSAR_100_POWER * effective% flows as long as Connected.
+  - type: Battery
+    maxCharge: 1000000000
+    startingCharge: 1000000000
+  - type: PowerNetworkBattery
+    maxSupply: 0
+  - type: NodeContainer
+    nodes:
+      output:
+        !type:CableDeviceNode
+        nodeGroupID: HVPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydPulsarBridgeUiKey.Key:
+        type: OxydBridgeBui
+  - type: ActivatableUI
+    key: enum.OxydPulsarBridgeUiKey.Key
+
+# Pulsar fuel tank — Eris /obj/structure/pulsar_fuel_tank (700u).
+- type: entity
+  parent: BaseStructure
+  id: OxydPulsarFuelTank
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/pulsar_console.rsi
+    state: pulsar_tank
+    drawdepth: Machines
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.35,-0.35,0.35,0.35"
+        density: 80
+        mask:
+        - MachineMask
+        layer:
+        - MachineLayer
+  - type: Anchorable
+  - type: OxydPulsarFuelTank
+
+# Ship shield generator — Eris /obj/machinery/power/shield_generator.
+- type: entity
+  parent: BaseStructure
+  id: OxydShipShieldGenerator
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/shielding.rsi
+    state: generator0
+    drawdepth: Machines
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.4,-0.4,0.4,0.4"
+        density: 100
+        mask:
+        - MachineMask
+        layer:
+        - MachineLayer
+  - type: Anchorable
+  - type: OxydShipShield
+  - type: ApcPowerReceiver
+    load: 100
+  - type: UserInterface
+    interfaces:
+      enum.OxydShieldUiKey.Key:
+        type: OxydShieldBui
+  - type: ActivatableUI
+    key: enum.OxydShieldUiKey.Key
+
+# Bay variant (Eris bay generator sprite).
+- type: entity
+  parent: OxydShipShieldGenerator
+  id: OxydShipShieldGeneratorHull
+  suffix: Hull
+  components:
+  - type: Sprite
+    state: baygenerator0
