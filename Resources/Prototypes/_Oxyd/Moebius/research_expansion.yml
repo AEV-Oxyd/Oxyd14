@@ -125,9 +125,14 @@
 # Moebius-logged specimen with origin tech for the DA/science tool.
 # ---------------------------------------------------------------------------
 - type: entity
-  parent: ComplexXenoArtifact
+  parent: BaseItem
   id: OxydStrangeArtifact
   components:
+  - type: Sprite
+    sprite: Objects/Specific/Xenoarchaeology/item_artifacts.rsi
+    state: ano04
+  - type: Item
+    size: Normal
   - type: OxydOriginTech
     techs:
       OxydTreeBluespace: 4

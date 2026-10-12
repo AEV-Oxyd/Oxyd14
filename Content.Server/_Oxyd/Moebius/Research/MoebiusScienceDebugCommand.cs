@@ -9,8 +9,10 @@ using Content.Shared.Interaction.Events;
 using Content.Shared._Oxyd.Moebius.Research;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Lathe;
 using Content.Shared.Materials;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -91,13 +93,41 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
         ctx.WriteLine($"moebius: Activate {target} by {user}");
     }
 
-    /// <summary>Raise AfterInteractUsingEvent on an item against a target
-    /// (slime extractor on slime, science tool on mob).</summary>
+    /// <summary>Replay the real interact-using chain (SharedInteractionSystem
+    /// lines ~1058-1112): InteractUsingEvent on TARGET (slot inserts), then
+    /// AfterInteractEvent on the USED item (tool scans/extracts), then
+    /// AfterInteractUsingEvent on TARGET.</summary>
     [CommandImplementation("useon")]
     public void UseOn(IInvocationContext ctx, EntityUid item, EntityUid target, EntityUid user)
     {
-        EntityManager.EventBus.RaiseLocalEvent(item, new AfterInteractUsingEvent(user, item, target, Transform(target).Coordinates, true));
-        ctx.WriteLine($"moebius: UseOn {item} -> {target} by {user}");
+        var coords = Transform(target).Coordinates;
+        var ev = new InteractUsingEvent(user, item, target, coords);
+        EntityManager.EventBus.RaiseLocalEvent(target, ev);
+        var handled = ev.Handled;
+        if (!handled)
+        {
+            var ae = new AfterInteractEvent(user, item, target, coords, true);
+            EntityManager.EventBus.RaiseLocalEvent(item, ae);
+            handled = ae.Handled;
+            if (!handled)
+            {
+                var aue = new AfterInteractUsingEvent(user, item, target, coords, true);
+                EntityManager.EventBus.RaiseLocalEvent(target, aue);
+                handled = aue.Handled;
+            }
+        }
+        ctx.WriteLine($"moebius: UseOn {item} -> {target} by {user} handled={handled}");
+    }
+
+    /// <summary>Put an item into the user's free/active hand — needed before
+    /// useon steps that gate on holding the tool (wires panel screwdriver,
+    /// DoAfter NeedHand checks).</summary>
+    [CommandImplementation("hold")]
+    public void Hold(IInvocationContext ctx, EntityUid item, EntityUid user)
+    {
+        var hands = GetSys<SharedHandsSystem>();
+        var ok = hands.TryPickupAnyHand(user, item);
+        ctx.WriteLine($"moebius: hold {item} by {user} = {ok}");
     }
 
     /// <summary>Grant research points to a console.</summary>
@@ -111,5 +141,83 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
         }
         comp.Points += amount;
         ctx.WriteLine($"moebius: {console} now has {comp.Points} points");
+    }
+
+    /// <summary>Dump the verification-relevant fields of every Oxyd research
+    /// component on an entity (server-side evidence without a client).</summary>
+    [CommandImplementation("probe")]
+    public void Probe(IInvocationContext ctx, EntityUid ent)
+    {
+        if (TryComp<OxydRdConsoleComponent>(ent, out var con))
+            ctx.WriteLine($"probe:console pts={con.Points} unlocked={con.UnlockedNodes.Count} linked={con.LinkedDevices.Count} trees=[{string.Join(", ", con.TreeLevels)}]");
+        if (TryComp<OxydDestructiveAnalyzerComponent>(ent, out var da))
+            ctx.WriteLine($"probe:da busy={da.Busy} until={da.BusyUntil}");
+        if (TryComp<OxydScienceToolComponent>(ent, out var t))
+            ctx.WriteLine($"probe:tool blocks={t.Blocks.Count} total={t.TotalValue} first={(t.Blocks.Count > 0 ? t.Blocks[0].Subject : "-")}");
+        if (TryComp<OxydExplosionWatcherComponent>(ent, out var w))
+            ctx.WriteLine($"probe:watcher banked={w.BankedPoints} n={w.ExplosionsRecorded}");
+        if (TryComp<OxydResearchPointsDiskComponent>(ent, out var pd))
+            ctx.WriteLine($"probe:pdisk pts={pd.Points} spent={pd.Spent}");
+        if (TryComp<OxydResearchDataDiskComponent>(ent, out var dd))
+            ctx.WriteLine($"probe:ddisk nodes=[{string.Join(", ", dd.StoredNodes)}] designs={dd.StoredDesigns.Count}");
+        if (TryComp<OxydAutopsyReportComponent>(ent, out var ar))
+            ctx.WriteLine($"probe:autopsy report='{ar.Report}' v={ar.Value}");
+        if (TryComp<OxydOriginTechComponent>(ent, out var ot))
+            ctx.WriteLine($"probe:origintech=[{string.Join(", ", ot.Techs)}]");
+        if (TryComp<Content.Shared.Containers.ItemSlots.ItemSlotsComponent>(ent, out var isc))
+            ctx.WriteLine($"probe:itemslots=[{string.Join(", ", isc.Slots.Keys)}]");
+        ctx.WriteLine("probe:done");
+    }
+
+    /// <summary>Read the contents of an ItemSlots slot (da input, console disk/tool).</summary>
+    [CommandImplementation("slot")]
+    public void Slot(IInvocationContext ctx, EntityUid ent, string slotId)
+    {
+        var slots = GetSys<Content.Shared.Containers.ItemSlots.ItemSlotsSystem>();
+        var item = slots.GetItemOrNull(ent, slotId);
+        ctx.WriteLine($"probe:slot {ent}[{slotId}] = {(item == null ? "empty" : item.ToString())}");
+    }
+
+    /// <summary>Insert an item into an ItemSlots slot directly (the same call
+    /// TryInsertFromHand reaches once the hand check passes) — fires the
+    /// EntInsertedIntoContainer handlers the real path does.</summary>
+    [CommandImplementation("insert")]
+    public void Insert(IInvocationContext ctx, EntityUid target, EntityUid item, string slotId)
+    {
+        var slots = GetSys<Content.Shared.Containers.ItemSlots.ItemSlotsSystem>();
+        var ok = slots.TryInsert(target, slotId, item, null);
+        ctx.WriteLine($"moebius: insert {item} -> {target}[{slotId}] = {ok}");
+    }
+
+    /// <summary>Replay a console BUI message against the same handlers a client
+    /// click hits (Actor defaults to the console so popup targets stay valid).
+    /// Ops: deconstruct, rescan, uploadtool, ejectitem, diskupload, diskdownload,
+    /// diskclear, diskeject, unlockNode=&lt;id&gt;.</summary>
+    [CommandImplementation("bui")]
+    public void Bui(IInvocationContext ctx, EntityUid console, string op, EntityUid actor)
+    {
+        BoundUserInterfaceMessage? msg = op switch
+        {
+            "deconstruct" => new OxydRdDeconstructMessage(),
+            "rescan" => new OxydRdRescanMessage(),
+            "uploadtool" => new OxydRdUploadToolMessage(),
+            "ejectitem" => new OxydRdEjectItemMessage(),
+            "diskupload" => new OxydRdDiskMessage { Op = OxydRdDiskOp.Upload },
+            "diskdownload" => new OxydRdDiskMessage { Op = OxydRdDiskOp.Download },
+            "diskclear" => new OxydRdDiskMessage { Op = OxydRdDiskOp.Clear },
+            "diskeject" => new OxydRdDiskMessage { Op = OxydRdDiskOp.Eject },
+            _ when op.StartsWith("unlock:") => new OxydRdUnlockMessage { Node = op.Substring(7) },
+            _ => null,
+        };
+        if (msg == null)
+        {
+            ctx.WriteLine($"moebius: unknown bui op '{op}'");
+            return;
+        }
+        msg.Actor = actor;
+        // cast to object: the generic overload would dispatch on the declared
+        // base type (BoundUserInterfaceMessage) and no concrete handler would fire.
+        EntityManager.EventBus.RaiseLocalEvent(console, (object) msg);
+        ctx.WriteLine($"moebius: bui '{op}' on {console}");
     }
 }

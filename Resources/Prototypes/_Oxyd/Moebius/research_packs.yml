@@ -74,6 +74,9 @@
   - OxydRdMechRecharger
   - OxydRdPowermonitor
   - OxydRdRechargeStation
+  # Eris exosuit circuits -> stock Ripley control modules.
+  - OxydRdRipleyCentral
+  - OxydRdRipleyPeripherals
 - type: latheRecipePack
   id: OxydPackMechfabStatic
   recipes:
@@ -85,3 +88,9 @@
   - OxydRdRArm
   - OxydRdRLeg
   - OxydRdTorso
+  # Eris mechs2 designs -> stock Ripley harness + limbs (PartAssembly).
+  - OxydRdRipleyHarness
+  - OxydRdRipleyLArm
+  - OxydRdRipleyRArm
+  - OxydRdRipleyLLeg
+  - OxydRdRipleyRLeg

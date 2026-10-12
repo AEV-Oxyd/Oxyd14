@@ -30,11 +30,11 @@ public sealed partial class OxydResearchSystem
         SubscribeLocalEvent<OxydRdConsoleComponent, EntInsertedIntoContainerMessage>(OnConsoleSlotInsert);
         SubscribeLocalEvent<OxydRdConsoleComponent, EntRemovedFromContainerMessage>(OnConsoleSlotRemove);
         SubscribeLocalEvent<OxydDestructiveAnalyzerComponent, EntInsertedIntoContainerMessage>(OnDaInsert);
-        SubscribeLocalEvent<OxydScienceToolComponent, AfterInteractUsingEvent>(OnScienceToolUse);
+        SubscribeLocalEvent<OxydScienceToolComponent, AfterInteractEvent>(OnScienceToolUse);
         SubscribeLocalEvent<OxydExplosionWatcherComponent, DamageChangedEvent>(OnWatcherDamaged);
         SubscribeLocalEvent<OxydMentalImprinterComponent, UseInHandEvent>(OnImprinterUse);
         SubscribeLocalEvent<OxydDroneFabricatorComponent, ActivateInWorldEvent>(OnDroneFabricate);
-        SubscribeLocalEvent<OxydSlimeExtractorComponent, AfterInteractUsingEvent>(OnSlimeExtract);
+        SubscribeLocalEvent<OxydSlimeExtractorComponent, AfterInteractEvent>(OnSlimeExtract);
         SubscribeLocalEvent<OxydMaintenanceDroneShellComponent, UseInHandEvent>(OnDroneDeploy);
     }
 
@@ -318,7 +318,9 @@ public sealed partial class OxydResearchSystem
     }
 
     // ---- science tool use (Eris science_tool attack) ----
-    private void OnScienceToolUse(Entity<OxydScienceToolComponent> ent, ref AfterInteractUsingEvent args)
+    // AfterInteractEvent is raised on the USED item (the tool) when the click
+    // had no other handler — the right hook for item-side scan/extract behavior.
+    private void OnScienceToolUse(Entity<OxydScienceToolComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach)
             return;
@@ -389,7 +391,7 @@ public sealed partial class OxydResearchSystem
 
     // ---- slime core extraction (Eris xenobiology extract tooling: cores are
     // research specimens; adapted — draws from any refinable biological mob) ----
-    private void OnSlimeExtract(Entity<OxydSlimeExtractorComponent> ent, ref AfterInteractUsingEvent args)
+    private void OnSlimeExtract(Entity<OxydSlimeExtractorComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target == null)
             return;
@@ -424,7 +426,6 @@ public sealed partial class OxydResearchSystem
     // ---- explosion watcher (Eris KES: banks points per explosion) ----
     private void OnWatcherDamaged(Entity<OxydExplosionWatcherComponent> ent, ref DamageChangedEvent args)
     {
-        Log.Info($"moebius-watcher: event on {ent}, delta={(args.DamageDelta == null ? "null" : args.DamageDelta.GetTotal().ToString())}, anchored={Transform(ent).Anchored}");
         if (args.DamageDelta == null || !Transform(ent).Anchored)
             return;
         var delta = args.DamageDelta.GetTotal().Int();

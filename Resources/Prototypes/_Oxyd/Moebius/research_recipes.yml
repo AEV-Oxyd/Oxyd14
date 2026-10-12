@@ -342,3 +342,78 @@
     Glass: 250
   categories:
   - Robotics
+# Eris mechs2 designs -> stock Ripley APLU construction chain (harness +
+# limbs assemble via PartAssembly + the Ripley construction graph).
+- type: latheRecipe
+  id: OxydRdRipleyHarness
+  name: oxyd-recipe-item-mechfab-ripley-harness
+  result: RipleyHarness
+  completetime: 10
+  materials:
+    Steel: 1500
+    Glass: 1200
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyLArm
+  name: oxyd-recipe-item-mechfab-ripley-l-arm
+  result: RipleyLArm
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyRArm
+  name: oxyd-recipe-item-mechfab-ripley-r-arm
+  result: RipleyRArm
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyLLeg
+  name: oxyd-recipe-item-mechfab-ripley-l-leg
+  result: RipleyLLeg
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyRLeg
+  name: oxyd-recipe-item-mechfab-ripley-r-leg
+  result: RipleyRLeg
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+# Eris exosuit circuit designs -> stock mech control modules (imprinter side).
+- type: latheRecipe
+  id: OxydRdRipleyCentral
+  name: oxyd-recipe-circuit-ripley-central
+  result: RipleyCentralElectronics
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+    Gold: 100
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdRipleyPeripherals
+  name: oxyd-recipe-circuit-ripley-peripherals
+  result: RipleyPeripheralsElectronics
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+    Gold: 50
+  categories:
+  - Circuitry
