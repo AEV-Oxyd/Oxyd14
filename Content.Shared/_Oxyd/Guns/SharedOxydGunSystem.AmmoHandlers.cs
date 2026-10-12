@@ -19,8 +19,6 @@ public abstract partial class SharedOxydGunSystem
     {
         if (args.Handled)
             return;
-        if (!HasComp<OxydBulletComponent>(args.Used))
-            return;
         if (TerminatingOrDeleted(args.Used))
             return;
         var ev = new GunTryLoadAmmoEvent(args.Used, true);
