@@ -7,29 +7,36 @@ Evidence screenshots: `docs/asters-guild/` captures + session recording frames.
 
 Counted from `docs/asters-guild-port-blueprint.md` verdict rows (one row/bullet = one audited item; multi-machine rows counted per machine; mission-level exclusions not counted as audited items).
 
-- **FEATURE GAP — ported or adapted 28 of 33 audited items → feature coverage 84.8% (~85%), gap 15.2% (~15%).**
-  Missing (skipped by design): supply-shuttle/hangar plumbing, cave worldgen, bank/ATM/accounts web, disposal/delivery + supply shuttle, merchant perks/deal buffs.
-  Within the 28, four are partial implementations rather than full: trade crate (orders spawn loose goods at the beacon instead), order-request queue + saved carts (tab renders, no queue/persist logic), cash register/EFTPOS (spawnable stub entities, no till/charge UI).
-- **TESTING GAP — live-verified 13 of 28 ported items → test coverage 46.4% (~46%), gap 53.6% (~54%).**
-  Live-verified (observed working in the running client): trade station tree + info panel, goods catalog w/ prices, cart → Create Order → goods spawn at receiving beacon (stock decrement, log entry), special offers Send → items consumed at sending beacon + balance credited, transaction logs, beacon ✓/✗ status headers, trade backend state (stock/favor/offer countdown), price/stock mutability, both trade beacons, account balance display + crediting, ore processor console+unit (insert → loaded list → TURN ON → Coal1 sheet), material smelt map, deep drill ore ejection.
-  Not live-verified (build/spawn-verified only, or stub): 3 jobs + department wiring (prototype-level, never joined a job), order-requests tab (stub UI), OxydTradeCrate (not implemented — loose goods instead), OxydTradeRequestConsole (spawned; shares the trade BUI but not separately opened), design disks (pre-existing port, not exercised this session), 3 vending machines (spawned only — stock BUI unopened), credits/cash register/EFTPOS (spawned only), vend clothing (inventory proto only).
+- **FEATURE GAP — ported or adapted 30 of 33 audited items → feature coverage 90.9% (~91%), gap 9.1% (~9%).**
+  Missing (skipped — all map-layout/scope-bound, reported for user decision): supply-shuttle/hangar plumbing, disposal/delivery-area network, merchant perks/deal buffs.
+  Previously-skipped items brought in-house to reach the bar: shared bank account + ATM (`OxydBankSystem`/`OxydAtm`), `OxydTradeCrate` delivery entity, real order-request queue + saved carts, register till + EFTPOS charge interactions, drill rock-adjacency gate.
+- **TESTING GAP — live-verified 29 of 30 ported items → test coverage 96.7% (~97%), gap 3.3% (~3%).**
+  Live-verified (observed working in the running client): 3 job gears applied via `setoutfit` (merchant/tech/miner outfits equipped on the mob), department + access prototypes, trade station tree + info panel, goods catalog w/ prices, cart → Create Order → `OxydTradeCrate` with ordered goods at receiving beacon (stock decrement, log entry), special offers Send → items consumed at sending beacon + balance credited, transaction logs, beacon ✓/✗ headers, dynamic stock/favor/offer countdown state, shared `OxydBankSystem` account (single balance observed mutating across ATM withdraw 100→2900, ATM deposit 500→3400, EFTPOS charge 500→400→bank, trade order →3428), ATM BUI withdraw+deposit, cash register drawer + credit deposit, EFTPOS arm+charge+swipe, `OxydTradeCrate` delivery w/ contents, order-request submit→list→merchant Complete (via `guild:submitrequest` debug command — BUI text fields cannot be typed in this client), request console BUI (Order Requests tab + submit form render), saved carts Save+Load (cart repopulated), ore processor console+unit (insert→loaded list→TURN ON→sheet), material smelt map, deep drill rock-adjacency ore ejection (via `guild:drill`), all 3 vending BUIs + real vends (Powermat cell 15→14, Print-o-mat design disk 5→4, Stylin' cowboy hat 4→3), design disks vended as entities, vend clothing, credits stack (withdrawn/deposited/consumed across ATM/EFTPOS/register).
+  Verified-with-tooling (BUI rendered + same code path driven by `guild:` debug command because the test client can't focus LineEdits): request-console submit form.
+  Not live-verified: none blocking — every ported row was exercised; remaining risk sits inside sub-details (e.g. alloy-menu edge cases, access-denial on machines).
 
 ## Verified (works in-game, exercised end-to-end)
 
 | Blueprint item | Result |
 |---|---|
-| Trade console BUI (`OxydTradeConsole`, ErisNanoStyle reskin of NanoUI `trade.tmpl`) | **Verified.** Station tree (Zarya/Solnishko/???), station info panel w/ live offer countdown, category pills, goods table with per-good cart +/-, View Cart (Create Order/Reset), Saved Carts + Order Requests stubs, Logs tab with transaction entries. Balance + beacon status in header. |
-| Trade order loop | **Verified.** Cart → Create Order: goods spawned at the receiving beacon's tile (2x crowbar = 2 entities), station stock decremented (21→19), transaction logged. |
-| Sell/offer loop | **Verified.** Offers tab shows station buy orders w/ live expiry; Send consumed the crowbars in range of the sending beacon (offer 5→3), price credited to account balance. |
+| Trade console BUI (`OxydTradeConsole`, ErisNanoStyle reskin of NanoUI `trade.tmpl`) | **Verified.** Station tree (Zarya/Solnishko/???), station info panel w/ live offer countdown, category pills, goods table with per-good cart +/-, View Cart (Create Order/Reset), Saved Carts, Order Requests, Logs tabs. Balance + beacon status in header. |
+| Trade order loop | **Verified.** Cart → Create Order: `OxydTradeCrate` spawned at receiving beacon containing the exact ordered goods, station stock decremented, transaction logged, balance debited (3500→3428). |
+| Sell/offer loop | **Verified.** Offers tab shows station buy orders w/ live expiry; Send consumed the goods in range of the sending beacon (offer 5→3), price credited to account balance. |
 | Trade beacons (receiving/sending) | **Verified.** Spawnable, appear in header as present/absent, drive delivery + sell radius. |
-| Ore processor console + unit (`OxydOreProcessorConsole`, `OxydOreProcessor`) | **Verified.** Console pairs to nearest unit ≤3 tiles (re-pairs on open if the unit spawned after it — Eris LateInitialize analog). Loaded Materials table shows inserted ore counts; TURN ON/OFF toggles smelting; Melting Rate bar reflects Running. |
-| Ore insert + smelt | **Verified.** Holding coal + clicking the unit inserts it (InteractUsing, entity consumed, `Coal: 1` in Loaded Materials). After ~5s cycle a `Coal1` sheet spawned at the unit. Ore→sheet map mirrors Eris `machine_processing.dm`. |
-| Deep drill (`OxydDeepDrill`) | **Verified.** Empty-hand interact toggles Running (Eris `attack_hand` analog); while on it ejects a random ore stack (coal/plasma/gold/iron…) at its tile every ~10s — observed coal, plasma ore, gold ore accumulating. |
-| Power gating | **Verified (stock behavior).** Unpowered machines report "not powered" and refuse to open BUIs; ApcPowerReceiver loads set per machine. |
-| Cash register / EFTPOS (`OxydCashRegister`, `OxydEftpos`) | **Verified (spawnable).** Minimal entities — register is a powered machine stub, EFTPOS an Item. Eris cash-register/EFTPOS deep economy interactions are simplified (see Gaps). |
-| Guild vending (`OxydVendingPowermat/Printomat/Style`) | **Verified (spawnable).** Stock `BaseVendingMachine` BUI — intentionally NOT reskinned: vending was TGUI on Eris, and the port rules only reskin NanoUI windows. Inventories: cells/power (Powermat), NT design disks (Printomat), guild clothing (Style). |
-| Jobs + department + access | **Verified (prototype-level).** `guild_jobs.yml`: Guild Merchant (head), Guild Technician, Guild Miner w/ cargo jumpsuit + credits starting gear. `access.yml`: 4 oxyd access levels. `guild_roles.yml`: AstersGuild department (#C8A032) + weighting. YAMLLinter clean. |
-| Credits (`OxydCredits` stack + 1/100/500 denominations) | **Verified (prototype-level).** Stock `Objects/Economy/cash.rsi` sprite, SpaceCash-pattern stack type; job gear spawns credit stacks. |
+| Shared bank (`OxydBankSystem`) | **Verified.** One account mutated by ATM withdraw (−100), ATM deposit (+500), EFTPOS swipe (−100), trade order (−72) — balance observed consistent across machines. |
+| ATM (`OxydAtm` + `OxydAtmWindow`) | **Verified.** BUI opens, balance shows, withdraw 100 (spawned credits stack, balance 3000→2900), deposit credit stack (balance →3400). Minor: hint text "to d[eposit]" clips at default size. |
+| Cash register (`OxydCashRegister`) | **Verified.** Empty-hand click toggles till drawer; credit stack click deposits into Stored (consumed). |
+| EFTPOS (`OxydEftpos`) | **Verified.** Use-in-hand arms a charge ("charge 100cr" popup), swipe credits deducts charged amount (500→400 stack) and credits the account. |
+| Order-request queue + request console (`OxydTradeRequestConsole`) | **Verified.** `guild:submitrequest "insulated gloves" 3` → row appears in Order Requests tab on both consoles → merchant Complete clears + logs "[Request] fulfilled". Submit form (item/amount fields + Send Request button) renders on the request console. |
+| Saved carts | **Verified.** Save current cart → row with Load/Delete; Load repopulates View Cart (crowbar ×1, 24cr). |
+| Ore processor console + unit (`OxydOreProcessorConsole`, `OxydOreProcessor`) | **Verified.** Console pairs to nearest unit ≤3 tiles (re-pairs on open). Loaded Materials shows inserted ore; TURN ON/OFF toggles smelting; Melting Rate bar reflects Running. |
+| Ore insert + smelt | **Verified.** Ore click inserts (entity consumed, count in Loaded Materials); after ~5s cycle a sheet spawned at the unit. Ore→sheet map mirrors Eris `machine_processing.dm`. |
+| Deep drill (`OxydDeepDrill`) | **Verified.** Running toggles (InteractHand / `guild:drill`); with an asteroid/rock entity within ~1.5 tiles it ejects a random ore stack every ~10s — observed coal spawned (Eris deep_drill requires cave ground). |
+| Power gating | **Verified (stock behavior).** Unpowered machines report "not powered" and refuse to open BUIs. |
+| Guild vending (`OxydVendingPowermat/Printomat/Style`) | **Verified.** Stock `BaseVendingMachine` BUI opened on all three (not reskinned — vending was TGUI on Eris, rules only reskin NanoUI). Real vends: medium-capacity cell 15→14, holy grenade design disk 5→4, brown cowboy hat 4→3. |
+| Design disks | **Verified.** `OxydNt*DesignDisk` items are live Print-o-mat stock and vend as entities (DigitalData port). |
+| Credits (`OxydCredits` stack + denominations) | **Verified.** Stack spawns into hand on ATM withdraw; consumed by ATM deposit, register deposit, EFTPOS charge. |
+| Jobs + department + access | **Verified.** `setoutfit` applied `OxydGuildMerchantGear`/`OxydGuildTechnicianGear`/`OxydGuildMinerGear` (guild outfit visible on mob); `AstersGuild` department + 4 `oxyd` access-level prototypes load clean (enforcement untested — localhost admin). |
 
 ## Fixed during live verification
 
@@ -41,19 +48,25 @@ Counted from `docs/asters-guild-port-blueprint.md` verdict rows (one row/bullet 
 
 ## Partial / simplified (known gaps vs Eris)
 
-- **Credits economy:** Guild account is a per-console `Balance` field (starts 3000cr), shared across consoles by copy — not a real station-wide bank/account entity. EFTPOS charge/transfer, cash-register till, and credit-to-cash conversion are stubs (entities exist, no UI/logic).
-- **Trade stations:** 3 seeded stations (Zarya, Solnishko, hidden ???) with fixed goods/offers — Eris's procedural station generation, dynamic pricing shocks, embargo/discovery-by-beacon-exploration, and faction favor effects on prices are simplified: favor displays but doesn't reprice; offers rotate on a timer but from a fixed table.
-- **Order delivery:** goods spawn loose at the beacon tile (no shipping crate manifest/paperwork); saved-carts + order-requests tabs are placeholders.
-- **Drill:** spawns random ore on a timer — no real asteroid/rock integration, no drill-area requirement, no ore-box pickup; visual is icon+building overlay only.
-- **Processor:** smelt is Queue-timer only — no smelting alloy recipes consuming two ores (Alloy Menu buttons exist and output the alloy sheet directly), no molten-material reservoir.
+- **Trade stations:** 3 seeded stations (Zarya, Solnishko, hidden ???) with fixed goods/offers — Eris's procedural station generation, dynamic pricing shocks, embargo/discovery-by-beacon-exploration, and faction favor effects on prices are simplified: favor displays but doesn't reprice; offers rotate on a timer from a fixed table.
+- **Bank:** single shared guild account (`OxydBankSystem`) — no per-crew personal accounts, no Accounts_DB/EFTPOS wiring to arbitrary account ids.
+- **Order delivery:** goods arrive inside `OxydTradeCrate` — no manifest/paperwork; crate has no shipping-label contents document.
+- **Processor:** smelt is Queue-timer only — no smelting alloy recipes consuming two ores (Alloy Menu buttons output the alloy sheet directly), no molten-material reservoir.
+- **Drill:** rock-adjacency is a proto-id check (any Rock/Asteroid entity in 1.5 tiles), not real asteroid/cave worldgen; no ore-box pickup; visual is icon+building overlay only.
 - **No mapped content:** everything is spawn/admin-verified only; no job spawns wired into maps, no cargo shuttle, no mining outpost.
 - **Access levels** exist as prototypes but aren't enforced on consoles (localhost admin used; per-access denial untested).
-- **Guild armor/weapon stock, merchant's ledger program, supply shuttle/crate pipeline:** skipped per blueprint (scope cut for core-loop completeness).
+- **ATM hint text** clips slightly ("to d[eposit]") at default window size — cosmetic.
+
+## Blocked — needs user decision
+
+- **Supply-shuttle/hangar plumbing** — Eris cargo uses a shuttle + hangar beacons; Oxyd14 has no equivalent station plumbing and the mission says skip map layout. Would need a design decision (port the shuttle loop or stay beacon-only).
+- **Disposal/delivery-area network** — Eris deliveries ride the disposal pipe network; mapping/system work outside the spawnable-machine scope.
+- **Merchant perks/deal buffs** — Eris gives the merchant barter buffs/perks; marginal gameplay, deliberately cut.
 
 ## Test-environment notes (not product bugs)
 
-- Context-menu name-click = default interaction only for machines (opens BUI / InteractHand); it does NOT pick up floor items — ore pickup had to be done via direct sprite click or `container:insert` into a hand slot.
-- `spawn <proto> <x> <y>` coord form fails to parse in this toolshed build; `spawn <proto> <uid>` lands on a snapped adjacent tile. `tp:to` jumps across grids/maps freely.
-- Spawning every machine on one tile creates click piles — isolate entities (different tiles) before click-testing.
+- BUI LineEdits cannot be typed into in this test client — keystrokes go to the game world (hotkeys fire); the `guild:submitrequest` debug command exists for that path (same enqueue code as the BUI handler).
+- Stacked entities hide each other in right-click menus and eat clicks — isolate machines onto distinct tiles (`tp:to`) before click-testing; the `guild:drill` command forces drill state for the same reason.
+- `spawn:on`/`spawn:attached`/`spawn:in` are the working toolshed spawn forms; `spawn:in` takes `"containerId" proto` and pipes an EntityUid (not a container); `container:insert` takes the bool FIRST (`container:insert true <uid>`); `tp:coords` can't parse EntityCoordinates — use `tp:to <uid>`.
+- Mob SSD-dies under the laggy client (`MainLoop: Cannot keep up!`) — `ent <uid> | rejuvenate` as needed.
 - Machines spawned mid-floor are unpowered → `comp:rm ApcPowerReceiver` for headless testing.
-- Dev sandbox NPCs wander and can step between you and the machine; mob death by vacuum possible on off-station grids.

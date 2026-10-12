@@ -181,6 +181,21 @@ public sealed partial class OxydOreProcessorSystem : EntitySystem
         }
     }
 
+    /// <summary>Debug hook (guild:drill): force every drill's Running state — the
+    /// InteractHand toggle can't be reached when machines are stacked for testing.</summary>
+    public int DebugSetDrillRunning(bool running)
+    {
+        var n = 0;
+        var q = EntityQueryEnumerator<OxydDeepDrillComponent>();
+        while (q.MoveNext(out var u, out var d))
+        {
+            d.Running = running;
+            _appearance.SetData(u, OxydGuildVisuals.Working, running);
+            n++;
+        }
+        return n;
+    }
+
     /// <summary>Cave-generator stand-in (Eris: drill needs cave worldgen beneath) — any
     /// entity whose proto id contains Rock/Asteroid within ~1.5 tiles counts as ground
     /// the drill can bite into (WallRock*/asteroid walls).</summary>

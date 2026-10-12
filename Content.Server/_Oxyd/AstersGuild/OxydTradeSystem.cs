@@ -424,5 +424,21 @@ public sealed partial class OxydTradeSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    /// <summary>Debug/testing hook (guild:submitrequest): enqueue a crew request as if a
+    /// request console submitted it — BUI LineEdits can't be driven in the test client.</summary>
+    public void DebugSubmitRequest(string item, int amount, string from)
+    {
+        _requests.Add(new Request
+        {
+            Id = _nextRequestId++,
+            Item = item.Trim(),
+            Amount = Math.Clamp(amount, 1, 50),
+            From = from,
+        });
+        var q = EntityQueryEnumerator<OxydTradeConsoleComponent>();
+        while (q.MoveNext(out var u, out var c))
+            PushState(u, c);
+    }
+
     [Dependency] private EntityLookupSystem _lookup = default!;
 }
