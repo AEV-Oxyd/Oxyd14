@@ -105,17 +105,6 @@ public sealed class OxydScanBlock
     public int Value;
 }
 
-/// <summary>Eris /obj/item/autopsy_scanner: scanning a corpse writes an autopsy
-/// report item the console can upload for research data.</summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class OxydAutopsyScannerComponent : Component
-{
-    [DataField, AutoNetworkedField]
-    public float Cooldown;
-
-    [DataField, AutoNetworkedField]
-    public TimeSpan NextUse;
-}
 
 /// <summary>Eris autopsy report / experiment data block:
 /// a scannable item worth points when fed to the console.</summary>

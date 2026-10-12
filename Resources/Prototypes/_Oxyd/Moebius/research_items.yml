@@ -18,20 +18,6 @@
   - type: InteractionOutline
   - type: Clickable
 
-# Autopsy scanner: scans corpses into autopsy report items (Eris autopsy.dm).
-- type: entity
-  parent: BaseItem
-  id: OxydAutopsyScanner
-  components:
-  - type: Sprite
-    sprite: Objects/Specific/Medical/healthanalyzer.rsi
-    state: analyzer
-  - type: OxydAutopsyScanner
-  - type: Item
-    size: Small
-  - type: InteractionOutline
-  - type: Clickable
-
 # Autopsy report data block (Eris paper report fed to the console).
 - type: entity
   parent: BaseItem

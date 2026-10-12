@@ -28,7 +28,6 @@ public sealed partial class OxydResearchSystem
         SubscribeLocalEvent<OxydRdConsoleComponent, EntRemovedFromContainerMessage>(OnConsoleSlotRemove);
         SubscribeLocalEvent<OxydDestructiveAnalyzerComponent, EntInsertedIntoContainerMessage>(OnDaInsert);
         SubscribeLocalEvent<OxydScienceToolComponent, AfterInteractUsingEvent>(OnScienceToolUse);
-        SubscribeLocalEvent<OxydAutopsyScannerComponent, AfterInteractUsingEvent>(OnAutopsyUse);
         SubscribeLocalEvent<OxydExplosionWatcherComponent, DamageChangedEvent>(OnWatcherDamaged);
     }
 
@@ -330,28 +329,6 @@ public sealed partial class OxydResearchSystem
         args.Handled = true;
     }
 
-    // ---- autopsy scanner (Eris autopsy_scanner) ----
-    private void OnAutopsyUse(Entity<OxydAutopsyScannerComponent> ent, ref AfterInteractUsingEvent args)
-    {
-        if (args.Handled || !args.CanReach)
-            return;
-        if (_timing.CurTime < ent.Comp.NextUse)
-            return;
-        var target = args.Target;
-        if (target == null || !HasComp<MobStateComponent>(target.Value))
-            return;
-        ent.Comp.NextUse = _timing.CurTime + TimeSpan.FromSeconds(8);
-        Dirty(ent);
-        var report = Spawn("OxydAutopsyReport", Transform(args.User).Coordinates);
-        if (TryComp<OxydAutopsyReportComponent>(report, out var rep))
-        {
-            rep.Report = $"Autopsy of {Name(target.Value)}. Time of death unestablished; " +
-                         "external trauma consistent with station hazards.";
-            Dirty(report, rep);
-        }
-        _popup.PopupEntity("Autopsy report printed.", ent, args.User);
-        args.Handled = true;
-    }
 
     // ---- explosion watcher (Eris KES: banks points per explosion) ----
     private void OnWatcherDamaged(Entity<OxydExplosionWatcherComponent> ent, ref DamageChangedEvent args)
