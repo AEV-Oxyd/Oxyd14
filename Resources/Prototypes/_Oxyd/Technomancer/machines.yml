@@ -10,7 +10,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/power_engi.rsi
     state: smes
-    drawdepth: Machines
   - type: UserInterface
     interfaces:
       enum.BatteryUiKey.Key:
@@ -26,7 +25,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/power_engi.rsi
     state: term
-    drawdepth: Machines
   - type: Physics
   - type: Fixtures
     fixtures:
@@ -60,7 +58,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/pulsar_console.rsi
     state: console
-    drawdepth: Machines
   - type: Physics
   - type: Fixtures
     fixtures:
@@ -92,7 +89,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/pulsar_power_bridge.rsi
     state: bridge_on1
-    drawdepth: Machines
   - type: Physics
   - type: Fixtures
     fixtures:
@@ -110,6 +106,7 @@
   # Backing store is effectively infinite while the satellite is on beam —
   # Eris PULSAR_100_POWER * effective% flows as long as Connected.
   - type: Battery
+    netsync: false
     maxCharge: 1000000000
     startingCharge: 1000000000
   - type: PowerNetworkBattery
@@ -136,7 +133,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/pulsar_console.rsi
     state: pulsar_tank
-    drawdepth: Machines
   - type: Physics
   - type: Fixtures
     fixtures:
@@ -162,7 +158,6 @@
   - type: Sprite
     sprite: _Oxyd/Technomancer/shielding.rsi
     state: generator0
-    drawdepth: Machines
   - type: Physics
   - type: Fixtures
     fixtures:
