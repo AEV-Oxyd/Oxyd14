@@ -9,46 +9,62 @@
   "states": [
     {
       "name": "term",
-      "directions": 4
+      "directions": 4,
+      "delays": [
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ]
+      ]
     },
     {
       "name": "term-f",
-      "directions": 4
+      "directions": 4,
+      "delays": [
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ]
+      ]
     },
     {
       "name": "smes",
       "delays": [
         [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
           0.2
-        ],
-        [
-          0.2
-        ],
-        [
-          0.2
-        ],
-        [
-          0.2
-        ],
+        ]
+      ]
+    },
+    {
+      "name": "smes-og1",
+      "delays": [
         [
           0.2
         ]
       ]
     },
     {
-      "name": "smes-og1"
-    },
-    {
-      "name": "smes-op0"
+      "name": "smes-op0",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
       "name": "smes-op1",
       "delays": [
         [
-          1.0
-        ],
-        [
-          1.0
+          0.2,
+          0.2
         ]
       ]
     },
@@ -56,15 +72,18 @@
       "name": "smes-oc1",
       "delays": [
         [
-          0.5
-        ],
-        [
-          0.5
+          0.2,
+          0.2
         ]
       ]
     },
     {
-      "name": "smes-oc0"
+      "name": "smes-oc0",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     }
   ]
 }

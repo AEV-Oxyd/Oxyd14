@@ -8,10 +8,20 @@
   },
   "states": [
     {
-      "name": "bridge"
+      "name": "bridge",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "bridge_broken"
+      "name": "bridge_broken",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
       "name": "bridge_on1",

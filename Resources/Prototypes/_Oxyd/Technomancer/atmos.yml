@@ -67,10 +67,10 @@
   parent: GasCanister
   id: OxydCanister
   suffix: Eris
+  # Sprite kept stock: stock canister visualizer drives states
+  # (unlocked/can-o0/...) the Eris RSI does not carry — the Eris
+  # surface is delivered via the OxydCanisterBui reskin instead.
   components:
-  - type: Sprite
-    sprite: _Oxyd/Technomancer/canister.rsi
-    state: red
   - type: UserInterface
     interfaces:
       enum.GasCanisterUiKey.Key:
@@ -134,7 +134,7 @@
   - type: ItemSlots
     slots:
       input:
-        name: item
+        name: oxyd-forge-input-slot-name
   - type: UserInterface
     interfaces:
       enum.OxydForgeUiKey.Key:
@@ -145,8 +145,7 @@
 # Compressed matter output stack (Eris matter sheets).
 - type: material
   id: OxydCompressedMatter
-  name: compressed matter
-  unit: materials-unit-sheet
+  name: materials-oxyd-compressed-matter
   stackEntity: OxydCompressedMatterSingle
   icon: { sprite: Objects/Materials/Sheets/metal.rsi, state: steel }
   color: '#5a6a7a'
@@ -169,6 +168,8 @@
 - type: stack
   parent: BaseMediumStack
   id: OxydCompressedMatterStack
+  name: stack-oxyd-compressed-matter
+  spawn: OxydCompressedMatterSingle
   maxCount: 60
 
 # RCD — Eris IJIRO RCD maps to stock RCD (§10).

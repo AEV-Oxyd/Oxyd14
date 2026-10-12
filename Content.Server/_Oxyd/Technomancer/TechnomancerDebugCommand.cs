@@ -1,8 +1,10 @@
 using Content.Server.Administration;
 using Content.Shared._Oxyd.Technomancer;
 using Content.Shared.Administration;
+using System.Collections.Generic;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Toolshed.Syntax;
 using Robust.Shared.Toolshed;
 
 namespace Content.Server._Oxyd.Technomancer;
@@ -44,6 +46,18 @@ public sealed class TechnomancerCommand : ToolshedCommand
     {
         var uid = ExecutingEntity(ctx)
             ?? throw new InvalidOperationException("no executing entity");
+        GridAt(ctx, uid);
+    }
+
+    [CommandImplementation("grid")]
+    public void GridPiped(IInvocationContext ctx, [PipedArgument] IEnumerable<EntityUid> mobs)
+    {
+        foreach (var mob in mobs)
+            GridAt(ctx, mob);
+    }
+
+    private void GridAt(IInvocationContext ctx, EntityUid uid)
+    {
         var coords = Transform(uid).Coordinates;
         var x = coords.X;
         var y = coords.Y;
@@ -61,6 +75,18 @@ public sealed class TechnomancerCommand : ToolshedCommand
     {
         var uid = ExecutingEntity(ctx)
             ?? throw new InvalidOperationException("no executing entity");
+        ItemsAt(ctx, uid);
+    }
+
+    [CommandImplementation("items")]
+    public void SpawnItemsPiped(IInvocationContext ctx, [PipedArgument] IEnumerable<EntityUid> mobs)
+    {
+        foreach (var mob in mobs)
+            ItemsAt(ctx, mob);
+    }
+
+    private void ItemsAt(IInvocationContext ctx, EntityUid uid)
+    {
         var coords = Transform(uid).Coordinates;
         for (var i = 0; i < Items.Length; i++)
         {

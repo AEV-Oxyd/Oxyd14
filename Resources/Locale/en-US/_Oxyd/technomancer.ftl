@@ -42,3 +42,18 @@ ent-OxydDesignDiskArk = ARK-034 design disk
     .desc = Technomancer schematics: power and machine designs.
 ent-OxydDesignDiskIjiro = IJIRO-451 design disk
     .desc = IJIRO Industries schematics: rapid construction tools.
+
+ent-OxydRconConsole = RCON remote control console
+ent-OxydRconConsole.desc = Monitors and toggles SMES inputs, outputs, and breaker boxes across the grid.
+
+ent-OxydCompressedMatter = compressed matter
+ent-OxydCompressedMatter.desc = A compact block of refined matter produced by the nanoforge.
+
+ent-OxydCompressedMatterStack = compressed matter
+ent-OxydCompressedMatterStack.desc = A stack of compressed matter pellets.
+
+ent-OxydRapidConstructionDevice = rapid construction device
+ent-OxydRapidConstructionDevice.desc = Prints walls, floors, and airlocks from compressed matter cartridges.
+oxyd-forge-input-slot-name = item
+materials-oxyd-compressed-matter = compressed matter
+stack-oxyd-compressed-matter = compressed matter

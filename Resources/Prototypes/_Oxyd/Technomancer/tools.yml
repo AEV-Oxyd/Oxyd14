@@ -8,8 +8,8 @@
   id: OxydDuctTape
   components:
   - type: Sprite
-    sprite: Objects/Misc/stock_parts.rsi
-    state: cable_coil
+    sprite: Objects/Tools/cable-coils.rsi
+    state: coilall-30
   - type: Item
   - type: Tool
     qualities: [ Welding ]
@@ -43,7 +43,7 @@
   suffix: wirecutter+crowbar
   components:
   - type: Sprite
-    sprite: Objects/Tools/wirecutter.rsi
+    sprite: Objects/Tools/wirecutters.rsi
     state: cutters
   - type: Item
   - type: Tag
@@ -61,7 +61,7 @@
   components:
   - type: Sprite
     sprite: Objects/Tools/crowbar.rsi
-    state: crowbar
+    state: icon
   - type: Item
   - type: Tag
     tags: [ Crowbar ]
@@ -79,7 +79,7 @@
   components:
   - type: Sprite
     sprite: Objects/Tools/wrench.rsi
-    state: wrench
+    state: icon
   - type: Item
   - type: Tag
     tags: [ Wrench ]
@@ -104,7 +104,7 @@
   components:
   - type: Sprite
     sprite: Objects/Tools/multitool.rsi
-    state: multitool
+    state: icon
   - type: Item
   - type: OxydToolMod
     grantsQuality: Pulsing
@@ -118,7 +118,7 @@
   components:
   - type: Sprite
     sprite: Objects/Tools/rcd.rsi
-    state: rcd
+    state: icon
   - type: Item
   - type: OxydRpd
     pipeProto: GasPipeStraight

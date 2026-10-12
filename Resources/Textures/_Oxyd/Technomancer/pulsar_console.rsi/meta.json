@@ -8,19 +8,44 @@
   },
   "states": [
     {
-      "name": "console"
+      "name": "console",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "console_off"
+      "name": "console_off",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "console_broken"
+      "name": "console_broken",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "pulsar_tank"
+      "name": "pulsar_tank",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "pulsar_tank_burst"
+      "name": "pulsar_tank_burst",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     }
   ]
 }

@@ -8,46 +8,116 @@
   },
   "states": [
     {
-      "name": "red"
+      "name": "red",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "orange"
+      "name": "orange",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "blue"
+      "name": "blue",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "black"
+      "name": "black",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "grey"
+      "name": "grey",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "can-open"
+      "name": "can-open",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "can-connector"
+      "name": "can-connector",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "red-1"
+      "name": "red-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "orange-1"
+      "name": "orange-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "black-1"
+      "name": "black-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "grey-1"
+      "name": "grey-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "blue-1"
+      "name": "blue-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "yellow"
+      "name": "yellow",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     },
     {
-      "name": "yellow-1"
+      "name": "yellow-1",
+      "delays": [
+        [
+          0.2
+        ]
+      ]
     }
   ]
 }
