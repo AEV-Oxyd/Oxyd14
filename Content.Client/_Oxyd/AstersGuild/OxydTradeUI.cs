@@ -91,8 +91,7 @@ public sealed partial class OxydTradeWindow : FancyWindow
         header.AddChild(new ErisLink(s.HasAccount ? "✓Account" : "Account"));
         header.AddChild(new Label { Text = s.ReceivingBeacon, FontColorOverride = ErisNanoColors.LabelText });
         header.AddChild(new Label { Text = s.SendingBeacon, FontColorOverride = ErisNanoColors.LabelText });
-        var bal = new ErisItemLabel($"Account Balance: {s.Balance} credits");
-        bal.HorizontalAlignment = HAlignment.Right;
+        var bal = new ErisItemLabel($"Balance: {s.Balance}cr");
         header.AddChild(bal);
         Content.AddChild(ErisCandystripe.Wrap(header, 0));
 
@@ -136,7 +135,7 @@ public sealed partial class OxydTradeWindow : FancyWindow
         else
         {
             infoCol.AddChild(new ErisItemLabel($"Name: {s.SelectedName}"));
-            infoCol.AddChild(new ErisSubLabel($"Description: {s.SelectedDesc}"));
+            infoCol.AddChild(new ErisSubLabel($"Description: {s.SelectedDesc}") { ClipText = true, HorizontalExpand = true });
             var st = s.Stations[s.SelectedStation];
             infoCol.AddChild(new ErisSubLabel($"Favor: {st.Favor}/{st.FavorMax}"));
             var t = st.OfferSecondsLeft;

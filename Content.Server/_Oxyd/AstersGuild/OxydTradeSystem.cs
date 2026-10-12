@@ -151,8 +151,8 @@ public sealed partial class OxydTradeSystem : EntitySystem
         while (rq.MoveNext(out _, out _)) { recv = true; break; }
         var sq = EntityQueryEnumerator<OxydTradeBeaconSendingComponent>();
         while (sq.MoveNext(out _, out _)) { send = true; break; }
-        receiving = recv ? "✓Receiving Beacon: Cargo Bay (1, 1)" : "✗No Receiving Beacon";
-        sending = send ? "✓Sending Beacon: Cargo Bay (1, 1)" : "✗No Sending Beacon";
+        receiving = recv ? "✓Receiving Beacon" : "✗No Receiving Beacon";
+        sending = send ? "✓Sending Beacon" : "✗No Sending Beacon";
         return recv && send;
     }
 

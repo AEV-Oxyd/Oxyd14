@@ -18,6 +18,7 @@ namespace Content.Server._Oxyd.AstersGuild;
 public sealed partial class OxydOreProcessorSystem : EntitySystem
 {
     [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private AppearanceSystem _appearance = default!;
 
     /// <summary>Ore EntProtoId -> sheet EntProtoId produced.</summary>
     private static readonly Dictionary<string, string> OreToSheet = new()
@@ -45,12 +46,32 @@ public sealed partial class OxydOreProcessorSystem : EntitySystem
         SubscribeLocalEvent<OxydOreProcessorConsoleComponent, OxydOreProcessorToggleMessage>(OnToggle);
         SubscribeLocalEvent<OxydOreProcessorConsoleComponent, OxydOreProcessorStoreMessage>(OnStore);
         SubscribeLocalEvent<OxydOreProcessorConsoleComponent, OxydOreProcessorAlloyMessage>(OnAlloy);
-        SubscribeLocalEvent<OxydOreProcessorConsoleComponent, BoundUIOpenedEvent>((u, c, _) => PushState(u, c));
+        SubscribeLocalEvent<OxydOreProcessorConsoleComponent, BoundUIOpenedEvent>(OnOpened);
         SubscribeLocalEvent<OxydOreProcessorComponent, InteractUsingEvent>(OnProcessorInteract);
+        SubscribeLocalEvent<OxydDeepDrillComponent, InteractHandEvent>(OnDrillInteract);
+    }
+
+    /// <summary>Eris attack_hand toggles the drill (deep_drill.dm).</summary>
+    private void OnDrillInteract(EntityUid uid, OxydDeepDrillComponent d, InteractHandEvent args)
+    {
+        d.Running = !d.Running;
+        _appearance.SetData(uid, OxydGuildVisuals.Working, d.Running);
+        args.Handled = true;
     }
 
     /// <summary>Eris LateInitialize: console finds the closest processor within 3 tiles.</summary>
     private void OnConsoleInit(EntityUid uid, OxydOreProcessorConsoleComponent comp, ref MapInitEvent args)
+        => TryPair(uid, comp);
+
+    /// <summary>Re-pair on open if the unit was spawned/moved after the console initialized.</summary>
+    private void OnOpened(EntityUid uid, OxydOreProcessorConsoleComponent comp, BoundUIOpenedEvent args)
+    {
+        if (comp.Machine is not { } m || Deleted(m))
+            TryPair(uid, comp);
+        PushState(uid, comp);
+    }
+
+    private void TryPair(EntityUid uid, OxydOreProcessorConsoleComponent comp)
     {
         var pos = Transform(uid).Coordinates;
         EntityUid? best = null;
@@ -82,7 +103,10 @@ public sealed partial class OxydOreProcessorSystem : EntitySystem
     private void OnToggle(EntityUid uid, OxydOreProcessorConsoleComponent comp, OxydOreProcessorToggleMessage _)
     {
         if (comp.Machine is { } m && TryComp(m, out OxydOreProcessorComponent? p))
+        {
             p.Running = !p.Running;
+            _appearance.SetData(m, OxydGuildVisuals.Working, p.Running);
+        }
         PushState(uid, comp);
     }
 
