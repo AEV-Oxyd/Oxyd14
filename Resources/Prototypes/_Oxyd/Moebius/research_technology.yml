@@ -26,8 +26,8 @@
   name: oxyd-rd-node-adv-med-machines
   description: oxyd-rd-node-adv-med-machines.desc
   cost: 500
-  posX: 0.3 //0.25
-  posY: 0.65 //0.6
+  posX: 0.3
+  posY: 0.65
   iconHint: sleeper
   requiredNodes:
   - OxydTechBasicMedMachines
@@ -742,10 +742,10 @@
   tree: OxydTreePowerstorage
   name: oxyd-rd-node-fusion-power-generation
   description: oxyd-rd-node-fusion-power-generation.desc
-  cost: 2000//5000
+  cost: 2000
   posX: 0.6
   posY: 0.4
-  iconHint: rignuclearreactor"//"fusion
+  iconHint: rignuclearreactor
   requiredNodes:
   - OxydTechAdvancedPowerGeneration
 - type: oxydTechNode

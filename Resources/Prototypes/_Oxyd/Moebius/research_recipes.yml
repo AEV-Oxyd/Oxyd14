@@ -10,7 +10,7 @@
     Steel: 100
     Glass: 80
   categories:
-  - Disks
+  - Research
 - type: latheRecipe
   id: OxydRdAirManagement
   name: oxyd-recipe-circuit-air-management
@@ -20,7 +20,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdAtmosalerts
   name: oxyd-recipe-circuit-atmosalerts
@@ -30,7 +30,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdAutolathe
   name: oxyd-recipe-circuit-autolathe
@@ -40,7 +40,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdBasic
   name: oxyd-recipe-item-computer-part-portabledrive-basic
@@ -50,7 +50,7 @@
     Steel: 100
     Glass: 80
   categories:
-  - Disks
+  - Research
 - type: latheRecipe
   id: OxydRdBasicSensor
   name: oxyd-recipe-item-part-basic-sensor
@@ -70,7 +70,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdCircuitImprinter
   name: oxyd-recipe-circuit-circuit-imprinter
@@ -80,7 +80,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdDestructiveAnalyzer
   name: oxyd-recipe-circuit-destructive-analyzer
@@ -90,7 +90,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdExoskeleton
   name: oxyd-recipe-item-mechfab-robot-exoskeleton
@@ -109,7 +109,7 @@
     Steel: 120
     Glass: 40
   categories:
-  - Devices
+  - Tools
 - type: latheRecipe
   id: OxydRdHead
   name: oxyd-recipe-item-mechfab-robot-head
@@ -129,7 +129,7 @@
     Steel: 400
     Glass: 200
   categories:
-  - Cells
+  - Parts
 - type: latheRecipe
   id: OxydRdHyper
   name: oxyd-recipe-item-powercell-large-hyper
@@ -139,7 +139,7 @@
     Steel: 400
     Glass: 200
   categories:
-  - Cells
+  - Parts
 - type: latheRecipe
   id: OxydRdLArm
   name: oxyd-recipe-item-mechfab-robot-l-arm
@@ -169,7 +169,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdMechfab
   name: oxyd-recipe-circuit-mechfab
@@ -179,7 +179,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdMesons
   name: oxyd-recipe-item-mesons
@@ -189,7 +189,7 @@
     Steel: 100
     Glass: 120
   categories:
-  - Devices
+  - Tools
 - type: latheRecipe
   id: OxydRdMicroMani
   name: oxyd-recipe-item-part-micro-mani
@@ -209,7 +209,7 @@
     Steel: 500
     Glass: 300
   categories:
-  - Devices
+  - Tools
 - type: latheRecipe
   id: OxydRdNormal
   name: oxyd-recipe-item-computer-part-portabledrive-normal
@@ -219,7 +219,7 @@
     Steel: 100
     Glass: 80
   categories:
-  - Disks
+  - Research
 - type: latheRecipe
   id: OxydRdNuclear
   name: oxyd-recipe-item-powercell-large-nuclear
@@ -230,7 +230,7 @@
     Glass: 150
     Uranium: 200
   categories:
-  - Cells
+  - Parts
 - type: latheRecipe
   id: OxydRdPosibrain
   name: oxyd-recipe-item-mechfab-posibrain
@@ -251,7 +251,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdProtolathe
   name: oxyd-recipe-circuit-protolathe
@@ -261,7 +261,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdRArm
   name: oxyd-recipe-item-mechfab-robot-r-arm
@@ -291,7 +291,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdRechargeStation
   name: oxyd-recipe-circuit-recharge-station
@@ -301,7 +301,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdScienceTool
   name: oxyd-recipe-item-science-tool
@@ -311,7 +311,7 @@
     Steel: 150
     Glass: 100
   categories:
-  - Devices
+  - Tools
 - type: latheRecipe
   id: OxydRdSuper
   name: oxyd-recipe-item-powercell-large-super
@@ -321,7 +321,7 @@
     Steel: 400
     Glass: 200
   categories:
-  - Cells
+  - Parts
 - type: latheRecipe
   id: OxydRdTeleconsole
   name: oxyd-recipe-circuit-teleconsole
@@ -331,7 +331,7 @@
     Steel: 200
     Glass: 200
   categories:
-  - Circuits
+  - Circuitry
 - type: latheRecipe
   id: OxydRdTorso
   name: oxyd-recipe-item-mechfab-robot-torso

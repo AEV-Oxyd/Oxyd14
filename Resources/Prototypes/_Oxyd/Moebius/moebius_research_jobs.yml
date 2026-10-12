@@ -31,9 +31,9 @@
 
 - type: startingGear
   id: MoebiusOverseerGear
-  outerClothing: erisport_labcoat
   equipment:
     jumpsuit: erisport_moebius_expedition_overseers_jumpsuit
+    outerClothing: erisport_labcoat
     id: OxydMoebiusPDA
 
 - type: startingGear
@@ -59,9 +59,9 @@
 
 - type: startingGear
   id: MoebiusScientistGear
-  outerClothing: erisport_moebius_scientist_labcoat
   equipment:
     jumpsuit: erisport_moebius_scientists_jumpsuit
+    outerClothing: erisport_moebius_scientist_labcoat
     id: OxydMoebiusPDA
     belt: OxydScienceTool
 
@@ -80,7 +80,6 @@
   supervisors: job-supervisors-moebius-overseer
   access:
   - Research
-  - Robotics
   - Maintenance
   - External
   - OxydMoebius
