@@ -55,6 +55,16 @@ public sealed class OxydTradeOfferEntry
     public int SecondsLeft;
 }
 
+/// <summary>One order request from a crew console (Eris trade_orders queue).</summary>
+[Serializable, NetSerializable]
+public sealed class OxydTradeRequestEntry
+{
+    public int Id;
+    public string Item = string.Empty;
+    public int Amount;
+    public string From = string.Empty;
+}
+
 [Serializable, NetSerializable]
 public sealed class OxydTradeState : BoundUserInterfaceState
 {
@@ -73,6 +83,10 @@ public sealed class OxydTradeState : BoundUserInterfaceState
     public int CartCount;
     public int CartTotal;
     public List<string> CartLines = new();
+    public List<OxydTradeRequestEntry> Requests = new();
+    public List<string> SavedCartNames = new();
+    /// <summary>Crew-side request console (Eris preset/trade_orders): show the submit form.</summary>
+    public bool IsRequestConsole;
     public List<string> Log = new();
     public string? Error;
 }
@@ -111,6 +125,60 @@ public sealed class OxydTradeResetCartMessage : BoundUserInterfaceMessage
 public sealed class OxydTradeSendOfferMessage : BoundUserInterfaceMessage
 {
     public int OfferId;
+}
+
+/// <summary>Eris saved_carts: persist the current cart under a name.</summary>
+[Serializable, NetSerializable]
+public sealed class OxydTradeSaveCartMessage : BoundUserInterfaceMessage
+{
+    public string Name = string.Empty;
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydTradeLoadCartMessage : BoundUserInterfaceMessage
+{
+    public int Index;
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydTradeDeleteSavedCartMessage : BoundUserInterfaceMessage
+{
+    public int Index;
+}
+
+/// <summary>Eris trade_orders: crew submits a goods request to the merchant queue.</summary>
+[Serializable, NetSerializable]
+public sealed class OxydTradeSubmitRequestMessage : BoundUserInterfaceMessage
+{
+    public string Item = string.Empty;
+    public int Amount = 1;
+}
+
+/// <summary>Merchant clears a request off the queue (Eris order_requests list).</summary>
+[Serializable, NetSerializable]
+public sealed class OxydTradeCompleteRequestMessage : BoundUserInterfaceMessage
+{
+    public int Id;
+}
+
+// ---------------- ATM (Eris economy/ATM.dm) ----------------
+
+[Serializable, NetSerializable]
+public enum OxydAtmUiKey : byte
+{
+    Key,
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydAtmState : BoundUserInterfaceState
+{
+    public int Balance;
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydAtmWithdrawMessage : BoundUserInterfaceMessage
+{
+    public int Amount;
 }
 
 // ---------------- Ore processor console ----------------

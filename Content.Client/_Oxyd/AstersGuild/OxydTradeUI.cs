@@ -28,6 +28,11 @@ public sealed class OxydTradeBoundUserInterface : BoundUserInterface
         _window.CreateOrder += () => SendMessage(new OxydTradeCreateOrderMessage());
         _window.ResetCart += () => SendMessage(new OxydTradeResetCartMessage());
         _window.SendOffer += id => SendMessage(new OxydTradeSendOfferMessage { OfferId = id });
+        _window.SaveCart += n => SendMessage(new OxydTradeSaveCartMessage { Name = n });
+        _window.LoadCart += i => SendMessage(new OxydTradeLoadCartMessage { Index = i });
+        _window.DeleteSavedCart += i => SendMessage(new OxydTradeDeleteSavedCartMessage { Index = i });
+        _window.SubmitRequest += (i, a) => SendMessage(new OxydTradeSubmitRequestMessage { Item = i, Amount = a });
+        _window.CompleteRequest += id => SendMessage(new OxydTradeCompleteRequestMessage { Id = id });
         _window.OnClose += Close;
     }
 
@@ -65,6 +70,15 @@ public sealed partial class OxydTradeWindow : FancyWindow
     public event Action? CreateOrder;
     public event Action? ResetCart;
     public event Action<int>? SendOffer;
+    public event Action<string>? SaveCart;
+    public event Action<int>? LoadCart;
+    public event Action<int>? DeleteSavedCart;
+    public event Action<string, int>? SubmitRequest;
+    public event Action<int>? CompleteRequest;
+
+    private LineEdit? _savedCartName;
+    private LineEdit? _requestItem;
+    private LineEdit? _requestAmount;
 
     private OxydTradeState? _state;
     private string _tab = "Goods";
@@ -162,6 +176,8 @@ public sealed partial class OxydTradeWindow : FancyWindow
             case "Goods": BuildGoods(body, s); break;
             case "Offers": BuildOffers(body, s); break;
             case "View Cart": BuildCart(body, s); break;
+            case "Saved Carts": BuildSavedCarts(body, s); break;
+            case "Order Requests": BuildRequests(body, s); break;
             case "Logs": BuildLogs(body, s); break;
             default: body.AddChild(new ErisSubLabel("Nothing here yet.")); break;
         }
@@ -262,11 +278,81 @@ public sealed partial class OxydTradeWindow : FancyWindow
         var create = new ErisLink("Create Order");
         create.OnPressed += _ => CreateOrder?.Invoke();
         var save = new ErisLink("Save");
+        save.OnPressed += _ => SaveCart?.Invoke(_savedCartName?.Text.Trim() is { Length: > 0 } n ? n : "cart");
         var load = new ErisLink("Load");
+        load.OnPressed += _ => { if (s.SavedCartNames.Count > 0) LoadCart?.Invoke(0); };
         var reset = new ErisLink("Reset");
         reset.OnPressed += _ => ResetCart?.Invoke();
         btns.AddChild(create); btns.AddChild(save); btns.AddChild(load); btns.AddChild(reset);
         body.AddChild(btns);
+    }
+
+    /// <summary>Eris saved_carts.tmpl: named carts + load/delete links.</summary>
+    private void BuildSavedCarts(BoxContainer body, OxydTradeState s)
+    {
+        body.AddChild(new ErisItemLabel("Saved carts"));
+        var saveRow = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 4 };
+        _savedCartName = new LineEdit { PlaceHolder = "cart name", MinWidth = 160 };
+        var saveBtn = new ErisLink("Save current cart");
+        saveBtn.OnPressed += _ => SaveCart?.Invoke(_savedCartName.Text.Trim() is { Length: > 0 } n ? n : "cart");
+        saveRow.AddChild(_savedCartName);
+        saveRow.AddChild(saveBtn);
+        body.AddChild(saveRow);
+        if (s.SavedCartNames.Count == 0)
+            body.AddChild(new ErisSubLabel("No saved carts."));
+        var i = 0;
+        foreach (var name in s.SavedCartNames)
+        {
+            var idx = i;
+            var row = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 8 };
+            row.AddChild(new Label { Text = name, FontColorOverride = Color.White, MinWidth = 180, ClipText = true });
+            var load = new ErisLink("Load");
+            load.OnPressed += _ => LoadCart?.Invoke(idx);
+            var del = new ErisLink("Delete", red: true);
+            del.OnPressed += _ => DeleteSavedCart?.Invoke(idx);
+            row.AddChild(load); row.AddChild(del);
+            body.AddChild(ErisCandystripe.Wrap(row, i));
+            i++;
+        }
+    }
+
+    /// <summary>Eris orders.tmpl / trade_orders: merchant queue + crew submit form.</summary>
+    private void BuildRequests(BoxContainer body, OxydTradeState s)
+    {
+        body.AddChild(new ErisItemLabel("Order Requests"));
+        if (s.IsRequestConsole)
+        {
+            var form = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 4 };
+            _requestItem = new LineEdit { PlaceHolder = "item name", MinWidth = 160 };
+            _requestAmount = new LineEdit { PlaceHolder = "amount", MinWidth = 70 };
+            var submit = new ErisLink("Submit request");
+            submit.OnPressed += _ =>
+            {
+                var amt = int.TryParse(_requestAmount?.Text.Trim(), out var a) ? a : 1;
+                if (_requestItem?.Text.Trim() is { Length: > 0 } item)
+                    SubmitRequest?.Invoke(item, amt);
+            };
+            form.AddChild(_requestItem);
+            form.AddChild(_requestAmount);
+            form.AddChild(submit);
+            body.AddChild(form);
+        }
+        if (s.Requests.Count == 0)
+            body.AddChild(new ErisSubLabel("No pending requests."));
+        var i = 0;
+        foreach (var r in s.Requests)
+        {
+            var id = r.Id;
+            var row = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 8 };
+            row.AddChild(new Label { Text = $"{r.Item} x{r.Amount} — {r.From}", FontColorOverride = Color.White, MinWidth = 240, ClipText = true });
+            if (!s.IsRequestConsole)
+            {
+                var done = new ErisLink("Complete");
+                done.OnPressed += _ => CompleteRequest?.Invoke(id);
+                row.AddChild(done);
+            }
+            body.AddChild(ErisCandystripe.Wrap(row, i++));
+        }
     }
 
     private void BuildLogs(BoxContainer body, OxydTradeState s)

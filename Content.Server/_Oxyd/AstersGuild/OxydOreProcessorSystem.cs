@@ -19,6 +19,7 @@ public sealed partial class OxydOreProcessorSystem : EntitySystem
 {
     [Dependency] private UserInterfaceSystem _ui = default!;
     [Dependency] private AppearanceSystem _appearance = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
 
     /// <summary>Ore EntProtoId -> sheet EntProtoId produced.</summary>
     private static readonly Dictionary<string, string> OreToSheet = new()
@@ -172,8 +173,26 @@ public sealed partial class OxydOreProcessorSystem : EntitySystem
             d.Accum += frameTime;
             if (d.Accum < d.OreEvery) continue;
             d.Accum = 0;
+            // Eris deep_drill only digs into cave/asteroid ground (cave_generator.dm):
+            // require a rock/asteroid wall in reach before the head bites ore out.
+            if (!RockNearby(uid)) continue;
             var ores = new[] { "SteelOre", "UraniumOre", "PlasmaOre", "GoldOre", "SilverOre", "Coal" };
             Spawn(ores[Random.Shared.Next(ores.Length)], Transform(uid).Coordinates);
         }
+    }
+
+    /// <summary>Cave-generator stand-in (Eris: drill needs cave worldgen beneath) — any
+    /// entity whose proto id contains Rock/Asteroid within ~1.5 tiles counts as ground
+    /// the drill can bite into (WallRock*/asteroid walls).</summary>
+    private bool RockNearby(EntityUid uid)
+    {
+        foreach (var ent in _lookup.GetEntitiesInRange(uid, 1.5f))
+        {
+            if (ent == uid) continue;
+            if (TryComp(ent, out MetaDataComponent? md) && md.EntityPrototype?.ID is { } id &&
+                (id.Contains("Rock") || id.Contains("Asteroid")))
+                return true;
+        }
+        return false;
     }
 }

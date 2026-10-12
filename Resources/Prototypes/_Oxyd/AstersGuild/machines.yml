@@ -41,6 +41,7 @@
     - state: request
       map: ["enum.OxydGuildVisualLayers.Base"]
   - type: OxydTradeConsole
+    requestConsole: true
   - type: ActivatableUI
     key: enum.OxydTradeUiKey.Key
   - type: ActivatableUIRequiresPower
@@ -50,6 +51,41 @@
         type: OxydTradeBoundUserInterface
   - type: ApcPowerReceiver
     powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Trade crate — goods ordered at the console arrive inside a steel crate on the
+# receiving beacon (Eris order.dm shipping crates).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: CrateGenericSteel
+  id: OxydTradeCrate
+
+# ---------------------------------------------------------------------------
+# ATM — Eris economy/ATM.dm teller tied to the shared guild account. NanoUI-style
+# window: balance + withdraw; deposit = insert a credits stack on the machine.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAtm
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: transfer
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydAtm
+  - type: ActivatableUI
+    key: enum.OxydAtmUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAtmUiKey.Key:
+        type: OxydAtmBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 50
   - type: Appearance
   - type: InteractionOutline
   - type: Clickable
