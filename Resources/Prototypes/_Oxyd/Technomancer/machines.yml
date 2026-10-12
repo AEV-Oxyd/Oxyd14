@@ -7,9 +7,24 @@
   parent: SMESBasic
   id: OxydSmesUnit
   components:
+  # Stock SmesVisualizer drives Charge/Input/Output layers via SmesVisualLayers
+  # map keys — each layer must carry the RSI explicitly (see smes.yml).
   - type: Sprite
     sprite: _Oxyd/Technomancer/power_engi.rsi
-    state: smes
+    layers:
+      - state: smes
+      - map: ["enum.SmesVisualLayers.Charge"]
+        state: "smes-og1" # -og0 does not exist
+        shader: unshaded
+        visible: false
+      - map: ["enum.SmesVisualLayers.Input"]
+        state: "smes-oc0"
+        shader: unshaded
+      - map: ["enum.SmesVisualLayers.Output"]
+        state: "smes-op1"
+        shader: unshaded
+      - map: ["enum.WiresVisualLayers.MaintenancePanel"]
+        state: smes
   - type: UserInterface
     interfaces:
       enum.BatteryUiKey.Key:

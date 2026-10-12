@@ -39,13 +39,35 @@ public sealed partial class OxydPulsarWindow : FancyWindow
         RobustXamlLoader.Load(this);
         Body.PanelOverride = new Robust.Client.Graphics.StyleBoxFlat(ErisNanoColors.BodyBg);
 
-        Content.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-power-produced")));
-        Content.AddChild(_producedBar);
-        Content.AddChild(_producedLabel);
-        Content.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-fuel")));
-        Content.AddChild(_fuelBar);
-        Content.AddChild(_fuelLabel);
-        Content.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-shield")));
+        // Two-column Eris layout: stats left, satellite map + dir pad right,
+        // so the whole window fits inside a ~430px viewport band.
+        var columns = new BoxContainer
+        {
+            Orientation = BoxContainer.LayoutOrientation.Horizontal,
+            SeparationOverride = 10,
+        };
+        Content.AddChild(columns);
+        var left = new BoxContainer
+        {
+            Orientation = BoxContainer.LayoutOrientation.Vertical,
+            SeparationOverride = 6,
+            MinSize = new Vector2(200, 0),
+        };
+        columns.AddChild(left);
+        var right = new BoxContainer
+        {
+            Orientation = BoxContainer.LayoutOrientation.Vertical,
+            SeparationOverride = 6,
+        };
+        columns.AddChild(right);
+
+        left.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-power-produced")));
+        left.AddChild(_producedBar);
+        left.AddChild(_producedLabel);
+        left.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-fuel")));
+        left.AddChild(_fuelBar);
+        left.AddChild(_fuelLabel);
+        left.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-shield")));
         var pillRow = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 4 };
         foreach (var v in new[] { 0, 45, 70, 100 })
         {
@@ -55,17 +77,17 @@ public sealed partial class OxydPulsarWindow : FancyWindow
             _shieldPills[v] = pill;
             pillRow.AddChild(pill);
         }
-        Content.AddChild(pillRow);
-        Content.AddChild(_shieldBar);
+        left.AddChild(pillRow);
+        left.AddChild(_shieldBar);
         var effRow = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 6 };
         effRow.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-effective")));
         effRow.AddChild(_effectiveLabel);
-        Content.AddChild(effRow);
-        Content.AddChild(_countdown);
-        Content.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-map")));
+        left.AddChild(effRow);
+        left.AddChild(_countdown);
+        right.AddChild(new ErisItemLabel(Loc.GetString("oxyd-pulsar-map")));
         _grid.Columns = 15;
-        _grid.MaxSize = new Vector2(390, 390);
-        Content.AddChild(_grid);
+        _grid.MaxSize = new Vector2(200, 200);
+        right.AddChild(_grid);
         var pad = new GridContainer { Columns = 3, HorizontalAlignment = HAlignment.Center };
         var dirs = new (string t, Vector2i d)[]
         {
@@ -75,13 +97,13 @@ public sealed partial class OxydPulsarWindow : FancyWindow
         };
         for (var i = 0; i < 9; i++)
         {
-            if (i == 4) { pad.AddChild(new Control { MinSize = new Vector2(34, 30) }); continue; }
+            if (i == 4) { pad.AddChild(new Control { MinSize = new Vector2(34, 26) }); continue; }
             var (t, d) = dirs[i < 4 ? i : i - 1];
-            var b = new ErisLink(t) { MinSize = new Vector2(34, 30) };
+            var b = new ErisLink(t) { MinSize = new Vector2(34, 26) };
             b.OnPressed += _ => Move?.Invoke(d);
             pad.AddChild(b);
         }
-        Content.AddChild(pad);
+        right.AddChild(pad);
     }
 
     private static Color FillFor(float f) =>
@@ -121,7 +143,7 @@ public sealed partial class OxydPulsarWindow : FancyWindow
             var pos = new Vector2i(x, y);
             var cell = new PanelContainer
             {
-                MinSize = new Vector2(390f / s.GridSize - 1, 390f / s.GridSize - 1),
+                MinSize = new Vector2(200f / s.GridSize - 1, 200f / s.GridSize - 1),
             };
             Color bg = Color.FromHex("#00005f"); // Eris empty-ocean tile
             if (beams.Contains(pos)) bg = Color.FromHex("#82C2D8");
