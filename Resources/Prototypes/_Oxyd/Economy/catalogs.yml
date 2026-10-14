@@ -1,0 +1,21 @@
+- type: oxydCatalog
+  id: drinks
+  title: Neon Cocktails!
+  entries:
+  - name: Space Freezo
+    description: Ice-cold club classic. Garnish optional.
+  - name: Eris Sunrise
+    description: Sweet, bright, and slightly radioactive in flavor only.
+  - name: Manager's Special
+    description: Whatever is left in the shaker after last call.
+
+- type: oxydCatalog
+  id: cooking
+  title: Cooking Assistant
+  entries:
+  - name: Club Burger
+    description: Stack it high, charge it higher.
+  - name: Fried Spacecarrot
+    description: Crunchy side for the dinner rush.
+  - name: Mystery Stew
+    description: Today's special is always a surprise.

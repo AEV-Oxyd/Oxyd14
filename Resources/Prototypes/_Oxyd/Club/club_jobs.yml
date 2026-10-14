@@ -1,0 +1,182 @@
+# Club civilian jobs (Eris code/game/jobs/job/civilian.dm + assistant.dm).
+# Unique prototype IDs keep upstream Bartender / ServiceWorker / Passenger free to evolve.
+# Eris access list -> fork mapping lives in _Oxyd/Club/access.yml comments.
+# Clothing sprites already live under erisPorted/; Artist's Bench / insight perks are follow-up.
+
+# ---------------------------------------------------------------------------
+# Club Manager — Eris /datum/job/clubmanager (bartender outfit + manager jacket)
+# ---------------------------------------------------------------------------
+- type: job
+  id: ClubManager
+  name: job-name-club-manager
+  description: job-description-club-manager
+  playTimeTracker: JobClubManager
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: Civilian
+    time: 1h
+  startingGear: ClubManagerGear
+  icon: JobIconClubManager
+  supervisors: job-supervisors-hop
+  access:
+  - Service
+  - Bar
+  - Kitchen
+  - Maintenance
+  - OxydClubChange
+  - OxydClubArtist
+
+- type: startingGear
+  id: ClubManagerGear
+  equipment:
+    jumpsuit: erisport_bartenders_uniform
+    outerClothing: erisport_managers_jacket
+    head: ClothingHeadHatTophat
+    shoes: ClothingShoesColorBlack
+    ears: ClothingHeadsetService
+    id: BartenderPDA
+  storage:
+    back:
+    - ShellShotgunBeanbag
+    - ShellShotgunBeanbag
+    - ShellShotgunBeanbag
+    - ShellShotgunBeanbag
+
+- type: chameleonOutfit
+  id: ClubManagerChameleonOutfit
+  job: ClubManager
+  equipment:
+    jumpsuit: erisport_bartenders_uniform
+    outerClothing: erisport_managers_jacket
+    head: ClothingHeadHatTophat
+    eyes: ClothingEyesGlassesSunglasses
+    neck: ClothingNeckScarfStripedBlack
+    gloves: ClothingHandsGlovesColorBlack
+
+# ---------------------------------------------------------------------------
+# Club Worker — Eris /datum/job/clubworker (waiter outfit; cook+serve+bounce)
+# ---------------------------------------------------------------------------
+- type: job
+  id: ClubWorker
+  name: job-name-club-worker
+  description: job-description-club-worker
+  playTimeTracker: JobClubWorker
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: Civilian
+    time: 0.5h
+  startingGear: ClubWorkerGear
+  icon: JobIconClubWorker
+  supervisors: job-supervisors-club-manager
+  access:
+  - Service
+  - Bar
+  - Kitchen
+  - Maintenance
+
+- type: startingGear
+  id: ClubWorkerGear
+  equipment:
+    jumpsuit: erisport_waiters_outfit
+    shoes: ClothingShoesColorBlack
+    ears: ClothingHeadsetService
+    id: ServiceWorkerPDA
+
+- type: chameleonOutfit
+  id: ClubWorkerChameleonOutfit
+  job: ClubWorker
+  equipment:
+    jumpsuit: erisport_waiters_outfit
+    head: ClothingHeadHatBowlerHat
+    eyes: ClothingEyesGlassesSunglasses
+    outerClothing: ClothingOuterVest
+    gloves: ClothingHandsGlovesColorBlack
+
+# ---------------------------------------------------------------------------
+# Club Artist — Eris /datum/job/artist (insight/art bench deferred)
+# ---------------------------------------------------------------------------
+- type: job
+  id: ClubArtist
+  name: job-name-club-artist
+  description: job-description-club-artist
+  playTimeTracker: JobClubArtist
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: Civilian
+    time: 0.5h
+  startingGear: ClubArtistGear
+  icon: JobIconClubArtist
+  supervisors: job-supervisors-club-manager
+  access:
+  - Service
+  - Bar
+  - Kitchen
+  - Maintenance
+  - Theatre
+  - OxydClubArtist
+
+- type: startingGear
+  id: ClubArtistGear
+  equipment:
+    jumpsuit: erisport_Jesters_Garments
+    outerClothing: erisport_Complicated_Vest
+    head: erisport_red_feathered_beret
+    shoes: ClothingShoesClown
+    mask: ClothingMaskClown
+    eyes: ClothingEyesGlassesSunglasses
+    ears: ClothingHeadsetService
+    id: ClownPDA
+    pocket1: BikeHorn
+  storage:
+    back:
+    - FoodBanana
+    - CrayonBox
+    - SprayBottleWater
+    - RubberStampClown
+    - Cablecuffs
+
+- type: chameleonOutfit
+  id: ClubArtistChameleonOutfit
+  job: ClubArtist
+  equipment:
+    jumpsuit: erisport_Jesters_Garments
+    outerClothing: erisport_Complicated_Vest
+    head: erisport_lime_feathered_beret
+    shoes: ClothingShoesClown
+    mask: ClothingMaskClown
+    eyes: ClothingEyesGlassesSunglasses
+
+# ---------------------------------------------------------------------------
+# Vagabond — Eris /datum/job/assistant (ASSISTANT_TITLE); overflow civilian
+# ---------------------------------------------------------------------------
+- type: job
+  id: Vagabond
+  name: job-name-vagabond
+  description: job-description-vagabond
+  playTimeTracker: JobVagabond
+  startingGear: VagabondGear
+  icon: JobIconVagabond
+  supervisors: job-supervisors-everyone
+  access:
+  - Maintenance
+
+- type: startingGear
+  id: VagabondGear
+  equipment:
+    jumpsuit: erisport_assistants_uniform
+    outerClothing: erisport_assistant_jacket
+    shoes: ClothingShoesColorBlack
+    ears: ClothingHeadsetGrey
+    id: PassengerPDA
+    pocket1: SpaceCash1000
+
+- type: chameleonOutfit
+  id: VagabondChameleonOutfit
+  job: Vagabond
+  equipment:
+    jumpsuit: erisport_assistants_uniform
+    outerClothing: erisport_assistant_jacket
+    head: ClothingHeadHatWelding
+    eyes: ClothingEyesGlassesCheapSunglasses
+    mask: ClothingMaskGas
+    gloves: ClothingHandsGlovesColorYellowBudget

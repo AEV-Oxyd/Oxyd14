@@ -1,0 +1,45 @@
+# Eris job economy wiring (code/game/jobs/job/civilian.dm + wages.dm)
+
+- type: oxydJobEconomy
+  id: ClubManager
+  wage: 0
+  initialBalance: 3000
+  departmentAccountAccess: true
+  employer: Service
+
+- type: oxydJobEconomy
+  id: ClubWorker
+  wage: 0
+  initialBalance: 750
+  departmentAccountAccess: true
+  employer: Service
+
+- type: oxydJobEconomy
+  id: ClubArtist
+  wage: 0
+  initialBalance: 600
+  departmentAccountAccess: false
+  employer: Service
+
+- type: oxydJobEconomy
+  id: Vagabond
+  wage: 0
+  initialBalance: 0
+  accountAllowed: false
+  employer: Service
+
+- type: oxydJobEconomy
+  id: Captain
+  wage: 0
+  initialBalance: -1
+  departmentAccountAccess: true
+  canMakeAccounts: true
+  employer: Cargo
+
+- type: oxydJobEconomy
+  id: HeadOfPersonnel
+  wage: 600
+  initialBalance: -1
+  departmentAccountAccess: true
+  canMakeAccounts: true
+  employer: Cargo

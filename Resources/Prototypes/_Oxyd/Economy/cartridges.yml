@@ -1,0 +1,52 @@
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTaxQuicklyCartridge
+  name: TaxQuickly 2565 cartridge
+  description: NT banking client. Transfer funds, manage wages, register accounts.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:TaxQuicklyUi
+  - type: Cartridge
+    programName: oxyd-taxquickly-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: TaxQuicklyCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydDrinkCatalogCartridge
+  name: Neon Cocktails cartridge
+  description: Club drink catalog for the bar staff.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-drink-catalog-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: drinks
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydCookCatalogCartridge
+  name: Cooking Assistant cartridge
+  description: Club kitchen catalog.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-cook-catalog-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: cooking
