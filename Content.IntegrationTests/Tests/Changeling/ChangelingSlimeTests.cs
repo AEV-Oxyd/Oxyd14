@@ -205,9 +205,8 @@ public sealed class ChangelingSlimeTests : InteractionTest
 
     private ItemGridPiece GetStorageControl(NetEntity target)
     {
-        var uid = ToClient(target);
-        var hotbar = GetWidget<HotbarGui>();
-        var storageContainer = GetControlFromField<Control>(nameof(HotbarGui.SingleStorageContainer), hotbar);
-        return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, storageContainer);
+        // HotbarGui.SingleStorageContainer was removed upstream; rewrite when storage hotbar lands again.
+        Assert.Fail("HotbarGui.SingleStorageContainer is unavailable");
+        throw new NotSupportedException();
     }
 }
