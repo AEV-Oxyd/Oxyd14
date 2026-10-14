@@ -1,0 +1,93 @@
+# Eris economy machines — ATM / cash register / EFTPOS / tip jar
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAtm
+  name: ATM
+  description: NanoTrasen banking terminal. Insert your ID credentials and Credit stacks.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: transfer
+  - type: OxydAtm
+  - type: ActivatableUI
+    key: enum.OxydAtmUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAtmUiKey.Key:
+        type: OxydAtmBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 50
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: BaseItem
+  id: OxydCashRegister
+  name: cash register
+  description: Club till. Open the drawer, drop Credits, then bank the till.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/briefcase.rsi
+    state: briefcase_black
+  - type: Item
+    size: Normal
+  - type: OxydCashRegister
+    departmentId: Service
+
+- type: entity
+  parent: BaseItem
+  id: OxydEftpos
+  name: EFTPOS
+  description: Portable charge terminal. Activate to set amount, swipe Credits or ID to pay.
+  components:
+  - type: Sprite
+    sprite: Objects/Devices/station_map.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: OxydEftpos
+    departmentId: Service
+
+- type: entity
+  parent: BaseItem
+  id: OxydTipJar
+  name: tip jar
+  description: Drop Credits for good service. Empty with an empty hand.
+  components:
+  - type: Sprite
+    sprite: Objects/Consumable/Drinks/glass.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: OxydTipJar
+
+- type: entity
+  parent: BaseItem
+  id: OxydEwallet
+  name: charge card
+  description: A prepaid charge card.
+  components:
+  - type: Sprite
+    sprite: Objects/Economy/cash.rsi
+    state: cash_100
+  - type: Item
+    size: Tiny
+  - type: OxydEwallet
+    worth: 500
+
+# Example Club vendor that charges buyers and credits Service.
+- type: entity
+  parent: VendingMachineCoffee
+  id: OxydVendingClubSnacks
+  name: Club SnackMate
+  description: Overpriced snacks for the dance floor. Sales go to the Club/Service account.
+  suffix: Paid / Service earnings
+  components:
+  - type: OxydVendorEarnings
+    departmentId: Service
+    defaultPrice: 25
+    requirePayment: true

@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Access.Components;
 using Content.Shared.Chat;
@@ -104,9 +105,9 @@ public sealed partial class OxydEconomySystem
         Dirty(cardId, bankId);
     }
 
-    private void EnsureDepartmentsForRound()
+    public void EnsureDepartmentsForRound()
     {
-        if (_departmentsReady)
+        if (_departmentsReady && _accounts.Values.Any(a => a.IsDepartment))
             return;
 
         foreach (var station in _station.GetStations())

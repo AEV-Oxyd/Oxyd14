@@ -1,9 +1,13 @@
 using System.Linq;
 using Content.Server.Administration;
+using Content.Server.Stack;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Administration;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Mobs.Components;
+using Content.Shared.Stacks;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Toolshed;
 
 namespace Content.Server._Oxyd.Economy;
@@ -189,5 +193,100 @@ public sealed class EconomyDebugCommand : ToolshedCommand
         ctx.WriteLine($"assert acct={account} bal={acc.Balance} {op} {value} => {ok}");
         if (!ok)
             throw new InvalidOperationException("economy:assert failed");
+    }
+
+    [CommandImplementation("givecash")]
+    public void GiveCash(IInvocationContext ctx, int amount)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        var cash = GetSys<StackSystem>().SpawnAtPosition(amount, (ProtoId<StackPrototype>)"Credit", Transform(uid).Coordinates);
+        GetSys<SharedHandsSystem>().TryPickupAnyHand(uid, cash, checkActionBlocker: false);
+        ctx.WriteLine($"gave {amount} Credit to {EntityManager.ToPrettyString(uid)}");
+    }
+
+    [CommandImplementation("place")]
+    public void Place(IInvocationContext ctx, string what)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        var proto = what.ToLowerInvariant() switch
+        {
+            "atm" => "OxydAtm",
+            "register" => "OxydCashRegister",
+            "eftpos" => "OxydEftpos",
+            "tipjar" => "OxydTipJar",
+            "vendor" => "OxydVendingClubSnacks",
+            _ => what,
+        };
+        var ent = Spawn(proto, Transform(uid).Coordinates);
+        ctx.WriteLine($"placed {EntityManager.ToPrettyString(ent)}");
+    }
+
+    [CommandImplementation("link")]
+    public void Link(IInvocationContext ctx, string kind, int account)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        // Link nearest matching device within 2m
+        var lookup = GetSys<EntityLookupSystem>();
+        var xform = Transform(uid);
+        foreach (var ent in lookup.GetEntitiesInRange(xform.Coordinates, 2f))
+        {
+            if (kind == "register" && TryComp<OxydCashRegisterComponent>(ent, out var reg))
+            {
+                reg.LinkedAccountNumber = account;
+                EntityManager.Dirty(ent, reg);
+                ctx.WriteLine($"linked register {EntityManager.ToPrettyString(ent)} -> acct={account}");
+                return;
+            }
+
+            if (kind == "eftpos" && TryComp<OxydEftposComponent>(ent, out var eft))
+            {
+                eft.LinkedAccountNumber = account;
+                EntityManager.Dirty(ent, eft);
+                ctx.WriteLine($"linked eftpos {EntityManager.ToPrettyString(ent)} -> acct={account}");
+                return;
+            }
+
+            if (kind == "vendor" && TryComp<OxydVendorEarningsComponent>(ent, out var vend))
+            {
+                vend.LinkedAccountNumber = account;
+                EntityManager.Dirty(ent, vend);
+                ctx.WriteLine($"linked vendor {EntityManager.ToPrettyString(ent)} -> acct={account}");
+                return;
+            }
+        }
+
+        ctx.WriteLine($"no {kind} in range");
+    }
+
+    [CommandImplementation("setup")]
+    public void Setup(IInvocationContext ctx, string scenario)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        Eco.EnsureDepartmentsForRound();
+        var service = Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerService);
+        switch (scenario)
+        {
+            case "club-pos":
+                Place(ctx, "register");
+                Place(ctx, "eftpos");
+                Place(ctx, "tipjar");
+                if (service != null)
+                {
+                    Link(ctx, "register", service.AccountNumber);
+                    Link(ctx, "eftpos", service.AccountNumber);
+                    ctx.WriteLine($"dept Service acct={service.AccountNumber} pin={service.Pin} bal={service.Balance}");
+                }
+                break;
+            case "payday-retainer":
+                if (Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo) is { } cargo)
+                    Eco.TrySetBalance(cargo.AccountNumber, 50000);
+                if (service != null)
+                    Eco.TrySetBalance(service.AccountNumber, 500);
+                ctx.WriteLine("payday-retainer seeded (Cargo rich, Service poor)");
+                break;
+            default:
+                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer");
+                break;
+        }
     }
 }
