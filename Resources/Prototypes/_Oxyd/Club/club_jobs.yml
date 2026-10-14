@@ -34,7 +34,7 @@
     head: ClothingHeadHatTophat
     shoes: ClothingShoesColorBlack
     ears: ClothingHeadsetService
-    id: BartenderPDA
+    id: OxydPdaClub
   storage:
     back:
     - ShellShotgunBeanbag
@@ -80,7 +80,7 @@
     jumpsuit: erisport_waiters_outfit
     shoes: ClothingShoesColorBlack
     ears: ClothingHeadsetService
-    id: ServiceWorkerPDA
+    id: OxydPdaClub
 
 - type: chameleonOutfit
   id: ClubWorkerChameleonOutfit
@@ -125,7 +125,7 @@
     mask: ClothingMaskClown
     eyes: ClothingEyesGlassesSunglasses
     ears: ClothingHeadsetService
-    id: ClownPDA
+    id: OxydPdaArtist
     pocket1: BikeHorn
   storage:
     back:
