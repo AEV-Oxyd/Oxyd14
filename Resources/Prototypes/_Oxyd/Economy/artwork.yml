@@ -16,6 +16,7 @@
   - type: OverrideSell
     overrideAccount: Guild
   - type: OxydArtwork
+    artKind: statue
 
 - type: entity
   parent: BaseItem
@@ -33,3 +34,62 @@
   - type: OverrideSell
     overrideAccount: Guild
   - type: OxydArtwork
+    artKind: oddity
+  - type: Oddity
+    giving:
+      Cog: 1
+      Bio: 1
+
+- type: entity
+  parent: BaseItem
+  id: OxydArtworkToolmod
+  name: artwork tool mod
+  description: A decorative tool upgrade. More form than function — until Guild prices it.
+  components:
+  - type: Sprite
+    sprite: Objects/Fun/figurines.rsi
+    state: engineer
+  - type: Item
+    size: Small
+  - type: StaticPrice
+    price: 80
+  - type: OverrideSell
+    overrideAccount: Guild
+  - type: OxydArtwork
+    artKind: toolmod
+
+- type: entity
+  parent: BaseItem
+  id: OxydArtworkGunPart
+  name: artwork gun part
+  description: An ornate receiver fragment. Collectors and brokers bid.
+  components:
+  - type: Sprite
+    sprite: Objects/Fun/figurines.rsi
+    state: security
+  - type: Item
+    size: Small
+  - type: StaticPrice
+    price: 90
+  - type: OverrideSell
+    overrideAccount: Guild
+  - type: OxydArtwork
+    artKind: gunPart
+
+- type: entity
+  parent: BaseItem
+  id: OxydArtworkArmorPart
+  name: artwork armor part
+  description: A sculpted plate. Looks ceremonial; sells serious.
+  components:
+  - type: Sprite
+    sprite: Objects/Fun/figurines.rsi
+    state: chef
+  - type: Item
+    size: Small
+  - type: StaticPrice
+    price: 85
+  - type: OverrideSell
+    overrideAccount: Guild
+  - type: OxydArtwork
+    artKind: armorPart

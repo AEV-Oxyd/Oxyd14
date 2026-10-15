@@ -1,10 +1,12 @@
 using System.Linq;
+using Content.Server._Oxyd.SanityInsightAndResting;
 using Content.Server.Administration;
 using Content.Server.Stack;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Administration;
 using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Materials;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
@@ -310,7 +312,17 @@ public sealed class EconomyDebugCommand : ToolshedCommand
                 Place(ctx, "accountsdb");
                 Place(ctx, "bench");
                 Eco.EnsureDepartmentsForRound();
-                ctx.WriteLine("accounts uplink + artist bench placed");
+                SeedNearestBench(ctx, uid);
+                ctx.WriteLine("accounts uplink + artist bench placed (materials seeded)");
+                break;
+            case "artist":
+                Place(ctx, "bench");
+                SeedNearestBench(ctx, uid);
+                EntityManager.EnsureComponent<OxydArtistPerkComponent>(uid);
+                var san = EntityManager.EnsureComponent<SanityComponent>(uid);
+                san.Insight = 100f;
+                EntityManager.Dirty(uid, san);
+                ctx.WriteLine("artist bench + perk + 100 insight (materials seeded)");
                 break;
             case "trade":
                 Place(ctx, "send");
@@ -327,9 +339,28 @@ public sealed class EconomyDebugCommand : ToolshedCommand
                 ctx.WriteLine("trade beacons placed (send+recv)");
                 break;
             default:
-                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer|accountsdb|trade");
+                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer|accountsdb|artist|trade");
                 break;
         }
+    }
+
+    private void SeedNearestBench(IInvocationContext ctx, EntityUid near)
+    {
+        var mats = GetSys<SharedMaterialStorageSystem>();
+        var lookup = GetSys<EntityLookupSystem>();
+        foreach (var ent in lookup.GetEntitiesInRange(Transform(near).Coordinates, 3f))
+        {
+            if (!TryComp<OxydArtistBenchComponent>(ent, out var bench))
+                continue;
+
+            foreach (var mat in bench.SuitableMaterials)
+                mats.TryChangeMaterialAmount(ent, mat, 200);
+
+            ctx.WriteLine($"seeded materials on {EntityManager.ToPrettyString(ent)}");
+            return;
+        }
+
+        ctx.WriteLine("no artist bench in range to seed");
     }
 
     [CommandImplementation("suspend")]

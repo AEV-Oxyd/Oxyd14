@@ -3,11 +3,10 @@ using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;
 
-/// <summary>
-/// This is used for...
-/// </summary>
+/// <summary>Eris oddity inspiration stats (skill → bonus). Used by rest focus and artist bench.</summary>
 [RegisterComponent]
 public sealed partial class OddityComponent : Component
 {
-    public Dictionary<ProtoId<SkillPrototype>, int> giving =  new Dictionary<ProtoId<SkillPrototype>, int>();
+    [DataField]
+    public Dictionary<ProtoId<SkillPrototype>, int> giving = new();
 }

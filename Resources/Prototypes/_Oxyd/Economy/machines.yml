@@ -149,13 +149,38 @@
   parent: [ BaseMachinePowered ]
   id: OxydArtistBench
   name: artist's bench
-  description: Pour insight into wood and steel. Finished pieces consign to the Asters Guild.
+  description: Insert wood, steel, glass, plasteel, plastic and a bit of your soul to create a beautiful work of art.
   components:
   - type: Sprite
     sprite: Structures/Machines/autolathe.rsi
     layers:
     - state: icon
+    - state: inserting
+      map: ["enum.MaterialStorageVisualLayers.Inserting"]
   - type: OxydArtistBench
+  - type: MaterialStorage
+    whitelist:
+      tags:
+      - Sheet
+      - RawMaterial
+      - Ingot
+    materialWhiteList:
+    - Wood
+    - Steel
+    - Glass
+    - Plasteel
+    - Plastic
+  - type: ItemSlots
+    slots:
+      oddity_slot:
+        name: Inspiration oddity
+        whitelist:
+          components:
+          - Oddity
+        insertOnInteract: true
+  - type: ContainerContainer
+    containers:
+      oddity_slot: !type:ContainerSlot
   - type: ActivatableUI
     key: enum.OxydArtistBenchUiKey.Key
   - type: ActivatableUIRequiresPower

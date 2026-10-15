@@ -90,6 +90,18 @@
     name: Artwork oddity
     price: 600
     amount: 1
+  - product: OxydArtworkToolmod
+    name: Artwork tool mod
+    price: 450
+    amount: 2
+  - product: OxydArtworkGunPart
+    name: Artwork gun part
+    price: 500
+    amount: 1
+  - product: OxydArtworkArmorPart
+    name: Artwork armor part
+    price: 480
+    amount: 1
 
 - type: oxydTradeStation
   id: Caduceus

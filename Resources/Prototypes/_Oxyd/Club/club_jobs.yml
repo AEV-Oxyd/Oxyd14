@@ -93,7 +93,7 @@
     gloves: ClothingHandsGlovesColorBlack
 
 # ---------------------------------------------------------------------------
-# Club Artist — Eris /datum/job/artist (insight/art bench deferred)
+# Club Artist — Eris /datum/job/artist (PERK_ARTIST + artist bench)
 # ---------------------------------------------------------------------------
 - type: job
   id: ClubArtist
@@ -114,6 +114,10 @@
   - Maintenance
   - Theatre
   - OxydClubArtist
+  special:
+  - !type:AddComponentSpecial
+    components:
+    - type: OxydArtistPerk
 
 - type: startingGear
   id: ClubArtistGear
