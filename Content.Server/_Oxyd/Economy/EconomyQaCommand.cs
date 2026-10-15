@@ -99,8 +99,8 @@ public sealed partial class EconomyDebugCommand
         try
         {
             var uid = ExecutingEntity(ctx);
-            if (uid != null && Exists(uid.Value) && HasComp<MobStateComponent>(uid.Value))
-                return uid;
+            if (uid is { } actor && EntityManager.EntityExists(actor) && HasComp<MobStateComponent>(actor))
+                return actor;
         }
         catch
         {
