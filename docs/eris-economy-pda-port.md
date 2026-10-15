@@ -20,11 +20,19 @@ Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 - NTOS stubs — records / bounty / trade_orders catalog cartridges on Club/Artist/Guild PDAs
 - `economy:place|givecash|link|setup club-pos|accountsdb|list|suspend|sync`
 
+## Also — full trade stack (P7)
+
+- `OxydTradeStation` prototypes (Vermouth, AstersCapital, Caduceus)
+- Cart → order queue → receiving beacon fulfill (Guild free fee; others +10%)
+- Sending beacon offer export (80/20 slave/Guild cut)
+- Real `OxydTradeOrdersCartridge` UI (stations/goods/cart/orders/offers/logs)
+- Toolshed: `economy:setup trade`, `economy:trade stations|discover|orders|restock|buy`, `place send|recv`
+
 ## Still deferred
 
-- Full Eris trade_orders buy/sell lists (P7 deep)
 - Optional modular PDA hardware (PD6)
 - Material-consuming autolathe artist_bench parity (insight-only for now)
+- Overmap trade station discovery tree / hidden inventory thresholds
 
 ## QA
 
@@ -43,6 +51,12 @@ economy:place bench
 economy:list
 economy:suspend <acct> true
 economy:sync
+economy:setup trade
+economy:trade stations
+economy:trade discover Caduceus
+economy:trade buy Vermouth:DrinkGlass
+economy:place send
+economy:place recv
 entities with MobState named ".*Surname.*" | economy:status
 pda:spritecheck
 pda:programs

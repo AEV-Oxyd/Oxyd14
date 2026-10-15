@@ -91,16 +91,15 @@
   parent: BasePDACartridge
   id: OxydTradeOrdersCartridge
   name: trade orders cartridge
-  description: NTOS stub — Asters Guild export order board.
+  description: Asters Guild trade board — stations, cart, orders, and export offers.
   components:
   - type: Sprite
     state: cart-y
   - type: UIFragment
-    ui: !type:OxydCatalogUi
+    ui: !type:OxydTradeOrdersUi
   - type: Cartridge
     programName: oxyd-trade-orders-program-name
     icon:
       sprite: Interface/Misc/program_icons.rsi
       state: nano_task
-  - type: OxydCatalogCartridge
-    catalogId: trade_orders
+  - type: OxydTradeOrdersCartridge

@@ -219,6 +219,8 @@ public sealed class EconomyDebugCommand : ToolshedCommand
             "accountsdb-secure" => "OxydAccountsDb",
             "bench" or "artist" => "OxydArtistBench",
             "art" => "OxydArtworkStatue",
+            "send" or "beacon-send" => "OxydTradeBeaconSending",
+            "recv" or "beacon-recv" => "OxydTradeBeaconReceiving",
             _ => what,
         };
         var ent = Spawn(proto, Transform(uid).Coordinates);
@@ -255,6 +257,22 @@ public sealed class EconomyDebugCommand : ToolshedCommand
                 vend.LinkedAccountNumber = account;
                 EntityManager.Dirty(ent, vend);
                 ctx.WriteLine($"linked vendor {EntityManager.ToPrettyString(ent)} -> acct={account}");
+                return;
+            }
+
+            if ((kind is "send" or "beacon-send") && TryComp<OxydTradeBeaconSendingComponent>(ent, out var send))
+            {
+                send.LinkedAccountNumber = account;
+                EntityManager.Dirty(ent, send);
+                ctx.WriteLine($"linked send beacon {EntityManager.ToPrettyString(ent)} -> acct={account}");
+                return;
+            }
+
+            if ((kind is "recv" or "beacon-recv") && TryComp<OxydTradeBeaconReceivingComponent>(ent, out var recv))
+            {
+                recv.LinkedAccountNumber = account;
+                EntityManager.Dirty(ent, recv);
+                ctx.WriteLine($"linked recv beacon {EntityManager.ToPrettyString(ent)} -> acct={account}");
                 return;
             }
         }
@@ -294,8 +312,22 @@ public sealed class EconomyDebugCommand : ToolshedCommand
                 Eco.EnsureDepartmentsForRound();
                 ctx.WriteLine("accounts uplink + artist bench placed");
                 break;
+            case "trade":
+                Place(ctx, "send");
+                Place(ctx, "recv");
+                Eco.EnsureDepartmentsForRound();
+                GetSys<OxydTradeSystem>().EnsureSeeded();
+                if (Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerGuild) is { } guild)
+                {
+                    Link(ctx, "send", guild.AccountNumber);
+                    Link(ctx, "recv", guild.AccountNumber);
+                    ctx.WriteLine($"dept Guild acct={guild.AccountNumber} pin={guild.Pin} bal={guild.Balance}");
+                }
+
+                ctx.WriteLine("trade beacons placed (send+recv)");
+                break;
             default:
-                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer|accountsdb");
+                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer|accountsdb|trade");
                 break;
         }
     }
@@ -328,5 +360,90 @@ public sealed class EconomyDebugCommand : ToolshedCommand
     {
         Eco.SyncDepartmentsFromCargo();
         ctx.WriteLine("department accounts synced from cargo bank");
+    }
+
+    [CommandImplementation("trade")]
+    public void Trade(IInvocationContext ctx, string mode, string? arg = null)
+    {
+        var trade = GetSys<OxydTradeSystem>();
+        trade.EnsureSeeded();
+        Eco.EnsureDepartmentsForRound();
+
+        switch (mode.ToLowerInvariant())
+        {
+            case "stations":
+                foreach (var st in trade.Stations.Values)
+                {
+                    ctx.WriteLine(
+                        $"{(st.Discovered ? "*" : " ")} {st.Id} '{st.Name}' goods={st.Goods.Count} offers={st.Offers.Count} wealth={st.Wealth} favor={st.Favor}");
+                }
+
+                break;
+            case "discover":
+                if (string.IsNullOrWhiteSpace(arg))
+                {
+                    ctx.WriteLine("usage: economy:trade discover <stationId>");
+                    return;
+                }
+
+                trade.DiscoverStation(arg);
+                ctx.WriteLine($"discovered {arg}");
+                break;
+            case "orders":
+                foreach (var o in trade.Orders)
+                {
+                    ctx.WriteLine(
+                        $"{o.OrderId} {(o.Fulfilled ? "DONE" : "OPEN")} acct={o.RequestingAccount} cost={o.Cost}+{o.Fee} {o.ContentsSummary}");
+                }
+
+                break;
+            case "restock":
+                trade.RestockTick();
+                ctx.WriteLine("trade restock tick");
+                break;
+            case "buy":
+                // Quick path: buy 1 unit of product from Vermouth as Guild and spawn at feet
+                var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+                if (string.IsNullOrWhiteSpace(arg))
+                {
+                    ctx.WriteLine("usage: economy:trade buy <stationId:product>");
+                    return;
+                }
+
+                var parts = arg.Split(':', 2);
+                if (parts.Length != 2)
+                {
+                    ctx.WriteLine("usage: economy:trade buy <stationId:product>");
+                    return;
+                }
+
+                var guild = Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerGuild)
+                            ?? throw new InvalidOperationException("no guild");
+                var loader = uid; // cart keyed by loader; use self
+                trade.ClearCart(loader);
+                if (!trade.TryAddToCart(loader, parts[0], parts[1], 1, out var err))
+                {
+                    ctx.WriteLine($"buy add failed: {err}");
+                    return;
+                }
+
+                if (!trade.TryPlaceOrder(loader, guild.AccountNumber, "economy:trade buy", out var order, out err) || order == null)
+                {
+                    ctx.WriteLine($"buy order failed: {err}");
+                    return;
+                }
+
+                if (!trade.TryFulfillOrder(order.OrderId, Transform(uid).Coordinates, out err))
+                {
+                    ctx.WriteLine($"buy fulfill failed: {err}");
+                    return;
+                }
+
+                ctx.WriteLine($"bought {arg} as {order.OrderId}");
+                break;
+            default:
+                ctx.WriteLine("usage: economy:trade stations|discover|orders|restock|buy");
+                break;
+        }
     }
 }
