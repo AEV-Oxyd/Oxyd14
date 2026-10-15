@@ -38,12 +38,26 @@ Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 - Toolshed: `pda:hw`, `pda:install …`, `pda:give cpu|hdd|net|tesla|printer|signaller|medscan|atmos|price|reagent`
 - Alt-verb: Hardware report (prints paper)
 
-## Still deferred
+## Explicitly deferred (out of scope for this PR)
 
-- Overmap trade station discovery tree / hidden inventory thresholds
-- Map placement polish for ATM / Accounts DB / beacons / artist bench
+- **Overmap trade discovery depth** — favor → hidden inventory unlocks, recommendation trees, overmap POI fog-of-war discovery, spawn budget / rare station pool. Current trade uses `Discovered` flags + Toolshed discover only.
+- **Map / round integration polish** — placing ATM, Accounts DB, artist bench, trade beacons on Club/Guild maps and roundstart wiring. QA uses Toolshed `economy:setup` / `place` on the Dev map instead.
 
 ## QA
+
+### Full suite (target ≥90% coverage)
+
+Joined client required (or any MobState on the map). From server FIFO:
+
+```
+economy:qa
+```
+
+Optional suites: `economy:qa core|devices|accounts|artist|trade|pda`.
+
+Prints `PASS`/`FAIL` lines and `coverage=N%`. Live UI proof uses `economy:setup` + computer-use on top of the suite.
+
+### Manual helpers
 
 ```
 economy:create Alice 1000
@@ -53,6 +67,8 @@ economy:dept Guild
 economy:payday force
 economy:setup club-pos
 economy:setup accountsdb
+economy:setup artist
+economy:setup trade
 economy:givecash 500
 economy:place atm
 economy:place accountsdb
@@ -60,7 +76,6 @@ economy:place bench
 economy:list
 economy:suspend <acct> true
 economy:sync
-economy:setup trade
 economy:trade stations
 economy:trade discover Caduceus
 economy:trade buy Vermouth:DrinkGlass

@@ -47,58 +47,118 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
     private void OnLogin(Entity<OxydAtmComponent> ent, ref OxydAtmLoginMessage args)
     {
-        if (!_economy.TryLogin(args.AccountNumber, args.Pin, out _, "ATM"))
-        {
-            PushState(ent, "Login failed");
-            return;
-        }
-
-        ent.Comp.SessionAccount = args.AccountNumber;
-        Dirty(ent);
-        PushState(ent);
+        if (!TryLogin(ent, args.AccountNumber, args.Pin, out var err))
+            PushState(ent, err ?? "Login failed");
     }
 
     private void OnLogout(Entity<OxydAtmComponent> ent, ref OxydAtmLogoutMessage args)
+    {
+        TryLogout(ent);
+    }
+
+    private void OnWithdraw(Entity<OxydAtmComponent> ent, ref OxydAtmWithdrawMessage args)
+    {
+        if (!TryWithdraw(ent, args.Amount, args.Actor, out var err))
+            PushState(ent, err ?? "Withdraw failed");
+    }
+
+    private void OnTransfer(Entity<OxydAtmComponent> ent, ref OxydAtmTransferMessage args)
+    {
+        if (!TryTransfer(ent, args.TargetAccount, args.Amount, out var err))
+            PushState(ent, err ?? "Transfer failed");
+    }
+
+    /// <summary>Toolshed-friendly ATM login (avoids BUI LineEdit).</summary>
+    public bool TryLogin(Entity<OxydAtmComponent> ent, int accountNumber, int pin, out string? error)
+    {
+        error = null;
+        if (!_economy.TryLogin(accountNumber, pin, out _, "ATM"))
+        {
+            error = "Login failed";
+            PushState(ent, error);
+            return false;
+        }
+
+        ent.Comp.SessionAccount = accountNumber;
+        Dirty(ent);
+        PushState(ent);
+        return true;
+    }
+
+    public void TryLogout(Entity<OxydAtmComponent> ent)
     {
         ent.Comp.SessionAccount = null;
         Dirty(ent);
         PushState(ent);
     }
 
-    private void OnWithdraw(Entity<OxydAtmComponent> ent, ref OxydAtmWithdrawMessage args)
+    public bool TryWithdraw(Entity<OxydAtmComponent> ent, int amount, EntityUid actor, out string? error)
     {
-        if (ent.Comp.SessionAccount is not { } acct || args.Amount <= 0)
+        error = null;
+        if (ent.Comp.SessionAccount is not { } acct || amount <= 0)
         {
-            PushState(ent, "Not logged in");
-            return;
+            error = "Not logged in";
+            PushState(ent, error);
+            return false;
         }
 
-        if (!_economy.TryAdjust(acct, -args.Amount, "ATM withdraw", "ATM"))
+        if (!_economy.TryAdjust(acct, -amount, "ATM withdraw", "ATM"))
         {
-            PushState(ent, "Insufficient funds");
-            return;
+            error = "Insufficient funds";
+            PushState(ent, error);
+            return false;
         }
 
-        _stacks.SpawnAtPosition(args.Amount, CreditStack, Transform(ent).Coordinates);
-        _popup.PopupEntity($"Dispensed {args.Amount}cr.", ent, args.Actor);
+        _stacks.SpawnAtPosition(amount, CreditStack, Transform(ent).Coordinates);
+        _popup.PopupEntity($"Dispensed {amount}cr.", ent, actor);
         PushState(ent);
+        return true;
     }
 
-    private void OnTransfer(Entity<OxydAtmComponent> ent, ref OxydAtmTransferMessage args)
+    public bool TryTransfer(Entity<OxydAtmComponent> ent, int targetAccount, int amount, out string? error)
     {
+        error = null;
         if (ent.Comp.SessionAccount is not { } from)
         {
-            PushState(ent, "Not logged in");
-            return;
+            error = "Not logged in";
+            PushState(ent, error);
+            return false;
         }
 
-        if (!_economy.TryTransfer(from, args.TargetAccount, args.Amount, "ATM transfer", "ATM", out var err))
+        if (!_economy.TryTransfer(from, targetAccount, amount, "ATM transfer", "ATM", out error))
         {
-            PushState(ent, err ?? "Transfer failed");
-            return;
+            error ??= "Transfer failed";
+            PushState(ent, error);
+            return false;
         }
 
         PushState(ent);
+        return true;
+    }
+
+    public bool TryDeposit(Entity<OxydAtmComponent> ent, int amount, out string? error)
+    {
+        error = null;
+        if (ent.Comp.SessionAccount is not { } acct)
+        {
+            error = "Not logged in";
+            return false;
+        }
+
+        if (amount <= 0)
+        {
+            error = "Bad amount";
+            return false;
+        }
+
+        if (!_economy.TryAdjust(acct, amount, "ATM deposit", "ATM"))
+        {
+            error = "Deposit failed";
+            return false;
+        }
+
+        PushState(ent);
+        return true;
     }
 
     private void OnInteractUsing(Entity<OxydAtmComponent> ent, ref InteractUsingEvent args)

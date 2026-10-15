@@ -16,7 +16,7 @@ namespace Content.Server._Oxyd.Economy;
 
 /// <summary>Toolshed QA surface for Eris economy port (computer-use friendly).</summary>
 [ToolshedCommand(Name = "economy"), AdminCommand(AdminFlags.Debug)]
-public sealed class EconomyDebugCommand : ToolshedCommand
+public sealed partial class EconomyDebugCommand : ToolshedCommand
 {
     private OxydEconomySystem? _eco;
 

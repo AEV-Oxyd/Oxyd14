@@ -98,35 +98,76 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Verbs.Add(new AlternativeVerb
         {
             Text = "Bank till",
-            Act = () => BankTill(ent, user),
+            Act = () => TryBankTill(ent, user),
         });
     }
 
-    private void BankTill(Entity<OxydCashRegisterComponent> ent, EntityUid user)
+    /// <summary>Bank till contents into the linked department account. Used by verbs and Toolshed QA.</summary>
+    public bool TryBankTill(Entity<OxydCashRegisterComponent> ent, EntityUid user, out string? error)
     {
+        error = null;
         if (ent.Comp.Stored <= 0)
         {
-            _popup.PopupEntity("The till is empty.", ent, user);
-            return;
+            error = "The till is empty.";
+            _popup.PopupEntity(error, ent, user);
+            return false;
         }
 
         var acct = ResolveLinkedAccount(ent.Comp.LinkedAccountNumber, ent.Comp.DepartmentId);
         if (acct == 0)
         {
-            _popup.PopupEntity("No linked account.", ent, user);
-            return;
+            error = "No linked account.";
+            _popup.PopupEntity(error, ent, user);
+            return false;
         }
 
         var amount = ent.Comp.Stored;
         if (!_economy.TryAdjust(acct, amount, "Cash register bank", "CashRegister"))
         {
-            _popup.PopupEntity("Could not credit linked account.", ent, user);
-            return;
+            error = "Could not credit linked account.";
+            _popup.PopupEntity(error, ent, user);
+            return false;
         }
 
         ent.Comp.Stored = 0;
         Dirty(ent);
         _popup.PopupEntity($"Banked {amount}cr to account #{acct}.", ent, user);
+        return true;
+    }
+
+    private void TryBankTill(Entity<OxydCashRegisterComponent> ent, EntityUid user)
+        => TryBankTill(ent, user, out _);
+
+    /// <summary>Arm EFTPOS charge amount for the next swipe (Toolshed / verb parity).</summary>
+    public void ArmEftpos(Entity<OxydEftposComponent> ent, int charge)
+    {
+        ent.Comp.Charge = Math.Max(0, charge);
+        ent.Comp.Charging = ent.Comp.Charge > 0;
+        Dirty(ent);
+    }
+
+    /// <summary>Charge <paramref name="payer"/> account into the EFTPOS linked destination.</summary>
+    public bool TryChargeEftpos(Entity<OxydEftposComponent> ent, int payer, out string? error)
+    {
+        error = null;
+        if (!ent.Comp.Charging || ent.Comp.Charge <= 0)
+        {
+            error = "EFTPOS idle";
+            return false;
+        }
+
+        var dest = ResolveLinkedAccount(ent.Comp.LinkedAccountNumber, ent.Comp.DepartmentId);
+        if (dest == 0)
+        {
+            error = "EFTPOS has no linked account.";
+            return false;
+        }
+
+        if (!_economy.TryTransfer(payer, dest, ent.Comp.Charge, "EFTPOS charge", "EFTPOS", out error))
+            return false;
+
+        ClearCharge(ent);
+        return true;
     }
 
     private void OnEftposUse(Entity<OxydEftposComponent> ent, ref UseInHandEvent args)
