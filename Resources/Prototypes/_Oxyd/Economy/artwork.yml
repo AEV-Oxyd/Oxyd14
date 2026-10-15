@@ -1,0 +1,35 @@
+# Eris artist_bench outputs — priced + OverrideSell Guild
+
+- type: entity
+  parent: BaseItem
+  id: OxydArtworkStatue
+  name: artwork statue
+  description: A small sculpted piece. Guild trade will take a cut.
+  components:
+  - type: Sprite
+    sprite: Objects/Fun/figurines.rsi
+    state: clown
+  - type: Item
+    size: Normal
+  - type: StaticPrice
+    price: 50
+  - type: OverrideSell
+    overrideAccount: Guild
+  - type: OxydArtwork
+
+- type: entity
+  parent: BaseItem
+  id: OxydArtworkOddity
+  name: artwork oddity
+  description: Something strange and valuable. Guild brokers love these.
+  components:
+  - type: Sprite
+    sprite: Objects/Fun/figurines.rsi
+    state: captain
+  - type: Item
+    size: Small
+  - type: StaticPrice
+    price: 120
+  - type: OverrideSell
+    overrideAccount: Guild
+  - type: OxydArtwork

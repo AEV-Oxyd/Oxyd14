@@ -228,6 +228,106 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return true;
     }
 
+    /// <summary>HoP Accounts DB silent adjust — works even on suspended accounts.</summary>
+    public bool TrySilentAdjust(int number, int delta, string purpose, string terminal, int fundCap = OxydAccountsDbComponent.FundCap)
+    {
+        if (!_accounts.TryGetValue(number, out var acc))
+            return false;
+
+        var next = Math.Clamp(acc.Balance + delta, -fundCap, fundCap);
+        var applied = next - acc.Balance;
+        if (applied == 0 && delta != 0)
+            return false;
+
+        acc.Balance = next;
+        SyncDepartmentToCargo(acc);
+        LogTransaction(acc, purpose, applied, terminal);
+        return true;
+    }
+
+    public bool TrySetSuspended(int number, bool suspended)
+    {
+        if (!_accounts.TryGetValue(number, out var acc))
+            return false;
+
+        acc.Suspended = suspended;
+        LogTransaction(acc, suspended ? "Account suspended" : "Account reinstated", 0, "AccountsDB");
+        return true;
+    }
+
+    /// <summary>Create a personal account funded from a department (Eris create_account).</summary>
+    public bool TryCreateFundedAccount(
+        string ownerName,
+        int startingFunds,
+        int fundingAccount,
+        string terminal,
+        [NotNullWhen(true)] out OxydMoneyAccountData? created,
+        [NotNullWhen(false)] out string? error)
+    {
+        created = null;
+        error = null;
+        startingFunds = Math.Clamp(startingFunds, 0, OxydAccountsDbComponent.FundCap);
+
+        if (!_accounts.TryGetValue(fundingAccount, out var funder) || funder.Suspended)
+        {
+            error = "Funding account unavailable";
+            return false;
+        }
+
+        if (startingFunds > funder.Balance)
+        {
+            error = "Insufficient department funds";
+            return false;
+        }
+
+        if (startingFunds > 0 && !TryAdjust(fundingAccount, -startingFunds, $"New account activation ({ownerName})", terminal))
+        {
+            error = "Could not debit funding account";
+            return false;
+        }
+
+        created = CreateAccount(ownerName, ownerName, startingFunds, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
+        return true;
+    }
+
+    /// <summary>Zero a personal account and credit Cargo/station (Eris revoke_payroll).</summary>
+    public bool TryRevokePayroll(int number, int destinationAccount, string terminal, [NotNullWhen(false)] out string? error)
+    {
+        error = null;
+        if (!_accounts.TryGetValue(number, out var acc) || acc.IsDepartment)
+        {
+            error = "Invalid account";
+            return false;
+        }
+
+        if (!_accounts.TryGetValue(destinationAccount, out _))
+        {
+            error = "Destination missing";
+            return false;
+        }
+
+        var funds = acc.Balance;
+        if (funds == 0)
+            return true;
+
+        acc.Balance = 0;
+        SyncDepartmentToCargo(acc);
+        LogTransaction(acc, "Revoke payroll", -funds, terminal);
+        TrySilentAdjust(destinationAccount, funds, $"Revoke payroll ({acc.OwnerName})", terminal);
+        return true;
+    }
+
+    /// <summary>Pull department balances from StationBankAccount / CargoAccount.</summary>
+    public void SyncDepartmentsFromCargo()
+    {
+        EnsureDepartmentsForRound();
+        foreach (var acc in _accounts.Values)
+        {
+            if (acc.IsDepartment)
+                PullDepartmentFromCargo(acc);
+        }
+    }
+
     public void ForcePayday() => RunPayday();
 
     public TimeSpan NextPayday => _nextPayday;

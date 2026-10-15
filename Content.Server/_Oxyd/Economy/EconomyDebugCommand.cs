@@ -215,6 +215,10 @@ public sealed class EconomyDebugCommand : ToolshedCommand
             "eftpos" => "OxydEftpos",
             "tipjar" => "OxydTipJar",
             "vendor" => "OxydVendingClubSnacks",
+            "accountsdb" => "OxydAccountsDbOpen",
+            "accountsdb-secure" => "OxydAccountsDb",
+            "bench" or "artist" => "OxydArtistBench",
+            "art" => "OxydArtworkStatue",
             _ => what,
         };
         var ent = Spawn(proto, Transform(uid).Coordinates);
@@ -284,9 +288,45 @@ public sealed class EconomyDebugCommand : ToolshedCommand
                     Eco.TrySetBalance(service.AccountNumber, 500);
                 ctx.WriteLine("payday-retainer seeded (Cargo rich, Service poor)");
                 break;
+            case "accountsdb":
+                Place(ctx, "accountsdb");
+                Place(ctx, "bench");
+                Eco.EnsureDepartmentsForRound();
+                ctx.WriteLine("accounts uplink + artist bench placed");
+                break;
             default:
-                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer");
+                ctx.WriteLine("usage: economy:setup club-pos|payday-retainer|accountsdb");
                 break;
         }
+    }
+
+    [CommandImplementation("suspend")]
+    public void Suspend(IInvocationContext ctx, int account, bool suspended)
+    {
+        if (!Eco.TrySetSuspended(account, suspended))
+        {
+            ctx.WriteLine($"acct={account}: suspend failed");
+            return;
+        }
+
+        ctx.WriteLine($"acct={account} suspended={suspended}");
+    }
+
+    [CommandImplementation("list")]
+    public void List(IInvocationContext ctx)
+    {
+        Eco.EnsureDepartmentsForRound();
+        foreach (var acc in Eco.Accounts.Values.OrderBy(a => a.AccountNumber))
+        {
+            ctx.WriteLine(
+                $"#{acc.AccountNumber} {acc.OwnerName} bal={acc.Balance}{(acc.Suspended ? " SUS" : "")}{(acc.IsDepartment ? " DEPT" : "")}");
+        }
+    }
+
+    [CommandImplementation("sync")]
+    public void Sync(IInvocationContext ctx)
+    {
+        Eco.SyncDepartmentsFromCargo();
+        ctx.WriteLine("department accounts synced from cargo bank");
     }
 }

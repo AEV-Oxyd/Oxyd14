@@ -13,6 +13,19 @@ public sealed partial class OxydAtmComponent : Component
     public int? SessionAccount;
 }
 
+/// <summary>Eris Accounts uplink terminal (HoP) — list/create/suspend/adjust.</summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydAccountsDbComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public int? DetailAccount;
+
+    [DataField, AutoNetworkedField]
+    public bool Creating;
+
+    public const int FundCap = 1_000_000;
+}
+
 /// <summary>Eris cash register till. Linked account receives banked till funds.</summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydCashRegisterComponent : Component

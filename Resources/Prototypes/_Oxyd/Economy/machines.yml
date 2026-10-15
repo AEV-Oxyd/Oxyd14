@@ -91,3 +91,80 @@
     departmentId: Service
     defaultPrice: 25
     requirePayment: true
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAccountsDb
+  name: accounts uplink terminal
+  description: HoP banking console. List, create, suspend, and adjust Oxyd money accounts.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: allocate
+  - type: OxydAccountsDb
+  - type: ActivatableUI
+    key: enum.OxydAccountsDbUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: ActivatableUIRequiresAccess
+  - type: AccessReader
+    access: [["HeadOfPersonnel"], ["Captain"]]
+  - type: UserInterface
+    interfaces:
+      enum.OxydAccountsDbUiKey.Key:
+        type: OxydAccountsDbBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# Debug / map spawn — no AccessReader so anyone can open (Toolshed economy:place accountsdb)
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAccountsDbOpen
+  name: accounts uplink terminal
+  suffix: Open access
+  description: HoP banking console (open access for QA).
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: allocate
+  - type: OxydAccountsDb
+  - type: ActivatableUI
+    key: enum.OxydAccountsDbUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAccountsDbUiKey.Key:
+        type: OxydAccountsDbBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydArtistBench
+  name: artist's bench
+  description: Pour insight into wood and steel. Finished pieces consign to the Asters Guild.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/autolathe.rsi
+    layers:
+    - state: icon
+  - type: OxydArtistBench
+  - type: ActivatableUI
+    key: enum.OxydArtistBenchUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydArtistBenchUiKey.Key:
+        type: OxydArtistBenchBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 150
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable

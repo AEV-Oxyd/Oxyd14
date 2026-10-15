@@ -50,3 +50,57 @@
       state: nano_task
   - type: OxydCatalogCartridge
     catalogId: cooking
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydRecordsCartridge
+  name: station records cartridge
+  description: NTOS stub — crew records lookup notes for Command.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-records-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: OxydCatalogCartridge
+    catalogId: records
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydBountyCartridge
+  name: bounty board cartridge
+  description: NTOS stub — cargo bounty digest.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-bounty-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: bounty
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTradeOrdersCartridge
+  name: trade orders cartridge
+  description: NTOS stub — Asters Guild export order board.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-trade-orders-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: trade_orders
