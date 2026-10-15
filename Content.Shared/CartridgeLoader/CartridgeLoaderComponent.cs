@@ -1,10 +1,11 @@
-﻿using Content.Shared.Containers.ItemSlots;
+﻿using Content.Shared._Oxyd.Pda;
+using Content.Shared.Containers.ItemSlots;
 using Robust.Shared.GameStates;
 
 namespace Content.Shared.CartridgeLoader;
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-[Access(typeof(CartridgeLoaderSystem))]
+[Access(typeof(CartridgeLoaderSystem), typeof(SharedOxydModularPdaSystem))]
 public sealed partial class CartridgeLoaderComponent : Component
 {
     public const string UnremovableContainerId = "preinstalled-program-container";

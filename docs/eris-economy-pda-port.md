@@ -28,11 +28,20 @@ Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 - Real `OxydTradeOrdersCartridge` UI (stations/goods/cart/orders/offers/logs)
 - Toolshed: `economy:setup trade`, `economy:trade stations|discover|orders|restock|buy`, `place send|recv`
 
+## Also — modular PDA hardware (PD6)
+
+- `OxydModularPda` bay: CPU / HDD / Network / Peripheral ItemSlots
+- Parts: micro→adv CPUs, micro→advanced HDDs, basic/advanced net, tesla-link, mini printer
+- HDD sets `CartridgeLoader.DiskSpace`; CPU adds disk bonus + max program threads; net sets wireless range
+- Eris PDAs ship with starter kits (Club printer, Guild long-range + tesla, Moebius adv CPU)
+- Toolshed: `pda:hw`, `pda:install cpu|hdd|net|per <proto>`, `pda:give cpu|hdd|net|tesla|printer`
+- Alt-verb: Hardware report (prints paper)
+
 ## Still deferred
 
-- Optional modular PDA hardware (PD6)
 - Material-consuming autolathe artist_bench parity (insight-only for now)
 - Overmap trade station discovery tree / hidden inventory thresholds
+- Full NTNet signaller / scanner hardware modules beyond bay stats
 
 ## QA
 
@@ -60,4 +69,7 @@ economy:place recv
 entities with MobState named ".*Surname.*" | economy:status
 pda:spritecheck
 pda:programs
+pda:hw
+pda:give hdd
+pda:install hdd OxydHwHddAdvanced
 ```

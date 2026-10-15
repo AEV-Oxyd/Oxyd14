@@ -29,6 +29,9 @@
   - type: Icon
     sprite: _Oxyd/Devices/eris_pda.rsi
     state: pda-club
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingPeripheral: OxydHwPrinter
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 12
@@ -82,6 +85,8 @@
   - type: Icon
     sprite: _Oxyd/Devices/eris_pda.rsi
     state: pda-clown
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 10
@@ -132,6 +137,9 @@
   - type: Icon
     sprite: _Oxyd/Devices/eris_pda.rsi
     state: pda-nt
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingCpu: OxydHwCpuAdv
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 10
@@ -180,6 +188,8 @@
   - type: Icon
     sprite: _Oxyd/Devices/eris_pda.rsi
     state: pda-neo
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 10
@@ -228,6 +238,10 @@
   - type: Icon
     sprite: _Oxyd/Devices/eris_pda.rsi
     state: pda-sup
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingNetwork: OxydHwNetAdvanced
+    startingPeripheral: OxydHwTeslaLink
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 10

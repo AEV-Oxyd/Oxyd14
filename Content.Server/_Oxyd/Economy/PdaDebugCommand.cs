@@ -1,7 +1,10 @@
 using System.Linq;
+using Content.Server._Oxyd.Pda;
 using Content.Server.Administration;
+using Content.Shared._Oxyd.Pda;
 using Content.Shared.Administration;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Inventory;
 using Content.Shared.Mobs.Components;
 using Content.Shared.PDA;
@@ -70,14 +73,80 @@ public sealed class PdaDebugCommand : ToolshedCommand
     public void Give(IInvocationContext ctx, string which)
     {
         var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
-        var proto = which.ToLowerInvariant() switch
+        EntProtoId proto = which.ToLowerInvariant() switch
         {
             "club" => ClubPda,
             "artist" => ArtistPda,
+            "cpu" => (EntProtoId)"OxydHwCpuAdv",
+            "hdd" => (EntProtoId)"OxydHwHddAdvanced",
+            "net" => (EntProtoId)"OxydHwNetAdvanced",
+            "tesla" => (EntProtoId)"OxydHwTeslaLink",
+            "printer" => (EntProtoId)"OxydHwPrinter",
             _ => (EntProtoId)which,
         };
 
         var pda = Spawn(proto, Transform(uid).Coordinates);
         ctx.WriteLine($"spawned {EntityManager.ToPrettyString(pda)} — equip manually or via inventory");
+    }
+
+    [CommandImplementation("hw")]
+    public void HardwareSelf(IInvocationContext ctx)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        Hardware(ctx, uid);
+    }
+
+    [CommandImplementation("hw")]
+    public void Hardware(IInvocationContext ctx, [PipedArgument] EntityUid mob)
+    {
+        if (!GetSys<InventorySystem>().TryGetSlotEntity(mob, "id", out var idUid) ||
+            !TryComp<OxydModularPdaComponent>(idUid.Value, out var mod))
+        {
+            ctx.WriteLine($"{EntityManager.ToPrettyString(mob)}: no modular PDA");
+            return;
+        }
+
+        GetSys<OxydModularPdaSystem>().Recalculate((idUid.Value, mod));
+        ctx.WriteLine(GetSys<OxydModularPdaSystem>().DescribeHardware((idUid.Value, mod)));
+    }
+
+    [CommandImplementation("install")]
+    public void InstallHw(IInvocationContext ctx, string slot, string proto)
+    {
+        var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
+        if (!GetSys<InventorySystem>().TryGetSlotEntity(uid, "id", out var idUid) ||
+            !HasComp<OxydModularPdaComponent>(idUid.Value))
+        {
+            ctx.WriteLine("no modular PDA equipped");
+            return;
+        }
+
+        var slotId = slot.ToLowerInvariant() switch
+        {
+            "cpu" => OxydModularPdaComponent.CpuSlotId,
+            "hdd" => OxydModularPdaComponent.HddSlotId,
+            "net" => OxydModularPdaComponent.NetSlotId,
+            "per" or "peripheral" or "tesla" or "printer" => OxydModularPdaComponent.PeripheralSlotId,
+            _ => slot,
+        };
+
+        var slots = GetSys<ItemSlotsSystem>();
+        if (slots.GetItemOrNull(idUid.Value, slotId) is { } existing)
+        {
+            slots.TryEject(idUid.Value, slotId, uid, out _);
+            ctx.WriteLine($"ejected previous {EntityManager.ToPrettyString(existing)}");
+        }
+
+        var part = Spawn(proto, Transform(uid).Coordinates);
+        if (!slots.TryInsert(idUid.Value, slotId, part, uid))
+        {
+            ctx.WriteLine($"install failed for {proto} into {slotId}");
+            Del(part);
+            return;
+        }
+
+        var mod = Comp<OxydModularPdaComponent>(idUid.Value);
+        GetSys<OxydModularPdaSystem>().Recalculate((idUid.Value, mod));
+        ctx.WriteLine($"installed {proto} → disk={mod.EffectiveDiskSpace} net={mod.EffectiveNetworkRange}");
     }
 }
