@@ -82,6 +82,11 @@ public sealed class PdaDebugCommand : ToolshedCommand
             "net" => (EntProtoId)"OxydHwNetAdvanced",
             "tesla" => (EntProtoId)"OxydHwTeslaLink",
             "printer" => (EntProtoId)"OxydHwPrinter",
+            "signaller" or "signal" => (EntProtoId)"OxydHwSignaller",
+            "medscan" or "medical" => (EntProtoId)"OxydHwScannerMedical",
+            "atmossan" or "atmos" => (EntProtoId)"OxydHwScannerAtmos",
+            "pricescan" or "price" => (EntProtoId)"OxydHwScannerPrice",
+            "reagentscan" or "reagent" => (EntProtoId)"OxydHwScannerReagent",
             _ => (EntProtoId)which,
         };
 
@@ -126,7 +131,8 @@ public sealed class PdaDebugCommand : ToolshedCommand
             "cpu" => OxydModularPdaComponent.CpuSlotId,
             "hdd" => OxydModularPdaComponent.HddSlotId,
             "net" => OxydModularPdaComponent.NetSlotId,
-            "per" or "peripheral" or "tesla" or "printer" => OxydModularPdaComponent.PeripheralSlotId,
+            "per" or "peripheral" or "tesla" or "printer" or "signaller" or "scanner" or "medical" or "atmos" or "price" or "reagent"
+                => OxydModularPdaComponent.PeripheralSlotId,
             _ => slot,
         };
 

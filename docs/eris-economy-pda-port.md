@@ -15,10 +15,10 @@ Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 - Cash register / EFTPOS / tip jar / ewallet — Credit + linked Service account
 - Paid Club vendor (`OxydVendingClubSnacks`) via `VendingMachineEjectAttemptEvent` + `OxydVendorEarnings`
 - Accounts DB HoP terminal — `OxydAccountsDb` / `OxydAccountsDbOpen` (list/create/suspend/adjust/revoke)
-- Artist bench — `OxydArtistBench` spends `SanityComponent.Insight`, spawns Guild-tagged `StaticPrice` art
+- Artist bench — materials + oddity inspiration + ClubArtist perk (Eris parity)
 - Guild trade bridge — `EntitySoldEvent` syncs CargoAccount balances into Oxyd department ledgers
-- NTOS stubs — records / bounty / trade_orders catalog cartridges on Club/Artist/Guild PDAs
-- `economy:place|givecash|link|setup club-pos|accountsdb|list|suspend|sync`
+- Live NTOS — records / bounty / email / NTNRC chat (+ trade_orders); signaller & scanner programs
+- `economy:place|givecash|link|setup club-pos|accountsdb|artist|list|suspend|sync`
 
 ## Also — full trade stack (P7)
 
@@ -32,16 +32,16 @@ Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 
 - `OxydModularPda` bay: CPU / HDD / Network / Peripheral ItemSlots
 - Parts: micro→adv CPUs, micro→advanced HDDs, basic/advanced net, tesla-link, mini printer
+- Peripherals: signaller, medical/atmos/price/reagent scanners
 - HDD sets `CartridgeLoader.DiskSpace`; CPU adds disk bonus + max program threads; net sets wireless range
-- Eris PDAs ship with starter kits (Club printer, Guild long-range + tesla, Moebius adv CPU)
-- Toolshed: `pda:hw`, `pda:install cpu|hdd|net|per <proto>`, `pda:give cpu|hdd|net|tesla|printer`
+- Eris PDAs ship with starter kits (Club printer, Guild long-range + tesla, Moebius medical scanner)
+- Toolshed: `pda:hw`, `pda:install …`, `pda:give cpu|hdd|net|tesla|printer|signaller|medscan|atmos|price|reagent`
 - Alt-verb: Hardware report (prints paper)
 
 ## Still deferred
 
-- Material-consuming autolathe artist_bench parity (insight-only for now)
 - Overmap trade station discovery tree / hidden inventory thresholds
-- Full NTNet signaller / scanner hardware modules beyond bay stats
+- Map placement polish for ATM / Accounts DB / beacons / artist bench
 
 ## QA
 

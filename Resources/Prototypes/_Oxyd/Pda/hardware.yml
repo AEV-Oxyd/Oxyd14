@@ -183,3 +183,93 @@
     slot: Peripheral
     printer: true
     powerUsage: 50
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwSignaller
+  name: signal manager module
+  description: Wireless DeviceLink transmitter for modular PDAs. Pair with the signal manager program.
+  components:
+  - type: Sprite
+    sprite: Objects/Devices/signaller.rsi
+    state: signaller
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    signaller: true
+    powerUsage: 15
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerMedical
+  name: medical scanner module
+  description: Health analyzer peripheral for modular PDAs.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/healthanalyzer.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Medical
+    powerUsage: 25
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerAtmos
+  name: atmos scanner module
+  description: Gas analyzer peripheral for modular PDAs.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Atmos/gasanalyzer.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Atmos
+    powerUsage: 20
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerPrice
+  name: price scanner module
+  description: Appraisal peripheral — click a target to price it into the scan buffer.
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/appraisal-tool.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Price
+    powerUsage: 10
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerReagent
+  name: reagent scanner module
+  description: Chemistry peripheral — click a solution container to dump reagents into the buffer.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Chemistry/beaker.rsi
+    state: beaker
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Reagent
+    powerUsage: 15

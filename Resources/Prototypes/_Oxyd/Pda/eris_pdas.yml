@@ -55,6 +55,8 @@
         - id: OxydDrinkCatalogCartridge
         - id: OxydCookCatalogCartridge
         - id: OxydRecordsCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
 
 - type: entity
   parent: BasePDA
@@ -109,6 +111,9 @@
         - id: OxydTaxQuicklyCartridge
         - id: OxydTradeOrdersCartridge
         - id: OxydBountyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydScannerCartridge
 
 - type: entity
   parent: BasePDA
@@ -140,6 +145,7 @@
   - type: OxydModularPda
     startingHdd: OxydHwHddSmallAdv
     startingCpu: OxydHwCpuAdv
+    startingPeripheral: OxydHwScannerMedical
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     diskSpace: 10
@@ -160,6 +166,10 @@
         - id: NanoTaskCartridge
         - id: NewsReaderCartridge
         - id: OxydTaxQuicklyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydScannerCartridge
+        - id: OxydRecordsCartridge
 
 - type: entity
   parent: BasePDA
@@ -264,3 +274,6 @@
         - id: OxydTaxQuicklyCartridge
         - id: OxydTradeOrdersCartridge
         - id: OxydBountyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydSignallerCartridge

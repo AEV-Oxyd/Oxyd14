@@ -128,6 +128,8 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
 
         ent.Comp.HasTeslaLink = peri?.TeslaLink == true;
         ent.Comp.HasPrinter = peri?.Printer == true;
+        ent.Comp.HasSignaller = peri?.Signaller == true;
+        ent.Comp.ActiveScanner = peri?.Scanner ?? OxydScannerKind.None;
         ent.Comp.TotalPowerUsage =
             (cpu?.PowerUsage ?? 0) + (hdd?.PowerUsage ?? 0) + (net?.PowerUsage ?? 0) + (peri?.PowerUsage ?? 0);
 
@@ -156,7 +158,11 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
         AppendSlot(sb, "PER", ent, OxydModularPdaComponent.PeripheralSlotId);
         sb.AppendLine($"Net range {ent.Comp.EffectiveNetworkRange}m | draw {ent.Comp.TotalPowerUsage}W"
                       + (ent.Comp.HasTeslaLink ? " | tesla-link" : string.Empty)
-                      + (ent.Comp.HasPrinter ? " | printer" : string.Empty));
+                      + (ent.Comp.HasPrinter ? " | printer" : string.Empty)
+                      + (ent.Comp.HasSignaller ? " | signaller" : string.Empty)
+                      + (ent.Comp.ActiveScanner != OxydScannerKind.None
+                          ? $" | scanner={ent.Comp.ActiveScanner}"
+                          : string.Empty));
         return sb.ToString();
     }
 

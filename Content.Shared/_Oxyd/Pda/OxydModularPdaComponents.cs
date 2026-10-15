@@ -10,7 +10,16 @@ public enum OxydHardwareSlot : byte
     Cpu,
     Hdd,
     Network,
-    Peripheral, // tesla / printer / scanner
+    Peripheral, // tesla / printer / scanner / signaller
+}
+
+public enum OxydScannerKind : byte
+{
+    None = 0,
+    Medical,
+    Atmos,
+    Price,
+    Reagent,
 }
 
 /// <summary>Eris computer_hardware piece installable in a modular PDA bay.</summary>
@@ -44,6 +53,14 @@ public sealed partial class OxydComputerHardwareComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool Printer;
+
+    /// <summary>Eris signal manager hardware — enables wireless DeviceLink signalling from the PDA.</summary>
+    [DataField, AutoNetworkedField]
+    public bool Signaller;
+
+    /// <summary>Eris scanner module kind (medical / atmos / price / reagent).</summary>
+    [DataField, AutoNetworkedField]
+    public OxydScannerKind Scanner = OxydScannerKind.None;
 
     [DataField, AutoNetworkedField]
     public int PowerUsage;
@@ -95,6 +112,16 @@ public sealed partial class OxydModularPdaComponent : Component
 
     [ViewVariables, AutoNetworkedField]
     public bool HasPrinter;
+
+    [ViewVariables, AutoNetworkedField]
+    public bool HasSignaller;
+
+    [ViewVariables, AutoNetworkedField]
+    public OxydScannerKind ActiveScanner = OxydScannerKind.None;
+
+    /// <summary>Last price/reagent scan text for the scanner program.</summary>
+    [ViewVariables, AutoNetworkedField]
+    public string ScanBuffer = string.Empty;
 
     [ViewVariables, AutoNetworkedField]
     public int TotalPowerUsage;
