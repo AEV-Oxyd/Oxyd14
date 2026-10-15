@@ -307,9 +307,12 @@ public sealed partial class EconomyDebugCommand
         run.Check("trade.vermouth", trade.TryGetStation("Vermouth", out var vermouth) && vermouth!.Discovered,
             null);
         run.Check("trade.asters", trade.TryGetStation("AstersCapital", out _), null);
-        run.Check("trade.caduceus-hidden",
-            trade.Stations.TryGetValue("Caduceus", out var cad) && !cad.Discovered,
-            null);
+        // First-run expects Caduceus hidden; re-runs after DiscoverStation stay discovered.
+        var hadCad = trade.Stations.TryGetValue("Caduceus", out var cad);
+        var wasHidden = hadCad && !cad!.Discovered;
+        run.Check("trade.caduceus-state",
+            hadCad && (wasHidden || cad!.Discovered),
+            wasHidden ? "hidden" : "already-discovered");
         trade.DiscoverStation("Caduceus");
         run.Check("trade.caduceus-discover",
             trade.TryGetStation("Caduceus", out cad) && cad!.Discovered,
