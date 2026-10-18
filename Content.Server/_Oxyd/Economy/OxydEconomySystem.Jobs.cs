@@ -3,6 +3,7 @@ using Content.Shared._Oxyd.Economy;
 using Content.Shared.Access.Components;
 using Content.Server.Chat.Managers;
 using Content.Shared.Chat;
+using Content.Shared.GameTicking;
 using Robust.Shared.Player;
 using Content.Shared.PDA;
 using Content.Shared.Roles;
@@ -77,12 +78,19 @@ public sealed partial class OxydEconomySystem
         if (personal.DepartmentAccountNumber is { } d)
             msg += $" | Dept #{d} PIN {personal.DepartmentPin}";
 
-        // Private channel — an IC emote still shows the PIN as a speech bubble to
-        // nearby players even with hideChat.
-        if (TryComp<ActorComponent>(mob, out var actorComp))
-            _chatManager.ChatMessageToOne(ChatChannel.Server, msg, msg, mob, false, actorComp.PlayerSession.Channel);
-        else
-            _chat.TrySendInGameICMessage(mob, msg, InGameICChatType.Emote, hideChat: true);
+        // JobAfterSpawnEvent fires before the player's session attaches to the body,
+        // so delivery is deferred to PlayerSpawnCompleteEvent (OnPlayerSpawnComplete).
+        personal.PendingPinMessage = msg;
+    }
+
+    private void OnPlayerSpawnComplete(PlayerSpawnCompleteEvent args)
+    {
+        if (!TryComp<OxydPersonalAccountComponent>(args.Mob, out var personal) ||
+            personal.PendingPinMessage is not { } msg)
+            return;
+
+        personal.PendingPinMessage = null;
+        _chatManager.ChatMessageToOne(ChatChannel.Server, msg, msg, args.Mob, false, args.Player.Channel);
     }
 
     private int ComputeSpawnBalance(int wage, int initialBalance)

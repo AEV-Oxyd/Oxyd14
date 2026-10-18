@@ -14,9 +14,7 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
     [Dependency] private readonly OxydEconomySystem _economy = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
 
-    private readonly Dictionary<EntityUid, int> _sessions = new();
-    private readonly Dictionary<EntityUid, OxydTradeUiTab> _tabs = new();
-    private readonly Dictionary<EntityUid, string?> _selectedStation = new();
+
 
     public override void Initialize()
     {
@@ -42,23 +40,26 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
         switch (msg.Action)
         {
             case OxydTradeUiAction.Login:
-                if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _))
-                    _sessions[loader] = msg.AccountNumber;
+                if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _, "TradeOrders", loader))
+                    EnsureComp<OxydPdaBankSessionComponent>(loader).AccountNumber = msg.AccountNumber;
                 else
                     error = "Login failed";
                 break;
             case OxydTradeUiAction.Logout:
-                _sessions.Remove(loader);
+                RemCompDeferred<OxydPdaBankSessionComponent>(loader);
                 break;
             case OxydTradeUiAction.SetTab:
-                _tabs[loader] = msg.Tab;
+                EnsureComp<OxydPdaBankSessionComponent>(loader).Tab = msg.Tab;
                 break;
             case OxydTradeUiAction.SelectStation:
-                _selectedStation[loader] = msg.StationId;
-                _tabs[loader] = OxydTradeUiTab.Goods;
+                {
+                    var s = EnsureComp<OxydPdaBankSessionComponent>(loader);
+                    s.SelectedStation = msg.StationId;
+                    s.Tab = OxydTradeUiTab.Goods;
+                }
                 break;
             case OxydTradeUiAction.AddToCart:
-                if (!_sessions.ContainsKey(loader))
+                if (!HasComp<OxydPdaBankSessionComponent>(loader))
                 {
                     error = "Not logged in";
                     break;
@@ -146,7 +147,13 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
     }
 
     private bool RequireSession(EntityUid loader, out int account)
-        => _sessions.TryGetValue(loader, out account);
+    {
+        account = 0;
+        if (!TryComp<OxydPdaBankSessionComponent>(loader, out var s) || s.AccountNumber == 0)
+            return false;
+        account = s.AccountNumber;
+        return true;
+    }
 
     private bool TryFindReceivingBeacon(EntityUid loader, out EntityUid beacon, out EntityCoordinates dropAt)
     {
@@ -187,8 +194,13 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
         _trade.EnsureSeeded();
         _economy.EnsureDepartmentsForRound();
 
-        var tab = _tabs.GetValueOrDefault(loader, OxydTradeUiTab.Stations);
-        var selected = _selectedStation.GetValueOrDefault(loader);
+        var tab = OxydTradeUiTab.Stations;
+        string? selected = null;
+        if (TryComp<OxydPdaBankSessionComponent>(loader, out var sess))
+        {
+            tab = sess.Tab;
+            selected = sess.SelectedStation;
+        }
         var state = new OxydTradeOrdersUiState
         {
             Tab = tab,
@@ -197,7 +209,7 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
             Status = status,
         };
 
-        if (_sessions.TryGetValue(loader, out var acct) && _economy.TryGetAccount(acct, out var data))
+        if (RequireSession(loader, out var acct) && _economy.TryGetAccount(acct, out var data))
         {
             state.LoggedIn = true;
             state.AccountNumber = data.AccountNumber;

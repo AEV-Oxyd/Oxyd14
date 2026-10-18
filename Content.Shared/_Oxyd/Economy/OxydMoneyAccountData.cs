@@ -46,8 +46,11 @@ public sealed partial class OxydPersonalAccountComponent : Component
     [DataField, AutoNetworkedField]
     public int? DepartmentAccountNumber;
 
-    [DataField, AutoNetworkedField]
+    /// <summary>Server-only: networking this lets any client in range read the PIN.</summary>
     public int? DepartmentPin;
+
+    /// <summary>Server-only: PIN delivery text waiting for the player to finish spawning.</summary>
+    public string? PendingPinMessage;
 }
 
 /// <summary>Associates an ID card with a personal account number (Eris associated_account_number).</summary>

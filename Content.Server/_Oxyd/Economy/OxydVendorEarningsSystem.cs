@@ -1,5 +1,5 @@
+using Content.Server.VendingMachines;
 using Content.Shared._Oxyd.Economy;
-using Content.Shared.Access.Systems;
 using Content.Shared.Emag.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Inventory;
@@ -24,7 +24,7 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
     [Dependency] private readonly SharedStackSystem _stacks = default!;
     [Dependency] private readonly InventorySystem _inventory = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
-    [Dependency] private readonly AccessReaderSystem _accessReader = default!;
+    [Dependency] private readonly VendingMachineSystem _vending = default!;
 
     public override void Initialize()
     {
@@ -87,7 +87,9 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
         if (inv == null || !inv.TryGetValue(args.ItemId, out var entry) || entry.Amount <= 0)
             return false;
 
-        return _accessReader.IsAllowed(args.User, ent.Owner);
+        // Same gate the vending system uses — emagged machines authorize anyone,
+        // so those vends still get charged rather than coming out free.
+        return _vending.IsAuthorized(ent.Owner, args.User, vend);
     }
 
     private int ResolveDest(OxydVendorEarningsComponent comp)

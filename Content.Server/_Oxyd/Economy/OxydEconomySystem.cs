@@ -44,6 +44,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         base.Initialize();
         _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
         SubscribeLocalEvent<JobAfterSpawnEvent>(OnJobAfterSpawn);
+        SubscribeLocalEvent<PlayerSpawnCompleteEvent>(OnPlayerSpawnComplete);
         SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
     }
 
@@ -51,6 +52,8 @@ public sealed partial class OxydEconomySystem : EntitySystem
     {
         _accounts.Clear();
         _cargoSyncedBalance.Clear();
+        _loginFailuresByAccount.Clear();
+        _loginFailuresByUser.Clear();
         _nextAccountNumber = 111111;
         _departmentsReady = false;
         _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
@@ -167,18 +170,50 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return null;
     }
 
-    public bool TryLogin(int number, int pin, [NotNullWhen(true)] out OxydMoneyAccountData? account, string terminal = "TaxQuickly")
+    /// <summary>PIN brute-force guard: failures are counted per account and per
+    /// connecting user; 5 failures inside a minute locks that side out for 60s.</summary>
+    private readonly Dictionary<int, (int Count, TimeSpan LockedUntil)> _loginFailuresByAccount = new();
+    private readonly Dictionary<EntityUid, (int Count, TimeSpan LockedUntil)> _loginFailuresByUser = new();
+    private const int LoginMaxFailures = 5;
+    private static readonly TimeSpan LoginFailureWindow = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan LoginLockout = TimeSpan.FromMinutes(1);
+
+    private static bool LoginLocked((int Count, TimeSpan LockedUntil) rec, TimeSpan now)
+        => now < rec.LockedUntil;
+
+    private static void LoginFailed<K>(Dictionary<K, (int Count, TimeSpan LockedUntil)> table, K key, TimeSpan now)
+        where K : notnull
+    {
+        table.TryGetValue(key, out var rec);
+        var count = now < rec.LockedUntil + LoginFailureWindow ? rec.Count + 1 : 1;
+        var until = count >= LoginMaxFailures ? now + LoginLockout : rec.LockedUntil;
+        table[key] = (count, until);
+    }
+
+    public bool TryLogin(int number, int pin, [NotNullWhen(true)] out OxydMoneyAccountData? account, string terminal = "TaxQuickly", EntityUid? user = null)
     {
         account = null;
+        var now = _timing.CurTime;
+        if (_loginFailuresByAccount.TryGetValue(number, out var acctRec) && LoginLocked(acctRec, now))
+            return false;
+        if (user is { } u && _loginFailuresByUser.TryGetValue(u, out var userRec) && LoginLocked(userRec, now))
+            return false;
+
         if (!_accounts.TryGetValue(number, out var found) || found.Suspended)
             return false;
 
         if (found.Pin != pin)
         {
             LogTransaction(found, "Failed login", 0, terminal);
+            LoginFailed(_loginFailuresByAccount, number, now);
+            if (user is { } u2)
+                LoginFailed(_loginFailuresByUser, u2, now);
             return false;
         }
 
+        _loginFailuresByAccount.Remove(number);
+        if (user is { } u3)
+            _loginFailuresByUser.Remove(u3);
         account = found;
         return true;
     }
@@ -204,6 +239,8 @@ public sealed partial class OxydEconomySystem : EntitySystem
             return false;
         }
 
+        RefreshDepartment(src);
+        RefreshDepartment(dst);
         if (src.Balance < amount)
         {
             error = "Insufficient funds";
@@ -219,11 +256,21 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return true;
     }
 
+    /// <summary>Cargo-console spending, passive income and bounties mutate
+    /// StationBankAccount directly — pull the authoritative balance back before
+    /// any op that mutates our copy so it can't overdraw what cargo already spent.</summary>
+    private void RefreshDepartment(OxydMoneyAccountData acc)
+    {
+        if (acc.IsDepartment && acc.DepartmentId != null)
+            PullDepartmentFromCargo(acc);
+    }
+
     public bool TryAdjust(int number, int delta, string purpose, string terminal)
     {
         if (!_accounts.TryGetValue(number, out var acc) || acc.Suspended)
             return false;
 
+        RefreshDepartment(acc);
         if (delta < 0 && acc.Balance < -delta)
             return false;
 
@@ -238,6 +285,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (!_accounts.TryGetValue(number, out var acc))
             return false;
 
+        RefreshDepartment(acc);
         acc.Balance = balance;
         SyncDepartmentToCargo(acc);
         return true;
@@ -249,6 +297,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (!_accounts.TryGetValue(number, out var acc))
             return false;
 
+        RefreshDepartment(acc);
         var next = Math.Clamp(acc.Balance + delta, -fundCap, fundCap);
         var applied = next - acc.Balance;
         if (applied == 0 && delta != 0)

@@ -16,7 +16,8 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _protos = default!;
 
     // Session keyed by loader uid
-    private readonly Dictionary<EntityUid, int> _sessions = new();
+    // Session lives on the loader via OxydPdaBankSessionComponent — cleans up
+    // with the entity and never leaks between rounds.
 
     public override void Initialize()
     {
@@ -24,10 +25,9 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeMessageEvent>(OnMessage);
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, ComponentShutdown>(OnShutdown);
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+
     }
 
-    private void OnRoundCleanup(RoundRestartCleanupEvent ev) => _sessions.Clear();
 
     private void OnShutdown(Entity<TaxQuicklyCartridgeComponent> ent, ref ComponentShutdown args)
     {
@@ -50,13 +50,13 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
         switch (msg.Action)
         {
             case TaxQuicklyUiAction.Login:
-                if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _))
-                    _sessions[loader] = msg.AccountNumber;
+                if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _, "TaxQuickly", loader))
+                    EnsureComp<OxydPdaBankSessionComponent>(loader).AccountNumber = msg.AccountNumber;
                 else
                     error = "Login failed";
                 break;
             case TaxQuicklyUiAction.Logout:
-                _sessions.Remove(loader);
+                RemCompDeferred<OxydPdaBankSessionComponent>(loader);
                 break;
             case TaxQuicklyUiAction.Transfer:
                 if (!RequireSession(loader, out var from))
@@ -168,12 +168,6 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     break;
                 }
 
-                if (!_economy.TryAdjust(maker2, -OxydEconomyConstants.DepartmentAccountCreateFee, "Register department account", "TaxQuickly"))
-                {
-                    error = "Insufficient funds for fee";
-                    break;
-                }
-
                 var deptName = (msg.Text ?? string.Empty).Trim();
                 // The id flows into StationBankAccount.Accounts as a CargoAccountPrototype
                 // key — free text crashes every cargo console's prototype lookup, and an
@@ -191,6 +185,13 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     break;
                 }
 
+                // Charge the fee only after every check has passed.
+                if (!_economy.TryAdjust(maker2, -OxydEconomyConstants.DepartmentAccountCreateFee, "Register department account", "TaxQuickly"))
+                {
+                    error = "Insufficient funds for fee";
+                    break;
+                }
+
                 var dCreated = _economy.CreateAccount(deptName, deptName, 0, m2.DepartmentId, 0, isDepartment: true, departmentId: deptName, canMakeAccounts: true);
                 error = $"Created dept acct={dCreated.AccountNumber} pin={dCreated.Pin}";
                 break;
@@ -202,12 +203,18 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
     }
 
     private bool RequireSession(EntityUid loader, out int account)
-        => _sessions.TryGetValue(loader, out account);
+    {
+        account = 0;
+        if (!TryComp<OxydPdaBankSessionComponent>(loader, out var s) || s.AccountNumber == 0)
+            return false;
+        account = s.AccountNumber;
+        return true;
+    }
 
     private void UpdateUi(EntityUid cart, EntityUid loader, string? error = null)
     {
         var state = new TaxQuicklyUiState { Error = error };
-        if (_sessions.TryGetValue(loader, out var number) && _economy.TryGetAccount(number, out var acc))
+        if (RequireSession(loader, out var number) && _economy.TryGetAccount(number, out var acc))
         {
             state.LoggedIn = true;
             state.AccountNumber = acc.AccountNumber;

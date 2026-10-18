@@ -50,13 +50,12 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
     private void OnOpened(Entity<OxydAtmComponent> ent, ref BoundUIOpenedEvent args)
     {
-        // A leftover session belongs to its owner only — anyone else opening
-        // the ATM sees a fresh logged-out state and cannot touch the account.
+        // A leftover session belongs to its owner only — close the UI for anyone
+        // else so they never see the account data nor can end the session.
         if (ent.Comp.SessionAccount != null && ent.Comp.SessionUser != args.Actor)
         {
-            ent.Comp.SessionAccount = null;
-            ent.Comp.SessionUser = null;
-            Dirty(ent);
+            _ui.CloseUi(ent.Owner, OxydAtmUiKey.Key, args.Actor);
+            return;
         }
 
         PushState(ent);
@@ -70,6 +69,9 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
     private void OnLogout(Entity<OxydAtmComponent> ent, ref OxydAtmLogoutMessage args)
     {
+        if (!SessionOwned(ent, args.Actor, out _))
+            return;
+
         TryLogout(ent);
     }
 
@@ -89,7 +91,7 @@ public sealed partial class OxydAtmSystem : EntitySystem
     public bool TryLogin(Entity<OxydAtmComponent> ent, int accountNumber, int pin, EntityUid? actor, out string? error)
     {
         error = null;
-        if (!_economy.TryLogin(accountNumber, pin, out _, "ATM"))
+        if (!_economy.TryLogin(accountNumber, pin, out _, "ATM", actor))
         {
             error = "Login failed";
             PushState(ent, error);
@@ -206,6 +208,12 @@ public sealed partial class OxydAtmSystem : EntitySystem
         if (ent.Comp.SessionAccount is not { } acct)
         {
             _popup.PopupEntity("Log in before depositing.", ent, args.User);
+            return;
+        }
+
+        if (!SessionOwned(ent, args.User, out var depErr))
+        {
+            _popup.PopupEntity(depErr, ent, args.User);
             return;
         }
 

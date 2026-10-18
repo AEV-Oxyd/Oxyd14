@@ -30,7 +30,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
     private TimeSpan _nextRestock;
 
     /// <summary>Per-loader shopping carts keyed by loader EntityUid.</summary>
-    private readonly Dictionary<EntityUid, List<OxydTradeCartLineRuntime>> _carts = new();
+
 
     public IReadOnlyDictionary<string, OxydTradeStationRuntime> Stations => _stations;
     public IReadOnlyList<OxydTradeOrderRuntime> Orders => _orders;
@@ -48,7 +48,6 @@ public sealed partial class OxydTradeSystem : EntitySystem
         _stations.Clear();
         _orders.Clear();
         _logs.Clear();
-        _carts.Clear();
         _nextOrderId = 1;
         _nextLogId = 1;
         _seeded = false;
@@ -125,16 +124,9 @@ public sealed partial class OxydTradeSystem : EntitySystem
     public bool TryGetStation(string id, [NotNullWhen(true)] out OxydTradeStationRuntime? station)
         => _stations.TryGetValue(id, out station) && station.Discovered;
 
+    /// <summary>Cart lives on the loader (PDA) so entity deletion cleans it up.</summary>
     public List<OxydTradeCartLineRuntime> GetCart(EntityUid loader)
-    {
-        if (!_carts.TryGetValue(loader, out var cart))
-        {
-            cart = new List<OxydTradeCartLineRuntime>();
-            _carts[loader] = cart;
-        }
-
-        return cart;
-    }
+        => EnsureComp<OxydTradeCartComponent>(loader).Lines;
 
     public void ClearCart(EntityUid loader) => GetCart(loader).Clear();
 
@@ -342,6 +334,13 @@ public sealed partial class OxydTradeSystem : EntitySystem
             // Fee is the Guild's cut; the goods cost goes to the station (Cargo)
             // rather than also being pocketed by the Guild.
             var costDest = _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo) ?? guild;
+            if (!_economy.TryGetAccount(order.RequestingAccount, out var reqAcc) ||
+                reqAcc.Balance < order.Fee + order.Cost)
+            {
+                error = "Insufficient funds";
+                return false;
+            }
+
             if (order.Fee > 0 &&
                 !_economy.TryTransfer(order.RequestingAccount, guild.AccountNumber, order.Fee, $"Trade order fee {order.OrderId}", "TradeBeacon", out error))
             {
@@ -351,6 +350,8 @@ public sealed partial class OxydTradeSystem : EntitySystem
 
             if (!_economy.TryTransfer(order.RequestingAccount, costDest.AccountNumber, order.Cost, $"Trade order {order.OrderId}", "TradeBeacon", out error))
             {
+                // Refund the fee so a half-failed payment doesn't charge it per retry.
+                _economy.TryTransfer(guild.AccountNumber, order.RequestingAccount, order.Fee, $"Refund trade fee {order.OrderId}", "TradeBeacon", out _);
                 error ??= "Payment failed";
                 return false;
             }
