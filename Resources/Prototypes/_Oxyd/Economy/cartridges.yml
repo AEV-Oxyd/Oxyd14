@@ -1,0 +1,171 @@
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTaxQuicklyCartridge
+  name: TaxQuickly 2565 cartridge
+  description: NT banking client. Transfer funds, manage wages, register accounts.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:TaxQuicklyUi
+  - type: Cartridge
+    programName: oxyd-taxquickly-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: TaxQuicklyCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydDrinkCatalogCartridge
+  name: Neon Cocktails cartridge
+  description: Club drink catalog for the bar staff.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-drink-catalog-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: drinks
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydCookCatalogCartridge
+  name: Cooking Assistant cartridge
+  description: Club kitchen catalog.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydCatalogUi
+  - type: Cartridge
+    programName: oxyd-cook-catalog-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydCatalogCartridge
+    catalogId: cooking
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydRecordsCartridge
+  name: station records cartridge
+  description: Live crew records from the station database.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:OxydRecordsUi
+  - type: Cartridge
+    programName: oxyd-records-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: OxydRecordsCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydBountyCartridge
+  name: bounty board cartridge
+  description: Live cargo bounty board for the station.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydBountyUi
+  - type: Cartridge
+    programName: oxyd-bounty-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydBountyCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydEmailCartridge
+  name: email client cartridge
+  description: NT Mail — register, inbox, and send station email.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:OxydEmailUi
+  - type: Cartridge
+    programName: oxyd-email-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: OxydEmailCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydNtChatCartridge
+  name: NTNRC chat cartridge
+  description: NanoTrasen Relay Chat — channels across PDA net.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydNtChatUi
+  - type: Cartridge
+    programName: oxyd-ntchat-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydNtChatCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydSignallerCartridge
+  name: signal manager cartridge
+  description: Fire wireless DeviceLink signals. Requires signaller hardware.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydSignallerUi
+  - type: Cartridge
+    programName: oxyd-signaller-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydSignallerCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydScannerCartridge
+  name: scanner cartridge
+  description: Drive an installed scanner module and review the data buffer.
+  components:
+  - type: Sprite
+    state: cart-lib
+  - type: UIFragment
+    ui: !type:OxydScannerUi
+  - type: Cartridge
+    programName: oxyd-scanner-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: OxydScannerCartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTradeOrdersCartridge
+  name: trade orders cartridge
+  description: Asters Guild trade board — stations, cart, orders, and export offers.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:OxydTradeOrdersUi
+  - type: Cartridge
+    programName: oxyd-trade-orders-program-name
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: OxydTradeOrdersCartridge

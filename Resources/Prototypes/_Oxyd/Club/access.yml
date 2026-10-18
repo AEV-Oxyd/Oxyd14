@@ -1,0 +1,11 @@
+# Club access levels (Eris code/game/jobs/access_datum.dm, ACCESS_REGION_CLUB).
+# Bar / Kitchen / Theatre / Maintenance already exist as stock SS14 levels.
+# Eris-only: access_change_club (Manager ID console) and access_artist (artist office).
+
+- type: accessLevel
+  id: OxydClubChange
+  name: oxyd-access-club-change
+
+- type: accessLevel
+  id: OxydClubArtist
+  name: oxyd-access-club-artist
