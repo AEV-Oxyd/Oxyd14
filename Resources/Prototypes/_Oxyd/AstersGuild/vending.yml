@@ -1,0 +1,71 @@
+# Asters Guild vending inventories + machines (Eris code/game/machinery/vending.dm:
+# powermat, printomat, style).
+
+- type: vendingMachineInventory
+  id: OxydGuildPowermatInventory
+  startingInventory:
+    PowerCellSmall: 20
+    PowerCellMedium: 15
+    PowerCellHigh: 15
+    PowerCellHyper: 10
+  contrabandInventory:
+    PowerCellHyper: 5
+  # Eris prices (vending.dm:1551): small 100/200, medium 300/400, large 500/700,
+  # super cells 350-1200 contraband.
+
+- type: vendingMachineInventory
+  id: OxydGuildPrintomatInventory
+  startingInventory:
+    OxydNtRitualBookDesignDisk: 10
+    OxydNtEnergyCrossbowDesignDisk: 10
+    OxydNtHolyGrenadeDesignDisk: 5
+    OxydNtLightfallDesignDisk: 5
+    OxydNtDominionDesignDisk: 10
+  contrabandInventory:
+    OxydNtHolyGrenadeDesignDisk: 3
+
+- type: vendingMachineInventory
+  id: OxydGuildStyleInventory
+  startingInventory:
+    ClothingNeckScarfStripedRed: 8
+    ClothingNeckScarfStripedBlue: 8
+    ClothingNeckScarfStripedGreen: 8
+    ClothingNeckScarfStripedBlack: 8
+    ClothingEyesGlassesSunglasses: 4
+    ClothingHeadHatCowboyBrown: 4
+    ClothingHandsGlovesFingerless: 3
+    ClothingShoesBootsJack: 4
+    ClothingUniformJumpsuitQMFormal: 4
+
+- type: entity
+  parent: [ BaseVendingMachine ]
+  id: OxydVendingPowermat
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/VendingMachines/engivend.rsi
+    snapCardinals: true
+  - type: VendingMachine
+    pack: OxydGuildPowermatInventory
+  - type: VendingMachineVisuals
+
+- type: entity
+  parent: [ BaseVendingMachine ]
+  id: OxydVendingPrintomat
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/VendingMachines/cart.rsi
+    snapCardinals: true
+  - type: VendingMachine
+    pack: OxydGuildPrintomatInventory
+  - type: VendingMachineVisuals
+
+- type: entity
+  parent: [ BaseVendingMachine ]
+  id: OxydVendingStyle
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/VendingMachines/cargodrobe.rsi
+    snapCardinals: true
+  - type: VendingMachine
+    pack: OxydGuildStyleInventory
+  - type: VendingMachineVisuals

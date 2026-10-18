@@ -1,0 +1,37 @@
+# Asters Guild items — credits (Eris economy/cash.dm space cash).
+# Mirrors stock SpaceCash: one stack type + per-denomination entity protos.
+
+- type: stack
+  id: OxydCredits
+  name: oxyd-stack-credits
+  spawn: OxydCredits1
+  icon: { sprite: Objects/Economy/cash.rsi, state: cash }
+  maxCount: 10000
+
+- type: entity
+  parent: BaseItem
+  id: OxydCredits1
+  components:
+  - type: Stack
+    stackType: OxydCredits
+    count: 1
+  - type: Sprite
+    sprite: Objects/Economy/cash.rsi
+    state: cash
+  - type: Item
+
+- type: entity
+  parent: OxydCredits1
+  id: OxydCredits100
+  components:
+  - type: Stack
+    stackType: OxydCredits
+    count: 100
+
+- type: entity
+  parent: OxydCredits1
+  id: OxydCredits500
+  components:
+  - type: Stack
+    stackType: OxydCredits
+    count: 500
