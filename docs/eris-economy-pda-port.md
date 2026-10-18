@@ -1,5 +1,7 @@
 # Eris Economy + PDA Port (execution slice)
 
+> **Folded into** [AEV-Oxyd/Oxyd14#33](https://github.com/AEV-Oxyd/Oxyd14/pull/33) (`eris-litany-port`). Standalone branch `cursor/eris-economy-pda-port-7682` is superseded. Asters Guild ATM/POS/beacon duplicates were removed in favor of this stack; Guild trade **console** lives as `OxydGuildTradeConsoleSystem`.
+
 Implements the Eris economy + PDA plan vertical slices on Oxyd14:
 
 - **P0/P1:** `OxydEconomySystem` personal accounts, PIN, transfers, transaction logs
