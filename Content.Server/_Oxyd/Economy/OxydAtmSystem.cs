@@ -101,6 +101,15 @@ public sealed partial class OxydAtmSystem : EntitySystem
         ent.Comp.SessionAccount = accountNumber;
         ent.Comp.SessionUser = actor;
         Dirty(ent);
+
+        // Anyone else who had the UI open must not receive the new session's
+        // account number/name/balance — kick every other viewer.
+        foreach (var other in _ui.GetActors(ent.Owner, OxydAtmUiKey.Key))
+        {
+            if (other != actor)
+                _ui.CloseUi(ent.Owner, OxydAtmUiKey.Key, other);
+        }
+
         PushState(ent);
         return true;
     }
@@ -113,18 +122,18 @@ public sealed partial class OxydAtmSystem : EntitySystem
         PushState(ent);
     }
 
-    /// <summary>Reject actions from anyone but the player who logged in.</summary>
+    /// <summary>Reject actions from anyone but the player who logged in —
+    /// rejecting must never end the owner's session (a bystander pressing
+    /// buttons is noise, not a logout).</summary>
     private bool SessionOwned(Entity<OxydAtmComponent> ent, EntityUid actor, out string? error)
     {
         error = null;
         if (ent.Comp.SessionAccount is { } && ent.Comp.SessionUser == actor)
             return true;
 
-        ent.Comp.SessionAccount = null;
-        ent.Comp.SessionUser = null;
-        Dirty(ent);
-        error = "Session expired — log in again.";
-        PushState(ent, error);
+        error = ent.Comp.SessionAccount is { }
+            ? "ATM in use by someone else"
+            : "Not logged in";
         return false;
     }
 

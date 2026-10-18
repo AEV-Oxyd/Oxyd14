@@ -22,6 +22,12 @@ public sealed class OxydMoneyAccountData
     public bool CanMakeAccounts;
     public int SecurityLevel; // 0 auto / 1 pin / 2 card+pin
     public bool Suspended;
+
+    /// <summary>PIN-bruteforce state: failures counted in a rolling window
+    /// measured from FirstFailAt; reaching the cap locks the account.</summary>
+    public int FailCount;
+    public TimeSpan FirstFailAt;
+    public TimeSpan LoginLockedUntil;
     public List<OxydTransactionData> Transactions = new();
 }
 

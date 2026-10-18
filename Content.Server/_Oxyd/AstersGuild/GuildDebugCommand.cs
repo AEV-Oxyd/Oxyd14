@@ -15,7 +15,7 @@ namespace Content.Server._Oxyd.AstersGuild;
 public sealed class GuildCommand : ToolshedCommand
 {
     private OxydGuildTradeConsoleSystem? _trade;
-    private OxydBankSystem? _bank;
+    private Content.Server._Oxyd.Economy.OxydEconomySystem? _economy;
 
     /// <summary>Enqueue a crew order request as if a request console submitted it.</summary>
     [CommandImplementation("submitrequest")]
@@ -30,17 +30,20 @@ public sealed class GuildCommand : ToolshedCommand
     [CommandImplementation("credit")]
     public void Credit(IInvocationContext ctx, int amount)
     {
-        _bank ??= GetSys<OxydBankSystem>();
-        _bank.Credit(amount);
-        ctx.WriteLine($"guild: credited {amount}cr; balance={_bank.Balance()}cr");
+        _economy ??= GetSys<Content.Server._Oxyd.Economy.OxydEconomySystem>();
+        var guild = _economy.FindDepartmentAccount(Content.Shared._Oxyd.Economy.OxydEconomyConstants.EmployerGuild);
+        if (guild == null) { ctx.WriteLine("guild: no department account"); return; }
+        _economy.TryAdjust(guild.AccountNumber, amount, "Debug credit", "GuildDebug");
+        ctx.WriteLine($"guild: credited {amount}cr; balance={guild.Balance}cr");
     }
 
     /// <summary>Print the shared guild account balance.</summary>
     [CommandImplementation("balance")]
     public void Balance(IInvocationContext ctx)
     {
-        _bank ??= GetSys<OxydBankSystem>();
-        ctx.WriteLine($"guild: balance={_bank.Balance()}cr");
+        _economy ??= GetSys<Content.Server._Oxyd.Economy.OxydEconomySystem>();
+        var guild = _economy.FindDepartmentAccount(Content.Shared._Oxyd.Economy.OxydEconomyConstants.EmployerGuild);
+        ctx.WriteLine($"guild: balance={(guild?.Balance ?? 0)}cr");
     }
 
     /// <summary>Force all deep drills on/off (InteractHand can't reach stacked machines).</summary>

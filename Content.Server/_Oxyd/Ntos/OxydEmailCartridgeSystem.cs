@@ -1,3 +1,4 @@
+using Content.Server._Oxyd.Economy;
 using Content.Shared._Oxyd.Ntos;
 using Content.Shared.CartridgeLoader;
 
@@ -8,7 +9,6 @@ public sealed partial class OxydEmailCartridgeSystem : EntitySystem
     [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
     [Dependency] private readonly OxydEmailSystem _email = default!;
 
-    private readonly Dictionary<EntityUid, int?> _open = new();
 
     public override void Initialize()
     {
@@ -44,13 +44,14 @@ public sealed partial class OxydEmailCartridgeSystem : EntitySystem
                 break;
             case OxydEmailUiAction.Logout:
                 _email.Logout(loader);
-                _open.Remove(loader);
+                if (TryComp<OxydEmailUiComponent>(loader, out var loUi))
+                    loUi.OpenMessageId = null;
                 status = "Logged out";
                 break;
             case OxydEmailUiAction.Open:
                 if (_email.TryGetSession(loader, out var loginOpen))
                 {
-                    _open[loader] = msg.MessageId;
+                    EnsureComp<OxydEmailUiComponent>(loader).OpenMessageId = msg.MessageId;
                     _email.MarkRead(loginOpen, msg.MessageId);
                 }
                 else
@@ -69,7 +70,8 @@ public sealed partial class OxydEmailCartridgeSystem : EntitySystem
                     error = "Not logged in";
                 else if (_email.TryDelete(delLogin, msg.MessageId))
                 {
-                    _open.Remove(loader);
+                    if (TryComp<OxydEmailUiComponent>(loader, out var delUi))
+                        delUi.OpenMessageId = null;
                     status = "Deleted";
                 }
                 else
@@ -98,7 +100,7 @@ public sealed partial class OxydEmailCartridgeSystem : EntitySystem
                 });
             }
 
-            if (_open.TryGetValue(loader, out var openId) && openId is { } oid)
+            if (TryComp<OxydEmailUiComponent>(loader, out var ui) && ui.OpenMessageId is { } oid)
             {
                 var detail = _email.GetMessage(login, oid);
                 if (detail != null)

@@ -378,12 +378,28 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
     /// <summary>Eris offer send: consume matching entities near the sending beacon.</summary>
     private void OnSendOffer(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSendOfferMessage msg)
     {
+        // Offers belong to the merchant console — a crew request console must not
+        // spend or deliver goods on the guild's books.
+        if (comp.RequestConsole) return;
+
         var o = _offers.Find(x => x.Id == msg.OfferId);
         if (o == null || o.SecondsLeft <= 0 || o.Amount <= 0) return;
 
+        // Use the nearest sending beacon to THIS console — not the first beacon
+        // anywhere in the world.
         EntityUid? beacon = null;
+        var bestDist = float.MaxValue;
         var bq = EntityQueryEnumerator<EconomyBeaconSend>();
-        while (bq.MoveNext(out var buid, out _)) { beacon = buid; break; }
+        var myPos = Transform(uid).WorldPosition;
+        while (bq.MoveNext(out var buid, out _))
+        {
+            var d = (Transform(buid).WorldPosition - myPos).LengthSquared();
+            if (d < bestDist)
+            {
+                bestDist = d;
+                beacon = buid;
+            }
+        }
         if (beacon == null) return;
 
         var beaconPos = Transform(beacon.Value).Coordinates;
@@ -449,6 +465,8 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
     /// free-text requests (Eris lets the merchant read anything).</summary>
     private void OnSubmitRequest(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSubmitRequestMessage msg)
     {
+        // Requests come from the crew request console only.
+        if (!comp.RequestConsole) return;
         var item = msg.Item.Trim();
         if (item.Length == 0 || item.Length > 64) return;
         _requests.Add(new Request
@@ -464,6 +482,8 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
     /// <summary>Merchant clears a request once ordered/fulfilled (Eris order_requests).</summary>
     private void OnCompleteRequest(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeCompleteRequestMessage msg)
     {
+        // Requests are completed on the merchant console, not the crew console.
+        if (comp.RequestConsole) return;
         var r = _requests.Find(x => x.Id == msg.Id);
         if (r == null) return;
         _requests.Remove(r);

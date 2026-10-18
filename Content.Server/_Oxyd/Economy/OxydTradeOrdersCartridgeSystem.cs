@@ -41,25 +41,32 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
         {
             case OxydTradeUiAction.Login:
                 if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _, "TradeOrders", loader))
-                    EnsureComp<OxydPdaBankSessionComponent>(loader).AccountNumber = msg.AccountNumber;
+                    EnsureComp<OxydTradeOrdersSessionComponent>(loader).AccountNumber = msg.AccountNumber;
                 else
                     error = "Login failed";
                 break;
             case OxydTradeUiAction.Logout:
-                RemCompDeferred<OxydPdaBankSessionComponent>(loader);
+                // Reset the session fields rather than defer-remove: the UI push
+                // below must already see the logged-out state.
+                if (TryComp<OxydTradeOrdersSessionComponent>(loader, out var logSess))
+                {
+                    logSess.AccountNumber = 0;
+                    logSess.SelectedStation = null;
+                    logSess.Tab = OxydTradeUiTab.Stations;
+                }
                 break;
             case OxydTradeUiAction.SetTab:
-                EnsureComp<OxydPdaBankSessionComponent>(loader).Tab = msg.Tab;
+                EnsureComp<OxydTradeOrdersSessionComponent>(loader).Tab = msg.Tab;
                 break;
             case OxydTradeUiAction.SelectStation:
                 {
-                    var s = EnsureComp<OxydPdaBankSessionComponent>(loader);
+                    var s = EnsureComp<OxydTradeOrdersSessionComponent>(loader);
                     s.SelectedStation = msg.StationId;
                     s.Tab = OxydTradeUiTab.Goods;
                 }
                 break;
             case OxydTradeUiAction.AddToCart:
-                if (!HasComp<OxydPdaBankSessionComponent>(loader))
+                if (!RequireSession(loader, out _))
                 {
                     error = "Not logged in";
                     break;
@@ -149,7 +156,7 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
     private bool RequireSession(EntityUid loader, out int account)
     {
         account = 0;
-        if (!TryComp<OxydPdaBankSessionComponent>(loader, out var s) || s.AccountNumber == 0)
+        if (!TryComp<OxydTradeOrdersSessionComponent>(loader, out var s) || s.AccountNumber == 0)
             return false;
         account = s.AccountNumber;
         return true;
@@ -196,7 +203,7 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
 
         var tab = OxydTradeUiTab.Stations;
         string? selected = null;
-        if (TryComp<OxydPdaBankSessionComponent>(loader, out var sess))
+        if (TryComp<OxydTradeOrdersSessionComponent>(loader, out var sess))
         {
             tab = sess.Tab;
             selected = sess.SelectedStation;

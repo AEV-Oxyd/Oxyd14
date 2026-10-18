@@ -52,8 +52,6 @@ public sealed partial class OxydEconomySystem : EntitySystem
     {
         _accounts.Clear();
         _cargoSyncedBalance.Clear();
-        _loginFailuresByAccount.Clear();
-        _loginFailuresByUser.Clear();
         _nextAccountNumber = 111111;
         _departmentsReady = false;
         _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
@@ -170,50 +168,67 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return null;
     }
 
-    /// <summary>PIN brute-force guard: failures are counted per account and per
-    /// connecting user; 5 failures inside a minute locks that side out for 60s.</summary>
-    private readonly Dictionary<int, (int Count, TimeSpan LockedUntil)> _loginFailuresByAccount = new();
-    private readonly Dictionary<EntityUid, (int Count, TimeSpan LockedUntil)> _loginFailuresByUser = new();
+    /// <summary>PIN brute-force guard: failures are counted per account (fields on
+    /// OxydMoneyAccountData, cleared with the round) and per user (component on the
+    /// user entity). The window is measured from the FIRST failure — 5 inside a
+    /// minute locks that side out for a minute.</summary>
     private const int LoginMaxFailures = 5;
     private static readonly TimeSpan LoginFailureWindow = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan LoginLockout = TimeSpan.FromMinutes(1);
 
-    private static bool LoginLocked((int Count, TimeSpan LockedUntil) rec, TimeSpan now)
-        => now < rec.LockedUntil;
-
-    private static void LoginFailed<K>(Dictionary<K, (int Count, TimeSpan LockedUntil)> table, K key, TimeSpan now)
-        where K : notnull
+    private static void LoginFailed(ref int count, ref TimeSpan firstFailAt, ref TimeSpan lockedUntil, TimeSpan now)
     {
-        table.TryGetValue(key, out var rec);
-        var count = now < rec.LockedUntil + LoginFailureWindow ? rec.Count + 1 : 1;
-        var until = count >= LoginMaxFailures ? now + LoginLockout : rec.LockedUntil;
-        table[key] = (count, until);
+        if (now - firstFailAt > LoginFailureWindow)
+        {
+            count = 0;
+            firstFailAt = now;
+        }
+        count++;
+        if (count >= LoginMaxFailures)
+        {
+            lockedUntil = now + LoginLockout;
+            count = 0;
+        }
     }
 
     public bool TryLogin(int number, int pin, [NotNullWhen(true)] out OxydMoneyAccountData? account, string terminal = "TaxQuickly", EntityUid? user = null)
     {
         account = null;
         var now = _timing.CurTime;
-        if (_loginFailuresByAccount.TryGetValue(number, out var acctRec) && LoginLocked(acctRec, now))
-            return false;
-        if (user is { } u && _loginFailuresByUser.TryGetValue(u, out var userRec) && LoginLocked(userRec, now))
+        if (!_accounts.TryGetValue(number, out var found) || found.Suspended)
             return false;
 
-        if (!_accounts.TryGetValue(number, out var found) || found.Suspended)
+        if (now < found.LoginLockedUntil)
+            return false;
+        if (user is { } u && TryComp<OxydLoginFailuresComponent>(u, out var lf) && now < lf.LockedUntil)
             return false;
 
         if (found.Pin != pin)
         {
             LogTransaction(found, "Failed login", 0, terminal);
-            LoginFailed(_loginFailuresByAccount, number, now);
+            var fc = found.FailCount;
+            var ff = found.FirstFailAt;
+            var lu = found.LoginLockedUntil;
+            LoginFailed(ref fc, ref ff, ref lu, now);
+            found.FailCount = fc;
+            found.FirstFailAt = ff;
+            found.LoginLockedUntil = lu;
+
             if (user is { } u2)
-                LoginFailed(_loginFailuresByUser, u2, now);
+            {
+                var ucomp = EnsureComp<OxydLoginFailuresComponent>(u2);
+                LoginFailed(ref ucomp.Count, ref ucomp.FirstFailAt, ref ucomp.LockedUntil, now);
+            }
             return false;
         }
 
-        _loginFailuresByAccount.Remove(number);
+        found.FailCount = 0;
         if (user is { } u3)
-            _loginFailuresByUser.Remove(u3);
+        {
+            var ucomp3 = EnsureComp<OxydLoginFailuresComponent>(u3);
+            ucomp3.Count = 0;
+            ucomp3.LockedUntil = TimeSpan.Zero;
+        }
         account = found;
         return true;
     }

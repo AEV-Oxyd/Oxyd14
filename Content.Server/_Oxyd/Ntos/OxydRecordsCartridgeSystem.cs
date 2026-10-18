@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Server._Oxyd.Economy;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Ntos;
 using Content.Shared.CartridgeLoader;
@@ -14,7 +15,6 @@ public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
     [Dependency] private readonly StationSystem _station = default!;
     [Dependency] private readonly StationRecordsSystem _records = default!;
 
-    private readonly Dictionary<EntityUid, uint?> _active = new();
 
     public override void Initialize()
     {
@@ -35,10 +35,10 @@ public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
         switch (msg.Action)
         {
             case OxydRecordsUiAction.Select:
-                _active[loader] = msg.RecordId;
+                EnsureComp<OxydRecordsUiComponent>(loader).ActiveRecord = msg.RecordId;
                 break;
             case OxydRecordsUiAction.Clear:
-                _active.Remove(loader);
+                RemCompDeferred<OxydRecordsUiComponent>(loader);
                 break;
         }
 
@@ -69,7 +69,11 @@ public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
             });
         }
 
-        if (_active.TryGetValue(loader, out var activeId) && activeId is { } sel)
+        // Club/church PDAs are not security tools — withhold fingerprints/DNA.
+        var loaderProto = MetaData(loader).EntityPrototype?.ID;
+        var showSensitive = loaderProto is not "OxydPdaChurch" and not "OxydPdaClub";
+
+        if (TryComp<OxydRecordsUiComponent>(loader, out var selUi) && selUi.ActiveRecord is { } sel)
         {
             var key = new StationRecordKey(sel, station.Value);
             if (_records.TryGetRecord<GeneralStationRecord>(key, out var detail))
@@ -82,8 +86,8 @@ public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
                     Age = detail.Age,
                     Species = detail.Species,
                     Gender = detail.Gender.ToString(),
-                    Fingerprint = detail.Fingerprint,
-                    Dna = detail.DNA,
+                    Fingerprint = showSensitive ? detail.Fingerprint : null,
+                    Dna = showSensitive ? detail.DNA : null,
                 };
             }
         }

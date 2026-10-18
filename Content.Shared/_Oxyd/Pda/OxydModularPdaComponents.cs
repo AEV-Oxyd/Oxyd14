@@ -97,6 +97,9 @@ public sealed partial class OxydModularPdaComponent : Component
     [DataField]
     public EntProtoId? StartingPeripheral;
 
+    /// <summary>Server-side rate limit for printing the hardware report.</summary>
+    public TimeSpan NextPrintAt;
+
     /// <summary>Computed: effective max concurrent programs from CPU.</summary>
     [ViewVariables, AutoNetworkedField]
     public int EffectiveMaxPrograms = 2;

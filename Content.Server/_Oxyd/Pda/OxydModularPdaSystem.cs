@@ -15,6 +15,7 @@ using Content.Shared.Interaction;
 using Content.Shared.Paper;
 using Content.Shared.Popups;
 using Content.Shared.Verbs;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Pda;
 
@@ -22,6 +23,7 @@ namespace Content.Server._Oxyd.Pda;
 public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
 {
     [Dependency] private readonly PaperSystem _paper = default!;
+    [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly MetaDataSystem _meta = default!;
     [Dependency] private readonly DeviceLinkSystem _deviceLink = default!;
@@ -142,6 +144,15 @@ public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
 
     private void PrintHardwareReport(Entity<OxydModularPdaComponent> ent, EntityUid user)
     {
+        // Rate-limit: printing must not be a paper dispenser.
+        var now = _timing.CurTime;
+        if (now < ent.Comp.NextPrintAt)
+        {
+            _popup.PopupEntity("Printer is recharging…", ent, user);
+            return;
+        }
+        ent.Comp.NextPrintAt = now + TimeSpan.FromSeconds(30);
+
         var paper = Spawn("Paper", Transform(ent).Coordinates);
         _meta.SetEntityName(paper, "PDA hardware report");
         _paper.SetContent(paper, DescribeHardware(ent));

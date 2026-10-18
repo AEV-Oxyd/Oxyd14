@@ -16,7 +16,7 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _protos = default!;
 
     // Session keyed by loader uid
-    // Session lives on the loader via OxydPdaBankSessionComponent — cleans up
+    // Session lives on the loader via OxydTaxQuicklySessionComponent — cleans up
     // with the entity and never leaks between rounds.
 
     public override void Initialize()
@@ -51,12 +51,12 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
         {
             case TaxQuicklyUiAction.Login:
                 if (_economy.TryLogin(msg.AccountNumber, msg.Pin, out _, "TaxQuickly", loader))
-                    EnsureComp<OxydPdaBankSessionComponent>(loader).AccountNumber = msg.AccountNumber;
+                    EnsureComp<OxydTaxQuicklySessionComponent>(loader).AccountNumber = msg.AccountNumber;
                 else
                     error = "Login failed";
                 break;
             case TaxQuicklyUiAction.Logout:
-                RemCompDeferred<OxydPdaBankSessionComponent>(loader);
+                RemCompDeferred<OxydTaxQuicklySessionComponent>(loader);
                 break;
             case TaxQuicklyUiAction.Transfer:
                 if (!RequireSession(loader, out var from))
@@ -98,6 +98,14 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                 if (employee.IsDepartment)
                 {
                     error = "Cannot employ a department";
+                    break;
+                }
+
+                // Can't poach another department's employee without their consent —
+                // only unemployed accounts (or our own employees) may be linked.
+                if (employee.Employer != null && employee.Employer != deptAcc.DepartmentId)
+                {
+                    error = "Employee belongs to another department";
                     break;
                 }
 
@@ -205,7 +213,7 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
     private bool RequireSession(EntityUid loader, out int account)
     {
         account = 0;
-        if (!TryComp<OxydPdaBankSessionComponent>(loader, out var s) || s.AccountNumber == 0)
+        if (!TryComp<OxydTaxQuicklySessionComponent>(loader, out var s) || s.AccountNumber == 0)
             return false;
         account = s.AccountNumber;
         return true;
