@@ -1,89 +1,101 @@
 {
-  "version": 1,
-  "license": "CC-BY-SA-3.0",
-  "copyright": "CEV Eris",
-  "size": {
-    "x": 32,
-    "y": 32
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 32,
+  "y": 32
+ },
+ "states": [
+  {
+   "name": "term",
+   "directions": 4,
+   "delays": [
+    [
+     0.2
+    ],
+    [
+     0.2
+    ],
+    [
+     0.2
+    ],
+    [
+     0.2
+    ]
+   ]
   },
-  "states": [
-    {
-      "name": "term",
-      "directions": 4,
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "term-f",
-      "directions": 4,
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes-og1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes-op0",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes-op1",
-      "delays": [
-        [
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes-oc1",
-      "delays": [
-        [
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "smes-oc0",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    }
-  ]
+  {
+   "name": "term-f",
+   "directions": 4,
+   "delays": [
+    [
+     0.2
+    ],
+    [
+     0.2
+    ],
+    [
+     0.2
+    ],
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes-og1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes-op0",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes-op1",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes-oc1",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "smes-oc0",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  }
+ ]
 }

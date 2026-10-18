@@ -1,123 +1,123 @@
 {
-  "version": 1,
-  "license": "CC-BY-SA-3.0",
-  "copyright": "CEV Eris",
-  "size": {
-    "x": 32,
-    "y": 32
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 32,
+  "y": 32
+ },
+ "states": [
+  {
+   "name": "red",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
   },
-  "states": [
-    {
-      "name": "red",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "orange",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "blue",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "black",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "grey",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "can-open",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "can-connector",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "red-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "orange-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "black-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "grey-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "blue-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "yellow",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "yellow-1",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    }
-  ]
+  {
+   "name": "orange",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "blue",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "black",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "grey",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "can-open",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "can-connector",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "red-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "orange-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "black-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "grey-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "blue-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "yellow",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "yellow-1",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  }
+ ]
 }

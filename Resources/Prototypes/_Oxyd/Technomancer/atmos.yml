@@ -56,7 +56,13 @@
   components:
   - type: Sprite
     sprite: _Oxyd/Technomancer/monitors.rsi
-    state: alarm0
+    layers:
+    - state: alarm0
+    - state: alarm0
+      shader: unshaded
+      map: ["airAlarmState"]
+    - state: alarm_build2
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
   - type: UserInterface
     interfaces:
       enum.SharedAirAlarmInterfaceKey.Key:

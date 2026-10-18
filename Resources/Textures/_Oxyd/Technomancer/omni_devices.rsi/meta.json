@@ -1,286 +1,320 @@
 {
-  "version": 1,
-  "license": "CC-BY-SA-3.0",
-  "copyright": "CEV Eris",
-  "size": {
-    "x": 32,
-    "y": 32
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 32,
+  "y": 32
+ },
+ "states": [
+  {
+   "name": "base",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
   },
-  "states": [
-    {
-      "name": "base",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "mixer",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "mixer_glow",
-      "delays": [
-        [
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "south_in",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "west_in",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "east_in",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "north_in",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "east_out",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "north_out",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "south_out",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "west_out",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "east_in_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "west_in_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "north_in_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "south_in_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "east_out_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "west_out_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "north_out_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "south_out_glow",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "north_filter",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "south_filter",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "east_filter",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "west_filter",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "filter",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "filter_glow",
-      "delays": [
-        [
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "error",
-      "delays": [
-        [
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "map_mixer",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "map_filter",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    }
-  ]
+  {
+   "name": "mixer",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "mixer_glow",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "south_in",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "west_in",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "east_in",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "north_in",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "east_out",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "north_out",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "south_out",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "west_out",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "east_in_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "west_in_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "north_in_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "south_in_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "east_out_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "west_out_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "north_out_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "south_out_glow",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "north_filter",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "south_filter",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "east_filter",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "west_filter",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "filter",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "filter_glow",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "error",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "map_mixer",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "map_filter",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "gasFilter",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "gasFilterOn",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "gasMixer",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "gasMixerOn",
+   "delays": [
+    [
+     0.2,
+     0.2
+    ]
+   ]
+  }
+ ]
 }

@@ -1,113 +1,113 @@
 {
-  "version": 1,
-  "license": "CC-BY-SA-3.0",
-  "copyright": "CEV Eris",
-  "size": {
-    "x": 32,
-    "y": 32
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 32,
+  "y": 32
+ },
+ "states": [
+  {
+   "name": "nanoforge",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
   },
-  "states": [
-    {
-      "name": "nanoforge",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_work",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_pause",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_finish",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_load",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_load_m",
-      "delays": [
-        [
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2,
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "nanoforge_panel",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    }
-  ]
+  {
+   "name": "nanoforge_work",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "nanoforge_pause",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "nanoforge_finish",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "nanoforge_load",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "nanoforge_load_m",
+   "delays": [
+    [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "nanoforge_panel",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  }
+ ]
 }

@@ -1,140 +1,102 @@
 {
-  "version": 1,
-  "license": "CC-BY-SA-3.0",
-  "copyright": "CEV Eris",
-  "size": {
-    "x": 48,
-    "y": 64
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 48,
+  "y": 64
+ },
+ "states": [
+  {
+   "name": "bridge",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
   },
-  "states": [
-    {
-      "name": "bridge",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "bridge_broken",
-      "delays": [
-        [
-          0.2
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on1",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on2",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on3",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on4",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on5",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on6",
-      "delays": [
-        [
-          0.15
-        ],
-        [
-          0.15
-        ],
-        [
-          0.15
-        ]
-      ]
-    },
-    {
-      "name": "bridge_on_crit",
-      "delays": [
-        [
-          0.4
-        ],
-        [
-          0.1
-        ],
-        [
-          0.1
-        ],
-        [
-          0.15
-        ],
-        [
-          0.4
-        ],
-        [
-          0.1
-        ],
-        [
-          0.1
-        ],
-        [
-          0.15
-        ]
-      ]
-    }
-  ]
+  {
+   "name": "bridge_broken",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on1",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on2",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on3",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on4",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on5",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on6",
+   "delays": [
+    [
+     0.15,
+     0.15,
+     0.15
+    ]
+   ]
+  },
+  {
+   "name": "bridge_on_crit",
+   "delays": [
+    [
+     0.4,
+     0.4,
+     0.4,
+     0.4,
+     0.4,
+     0.4,
+     0.4,
+     0.4
+    ]
+   ]
+  }
+ ]
 }
