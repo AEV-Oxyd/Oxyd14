@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared._Oxyd.Economy;
+using Content.Shared.GameTicking;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
@@ -38,6 +39,19 @@ public sealed partial class OxydTradeSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
+        _nextRestock = _timing.CurTime + TimeSpan.FromMinutes(6);
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+    }
+
+    private void OnRoundCleanup(RoundRestartCleanupEvent ev)
+    {
+        _stations.Clear();
+        _orders.Clear();
+        _logs.Clear();
+        _carts.Clear();
+        _nextOrderId = 1;
+        _nextLogId = 1;
+        _seeded = false;
         _nextRestock = _timing.CurTime + TimeSpan.FromMinutes(6);
     }
 
@@ -239,13 +253,19 @@ public sealed partial class OxydTradeSystem : EntitySystem
         return true;
     }
 
-    public bool TryCancelOrder(string orderId, [NotNullWhen(false)] out string? error)
+    public bool TryCancelOrder(string orderId, int? actorAccount, [NotNullWhen(false)] out string? error)
     {
         error = null;
         var order = _orders.FirstOrDefault(o => o.OrderId == orderId);
         if (order == null)
         {
             error = "Unknown order";
+            return false;
+        }
+
+        if (actorAccount != null && order.RequestingAccount != actorAccount.Value)
+        {
+            error = "Not your order";
             return false;
         }
 
@@ -259,8 +279,10 @@ public sealed partial class OxydTradeSystem : EntitySystem
         return true;
     }
 
-    /// <summary>Purchase an order at a receiving beacon — debit requester (or Guild), spawn goods.</summary>
-    public bool TryFulfillOrder(string orderId, EntityCoordinates dropAt, [NotNullWhen(false)] out string? error)
+    /// <summary>Purchase an order at a receiving beacon — debit requester (or Guild), spawn goods.
+    /// fulfillerAccounts: the fulfiller's personal/department accounts — one must be the
+    /// requester or the Guild, otherwise anyone could deliver someone else's order.</summary>
+    public bool TryFulfillOrder(string orderId, EntityCoordinates dropAt, int[]? fulfillerAccounts, [NotNullWhen(false)] out string? error)
     {
         error = null;
         EnsureSeeded();
@@ -283,6 +305,14 @@ public sealed partial class OxydTradeSystem : EntitySystem
         if (guild == null)
         {
             error = "Guild account missing";
+            return false;
+        }
+
+        // Ownership: only the requester themselves or the Guild can pick the order up.
+        if (fulfillerAccounts == null ||
+            !fulfillerAccounts.Any(a => a == order.RequestingAccount || a == guild.AccountNumber))
+        {
+            error = "Not authorized to fulfill this order";
             return false;
         }
 
@@ -309,7 +339,17 @@ public sealed partial class OxydTradeSystem : EntitySystem
         }
         else
         {
-            if (!_economy.TryTransfer(order.RequestingAccount, guild.AccountNumber, total, $"Trade order {order.OrderId}", "TradeBeacon", out error))
+            // Fee is the Guild's cut; the goods cost goes to the station (Cargo)
+            // rather than also being pocketed by the Guild.
+            var costDest = _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo) ?? guild;
+            if (order.Fee > 0 &&
+                !_economy.TryTransfer(order.RequestingAccount, guild.AccountNumber, order.Fee, $"Trade order fee {order.OrderId}", "TradeBeacon", out error))
+            {
+                error ??= "Payment failed";
+                return false;
+            }
+
+            if (!_economy.TryTransfer(order.RequestingAccount, costDest.AccountNumber, order.Cost, $"Trade order {order.OrderId}", "TradeBeacon", out error))
             {
                 error ??= "Payment failed";
                 return false;

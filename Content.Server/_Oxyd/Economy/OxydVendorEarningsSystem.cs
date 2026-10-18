@@ -1,10 +1,13 @@
 using Content.Shared._Oxyd.Economy;
+using Content.Shared.Access.Systems;
+using Content.Shared.Emag.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Inventory;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
 using Content.Shared.Stacks;
 using Content.Shared.VendingMachines;
+using Content.Shared.VendingMachines.Components;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.Economy;
@@ -21,6 +24,7 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
     [Dependency] private readonly SharedStackSystem _stacks = default!;
     [Dependency] private readonly InventorySystem _inventory = default!;
     [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private readonly AccessReaderSystem _accessReader = default!;
 
     public override void Initialize()
     {
@@ -43,6 +47,11 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
             return;
         }
 
+        // Only charge when the vend will actually happen — access, stock and the
+        // in-progress check all live after this attempt event, so repeat them here.
+        if (!VendWillSucceed(ent, args))
+            return;
+
         if (!TryChargeBuyer(args.User, price, out var err))
         {
             if (!ent.Comp.RequirePayment)
@@ -56,6 +65,29 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
 
         _economy.TryAdjust(dest, price, $"Vendor sale {args.ItemId}", "Vending");
         _popup.PopupEntity($"Charged {price}cr.", ent, args.User);
+    }
+
+    /// <summary>Mirror of AuthorizedVend's gates: in-stock entry, not already
+    /// ejecting, unbroken, and the user is allowed through the access reader.</summary>
+    private bool VendWillSucceed(Entity<OxydVendorEarningsComponent> ent, in VendingMachineEjectAttemptEvent args)
+    {
+        if (!TryComp<VendingMachineComponent>(ent, out var vend) || vend.Broken)
+            return false;
+
+        if (TryComp<VendingMachineEjectComponent>(ent, out var eject) && eject.Ejecting)
+            return false;
+
+        Dictionary<string, VendingMachineInventoryEntry>? inv = args.Type switch
+        {
+            InventoryType.Emagged => HasComp<EmaggedComponent>(ent) ? vend.EmaggedInventory : null,
+            InventoryType.Contraband => vend.Contraband ? vend.ContrabandInventory : null,
+            _ => vend.Inventory,
+        };
+
+        if (inv == null || !inv.TryGetValue(args.ItemId, out var entry) || entry.Amount <= 0)
+            return false;
+
+        return _accessReader.IsAllowed(args.User, ent.Owner);
     }
 
     private int ResolveDest(OxydVendorEarningsComponent comp)

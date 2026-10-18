@@ -97,7 +97,7 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
             return;
         }
 
-        if (!_trade.TryFulfillOrder(args.OrderId, Transform(ent).Coordinates, out var err))
+        if (!_trade.TryFulfillOrder(args.OrderId, Transform(ent).Coordinates, FulfillerAccounts(args.Actor), out var err))
         {
             PushReceiving(ent, error: err);
             return;
@@ -148,6 +148,24 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
             Error = error,
             Status = status ?? (ready ? "Ready to export offers" : "Cooling down"),
         });
+    }
+
+    /// <summary>Every account the fulfiller controls — personal plus department —
+    /// so the trade system can check order ownership before delivering.</summary>
+    private int[]? FulfillerAccounts(EntityUid actor)
+    {
+        var accounts = new List<int>();
+        if (TryComp<OxydPersonalAccountComponent>(actor, out var personal))
+        {
+            accounts.Add(personal.AccountNumber);
+            if (personal.DepartmentAccountNumber is { } dept)
+                accounts.Add(dept);
+        }
+
+        if (accounts.Count == 0 && TryComp<OxydBankIdComponent>(actor, out var bankId))
+            accounts.Add(bankId.AccountNumber);
+
+        return accounts.Count == 0 ? null : accounts.ToArray();
     }
 
     private void PushReceiving(Entity<OxydTradeBeaconReceivingComponent> ent, string? error = null, string? status = null)

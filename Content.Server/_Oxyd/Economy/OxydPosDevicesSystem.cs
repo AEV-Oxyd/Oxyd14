@@ -203,21 +203,34 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
                 return;
             }
 
+            if (!_economy.TryAdjust(dest, ent.Comp.Charge, "EFTPOS charge", "EFTPOS"))
+            {
+                _popup.PopupEntity("Charge failed — linked account unavailable.", ent, args.User);
+                return;
+            }
+
             if (stack.Count == ent.Comp.Charge)
                 QueueDel(args.Used);
             else
                 _stacks.SetCount(args.Used, stack.Count - ent.Comp.Charge);
 
-            _economy.TryAdjust(dest, ent.Comp.Charge, "EFTPOS charge", "EFTPOS");
             _popup.PopupEntity($"Charged {ent.Comp.Charge}cr.", ent, args.User);
             ClearCharge(ent);
             args.Handled = true;
             return;
         }
 
-        // Pay with ID-linked personal account (card or PDA)
-        if (TryGetAccountFromItem(args.Used, out var payer) || TryGetAccountFromItem(args.User, out payer))
+        // Pay with ID-linked personal account (card or PDA). The swiped card must
+        // be the swiper's own — a stolen ID alone is not enough to move money, and
+        // a non-ID item no longer silently charges the swiper's worn card.
+        if (TryGetAccountFromItem(args.Used, out var payer))
         {
+            if (!TryGetAccountFromItem(args.User, out var holder) || holder != payer)
+            {
+                _popup.PopupEntity("Swipe your own ID to pay.", ent, args.User);
+                return;
+            }
+
             if (!_economy.TryTransfer(payer, dest, ent.Comp.Charge, "EFTPOS charge", "EFTPOS", out var err))
             {
                 _popup.PopupEntity(err ?? "Charge failed.", ent, args.User);

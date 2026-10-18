@@ -1,7 +1,9 @@
 using System.Linq;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Access.Components;
+using Content.Server.Chat.Managers;
 using Content.Shared.Chat;
+using Robust.Shared.Player;
 using Content.Shared.PDA;
 using Content.Shared.Roles;
 
@@ -9,6 +11,8 @@ namespace Content.Server._Oxyd.Economy;
 
 public sealed partial class OxydEconomySystem
 {
+    [Dependency] private readonly IChatManager _chatManager = default!;
+
     public void SetupAccountForJob(EntityUid mob, JobPrototype job)
     {
         if (HasComp<OxydPersonalAccountComponent>(mob))
@@ -73,7 +77,12 @@ public sealed partial class OxydEconomySystem
         if (personal.DepartmentAccountNumber is { } d)
             msg += $" | Dept #{d} PIN {personal.DepartmentPin}";
 
-        _chat.TrySendInGameICMessage(mob, msg, InGameICChatType.Emote, hideChat: true);
+        // Private channel — an IC emote still shows the PIN as a speech bubble to
+        // nearby players even with hideChat.
+        if (TryComp<ActorComponent>(mob, out var actorComp))
+            _chatManager.ChatMessageToOne(ChatChannel.Server, msg, msg, mob, false, actorComp.PlayerSession.Channel);
+        else
+            _chat.TrySendInGameICMessage(mob, msg, InGameICChatType.Emote, hideChat: true);
     }
 
     private int ComputeSpawnBalance(int wage, int initialBalance)

@@ -30,16 +30,33 @@ public sealed partial class OxydAtmSystem : EntitySystem
         SubscribeLocalEvent<OxydAtmComponent, OxydAtmWithdrawMessage>(OnWithdraw);
         SubscribeLocalEvent<OxydAtmComponent, OxydAtmTransferMessage>(OnTransfer);
         SubscribeLocalEvent<OxydAtmComponent, InteractUsingEvent>(OnInteractUsing);
+        SubscribeLocalEvent<OxydAtmComponent, BoundUIClosedEvent>(OnClosed);
+    }
+
+    private void OnClosed(Entity<OxydAtmComponent> ent, ref BoundUIClosedEvent args)
+    {
+        // Log the owner out when their UI session closes — the ATM never stays
+        // logged in for the next person.
+        var closer = args.Actor;
+        if (ent.Comp.SessionAccount != null &&
+            (ent.Comp.SessionUser == null || closer == null || closer == ent.Comp.SessionUser))
+        {
+            ent.Comp.SessionAccount = null;
+            ent.Comp.SessionUser = null;
+            Dirty(ent);
+            PushState(ent);
+        }
     }
 
     private void OnOpened(Entity<OxydAtmComponent> ent, ref BoundUIOpenedEvent args)
     {
-        // Auto-login from ID if present on the user.
-        if (ent.Comp.SessionAccount == null &&
-            TryFindBankId(args.Actor, out var acct) &&
-            _economy.TryGetAccount(acct, out _))
+        // A leftover session belongs to its owner only — anyone else opening
+        // the ATM sees a fresh logged-out state and cannot touch the account.
+        if (ent.Comp.SessionAccount != null && ent.Comp.SessionUser != args.Actor)
         {
-            // Still require PIN for security level >= 1 — leave logged out until PIN.
+            ent.Comp.SessionAccount = null;
+            ent.Comp.SessionUser = null;
+            Dirty(ent);
         }
 
         PushState(ent);
@@ -47,7 +64,7 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
     private void OnLogin(Entity<OxydAtmComponent> ent, ref OxydAtmLoginMessage args)
     {
-        if (!TryLogin(ent, args.AccountNumber, args.Pin, out var err))
+        if (!TryLogin(ent, args.AccountNumber, args.Pin, args.Actor, out var err))
             PushState(ent, err ?? "Login failed");
     }
 
@@ -64,12 +81,12 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
     private void OnTransfer(Entity<OxydAtmComponent> ent, ref OxydAtmTransferMessage args)
     {
-        if (!TryTransfer(ent, args.TargetAccount, args.Amount, out var err))
+        if (!TryTransfer(ent, args.TargetAccount, args.Amount, args.Actor, out var err))
             PushState(ent, err ?? "Transfer failed");
     }
 
     /// <summary>Toolshed-friendly ATM login (avoids BUI LineEdit).</summary>
-    public bool TryLogin(Entity<OxydAtmComponent> ent, int accountNumber, int pin, out string? error)
+    public bool TryLogin(Entity<OxydAtmComponent> ent, int accountNumber, int pin, EntityUid? actor, out string? error)
     {
         error = null;
         if (!_economy.TryLogin(accountNumber, pin, out _, "ATM"))
@@ -80,6 +97,7 @@ public sealed partial class OxydAtmSystem : EntitySystem
         }
 
         ent.Comp.SessionAccount = accountNumber;
+        ent.Comp.SessionUser = actor;
         Dirty(ent);
         PushState(ent);
         return true;
@@ -88,16 +106,34 @@ public sealed partial class OxydAtmSystem : EntitySystem
     public void TryLogout(Entity<OxydAtmComponent> ent)
     {
         ent.Comp.SessionAccount = null;
+        ent.Comp.SessionUser = null;
         Dirty(ent);
         PushState(ent);
+    }
+
+    /// <summary>Reject actions from anyone but the player who logged in.</summary>
+    private bool SessionOwned(Entity<OxydAtmComponent> ent, EntityUid actor, out string? error)
+    {
+        error = null;
+        if (ent.Comp.SessionAccount is { } && ent.Comp.SessionUser == actor)
+            return true;
+
+        ent.Comp.SessionAccount = null;
+        ent.Comp.SessionUser = null;
+        Dirty(ent);
+        error = "Session expired — log in again.";
+        PushState(ent, error);
+        return false;
     }
 
     public bool TryWithdraw(Entity<OxydAtmComponent> ent, int amount, EntityUid actor, out string? error)
     {
         error = null;
-        if (ent.Comp.SessionAccount is not { } acct || amount <= 0)
+        if (!SessionOwned(ent, actor, out error) ||
+            ent.Comp.SessionAccount is not { } acct ||
+            amount <= 0)
         {
-            error = "Not logged in";
+            error ??= "Not logged in";
             PushState(ent, error);
             return false;
         }
@@ -115,12 +151,13 @@ public sealed partial class OxydAtmSystem : EntitySystem
         return true;
     }
 
-    public bool TryTransfer(Entity<OxydAtmComponent> ent, int targetAccount, int amount, out string? error)
+    public bool TryTransfer(Entity<OxydAtmComponent> ent, int targetAccount, int amount, EntityUid actor, out string? error)
     {
         error = null;
-        if (ent.Comp.SessionAccount is not { } from)
+        if (!SessionOwned(ent, actor, out error) ||
+            ent.Comp.SessionAccount is not { } from)
         {
-            error = "Not logged in";
+            error ??= "Not logged in";
             PushState(ent, error);
             return false;
         }
@@ -173,8 +210,13 @@ public sealed partial class OxydAtmSystem : EntitySystem
         }
 
         var value = stack.Count;
+        if (!_economy.TryAdjust(acct, value, "ATM deposit", "ATM"))
+        {
+            _popup.PopupEntity("Deposit failed — account unavailable.", ent, args.User);
+            return;
+        }
+
         QueueDel(args.Used);
-        _economy.TryAdjust(acct, value, "ATM deposit", "ATM");
         _popup.PopupEntity($"Deposited {value}cr.", ent, args.User);
         PushState(ent);
         args.Handled = true;

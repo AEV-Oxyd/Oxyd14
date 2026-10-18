@@ -173,7 +173,7 @@ public sealed partial class EconomyDebugCommand
         var atm = Comp<OxydAtmComponent>(atmUid);
         var atmSys = GetSys<OxydAtmSystem>();
         run.Check("atm.spawn", HasComp<OxydAtmComponent>(atmUid), EntityManager.ToPrettyString(atmUid));
-        run.Check("atm.login", atmSys.TryLogin((atmUid, atm), acct.AccountNumber, acct.Pin, out var err), err);
+        run.Check("atm.login", atmSys.TryLogin((atmUid, atm), acct.AccountNumber, acct.Pin, actor, out var err), err);
         var balBefore = acct.Balance;
         run.Check("atm.withdraw", atmSys.TryWithdraw((atmUid, atm), 100, actor, out err), err);
         run.Check("atm.withdraw-bal", acct.Balance == balBefore - 100, $"bal={acct.Balance}");
@@ -181,7 +181,7 @@ public sealed partial class EconomyDebugCommand
         run.Check("atm.deposit-bal", acct.Balance == balBefore - 60, $"bal={acct.Balance}");
 
         var dest = eco.CreateAccount("QaDest", "QaDest", 0, OxydEconomyConstants.EmployerService, 0);
-        run.Check("atm.transfer", atmSys.TryTransfer((atmUid, atm), dest.AccountNumber, 50, out err), err);
+        run.Check("atm.transfer", atmSys.TryTransfer((atmUid, atm), dest.AccountNumber, 50, actor, out err), err);
 
         var service = eco.FindDepartmentAccount(OxydEconomyConstants.EmployerService)
                       ?? eco.CreateAccount("Service Department", "Service", 1000,
@@ -337,7 +337,7 @@ public sealed partial class EconomyDebugCommand
         {
             var before = guild.Balance;
             run.Check("trade.fulfill",
-                trade.TryFulfillOrder(order.OrderId, coords, out err) && order.Fulfilled,
+                trade.TryFulfillOrder(order.OrderId, coords, new[] { order.RequestingAccount }, out err) && order.Fulfilled,
                 err);
             run.Check("trade.fulfill-debit",
                 guild.Balance == before - order.Cost,

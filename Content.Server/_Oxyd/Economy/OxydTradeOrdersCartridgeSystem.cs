@@ -89,13 +89,19 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
                     error ??= "Order failed";
                 break;
             case OxydTradeUiAction.CancelOrder:
-                if (!_trade.TryCancelOrder(msg.OrderId ?? string.Empty, out error))
+                if (!RequireSession(loader, out var cancelAcct))
+                {
+                    error = "Not logged in";
+                    break;
+                }
+
+                if (!_trade.TryCancelOrder(msg.OrderId ?? string.Empty, cancelAcct, out error))
                     error ??= "Cancel failed";
                 else
                     status = "Order cancelled";
                 break;
             case OxydTradeUiAction.FulfillOrder:
-                if (!RequireSession(loader, out _))
+                if (!RequireSession(loader, out var fulfillAcct))
                 {
                     error = "Not logged in";
                     break;
@@ -107,7 +113,7 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
                     break;
                 }
 
-                if (_trade.TryFulfillOrder(msg.OrderId ?? string.Empty, dropAt, out error))
+                if (_trade.TryFulfillOrder(msg.OrderId ?? string.Empty, dropAt, new[] { fulfillAcct }, out error))
                     status = $"Fulfilled at {ToPrettyString(recv)}";
                 else
                     error ??= "Fulfill failed";

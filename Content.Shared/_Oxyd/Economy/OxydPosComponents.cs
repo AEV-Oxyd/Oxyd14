@@ -11,6 +11,9 @@ public sealed partial class OxydAtmComponent : Component
 {
     [DataField, AutoNetworkedField]
     public int? SessionAccount;
+
+    /// <summary>The player who logged in — only they may transact; cleared on UI close.</summary>
+    public EntityUid? SessionUser;
 }
 
 /// <summary>Eris Accounts uplink terminal (HoP) — list/create/suspend/adjust.</summary>

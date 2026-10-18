@@ -4,6 +4,8 @@ using EconomyBeaconRecv = Content.Shared._Oxyd.Economy.OxydTradeBeaconReceivingC
 using EconomyBeaconSend = Content.Shared._Oxyd.Economy.OxydTradeBeaconSendingComponent;
 using Content.Shared.Storage.Components;
 using Robust.Server.GameObjects;
+using Content.Server._Oxyd.Economy;
+using Content.Shared.GameTicking;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -25,6 +27,7 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
 {
     [Dependency] private UserInterfaceSystem _ui = default!;
     [Dependency] private OxydBankSystem _bank = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
     [Dependency] private SharedContainerSystem _container = default!;
 
     /// <summary>One sellable good (Eris goods_for_sale row).</summary>
@@ -58,6 +61,7 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         public string Name = string.Empty;
         public int Price;
         public int Amount;
+        public int AmountOriginal;
         public float SecondsLeft;
     }
 
@@ -95,6 +99,25 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeCompleteRequestMessage>(OnCompleteRequest);
         SubscribeLocalEvent<OxydTradeConsoleComponent, ComponentStartup>((u, c, _) => PushState(u, c));
         SubscribeLocalEvent<OxydTradeConsoleComponent, BoundUIOpenedEvent>((u, c, _) => PushState(u, c));
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+    }
+
+    private void OnRoundCleanup(RoundRestartCleanupEvent ev)
+    {
+        _stations.Clear();
+        _offers.Clear();
+        _requests.Clear();
+        _nextRequestId = 0;
+        SeedStations();
+        SeedOffers();
+    }
+
+    /// <summary>The unified Guild department account in OxydEconomy — the same one
+    /// ATMs, EFTPOS and trade beacons move money through.</summary>
+    private Content.Shared._Oxyd.Economy.OxydMoneyAccountData? GuildAccount()
+    {
+        _economy.EnsureDepartmentsForRound();
+        return _economy.FindDepartmentAccount(Content.Shared._Oxyd.Economy.OxydEconomyConstants.EmployerGuild);
     }
 
     /// <summary>Eris station catalog — modeled on TradeDestinations/Solnishko goods data.</summary>
@@ -151,10 +174,10 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
     /// <summary>Eris special offers — stations request goods at a markup for favor.</summary>
     private void SeedOffers()
     {
-        _offers.Add(new Offer { Id = 0, Station = "Zarya", Want = "Crowbar", Name = "crowbar", Price = 2800, Amount = 5, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 1, Station = "Zarya", Want = "Screwdriver", Name = "screwdriver", Price = 2800, Amount = 4, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 2, Station = "Zarya", Want = "Shovel", Name = "shovel", Price = 2800, Amount = 4, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 3, Station = "Solnishko", Want = "PowerCellSmall", Name = "cell 100S", Price = 5600, Amount = 10, SecondsLeft = 300 });
+        _offers.Add(new Offer { Id = 0, Station = "Zarya", Want = "Crowbar", Name = "crowbar", Price = 2800, Amount = 5, AmountOriginal = 5, SecondsLeft = 300 });
+        _offers.Add(new Offer { Id = 1, Station = "Zarya", Want = "Screwdriver", Name = "screwdriver", Price = 2800, Amount = 4, AmountOriginal = 4, SecondsLeft = 300 });
+        _offers.Add(new Offer { Id = 2, Station = "Zarya", Want = "Shovel", Name = "shovel", Price = 2800, Amount = 4, AmountOriginal = 4, SecondsLeft = 300 });
+        _offers.Add(new Offer { Id = 3, Station = "Solnishko", Want = "PowerCellSmall", Name = "cell 100S", Price = 5600, Amount = 10, AmountOriginal = 10, SecondsLeft = 300 });
     }
 
     public override void Update(float frameTime)
@@ -190,7 +213,7 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         BeaconCheck(out var recv, out var send);
         var s = new OxydTradeState
         {
-            Balance = _bank.Balance(),
+            Balance = GuildAccount()?.Balance ?? 0,
             ReceivingBeacon = recv,
             SendingBeacon = send,
             SelectedStation = comp.SelectedStation,
@@ -301,12 +324,26 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
     /// balance decrements, log line written.</summary>
     private void OnCreateOrder(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeCreateOrderMessage _)
     {
+        // Crew request consoles only file requests — they can't spend the guild balance.
+        if (comp.RequestConsole) return;
         if (comp.SelectedStation < 0 || comp.Cart.Count == 0) return;
         var st = _stations[comp.SelectedStation];
+
+        // Charge only what can actually be delivered — stock is shared across
+        // consoles, so anything short would otherwise vanish with no refund.
+        var takes = new Dictionary<int, int>();
         var total = 0;
         foreach (var (id, n) in comp.Cart)
-            if (id >= 0 && id < st.Goods.Count) total += n * st.Goods[id].Price;
-        if (!_bank.TrySpend(total))
+        {
+            if (id < 0 || id >= st.Goods.Count) continue;
+            var take = Math.Min(n, st.Goods[id].Stock);
+            takes[id] = take;
+            total += take * st.Goods[id].Price;
+        }
+        if (total <= 0)
+            return;
+        var guild = GuildAccount();
+        if (guild == null || !_economy.TryAdjust(guild.AccountNumber, -total, $"Trade order {st.Nick}", "TradeConsole"))
             return;
 
         EntityUid? beacon = null;
@@ -322,9 +359,8 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         var delivered = new List<string>();
         foreach (var (id, n) in comp.Cart)
         {
-            if (id < 0 || id >= st.Goods.Count) continue;
+            if (!takes.TryGetValue(id, out var take) || id < 0 || id >= st.Goods.Count) continue;
             var g = st.Goods[id];
-            var take = Math.Min(n, g.Stock);
             g.Stock -= take;
             for (var i = 0; i < take; i++)
             {
@@ -364,8 +400,13 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         if (consumed <= 0) return;
         foreach (var e in found) Del(e);
         o.Amount -= consumed;
-        var gained = o.Price;
-        _bank.Credit(gained);
+        // Pay pro-rata for partial deliveries — full price only on a full fill.
+        var gained = o.AmountOriginal > 0
+            ? (int)MathF.Floor(o.Price * consumed / (float)o.AmountOriginal)
+            : 0;
+        var guild = GuildAccount();
+        if (guild != null && gained > 0)
+            _economy.TryAdjust(guild.AccountNumber, gained, $"Trade offer {o.Station}", "TradeConsole");
         var st = _stations.Find(s => s.Nick == o.Station);
         if (st != null) st.Favor = Math.Min(st.Favor + consumed, st.FavorMax);
         comp.Log.Add($"[Offer] {o.Station}: {o.Name} x{consumed} — +{gained}cr, favor +{consumed}");

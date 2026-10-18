@@ -7,6 +7,7 @@ using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Cargo.Components;
 using Content.Shared.Cargo.Prototypes;
+using Content.Shared.GameTicking;
 using Content.Shared.Inventory;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -30,6 +31,8 @@ public sealed partial class OxydEconomySystem : EntitySystem
     [Dependency] private readonly ChatSystem _chat = default!;
 
     private readonly Dictionary<int, OxydMoneyAccountData> _accounts = new();
+    /// <summary>Balance last pushed to StationBankAccount per account — sync applies the delta only.</summary>
+    private readonly Dictionary<int, int> _cargoSyncedBalance = new();
     private int _nextAccountNumber = 111111;
     private TimeSpan _nextPayday;
     private bool _departmentsReady;
@@ -41,6 +44,16 @@ public sealed partial class OxydEconomySystem : EntitySystem
         base.Initialize();
         _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
         SubscribeLocalEvent<JobAfterSpawnEvent>(OnJobAfterSpawn);
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+    }
+
+    private void OnRoundCleanup(RoundRestartCleanupEvent ev)
+    {
+        _accounts.Clear();
+        _cargoSyncedBalance.Clear();
+        _nextAccountNumber = 111111;
+        _departmentsReady = false;
+        _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
     }
 
     public override void Update(float frameTime)
@@ -76,6 +89,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
             if (existing != null)
             {
                 existing.Balance = balance;
+                _cargoSyncedBalance[existing.AccountNumber] = balance;
                 continue;
             }
 
@@ -98,6 +112,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
                 isDepartment: true,
                 departmentId: deptId,
                 canMakeAccounts: canMake);
+            _cargoSyncedBalance[_accounts.Values.Last().AccountNumber] = balance;
         }
 
         _departmentsReady = true;
@@ -332,16 +347,23 @@ public sealed partial class OxydEconomySystem : EntitySystem
 
     public TimeSpan NextPayday => _nextPayday;
 
+    /// <summary>Push only the change since the last sync — cargo's own income/spend
+    /// between syncs is preserved instead of being overwritten by our cached balance.</summary>
     private void SyncDepartmentToCargo(OxydMoneyAccountData acc)
     {
         if (!acc.IsDepartment || acc.DepartmentId == null)
             return;
 
         var station = _station.GetStations().FirstOrNull();
-        if (station == null)
+        if (station == null || !TryComp<StationBankAccountComponent>(station.Value, out var bank))
             return;
 
-        _cargo.TrySetBankAccount(station.Value, (ProtoId<CargoAccountPrototype>)acc.DepartmentId, acc.Balance, true);
+        var delta = acc.Balance - _cargoSyncedBalance.GetValueOrDefault(acc.AccountNumber);
+        if (delta == 0)
+            return;
+
+        _cargo.UpdateBankAccount((station.Value, bank), delta, (ProtoId<CargoAccountPrototype>)acc.DepartmentId, true);
+        _cargoSyncedBalance[acc.AccountNumber] = acc.Balance;
     }
 
     private void PullDepartmentFromCargo(OxydMoneyAccountData acc)
@@ -354,7 +376,10 @@ public sealed partial class OxydEconomySystem : EntitySystem
             return;
 
         if (_cargo.TryGetAccount(station.Value, acc.DepartmentId, out var bal))
+        {
             acc.Balance = bal;
+            _cargoSyncedBalance[acc.AccountNumber] = bal;
+        }
     }
 
     private void LogTransaction(OxydMoneyAccountData acc, string purpose, int amount, string terminal)

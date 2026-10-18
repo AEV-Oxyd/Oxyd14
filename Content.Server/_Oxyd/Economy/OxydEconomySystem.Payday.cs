@@ -6,6 +6,14 @@ namespace Content.Server._Oxyd.Economy;
 
 public sealed partial class OxydEconomySystem
 {
+    /// <summary>Employer names allowed to mint payday money without a department
+    /// account (Eris external benefactors). Any other missing employer just doesn't pay.</summary>
+    private static readonly HashSet<string> ExternalBenefactors = new()
+    {
+        "Moebius",
+        "Church",
+    };
+
     public void RunPayday()
     {
         EnsureDepartmentsForRound();
@@ -71,10 +79,14 @@ public sealed partial class OxydEconomySystem
         if (recipient.Employer == null)
             return false;
 
-        // External benefactor strings (Moebius / Church) mint money.
+        // External benefactor strings (Moebius / Church) mint money — anything
+        // else with no real department account doesn't pay, it only accrues debt.
         var funder = FindDepartmentAccount(recipient.Employer);
         if (funder == null)
         {
+            if (!ExternalBenefactors.Contains(recipient.Employer))
+                return false;
+
             recipient.Balance += amount;
             LogTransaction(recipient, purpose + " (external)", amount, "OxydPayday");
             return true;

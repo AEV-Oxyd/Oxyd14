@@ -1,7 +1,10 @@
 using System.Linq;
 using Content.Shared._Oxyd.Economy;
+using Content.Shared.Cargo.Prototypes;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.CartridgeLoader.Cartridges;
+using Content.Shared.GameTicking;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.Economy;
 
@@ -10,6 +13,7 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
 {
     [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
     [Dependency] private readonly OxydEconomySystem _economy = default!;
+    [Dependency] private readonly IPrototypeManager _protos = default!;
 
     // Session keyed by loader uid
     private readonly Dictionary<EntityUid, int> _sessions = new();
@@ -20,7 +24,10 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeMessageEvent>(OnMessage);
         SubscribeLocalEvent<TaxQuicklyCartridgeComponent, ComponentShutdown>(OnShutdown);
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
     }
+
+    private void OnRoundCleanup(RoundRestartCleanupEvent ev) => _sessions.Clear();
 
     private void OnShutdown(Entity<TaxQuicklyCartridgeComponent> ent, ref ComponentShutdown args)
     {
@@ -88,6 +95,12 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     break;
                 }
 
+                if (employee.IsDepartment)
+                {
+                    error = "Cannot employ a department";
+                    break;
+                }
+
                 employee.Employer = deptAcc.DepartmentId;
                 break;
             case TaxQuicklyUiAction.SetWage:
@@ -103,18 +116,30 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     break;
                 }
 
-                emp2.Wage = msg.Amount;
+                if (emp2.Employer != d2.DepartmentId)
+                {
+                    error = "Not your employee";
+                    break;
+                }
+
+                emp2.Wage = Math.Clamp(msg.Amount, 0, OxydEconomyConstants.WageCommand);
                 emp2.WageManual = true;
                 break;
             case TaxQuicklyUiAction.DisavowEmployee:
-                if (!RequireSession(loader, out _))
+                if (!RequireSession(loader, out var dept3) || !_economy.TryGetAccount(dept3, out var d3) || !d3.IsDepartment)
                 {
-                    error = "Not logged in";
+                    error = "Department login required";
                     break;
                 }
 
                 if (_economy.TryGetAccount(msg.TargetAccount, out var emp3))
                 {
+                    if (emp3.Employer != d3.DepartmentId)
+                    {
+                        error = "Not your employee";
+                        break;
+                    }
+
                     emp3.Employer = null;
                     emp3.Wage = 0;
                     emp3.Debt = 0;
@@ -149,7 +174,23 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     break;
                 }
 
-                var deptName = msg.Text ?? "NewDept";
+                var deptName = (msg.Text ?? string.Empty).Trim();
+                // The id flows into StationBankAccount.Accounts as a CargoAccountPrototype
+                // key — free text crashes every cargo console's prototype lookup, and an
+                // existing id creates a shadow department.
+                if (deptName.Length == 0 || deptName.Length > 32 ||
+                    !_protos.TryIndex<CargoAccountPrototype>(deptName, out _))
+                {
+                    error = "Unknown department id";
+                    break;
+                }
+
+                if (_economy.FindDepartmentAccount(deptName) != null)
+                {
+                    error = "Department already exists";
+                    break;
+                }
+
                 var dCreated = _economy.CreateAccount(deptName, deptName, 0, m2.DepartmentId, 0, isDepartment: true, departmentId: deptName, canMakeAccounts: true);
                 error = $"Created dept acct={dCreated.AccountNumber} pin={dCreated.Pin}";
                 break;

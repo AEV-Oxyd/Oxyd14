@@ -464,7 +464,7 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
                     return;
                 }
 
-                if (!trade.TryFulfillOrder(order.OrderId, Transform(uid).Coordinates, out err))
+                if (!trade.TryFulfillOrder(order.OrderId, Transform(uid).Coordinates, new[] { order.RequestingAccount }, out err))
                 {
                     ctx.WriteLine($"buy fulfill failed: {err}");
                     return;
