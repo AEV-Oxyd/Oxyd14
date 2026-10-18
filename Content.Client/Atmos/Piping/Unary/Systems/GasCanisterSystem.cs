@@ -23,7 +23,8 @@ public sealed partial class GasCanisterSystem : SharedGasCanisterSystem
 
     private void OnGasState(Entity<GasCanisterComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        if (UI.TryGetOpenUi<GasCanisterBoundUserInterface>(ent.Owner, GasCanisterUiKey.Key, out var bui))
+        // BoundUserInterface so _Oxyd reskins of this window don't crash the cast.
+        if (UI.TryGetOpenUi<BoundUserInterface>(ent.Owner, GasCanisterUiKey.Key, out var bui))
         {
             bui.Update<GasCanisterBoundUserInterfaceState>();
         }
@@ -31,7 +32,8 @@ public sealed partial class GasCanisterSystem : SharedGasCanisterSystem
 
     protected override void DirtyUI(EntityUid uid, GasCanisterComponent? component = null, NodeContainerComponent? nodes = null)
     {
-        if (UI.TryGetOpenUi<GasCanisterBoundUserInterface>(uid, GasCanisterUiKey.Key, out var bui))
+        // BoundUserInterface so _Oxyd reskins of this window don't crash the cast.
+        if (UI.TryGetOpenUi<BoundUserInterface>(uid, GasCanisterUiKey.Key, out var bui))
         {
             bui.Update<GasCanisterBoundUserInterfaceState>();
         }

@@ -1,0 +1,148 @@
+# Technomancer tools & gear — Eris §10 Adapt (stock SS14 tool semantics;
+# Eris' alternate tool-engine of qualities/workspeed/health stays gap-doc'd).
+
+# Duct tape — Eris tools/tape.dm Adapt: improvised sealant mapped to stock
+# Welding quality (seals doors/items) at half speed, expendable feel via sprite.
+- type: entity
+  parent: BaseItem
+  id: OxydDuctTape
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/cable-coils.rsi
+    state: coilall-30
+  - type: Item
+  - type: Tool
+    qualities: [ Welding ]
+    speedModifier: 2.5
+  - type: MeleeWeapon
+    damage:
+      types:
+        Blunt: 2
+
+# Advanced tools — Eris advanced_tools.dm as stock tools w/ combined qualities.
+- type: entity
+  parent: BaseItem
+  id: OxydCombiDriver
+  suffix: screwdriver+multitool
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/screwdriver.rsi
+    state: screwdriver
+  - type: Item
+  - type: Tag
+    tags: [ Screwdriver, Multitool ]
+  - type: Tool
+    qualities: [ Screwing, Pulsing ]
+  - type: MeleeWeapon
+    damage:
+      types:
+        Piercing: 5
+- type: entity
+  parent: BaseItem
+  id: OxydArmatureCutter
+  suffix: wirecutter+crowbar
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/wirecutters.rsi
+    state: cutters
+  - type: Item
+  - type: Tag
+    tags: [ Wirecutter, Crowbar ]
+  - type: Tool
+    qualities: [ Cutting, Prying ]
+  - type: MeleeWeapon
+    damage:
+      types:
+        Slash: 6
+- type: entity
+  parent: BaseItem
+  id: OxydPneumaticCrowbar
+  suffix: powered
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/crowbar.rsi
+    state: icon
+  - type: Item
+  - type: Tag
+    tags: [ Crowbar ]
+  - type: Tool
+    qualities: [ Prying ]
+    speedModifier: 0.5
+  - type: MeleeWeapon
+    damage:
+      types:
+        Blunt: 7
+- type: entity
+  parent: BaseItem
+  id: OxydPoweredHammer
+  suffix: powered
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/wrench.rsi
+    state: icon
+  - type: Item
+  - type: Tag
+    tags: [ Wrench ]
+  - type: Tool
+    qualities: [ Anchoring ]
+    speedModifier: 0.5
+  - type: MeleeWeapon
+    damage:
+      types:
+        Blunt: 9
+- type: entity
+  parent: Welder
+  id: OxydWelderAdv
+  suffix: advanced
+  components: []
+
+# Tool mods — Eris tools/mods Adapt (single-use quality patches).
+- type: entity
+  parent: BaseItem
+  id: OxydToolModComplicator
+  suffix: +pulsing
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/multitool.rsi
+    state: icon
+  - type: Item
+  - type: OxydToolMod
+    grantsQuality: Pulsing
+
+# RPD — Eris IJIRO rapid pipe dispenser Adapt (no stock RPD in this tree;
+# minimal dispenser: use in hand -> pipe segment at your feet).
+- type: entity
+  parent: BaseItem
+  id: OxydRapidPipeDispenser
+  suffix: IJIRO
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/rcd.rsi
+    state: icon
+  - type: Item
+  - type: OxydRpd
+    pipeProto: GasPipeStraight
+
+# Design disks — Eris technomancers.dm disks (self-describing reference items).
+- type: entity
+  parent: BaseItem
+  id: OxydDesignDiskArk
+  suffix: ARK-034
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/nukedisk.rsi
+    state: icon
+  - type: Item
+  - type: OxydDesignDisk
+    designs: ["ARK-034: breaker box", "ARK-034: SMES cell frame", "ARK-034: pulsar control console board"]
+- type: entity
+  parent: BaseItem
+  id: OxydDesignDiskIjiro
+  suffix: IJIRO-451
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/nukedisk.rsi
+    state: icon
+  - type: Item
+  - type: OxydDesignDisk
+    designs: ["IJIRO-451: rapid construction device", "IJIRO-451: rapid pipe dispenser"]
