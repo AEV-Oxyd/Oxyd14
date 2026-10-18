@@ -63,65 +63,8 @@
   parent: CrateGenericSteel
   id: OxydTradeCrate
 
-# ---------------------------------------------------------------------------
-# ATM — Eris economy/ATM.dm teller tied to the shared guild account. NanoUI-style
-# window: balance + withdraw; deposit = insert a credits stack on the machine.
-# ---------------------------------------------------------------------------
-- type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydAtm
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/computers.rsi
-    layers:
-    - state: transfer
-      map: ["enum.OxydGuildVisualLayers.Base"]
-  - type: OxydAtm
-  - type: ActivatableUI
-    key: enum.OxydAtmUiKey.Key
-  - type: ActivatableUIRequiresPower
-  - type: UserInterface
-    interfaces:
-      enum.OxydAtmUiKey.Key:
-        type: OxydAtmBoundUserInterface
-  - type: ApcPowerReceiver
-    powerLoad: 50
-  - type: Appearance
-  - type: InteractionOutline
-  - type: Clickable
-
-# ---------------------------------------------------------------------------
-# Trade beacons — receiving (ordered goods appear) and sending (offer exports).
-# ---------------------------------------------------------------------------
-- type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydTradeBeaconReceiving
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/ore_processor.rsi
-    layers:
-    - state: icon
-      map: ["enum.OxydGuildVisualLayers.Base"]
-  - type: OxydTradeBeaconReceiving
-  - type: ApcPowerReceiver
-    powerLoad: 100
-  - type: InteractionOutline
-  - type: Clickable
-
-- type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydTradeBeaconSending
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/ore_processor.rsi
-    layers:
-    - state: icon
-      map: ["enum.OxydGuildVisualLayers.Base"]
-  - type: OxydTradeBeaconSending
-  - type: ApcPowerReceiver
-    powerLoad: 100
-  - type: InteractionOutline
-  - type: Clickable
+# ATM, trade beacons, cash register, and EFTPOS entity protos live in
+# Resources/Prototypes/_Oxyd/Economy/machines.yml (Eris economy+PDA port).
 
 # ---------------------------------------------------------------------------
 # Ore processor pair — production machine console + processing unit.
@@ -199,39 +142,5 @@
         enum.OxydGuildVisualLayers.Working:
           True: { visible: true }
           False: { visible: false }
-  - type: InteractionOutline
-  - type: Clickable
-
-# ---------------------------------------------------------------------------
-# Cash register (Eris browse window — kept stock, no reskin per port rules).
-# ---------------------------------------------------------------------------
-- type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydCashRegister
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/computers.rsi
-    layers:
-    - state: generic
-      map: ["enum.OxydGuildVisualLayers.Base"]
-  - type: OxydCashRegister
-  - type: ApcPowerReceiver
-    powerLoad: 50
-  - type: InteractionOutline
-  - type: Clickable
-
-# ---------------------------------------------------------------------------
-# EFTPOS terminal (Eris browse window — stock look on the port side).
-# ---------------------------------------------------------------------------
-- type: entity
-  parent: [ BaseItem ]
-  id: OxydEftpos
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/ore_processor.rsi
-    layers:
-    - state: icon
-  - type: OxydEftpos
-  - type: Item
   - type: InteractionOutline
   - type: Clickable

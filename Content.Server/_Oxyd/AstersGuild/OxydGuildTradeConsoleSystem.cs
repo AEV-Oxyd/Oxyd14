@@ -1,5 +1,7 @@
 using Content.Shared._Oxyd.AstersGuild;
 using Content.Shared.Containers;
+using EconomyBeaconRecv = Content.Shared._Oxyd.Economy.OxydTradeBeaconReceivingComponent;
+using EconomyBeaconSend = Content.Shared._Oxyd.Economy.OxydTradeBeaconSendingComponent;
 using Content.Shared.Storage.Components;
 using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
@@ -14,8 +16,12 @@ namespace Content.Server._Oxyd.AstersGuild;
 /// (code/controllers/subsystems/trade.dm): station tree with discovery, per-station goods
 /// catalog w/ stock + prices, favor, rotating special offers with timers, cart -> order to
 /// the receiving beacon, offer fulfillment via the sending beacon, transaction logs.
+///
+/// Beacon component types live in <c>Content.Shared._Oxyd.Economy</c> (shared with the
+/// Eris economy+PDA port). Runtime cart/order state for PDA Trade Orders is owned by
+/// <c>Content.Server._Oxyd.Economy.OxydTradeSystem</c> — this system is console-only.
 /// </summary>
-public sealed partial class OxydTradeSystem : EntitySystem
+public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
 {
     [Dependency] private UserInterfaceSystem _ui = default!;
     [Dependency] private OxydBankSystem _bank = default!;
@@ -168,9 +174,9 @@ public sealed partial class OxydTradeSystem : EntitySystem
     private bool BeaconCheck(out string receiving, out string sending)
     {
         var recv = false; var send = false;
-        var rq = EntityQueryEnumerator<OxydTradeBeaconReceivingComponent>();
+        var rq = EntityQueryEnumerator<EconomyBeaconRecv>();
         while (rq.MoveNext(out _, out _)) { recv = true; break; }
-        var sq = EntityQueryEnumerator<OxydTradeBeaconSendingComponent>();
+        var sq = EntityQueryEnumerator<EconomyBeaconSend>();
         while (sq.MoveNext(out _, out _)) { send = true; break; }
         receiving = recv ? "✓Receiving Beacon" : "✗No Receiving Beacon";
         sending = send ? "✓Sending Beacon" : "✗No Sending Beacon";
@@ -304,7 +310,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
             return;
 
         EntityUid? beacon = null;
-        var bq = EntityQueryEnumerator<OxydTradeBeaconReceivingComponent>();
+        var bq = EntityQueryEnumerator<EconomyBeaconRecv>();
         while (bq.MoveNext(out var buid, out var _bc)) { beacon = buid; break; }
         var at = beacon != null
             ? Transform(beacon.Value).Coordinates
@@ -340,7 +346,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
         if (o == null || o.SecondsLeft <= 0 || o.Amount <= 0) return;
 
         EntityUid? beacon = null;
-        var bq = EntityQueryEnumerator<OxydTradeBeaconSendingComponent>();
+        var bq = EntityQueryEnumerator<EconomyBeaconSend>();
         while (bq.MoveNext(out var buid, out _)) { beacon = buid; break; }
         if (beacon == null) return;
 

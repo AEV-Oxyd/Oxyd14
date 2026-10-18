@@ -54,25 +54,8 @@ public sealed partial class OxydBankAccountComponent : Component
     public int Balance = 3000;
 }
 
-/// <summary>Eris ATM (economy/ATM.dm): deposit held credits into the guild account,
-/// withdraw denominations back out.</summary>
-[RegisterComponent]
-public sealed partial class OxydAtmComponent : Component
-{
-}
-
-/// <summary>Eris receiving trade beacon: ordered goods materialize here.</summary>
-[RegisterComponent]
-public sealed partial class OxydTradeBeaconReceivingComponent : Component
-{
-}
-
-/// <summary>Eris sending trade beacon: entities placed on/near it are exported for
-/// offers and direct sales.</summary>
-[RegisterComponent]
-public sealed partial class OxydTradeBeaconSendingComponent : Component
-{
-}
+// ATM / trade beacons / cash register / EFTPOS components live in
+// Content.Shared._Oxyd.Economy (Eris economy+PDA port) — do not re-register here.
 
 /// <summary>Eris production machine console: drives the paired OxydOreProcessor.</summary>
 [RegisterComponent]
@@ -108,31 +91,6 @@ public sealed partial class OxydDeepDrillComponent : Component
     [DataField]
     public float OreEvery = 10f;
     public float Accum;
-}
-
-/// <summary>Eris cash register (cash_register.dm): till drawer holds deposited credits.
-/// Kept interaction-driven (no BUI) — Eris used a legacy browse() window.</summary>
-[RegisterComponent]
-public sealed partial class OxydCashRegisterComponent : Component
-{
-    /// <summary>Drawer open/closed (Eris register toggles its till).</summary>
-    public bool DrawerOpen;
-
-    /// <summary>Credits sitting in the till.</summary>
-    public int Stored;
-}
-
-/// <summary>Eris EFTPOS terminal (economy/EFTPOS.dm): merchant sets a charge, a customer
-/// pays by swiping credits. Interaction-driven — Eris used a legacy browse() window.</summary>
-[RegisterComponent]
-public sealed partial class OxydEftposComponent : Component
-{
-    /// <summary>Charge the merchant dialed in (0 = idle).</summary>
-    [DataField]
-    public int Charge = 0;
-
-    /// <summary>Terminal is armed and waiting for a swipe.</summary>
-    public bool Charging;
 }
 
 /// <summary>Visual-state keys for Asters Guild machine sprites.</summary>

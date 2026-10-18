@@ -161,25 +161,7 @@ public sealed class OxydTradeCompleteRequestMessage : BoundUserInterfaceMessage
     public int Id;
 }
 
-// ---------------- ATM (Eris economy/ATM.dm) ----------------
-
-[Serializable, NetSerializable]
-public enum OxydAtmUiKey : byte
-{
-    Key,
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydAtmState : BoundUserInterfaceState
-{
-    public int Balance;
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydAtmWithdrawMessage : BoundUserInterfaceMessage
-{
-    public int Amount;
-}
+// ATM UI types live in Content.Shared._Oxyd.Economy (Eris economy+PDA port).
 
 // ---------------- Ore processor console ----------------
 

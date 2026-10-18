@@ -14,14 +14,14 @@ namespace Content.Server._Oxyd.AstersGuild;
 [ToolshedCommand, AdminCommand(AdminFlags.Debug)]
 public sealed class GuildCommand : ToolshedCommand
 {
-    private OxydTradeSystem? _trade;
+    private OxydGuildTradeConsoleSystem? _trade;
     private OxydBankSystem? _bank;
 
     /// <summary>Enqueue a crew order request as if a request console submitted it.</summary>
     [CommandImplementation("submitrequest")]
     public void SubmitRequest(IInvocationContext ctx, string item, int amount = 1)
     {
-        _trade ??= GetSys<OxydTradeSystem>();
+        _trade ??= GetSys<OxydGuildTradeConsoleSystem>();
         _trade.DebugSubmitRequest(item, amount, "crew console (debug)");
         ctx.WriteLine($"guild: submitted order request '{item}' x{amount}");
     }
