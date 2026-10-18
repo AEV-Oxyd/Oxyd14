@@ -2,6 +2,7 @@ using System.Linq;
 using Content.Server._Oxyd.Ntos;
 using Content.Server._Oxyd.Pda;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.DeviceLinking.Components;
 using Content.Server.Medical.Components;
 using Content.Shared._Oxyd.Economy;

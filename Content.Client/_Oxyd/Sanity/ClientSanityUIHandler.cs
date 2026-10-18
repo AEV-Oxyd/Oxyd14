@@ -2,7 +2,7 @@ using System.Linq;
 using Content.Client._Oxyd.Framework;
 using Content.Client._Oxyd.UI;
 using Content.Client.CharacterInfo;
-using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 

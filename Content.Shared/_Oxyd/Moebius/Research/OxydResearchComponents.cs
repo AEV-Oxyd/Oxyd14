@@ -72,6 +72,13 @@ public sealed partial class OxydDestructiveAnalyzerComponent : Component
     /// <summary>Eris deconstruction takes a few seconds.</summary>
     [DataField]
     public float DeconstructTime = 4f;
+
+    /// <summary>Item mid-deconstruction (reviewer round-2: pending work lives on
+    /// the component, not a system-level dictionary keyed by entity).</summary>
+    public EntityUid? PendingItem;
+
+    /// <summary>Console that ordered the running deconstruction.</summary>
+    public EntityUid? PendingConsole;
 }
 
 /// <summary>Eris origin_tech on items: tech tree -> level this object advances

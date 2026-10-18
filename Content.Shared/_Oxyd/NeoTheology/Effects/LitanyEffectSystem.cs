@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Numerics;
-using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Database;
 using Content.Shared._Oxyd.NeoTheology.Components;

@@ -1,37 +1,57 @@
 using System.Linq;
+using Content.Shared._Oxyd.Ntos;
+using Robust.Shared.Map;
 
 namespace Content.Server._Oxyd.Ntos;
 
-/// <summary>Eris NTNRC-style channel chat shared across PDAs.</summary>
+/// <summary>Eris NTNRC-style channel chat shared across PDAs.
+/// Reviewer round-2: channel/name/join state lives on a lazily-spawned nullspace
+/// entity (OxydBankSystem pattern) so chat resets each round, bounded by caps.</summary>
 public sealed partial class OxydNtChatSystem : EntitySystem
 {
-    private int _nextChannelId = 1;
-    private readonly Dictionary<int, OxydChatChannel> _channels = new();
-    private readonly Dictionary<EntityUid, string> _names = new();
-    private readonly Dictionary<EntityUid, int?> _joined = new();
+    // Reviewer round-2 caps: bounded chat storage per round.
+    private const int MaxChannels = 32;
+    private const int MaxMessages = 80;
+    private const int MaxMessage = 1024;
+    private const int MaxTitle = 64;
 
-    public override void Initialize()
+    private EntityUid? _stateEnt;
+
+    /// <summary>Find or create the round-scoped chat state entity (nullspace).</summary>
+    private OxydNtChatStateComponent GetState()
     {
-        base.Initialize();
-        EnsureGeneral();
+        if (_stateEnt is { } cached && !Deleted(cached))
+            return Comp<OxydNtChatStateComponent>(cached);
+        var q = EntityQueryEnumerator<OxydNtChatStateComponent>();
+        while (q.MoveNext(out var uid, out var comp))
+        {
+            _stateEnt = uid;
+            return comp;
+        }
+        _stateEnt = Spawn(null, MapCoordinates.Nullspace);
+        var state = AddComp<OxydNtChatStateComponent>(_stateEnt.Value);
+        EnsureGeneral(state);
+        return state;
     }
 
     public string GetOrSetName(EntityUid loader, string? requested = null)
     {
+        var state = GetState();
         if (!string.IsNullOrWhiteSpace(requested))
-            _names[loader] = requested.Trim();
-        else if (!_names.ContainsKey(loader))
-            _names[loader] = $"User{_names.Count + 100}";
+            state.Names[loader] = requested.Trim();
+        else if (!state.Names.ContainsKey(loader))
+            state.Names[loader] = $"User{state.Names.Count + 100}";
 
-        return _names[loader];
+        return state.Names[loader];
     }
 
-    public IReadOnlyCollection<OxydChatChannel> ListChannels() => _channels.Values;
+    public IReadOnlyCollection<OxydChatChannel> ListChannels() => GetState().Channels.Values;
 
     public bool TryJoin(EntityUid loader, int channelId, out string? error)
     {
         error = null;
-        if (!_channels.TryGetValue(channelId, out var ch))
+        var state = GetState();
+        if (!state.Channels.TryGetValue(channelId, out var ch))
         {
             error = "Channel missing";
             return false;
@@ -39,39 +59,51 @@ public sealed partial class OxydNtChatSystem : EntitySystem
 
         Leave(loader);
         ch.Clients.Add(loader);
-        _joined[loader] = channelId;
-        ch.Messages.Add($"* {GetOrSetName(loader)} joined");
+        state.Joined[loader] = channelId;
+        AddMessage(ch, $"* {GetOrSetName(loader)} joined");
         return true;
     }
 
     public void Leave(EntityUid loader)
     {
-        if (_joined.TryGetValue(loader, out var id) && id is { } cid && _channels.TryGetValue(cid, out var ch))
+        var state = GetState();
+        if (state.Joined.TryGetValue(loader, out var id) && id is { } cid && state.Channels.TryGetValue(cid, out var ch))
         {
             ch.Clients.Remove(loader);
-            ch.Messages.Add($"* {GetOrSetName(loader)} left");
+            AddMessage(ch, $"* {GetOrSetName(loader)} left");
         }
 
-        _joined.Remove(loader);
+        state.Joined.Remove(loader);
     }
 
-    public OxydChatChannel Create(EntityUid loader, string title)
+    public bool TryCreate(EntityUid loader, string title, out OxydChatChannel? channel)
     {
-        EnsureGeneral();
+        var state = GetState();
+        EnsureGeneral(state);
+        // Reviewer cap: bounded channel count.
+        if (state.Channels.Count >= MaxChannels)
+        {
+            channel = null;
+            return false;
+        }
         var ch = new OxydChatChannel
         {
-            Id = _nextChannelId++,
-            Title = string.IsNullOrWhiteSpace(title) ? $"Channel {_nextChannelId}" : title.Trim(),
+            Id = state.NextChannelId++,
+            Title = string.IsNullOrWhiteSpace(title) ? $"Channel {state.NextChannelId}" : title.Trim(),
         };
-        _channels[ch.Id] = ch;
+        if (ch.Title.Length > MaxTitle)
+            ch.Title = ch.Title[..MaxTitle];
+        state.Channels[ch.Id] = ch;
         TryJoin(loader, ch.Id, out _);
-        return ch;
+        channel = ch;
+        return true;
     }
 
     public bool TrySpeak(EntityUid loader, string message, out string? error)
     {
         error = null;
-        if (!_joined.TryGetValue(loader, out var id) || id is not { } cid || !_channels.TryGetValue(cid, out var ch))
+        var state = GetState();
+        if (!state.Joined.TryGetValue(loader, out var id) || id is not { } cid || !state.Channels.TryGetValue(cid, out var ch))
         {
             error = "Not in a channel";
             return false;
@@ -84,32 +116,33 @@ public sealed partial class OxydNtChatSystem : EntitySystem
             return false;
         }
 
-        ch.Messages.Add($"{GetOrSetName(loader)}: {message}");
-        if (ch.Messages.Count > 80)
-            ch.Messages.RemoveRange(0, ch.Messages.Count - 80);
+        // Reviewer cap: message text truncated to a sane size.
+        if (message.Length > MaxMessage)
+            message = message[..MaxMessage];
+        AddMessage(ch, $"{GetOrSetName(loader)}: {message}");
         return true;
     }
 
     public int? GetJoined(EntityUid loader)
-        => _joined.TryGetValue(loader, out var id) ? id : null;
+        => GetState().Joined.TryGetValue(loader, out var id) ? id : null;
 
     public OxydChatChannel? GetChannel(int id)
-        => _channels.TryGetValue(id, out var ch) ? ch : null;
+        => GetState().Channels.TryGetValue(id, out var ch) ? ch : null;
 
-    private void EnsureGeneral()
+    private static void AddMessage(OxydChatChannel ch, string message)
     {
-        if (_channels.Values.Any(c => c.Title == "General"))
+        // Reviewer cap: bounded scrollback per channel.
+        ch.Messages.Add(message);
+        if (ch.Messages.Count > MaxMessages)
+            ch.Messages.RemoveRange(0, ch.Messages.Count - MaxMessages);
+    }
+
+    private void EnsureGeneral(OxydNtChatStateComponent state)
+    {
+        if (state.Channels.Values.Any(c => c.Title == "General"))
             return;
 
-        var ch = new OxydChatChannel { Id = _nextChannelId++, Title = "General" };
-        _channels[ch.Id] = ch;
+        var ch = new OxydChatChannel { Id = state.NextChannelId++, Title = "General" };
+        state.Channels[ch.Id] = ch;
     }
-}
-
-public sealed class OxydChatChannel
-{
-    public int Id;
-    public string Title = string.Empty;
-    public HashSet<EntityUid> Clients = new();
-    public List<string> Messages = new();
 }

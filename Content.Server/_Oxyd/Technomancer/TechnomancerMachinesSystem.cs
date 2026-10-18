@@ -211,21 +211,35 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         var shieldQuery = EntityQueryEnumerator<OxydShipShieldComponent>();
         while (shieldQuery.MoveNext(out var uid, out var shield))
         {
+            var mult = 1f;
+            foreach (var m in shield.EnabledModes)
+                foreach (var def in OxydShieldModes.All)
+                    if (def.Id == m) mult *= def.Mult;
+            var upkeepWatts = shield.UpkeepWattsPerUnit * shield.Integrity * mult;
+            if (shield.InputCap > 0f)
+                upkeepWatts = Math.Min(upkeepWatts, shield.InputCap * 1000f);
+
+            var hasReceiver = TryComp<ApcPowerReceiverComponent>(uid, out var rec);
             if (shield.Running)
             {
-                var mult = 1f;
-                foreach (var m in shield.EnabledModes)
-                    foreach (var def in OxydShieldModes.All)
-                        if (def.Id == m) mult *= def.Mult;
-                var upkeep = shield.UpkeepWattsPerUnit * shield.Integrity / 1000f * mult;
-                if (TryComp<PowerNetworkBatteryComponent>(uid, out var bat))
-                    bat.MaxSupply = upkeep;
-                shield.Integrity = Math.Min(shield.Capacity, shield.Integrity + 2f);
+                // Reviewer: upkeep must CONSUME power — declare the draw as the
+                // receiver's network load and only regenerate integrity while the
+                // grid actually feeds the generator (no free regen).
+                if (hasReceiver && rec != null)
+                {
+                    rec.Load = upkeepWatts;
+                    if (rec.Powered)
+                        shield.Integrity = Math.Min(shield.Capacity, shield.Integrity + 2f);
+                }
+                else
+                {
+                    shield.Integrity = Math.Min(shield.Capacity, shield.Integrity + 2f);
+                }
+                Dirty(uid, shield);
             }
-            var hasPower = TryComp<PowerNetworkBatteryComponent>(uid, out var shBat);
             _ui.SetUiState(uid, OxydShieldUiKey.Key, new OxydShieldState
             {
-                HasConduit = hasPower,
+                HasConduit = hasReceiver,
                 Running = shield.Running,
                 Integrity = shield.Integrity,
                 Capacity = shield.Capacity,
@@ -233,8 +247,8 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
                 MitigationPh = shield.EnabledModes.Contains("hyperkinetic") ? 60f : 0f,
                 MitigationHe = shield.EnabledModes.Contains("atmos") ? 60f : 0f,
                 MitigationMax = 60f,
-                UpkeepKw = shield.UpkeepWattsPerUnit * shield.Integrity / 1000f,
-                TotalUseKw = hasPower && shBat != null ? shBat.MaxSupply / 1000f : 0f,
+                UpkeepKw = upkeepWatts / 1000f,
+                TotalUseKw = hasReceiver && rec != null ? rec.PowerReceived / 1000f : 0f,
                 FieldSize = shield.FieldSize,
                 MaxFieldSize = shield.MaxFieldSize,
                 InputCap = shield.InputCap,

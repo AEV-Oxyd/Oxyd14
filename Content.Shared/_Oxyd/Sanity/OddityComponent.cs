@@ -1,7 +1,7 @@
 using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
 
-namespace Content.Server._Oxyd.SanityInsightAndResting;
+namespace Content.Shared._Oxyd.Sanity;
 
 /// <summary>Eris oddity inspiration stats (skill → bonus). Used by rest focus and artist bench.</summary>
 [RegisterComponent]

@@ -45,8 +45,10 @@ public sealed partial class OxydNtChatCartridgeSystem : EntitySystem
                 status = "Left";
                 break;
             case OxydNtChatUiAction.Create:
-                var ch = _chat.Create(loader, msg.Text);
-                status = $"Created {ch.Title}";
+                if (_chat.TryCreate(loader, msg.Text, out var ch))
+                    status = $"Created {ch!.Title}";
+                else
+                    error = "Channel limit reached";
                 break;
             case OxydNtChatUiAction.Speak:
                 if (!_chat.TrySpeak(loader, msg.Text, out error))

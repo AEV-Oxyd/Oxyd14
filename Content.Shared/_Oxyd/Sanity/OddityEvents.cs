@@ -1,4 +1,4 @@
-namespace Content.Server._Oxyd.SanityInsightAndResting;
+namespace Content.Shared._Oxyd.Sanity;
 
 public sealed class OddityUsedEvent : EntityEventArgs
 {

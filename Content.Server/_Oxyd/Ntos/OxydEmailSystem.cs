@@ -1,17 +1,46 @@
 using System.Linq;
+using Content.Shared._Oxyd.Ntos;
+using Robust.Shared.Map;
 
 namespace Content.Server._Oxyd.Ntos;
 
-/// <summary>Station-wide NT email accounts (Eris email_client parity).</summary>
+/// <summary>Station-wide NT email accounts (Eris email_client parity).
+/// Reviewer round-2: accounts/inboxes live on a lazily-spawned nullspace entity
+/// (OxydBankSystem pattern) so mail resets each round instead of leaking across
+/// rounds, and every collection is bounded by the caps below.</summary>
 public sealed partial class OxydEmailSystem : EntitySystem
 {
-    private int _nextMsgId = 1;
-    private readonly Dictionary<string, OxydEmailAccount> _accounts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<EntityUid, string> _sessions = new();
+    // Reviewer round-2 caps: bounded mail storage per round.
+    private const int MaxAccounts = 128;
+    private const int MaxInbox = 64;
+    private const int MaxSent = 64;
+    private const int MaxSubject = 256;
+    private const int MaxBody = 4096;
+
+    private const string MailerLogin = "mailer@nt.mail";
+
+    private EntityUid? _stateEnt;
+
+    /// <summary>Find or create the round-scoped mail state entity (nullspace).</summary>
+    private OxydEmailStateComponent GetState()
+    {
+        if (_stateEnt is { } cached && !Deleted(cached))
+            return Comp<OxydEmailStateComponent>(cached);
+        var q = EntityQueryEnumerator<OxydEmailStateComponent>();
+        while (q.MoveNext(out var uid, out var comp))
+        {
+            _stateEnt = uid;
+            return comp;
+        }
+        _stateEnt = Spawn(null, MapCoordinates.Nullspace);
+        return AddComp<OxydEmailStateComponent>(_stateEnt.Value);
+    }
 
     public bool TryRegister(string login, string password, out string? error)
     {
         error = null;
+        var state = GetState();
+        EnsureSystemAccount(state);
         login = Normalize(login);
         if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
         {
@@ -19,16 +48,21 @@ public sealed partial class OxydEmailSystem : EntitySystem
             return false;
         }
 
-        if (_accounts.ContainsKey(login))
+        if (state.Accounts.ContainsKey(login))
         {
             error = "Account exists";
             return false;
         }
 
-        _accounts[login] = new OxydEmailAccount { Login = login, Password = password };
-        // Welcome mail from mailer-daemon
-        EnsureSystemAccount();
-        TrySend("mailer@nt.mail", login, "Welcome to NT Mail",
+        if (state.Accounts.Count >= MaxAccounts)
+        {
+            error = "Account limit reached";
+            return false;
+        }
+
+        state.Accounts[login] = new OxydEmailAccount { Login = login, Password = password };
+        // Welcome mail from the mailer-daemon.
+        TrySend(MailerLogin, login, "Welcome to NT Mail",
             "Your NanoTrasen mail account is online. Stay professional.", out _);
         return true;
     }
@@ -36,8 +70,12 @@ public sealed partial class OxydEmailSystem : EntitySystem
     public bool TryLogin(EntityUid loader, string login, string password, out string? error)
     {
         error = null;
+        var state = GetState();
         login = Normalize(login);
-        if (!_accounts.TryGetValue(login, out var acc) || acc.Password != password)
+        // Reviewer: NonInteractive accounts (the mailer daemon) can never be
+        // logged into — they only send automated notices, so TryLogin rejects
+        // them regardless of the password supplied.
+        if (!state.Accounts.TryGetValue(login, out var acc) || acc.NonInteractive || acc.Password != password)
         {
             error = "Bad credentials";
             return false;
@@ -49,27 +87,29 @@ public sealed partial class OxydEmailSystem : EntitySystem
             return false;
         }
 
-        _sessions[loader] = login;
+        state.Sessions[loader] = login;
         return true;
     }
 
-    public void Logout(EntityUid loader) => _sessions.Remove(loader);
+    public void Logout(EntityUid loader) => GetState().Sessions.Remove(loader);
 
     public bool TryGetSession(EntityUid loader, out string login)
-        => _sessions.TryGetValue(loader, out login!);
+        => GetState().Sessions.TryGetValue(loader, out login!);
 
     public bool TrySend(string from, string to, string subject, string body, out string? error)
     {
         error = null;
+        var state = GetState();
+        EnsureSystemAccount(state);
         from = Normalize(from);
         to = Normalize(to);
-        if (!_accounts.ContainsKey(from))
+        if (!state.Accounts.ContainsKey(from))
         {
             error = "Unknown sender";
             return false;
         }
 
-        if (!_accounts.TryGetValue(to, out var dest))
+        if (!state.Accounts.TryGetValue(to, out var dest))
         {
             error = "Recipient not found";
             return false;
@@ -77,27 +117,34 @@ public sealed partial class OxydEmailSystem : EntitySystem
 
         var msg = new OxydEmailMessage
         {
-            Id = _nextMsgId++,
+            Id = state.NextMsgId++,
             From = from,
             To = to,
-            Subject = string.IsNullOrWhiteSpace(subject) ? "(no subject)" : subject.Trim(),
-            Body = body ?? string.Empty,
+            // Reviewer caps: message text truncated to sane sizes.
+            Subject = Truncate(string.IsNullOrWhiteSpace(subject) ? "(no subject)" : subject.Trim(), MaxSubject),
+            Body = Truncate(body ?? string.Empty, MaxBody),
         };
         dest.Inbox.Insert(0, msg);
-        if (_accounts.TryGetValue(from, out var src))
+        if (dest.Inbox.Count > MaxInbox)
+            dest.Inbox.RemoveRange(MaxInbox, dest.Inbox.Count - MaxInbox);
+        if (state.Accounts.TryGetValue(from, out var src))
+        {
             src.Sent.Insert(0, msg);
+            if (src.Sent.Count > MaxSent)
+                src.Sent.RemoveRange(MaxSent, src.Sent.Count - MaxSent);
+        }
         return true;
     }
 
     public IReadOnlyList<OxydEmailMessage> GetInbox(string login)
-        => _accounts.TryGetValue(Normalize(login), out var acc) ? acc.Inbox : Array.Empty<OxydEmailMessage>();
+        => GetState().Accounts.TryGetValue(Normalize(login), out var acc) ? acc.Inbox : Array.Empty<OxydEmailMessage>();
 
     public OxydEmailMessage? GetMessage(string login, int id)
         => GetInbox(login).FirstOrDefault(m => m.Id == id);
 
     public bool TryDelete(string login, int id)
     {
-        if (!_accounts.TryGetValue(Normalize(login), out var acc))
+        if (!GetState().Accounts.TryGetValue(Normalize(login), out var acc))
             return false;
         return acc.Inbox.RemoveAll(m => m.Id == id) > 0;
     }
@@ -109,11 +156,16 @@ public sealed partial class OxydEmailSystem : EntitySystem
             msg.Read = true;
     }
 
-    private void EnsureSystemAccount()
+    private void EnsureSystemAccount(OxydEmailStateComponent state)
     {
-        if (!_accounts.ContainsKey("mailer@nt.mail"))
-            _accounts["mailer@nt.mail"] = new OxydEmailAccount { Login = "mailer@nt.mail", Password = "system" };
+        // Reviewer: the mailer daemon gets no usable password and a NonInteractive
+        // flag so nobody can log in as the official mailer.
+        if (!state.Accounts.ContainsKey(MailerLogin))
+            state.Accounts[MailerLogin] = new OxydEmailAccount { Login = MailerLogin, NonInteractive = true };
     }
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max];
 
     private static string Normalize(string login)
     {
@@ -122,23 +174,4 @@ public sealed partial class OxydEmailSystem : EntitySystem
             login += "@nt.mail";
         return login.ToLowerInvariant();
     }
-}
-
-public sealed class OxydEmailAccount
-{
-    public string Login = string.Empty;
-    public string Password = string.Empty;
-    public bool Suspended;
-    public List<OxydEmailMessage> Inbox = new();
-    public List<OxydEmailMessage> Sent = new();
-}
-
-public sealed class OxydEmailMessage
-{
-    public int Id;
-    public string From = string.Empty;
-    public string To = string.Empty;
-    public string Subject = string.Empty;
-    public string Body = string.Empty;
-    public bool Read;
 }

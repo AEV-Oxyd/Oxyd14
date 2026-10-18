@@ -1,5 +1,5 @@
 using System.Linq;
-using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared.Damage.Components;
 using Content.Shared.EntityConditions;
 using Content.Shared._Oxyd.NeoTheology.Components;

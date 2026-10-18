@@ -5,6 +5,7 @@ using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared.Item;
 using Content.Shared.Paper;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared.Stacks;
 using Robust.Shared.Prototypes;
 

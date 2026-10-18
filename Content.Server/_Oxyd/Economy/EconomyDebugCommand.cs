@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.Administration;
 using Content.Server.Stack;
 using Content.Server.Station.Systems;
