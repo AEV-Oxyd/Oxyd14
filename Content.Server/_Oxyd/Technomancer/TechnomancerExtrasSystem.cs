@@ -101,12 +101,15 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
             return;
         switch (msg.Field)
         {
-            // Same handler path the stock SMES BUI uses (BatteryInterfaceSystem).
+            // Same fields the stock SMES BUI toggles (BatteryInterfaceSystem) —
+            // set directly: re-raised BUI messages lose UiKey and get filtered.
             case "input":
-                RaiseLocalEvent(target, new BatterySetInputBreakerMessage(msg.Value));
+                if (TryComp<PowerNetworkBatteryComponent>(target, out var netIn))
+                    netIn.CanCharge = msg.Value;
                 break;
             case "output":
-                RaiseLocalEvent(target, new BatterySetOutputBreakerMessage(msg.Value));
+                if (TryComp<PowerNetworkBatteryComponent>(target, out var netOut))
+                    netOut.CanDischarge = msg.Value;
                 break;
             case "breaker":
                 RaiseLocalEvent(target, new OxydBreakerToggleMessage(msg.Value));

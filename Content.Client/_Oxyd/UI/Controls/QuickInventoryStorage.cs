@@ -45,10 +45,10 @@ public sealed class QuickInventoryStorage : Container
 
     public void UpdateContained()
     {
-        if (entityManager.Deleted(storage))
+        if (!storage.Owner.IsValid() || entityManager.Deleted(storage) || storage.Comp.Container is not { } storageContainer)
             contained.Clear();
         else
-            contained = storage.Comp.Container.ContainedEntities.ToList();
+            contained = storageContainer.ContainedEntities.ToList();
         foreach (var ent in contained)
         {
             if (existing.TryGetValue(ent, out var _))
