@@ -1,0 +1,92 @@
+# Moebius research items (Eris code/modules/research/experiment.dm +
+# code/game/objects/items/weapons/autopsy.dm).
+
+# Science tool: scans objects with origin_tech into datablocks; upload at console.
+- type: entity
+  parent: BaseItem
+  id: OxydScienceTool
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/healthanalyzer.rsi
+    state: icon
+  - type: OxydScienceTool
+  - type: OxydOriginTech
+    techs:
+      OxydTreeEngineering: 2
+  - type: Item
+    size: Small
+  - type: InteractionOutline
+  - type: Clickable
+
+# Autopsy report data block (Eris paper report fed to the console).
+- type: entity
+  parent: BaseItem
+  id: OxydAutopsyReport
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: datadisk_base
+  - type: OxydAutopsyReport
+  - type: OxydOriginTech
+    techs:
+      OxydTreeBiotech: 1
+  - type: Item
+    size: Tiny
+  - type: InteractionOutline
+  - type: Clickable
+
+# Portable research data disk (Eris tech/design disk).
+- type: entity
+  parent: BaseItem
+  id: OxydResearchDataDisk
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: datadisk_base
+  - type: OxydResearchDataDisk
+  - type: Item
+    size: Tiny
+  - type: InteractionOutline
+  - type: Clickable
+
+# Research points disk (Eris research_points disk: flat point grant, loot-tier).
+- type: entity
+  parent: BaseItem
+  id: OxydResearchPointsDisk
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: rndmajordisk
+  - type: OxydResearchPointsDisk
+    points: 5000
+  - type: Item
+    size: Tiny
+  - type: InteractionOutline
+  - type: Clickable
+
+# High-tech items for DA testing: a tier-3 stock part and a nuclear cell
+# variant carrying origin_tech (Eris deconstructs high-tech parts for points).
+- type: entity
+  parent: MicroManipulatorStockPart
+  id: OxydNanoManipulator
+  components:
+  - type: OxydOriginTech
+    techs:
+      OxydTreeEngineering: 3
+      OxydTreePowerstorage: 2
+  - type: PhysicalComposition
+    materialComposition:
+      Steel: 200
+      Glass: 100
+
+- type: entity
+  parent: PowerCellSmallPrinted
+  id: OxydCellPrototype
+  components:
+  - type: OxydOriginTech
+    techs:
+      OxydTreePowerstorage: 4
+  - type: PhysicalComposition
+    materialComposition:
+      Steel: 200
+      Glass: 100

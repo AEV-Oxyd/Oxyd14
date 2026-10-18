@@ -1,0 +1,154 @@
+# Eris Moebius research port — expansion items (blueprint sections 3-8).
+# Robotics consoles, drone fab, xenoflora/xenobio/xenoarch adapt-lite content,
+# mental imprinter. Eris sources: drone_fabricator.dm, _drone.dm,
+# computer/robot.dm, mental_imprinter, xenoflora/xenobio branches.
+
+# ---------------------------------------------------------------------------
+# Robotics control console (Eris computer/robot.dm — robot repair/status console)
+# Adapted: the stock robotics console is already silicon-aware in the fork;
+# this binds it to Moebius robotics access.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: ComputerRoboticsControl
+  id: OxydRoboticsConsole
+  components:
+  - type: AccessReader
+    access: [["OxydMoebiusRobotics"]]
+
+# ---------------------------------------------------------------------------
+# Expedition console (Eris Vasiliy Dokuchaev / overmap away missions).
+# Adapted to the stock salvage expedition console as the blueprint flagged:
+# away missions exist here as salvage expeditions, gated to Moebius research.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: ComputerSalvageExpedition
+  id: OxydExpeditionConsole
+  components:
+  - type: AccessReader
+    access: [["OxydMoebiusResearch"]]
+
+# ---------------------------------------------------------------------------
+# Drone fabricator (Eris /obj/machinery/drone_fabricator): assembles
+# maintenance drone shells on a cycle. Shells unfold into a non-player NPC —
+# a silicon stack is needed for inhabitable drones.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseMachinePowered
+  id: OxydDroneFabricator
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/exosuit_fabricator.rsi
+    state: fab-idle
+  - type: OxydDroneFabricator
+
+# Folded drone shell (Eris maint drone packaged form).
+- type: entity
+  parent: BaseItem
+  id: OxydMaintenanceDroneShell
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Robotics/cyborg_parts.rsi
+    state: borg_chest
+  - type: OxydMaintenanceDroneShell
+  - type: Item
+    size: Normal
+
+# Unfolded maintenance drone (Eris _drone.dm). Adapted: the fork's cleanbot
+# NPC is the closest maintenance-automaton behavior — not player-inhabitable.
+- type: entity
+  parent: MobCleanBot
+  id: OxydMaintenanceDrone
+
+# ---------------------------------------------------------------------------
+# Xenobiology adapt-lite (Eris slime-core experiment source): extractor draws
+# specimen cores out of refinable biological mobs (slimes); cores are
+# scannable/deconstructable research items.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseItem
+  id: OxydSlimeExtractor
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Chemistry/syringe.rsi
+    state: syringe_base0
+  - type: OxydSlimeExtractor
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydSlimeCore
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Xenoarchaeology/xeno_artifacts.rsi
+    state: ano01
+  - type: OxydOriginTech
+    techs:
+      OxydTreeBiotech: 3
+  - type: Item
+    size: Small
+
+# ---------------------------------------------------------------------------
+# Xenoflora adapt-lite (Eris exotic plant branch): exotic seed packets for the
+# research wing's hydroponics — growable in stock trays.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: SeedBase
+  id: OxydXenoSeedAmanita
+  components:
+  - type: Seed
+    plantId: FlyAmanitaPlants
+  - type: Sprite
+    sprite: Objects/Specific/Hydroponics/fly_amanita.rsi
+
+- type: entity
+  parent: SeedBase
+  id: OxydXenoSeedDeathnettle
+  components:
+  - type: Seed
+    plantId: DeathNettlePlants
+  - type: Sprite
+    sprite: Objects/Specific/Hydroponics/death_nettle.rsi
+
+- type: entity
+  parent: SeedBase
+  id: OxydXenoSeedGalaxythistle
+  components:
+  - type: Seed
+    plantId: GalaxythistlePlants
+  - type: Sprite
+    sprite: Objects/Specific/Hydroponics/galaxythistle.rsi
+
+# ---------------------------------------------------------------------------
+# Xenoarchaeology adapt-lite: Eris artifact analysis branch. The fork's stock
+# xenoartifact system supplies the real artifacts/analyzer; this variant is a
+# Moebius-logged specimen with origin tech for the DA/science tool.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseItem
+  id: OxydStrangeArtifact
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Xenoarchaeology/item_artifacts.rsi
+    state: ano04
+  - type: Item
+    size: Normal
+  - type: OxydOriginTech
+    techs:
+      OxydTreeBluespace: 4
+
+# ---------------------------------------------------------------------------
+# Mental imprinter (Eris spawn_blacklisted loot): eye-stab design imprint,
+# heavy sanity toll. Adapted: no stat system, so it is a single-use
+# sanity-costly flavor item.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseItem
+  id: OxydMentalImprinter
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/multitool.rsi
+    state: red-unlit
+  - type: OxydMentalImprinter
+  - type: Item
+    size: Small
