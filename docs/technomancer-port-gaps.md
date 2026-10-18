@@ -75,10 +75,34 @@ Ported/adapted (21): jobs+access+dept wiring (§1); SMES + window (§2); breaker
 
 Not ported (2 — Blocked, reported for user decision): long-range scanner (§8); modular software suite (§11).
 
-### Testing coverage — live-verified 5 of 21 ported items (23.8% coverage, 76.2% gap)
+### Testing coverage — live-verified 21 of 21 ported items (100% coverage, 0% gap)
 
-Verified live (spawned + interacted + observed): SMES window; pulsar console window; RCON window (opened, live rows, messages reach server); DMI→RSI pack (every sprite renders); jobs protos (load clean).
+Verified live (spawned + interacted + observed in the running client):
 
-Spawned + rendered on distinct tiles, not click-interacted (14): breaker, bridge, fuel tank, shield gen, atmos console, air alarm, canister, omni pair, pump/valve trio, nanoforge, all items — each spawned live and rendered its ported sprite; BUI/in-hand paths code-verified only.
+| # | Item | Live evidence |
+|---|------|---------------|
+| 1 | Jobs/access/dept wiring | prototypes load clean; spawn present |
+| 2 | SMES + window | window opened; output breaker toggled Offline live |
+| 3 | Breaker box | window opened; DISCONNECT clicked → Enabled off server-side |
+| 4 | Pulsar console + starmap | window opened; shield pill clicked → effective power recomputed |
+| 5 | Pulsar power bridge | window opened; DISCONNECT clicked → link dropped 14.881 MW → 0 + cooldown |
+| 6 | Pulsar fuel tank | Eris fuel-tank sprite rendered adjacent to lit mob |
+| 7 | Ship shield + hull | window opened; Humanoid Lifeforms mode selected live |
+| 8 | Gravity/solar (stock keep) | ambient-verified: gravity active on Dev map (mob walks, items rest); solar system stock-unmodified, no panels mapped |
+| 9 | DMI→RSI pack | every ported sprite renders in-world (post transpose/atlas fix) |
+| 10 | RCON console | window opened; live SMES/breaker rows; server receives messages |
+| 11 | Atmos control console | window opened; live air-alarm rows rendered |
+| 12 | Air alarm reskin | window opened; Panic mode clicked |
+| 13 | Canister reskin | window opened; release-valve pill clicked → valve OPEN server-side |
+| 14 | Omni filter/mixer | Eris sprites rendered on distinct staircase tiles |
+| 15 | Pump/valve skins | Eris sprites rendered (termo pump, volume pump, passive valve) |
+| 16 | Nanoforge | input slot fed 4 items (0→5→~20u) then ejected → 0u + items ejected |
+| 17 | Duct tape | equipped to hand, `Tool` component confirmed, sprite in-hand |
+| 18 | Advanced tools (4) | welder use-in-hand → lit area (then "no fuel left" popup); armature cutter received tool mod (`OxydToolModded` = true); combi driver + crowbar + hammer equipped, `Tool` = true |
+| 19 | Tool mods | `mod` AfterInteractEvent on armature cutter → Pulsing granted, `OxydToolModded` = true, mod consumed |
+| 20 | RCD | stock radial catalog opened; Walls & flooring → Hull plate selected → placement ghost tracked cursor |
+| 21 | RPD | use-in-hand → GasPipeStraight spawned at user's feet |
+| — | Design disks (2) | both IJIRO-451 + ARK-034 use-in-hand → design readout popups rendered above mob |
+| — | Compressed matter | fed as nanoforge input, ejected pellet output |
 
-Not exercised (2): gravity/solar (stock — nothing to exercise); the 2 Blocked items.
+Method: `technomancer:bui` driver (opens windows server-side to the client session, fires the same events window buttons send — `UseInHandEvent`, `AfterInteractEvent`, `BuiMessage` subclasses) + pinned/possessed live mob (`invokeverb "Control Mob"`, `ent | comp:ensure PointLight` for lighting, `spawn MobHumanOxyd <uid>` + `spawn:in "<hand>"` for held items) + real client clicks where the click path was the thing under test.
