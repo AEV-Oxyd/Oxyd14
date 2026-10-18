@@ -1,0 +1,237 @@
+# Asters Guild machines. Eris sources: trade/machinery/trade_beacon.dm,
+# modular_computers preset_console.dm:190 (preset/trade), mining/machine_processing.dm,
+# mining/drilling/deep_drill.dm, economy/cash_register.dm, economy/EFTPOS.dm.
+
+# ---------------------------------------------------------------------------
+# Trade console — the Eris preset/trade modular computer. Opens the Trading Program.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeConsole
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: supply
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeConsole
+  - type: ActivatableUI
+    key: enum.OxydTradeUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeUiKey.Key:
+        type: OxydTradeBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Crew order console — same window for crew-side requests (Eris preset/trade_orders).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeRequestConsole
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: request
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeConsole
+    requestConsole: true
+  - type: ActivatableUI
+    key: enum.OxydTradeUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeUiKey.Key:
+        type: OxydTradeBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Trade crate — goods ordered at the console arrive inside a steel crate on the
+# receiving beacon (Eris order.dm shipping crates).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: CrateGenericSteel
+  id: OxydTradeCrate
+
+# ---------------------------------------------------------------------------
+# ATM — Eris economy/ATM.dm teller tied to the shared guild account. NanoUI-style
+# window: balance + withdraw; deposit = insert a credits stack on the machine.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAtm
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: transfer
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydAtm
+  - type: ActivatableUI
+    key: enum.OxydAtmUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAtmUiKey.Key:
+        type: OxydAtmBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 50
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Trade beacons — receiving (ordered goods appear) and sending (offer exports).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeBeaconReceiving
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeBeaconReceiving
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeBeaconSending
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeBeaconSending
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Ore processor pair — production machine console + processing unit.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydOreProcessorConsole
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: generic
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydOreProcessorConsole
+  - type: ActivatableUI
+    key: enum.OxydOreProcessorUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydOreProcessorUiKey.Key:
+        type: OxydOreProcessorBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydOreProcessor
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+      map: ["enum.OxydGuildVisualLayers.Base"]
+    - state: building
+      map: ["enum.OxydGuildVisualLayers.Working"]
+      visible: false
+  - type: OxydOreProcessor
+  - type: ApcPowerReceiver
+    powerLoad: 800
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydGuildVisuals.Working:
+        enum.OxydGuildVisualLayers.Working:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Deep drill — slowly produces ore stacks on its tile while running.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydDeepDrill
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+      map: ["enum.OxydGuildVisualLayers.Base"]
+    - state: building
+      map: ["enum.OxydGuildVisualLayers.Working"]
+      visible: false
+  - type: OxydDeepDrill
+  - type: ApcPowerReceiver
+    powerLoad: 1000
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydGuildVisuals.Working:
+        enum.OxydGuildVisualLayers.Working:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Cash register (Eris browse window — kept stock, no reskin per port rules).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydCashRegister
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: generic
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydCashRegister
+  - type: ApcPowerReceiver
+    powerLoad: 50
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# EFTPOS terminal (Eris browse window — stock look on the port side).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseItem ]
+  id: OxydEftpos
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+  - type: OxydEftpos
+  - type: Item
+  - type: InteractionOutline
+  - type: Clickable
