@@ -1,3 +1,6 @@
+using Content.Shared.Popups;
+using Content.Shared.Mobs.Systems;
+using Content.Shared.Cuffs.Components;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.Effects;
@@ -26,6 +29,8 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
     [Dependency] private SharedContainerSystem _containers = default!;
     [Dependency] private MovementSpeedModifierSystem _movement = default!;
     [Dependency] private CoreModuleSystem _modules = default!;
+    [Dependency] private MobStateSystem _mobState = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
 
     [SubscribeLocalEvent]
     private void OnInstallCoreUpgrade(Entity<CruciformCoreUpgradeComponent> ent, ref AfterInteractEvent args)
@@ -34,9 +39,28 @@ public sealed partial class CruciformUpgradeSystem : EntitySystem
             return;
 
         if (_cruciform.TryGetCruciformEntity(target, out var implant, out var installed))
+        {
+            // Installing into someone else's implant (e.g. Obey) needs a subdued subject:
+            // restrained or incapacitated. A free, conscious person can't be converted by a click.
+            if (target != args.User && !IsSubdued(target))
+            {
+                _popup.PopupEntity(Loc.GetString("oxyd-cruciform-upgrade-not-subdued"), target, args.User);
+                args.Handled = true;
+                return;
+            }
+
             args.Handled = TryInstallCoreUpgrade(implant, installed, ent.Owner, args.User);
+        }
         else if (TryComp<CruciformComponent>(target, out var loose))
             args.Handled = TryInstallCoreUpgrade(target, loose, ent.Owner, args.User);
+    }
+
+    private bool IsSubdued(EntityUid target)
+    {
+        if (_mobState.IsIncapacitated(target))
+            return true;
+
+        return TryComp<CuffableComponent>(target, out var cuffable) && cuffable.CuffedHandCount > 0;
     }
 
     public bool TryInstallCoreUpgrade(EntityUid cruciform, CruciformComponent comp, EntityUid item, EntityUid? installer = null)

@@ -161,11 +161,16 @@ public sealed partial class OxydResearchSystem
         // Eris DA refunds material sheets to the analyzer output.
         if (TryComp<PhysicalCompositionComponent>(item, out var phys))
         {
+            // Composition is per unit; a stack holds Count units.
+            var units = TryComp<StackComponent>(item, out var itemStack) ? itemStack.Count : 1;
             foreach (var (matId, amount) in phys.MaterialComposition)
             {
                 if (!_proto.TryIndex<MaterialPrototype>(matId, out var mat) || mat.StackEntity == null)
                     continue;
-                var sheets = Math.Max(1, amount / 200); // ~half the item's mass (Eris returns stacks)
+                // Eris refunds about half the item's material; never more than went in.
+                var sheets = amount * units / 2 / MaterialPerSheet;
+                if (sheets <= 0)
+                    continue;
                 var stack = Spawn(mat.StackEntity.Value, Transform(da).Coordinates);
                 _stack.SetCount(stack, sheets);
             }
@@ -178,6 +183,9 @@ public sealed partial class OxydResearchSystem
     }
 
     [Dependency] private StackSystem _stack = default!;
+
+    /// <summary>Material units in one sheet/ingot stack unit (SS14 materials use 100).</summary>
+    private const int MaterialPerSheet = 100;
 
     private EntityUid? FindAnalyzerWithItem(Entity<OxydRdConsoleComponent> ent)
     {
@@ -347,6 +355,13 @@ public sealed partial class OxydResearchSystem
             _popup.PopupEntity("No research value detected.", ent, args.User);
             return;
         }
+        // Each specimen/object yields data once; rescanning it adds nothing.
+        if (HasComp<OxydResearchScannedComponent>(target.Value))
+        {
+            _popup.PopupEntity("Already scanned — no new research value.", ent, args.User);
+            args.Handled = true;
+            return;
+        }
         // Eris symptom scans (experiment.dm): scanning a specimen yields a
         // datablock — vitals on the living, pathology on the dead.
         if (!TryComp<OxydOriginTechComponent>(target.Value, out var origin) || origin.Techs.Count == 0)
@@ -358,6 +373,7 @@ public sealed partial class OxydResearchSystem
                 var svalue = alive ? 50 : 100;
                 ent.Comp.Blocks.Add(new OxydScanBlock { Subject = $"{label} sample: {Name(target.Value)}", Value = svalue });
                 ent.Comp.TotalValue += svalue;
+                EnsureComp<OxydResearchScannedComponent>(target.Value);
                 Dirty(ent);
                 _popup.PopupEntity($"Symptom scan recorded: {Name(target.Value)} (+{svalue}).", ent, args.User);
                 args.Handled = true;
@@ -371,6 +387,7 @@ public sealed partial class OxydResearchSystem
             value += lvl * 100;
         ent.Comp.Blocks.Add(new OxydScanBlock { Subject = Name(target.Value), Value = value });
         ent.Comp.TotalValue += value;
+        EnsureComp<OxydResearchScannedComponent>(target.Value);
         Dirty(ent);
         _popup.PopupEntity($"Scan recorded: {Name(target.Value)} (+{value}).", ent, args.User);
         args.Handled = true;

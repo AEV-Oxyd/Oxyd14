@@ -1,3 +1,4 @@
+using Content.Shared.Emag.Components;
 using Content.Server.Power.EntitySystems;
 using Robust.Server.GameObjects;
 using Content.Server.Power.Components;
@@ -63,6 +64,9 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         var c = ent.Comp;
         if (c.Fuel <= 0)
             return;
+        // One tile per move; the client picks the direction, not the distance.
+        if (msg.Dir == Vector2i.Zero || Math.Abs(msg.Dir.X) > 1 || Math.Abs(msg.Dir.Y) > 1)
+            return;
         var newPos = c.SatellitePos + msg.Dir;
         if (newPos.X < 0 || newPos.Y < 0 || newPos.X >= c.GridSize || newPos.Y >= c.GridSize)
             return;
@@ -121,7 +125,20 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
     private void OnShieldMode(Entity<OxydShipShieldComponent> ent, ref OxydShieldModeMessage msg)
     {
         if (msg.On)
+        {
+            // Only known modes; hacked-only ones need a hacked (emagged) generator.
+            var known = false;
+            foreach (var def in OxydShieldModes.All)
+            {
+                if (def.Id != msg.ModeId)
+                    continue;
+                known = !def.HackedOnly || HasComp<EmaggedComponent>(ent);
+                break;
+            }
+            if (!known)
+                return;
             ent.Comp.EnabledModes.Add(msg.ModeId);
+        }
         else
             ent.Comp.EnabledModes.Remove(msg.ModeId);
         Dirty(ent, ent.Comp);
@@ -227,7 +244,8 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
                 // grid actually feeds the generator (no free regen).
                 if (hasReceiver && rec != null)
                 {
-                    rec.Load = upkeepWatts;
+                    // Floor the draw so an empty (0 integrity) shield still needs a live grid.
+                    rec.Load = Math.Max(upkeepWatts, shield.UpkeepWattsPerUnit);
                     if (rec.Powered)
                         shield.Integrity = Math.Min(shield.Capacity, shield.Integrity + 2f);
                 }
@@ -236,6 +254,11 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
                     shield.Integrity = Math.Min(shield.Capacity, shield.Integrity + 2f);
                 }
                 Dirty(uid, shield);
+            }
+            else if (hasReceiver && rec != null && rec.Load != 0f)
+            {
+                // A stopped generator draws nothing.
+                rec.Load = 0f;
             }
             _ui.SetUiState(uid, OxydShieldUiKey.Key, new OxydShieldState
             {

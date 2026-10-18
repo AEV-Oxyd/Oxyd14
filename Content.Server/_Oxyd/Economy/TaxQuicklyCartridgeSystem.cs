@@ -56,7 +56,9 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
                     error = "Login failed";
                 break;
             case TaxQuicklyUiAction.Logout:
-                RemCompDeferred<OxydTaxQuicklySessionComponent>(loader);
+                // Clear in place: a deferred removal would still read as logged in for this refresh.
+                if (TryComp<OxydTaxQuicklySessionComponent>(loader, out var outSession))
+                    outSession.AccountNumber = 0;
                 break;
             case TaxQuicklyUiAction.Transfer:
                 if (!RequireSession(loader, out var from))

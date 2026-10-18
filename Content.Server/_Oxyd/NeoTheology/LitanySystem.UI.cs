@@ -228,6 +228,24 @@ public sealed partial class LitanySystem
         SendResultToActor(args.Actor, result, isFinal: !result.Success);
     }
 
+    private void OnPromptSubmitChoices(Entity<CruciformComponent> prompt, ref SubmitLitanyChoicesMessage args)
+    {
+        if (!_ui.GetActors(prompt.Owner, LitanyUiKey.Book).Contains(args.Actor))
+            return;
+
+        var result = SubmitChoicesCore(args.Actor, args.RequestId, args.SelectedTokens, args.RecipeId,
+            args.PlainText, prompt.Owner);
+        SendResultToActor(args.Actor, result, isFinal: !result.Success);
+    }
+
+    private void OnPromptCancel(Entity<CruciformComponent> prompt, ref CancelLitanyMessage args)
+    {
+        if (!_ui.GetActors(prompt.Owner, LitanyUiKey.Book).Contains(args.Actor))
+            return;
+
+        TryCancelLitany(args.Actor, args.RequestId);
+    }
+
     /// <summary>Test entry that mirrors the BUI choice submission without a connected client.</summary>
     internal LitanyActionResult TestingSubmitChoices(EntityUid actor, string requestId, List<string> tokens,
         string? plainText = null)

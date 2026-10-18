@@ -148,11 +148,16 @@ public sealed partial class NtUplinkSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnStoreMessageAttempt(Entity<StoreComponent> ent, ref BoundUserInterfaceMessageAttempt args)
+    private void OnStoreMessageAttempt(Entity<NtUplinkComponent> ent, ref BoundUserInterfaceMessageAttempt args)
     {
+        // Only gate the cruciform's own store UI; other stores (traitor PDAs, spellbooks)
+        // and the cruciform's other UIs are not ours to police.
+        if (!args.UiKey.Equals(StoreUiKey.Key) || !TryComp<StoreComponent>(ent, out var store))
+            return;
+
         var valid = TryComp<CruciformBearerComponent>(args.Actor, out var bearer) &&
             bearer.Cruciform is { } implant && TryGetUplink(implant, out var uplink) && uplink.Store == ent.Owner &&
-            _mind.TryGetMind(args.Actor, out var mind, out _) && ent.Comp.AccountOwner == mind;
+            _mind.TryGetMind(args.Actor, out var mind, out _) && store.AccountOwner == mind;
         if (!valid)
             args.Cancel();
     }
@@ -171,7 +176,12 @@ public sealed partial class NtUplinkSystem : EntitySystem
         if (TryComp<StoreComponent>(storeUid, out var storeComp))
             component.StoredTelecrystals = storeComp.Balance.GetValueOrDefault(Telecrystal);
 
-        QueueDel(storeUid);
+        // The store now lives on the cruciform itself: strip the store component rather than
+        // deleting the implant (which would take its soul snapshot and modules with it).
+        if (HasComp<NtUplinkComponent>(storeUid))
+            RemComp<StoreComponent>(storeUid);
+        else
+            QueueDel(storeUid);
 
         component.Store = null;
     }

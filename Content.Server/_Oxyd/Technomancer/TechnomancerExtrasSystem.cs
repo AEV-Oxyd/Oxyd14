@@ -64,6 +64,8 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         var smes = EntityQueryEnumerator<SmesComponent>();
         while (smes.MoveNext(out var uid, out _))
         {
+            if (!OnConsoleMap(ent.Owner, uid))
+                continue;
             var row = new RconRow
             {
                 Entity = GetNetEntity(uid),
@@ -82,6 +84,8 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         var breakers = EntityQueryEnumerator<OxydBreakerBoxComponent>();
         while (breakers.MoveNext(out var uid, out var br))
         {
+            if (!OnConsoleMap(ent.Owner, uid))
+                continue;
             state.Rows.Add(new RconRow
             {
                 Entity = GetNetEntity(uid),
@@ -94,25 +98,31 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         _ui.SetUiState(ent.Owner, OxydRconUiKey.Key, state);
     }
 
+    private bool OnConsoleMap(EntityUid console, EntityUid target)
+        => Transform(console).MapID == Transform(target).MapID;
+
     private void OnRconToggle(Entity<OxydRconComponent> ent, ref OxydRconToggleMessage msg)
     {
-        var target = GetEntity(msg.Entity);
-        if (!Exists(target))
+        // The client names the target, so only act on what this console lists:
+        // SMES units and breaker boxes on the console's own map.
+        if (!TryGetEntity(msg.Entity, out var maybeTarget) || maybeTarget is not { } target ||
+            !Exists(target) || !OnConsoleMap(ent.Owner, target))
             return;
         switch (msg.Field)
         {
             // Same fields the stock SMES BUI toggles (BatteryInterfaceSystem) —
             // set directly: re-raised BUI messages lose UiKey and get filtered.
             case "input":
-                if (TryComp<PowerNetworkBatteryComponent>(target, out var netIn))
+                if (HasComp<SmesComponent>(target) && TryComp<PowerNetworkBatteryComponent>(target, out var netIn))
                     netIn.CanCharge = msg.Value;
                 break;
             case "output":
-                if (TryComp<PowerNetworkBatteryComponent>(target, out var netOut))
+                if (HasComp<SmesComponent>(target) && TryComp<PowerNetworkBatteryComponent>(target, out var netOut))
                     netOut.CanDischarge = msg.Value;
                 break;
             case "breaker":
-                RaiseLocalEvent(target, new OxydBreakerToggleMessage(msg.Value));
+                if (HasComp<OxydBreakerBoxComponent>(target))
+                    RaiseLocalEvent(target, new OxydBreakerToggleMessage(msg.Value));
                 break;
         }
         PushRcon(ent);

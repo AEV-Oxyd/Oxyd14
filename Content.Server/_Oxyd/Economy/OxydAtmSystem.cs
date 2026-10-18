@@ -43,7 +43,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
         {
             ent.Comp.SessionAccount = null;
             ent.Comp.SessionUser = null;
-            Dirty(ent);
             PushState(ent);
         }
     }
@@ -100,7 +99,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
 
         ent.Comp.SessionAccount = accountNumber;
         ent.Comp.SessionUser = actor;
-        Dirty(ent);
 
         // Anyone else who had the UI open must not receive the new session's
         // account number/name/balance — kick every other viewer.
@@ -118,7 +116,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
     {
         ent.Comp.SessionAccount = null;
         ent.Comp.SessionUser = null;
-        Dirty(ent);
         PushState(ent);
     }
 

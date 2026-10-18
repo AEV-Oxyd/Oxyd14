@@ -15,3 +15,5 @@ oxyd-neotheology-profile-agrolyte = Agrolyte
 oxyd-neotheology-profile-custodian = Custodian
 oxyd-neotheology-profile-preacher = Preacher
 oxyd-neotheology-profile-inquisitor = Inquisitor
+
+oxyd-cruciform-upgrade-not-subdued = They must be restrained or incapacitated before you can install that.

@@ -85,6 +85,14 @@ public sealed partial class LitanySystem : EntitySystem
             subs.Event<BeginLitanyMessage>(OnBeginLitanyMessage);
             subs.Event<CancelLitanyMessage>(OnCancelLitanyMessage);
         });
+
+        // Spoken casts open their choice prompt on the caster's cruciform (OpenPrayerPrompt),
+        // so its submit/cancel messages arrive there rather than on a book.
+        Subs.BuiEvents<CruciformComponent>(LitanyUiKey.Book, subs =>
+        {
+            subs.Event<SubmitLitanyChoicesMessage>(OnPromptSubmitChoices);
+            subs.Event<CancelLitanyMessage>(OnPromptCancel);
+        });
     }
 
     [SubscribeLocalEvent]

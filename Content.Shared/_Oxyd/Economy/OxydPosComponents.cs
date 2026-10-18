@@ -5,14 +5,17 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Economy;
 
-/// <summary>Eris ATM — personal/dept account teller using Credit stacks.</summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+/// <summary>Eris ATM — personal/dept account teller using Credit stacks.
+/// Not networked: the session is server-only and the owner sees it through BUI state.</summary>
+[RegisterComponent]
 public sealed partial class OxydAtmComponent : Component
 {
-    [DataField, AutoNetworkedField]
+    /// <summary>Server-only: the logged-in account. Never networked — the owner gets it via BUI state.</summary>
+    [ViewVariables]
     public int? SessionAccount;
 
     /// <summary>The player who logged in — only they may transact; cleared on UI close.</summary>
+    [ViewVariables]
     public EntityUid? SessionUser;
 }
 
