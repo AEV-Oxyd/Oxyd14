@@ -2,7 +2,7 @@ using Content.Shared._Oxyd.Skills;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
-namespace Content.Server._Oxyd.SanityInsightAndResting;
+namespace Content.Shared._Oxyd.Sanity;
 
 /// <summary>
 /// Gained skills without selecting a oddity

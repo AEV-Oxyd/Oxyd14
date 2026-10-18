@@ -4,6 +4,7 @@ using Content.IntegrationTests.Fixtures;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server._Oxyd.NeoTheology;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.Atmos.Components;
 using Content.Server.Body.Components;
 using Content.Shared.Nutrition.Components;

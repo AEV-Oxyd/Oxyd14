@@ -3,6 +3,7 @@ using System.Linq;
 using Content.IntegrationTests.Fixtures;
 using Content.Server._Oxyd.Economy;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.Cargo.Components;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared._Oxyd.Skills;

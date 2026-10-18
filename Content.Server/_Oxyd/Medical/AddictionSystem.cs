@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared._Oxyd.Medical;
 using Content.Shared.Body.Components;
 using Content.Shared.Chemistry.EntitySystems;

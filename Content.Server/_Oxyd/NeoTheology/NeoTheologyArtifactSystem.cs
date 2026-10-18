@@ -6,6 +6,7 @@ using Content.Shared._Oxyd.Skills;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared.DoAfter;
 using Content.Shared.Examine;
 using Content.Shared.Hands.EntitySystems;

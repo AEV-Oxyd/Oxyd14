@@ -1,4 +1,5 @@
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared._Oxyd.Medical;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Body.Components;

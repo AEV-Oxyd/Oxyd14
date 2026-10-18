@@ -411,6 +411,20 @@ public sealed partial class OxydSurgerySystem : EntitySystem
     private void RunStep(EntityUid surgeon, EntityUid patient, EntityUid organ, OxydSurgeryStep step,
         EntityUid? tool, OxydSurgeryToolComponent? toolComp)
     {
+        var surg = EnsureComp<OxydOrganSurgeryComponent>(organ);
+        // Reviewer: one operation per organ at a time — a step already running on
+        // this organ blocks a second surgeon's step on it.
+        if (surg.RunningStep != null)
+        {
+            _popup.PopupEntity("That organ is already being operated on.", surgeon, surgeon);
+            return;
+        }
+        // Reviewer: the tool must still be held when the step starts.
+        if (tool is { } held && !_hands.IsHolding(surgeon, held))
+        {
+            _popup.PopupEntity("You're not holding that tool anymore.", surgeon, surgeon);
+            return;
+        }
         var speed = toolComp?.Speed ?? 1f;
         var ev = new OxydSurgeryDoAfterEvent(GetNetEntity(patient), GetNetEntity(organ), step,
             tool is { } t ? GetNetEntity(t) : NetEntity.Invalid)
@@ -430,7 +444,6 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
         if (_doAfter.TryStartDoAfter(doArgs))
         {
-            var surg = EnsureComp<OxydOrganSurgeryComponent>(organ);
             surg.RunningStep = step;
             Announce(surgeon, patient, "oxyd-medical-surgery-start", organ);
             PushAllStates(patient);
@@ -449,6 +462,10 @@ public sealed partial class OxydSurgerySystem : EntitySystem
             return;
 
         var surg = EnsureComp<OxydOrganSurgeryComponent>(organ);
+        // Reviewer: re-validate the held tool when the step actually starts —
+        // the session's recorded tool may have been dropped since the window opened.
+        if (s.Tool is { } rec && !_hands.IsHolding(args.Actor, rec))
+            s.Tool = HeldStepItem(args.Actor);
         var tools = ToolFlagsOf(s.Tool);
         if (!AvailableSteps(tools, s.Tool, organComp, surg,
                 s.Tool is { } held && IsTransplantItem(held),
@@ -457,6 +474,32 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
         RunStep(args.Actor, patient, organ, args.Step, s.Tool,
             s.Tool is { } t ? CompOrNull<OxydSurgeryToolComponent>(t) : null);
+    }
+
+    /// <summary>First held item usable for a step: a surgical tool, else a
+    /// transplant organ/limb, else an implantable item.</summary>
+    private EntityUid? HeldStepItem(EntityUid surgeon)
+    {
+        EntityUid? transplant = null, implant = null;
+        foreach (var held in _hands.EnumerateHeld(surgeon))
+        {
+            if (TryComp<OxydSurgeryToolComponent>(held, out var tc) && tc.Tools != OxydSurgeryTool.None)
+                return held;
+            if (transplant == null && IsTransplantItem(held))
+                transplant = held;
+            if (implant == null && CanImplant(held))
+                implant = held;
+        }
+        return transplant ?? implant;
+    }
+
+    /// <summary>Surgical tool flags across everything the surgeon holds (cable coil included).</summary>
+    private OxydSurgeryTool HeldToolFlags(EntityUid surgeon)
+    {
+        var flags = OxydSurgeryTool.None;
+        foreach (var held in _hands.EnumerateHeld(surgeon))
+            flags |= ToolFlagsOf(held);
+        return flags;
     }
 
     private OxydSurgeryTool ToolFlagsOf(EntityUid? tool)
@@ -494,7 +537,23 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
         var surg = EnsureComp<OxydOrganSurgeryComponent>(organ);
         var tool = args.Tool == NetEntity.Invalid ? (EntityUid?) null : GetEntity(args.Tool);
-        var toolComp = tool is { } t ? CompOrNull<OxydSurgeryToolComponent>(t) : null;
+        // Reviewer: re-validate the held tool at completion — it may have been
+        // dropped mid-DoAfter, and a dropped item must not drive the result.
+        if (tool is { } t && !_hands.IsHolding(surgeon, t))
+            tool = null;
+        var needed = ToolForStep(args.Step);
+        // Diagnose is free on an undiagnosed organ (AvailableSteps adds it bare);
+        // on a diagnosed one it rides the scalpel flag like the UI gate does.
+        if (args.Step == OxydSurgeryStep.DiagnoseWound && !surg.Diagnosed)
+            needed = OxydSurgeryTool.None;
+        var itemStep = args.Step is OxydSurgeryStep.InsertItem or OxydSurgeryStep.AttachOrgan;
+        if ((itemStep && tool == null) ||
+            (needed != OxydSurgeryTool.None && (HeldToolFlags(surgeon) & needed) == 0))
+        {
+            _popup.PopupEntity("You're not holding the right tool anymore.", surgeon, surgeon);
+            return;
+        }
+        var toolComp = tool is { } t2 ? CompOrNull<OxydSurgeryToolComponent>(t2) : null;
 
         // The clicked item carries no quality when it isn't a surgical tool
         // (e.g. a held organ) — Eris rolls the required tool's quality instead,

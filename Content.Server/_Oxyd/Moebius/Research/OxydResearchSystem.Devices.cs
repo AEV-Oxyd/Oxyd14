@@ -2,6 +2,7 @@
 // Eris source: destructive_analyzer.dm, experiment.dm (science_tool,
 // autopsy_scanner, explosion_watcher, points disks).
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.Materials;
 using Content.Shared._Oxyd.Moebius.Research;
 using Content.Shared.Interaction.Events;
@@ -77,41 +78,57 @@ public sealed partial class OxydResearchSystem
             return;
         daComp.Busy = true;
         daComp.BusyUntil = _timing.CurTime + TimeSpan.FromSeconds(daComp.DeconstructTime);
+        // Reviewer round-2: pending work lives on the component, not a system dict.
+        daComp.PendingItem = item.Value;
+        daComp.PendingConsole = ent.Owner;
+        // Lock the input slot while Busy — an ejected item could be merged into a
+        // stack (Busy never cleared, analyzer stuck) or kept and then deleted
+        // from a player's hand while still awarding points.
+        _slots.SetLock(daUid, InputSlot, true);
         Dirty(daUid, daComp);
-        _pendingDeconstruct[(daUid, item.Value)] = ent.Owner;
         _popup.PopupEntity("Destructive analysis started.", ent, args.Actor);
         UpdateUi(ent);
     }
 
-    private readonly Dictionary<(EntityUid Da, EntityUid Item), EntityUid> _pendingDeconstruct = new();
-
     public override void Update(float frameTime)
     {
-        var done = new List<(EntityUid, EntityUid)>();
-        foreach (var ((da, item), console) in _pendingDeconstruct)
+        var q = EntityQueryEnumerator<OxydDestructiveAnalyzerComponent>();
+        while (q.MoveNext(out var da, out var comp))
         {
-            if (TerminatingOrDeleted(da) || TerminatingOrDeleted(item))
+            if (comp.PendingItem is not { } item)
+                continue;
+            if (TerminatingOrDeleted(da))
+                continue;
+            // If the item left the input slot (destroyed, teleported, merged),
+            // abort: never delete or award points for an item the analyzer no
+            // longer holds, and clear Busy so the machine isn't stuck forever.
+            if (TerminatingOrDeleted(item) || _slots.GetItemOrNull(da, InputSlot) != item)
             {
-                done.Add((da, item));
+                ClearPending(da, comp);
                 continue;
             }
-            var comp = Comp<OxydDestructiveAnalyzerComponent>(da);
             if (_timing.CurTime < comp.BusyUntil)
                 continue;
-            FinishDeconstruct(da, item, console);
-            done.Add((da, item));
+            FinishDeconstruct(da, item, comp.PendingConsole ?? EntityUid.Invalid, comp);
         }
-        foreach (var k in done)
-            _pendingDeconstruct.Remove(k);
     }
 
-    private void FinishDeconstruct(EntityUid da, EntityUid item, EntityUid consoleUid)
+    private void ClearPending(EntityUid da, OxydDestructiveAnalyzerComponent comp)
     {
-        if (TryComp<OxydDestructiveAnalyzerComponent>(da, out var comp))
-        {
-            comp.Busy = false;
-            Dirty(da, comp);
-        }
+        comp.Busy = false;
+        comp.PendingItem = null;
+        comp.PendingConsole = null;
+        _slots.SetLock(da, InputSlot, false);
+        Dirty(da, comp);
+    }
+
+    private void FinishDeconstruct(EntityUid da, EntityUid item, EntityUid consoleUid,
+        OxydDestructiveAnalyzerComponent comp)
+    {
+        ClearPending(da, comp);
+        // Re-validate the item is still in the input slot before deleting/awarding.
+        if (_slots.GetItemOrNull(da, InputSlot) != item)
+            return;
         if (!TryComp<OxydRdConsoleComponent>(consoleUid, out var console))
         {
             Del(item);

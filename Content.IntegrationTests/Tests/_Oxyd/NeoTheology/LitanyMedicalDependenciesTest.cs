@@ -4,6 +4,7 @@ using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.Server._Oxyd.Medical;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Server.Atmos.Components;
 using Content.Server.Body.Components;
 using Content.Shared._Oxyd.Medical;

@@ -11,6 +11,7 @@ using Content.Server.Objectives;
 using Content.Server.Storage.EntitySystems;
 using Content.Shared._Oxyd.Framework.Objectives;
 using Content.Shared._Oxyd.Framework.RadialMenu;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared._Oxyd.Skills;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Mind;

@@ -1,6 +1,7 @@
 using System.Linq;
 using Content.Server._Oxyd.Framework.ViewCalc;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared.Botany.Components;
 using Content.Shared.Botany.Systems;

@@ -7,6 +7,7 @@ using Content.Shared.Mobs.Systems;
 using Robust.Shared.Utility;
 using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared._Oxyd.NeoTheology.Components;
 using Content.Shared._Oxyd.NeoTheology.UI;
 using Content.Shared._Oxyd.Skills;
