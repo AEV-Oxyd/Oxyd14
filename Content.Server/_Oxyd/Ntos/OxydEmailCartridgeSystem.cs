@@ -6,8 +6,8 @@ namespace Content.Server._Oxyd.Ntos;
 
 public sealed partial class OxydEmailCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly OxydEmailSystem _email = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private OxydEmailSystem _email = default!;
 
 
     public override void Initialize()

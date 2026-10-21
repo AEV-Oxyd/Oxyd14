@@ -2,6 +2,7 @@
   parent: BaseItem
   id: BaseRecipeDisk
   name: Debug Item Call Dev Retard If Seen
+  description: Debug Item Call Dev Retard If Seen.
   components:
     - type: Sprite
       sprite: Oxyd/erisported/_Manual/discs.rsi

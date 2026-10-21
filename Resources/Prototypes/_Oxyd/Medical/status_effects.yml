@@ -13,63 +13,76 @@
   parent: OxydAnalgesicBase
   id: OxydAnalgesicWordsOfPurging
   name: words of purging
+  description: Words of purging.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicAngelsBalm
   name: angel's balm
+  description: Angel's balm.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicDeusBlessing
   name: deus blessing
+  description: Deus blessing.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicHolyInaprovaline
   name: holy inaprovaline
+  description: Holy inaprovaline.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicLitanyConvalescence
   name: convalescence
+  description: Convalescence.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicLitanySuccour
   name: succour
+  description: Succour.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicParacetamol
   name: paracetamol
+  description: Paracetamol.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicTramadol
   name: tramadol
+  description: Tramadol.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicOxycodone
   name: oxycodone
+  description: Oxycodone.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicDiclofenac
   name: diclofenac
+  description: Diclofenac.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicAranecolmin
   name: aranecolmin
+  description: Aranecolmin.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicTraumaControl
   name: trauma control
+  description: Trauma control.
 
 - type: entity
   parent: OxydAnalgesicBase
   id: OxydAnalgesicAdrenaline
   name: adrenaline
+  description: Adrenaline.

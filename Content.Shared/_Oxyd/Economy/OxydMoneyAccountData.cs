@@ -48,6 +48,13 @@ public sealed partial class OxydPersonalAccountComponent : Component
     [DataField, AutoNetworkedField]
     public int AccountNumber;
 
+    /// <summary>Mirrored balance for the character window. The PIN stays server-side.</summary>
+    [DataField, AutoNetworkedField]
+    public int Balance;
+
+    [DataField, AutoNetworkedField]
+    public string OwnerName = string.Empty;
+
     /// <summary>Department account number remembered for Manager/Worker style access.</summary>
     [DataField, AutoNetworkedField]
     public int? DepartmentAccountNumber;

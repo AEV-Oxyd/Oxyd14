@@ -10,9 +10,9 @@ namespace Content.Server._Oxyd.Ntos;
 /// <summary>Eris signal manager — fires DeviceLink port when signaller HW is installed.</summary>
 public sealed partial class OxydSignallerCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly DeviceLinkSystem _deviceLink = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
 
     public override void Initialize()
     {

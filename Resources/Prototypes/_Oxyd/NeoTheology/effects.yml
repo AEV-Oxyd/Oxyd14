@@ -4,6 +4,8 @@
 # Soft gold glow + holy chime on a successful cast (solo or each ceremony participant).
 - type: entity
   id: OxydNtCastGlow
+  name: nt cast glow
+  description: Nt Cast Glow.
   categories: [ HideSpawnMenu ]
   components:
   - type: PointLight
@@ -19,6 +21,8 @@
 # Bright flash + church bell the moment a cruciform first awakens (Epiphany).
 - type: entity
   id: OxydNtEpiphanyFlash
+  name: nt epiphany flash
+  description: Nt Epiphany Flash.
   categories: [ HideSpawnMenu ]
   components:
   - type: PointLight

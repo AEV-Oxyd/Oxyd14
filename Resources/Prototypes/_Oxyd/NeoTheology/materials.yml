@@ -6,7 +6,7 @@
   parent: BaseVeryLargeStack
   id: Biomatter
   name: stack-biomatter
-  icon: { sprite: /Textures/Objects/Materials/materials.rsi, state: monkeyhide }
+  icon: { sprite: /Textures/_Oxyd/NeoTheology/biomatter.rsi, state: biomatter }
   spawn: OxydNtBiomatterStack1
   # Offerings consume up to 200 (offerings.yml); the cap must fit a single stack.
   maxCount: 250
@@ -16,7 +16,7 @@
   name: biomatter
   unit: materials-unit-sheet
   stackEntity: OxydNtBiomatterStack1
-  icon: { sprite: Objects/Materials/materials.rsi, state: monkeyhide }
+  icon: { sprite: _Oxyd/NeoTheology/biomatter.rsi, state: biomatter }
   color: '#7a4f2a'
   price: 0.05
 
@@ -24,18 +24,27 @@
   parent: MaterialBase
   id: OxydNtBiomatter
   name: biomatter
+  description: A soft, strange sheet of processed biomatter.
   suffix: Full
   components:
   - type: Material
   - type: PhysicalComposition
     materialComposition:
       Biomatter: 1
+  - type: Sprite
+    sprite: _Oxyd/NeoTheology/biomatter.rsi
+    state: biomatter_3
+    layers:
+    - state: biomatter_3
+      map: ["base"]
   - type: Stack
     stackType: Biomatter
     count: 10
-  - type: Sprite
-    sprite: Objects/Materials/materials.rsi
-    state: monkeyhide
+    baseLayer: base
+    layerStates:
+    - biomatter
+    - biomatter_2
+    - biomatter_3
 
 - type: entity
   parent: OxydNtBiomatter

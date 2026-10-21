@@ -20,6 +20,7 @@
   parent: OxydNtBiomatterCanister
   id: OxydNtBiomatterCanisterLarge
   name: large biomatter canister
+  description: Large biomatter canister.
   components:
   - type: MaterialStorage
     storageLimit: 2000

@@ -6,6 +6,8 @@
 - type: entity
   parent: BaseItem
   id: OxydErisAutopsyScanner
+  name: eris autopsy scanner
+  description: Eris Autopsy Scanner.
   components:
   - type: Sprite
     sprite: Objects/Specific/Medical/healthanalyzer.rsi
@@ -23,6 +25,8 @@
 - type: entity
   parent: BaseItem
   id: OxydErisMassSpectrometer
+  name: eris mass spectrometer
+  description: Eris Mass Spectrometer.
   components:
   - type: Sprite
     sprite: Objects/Specific/Atmos/gasanalyzer.rsi
@@ -35,6 +39,8 @@
 - type: entity
   parent: OxydErisMassSpectrometer
   id: OxydErisMassSpectrometerAdvanced
+  name: eris mass spectrometer advanced
+  description: Eris Mass Spectrometer Advanced.
   components:
   - type: OxydMassSpectrometer
     detailed: true

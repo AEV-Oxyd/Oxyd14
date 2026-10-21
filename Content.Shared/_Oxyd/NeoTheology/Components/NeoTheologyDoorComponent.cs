@@ -1,5 +1,6 @@
 using Content.Shared.FixedPoint;
 using Content.Shared._Oxyd.NeoTheology;
+using Robust.Shared.GameStates;
 
 namespace Content.Shared._Oxyd.NeoTheology.Components;
 
@@ -7,7 +8,7 @@ namespace Content.Shared._Oxyd.NeoTheology.Components;
 /// Marks a physical door as eligible for the foundation door litanies.
 /// Access remains supplied dynamically by the current bearer.
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class NeoTheologyDoorComponent : Component
 {
     /// <summary>Eris holy-door health depleted: the airlock's breakage threshold.</summary>
@@ -21,7 +22,7 @@ public sealed partial class NeoTheologyDoorComponent : Component
     public bool Broken;
 
     /// <summary>Eris <c>minimal_holiness</c>. The bearer must meet or exceed this clearance.</summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public NeoTheologyClearance MinimumClearance = NeoTheologyClearance.Common;
 }
 

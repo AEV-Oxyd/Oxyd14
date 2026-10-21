@@ -8,29 +8,23 @@ namespace Content.Server._Oxyd.Economy;
 /// <summary>Eris Accounts uplink terminal against <see cref="OxydEconomySystem"/>.</summary>
 public sealed partial class OxydAccountsDbSystem : EntitySystem
 {
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly AccessReaderSystem _access = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private AccessReaderSystem _access = default!;
 
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydAccountsDbComponent, BoundUIOpenedEvent>(OnOpened);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbSelectMessage>(OnSelect);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbBackMessage>(OnBack);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbBeginCreateMessage>(OnBeginCreate);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbCreateMessage>(OnCreate);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbToggleSuspendMessage>(OnToggleSuspend);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbAdjustMessage>(OnAdjust);
-        SubscribeLocalEvent<OxydAccountsDbComponent, OxydAccountsDbRevokePayrollMessage>(OnRevoke);
     }
 
+    [SubscribeLocalEvent]
     private void OnOpened(Entity<OxydAccountsDbComponent> ent, ref BoundUIOpenedEvent args)
     {
         _economy.EnsureDepartmentsForRound();
         PushState(ent, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnSelect(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbSelectMessage args)
     {
         if (!HasAccess(ent, args.Actor))
@@ -45,6 +39,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnBack(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbBackMessage args)
     {
         ent.Comp.DetailAccount = null;
@@ -53,6 +48,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnBeginCreate(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbBeginCreateMessage args)
     {
         if (!HasAccess(ent, args.Actor))
@@ -67,6 +63,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnCreate(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbCreateMessage args)
     {
         if (!HasAccess(ent, args.Actor))
@@ -110,6 +107,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor, status: $"Created #{created.AccountNumber} PIN {created.Pin}");
     }
 
+    [SubscribeLocalEvent]
     private void OnToggleSuspend(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbToggleSuspendMessage args)
     {
         if (!HasAccess(ent, args.Actor) || ent.Comp.DetailAccount is not { } num)
@@ -128,6 +126,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor, status: acc.Suspended ? "Suspended" : "Active");
     }
 
+    [SubscribeLocalEvent]
     private void OnAdjust(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbAdjustMessage args)
     {
         if (!HasAccess(ent, args.Actor) || ent.Comp.DetailAccount is not { } num)
@@ -146,6 +145,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         PushState(ent, args.Actor, status: $"Adjusted by {args.Delta}");
     }
 
+    [SubscribeLocalEvent]
     private void OnRevoke(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbRevokePayrollMessage args)
     {
         if (!HasAccess(ent, args.Actor) || ent.Comp.DetailAccount is not { } num)

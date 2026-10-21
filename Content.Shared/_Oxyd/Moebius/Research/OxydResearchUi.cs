@@ -52,6 +52,7 @@ public sealed class OxydRdNodeInfo
     public int State;
     /// <summary>Names of missing prerequisite nodes.</summary>
     public List<string> Missing = new();
+    public List<string> Requires = new();
     /// <summary>Recipe names this node unlocks (ported designs only).</summary>
     public List<string> Unlocks = new();
 }

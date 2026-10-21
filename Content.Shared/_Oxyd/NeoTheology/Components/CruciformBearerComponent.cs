@@ -26,4 +26,8 @@ public sealed partial class CruciformBearerComponent : Component
     /// <summary>Server-only request ID for the one pending cast/choice.</summary>
     [ViewVariables]
     public string? PendingRequestId;
+
+    /// <summary>View range currently added by the aura upgrade, so removal subtracts the same amount.</summary>
+    [ViewVariables]
+    public float AppliedViewRange;
 }

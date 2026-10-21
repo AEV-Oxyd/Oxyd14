@@ -184,14 +184,17 @@ public sealed partial class CruciformSystem : SharedCruciformSystem
     /// </summary>
     public void RefreshUpgradeBehaviors(EntityUid body, CruciformComponent component)
     {
-        if (component.Upgrade is { } upgrade && TryComp<CruciformUpgradeAuraComponent>(upgrade, out var aura))
+        var desired = component.Upgrade is { } upgrade && TryComp<CruciformUpgradeAuraComponent>(upgrade, out var aura)
+            ? aura.Radius
+            : 0f;
+        if (desired > 0f || TryComp<ViewTickerComponent>(body, out _))
         {
             var ticker = EnsureComp<ViewTickerComponent>(body);
-            ticker.auraRange = aura.Radius;
-        }
-        else if (TryComp<ViewTickerComponent>(body, out var existingTicker))
-        {
-            existingTicker.auraRange = 0f;
+            if (TryComp<CruciformBearerComponent>(body, out var bearer))
+            {
+                ticker.range += desired - bearer.AppliedViewRange;
+                bearer.AppliedViewRange = desired;
+            }
         }
 
         if (component.ImplantedEntity == body &&

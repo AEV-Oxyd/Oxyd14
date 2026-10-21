@@ -24,9 +24,6 @@ public sealed partial class OxydAppendixSystem : EntitySystem
     [Dependency] private VomitSystem _vomit = default!;
     [Dependency] private PainSystem _pain = default!;
 
-    /// <summary>Spontaneous appendicitis rate per minute of body-time (Eris random event).</summary>
-    private const float SpontaneousPerMinute = 0.2f;
-
     private const float StingStage = 0f;
     private const float DamageStage = 200f;
     private const float VomitStage = 400f;
@@ -46,17 +43,14 @@ public sealed partial class OxydAppendixSystem : EntitySystem
             if (organ.Body is not { } body)
                 continue;
 
+            // Eris spontaneous_appendicitis is a disabled one-mob event, not a per-organ
+            // roll. A healthy appendix stays quiet until something sets Inflamed.
+            if (app.Inflamed <= 0f)
+                continue;
+
             // OXYD: tick-scheduled rolls use a predicted stream keyed on the organ
             // so they don't shift the global RNG sequence mid-frame.
             var roll = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(uid));
-
-            // Spontaneous onset (Eris spontaneous_appendicitis event).
-            if (app.Inflamed <= 0f)
-            {
-                if (roll.Prob(SpontaneousPerMinute / 60f * 2f)) // per-2s tick
-                    app.Inflamed = 1f;
-                continue;
-            }
 
             app.Inflamed += 2f;
 

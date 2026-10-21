@@ -98,6 +98,8 @@ public sealed partial class OxydShieldWindow : FancyWindow
         _modeList.DisposeAllChildren();
         foreach (var m in OxydShieldModes.All)
         {
+            if (m.HackedOnly && !s.Hacked)
+                continue;
             var row = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 6 };
             var btn = new ErisLink(m.Name);
             var on = s.EnabledModes.Contains(m.Id);

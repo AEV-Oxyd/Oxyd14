@@ -9,6 +9,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydRdConsole
+  name: rd console
+  description: Rd Console.
   components:
   - type: Sprite
     sprite: Structures/Machines/computers.rsi
@@ -49,6 +51,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydDestructiveAnalyzer
+  name: destructive analyzer
+  description: Destructive Analyzer.
   components:
   - type: Sprite
     sprite: Structures/Machines/artifact_analyzer.rsi
@@ -74,6 +78,8 @@
 - type: entity
   parent: [ Protolathe ]
   id: OxydProtolathe
+  name: protolathe
+  description: Protolathe.
   components:
   - type: OxydRdLinkable
     kind: Protolathe
@@ -92,6 +98,8 @@
 - type: entity
   parent: [ CircuitImprinter ]
   id: OxydCircuitImprinter
+  name: circuit imprinter
+  description: Circuit Imprinter.
   components:
   - type: OxydRdLinkable
     kind: Imprinter
@@ -108,6 +116,8 @@
 - type: entity
   parent: [ CircuitImprinter ]
   id: OxydMechfab
+  name: mechfab
+  description: Mechfab.
   components:
   - type: Sprite
     sprite: Structures/Machines/exosuit_fabricator.rsi
@@ -140,6 +150,8 @@
 - type: entity
   parent: [ BaseItem ]
   id: OxydExplosionWatcher
+  name: explosion watcher
+  description: Explosion Watcher.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
@@ -159,10 +171,14 @@
 - type: entity
   parent: BaseComputerCircuitboard
   id: OxydRdConsoleCircuitboard
+  name: rd console circuitboard
+  description: Rd Console Circuitboard.
 
 - type: entity
   parent: BaseMachineCircuitboard
   id: OxydProtolatheBoard
+  name: protolathe board
+  description: Protolathe Board.
   components:
   - type: MachineBoard
     prototype: OxydProtolathe
@@ -176,6 +192,8 @@
 - type: entity
   parent: BaseMachineCircuitboard
   id: OxydCircuitImprinterBoard
+  name: circuit imprinter board
+  description: Circuit Imprinter Board.
   components:
   - type: MachineBoard
     prototype: OxydCircuitImprinter
@@ -185,6 +203,8 @@
 - type: entity
   parent: BaseMachineCircuitboard
   id: OxydMechfabBoard
+  name: mechfab board
+  description: Mechfab Board.
   components:
   - type: MachineBoard
     prototype: OxydMechfab
@@ -194,6 +214,8 @@
 - type: entity
   parent: BaseMachineCircuitboard
   id: OxydDestructiveAnalyzerBoard
+  name: destructive analyzer board
+  description: Destructive Analyzer Board.
   components:
   - type: MachineBoard
     prototype: OxydDestructiveAnalyzer

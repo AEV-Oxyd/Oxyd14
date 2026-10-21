@@ -28,6 +28,8 @@
 - type: entity
   parent: MedicalPDA
   id: OxydMoebiusPDA
+  name: moebius p d a
+  description: Moebius P D A.
   components:
   - type: EntityTableContainerFill
     containers:
@@ -43,6 +45,8 @@
 - type: entity
   parent: ChemistryPDA
   id: OxydMoebiusChemistPDA
+  name: moebius chemist p d a
+  description: Moebius Chemist P D A.
   components:
   - type: EntityTableContainerFill
     containers:

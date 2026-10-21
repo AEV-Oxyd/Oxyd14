@@ -7,8 +7,8 @@ namespace Content.Server._Oxyd.Economy;
 
 public sealed partial class OxydCatalogCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly IPrototypeManager _protos = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private IPrototypeManager _protos = default!;
 
     public override void Initialize()
     {

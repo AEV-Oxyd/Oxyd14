@@ -5,6 +5,8 @@
 - type: entity
   parent: BaseItem
   id: OxydScienceTool
+  name: science tool
+  description: Science Tool.
   components:
   - type: Sprite
     sprite: Objects/Specific/Medical/healthanalyzer.rsi
@@ -22,6 +24,8 @@
 - type: entity
   parent: BaseItem
   id: OxydAutopsyReport
+  name: autopsy report
+  description: Autopsy Report.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
@@ -39,6 +43,8 @@
 - type: entity
   parent: BaseItem
   id: OxydResearchDataDisk
+  name: research data disk
+  description: Research Data Disk.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
@@ -53,6 +59,8 @@
 - type: entity
   parent: BaseItem
   id: OxydResearchPointsDisk
+  name: research points disk
+  description: Research Points Disk.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
@@ -69,6 +77,8 @@
 - type: entity
   parent: MicroManipulatorStockPart
   id: OxydNanoManipulator
+  name: nano manipulator
+  description: Nano Manipulator.
   components:
   - type: OxydOriginTech
     techs:
@@ -82,6 +92,8 @@
 - type: entity
   parent: PowerCellSmallPrinted
   id: OxydCellPrototype
+  name: cell prototype
+  description: Cell Prototype.
   components:
   - type: OxydOriginTech
     techs:

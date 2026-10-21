@@ -44,7 +44,7 @@ public sealed class OxydTradeStackTest : GameTest
 
             var entMan = server.ResolveDependency<IEntityManager>();
             var drop = entMan.SpawnEntity("OxydTradeBeaconReceiving", map.MapCoords);
-            Assert.That(trade.TryFulfillOrder(order.OrderId, entMan.GetComponent<TransformComponent>(drop).Coordinates, out err), Is.True, err);
+            Assert.That(trade.TryFulfillOrder(order.OrderId, entMan.GetComponent<TransformComponent>(drop).Coordinates, new[] { order.RequestingAccount }, out err), Is.True, err);
             Assert.That(order.Fulfilled, Is.True);
             Assert.That(guild.Balance, Is.EqualTo(before - order.Cost));
             Assert.That(vermouth.Goods["DrinkGlass"].Stock, Is.EqualTo(stockBefore - 2));

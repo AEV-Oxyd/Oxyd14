@@ -19,10 +19,10 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
 {
     private static readonly ProtoId<StackPrototype> CreditStack = "Credit";
 
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly StackSystem _stacks = default!;
-    [Dependency] private readonly InventorySystem _inventory = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private StackSystem _stacks = default!;
+    [Dependency] private InventorySystem _inventory = default!;
 
     public override void Initialize()
     {

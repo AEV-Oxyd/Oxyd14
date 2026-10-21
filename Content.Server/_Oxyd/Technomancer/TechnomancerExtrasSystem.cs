@@ -29,12 +29,12 @@ namespace Content.Server._Oxyd.Technomancer;
 /// </summary>
 public sealed class TechnomancerExtrasSystem : EntitySystem
 {
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly IPrototypeManager _proto = default!;
-    [Dependency] private readonly SharedTransformSystem _xform = default!;
-    [Dependency] private readonly SharedBatterySystem _battery = default!;
-    [Dependency] private readonly PopupSystem _popup = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
+    [Dependency] private SharedTransformSystem _xform = default!;
+    [Dependency] private SharedBatterySystem _battery = default!;
+    [Dependency] private PopupSystem _popup = default!;
 
     private TimeSpan _nextPush = TimeSpan.Zero;
 
@@ -46,7 +46,6 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         SubscribeLocalEvent<OxydNanoforgeComponent, EntInsertedIntoContainerMessage>(OnForgeInsert);
         SubscribeLocalEvent<OxydNanoforgeComponent, OxydForgeEjectMessage>(OnForgeEject);
         SubscribeLocalEvent<OxydToolModComponent, AfterInteractEvent>(OnToolModApply);
-        SubscribeLocalEvent<OxydRpdComponent, UseInHandEvent>(OnRpdUse);
         SubscribeLocalEvent<OxydDesignDiskComponent, UseInHandEvent>(OnDiskUse);
         SubscribeLocalEvent<OxydNanoforgeComponent, BoundUIOpenedEvent>(OnForgeOpened);
     }
@@ -206,14 +205,6 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         var modded = EnsureComp<OxydToolModdedComponent>(target);
         modded.AppliedQualities.Add(ent.Comp.GrantsQuality.Id);
         QueueDel(ent.Owner);
-        args.Handled = true;
-    }
-
-    // ---- RPD (dispense a pipe at your feet) ----
-
-    private void OnRpdUse(Entity<OxydRpdComponent> ent, ref UseInHandEvent args)
-    {
-        Spawn(ent.Comp.PipeProto, Transform(args.User).Coordinates);
         args.Handled = true;
     }
 

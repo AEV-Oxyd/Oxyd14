@@ -9,7 +9,7 @@ namespace Content.Server._Oxyd.Economy;
 /// </summary>
 public sealed partial class OxydGuildTradeBridgeSystem : EntitySystem
 {
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
 
     public override void Initialize()
     {

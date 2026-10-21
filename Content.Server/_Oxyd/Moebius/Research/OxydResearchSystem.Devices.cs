@@ -1,3 +1,4 @@
+using System.Linq;
 // Eris Moebius research port: destructive analyzer + experiment sources.
 // Eris source: destructive_analyzer.dm, experiment.dm (science_tool,
 // autopsy_scanner, explosion_watcher, points disks).
@@ -556,7 +557,8 @@ public sealed partial class OxydResearchSystem
                     continue;
                 var info = new OxydRdNodeInfo { Id = node.ID, Name = Loc.GetString(node.Name),
                     Desc = node.Description != null ? Loc.GetString(node.Description.Value) : string.Empty,
-                    Cost = node.Cost, X = node.PosX, Y = node.PosY };
+                    Cost = node.Cost, X = node.PosX, Y = node.PosY,
+                    Requires = node.RequiredNodes.Select(id => id.Id).ToList() };
                 if (ent.Comp.UnlockedNodes.Contains(node.ID))
                     info.State = 2;
                 else

@@ -3,7 +3,14 @@ using Content.Server.Power.EntitySystems;
 using Robust.Server.GameObjects;
 using Content.Server.Power.Components;
 using Content.Shared._Oxyd.Technomancer.Components;
+using Content.Shared.Mobs.Components;
+using Content.Shared.Physics;
+using Content.Shared.Projectiles;
+using Content.Shared.Silicons.Borgs.Components;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics.Collision.Shapes;
+using Robust.Shared.Physics.Events;
+using Robust.Shared.Physics.Systems;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -17,9 +24,10 @@ namespace Content.Server._Oxyd.Technomancer;
 /// </summary>
 public sealed class TechnomancerMachinesSystem : EntitySystem
 {
-    [Dependency] private readonly IRobustRandom _rand = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
+    [Dependency] private IRobustRandom _rand = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private FixtureSystem _fixtures = default!;
 
     private TimeSpan _nextUpdate = TimeSpan.Zero;
 
@@ -29,6 +37,8 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         SubscribeLocalEvent<OxydPulsarComponent, OxydPulsarShieldMessage>(OnPulsarShield);
         SubscribeLocalEvent<OxydPulsarBridgeComponent, OxydPulsarBridgeToggleMessage>(OnBridgeToggle);
         SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldToggleMessage>(OnShieldToggle);
+        SubscribeLocalEvent<OxydShipShieldComponent, PreventCollideEvent>(OnShieldPreventCollide);
+        SubscribeLocalEvent<OxydShipShieldComponent, StartCollideEvent>(OnShieldCollide);
         SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldModeMessage>(OnShieldMode);
         SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldFieldSizeMessage>(OnShieldFieldSize);
         SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldInputCapMessage>(OnShieldInputCap);
@@ -120,6 +130,94 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         if (ent.Comp.Running && ent.Comp.Integrity <= 0)
             ent.Comp.Running = false;
         Dirty(ent, ent.Comp);
+        RefreshShieldField(ent);
+        PushShieldState(ent);
+    }
+
+    private void OnShieldPreventCollide(Entity<OxydShipShieldComponent> ent, ref PreventCollideEvent args)
+    {
+        if ((args.OurFixture.CollisionLayer & (int) CollisionGroup.BulletImpassable) == 0)
+            return;
+
+        if (!ShieldBlocks(ent.Comp, args.OtherEntity))
+            args.Cancelled = true;
+    }
+
+    private void OnShieldCollide(Entity<OxydShipShieldComponent> ent, ref StartCollideEvent args)
+    {
+        if (args.OurFixtureId != "shield" || !HasComp<ProjectileComponent>(args.OtherEntity))
+            return;
+
+        ent.Comp.Integrity = Math.Max(0f, ent.Comp.Integrity - 40f);
+        if (ent.Comp.Integrity <= 0f)
+            ent.Comp.Running = false;
+
+        Dirty(ent, ent.Comp);
+        RefreshShieldField(ent);
+        PushShieldState(ent);
+    }
+
+    private bool ShieldBlocks(OxydShipShieldComponent shield, EntityUid other)
+    {
+        if (!shield.Running || shield.Integrity <= 0f)
+            return false;
+
+        if (HasComp<ProjectileComponent>(other))
+            return shield.EnabledModes.Contains("hyperkinetic");
+
+        if (HasComp<BorgChassisComponent>(other))
+            return shield.EnabledModes.Contains("silicons");
+
+        if (HasComp<MobStateComponent>(other))
+        {
+            var id = MetaData(other).EntityPrototype?.ID ?? string.Empty;
+            var human = id.Contains("Human", StringComparison.Ordinal);
+            return human
+                ? shield.EnabledModes.Contains("humanoids")
+                : shield.EnabledModes.Contains("nonhumans");
+        }
+
+        return false;
+    }
+
+    private void RefreshShieldField(Entity<OxydShipShieldComponent> ent)
+    {
+        _fixtures.DestroyFixture(ent.Owner, "shield");
+        if (!ent.Comp.Running || ent.Comp.Integrity <= 0f || ent.Comp.FieldSize <= 0)
+            return;
+
+        var radius = Math.Clamp(ent.Comp.FieldSize, 1, 40);
+        _fixtures.TryCreateFixture(
+            ent.Owner,
+            new PhysShapeCircle(radius),
+            "shield",
+            density: 1000f,
+            hard: true,
+            collisionLayer: (int) (CollisionGroup.BulletImpassable | CollisionGroup.MidImpassable | CollisionGroup.HighImpassable));
+    }
+
+    private void PushShieldState(Entity<OxydShipShieldComponent> ent)
+    {
+        if (!_ui.IsUiOpen(ent.Owner, OxydShieldUiKey.Key))
+            return;
+
+        var shield = ent.Comp;
+        _ui.SetUiState(ent.Owner, OxydShieldUiKey.Key, new OxydShieldState
+        {
+            Running = shield.Running,
+            Integrity = shield.Integrity,
+            Capacity = shield.Capacity,
+            MitigationEm = shield.EnabledModes.Contains("photonic") ? 60f : 0f,
+            MitigationPh = shield.EnabledModes.Contains("hyperkinetic") ? 60f : 0f,
+            MitigationHe = shield.EnabledModes.Contains("atmos") ? 60f : 0f,
+            MitigationMax = 60f,
+            FieldSize = shield.FieldSize,
+            MaxFieldSize = shield.MaxFieldSize,
+            InputCap = shield.InputCap,
+            EnabledModes = new List<string>(shield.EnabledModes),
+            EventLog = new List<string>(shield.EventLog),
+            Hacked = HasComp<EmaggedComponent>(ent.Owner),
+        });
     }
 
     private void OnShieldMode(Entity<OxydShipShieldComponent> ent, ref OxydShieldModeMessage msg)
@@ -142,12 +240,16 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         else
             ent.Comp.EnabledModes.Remove(msg.ModeId);
         Dirty(ent, ent.Comp);
+        RefreshShieldField(ent);
+        PushShieldState(ent);
     }
 
     private void OnShieldFieldSize(Entity<OxydShipShieldComponent> ent, ref OxydShieldFieldSizeMessage msg)
     {
         ent.Comp.FieldSize = Math.Clamp(msg.Size, 0, ent.Comp.MaxFieldSize);
         Dirty(ent, ent.Comp);
+        RefreshShieldField(ent);
+        PushShieldState(ent);
     }
 
     private void OnShieldInputCap(Entity<OxydShipShieldComponent> ent, ref OxydShieldInputCapMessage msg)
@@ -260,24 +362,28 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
                 // A stopped generator draws nothing.
                 rec.Load = 0f;
             }
-            _ui.SetUiState(uid, OxydShieldUiKey.Key, new OxydShieldState
+            if (_ui.IsUiOpen(uid, OxydShieldUiKey.Key))
             {
-                HasConduit = hasReceiver,
-                Running = shield.Running,
-                Integrity = shield.Integrity,
-                Capacity = shield.Capacity,
-                MitigationEm = shield.EnabledModes.Contains("photonic") ? 60f : 0f,
-                MitigationPh = shield.EnabledModes.Contains("hyperkinetic") ? 60f : 0f,
-                MitigationHe = shield.EnabledModes.Contains("atmos") ? 60f : 0f,
-                MitigationMax = 60f,
-                UpkeepKw = upkeepWatts / 1000f,
-                TotalUseKw = hasReceiver && rec != null ? rec.PowerReceived / 1000f : 0f,
-                FieldSize = shield.FieldSize,
-                MaxFieldSize = shield.MaxFieldSize,
-                InputCap = shield.InputCap,
-                EnabledModes = new List<string>(shield.EnabledModes),
-                EventLog = new List<string>(shield.EventLog),
-            });
+                _ui.SetUiState(uid, OxydShieldUiKey.Key, new OxydShieldState
+                {
+                    HasConduit = hasReceiver,
+                    Running = shield.Running,
+                    Integrity = shield.Integrity,
+                    Capacity = shield.Capacity,
+                    MitigationEm = shield.EnabledModes.Contains("photonic") ? 60f : 0f,
+                    MitigationPh = shield.EnabledModes.Contains("hyperkinetic") ? 60f : 0f,
+                    MitigationHe = shield.EnabledModes.Contains("atmos") ? 60f : 0f,
+                    MitigationMax = 60f,
+                    UpkeepKw = upkeepWatts / 1000f,
+                    TotalUseKw = hasReceiver && rec != null ? rec.PowerReceived / 1000f : 0f,
+                    FieldSize = shield.FieldSize,
+                    MaxFieldSize = shield.MaxFieldSize,
+                    InputCap = shield.InputCap,
+                    EnabledModes = new List<string>(shield.EnabledModes),
+                    EventLog = new List<string>(shield.EventLog),
+                    Hacked = HasComp<EmaggedComponent>(uid),
+                });
+            }
         }
         // Pulsar console state push
         foreach (var (uid, c) in pulsarList)

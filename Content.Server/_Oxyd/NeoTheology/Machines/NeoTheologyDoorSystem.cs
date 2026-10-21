@@ -21,10 +21,8 @@ namespace Content.Server._Oxyd.NeoTheology.Machines;
 /// </summary>
 public sealed partial class NeoTheologyDoorSystem : EntitySystem
 {
-    [Dependency] private CruciformSystem _cruciform = default!;
     [Dependency] private DamageableSystem _damageable = default!;
     [Dependency] private SharedDoorSystem _doors = default!;
-    [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private SharedStackSystem _stack = default!;
 
@@ -40,43 +38,6 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
     {
         base.Initialize();
         SubscribeLocalEvent<NeoTheologyDoorComponent, DamageDealtEvent>(OnDamaged);
-        SubscribeLocalEvent<NeoTheologyDoorComponent, BeforeDoorOpenedEvent>(OnBeforeOpened);
-    }
-
-    private void OnBeforeOpened(EntityUid uid, NeoTheologyDoorComponent door, BeforeDoorOpenedEvent args)
-    {
-        if (door.MinimumClearance == NeoTheologyClearance.None)
-            return;
-
-        if (args.User is not { } user)
-        {
-            args.Cancel();
-            return;
-        }
-
-        if (HoldsTauCross(user))
-            return;
-
-        if (_cruciform.TryGetCruciform(user, out _, out var cruciform) &&
-            cruciform.Active &&
-            cruciform.Clearance >= door.MinimumClearance)
-            return;
-
-        args.Cancel();
-    }
-
-    private bool HoldsTauCross(EntityUid user)
-    {
-        if (!TryComp<HandsComponent>(user, out var hands))
-            return false;
-
-        foreach (var held in _hands.EnumerateHeld((user, hands)))
-        {
-            if (HasComp<TauCrossComponent>(held))
-                return true;
-        }
-
-        return false;
     }
 
     private void OnDamaged(EntityUid uid, NeoTheologyDoorComponent component, DamageDealtEvent args)

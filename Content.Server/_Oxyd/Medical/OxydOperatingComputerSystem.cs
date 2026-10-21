@@ -34,13 +34,21 @@ public sealed partial class OxydOperatingComputerSystem : EntitySystem
 
     public override void Initialize()
     {
-        // Push on open AND keep re-pushing while open: the open-time push races client
-        // window creation, and Eris refresh()es the page continuously anyway.
-        SubscribeLocalEvent<OxydOperatingComputerComponent, AfterActivatableUIOpenEvent>(OnUiOpen);
     }
 
-    private void OnUiOpen(EntityUid uid, OxydOperatingComputerComponent comp, AfterActivatableUIOpenEvent args)
-        => PushState(uid, comp);
+    [SubscribeLocalEvent]
+    private void OnUiOpen(Entity<OxydOperatingComputerComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        EnsureComp<OxydActiveInterfaceComponent>(ent);
+        PushState(ent, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnUiClose(Entity<OxydOperatingComputerComponent> ent, ref BoundUIClosedEvent args)
+    {
+        if (!_ui.IsUiOpen(ent.Owner, OxydOperatingComputerUiKey.Key))
+            RemComp<OxydActiveInterfaceComponent>(ent.Owner);
+    }
 
     /// <summary>Nearest operating table (Eris locates one in the cardinal directions;
     /// a radius search also covers diagonal tables).</summary>
@@ -135,11 +143,8 @@ public sealed partial class OxydOperatingComputerSystem : EntitySystem
             return;
         _refreshRemaining = 1f;
 
-        var query = EntityQueryEnumerator<OxydOperatingComputerComponent>();
-        while (query.MoveNext(out var uid, out var comp))
-        {
-            if (_ui.IsUiOpen(uid, OxydOperatingComputerUiKey.Key))
-                PushState(uid, comp);
-        }
+        var query = EntityQueryEnumerator<OxydOperatingComputerComponent, OxydActiveInterfaceComponent>();
+        while (query.MoveNext(out var uid, out var comp, out _))
+            PushState(uid, comp);
     }
 }

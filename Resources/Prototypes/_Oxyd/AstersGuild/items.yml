@@ -11,6 +11,8 @@
 - type: entity
   parent: BaseItem
   id: OxydCredits1
+  name: credits1
+  description: Credits1.
   components:
   - type: Stack
     stackType: OxydCredits
@@ -23,6 +25,8 @@
 - type: entity
   parent: OxydCredits1
   id: OxydCredits100
+  name: credits100
+  description: Credits100.
   components:
   - type: Stack
     stackType: OxydCredits
@@ -31,6 +35,8 @@
 - type: entity
   parent: OxydCredits1
   id: OxydCredits500
+  name: credits500
+  description: Credits500.
   components:
   - type: Stack
     stackType: OxydCredits

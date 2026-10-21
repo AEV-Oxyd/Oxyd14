@@ -2,8 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared._Oxyd.NeoTheology;
 using Content.Shared._Oxyd.NeoTheology.Components;
+using Content.Shared._Oxyd.NeoTheology.Events;
 using Content.Shared._Oxyd.NeoTheology.Prototypes;
 using Content.Shared._Oxyd.NeoTheology.UI;
+using Content.Shared.Chat;
+using Content.Shared.DoAfter;
 using Content.Shared.Hands;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
@@ -198,15 +201,76 @@ public sealed partial class LitanySystem
             return LitanyActionResult.Fail("oxyd-litany-denied-forged-actor");
         }
 
-        // Stale revision refresh happens inside TryBeginLitany via
-        // RefreshSnapshotOnStaleRevision — never authorize from the old list.
-        return TryBeginLitany(
+        if (!_catalog.TryGetLitany(args.Litany, out var litany))
+            return LitanyActionResult.Fail("oxyd-litany-denied-unknown");
+
+        // Choice, blueprint, and named-target rites still open the prompt. Every other
+        // rite is spoken: the book only chants the phrase, and speech casts it.
+        var needsPrompt = litany.SelectTarget || litany.SelectBlueprint || litany.AllowPlainText ||
+                          litany.DesignationChoices.Count > 0 ||
+                          LitanyPhraseParser.HasTargetPlaceholder(litany.Phrase);
+        if (needsPrompt)
+        {
+            return TryBeginLitany(
+                actor,
+                args.Litany,
+                LitanyCastOrigin.Book,
+                book: book,
+                expectedRevision: args.StateRevision,
+                choiceToken: args.ChoiceToken);
+        }
+
+        if (!_hands.IsHolding(actor, book) ||
+            !_hands.TryGetActiveItem(actor, out var active) ||
+            active != book)
+            return LitanyActionResult.Fail("oxyd-litany-denied-book-hand");
+
+        var delay = TimeSpan.FromSeconds(Math.Max(0.4, litany.Phrase.Length * 0.025));
+        var started = _doAfter.TryStartDoAfter(new DoAfterArgs(
+            EntityManager,
             actor,
-            args.Litany,
-            LitanyCastOrigin.Book,
-            book: book,
-            expectedRevision: args.StateRevision,
-            choiceToken: args.ChoiceToken);
+            delay,
+            new LitanyBookSpeakDoAfterEvent(litany.ID),
+            eventTarget: actor,
+            target: null,
+            used: book)
+        {
+            BreakOnMove = true,
+            BreakOnDamage = true,
+            NeedHand = true,
+            BreakOnDropItem = true,
+            BreakOnHandChange = true,
+            RequireCanInteract = true,
+            CancelDuplicate = true,
+            BlockDuplicate = true,
+        });
+
+        return started
+            ? LitanyActionResult.Ok()
+            : LitanyActionResult.Fail("oxyd-litany-denied-doafter");
+    }
+
+    [SubscribeLocalEvent]
+    private void OnBookSpeak(LitanyBookSpeakDoAfterEvent args)
+    {
+        if (args.Cancelled || args.Handled)
+            return;
+
+        if (!_catalog.TryGetLitany(args.LitanyId, out var litany))
+            return;
+
+        _chat.TrySendInGameICMessage(
+            args.User,
+            litany.Phrase,
+            InGameICChatType.Speak,
+            hideChat: false,
+            hideLog: false,
+            shell: null,
+            player: null,
+            nameOverride: null,
+            checkRadioPrefix: false,
+            ignoreActionBlocker: false);
+        args.Handled = true;
     }
 
     private void OnCancelLitanyMessage(Entity<LitanyBookComponent> book, ref CancelLitanyMessage args)

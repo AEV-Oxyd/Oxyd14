@@ -119,6 +119,14 @@ public sealed class OxydAtmUiState : BoundUserInterfaceState
     public string OwnerName = string.Empty;
     public int Balance;
     public string? Error;
+    public List<OxydAtmAccountEntry> Accounts = new();
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydAtmAccountEntry
+{
+    public int Number;
+    public string Name = string.Empty;
 }
 
 [Serializable, NetSerializable]

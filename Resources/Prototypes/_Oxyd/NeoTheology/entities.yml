@@ -101,6 +101,7 @@
   parent: OxydNtHolyDoor
   id: OxydNtHolyDoorClergy
   name: NeoTheology clergy door
+  description: NeoTheology clergy door.
   components:
   - type: NeoTheologyDoor
     minimumClearance: Clergy
@@ -110,6 +111,7 @@
   parent: OxydNtHolyDoor
   id: OxydNtHolyDoorPublic
   name: NeoTheology public door
+  description: NeoTheology public door.
   components:
   - type: NeoTheologyDoor
     minimumClearance: None
@@ -130,6 +132,8 @@
 - type: entity
   parent: HolyHandGrenade
   id: OxydNtHolyHandGrenade
+  name: nt holy hand grenade
+  description: Nt Holy Hand Grenade.
   components:
   - type: Explosive
     totalIntensity: 500
@@ -141,6 +145,7 @@
   parent: MobStatusEffectBase
   id: OxydNtEyeBlessing
   name: eye blessing
+  description: Eye blessing.
   components:
   - type: StatusEffect
     whitelist:

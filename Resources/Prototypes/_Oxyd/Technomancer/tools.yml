@@ -6,6 +6,8 @@
 - type: entity
   parent: BaseItem
   id: OxydDuctTape
+  name: duct tape
+  description: Duct Tape.
   components:
   - type: Sprite
     sprite: Objects/Tools/cable-coils.rsi
@@ -23,6 +25,8 @@
 - type: entity
   parent: BaseItem
   id: OxydCombiDriver
+  name: combi driver
+  description: Combi Driver.
   suffix: screwdriver+multitool
   components:
   - type: Sprite
@@ -40,6 +44,8 @@
 - type: entity
   parent: BaseItem
   id: OxydArmatureCutter
+  name: armature cutter
+  description: Armature Cutter.
   suffix: wirecutter+crowbar
   components:
   - type: Sprite
@@ -57,6 +63,8 @@
 - type: entity
   parent: BaseItem
   id: OxydPneumaticCrowbar
+  name: pneumatic crowbar
+  description: Pneumatic Crowbar.
   suffix: powered
   components:
   - type: Sprite
@@ -75,6 +83,8 @@
 - type: entity
   parent: BaseItem
   id: OxydPoweredHammer
+  name: powered hammer
+  description: Powered Hammer.
   suffix: powered
   components:
   - type: Sprite
@@ -93,6 +103,8 @@
 - type: entity
   parent: Welder
   id: OxydWelderAdv
+  name: welder adv
+  description: Welder Adv.
   suffix: advanced
   components: []
 
@@ -100,6 +112,8 @@
 - type: entity
   parent: BaseItem
   id: OxydToolModComplicator
+  name: tool mod complicator
+  description: Tool Mod Complicator.
   suffix: +pulsing
   components:
   - type: Sprite
@@ -109,24 +123,12 @@
   - type: OxydToolMod
     grantsQuality: Pulsing
 
-# RPD — Eris IJIRO rapid pipe dispenser Adapt (no stock RPD in this tree;
-# minimal dispenser: use in hand -> pipe segment at your feet).
-- type: entity
-  parent: BaseItem
-  id: OxydRapidPipeDispenser
-  suffix: IJIRO
-  components:
-  - type: Sprite
-    sprite: Objects/Tools/rcd.rsi
-    state: icon
-  - type: Item
-  - type: OxydRpd
-    pipeProto: GasPipeStraight
-
 # Design disks — Eris technomancers.dm disks (self-describing reference items).
 - type: entity
   parent: BaseItem
   id: OxydDesignDiskArk
+  name: design disk ark
+  description: Design Disk Ark.
   suffix: ARK-034
   components:
   - type: Sprite
@@ -138,6 +140,8 @@
 - type: entity
   parent: BaseItem
   id: OxydDesignDiskIjiro
+  name: design disk ijiro
+  description: Design Disk Ijiro.
   suffix: IJIRO-451
   components:
   - type: Sprite

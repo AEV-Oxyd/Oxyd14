@@ -58,5 +58,6 @@
   parent: BaseMindRole
   id: OxydNtObeyRole
   name: bound cruciform soul
+  description: Bound cruciform soul.
   components:
   - type: NeoTheologyObeyRole

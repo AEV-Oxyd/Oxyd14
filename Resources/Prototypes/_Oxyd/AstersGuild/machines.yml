@@ -8,6 +8,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydTradeConsole
+  name: trade console
+  description: Trade Console.
   components:
   - type: Sprite
     sprite: Structures/Machines/computers.rsi
@@ -34,6 +36,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydTradeRequestConsole
+  name: trade request console
+  description: Trade Request Console.
   components:
   - type: Sprite
     sprite: Structures/Machines/computers.rsi
@@ -62,60 +66,24 @@
 - type: entity
   parent: CrateGenericSteel
   id: OxydTradeCrate
+  name: trade crate
+  description: Trade Crate.
 
 # ATM, trade beacons, cash register, and EFTPOS entity protos live in
 # Resources/Prototypes/_Oxyd/Economy/machines.yml (Eris economy+PDA port).
 
-# ---------------------------------------------------------------------------
-# Ore processor pair — production machine console + processing unit.
-# ---------------------------------------------------------------------------
+# Ore processing is the stock lathe. The guild machine is that processor.
 - type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydOreProcessorConsole
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/computers.rsi
-    layers:
-    - state: generic
-      map: ["enum.OxydGuildVisualLayers.Base"]
-  - type: OxydOreProcessorConsole
-  - type: ActivatableUI
-    key: enum.OxydOreProcessorUiKey.Key
-  - type: ActivatableUIRequiresPower
-  - type: UserInterface
-    interfaces:
-      enum.OxydOreProcessorUiKey.Key:
-        type: OxydOreProcessorBoundUserInterface
-  - type: ApcPowerReceiver
-    powerLoad: 300
-  - type: Appearance
-  - type: InteractionOutline
-  - type: Clickable
+  parent: OreProcessor
+  id: OxydOreProcessor
+  name: ore processor
+  description: It produces sheets and ingots using ores.
 
 - type: entity
-  parent: [ BaseMachinePowered ]
-  id: OxydOreProcessor
-  components:
-  - type: Sprite
-    sprite: Structures/Machines/ore_processor.rsi
-    layers:
-    - state: icon
-      map: ["enum.OxydGuildVisualLayers.Base"]
-    - state: building
-      map: ["enum.OxydGuildVisualLayers.Working"]
-      visible: false
-  - type: OxydOreProcessor
-  - type: ApcPowerReceiver
-    powerLoad: 800
-  - type: Appearance
-  - type: GenericVisualizer
-    visuals:
-      enum.OxydGuildVisuals.Working:
-        enum.OxydGuildVisualLayers.Working:
-          True: { visible: true }
-          False: { visible: false }
-  - type: InteractionOutline
-  - type: Clickable
+  parent: BaseComputer
+  id: OxydOreProcessorConsole
+  name: ore processor console
+  description: Guild desk beside the ore processor. The processor itself takes the ore.
 
 # ---------------------------------------------------------------------------
 # Deep drill — slowly produces ore stacks on its tile while running.
@@ -123,6 +91,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydDeepDrill
+  name: deep drill
+  description: Deep Drill.
   components:
   - type: Sprite
     sprite: Structures/Machines/ore_processor.rsi

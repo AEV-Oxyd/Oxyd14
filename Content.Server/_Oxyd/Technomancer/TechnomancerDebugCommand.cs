@@ -46,7 +46,7 @@ public sealed class TechnomancerCommand : ToolshedCommand
     [
         "OxydDuctTape", "OxydCombiDriver", "OxydArmatureCutter",
         "OxydPneumaticCrowbar", "OxydPoweredHammer", "OxydWelderAdv",
-        "OxydToolModComplicator", "OxydRapidPipeDispenser",
+        "OxydToolModComplicator",
         "OxydRapidConstructionDevice", "OxydDesignDiskArk",
         "OxydDesignDiskIjiro", "OxydCompressedMatterSingle",
     ];

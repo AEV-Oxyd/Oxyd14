@@ -41,7 +41,9 @@ public sealed partial class LitanySystem
             target: null,
             used: requireBook ? cast.Book : null)
         {
-            BreakOnMove = true,
+            // The phrase was already spoken. Eris hear_talk does not demand the caster
+            // stand still afterwards, and a hidden bar made spoken litanies look dead.
+            BreakOnMove = requireBook,
             MovementThreshold = 0.3f,
             BreakOnDamage = true,
             DamageThreshold = 1,
@@ -51,7 +53,7 @@ public sealed partial class LitanySystem
             RequireCanInteract = true,
             CancelDuplicate = true,
             BlockDuplicate = true,
-            Hidden = true,
+            Hidden = requireBook,
             Broadcast = true,
         };
 

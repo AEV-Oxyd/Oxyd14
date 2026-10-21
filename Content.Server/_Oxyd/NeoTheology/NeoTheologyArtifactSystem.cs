@@ -102,6 +102,7 @@ public sealed partial class NeoTheologyArtifactSystem : EntitySystem
     private void OnSwordUse(Entity<SwordOfTruthComponent> ent, ref UseInHandEvent args)
     {
         if (args.Handled || _timing.CurTime < ent.Comp.NextFlash ||
+            !_cruciform.IsActiveBearer(args.User) ||
             !TryComp<WieldableComponent>(ent.Owner, out var wield) || !wield.Wielded)
             return;
         args.Handled = _doAfter.TryStartDoAfter(new DoAfterArgs(EntityManager, args.User,
@@ -115,6 +116,7 @@ public sealed partial class NeoTheologyArtifactSystem : EntitySystem
     private void OnSwordFlash(Entity<SwordOfTruthComponent> ent, ref SwordOfTruthFlashEvent args)
     {
         if (!args.Cancelled && !args.Handled && _hands.IsHolding(args.User, ent.Owner) &&
+            _cruciform.IsActiveBearer(args.User) &&
             TryComp<WieldableComponent>(ent.Owner, out var wield) && wield.Wielded &&
             _timing.CurTime >= ent.Comp.NextFlash)
         {

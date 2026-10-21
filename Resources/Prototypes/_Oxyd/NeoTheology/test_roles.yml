@@ -22,6 +22,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtDisciple
   name: NeoTheology disciple
+  description: NeoTheology disciple.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite
@@ -42,6 +43,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtAcolyte
   name: NeoTheology acolyte
+  description: NeoTheology acolyte.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite
@@ -62,6 +64,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtAgrolyte
   name: NeoTheology agrolyte
+  description: NeoTheology agrolyte.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite
@@ -82,6 +85,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtCustodian
   name: NeoTheology custodian
+  description: NeoTheology custodian.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite
@@ -102,6 +106,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtPreacher
   name: NeoTheology preacher
+  description: NeoTheology preacher.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite
@@ -122,6 +127,7 @@
 - type: entity
   id: RandomHumanoidSpawnerOxydNtInquisitor
   name: NeoTheology inquisitor
+  description: NeoTheology inquisitor.
   suffix: Litany Test Ghost Role
   components:
   - type: Sprite

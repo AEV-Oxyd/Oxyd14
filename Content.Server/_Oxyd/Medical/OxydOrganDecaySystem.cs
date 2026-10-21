@@ -2,7 +2,6 @@ using Content.Shared._Oxyd.Medical;
 using Content.Shared.Body;
 using Content.Shared.Examine;
 using Content.Shared.Random.Helpers;
-using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Medical;
@@ -23,15 +22,37 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
 
     public override void Initialize()
     {
-        SubscribeLocalEvent<OxydOrganSurgeryComponent, ExaminedEvent>(OnExamined);
-        SubscribeLocalEvent<OrganComponent, MapInitEvent>(OnOrganMapInit);
     }
 
+    [SubscribeLocalEvent]
     private void OnOrganMapInit(Entity<OrganComponent> ent, ref MapInitEvent args)
     {
+        if (TerminatingOrDeleted(ent.Owner))
+            return;
+
         EnsureComp<OxydOrganSurgeryComponent>(ent);
+        if (ent.Comp.Body == null)
+            EnsureComp<OutOfBodyComponent>(ent);
     }
 
+    [SubscribeLocalEvent]
+    private void OnOrganRemoved(Entity<OrganComponent> ent, ref OrganGotRemovedEvent args)
+    {
+        // Body deletion removes organs while they are already terminating. Adding a
+        // component there throws and takes the server down.
+        if (TerminatingOrDeleted(ent.Owner))
+            return;
+
+        EnsureComp<OutOfBodyComponent>(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnOrganInserted(Entity<OrganComponent> ent, ref OrganGotInsertedEvent args)
+    {
+        RemComp<OutOfBodyComponent>(ent.Owner);
+    }
+
+    [SubscribeLocalEvent]
     private void OnExamined(Entity<OxydOrganSurgeryComponent> ent, ref ExaminedEvent args)
     {
         if (ent.Comp.Decayed)
@@ -43,14 +64,16 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
         base.Update(frameTime);
         var now = _timing.CurTime;
 
-        var query = EntityQueryEnumerator<OrganComponent>();
-        while (query.MoveNext(out var uid, out var organ))
+        var query = EntityQueryEnumerator<OutOfBodyComponent, OxydOrganSurgeryComponent>();
+        while (query.MoveNext(out var uid, out _, out var surg))
         {
-            if (organ.Body != null)
+            if (TryComp<OrganComponent>(uid, out var organ) && organ.Body != null)
+            {
+                RemComp<OutOfBodyComponent>(uid);
                 continue;
+            }
 
-            if (!TryComp<OxydOrganSurgeryComponent>(uid, out var surg) ||
-                surg.Decayed || surg.Robotic || now < surg.NextDecay)
+            if (surg.Decayed || surg.Robotic || now < surg.NextDecay)
                 continue;
 
             surg.NextDecay = now + TimeSpan.FromSeconds(TickInterval);

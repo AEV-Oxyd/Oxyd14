@@ -6,6 +6,8 @@
 - type: entity
   parent: BaseItem
   id: OxydErisHealthScanner
+  name: eris health scanner
+  description: Eris Health Scanner.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_healthscanner.rsi
@@ -18,6 +20,8 @@
 # Stasis bag (Eris cryobag): one-use stasis container for critical patients.
 - type: entity
   id: OxydErisStasisBag
+  name: eris stasis bag
+  description: Eris Stasis Bag.
   components:
   - type: Sprite
     drawdepth: SmallObjects
@@ -50,6 +54,8 @@
 - type: entity
   parent: BodyBag
   id: OxydErisBodyBag
+  name: eris body bag
+  description: Eris Body Bag.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_bodybags.rsi
@@ -69,6 +75,8 @@
 - type: entity
   parent: Medkit
   id: OxydErisMedkit
+  name: eris medkit
+  description: Eris Medkit.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medkits.rsi
@@ -88,6 +96,8 @@
 - type: entity
   parent: Medkit
   id: OxydErisMedkitAdvanced
+  name: eris medkit advanced
+  description: Eris Medkit Advanced.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medkits.rsi
@@ -109,6 +119,8 @@
 - type: entity
   parent: Medkit
   id: OxydErisSurgeryKit
+  name: eris surgery kit
+  description: Eris Surgery Kit.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medkits.rsi
@@ -137,6 +149,8 @@
 - type: entity
   parent: Medkit
   id: OxydErisOrganFreezer
+  name: eris organ freezer
+  description: Eris Organ Freezer.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medkits.rsi

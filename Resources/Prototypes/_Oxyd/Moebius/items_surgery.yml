@@ -16,6 +16,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalScalpel
+  name: surgical scalpel
+  description: Surgical Scalpel.
   components:
   - type: Sprite
     state: scalpel
@@ -33,6 +35,8 @@
 - type: entity
   parent: OxydSurgicalScalpel
   id: OxydSurgicalScalpelAdvanced
+  name: surgical scalpel advanced
+  description: Surgical Scalpel Advanced.
   components:
   - type: Sprite
     state: scalpel_adv
@@ -44,6 +48,8 @@
 - type: entity
   parent: OxydSurgicalScalpel
   id: OxydSurgicalScalpelLaser
+  name: surgical scalpel laser
+  description: Surgical Scalpel Laser.
   components:
   - type: Sprite
     state: scalpel_laser
@@ -55,6 +61,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalHemostat
+  name: surgical hemostat
+  description: Surgical Hemostat.
   components:
   - type: Sprite
     state: hemostat
@@ -65,6 +73,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalRetractor
+  name: surgical retractor
+  description: Surgical Retractor.
   components:
   - type: Sprite
     state: retractor
@@ -75,6 +85,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalCautery
+  name: surgical cautery
+  description: Surgical Cautery.
   components:
   - type: Sprite
     state: cautery
@@ -85,6 +97,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalBoneSetter
+  name: surgical bone setter
+  description: Surgical Bone Setter.
   components:
   - type: Sprite
     state: bonesetter
@@ -95,6 +109,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalSaw
+  name: surgical saw
+  description: Surgical Saw.
   components:
   - type: Sprite
     state: saw
@@ -114,6 +130,8 @@
 - type: entity
   parent: OxydSurgicalSaw
   id: OxydSurgicalSawCircular
+  name: surgical saw circular
+  description: Surgical Saw Circular.
   components:
   - type: Sprite
     state: saw_circular
@@ -125,6 +143,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalDrill
+  name: surgical drill
+  description: Surgical Drill.
   components:
   - type: Sprite
     state: drill
@@ -136,6 +156,8 @@
 - type: entity
   parent: OxydMoebiusSurgicalBase
   id: OxydSurgicalTray
+  name: surgical tray
+  description: Surgical Tray.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medkits.rsi

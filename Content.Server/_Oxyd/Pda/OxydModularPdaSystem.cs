@@ -22,14 +22,14 @@ namespace Content.Server._Oxyd.Pda;
 /// <summary>Server modular PDA — wireless range, signaller/scanner sync, hardware report.</summary>
 public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
 {
-    [Dependency] private readonly PaperSystem _paper = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly MetaDataSystem _meta = default!;
-    [Dependency] private readonly DeviceLinkSystem _deviceLink = default!;
-    [Dependency] private readonly PricingSystem _pricing = default!;
-    [Dependency] private readonly SharedSolutionContainerSystem _solutions = default!;
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private PaperSystem _paper = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private MetaDataSystem _meta = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
+    [Dependency] private PricingSystem _pricing = default!;
+    [Dependency] private SharedSolutionContainerSystem _solutions = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
 
     public override void Initialize()
     {

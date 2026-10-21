@@ -63,6 +63,7 @@
   parent: OxydNtLightfallDesignDisk
   id: OxydNtDominionDesignDisk
   name: Dominion design disk
+  description: Dominion design disk.
   components:
   - type: DigitalDataHolder
     files:

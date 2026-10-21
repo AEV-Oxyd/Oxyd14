@@ -9,10 +9,10 @@ namespace Content.Server._Oxyd.Economy;
 /// <summary>Eris trade_orders PDA program — browse stations, cart, orders, offers.</summary>
 public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly OxydTradeSystem _trade = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private OxydTradeSystem _trade = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
 
 
 

@@ -47,6 +47,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisBruisePack
+  name: eris bruise pack
+  description: Eris Bruise Pack.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -70,6 +72,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisOintment
+  name: eris ointment
+  description: Eris Ointment.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -94,6 +98,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisTraumaKit
+  name: eris trauma kit
+  description: Eris Trauma Kit.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -117,6 +123,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisBurnKit
+  name: eris burn kit
+  description: Eris Burn Kit.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -142,6 +150,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisSplint
+  name: eris splint
+  description: Eris Splint.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -162,6 +172,8 @@
 - type: entity
   parent: BaseHealingItem
   id: OxydErisNanopaste
+  name: eris nanopaste
+  description: Eris Nanopaste.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_medstacks.rsi
@@ -190,6 +202,8 @@
 - type: entity
   parent: OxydErisBruisePack
   id: OxydErisBruisePackSingle
+  name: eris bruise pack single
+  description: Eris Bruise Pack Single.
   suffix: Single
   components:
   - type: Stack
@@ -198,6 +212,8 @@
 - type: entity
   parent: OxydErisOintment
   id: OxydErisOintmentSingle
+  name: eris ointment single
+  description: Eris Ointment Single.
   suffix: Single
   components:
   - type: Stack
@@ -206,6 +222,8 @@
 - type: entity
   parent: OxydErisTraumaKit
   id: OxydErisTraumaKitSingle
+  name: eris trauma kit single
+  description: Eris Trauma Kit Single.
   suffix: Single
   components:
   - type: Stack
@@ -214,6 +232,8 @@
 - type: entity
   parent: OxydErisBurnKit
   id: OxydErisBurnKitSingle
+  name: eris burn kit single
+  description: Eris Burn Kit Single.
   suffix: Single
   components:
   - type: Stack
@@ -222,6 +242,8 @@
 - type: entity
   parent: OxydErisSplint
   id: OxydErisSplintSingle
+  name: eris splint single
+  description: Eris Splint Single.
   suffix: Single
   components:
   - type: Stack
@@ -230,6 +252,8 @@
 - type: entity
   parent: OxydErisNanopaste
   id: OxydErisNanopasteSingle
+  name: eris nanopaste single
+  description: Eris Nanopaste Single.
   suffix: Single
   components:
   - type: Stack

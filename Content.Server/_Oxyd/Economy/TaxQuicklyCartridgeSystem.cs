@@ -11,9 +11,9 @@ namespace Content.Server._Oxyd.Economy;
 /// <summary>Eris TaxQuickly 2565 — PDA banking cartridge.</summary>
 public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly IPrototypeManager _protos = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private IPrototypeManager _protos = default!;
 
     // Session keyed by loader uid
     // Session lives on the loader via OxydTaxQuicklySessionComponent — cleans up

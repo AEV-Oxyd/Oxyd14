@@ -5,6 +5,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydRconConsole
+  name: rcon console
+  description: Rcon Console.
   placement:
     mode: SnapgridCenter
   components:
@@ -36,6 +38,8 @@
 - type: entity
   parent: OxydRconConsole
   id: OxydAtmosConsole
+  name: atmos console
+  description: Atmos Console.
   suffix: Atmos Control
   components:
   - type: Sprite
@@ -52,6 +56,8 @@
 - type: entity
   parent: AirAlarm
   id: OxydAirAlarm
+  name: air alarm
+  description: Air Alarm.
   suffix: Eris
   components:
   - type: Sprite
@@ -72,6 +78,8 @@
 - type: entity
   parent: GasCanister
   id: OxydCanister
+  name: canister
+  description: Canister.
   suffix: Eris
   # Sprite kept stock: stock canister visualizer drives states
   # (unlocked/can-o0/...) the Eris RSI does not carry — the Eris
@@ -87,6 +95,8 @@
 - type: entity
   parent: GasFilter
   id: OxydOmniFilter
+  name: omni filter
+  description: Omni Filter.
   suffix: Omni
   components:
   - type: Sprite
@@ -95,6 +105,8 @@
 - type: entity
   parent: GasMixer
   id: OxydOmniMixer
+  name: omni mixer
+  description: Omni Mixer.
   suffix: Omni
   components:
   - type: Sprite
@@ -105,14 +117,20 @@
 - type: entity
   parent: GasPressurePump
   id: OxydTermoPump
+  name: termo pump
+  description: Termo Pump.
   suffix: Eris
 - type: entity
   parent: GasVolumePump
   id: OxydTermoVolumePump
+  name: termo volume pump
+  description: Termo Volume Pump.
   suffix: Eris
 - type: entity
   parent: GasPassiveGate
   id: OxydPassiveValve
+  name: passive valve
+  description: Passive Valve.
   suffix: Eris
 
 # Nanoforge — Eris /obj/machinery/autolathe/nanoforge (§9): items -> matter.
@@ -152,6 +170,7 @@
 - type: material
   id: OxydCompressedMatter
   name: materials-oxyd-compressed-matter
+  description: Materials oxyd compressed matter.
   stackEntity: OxydCompressedMatterSingle
   icon: { sprite: Objects/Materials/Sheets/metal.rsi, state: steel }
   color: '#5a6a7a'
@@ -175,6 +194,7 @@
   parent: BaseMediumStack
   id: OxydCompressedMatterStack
   name: stack-oxyd-compressed-matter
+  description: Stack oxyd compressed matter.
   spawn: OxydCompressedMatterSingle
   maxCount: 60
 
@@ -182,4 +202,6 @@
 - type: entity
   parent: RCD
   id: OxydRapidConstructionDevice
+  name: rapid construction device
+  description: Rapid Construction Device.
   suffix: IJIRO

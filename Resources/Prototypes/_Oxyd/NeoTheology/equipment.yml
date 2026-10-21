@@ -33,6 +33,7 @@
   parent: BulletGrenadeEMP
   id: OxydNtIonBolt
   name: ion bolt
+  description: Ion bolt.
   categories: [HideSpawnMenu]
   components:
   - type: EmpOnTrigger

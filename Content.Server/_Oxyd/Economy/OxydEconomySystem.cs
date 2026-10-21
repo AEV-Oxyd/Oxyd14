@@ -22,13 +22,13 @@ namespace Content.Server._Oxyd.Economy;
 /// </summary>
 public sealed partial class OxydEconomySystem : EntitySystem
 {
-    [Dependency] private readonly IPrototypeManager _protos = default!;
-    [Dependency] private readonly IRobustRandom _random = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly CargoSystem _cargo = default!;
-    [Dependency] private readonly StationSystem _station = default!;
-    [Dependency] private readonly InventorySystem _inventory = default!;
-    [Dependency] private readonly ChatSystem _chat = default!;
+    [Dependency] private IPrototypeManager _protos = default!;
+    [Dependency] private IRobustRandom _random = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private CargoSystem _cargo = default!;
+    [Dependency] private StationSystem _station = default!;
+    [Dependency] private InventorySystem _inventory = default!;
+    [Dependency] private ChatSystem _chat = default!;
 
     private readonly Dictionary<int, OxydMoneyAccountData> _accounts = new();
     /// <summary>Balance last pushed to StationBankAccount per account — sync applies the delta only.</summary>
@@ -268,6 +268,8 @@ public sealed partial class OxydEconomySystem : EntitySystem
         SyncDepartmentToCargo(dst);
         LogTransaction(src, purpose, -amount, terminal);
         LogTransaction(dst, purpose, amount, terminal);
+        SyncDisplayedBalance(from);
+        SyncDisplayedBalance(to);
         return true;
     }
 
@@ -292,6 +294,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         acc.Balance += delta;
         SyncDepartmentToCargo(acc);
         LogTransaction(acc, purpose, delta, terminal);
+        SyncDisplayedBalance(number);
         return true;
     }
 
@@ -303,6 +306,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         RefreshDepartment(acc);
         acc.Balance = balance;
         SyncDepartmentToCargo(acc);
+        SyncDisplayedBalance(number);
         return true;
     }
 
@@ -321,7 +325,28 @@ public sealed partial class OxydEconomySystem : EntitySystem
         acc.Balance = next;
         SyncDepartmentToCargo(acc);
         LogTransaction(acc, purpose, applied, terminal);
+        SyncDisplayedBalance(number);
         return true;
+    }
+
+    public IEnumerable<OxydMoneyAccountData> EnumerateAccounts() => _accounts.Values;
+
+    /// <summary>Copies the server balance onto the owner's networked component for the character window.</summary>
+    private void SyncDisplayedBalance(int number)
+    {
+        if (!_accounts.TryGetValue(number, out var acc))
+            return;
+
+        var query = EntityQueryEnumerator<OxydPersonalAccountComponent>();
+        while (query.MoveNext(out var uid, out var personal))
+        {
+            if (personal.AccountNumber != number)
+                continue;
+
+            personal.Balance = acc.Balance;
+            personal.OwnerName = acc.OwnerName;
+            Dirty(uid, personal);
+        }
     }
 
     public bool TrySetSuspended(int number, bool suspended)

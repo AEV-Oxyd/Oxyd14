@@ -11,9 +11,9 @@ namespace Content.Server._Oxyd.Ntos;
 /// <summary>Live cargo bounty board PDA program.</summary>
 public sealed partial class OxydBountyCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly StationSystem _station = default!;
-    [Dependency] private readonly IPrototypeManager _protos = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private StationSystem _station = default!;
+    [Dependency] private IPrototypeManager _protos = default!;
 
     public override void Initialize()
     {

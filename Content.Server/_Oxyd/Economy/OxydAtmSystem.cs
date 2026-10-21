@@ -15,24 +15,13 @@ public sealed partial class OxydAtmSystem : EntitySystem
 {
     private static readonly ProtoId<StackPrototype> CreditStack = "Credit";
 
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly StackSystem _stacks = default!;
-    [Dependency] private readonly InventorySystem _inventory = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private StackSystem _stacks = default!;
+    [Dependency] private InventorySystem _inventory = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydAtmComponent, BoundUIOpenedEvent>(OnOpened);
-        SubscribeLocalEvent<OxydAtmComponent, OxydAtmLoginMessage>(OnLogin);
-        SubscribeLocalEvent<OxydAtmComponent, OxydAtmLogoutMessage>(OnLogout);
-        SubscribeLocalEvent<OxydAtmComponent, OxydAtmWithdrawMessage>(OnWithdraw);
-        SubscribeLocalEvent<OxydAtmComponent, OxydAtmTransferMessage>(OnTransfer);
-        SubscribeLocalEvent<OxydAtmComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<OxydAtmComponent, BoundUIClosedEvent>(OnClosed);
-    }
-
+    [SubscribeLocalEvent]
     private void OnClosed(Entity<OxydAtmComponent> ent, ref BoundUIClosedEvent args)
     {
         // Log the owner out when their UI session closes — the ATM never stays
@@ -47,6 +36,7 @@ public sealed partial class OxydAtmSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnOpened(Entity<OxydAtmComponent> ent, ref BoundUIOpenedEvent args)
     {
         // A leftover session belongs to its owner only — close the UI for anyone
@@ -60,12 +50,14 @@ public sealed partial class OxydAtmSystem : EntitySystem
         PushState(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnLogin(Entity<OxydAtmComponent> ent, ref OxydAtmLoginMessage args)
     {
         if (!TryLogin(ent, args.AccountNumber, args.Pin, args.Actor, out var err))
             PushState(ent, err ?? "Login failed");
     }
 
+    [SubscribeLocalEvent]
     private void OnLogout(Entity<OxydAtmComponent> ent, ref OxydAtmLogoutMessage args)
     {
         if (!SessionOwned(ent, args.Actor, out _))
@@ -74,12 +66,14 @@ public sealed partial class OxydAtmSystem : EntitySystem
         TryLogout(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnWithdraw(Entity<OxydAtmComponent> ent, ref OxydAtmWithdrawMessage args)
     {
         if (!TryWithdraw(ent, args.Amount, args.Actor, out var err))
             PushState(ent, err ?? "Withdraw failed");
     }
 
+    [SubscribeLocalEvent]
     private void OnTransfer(Entity<OxydAtmComponent> ent, ref OxydAtmTransferMessage args)
     {
         if (!TryTransfer(ent, args.TargetAccount, args.Amount, args.Actor, out var err))
@@ -206,6 +200,7 @@ public sealed partial class OxydAtmSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnInteractUsing(Entity<OxydAtmComponent> ent, ref InteractUsingEvent args)
     {
         if (!TryComp(args.Used, out StackComponent? stack) || stack.StackTypeId != CreditStack.Id)
@@ -245,6 +240,18 @@ public sealed partial class OxydAtmSystem : EntitySystem
             state.AccountNumber = data.AccountNumber;
             state.OwnerName = data.OwnerName;
             state.Balance = data.Balance;
+        }
+
+        foreach (var account in _economy.EnumerateAccounts())
+        {
+            if (account.Suspended)
+                continue;
+
+            state.Accounts.Add(new OxydAtmAccountEntry
+            {
+                Number = account.AccountNumber,
+                Name = string.IsNullOrWhiteSpace(account.OwnerName) ? account.AccountName : account.OwnerName,
+            });
         }
 
         _ui.SetUiState(ent.Owner, OxydAtmUiKey.Key, state);

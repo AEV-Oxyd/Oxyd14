@@ -5,6 +5,8 @@
 
 - type: entity
   id: OxydBorer
+  name: borer
+  description: Borer.
   parent: BaseSimpleMob
   components:
   - type: OxydBorer
@@ -61,6 +63,8 @@
 # (Eris /mob/living/captive_brain inside the borer).
 - type: entity
   id: OxydBorerCaptiveBrain
+  name: borer captive brain
+  description: Borer Captive Brain.
   parent: BaseItem
   categories: [ HideSpawnMenu ]
   components:

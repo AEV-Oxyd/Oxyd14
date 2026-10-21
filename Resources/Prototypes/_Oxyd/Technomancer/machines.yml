@@ -6,6 +6,8 @@
 - type: entity
   parent: SMESBasic
   id: OxydSmesUnit
+  name: smes unit
+  description: Smes Unit.
   components:
   # Stock SmesVisualizer drives Charge/Input/Output layers via SmesVisualLayers
   # map keys — each layer must carry the RSI explicitly (see smes.yml).
@@ -25,15 +27,13 @@
         shader: unshaded
       - map: ["enum.WiresVisualLayers.MaintenancePanel"]
         state: smes
-  - type: UserInterface
-    interfaces:
-      enum.BatteryUiKey.Key:
-        type: OxydSmesBui
 
 # Breaker box — Eris /obj/machinery/power/breakerbox circuit breaker.
 - type: entity
   parent: BaseStructure
   id: OxydBreakerBox
+  name: breaker box
+  description: Breaker Box.
   placement:
     mode: SnapgridCenter
   components:
@@ -67,6 +67,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydPulsarConsole
+  name: pulsar console
+  description: Pulsar Console.
   placement:
     mode: SnapgridCenter
   components:
@@ -98,6 +100,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydPulsarPowerBridge
+  name: pulsar power bridge
+  description: Pulsar Power Bridge.
   placement:
     mode: SnapgridCenter
   components:
@@ -142,6 +146,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydPulsarFuelTank
+  name: pulsar fuel tank
+  description: Pulsar Fuel Tank.
   placement:
     mode: SnapgridCenter
   components:
@@ -167,6 +173,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydShipShieldGenerator
+  name: ship shield generator
+  description: Ship Shield Generator.
   placement:
     mode: SnapgridCenter
   components:
@@ -200,6 +208,8 @@
 - type: entity
   parent: OxydShipShieldGenerator
   id: OxydShipShieldGeneratorHull
+  name: ship shield generator hull
+  description: Ship Shield Generator Hull.
   suffix: Hull
   components:
   - type: Sprite

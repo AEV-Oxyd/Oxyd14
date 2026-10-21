@@ -65,6 +65,7 @@
   parent: BasicHitscan
   id: OxydHitscan
   name: oxyd debug laser ray
+  description: Oxyd debug laser ray.
   categories: [ HideSpawnMenu ]
   components:
   - type: HitscanBasicVisuals
@@ -210,6 +211,7 @@
 - type: entity
   id: ProjectileOxyd
   name: bullet (15.2×169 mm shrapnel)
+  description: Bullet (15.2×169 mm shrapnel).
   categories: [ HideSpawnMenu ]
   parent: BaseItem
   components:

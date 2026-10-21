@@ -40,6 +40,8 @@
 - type: entity
   parent: [ BaseVendingMachine ]
   id: OxydVendingPowermat
+  name: vending powermat
+  description: Vending Powermat.
   components:
   - type: Sprite
     sprite: Structures/Machines/VendingMachines/engivend.rsi
@@ -51,6 +53,8 @@
 - type: entity
   parent: [ BaseVendingMachine ]
   id: OxydVendingPrintomat
+  name: vending printomat
+  description: Vending Printomat.
   components:
   - type: Sprite
     sprite: Structures/Machines/VendingMachines/cart.rsi
@@ -62,6 +66,8 @@
 - type: entity
   parent: [ BaseVendingMachine ]
   id: OxydVendingStyle
+  name: vending style
+  description: Vending Style.
   components:
   - type: Sprite
     sprite: Structures/Machines/VendingMachines/cargodrobe.rsi

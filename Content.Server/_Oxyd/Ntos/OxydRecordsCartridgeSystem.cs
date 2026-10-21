@@ -11,9 +11,9 @@ namespace Content.Server._Oxyd.Ntos;
 /// <summary>Live Eris crew records PDA program backed by StationRecords.</summary>
 public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly StationSystem _station = default!;
-    [Dependency] private readonly StationRecordsSystem _records = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private StationSystem _station = default!;
+    [Dependency] private StationRecordsSystem _records = default!;
 
 
     public override void Initialize()

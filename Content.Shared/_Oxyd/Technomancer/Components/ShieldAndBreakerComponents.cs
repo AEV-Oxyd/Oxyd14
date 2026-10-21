@@ -21,7 +21,7 @@ public sealed partial class OxydShipShieldComponent : Component
     public float Capacity = 5000f;
 
     [DataField, AutoNetworkedField]
-    public int FieldSize;
+    public int FieldSize = 4;
 
     [DataField, AutoNetworkedField]
     public int MaxFieldSize = 200;
@@ -86,6 +86,7 @@ public sealed class OxydShieldState : BoundUserInterfaceState
     public float InputCap;
     public List<string> EnabledModes = new();
     public List<string> EventLog = new();
+    public bool Hacked;
 }
 
 [Serializable, NetSerializable]

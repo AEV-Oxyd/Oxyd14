@@ -5,6 +5,7 @@
 - type: entity
   parent: BaseObjective
   id: OxydNtConvertObjective
+  name: nt convert objective
   description: Induct the named person into NeoTheology by installing a cruciform.
   components:
   - type: Objective
@@ -19,6 +20,7 @@
 - type: entity
   parent: OxydNtConvertObjective
   id: OxydNtRevealObjective
+  name: nt reveal objective
   description: Perform Revelation on the named person.
   components:
   - type: NeoTheologyObjective
@@ -27,6 +29,7 @@
 - type: entity
   parent: OxydNtConvertObjective
   id: OxydNtSanctifyObjective
+  name: nt sanctify objective
   description: Sanctify the named location with the group ceremony.
   components:
   - type: NeoTheologyObjective
@@ -35,6 +38,7 @@
 - type: entity
   parent: OxydNtConvertObjective
   id: OxydNtDestroyObjective
+  name: nt destroy objective
   description: Destroy the named heretical faction artifact with the Sword of Truth.
   components:
   - type: NeoTheologyObjective

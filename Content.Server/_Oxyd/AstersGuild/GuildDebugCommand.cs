@@ -50,7 +50,7 @@ public sealed class GuildCommand : ToolshedCommand
     [CommandImplementation("drill")]
     public void Drill(IInvocationContext ctx, string state)
     {
-        var proc = GetSys<OxydOreProcessorSystem>();
+        var proc = GetSys<OxydDeepDrillSystem>();
         var on = state == "on";
         var n = proc.DebugSetDrillRunning(on);
         ctx.WriteLine($"guild: set Running={on} on {n} drill(s)");

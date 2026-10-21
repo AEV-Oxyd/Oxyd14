@@ -29,34 +29,35 @@ public sealed partial class OxydArtistBenchSystem : EntitySystem
         SkillRob, SkillVig, SkillTgh, SkillCog, SkillMec, SkillBio,
     ];
 
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly SanitySystem _sanity = default!;
-    [Dependency] private readonly SharedMaterialStorageSystem _materials = default!;
-    [Dependency] private readonly ItemSlotsSystem _slots = default!;
-    [Dependency] private readonly SharedSkillSystem _skills = default!;
-    [Dependency] private readonly IRobustRandom _random = default!;
-    [Dependency] private readonly MetaDataSystem _meta = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private SanitySystem _sanity = default!;
+    [Dependency] private SharedMaterialStorageSystem _materials = default!;
+    [Dependency] private ItemSlotsSystem _slots = default!;
+    [Dependency] private SharedSkillSystem _skills = default!;
+    [Dependency] private IRobustRandom _random = default!;
+    [Dependency] private MetaDataSystem _meta = default!;
+    [Dependency] private OxydArtworkTextSystem _artwork = default!;
 
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydArtistBenchComponent, BoundUIOpenedEvent>(OnOpened);
-        SubscribeLocalEvent<OxydArtistBenchComponent, OxydArtistBenchCreateMessage>(OnCreate);
-        SubscribeLocalEvent<OxydArtistBenchComponent, MaterialAmountChangedEvent>(OnMaterialsChanged);
     }
 
+    [SubscribeLocalEvent]
     private void OnOpened(Entity<OxydArtistBenchComponent> ent, ref BoundUIOpenedEvent args)
     {
         PushState(ent, args.Actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnMaterialsChanged(Entity<OxydArtistBenchComponent> ent, ref MaterialAmountChangedEvent args)
     {
         foreach (var actor in _ui.GetActors(ent.Owner, OxydArtistBenchUiKey.Key))
             PushState(ent, actor);
     }
 
+    [SubscribeLocalEvent]
     private void OnCreate(Entity<OxydArtistBenchComponent> ent, ref OxydArtistBenchCreateMessage args)
     {
         if (!TryCreateArtwork(ent, args.Actor, args.InsightUsed, out var err, out var price, out var used, out var kind))
@@ -139,8 +140,9 @@ public sealed partial class OxydArtistBenchSystem : EntitySystem
         if (kind == "oddity")
             PopulateArtworkOddity(art, used);
 
-        _meta.SetEntityName(art, $"{artwork.ArtistName}'s {kind}");
-        _meta.SetEntityDescription(art, $"Insight {used:0} · {price}cr · Guild consignment");
+        var naming = _artwork.NameAndDescribe(art, kind, artwork.ArtistName);
+        _meta.SetEntityName(art, naming.Name);
+        _meta.SetEntityDescription(art, naming.Description);
 
         if (!isArtist)
             SacrificeSkills(artist);
@@ -160,36 +162,33 @@ public sealed partial class OxydArtistBenchSystem : EntitySystem
         return TryCreateArtwork(bench, artist, requestedInsight, out error, out price, out used, out _);
     }
 
+    private Dictionary<string, int> MaterialCost(Entity<OxydArtistBenchComponent> bench)
+    {
+        var cost = new Dictionary<string, int>();
+        foreach (var mat in bench.Comp.SuitableMaterials)
+            cost[mat] = -bench.Comp.MinMaterial;
+        return cost;
+    }
+
     private bool HasEnoughMaterials(Entity<OxydArtistBenchComponent> bench, out string? error)
     {
         error = null;
-        foreach (var mat in bench.Comp.SuitableMaterials)
-        {
-            var amount = _materials.GetMaterialAmount(bench.Owner, mat);
-            if (amount < bench.Comp.MinMaterial)
-            {
-                error = $"Need {bench.Comp.MinMaterial} {mat} (have {amount})";
-                return false;
-            }
-        }
+        if (_materials.CanChangeMaterialAmount((bench.Owner, null), MaterialCost(bench)))
+            return true;
 
-        return true;
+        error = "Need materials";
+        return false;
     }
 
     private bool TryConsumeMaterials(Entity<OxydArtistBenchComponent> bench, out string? error)
     {
         error = null;
-        // Eris randomize_materialas + consume: burn min_mat of each suitable material.
-        foreach (var mat in bench.Comp.SuitableMaterials)
-        {
-            if (!_materials.TryChangeMaterialAmount(bench.Owner, mat, -bench.Comp.MinMaterial))
-            {
-                error = $"Failed to consume {mat}";
-                return false;
-            }
-        }
+        // One storage transaction: a shortfall spends nothing.
+        if (_materials.TryChangeMaterialAmount((bench.Owner, null), MaterialCost(bench)))
+            return true;
 
-        return true;
+        error = "Need materials";
+        return false;
     }
 
     private string ChooseArtKind(Entity<OxydArtistBenchComponent> bench, EntityUid artist, float insUsed, bool isArtist)

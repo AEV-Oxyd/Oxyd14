@@ -11,6 +11,8 @@
 - type: entity
   parent: ComputerRoboticsControl
   id: OxydRoboticsConsole
+  name: robotics console
+  description: Robotics Console.
   components:
   - type: AccessReader
     access: [["OxydMoebiusRobotics"]]
@@ -23,6 +25,8 @@
 - type: entity
   parent: ComputerSalvageExpedition
   id: OxydExpeditionConsole
+  name: expedition console
+  description: Expedition Console.
   components:
   - type: AccessReader
     access: [["OxydMoebiusResearch"]]
@@ -35,6 +39,8 @@
 - type: entity
   parent: BaseMachinePowered
   id: OxydDroneFabricator
+  name: drone fabricator
+  description: Drone Fabricator.
   components:
   - type: Sprite
     sprite: Structures/Machines/exosuit_fabricator.rsi
@@ -45,6 +51,8 @@
 - type: entity
   parent: BaseItem
   id: OxydMaintenanceDroneShell
+  name: maintenance drone shell
+  description: Maintenance Drone Shell.
   components:
   - type: Sprite
     sprite: Objects/Specific/Robotics/cyborg_parts.rsi
@@ -58,6 +66,8 @@
 - type: entity
   parent: MobCleanBot
   id: OxydMaintenanceDrone
+  name: maintenance drone
+  description: Maintenance Drone.
 
 # ---------------------------------------------------------------------------
 # Xenobiology adapt-lite (Eris slime-core experiment source): extractor draws
@@ -67,6 +77,8 @@
 - type: entity
   parent: BaseItem
   id: OxydSlimeExtractor
+  name: slime extractor
+  description: Slime Extractor.
   components:
   - type: Sprite
     sprite: Objects/Specific/Chemistry/syringe.rsi
@@ -78,6 +90,8 @@
 - type: entity
   parent: BaseItem
   id: OxydSlimeCore
+  name: slime core
+  description: Slime Core.
   components:
   - type: Sprite
     sprite: Objects/Specific/Xenoarchaeology/xeno_artifacts.rsi
@@ -95,6 +109,8 @@
 - type: entity
   parent: SeedBase
   id: OxydXenoSeedAmanita
+  name: xeno seed amanita
+  description: Xeno Seed Amanita.
   components:
   - type: Seed
     plantId: FlyAmanitaPlants
@@ -104,6 +120,8 @@
 - type: entity
   parent: SeedBase
   id: OxydXenoSeedDeathnettle
+  name: xeno seed deathnettle
+  description: Xeno Seed Deathnettle.
   components:
   - type: Seed
     plantId: DeathNettlePlants
@@ -113,6 +131,8 @@
 - type: entity
   parent: SeedBase
   id: OxydXenoSeedGalaxythistle
+  name: xeno seed galaxythistle
+  description: Xeno Seed Galaxythistle.
   components:
   - type: Seed
     plantId: GalaxythistlePlants
@@ -127,6 +147,8 @@
 - type: entity
   parent: BaseItem
   id: OxydStrangeArtifact
+  name: strange artifact
+  description: Strange Artifact.
   components:
   - type: Sprite
     sprite: Objects/Specific/Xenoarchaeology/item_artifacts.rsi
@@ -145,6 +167,8 @@
 - type: entity
   parent: BaseItem
   id: OxydMentalImprinter
+  name: mental imprinter
+  description: Mental Imprinter.
   components:
   - type: Sprite
     sprite: Objects/Tools/multitool.rsi

@@ -12,7 +12,7 @@ namespace Content.Server._Oxyd.Economy;
 
 public sealed partial class OxydEconomySystem
 {
-    [Dependency] private readonly IChatManager _chatManager = default!;
+    [Dependency] private IChatManager _chatManager = default!;
 
     public void SetupAccountForJob(EntityUid mob, JobPrototype job)
     {
@@ -60,6 +60,8 @@ public sealed partial class OxydEconomySystem
 
         var personal = EnsureComp<OxydPersonalAccountComponent>(mob);
         personal.AccountNumber = account.AccountNumber;
+        personal.Balance = account.Balance;
+        personal.OwnerName = account.OwnerName;
 
         if (deptAccess && employer != null)
         {

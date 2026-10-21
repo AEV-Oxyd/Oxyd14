@@ -16,10 +16,10 @@ public sealed partial class OxydTradeSystem : EntitySystem
 {
     public const float HandlingFee = 0.1f;
 
-    [Dependency] private readonly IPrototypeManager _protos = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
+    [Dependency] private IPrototypeManager _protos = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
 
     private readonly Dictionary<string, OxydTradeStationRuntime> _stations = new();
     private readonly List<OxydTradeOrderRuntime> _orders = new();

@@ -19,12 +19,12 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
 {
     private static readonly ProtoId<StackPrototype> CreditStack = "Credit";
 
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly SharedStackSystem _stacks = default!;
-    [Dependency] private readonly InventorySystem _inventory = default!;
-    [Dependency] private readonly SharedHandsSystem _hands = default!;
-    [Dependency] private readonly VendingMachineSystem _vending = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private SharedStackSystem _stacks = default!;
+    [Dependency] private InventorySystem _inventory = default!;
+    [Dependency] private SharedHandsSystem _hands = default!;
+    [Dependency] private VendingMachineSystem _vending = default!;
 
     public override void Initialize()
     {

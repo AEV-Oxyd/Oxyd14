@@ -6,8 +6,8 @@ namespace Content.Server._Oxyd.Ntos;
 
 public sealed partial class OxydNtChatCartridgeSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private readonly OxydNtChatSystem _chat = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridges = default!;
+    [Dependency] private OxydNtChatSystem _chat = default!;
 
     public override void Initialize()
     {

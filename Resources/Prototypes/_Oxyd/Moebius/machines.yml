@@ -8,6 +8,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydMedicalSleeper
+  name: medical sleeper
+  description: Medical Sleeper.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_sleeper.rsi
@@ -52,6 +54,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydMedicalAutodoc
+  name: medical autodoc
+  description: Medical Autodoc.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_autodoc.rsi
@@ -87,6 +91,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydMedicalCentrifuge
+  name: medical centrifuge
+  description: Medical Centrifuge.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_chemmachines.rsi
@@ -123,6 +129,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydMedicalElectrolyzer
+  name: medical electrolyzer
+  description: Medical Electrolyzer.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_chemmachines.rsi
@@ -160,6 +168,8 @@
 - type: entity
   parent: BaseStructure
   id: OxydMedicalIvDrip
+  name: medical iv drip
+  description: Medical Iv Drip.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_ivstand.rsi
@@ -184,6 +194,8 @@
 - type: entity
   parent: TableBase
   id: OxydMedicalOperatingTable
+  name: medical operating table
+  description: Medical Operating Table.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_optable.rsi
@@ -206,6 +218,8 @@
 - type: entity
   parent: Morgue
   id: OxydMedicalMorgueTray
+  name: medical morgue tray
+  description: Medical Morgue Tray.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_morgue.rsi
@@ -246,6 +260,8 @@
 - type: entity
   parent: [ BaseMachinePowered ]
   id: OxydMedicalScannerPod
+  name: medical scanner pod
+  description: Medical Scanner Pod.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_sleeper.rsi
@@ -316,13 +332,6 @@
     sprite: Oxyd/erisported/eris_chemmachines.rsi
     state: dispenser
     snapCardinals: true
-  # Eris dispenser NanoUI: Oxyd BUI consuming the stock ReagentDispenser state.
-  - type: UserInterface
-    interfaces:
-      enum.ReagentDispenserUiKey.Key:
-        type: OxydChemDispenserBoundUserInterface
-      enum.StorageUiKey.Key:
-        type: StorageBoundUserInterface
 
 # ---------------------------------------------------------------------------
 # ChemMaster 3000 (Eris chem_master): engine ChemMaster skinned with the Eris
@@ -345,43 +354,81 @@
     sprite: Oxyd/erisported/eris_chemmachines.rsi
     state: mixer0
 
-# ---------------------------------------------------------------------------
-# Organ bioprinter (Eris machinery/bioprinter.dm): meat -> biomass, syringe
-# blood sample -> donor flag, prints internal organs for a biomass cost.
-# ---------------------------------------------------------------------------
+# Organ bioprinter: stock lathe. Meat inserts as Meaterial; recipes print organs.
 - type: entity
-  parent: [ BaseMachinePowered ]
+  parent: BaseLathe
   id: OxydErisBioprinter
   name: organ bioprinter
-  description: A machine that grows replacement organs.
+  description: A machine that grows replacement organs from inserted meat.
   components:
   - type: Sprite
     sprite: Oxyd/erisported/eris_bioprinter.rsi
     layers:
     - state: bioprinter
-      map: ["enum.OxydMachineVisualLayers.Base"]
-    - state: bioprinter_working
-      map: ["enum.OxydMachineVisualLayers.Occupied"]
-      visible: false
-  - type: OxydBioprinter
-  - type: ActivatableUI
-    key: enum.OxydBioprinterUiKey.Key
-  - type: ActivatableUIRequiresPower
-  - type: UserInterface
-    interfaces:
-      enum.OxydBioprinterUiKey.Key:
-        type: OxydBioprinterBoundUserInterface
-  - type: ApcPowerReceiver
-    powerLoad: 300
-  - type: Appearance
-  - type: GenericVisualizer
-    visuals:
-      enum.OxydMachineVisuals.Working:
-        enum.OxydMachineVisualLayers.Occupied:
-          True: { visible: true }
-          False: { visible: false }
-  - type: InteractionOutline
-  - type: Clickable
+      map: ["enum.LatheVisualLayers.IsRunning"]
+  - type: Machine
+    board: AutolatheMachineCircuitboard
+  - type: MaterialStorage
+    whitelist:
+      tags:
+      - Meat
+  - type: Lathe
+    idleState: bioprinter
+    runningState: bioprinter_working
+    staticPacks:
+    - OxydBioprinterPack
+
+- type: latheRecipePack
+  id: OxydBioprinterPack
+  recipes:
+  - OxydPrintOrganHeart
+  - OxydPrintOrganLungs
+  - OxydPrintOrganKidneys
+  - OxydPrintOrganEyes
+  - OxydPrintOrganLiver
+  - OxydPrintOrganStomach
+
+- type: latheRecipe
+  id: OxydPrintOrganHeart
+  result: OrganHumanHeart
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganLungs
+  result: OrganHumanLungs
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganKidneys
+  result: OrganHumanKidneys
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganEyes
+  result: OrganHumanEyes
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganLiver
+  result: OrganHumanLiver
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganStomach
+  result: OrganHumanStomach
+  completetime: 3
+  materials:
+    Meaterial: 300
 
 # ---------------------------------------------------------------------------
 # Excelsior autodoc (Eris excelsior variant): same machine, free surgery -
@@ -412,6 +459,8 @@
 - type: entity
   parent: VendingMachineMedicalBase
   id: OxydMoebiusMedVend
+  name: moebius med vend
+  description: Moebius Med Vend.
   components:
   - type: VendingMachine
     pack: OxydMoebiusMedVendInventory
@@ -436,6 +485,8 @@
 - type: entity
   parent: BaseComputerAiAccess
   id: OxydMedicalOperatingComputer
+  name: medical operating computer
+  description: Medical Operating Computer.
   components:
   - type: OxydOperatingComputer
   - type: Sprite

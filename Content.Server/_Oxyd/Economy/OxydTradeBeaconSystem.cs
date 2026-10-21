@@ -10,11 +10,11 @@ namespace Content.Server._Oxyd.Economy;
 /// <summary>Eris trade beacons — receiving (purchase drop) / sending (offer export).</summary>
 public sealed partial class OxydTradeBeaconSystem : EntitySystem
 {
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
-    [Dependency] private readonly OxydTradeSystem _trade = default!;
-    [Dependency] private readonly OxydEconomySystem _economy = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private OxydTradeSystem _trade = default!;
+    [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     public override void Initialize()
     {
