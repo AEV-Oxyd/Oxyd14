@@ -6,13 +6,15 @@ using System.Linq;
 using System.Numerics;
 using Content.Client._Oxyd.Medical.UI;
 using Content.Client.UserInterface.Controls;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Content.Shared._Oxyd.Moebius.Research;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
+using Robust.Shared.GameObjects;
+using Robust.Shared.IoC;
 using Robust.Shared.Maths;
-using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.Moebius.Research;
@@ -65,8 +67,9 @@ public sealed class OxydRdWindow : DefaultWindow
     public OxydRdWindow()
     {
         Title = "Moebius R&D Control Console";
-        SetSize = new Vector2(720, 560);
-        MinSize = new Vector2(520, 420);
+        // Wide enough for the Eris tech map (32px icons on the 0..1 canvas) plus the 200px detail pane.
+        SetSize = new Vector2(1240, 900);
+        MinSize = new Vector2(980, 700);
 
         var root = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 8 };
         Contents.AddChild(root);
@@ -97,17 +100,31 @@ public sealed class OxydRdWindow : DefaultWindow
         _state = state;
         _points.Text = $"Points: {state.Points}";
         RebuildMenu();
-        var scroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        var col = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, SeparationOverride = 8, HorizontalExpand = true };
-        scroll.AddChild(col);
         _body.RemoveAllChildren();
+        // The tech map is a fixed canvas. A scroll view clips the side pane and the tree tabs.
+        if (state.Screen == OxydRdScreen.Trees)
+        {
+            var col = new BoxContainer
+            {
+                Orientation = BoxContainer.LayoutOrientation.Vertical,
+                SeparationOverride = 8,
+                HorizontalExpand = true,
+                VerticalExpand = true,
+            };
+            _body.AddChild(col);
+            BuildTrees(col);
+            return;
+        }
+
+        var scroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var list = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, SeparationOverride = 8, HorizontalExpand = true };
+        scroll.AddChild(list);
         _body.AddChild(scroll);
         switch (state.Screen)
         {
-            case OxydRdScreen.Main: BuildMain(col); break;
-            case OxydRdScreen.Lathe: BuildLathe(col); break;
-            case OxydRdScreen.Trees: BuildTrees(col); break;
-            case OxydRdScreen.Disk: BuildDisk(col); break;
+            case OxydRdScreen.Main: BuildMain(list); break;
+            case OxydRdScreen.Lathe: BuildLathe(list); break;
+            case OxydRdScreen.Disk: BuildDisk(list); break;
         }
     }
 
@@ -162,9 +179,13 @@ public sealed class OxydRdWindow : DefaultWindow
             if (s.Da.Busy)
                 dcol.AddChild(new Label { Text = "Analysis in progress...", FontColorOverride = ErisSurgeryColors.WoundCountText });
         }
+        else if (!s.Da.Linked)
+        {
+            dcol.AddChild(new ErisSubLabel("No destructive analyzer linked."));
+        }
         else
         {
-            dcol.AddChild(new ErisSubLabel("Insert an item into the linked analyzer."));
+            dcol.AddChild(new ErisSubLabel("No item loaded inside the destructive analyzer."));
         }
         col.AddChild(da);
 
@@ -266,44 +287,63 @@ public sealed class OxydRdWindow : DefaultWindow
         col.AddChild(list);
     }
 
-    // Eris rdconsole tech_trees: positioned nodes, connector lines, side detail.
+    // Eris rdconsole tech_trees: 32px science.png icons on an absolute canvas,
+    // white elbow connectors, and a side pane (name, description, cost, requirements, unlocks).
+    private const float MapW = 700f;
+    private const float MapH = 520f;
+    private const float NodeSize = 40f;
+    private const float SideW = 250f;
+
+    private static readonly Color NodeResearched = Color.FromHex("#2f943c");
+    private static readonly Color NodeLocked = Color.FromHex("#942f3c");
+    private static readonly Color NodeOpen = Color.FromHex("#2c3444");
+    private static readonly Color NodeSelected = Color.FromHex("#3333cc");
+
+    private SpriteSystem? _sprites;
+
     private void BuildTrees(BoxContainer col)
     {
         var s = _state!;
-        var picker = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 6 };
+        var current = s.Trees.FirstOrDefault(t => t.Id == s.SelectedTree);
+        col.AddChild(new Label
+        {
+            Text = $"Research points: {s.Points}    {current?.Name ?? "Tech"} level: {current?.Level ?? 0}",
+            FontColorOverride = ErisSurgeryColors.Text,
+        });
+
+        var picker = new GridContainer { Columns = 3 };
         foreach (var t in s.Trees)
         {
             if (!t.Shown)
                 continue;
-            var l = new ErisLink($"{t.Name} {t.Level}");
+            var l = new ErisLink($"{t.Name}  {t.Level}");
             if (s.SelectedTree == t.Id)
                 l.SetSelectedLook();
             var id = t.Id;
             l.OnPressed += _ => Msg(new OxydRdSelectTreeMessage { Tree = id });
             picker.AddChild(l);
         }
-        picker.AddChild(new ErisSubLabel($"  Points available: {s.Points}"));
         col.AddChild(picker);
 
         var split = new BoxContainer
         {
             Orientation = BoxContainer.LayoutOrientation.Horizontal,
-            SeparationOverride = 8,
+            SeparationOverride = 10,
             HorizontalExpand = true,
-            MinHeight = 380,
+            VerticalExpand = true,
         };
         col.AddChild(split);
 
-        const float mapW = 460f;
-        const float mapH = 360f;
-        var map = new LayoutContainer
-        {
-            MinSize = new Vector2(mapW, mapH),
-        };
+        var map = new LayoutContainer { SetSize = new Vector2(MapW, MapH) };
         var canvas = new PanelContainer
         {
-            MinSize = new Vector2(mapW, mapH),
-            PanelOverride = new StyleBoxFlat(Color.FromHex("#1b1b22")),
+            SetSize = new Vector2(MapW, MapH),
+            MouseFilter = Control.MouseFilterMode.Ignore,
+            PanelOverride = new StyleBoxFlat(Color.FromHex("#14141c"))
+            {
+                BorderColor = Color.FromHex("#40628a"),
+                BorderThickness = new Thickness(1),
+            },
         };
         map.AddChild(canvas);
         LayoutContainer.SetPosition(canvas, Vector2.Zero);
@@ -311,91 +351,162 @@ public sealed class OxydRdWindow : DefaultWindow
         var byId = s.Nodes.ToDictionary(n => n.Id);
         foreach (var node in s.Nodes)
         {
-            var ax = node.X * mapW;
-            var ay = (1f - node.Y) * mapH;
+            var ax = node.X * MapW;
+            var ay = (1f - node.Y) * MapH;
             foreach (var req in node.Requires)
             {
                 if (!byId.TryGetValue(req, out var from))
                     continue;
-                var bx = from.X * mapW;
-                var by = (1f - from.Y) * mapH;
-                AddElbow(map, new Vector2(bx, by), new Vector2(ax, ay));
+                AddElbow(map, new Vector2(from.X * MapW, (1f - from.Y) * MapH), new Vector2(ax, ay));
             }
         }
 
         foreach (var node in s.Nodes)
-        {
-            var button = new Button
-            {
-                Text = node.Name,
-                MinSize = new Vector2(108, 32),
-                ClipText = true,
-            };
-            if (node.State == 2)
-                button.Modulate = Color.FromHex("#7dcea0");
-            else if (node.State == 0)
-                button.Modulate = Color.FromHex("#8899aa");
-            if (_selectedNode == node.Id)
-                button.Modulate = Color.FromHex("#f4d35e");
-            var nid = node.Id;
-            button.OnPressed += _ =>
-            {
-                _selectedNode = nid;
-                if (_state != null)
-                    UpdateState(_state);
-            };
-            map.AddChild(button);
-            LayoutContainer.SetPosition(button, new Vector2(node.X * mapW - 54f, (1f - node.Y) * mapH - 16f));
-        }
+            AddNode(map, node);
 
         split.AddChild(map);
 
+        var sideScroll = new ScrollContainer
+        {
+            SetWidth = SideW,
+            VerticalExpand = true,
+            MinHeight = MapH,
+        };
         var side = new BoxContainer
         {
             Orientation = BoxContainer.LayoutOrientation.Vertical,
-            SeparationOverride = 6,
-            MinWidth = 180,
-            HorizontalExpand = true,
+            SeparationOverride = 4,
+            SetWidth = SideW - 8,
         };
-        split.AddChild(side);
+        sideScroll.AddChild(side);
+        split.AddChild(sideScroll);
+
         var selected = s.Nodes.FirstOrDefault(n => n.Id == _selectedNode) ?? s.Nodes.FirstOrDefault();
         if (selected == null)
         {
-            side.AddChild(new Label { Text = "Select a technology." });
+            side.AddChild(WrapText("Select a technology.", ErisSurgeryColors.Text));
             return;
         }
 
         _selectedNode = selected.Id;
-        side.AddChild(new Label { Text = selected.Name, FontColorOverride = ErisSurgeryColors.ItemLabelText });
-        side.AddChild(new Label { Text = selected.Desc, FontColorOverride = ErisSurgeryColors.Text });
-        side.AddChild(new Label { Text = $"Cost {selected.Cost}" });
-        if (selected.Missing.Count > 0)
-            side.AddChild(new Label { Text = "Requires " + string.Join(", ", selected.Missing) });
-        if (selected.Unlocks.Count > 0)
-            side.AddChild(new Label { Text = "Unlocks " + string.Join(", ", selected.Unlocks) });
-        var research = new Button { Text = selected.State == 2 ? "Researched" : "Research", Disabled = selected.State != 1 };
+        side.AddChild(WrapText(selected.Name, ErisSurgeryColors.ItemLabelText));
+        side.AddChild(WrapText(string.IsNullOrEmpty(selected.Desc) ? "No description." : selected.Desc, ErisSurgeryColors.Text));
+        side.AddChild(WrapText("Cost", ErisSurgeryColors.ItemLabelText));
+        side.AddChild(WrapText($"{selected.Cost} Research Points", ErisSurgeryColors.Text));
+        side.AddChild(WrapText("Requirements", ErisSurgeryColors.ItemLabelText));
+        if (selected.Prereqs.Count == 0)
+            side.AddChild(WrapText("None", ErisSurgeryColors.LabelText));
+        foreach (var req in selected.Prereqs)
+            side.AddChild(WrapText(req.Name, req.Met ? Color.FromHex("#00FF00") : Color.FromHex("#FF4444")));
+        side.AddChild(WrapText("Unlocks", ErisSurgeryColors.ItemLabelText));
+        if (selected.Unlocks.Count == 0)
+            side.AddChild(WrapText("None", ErisSurgeryColors.LabelText));
+        foreach (var unlock in selected.Unlocks)
+            side.AddChild(WrapText(unlock, ErisSurgeryColors.Text));
+
+        var research = new ErisLink(selected.State == 2 ? "Researched" : "Research");
+        if (selected.State != 1)
+            research.SetDisabledLook();
         var unlockId = selected.Id;
-        research.OnPressed += _ => Msg(new OxydRdUnlockMessage { Node = unlockId });
+        research.OnPressed += _ =>
+        {
+            if (selected.State == 1)
+                Msg(new OxydRdUnlockMessage { Node = unlockId });
+        };
         side.AddChild(research);
+    }
+
+    private void AddNode(LayoutContainer map, OxydRdNodeInfo node)
+    {
+        var selected = _selectedNode == node.Id;
+        var bg = selected
+            ? NodeSelected
+            : node.State switch
+            {
+                2 => NodeResearched,
+                1 => NodeOpen,
+                _ => NodeLocked,
+            };
+        var button = new ContainerButton
+        {
+            SetSize = new Vector2(NodeSize, NodeSize),
+            ToolTip = node.Name,
+            StyleBoxOverride = new StyleBoxFlat(bg)
+            {
+                BorderColor = selected ? Color.White : Color.FromHex("#111118"),
+                BorderThickness = new Thickness(selected ? 2 : 1),
+            },
+        };
+        var icon = new TextureRect
+        {
+            Texture = NodeIcon(node.Icon),
+            SetSize = new Vector2(32, 32),
+            Stretch = TextureRect.StretchMode.KeepCentered,
+            MouseFilter = Control.MouseFilterMode.Ignore,
+            HorizontalAlignment = Control.HAlignment.Center,
+            VerticalAlignment = Control.VAlignment.Center,
+        };
+        button.AddChild(icon);
+        var nid = node.Id;
+        button.OnPressed += _ =>
+        {
+            _selectedNode = nid;
+            if (_state != null)
+                UpdateState(_state);
+        };
+        map.AddChild(button);
+        LayoutContainer.SetPosition(button, new Vector2(node.X * MapW - NodeSize / 2f, (1f - node.Y) * MapH - NodeSize / 2f));
+    }
+
+    private Texture? NodeIcon(string state)
+    {
+        _sprites ??= IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<SpriteSystem>();
+        var spec = new SpriteSpecifier.Rsi(new ResPath("/Textures/_Oxyd/Moebius/science.rsi"), state);
+        return _sprites.Frame0(spec);
+    }
+
+    private static RichTextLabel WrapText(string text, Color color)
+    {
+        var label = new RichTextLabel { SetWidth = SideW - 16, HorizontalExpand = true };
+        var message = new FormattedMessage();
+        message.PushColor(color);
+        message.AddText(text);
+        message.Pop();
+        label.SetMessage(message);
+        return label;
     }
 
     private static void AddElbow(LayoutContainer map, Vector2 from, Vector2 to)
     {
         var mid = new Vector2(to.X, from.Y);
-        AddSegment(map, from, mid);
-        AddSegment(map, mid, to);
+        var start = Pull(from, mid, NodeSize / 2f + 2f);
+        var end = Pull(to, mid, NodeSize / 2f + 2f);
+        AddSegment(map, start, mid);
+        AddSegment(map, mid, end);
+    }
+
+    private static Vector2 Pull(Vector2 point, Vector2 toward, float dist)
+    {
+        var delta = toward - point;
+        var len = delta.Length();
+        if (len < 1f)
+            return point;
+        return point + delta * (Math.Min(dist, len) / len);
     }
 
     private static void AddSegment(LayoutContainer map, Vector2 a, Vector2 b)
     {
         var min = Vector2.Min(a, b);
-        var size = Vector2.Max(Vector2.Abs(b - a), new Vector2(2, 2));
+        var size = Vector2.Abs(b - a);
+        if (size.X < 1.5f && size.Y < 1.5f)
+            return;
+        size = Vector2.Max(size, new Vector2(2, 2));
         var line = new PanelContainer
         {
-            PanelOverride = new StyleBoxFlat(Color.FromHex("#d0d0d8")),
+            PanelOverride = new StyleBoxFlat(Color.FromHex("#f2f2f6")),
             MouseFilter = Control.MouseFilterMode.Ignore,
+            SetSize = size,
         };
-        line.MinSize = size;
         map.AddChild(line);
         LayoutContainer.SetPosition(line, min);
     }
@@ -415,8 +526,8 @@ public sealed class OxydRdWindow : DefaultWindow
         else if (s.DiskIsPointsDisk)
         {
             dcol.AddChild(new ErisSubLabel(s.DiskSpent
-                ? "Research data disk (spent)."
-                : $"Research data disk: +{s.DiskPoints} points available."));
+                ? "Research points disk (spent)."
+                : $"Research points disk: +{s.DiskPoints} points available."));
             var load = new ErisLink("Load Data");
             if (s.DiskSpent)
                 load.SetDisabledLook();
@@ -425,7 +536,9 @@ public sealed class OxydRdWindow : DefaultWindow
         }
         else
         {
-            dcol.AddChild(new ErisSubLabel($"Data disk: {s.DiskNodeCount} techs, {s.DiskDesignCount} designs stored."));
+            var techWord = s.DiskNodeCount == 1 ? "tech" : "techs";
+            var designWord = s.DiskDesignCount == 1 ? "design" : "designs";
+            dcol.AddChild(new ErisSubLabel($"Data disk: {s.DiskNodeCount} {techWord}, {s.DiskDesignCount} {designWord} stored."));
             var row = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 6 };
             var load = new ErisLink("Load Data");
             load.OnPressed += _ => Msg(new OxydRdDiskMessage { Op = OxydRdDiskOp.Upload });

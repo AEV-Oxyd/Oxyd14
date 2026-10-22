@@ -487,6 +487,16 @@ public sealed partial class OxydResearchSystem
         state.Trees.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
 
         // analyzer card
+        foreach (var dev in ent.Comp.LinkedDevices)
+        {
+            if (TerminatingOrDeleted(dev))
+                continue;
+            if (TryComp<OxydRdLinkableComponent>(dev, out var link) && link.Kind == OxydRdDeviceKind.Analyzer)
+            {
+                state.Da.Linked = true;
+                break;
+            }
+        }
         var da = FindAnalyzerWithItem(ent);
         if (da != null)
         {
@@ -558,22 +568,24 @@ public sealed partial class OxydResearchSystem
                 var info = new OxydRdNodeInfo { Id = node.ID, Name = Loc.GetString(node.Name),
                     Desc = node.Description != null ? Loc.GetString(node.Description.Value) : string.Empty,
                     Cost = node.Cost, X = node.PosX, Y = node.PosY,
+                    Icon = string.IsNullOrEmpty(node.IconHint) ? "rd" : node.IconHint,
                     Requires = node.RequiredNodes.Select(id => id.Id).ToList() };
+                var prereqsMet = true;
+                foreach (var req in node.RequiredNodes)
+                {
+                    var met = ent.Comp.UnlockedNodes.Contains(req.Id);
+                    var reqName = _proto.TryIndex<OxydTechNodePrototype>(req.Id, out var r) ? Loc.GetString(r.Name) : req.Id;
+                    info.Prereqs.Add(new OxydRdReqInfo { Name = reqName, Met = met });
+                    if (!met)
+                    {
+                        prereqsMet = false;
+                        info.Missing.Add(reqName);
+                    }
+                }
                 if (ent.Comp.UnlockedNodes.Contains(node.ID))
                     info.State = 2;
                 else
-                {
-                    var ok = true;
-                    foreach (var req in node.RequiredNodes)
-                    {
-                        if (!ent.Comp.UnlockedNodes.Contains(req.Id))
-                        {
-                            ok = false;
-                            info.Missing.Add(_proto.TryIndex<OxydTechNodePrototype>(req.Id, out var r) ? Loc.GetString(r.Name) : req.Id);
-                        }
-                    }
-                    info.State = ok && ent.Comp.Points >= node.Cost ? 1 : 0;
-                }
+                    info.State = prereqsMet && ent.Comp.Points >= node.Cost ? 1 : 0;
                 foreach (var recipe in node.UnlocksRecipes)
                     info.Unlocks.Add(_proto.TryIndex(recipe, out var rp) ? Loc.GetString(rp.Name ?? recipe.Id) : recipe.Id);
                 state.Nodes.Add(info);

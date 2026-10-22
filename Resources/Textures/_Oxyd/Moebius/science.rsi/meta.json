@@ -1,0 +1,242 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV-Eris nano/images/science.png research-console icon sheet",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "Moebius_box1"
+    },
+    {
+      "name": "advmatterbin"
+    },
+    {
+      "name": "aicard"
+    },
+    {
+      "name": "ammobox"
+    },
+    {
+      "name": "bagofholding"
+    },
+    {
+      "name": "binarykey"
+    },
+    {
+      "name": "bluespacecell"
+    },
+    {
+      "name": "bluespacething"
+    },
+    {
+      "name": "booster"
+    },
+    {
+      "name": "borgmodule"
+    },
+    {
+      "name": "cell"
+    },
+    {
+      "name": "cellmount"
+    },
+    {
+      "name": "chamelion"
+    },
+    {
+      "name": "chemdisp"
+    },
+    {
+      "name": "clarissa"
+    },
+    {
+      "name": "communications"
+    },
+    {
+      "name": "compensatedbarrel"
+    },
+    {
+      "name": "cybercoffin"
+    },
+    {
+      "name": "cyborganalyzer"
+    },
+    {
+      "name": "drill"
+    },
+    {
+      "name": "durand"
+    },
+    {
+      "name": "flash"
+    },
+    {
+      "name": "freedom"
+    },
+    {
+      "name": "generator"
+    },
+    {
+      "name": "gps"
+    },
+    {
+      "name": "gun"
+    },
+    {
+      "name": "gygax"
+    },
+    {
+      "name": "handheldmonitor"
+    },
+    {
+      "name": "headset"
+    },
+    {
+      "name": "healthanalyzer"
+    },
+    {
+      "name": "holdingpouch"
+    },
+    {
+      "name": "hydroponics"
+    },
+    {
+      "name": "hypercell"
+    },
+    {
+      "name": "jackhammer"
+    },
+    {
+      "name": "jawsoflife"
+    },
+    {
+      "name": "mechgrenadelauncher"
+    },
+    {
+      "name": "mechlaser"
+    },
+    {
+      "name": "mechteleporter"
+    },
+    {
+      "name": "medhud"
+    },
+    {
+      "name": "mindswapper"
+    },
+    {
+      "name": "module"
+    },
+    {
+      "name": "moebiushelm"
+    },
+    {
+      "name": "moetablet"
+    },
+    {
+      "name": "monitoring"
+    },
+    {
+      "name": "night"
+    },
+    {
+      "name": "odyssey"
+    },
+    {
+      "name": "operationcomputer"
+    },
+    {
+      "name": "pda"
+    },
+    {
+      "name": "plasmablock"
+    },
+    {
+      "name": "posbrain"
+    },
+    {
+      "name": "rapidsyringegun"
+    },
+    {
+      "name": "rd"
+    },
+    {
+      "name": "recharger"
+    },
+    {
+      "name": "rignuclearreactor"
+    },
+    {
+      "name": "rigscanner"
+    },
+    {
+      "name": "ripley"
+    },
+    {
+      "name": "rped"
+    },
+    {
+      "name": "scalpelmanager"
+    },
+    {
+      "name": "shield"
+    },
+    {
+      "name": "sleeper"
+    },
+    {
+      "name": "smes"
+    },
+    {
+      "name": "solarcontrol"
+    },
+    {
+      "name": "spaceheater"
+    },
+    {
+      "name": "spiderlegs"
+    },
+    {
+      "name": "stunbaton"
+    },
+    {
+      "name": "stunrevolver"
+    },
+    {
+      "name": "submachinegun"
+    },
+    {
+      "name": "supercell"
+    },
+    {
+      "name": "supergenerator"
+    },
+    {
+      "name": "supermatterbin"
+    },
+    {
+      "name": "teleporter"
+    },
+    {
+      "name": "telescience"
+    },
+    {
+      "name": "tempgun"
+    },
+    {
+      "name": "teslagun"
+    },
+    {
+      "name": "toxincoater"
+    },
+    {
+      "name": "traumateam"
+    },
+    {
+      "name": "wrench"
+    }
+  ]
+}

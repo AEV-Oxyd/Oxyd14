@@ -24,6 +24,8 @@ public enum OxydRdScreen : byte
 [Serializable, NetSerializable]
 public sealed class OxydRdDaInfo
 {
+    /// <summary>A destructive analyzer is linked, even when its input slot is empty.</summary>
+    public bool Linked;
     public bool HasItem;
     public string ItemName = string.Empty;
     /// <summary>tree display name -> level the item would grant.</summary>
@@ -48,13 +50,24 @@ public sealed class OxydRdNodeInfo
     public int Cost;
     public float X;
     public float Y;
+    /// <summary>Eris science.png icon state (oxydTechNode.iconHint).</summary>
+    public string Icon = "rd";
     /// <summary>0 = unavailable (prereq missing), 1 = researchable, 2 = done.</summary>
     public int State;
     /// <summary>Names of missing prerequisite nodes.</summary>
     public List<string> Missing = new();
     public List<string> Requires = new();
+    /// <summary>Every prerequisite, met or not, for the Eris side pane.</summary>
+    public List<OxydRdReqInfo> Prereqs = new();
     /// <summary>Recipe names this node unlocks (ported designs only).</summary>
     public List<string> Unlocks = new();
+}
+
+[Serializable, NetSerializable]
+public sealed class OxydRdReqInfo
+{
+    public string Name = string.Empty;
+    public bool Met;
 }
 
 [Serializable, NetSerializable]

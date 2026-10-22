@@ -43,7 +43,7 @@ public sealed partial class OxydTechNodePrototype : IPrototype
     [DataField] public float PosX;
     [DataField] public float PosY;
 
-    /// <summary>Eris node icon name (used as a text glyph hint; no sprite ported).</summary>
+    /// <summary>Eris science.png icon state drawn on the tech-tree node.</summary>
     [DataField] public string? IconHint;
 
     /// <summary>Eris required_technologies: other node ids that must be unlocked first.</summary>
