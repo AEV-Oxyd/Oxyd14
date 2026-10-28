@@ -39,8 +39,20 @@ public static class DamageHelpers
 
         return newSpec;
     }
+}/// <summary>
+ ///  FLAG HELPERS. ONLY VALID FOR POSITIVE VALUES
+ /// </summary>
+public static class FH
+{
+    public static bool hasAny(Enum a, Enum b)
+    {
+        return (Convert.ToUInt64(a) & Convert.ToUInt64(b)) != 0;
+    }
+    public static bool hasAll(Enum a, Enum b)
+    {
+        return a.HasFlag(b);
+    }
 }
-
 
 public partial class SharedOxydHelpers : EntitySystem
 {

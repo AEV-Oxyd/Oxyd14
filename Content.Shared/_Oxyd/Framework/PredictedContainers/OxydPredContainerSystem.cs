@@ -78,7 +78,7 @@ public partial class OxydPredContainerSystem : EntitySystem
         foreach (var (key, content) in state.containers)
         {
             
-            if (ent.Comp.containers.TryGetValue(key, out var old) && (content.s.All(old.checksums.Contains) || old.capacityLimit != content.c.capacityLimit))
+            if (ent.Comp.containers.TryGetValue(key, out var old) && (content.s.All(old.checksums.Contains) && old.capacityLimit == content.c.capacityLimit))
             {
                 continue;
             }

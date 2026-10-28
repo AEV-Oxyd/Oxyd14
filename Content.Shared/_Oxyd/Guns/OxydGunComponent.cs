@@ -26,6 +26,7 @@ public enum COM // Chamber Operating Mode
     PumpableLoad= 1<<5, // will add a casing if chamber's empty
     PumpableUnload = 1<<6, // will remove a casing on pump
     Auto = 1<<7, // always loads after every fire/insertion
+    
 }
 
 
@@ -59,8 +60,15 @@ public sealed partial class OxydGunComponent : Component
     [ViewVariables, AutoNetworkedField]
     public bool safety = true;
 
+    [ViewVariables, AutoNetworkedField] public bool bolted = true;
+    [ViewVariables, AutoNetworkedField] public bool pumped = false;
+
     [DataField, AutoNetworkedField]
     public bool hasSafety = true;
+    [DataField, AutoNetworkedField]
+    public bool hasBolt = false;
+    [DataField, AutoNetworkedField]
+    public bool hasPump = false;
 
     [ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
     public bool jammed = false;
@@ -111,7 +119,6 @@ public partial class ChamberData
 {
     [ViewVariables] public string store = string.Empty;
     [DataField] public COM operatingMode = COM.None;
-    [ViewVariables] public bool state = false; // used by bolties
     [DataField] public bool pushback = false; // Default is Queue-based, if true, Stack-based
     [DataField] public int capacity = 1;
     [DataField] public int basecapacity = 1;

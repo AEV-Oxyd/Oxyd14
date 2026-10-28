@@ -218,6 +218,8 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
                 return false;
             if (ev.self.clickCoords == EntityCoordinates.Invalid)
                 return false;
+            if (!ev.self.InViewport)
+                return false;
             if (!TryComp<OxydGunComponent>(obj, out var gun))
             {
                 Log.Error($"Tried to fire handheld gun without gun component {MetaData(obj).EntityName}");

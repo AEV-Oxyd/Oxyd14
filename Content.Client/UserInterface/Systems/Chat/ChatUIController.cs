@@ -247,7 +247,7 @@ public sealed partial class ChatUIController : UIController
     {
         SetMainChat(true);
 
-        var viewportContainer = UIManager.ActiveScreen!.FindControl<VBox>("ViewportContainer");
+        var viewportContainer = UIManager.ActiveScreen!.FindControl<PanelContainer>("ViewportContainer");
         SetSpeechBubbleRoot(viewportContainer);
 
         SetChatWindowOpacity(_config.GetCVar(CCVars.ChatWindowOpacity));
@@ -416,7 +416,7 @@ public sealed partial class ChatUIController : UIController
         UpdateChannelPermissions();
     }
 
-    public void SetSpeechBubbleRoot(VBox root)
+    public void SetSpeechBubbleRoot(PanelContainer root)
     {
         _speechBubbleRoot.Orphan();
         root.AddChild(_speechBubbleRoot);
