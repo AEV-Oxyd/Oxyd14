@@ -1,0 +1,110 @@
+# Eris /obj/item/coreimplant_upgrade/neo/kit/ascension — a distinct removable core upgrade.
+- type: entity
+  parent: BaseItem
+  id: OxydNtPreacherAscensionKit
+  name: preacher ascension kit
+  description: Use on a cruciform or its bearer to install a conversion module. Initiation activates it; Asacris removes it.
+  components:
+  - type: CruciformCoreUpgrade
+    module: OxydNtModulePriestConvert
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: cruciform_upgrade
+  - type: Item
+    size: Small
+
+# Eris /obj/item/cruciform_upgrade/* ported as installable attachments.
+# Deltas come straight from upgrades.dm OnInstall/OnUninstall pairs:
+#   faiths_shield  brute_mod -0.2, burn_mod -0.2   -> damagedModifierDelta -0.2
+#   wrath_of_god   damage_multiplier +0.2, all resists +0.1 -> damagedModifierDelta 0.1
+# The behavioural upgrades carry one marker component each; CruciformUpgradeBehaviorSystem
+# runs the aura tick, the martyr burst, the movement modifier and the melee bonus.
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeNaturesBlessing
+  name: nature's blessing
+  description: This upgrade stabilizes the Faithful and nurtures the plants near the follower. Useful for Agrolytes.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeAura
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: natures_blessing
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeFaithsShield
+  name: faith's shield
+  description: This upgrade will slightly increase follower resistance to physical and burn injuries from any source.
+  components:
+  - type: CruciformUpgrade
+    damagedModifierDelta: -0.2
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: faiths_shield
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeCleansingPresence
+  name: cleansing presence
+  description: This upgrade cleans the tiles the follower walks upon and slowly withers space vines and maint-shrooms in their presence. Useful for Custodians.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeAura
+    bruteHealPerSecond: 0
+    burnHealPerSecond: 0
+    plantHealPerSecond: 0
+    cleanPuddles: true
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: cleansing_presence
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeMartyrGift
+  name: martyr's gift
+  description: On the death of the follower this upgrade bursts, burning any non-cruciformed creatures nearby while leaving terrain and the Faithful intact. It destroys itself in the process; the cruciform survives.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeMartyr
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: martyr_gift
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeWrathOfGod
+  name: wrath of god
+  description: This upgrade makes the follower deal more damage in melee, but also receive slightly more damage from all sources.
+  components:
+  - type: CruciformUpgrade
+    damagedModifierDelta: 0.1
+  - type: CruciformUpgradeMelee
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: wrath_of_god
+  - type: Item
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: OxydNtUpgradeSpeedOfTheChosen
+  name: speed of the chosen
+  description: This upgrade increases the movement speed of the follower.
+  components:
+  - type: CruciformUpgrade
+  - type: CruciformUpgradeSpeed
+  - type: Sprite
+    sprite: Oxyd/NeoTheology/upgrades.rsi
+    state: speed_of_the_chosen
+  - type: Item
+    size: Small

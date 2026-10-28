@@ -1,0 +1,25 @@
+# Moebius access levels (Eris code/game/jobs/access_datum.dm).
+# Eris has Moebius-only permissions that have no SS14 equivalent: the shared
+# corporate access, medical-equipment lockers, the morgue, the surgery suite,
+# and the Biolab Officer's command channel. Virology/genetics map onto the
+# existing Medical access because those sub-departments do not exist in SS14.
+
+- type: accessLevel
+  id: OxydMoebius
+  name: oxyd-access-moebius
+
+- type: accessLevel
+  id: OxydMoebiusEquipment
+  name: oxyd-access-moebius-equipment
+
+- type: accessLevel
+  id: OxydMoebiusMorgue
+  name: oxyd-access-moebius-morgue
+
+- type: accessLevel
+  id: OxydMoebiusSurgery
+  name: oxyd-access-moebius-surgery
+
+- type: accessLevel
+  id: OxydMoebiusOfficer
+  name: oxyd-access-moebius-officer

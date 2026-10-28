@@ -1,0 +1,116 @@
+# Asters Guild machines. Eris sources: trade/machinery/trade_beacon.dm,
+# modular_computers preset_console.dm:190 (preset/trade), mining/machine_processing.dm,
+# mining/drilling/deep_drill.dm, economy/cash_register.dm, economy/EFTPOS.dm.
+
+# ---------------------------------------------------------------------------
+# Trade console — the Eris preset/trade modular computer. Opens the Trading Program.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeConsole
+  name: trade console
+  description: Trade Console.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: supply
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeConsole
+  - type: ActivatableUI
+    key: enum.OxydTradeUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeUiKey.Key:
+        type: OxydTradeBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Crew order console — same window for crew-side requests (Eris preset/trade_orders).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeRequestConsole
+  name: trade request console
+  description: Trade Request Console.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: request
+      map: ["enum.OxydGuildVisualLayers.Base"]
+  - type: OxydTradeConsole
+    requestConsole: true
+  - type: ActivatableUI
+    key: enum.OxydTradeUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeUiKey.Key:
+        type: OxydTradeBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Trade crate — goods ordered at the console arrive inside a steel crate on the
+# receiving beacon (Eris order.dm shipping crates).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: CrateGenericSteel
+  id: OxydTradeCrate
+  name: trade crate
+  description: Trade Crate.
+
+# ATM, trade beacons, cash register, and EFTPOS entity protos live in
+# Resources/Prototypes/_Oxyd/Economy/machines.yml (Eris economy+PDA port).
+
+# Ore processing is the stock lathe. The guild machine is that processor.
+- type: entity
+  parent: OreProcessor
+  id: OxydOreProcessor
+  name: ore processor
+  description: It produces sheets and ingots using ores.
+
+- type: entity
+  parent: BaseComputer
+  id: OxydOreProcessorConsole
+  name: ore processor console
+  description: Guild desk beside the ore processor. The processor itself takes the ore.
+
+# ---------------------------------------------------------------------------
+# Deep drill — slowly produces ore stacks on its tile while running.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydDeepDrill
+  name: deep drill
+  description: Deep Drill.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/ore_processor.rsi
+    layers:
+    - state: icon
+      map: ["enum.OxydGuildVisualLayers.Base"]
+    - state: building
+      map: ["enum.OxydGuildVisualLayers.Working"]
+      visible: false
+  - type: OxydDeepDrill
+  - type: ApcPowerReceiver
+    powerLoad: 1000
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydGuildVisuals.Working:
+        enum.OxydGuildVisualLayers.Working:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable

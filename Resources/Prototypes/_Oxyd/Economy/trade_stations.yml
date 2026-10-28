@@ -1,0 +1,133 @@
+# Eris-style trade stations (Asters network) — buy inventory + sell offers
+
+- type: oxydTradeStation
+  id: Vermouth
+  name: "BTB 'Vermouth'"
+  description: Best beverages and kitchen staples. Part of the Aster's Trade Network.
+  startDiscovered: true
+  markup: 1.2
+  baseIncome: 1600
+  inventory:
+  - product: DrinkAbsintheBottleFull
+    name: Absinthe bottle
+    category: Drinks
+    price: 100
+    stock: 10
+  - product: DrinkGinBottleFull
+    name: Gin bottle
+    category: Drinks
+    price: 100
+    stock: 10
+  - product: DrinkWineBottleFull
+    name: Wine bottle
+    category: Drinks
+    price: 100
+    stock: 8
+  - product: ReagentContainerFlourSmall
+    name: Flour bag
+    category: Ingredients
+    price: 50
+    stock: 20
+  - product: FoodMeat
+    name: Raw meat
+    category: Ingredients
+    price: 100
+    stock: 15
+  - product: DrinkGlass
+    name: Drinking glass
+    category: Commissary
+    price: 30
+    stock: 25
+  offers:
+  - product: FoodBreadPlain
+    name: Plain bread
+    price: 180
+    amount: 4
+  - product: DrinkBeerBottleFull
+    name: Empty-beer returns (full beer)
+    price: 120
+    amount: 6
+
+- type: oxydTradeStation
+  id: AstersCapital
+  name: "ASTC 'Capital'"
+  description: Asters Guild capital desk — tools, crate staples, and artwork consignments.
+  startDiscovered: true
+  markup: 1.5
+  baseIncome: 2000
+  inventory:
+  - product: Crowbar
+    name: Crowbar
+    category: Tools
+    price: 150
+    stock: 8
+  - product: Wrench
+    name: Wrench
+    category: Tools
+    price: 150
+    stock: 8
+  - product: Wirecutter
+    name: Wirecutters
+    category: Tools
+    price: 150
+    stock: 8
+  - product: FlashlightLantern
+    name: Flashlight
+    category: Tools
+    price: 80
+    stock: 12
+  - product: SheetSteel1
+    name: Steel sheet
+    category: Materials
+    price: 40
+    stock: 30
+  offers:
+  - product: OxydArtworkStatue
+    name: Artwork statue
+    price: 400
+    amount: 2
+  - product: OxydArtworkOddity
+    name: Artwork oddity
+    price: 600
+    amount: 1
+  - product: OxydArtworkToolmod
+    name: Artwork tool mod
+    price: 450
+    amount: 2
+  - product: OxydArtworkGunPart
+    name: Artwork gun part
+    price: 500
+    amount: 1
+  - product: OxydArtworkArmorPart
+    name: Artwork armor part
+    price: 480
+    amount: 1
+
+- type: oxydTradeStation
+  id: Caduceus
+  name: "MTC 'Caduceus'"
+  description: Medical trade beacon. Bandages and chemistry basics.
+  startDiscovered: false
+  markup: 1.8
+  baseIncome: 1200
+  inventory:
+  - product: Brutepack
+    name: Bruise pack
+    category: Medical
+    price: 120
+    stock: 16
+  - product: Ointment
+    name: Ointment
+    category: Medical
+    price: 120
+    stock: 16
+  - product: Gauze
+    name: Gauze
+    category: Medical
+    price: 80
+    stock: 20
+  offers:
+  - product: Syringe
+    name: Syringe
+    price: 90
+    amount: 5

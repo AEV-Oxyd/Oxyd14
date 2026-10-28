@@ -5,7 +5,7 @@
   description: The NT Mk58 is a cheap, ubiquitous sidearm, produced by a NanoTrasen subsidiary. Uses standard .35 and high-capacity magazines.
   components:
   - type: Sprite
-    sprite: Oxyd/erisported/mk58_sec.rsi
+    sprite: Oxyd/erisported/mk58.rsi
     layers:
     - state: base
       map: ["enum.GunVisualLayers.Base"]

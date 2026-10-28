@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Server.Chemistry.Components;
+using Content.Shared.Administration.Logs; // OXYD
 using Content.Shared.Chemistry;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Containers.ItemSlots;
@@ -13,6 +14,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Content.Shared.Labels.Components;
 using Content.Shared.Storage;
+using Content.Shared.Database; // OXYD
 using Content.Server.Hands.Systems;
 
 namespace Content.Server.Chemistry.EntitySystems
@@ -31,6 +33,7 @@ namespace Content.Server.Chemistry.EntitySystems
         [Dependency] private UserInterfaceSystem _userInterfaceSystem = default!;
         [Dependency] private OpenableSystem _openable = default!;
         [Dependency] private HandsSystem _handsSystem = default!;
+        [Dependency] private ISharedAdminLogManager _adminLogger = default!; // OXYD
 
         public override void Initialize()
         {
@@ -143,10 +146,14 @@ namespace Content.Server.Chemistry.EntitySystems
             {
                 // force open container, if applicable, to avoid confusing people on why it doesn't dispense
                 _openable.SetOpen(storedContainer, true);
-                _solutionTransferSystem.Transfer(new SolutionTransferData(reagentDispenser,
+                var transferred = _solutionTransferSystem.Transfer(new SolutionTransferData(reagentDispenser,
                         storedContainer, src.Value,
                         outputContainer.Value, dst.Value,
                         (int)reagentDispenser.Comp.DispenseAmount));
+                // OXYD: log the committed transfer at the server-side entry point.
+                if (transferred > 0)
+                    _adminLogger.Add(LogType.Action, LogImpact.Medium,
+                        $"{ToPrettyString(message.Actor):user} dispensed {transferred}u from {ToPrettyString(storedContainer)} into {ToPrettyString(outputContainer.Value)} using {ToPrettyString(reagentDispenser.Owner):tool}");
             }
 
             UpdateUiState(reagentDispenser);
@@ -165,6 +172,9 @@ namespace Content.Server.Chemistry.EntitySystems
             if (storedContainer == EntityUid.Invalid)
                 return;
 
+            // OXYD: log the beaker/cartridge eject with its actor.
+            _adminLogger.Add(LogType.Action, LogImpact.Low,
+                $"{ToPrettyString(message.Actor):user} ejected {ToPrettyString(storedContainer)} from {ToPrettyString(reagentDispenser.Owner)}");
             _handsSystem.TryPickupAnyHand(message.Actor, storedContainer);
         }
 

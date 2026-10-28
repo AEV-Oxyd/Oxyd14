@@ -1,0 +1,398 @@
+# Eris Moebius medicine synthesis. Eris source: code/modules/reagents/recipes.dm.
+# Ingredient divergences (documented in docs/moebius-medical-catalog.md):
+#   hydrazine -> Diethylamine, tungsten -> Iron, blattedin -> Blood,
+#   hclacid -> SulfuricAcid, pacid -> PolytrinicAcid, serotrotium -> Cryptobiolin,
+#   carpotoxin -> CarpoToxin, stoxin -> ChloralHydrate, mutagen -> UnstableMutagen.
+
+- type: reaction
+  id: OxydParacetamol
+  reactants:
+    Inaprovaline: { amount: 1 }
+    Ethanol: { amount: 1 }
+    Acetone: { amount: 1 }
+  products:
+    OxydMedParacetamol: 3
+
+- type: reaction
+  id: OxydTramadol
+  reactants:
+    OxydMedParacetamol: { amount: 1 }
+    Sugar: { amount: 1 }
+    Water: { amount: 1 }
+  products:
+    OxydMedTramadol: 3
+
+- type: reaction
+  id: OxydOxycodone
+  reactants:
+    Ethanol: { amount: 1 }
+    OxydMedTramadol: { amount: 1 }
+  products:
+    OxydMedOxycodone: 2
+
+- type: reaction
+  id: OxydDiclofenac
+  reactants:
+    OxydMedParacetamol: { amount: 1 }
+    WeldingFuel: { amount: 1 }
+    Carbon: { amount: 1 }
+  products:
+    OxydMedDiclofenac: 3
+
+- type: reaction
+  id: OxydSterilizine
+  reactants:
+    Ethanol: { amount: 1 }
+    Dylovene: { amount: 1 }
+    SulfuricAcid: { amount: 1 }
+  products:
+    OxydMedSterilizine: 3
+
+- type: reaction
+  id: OxydPeridaxon
+  reactants:
+    Bicaridine: { amount: 2 }
+    OxydMedClonexadone: { amount: 2 }
+  products:
+    OxydMedPeridaxon: 2
+
+- type: reaction
+  id: OxydAlkysine
+  reactants:
+    SulfuricAcid: { amount: 1 }
+    Ammonia: { amount: 1 }
+    Dylovene: { amount: 1 }
+  products:
+    OxydMedAlkysine: 2
+
+- type: reaction
+  id: OxydImidazoline
+  reactants:
+    Carbon: { amount: 1 }
+    Diethylamine: { amount: 1 }
+    Dylovene: { amount: 1 }
+  products:
+    OxydMedImidazoline: 2
+
+- type: reaction
+  id: OxydInacusiate
+  reactants:
+    Carbon: { amount: 1 }
+    OxydMedImidazoline: { amount: 1 }
+    Dylovene: { amount: 1 }
+  products:
+    OxydMedInacusiate: 2
+
+- type: reaction
+  id: OxydRyetalyn
+  reactants:
+    Arithrazine: { amount: 1 }
+    Carbon: { amount: 1 }
+  products:
+    OxydMedRyetalyn: 2
+
+- type: reaction
+  id: OxydKyphotorin
+  reactants:
+    OxydMedPeridaxon: { amount: 1 }
+    UnstableMutagen: { amount: 1 }
+    OxydMedClonexadone: { amount: 1 }
+  products:
+    OxydMedKyphotorin: 3
+
+- type: reaction
+  id: OxydSanguinum
+  reactants:
+    Bicaridine: { amount: 1 }
+    OxydMedSpaceacillin: { amount: 1 }
+    Mercury: { amount: 1 }
+  products:
+    OxydMedSanguinum: 3
+
+- type: reaction
+  id: OxydMeralyne
+  reactants:
+    OxydDrugHyperzine: { amount: 1 }
+    Blood: { amount: 2 }
+    OxydMedTramadol: { amount: 1 }
+  products:
+    OxydMedMeralyne: 4
+
+- type: reaction
+  id: OxydCarthatoline
+  reactants:
+    OxydMedMeralyne: { amount: 1 }
+    Dylovene: { amount: 1 }
+    Carbon: { amount: 1 }
+  products:
+    OxydMedCarthatoline: 3
+
+- type: reaction
+  id: OxydVomitol
+  reactants:
+    Carbon: { amount: 1 }
+    SulfuricAcid: { amount: 1 }
+    Acetone: { amount: 1 }
+  products:
+    OxydMedVomitol: 3
+
+- type: reaction
+  id: OxydQuickclot
+  reactants:
+    Kelotane: { amount: 1 }
+    OxydMedClonexadone: { amount: 1 }
+    Plasma: { amount: 1, catalyst: true }
+  products:
+    OxydMedQuickclot: 2
+
+- type: reaction
+  id: OxydOssisine
+  reactants:
+    ChloralHydrate: { amount: 1 }
+    OxydMedClonexadone: { amount: 1 }
+    Bicaridine: { amount: 1 }
+  products:
+    OxydMedOssisine: 3
+
+- type: reaction
+  id: OxydPolystem
+  reactants:
+    PolytrinicAcid: { amount: 1 }
+    Iron: { amount: 1 }
+    Potassium: { amount: 3 }
+  products:
+    OxydMedPolystem: 5
+  maxTemp: 168
+  minTemp: 124
+
+- type: reaction
+  id: OxydDetox
+  reactants:
+    Cryptobiolin: { amount: 1 }
+    Inaprovaline: { amount: 3 }
+  products:
+    OxydMedDetox: 4
+  minTemp: 363
+
+- type: reaction
+  id: OxydPurger
+  reactants:
+    MindbreakerToxin: { amount: 1 }
+    Dylovene: { amount: 3 }
+  products:
+    OxydMedPurger: 4
+  minTemp: 363
+
+- type: reaction
+  id: OxydAddictol
+  reactants:
+    Mercury: { amount: 2 }
+    OxydMedPurger: { amount: 2 }
+    Impedrezene: { amount: 2 }
+  products:
+    OxydMedAddictol: 3
+
+- type: reaction
+  id: OxydAminazine
+  reactants:
+    OxydMedPurger: { amount: 1 }
+    OxydMedAlkysine: { amount: 1 }
+  products:
+    OxydMedAminazine: 2
+
+- type: reaction
+  id: OxydSuppressital
+  reactants:
+    OxydMedAminazine: { amount: 1 }
+    OxydMedTramadol: { amount: 1 }
+    Sugar: { amount: 1 }
+  products:
+    OxydMedSuppressital: 3
+
+- type: reaction
+  id: OxydRezadone
+  reactants:
+    CarpoToxin: { amount: 1 }
+    Cryptobiolin: { amount: 1 }
+    Copper: { amount: 1 }
+  products:
+    OxydMedRezadone: 3
+
+- type: reaction
+  id: OxydClonexadone
+  reactants:
+    Cryoxadone: { amount: 1 }
+    Sodium: { amount: 1 }
+    Plasma: { amount: 5, catalyst: true }
+  products:
+    OxydMedClonexadone: 2
+
+- type: reaction
+  id: OxydSpaceacillin
+  reactants:
+    Cryptobiolin: { amount: 1 }
+    Inaprovaline: { amount: 1 }
+  products:
+    OxydMedSpaceacillin: 2
+
+- type: reaction
+  id: OxydNoexcutite
+  reactants:
+    OxydMedTramadol: { amount: 1 }
+    Dylovene: { amount: 1 }
+  products:
+    OxydMedNoexcutite: 2
+  maxTemp: 150
+  minTemp: 120
+
+- type: reaction
+  id: OxydMethylphenidate
+  reactants:
+    MindbreakerToxin: { amount: 1 }
+    Diethylamine: { amount: 1 }
+  products:
+    OxydMedMethylphenidate: 2
+
+- type: reaction
+  id: OxydCitalopram
+  reactants:
+    MindbreakerToxin: { amount: 1 }
+    Carbon: { amount: 1 }
+  products:
+    OxydMedCitalopram: 2
+
+- type: reaction
+  id: OxydParoxetine
+  reactants:
+    MindbreakerToxin: { amount: 1 }
+    Acetone: { amount: 1 }
+    Inaprovaline: { amount: 1 }
+  products:
+    OxydMedParoxetine: 3
+
+- type: reaction
+  id: OxydVarceptol
+  reactants:
+    CarpoToxin: { amount: 1 }
+    UnstableMutagen: { amount: 1 }
+    Mercury: { amount: 1 }
+  products:
+    OxydMedVarceptol: 3
+
+- type: reaction
+  id: OxydNepotent
+  reactants:
+    OxydMedPeridaxon: { amount: 1 }
+    OxydMedKyphotorin: { amount: 1 }
+    Blood: { amount: 1 }
+  products:
+    OxydMedNepotent: 3
+
+- type: reaction
+  id: OxydProSurgeon
+  reactants:
+    Nicotine: { amount: 1 }
+    Sugar: { amount: 2 }
+    Iron: { amount: 2 }
+  products:
+    OxydStimProSurgeon: 4
+
+# P1 sweep. Resuscitator has no chem recipe in Eris (enricher oddity makes it); roach/spider
+# venoms (pararein, aranecolmin, diplopterum, seligitillin, starkellin, gewaltine, fuhrerole,
+# kaiseraurum, blattedin) plus biomatter/tar/xenomicrobes are harvested, not synthesized.
+
+- type: reaction
+  id: OxydKognim
+  reactants:
+    Radium: { amount: 1 }
+    OxydMedRyetalyn: { amount: 2 }
+    Synaptizine: { amount: 1 }
+  products:
+    OxydMedKognim: 2
+
+- type: reaction
+  id: OxydArectine
+  reactants:
+    Ethanol: { amount: 1 }
+    Dylovene: { amount: 1 }
+    WeldingFuel: { amount: 1 }
+  products:
+    OxydDrugArectine: 3
+
+- type: reaction
+  id: OxydAdrenaline
+  reactants:
+    Blood: { amount: 3 }
+    Dexalin: { amount: 1 }
+  products:
+    OxydStimAdrenaline: 4
+  minTemp: 373
+
+- type: reaction
+  id: OxydCyanide
+  reactants:
+    Toxin: { amount: 5 }
+    MindbreakerToxin: { amount: 3 }
+    OxydToxFuhrerole: { amount: 2 }
+  products:
+    OxydToxCyanide: 2
+  maxTemp: 33
+  minTemp: 10
+
+- type: reaction
+  id: OxydPlasticide
+  reactants:
+    Oil: { amount: 1 }
+    Ethanol: { amount: 1 }
+    Silicon: { amount: 1 }
+  products:
+    OxydToxPlasticide: 3
+  maxTemp: 270
+
+- type: reaction
+  id: OxydPotassiumChloride
+  reactants:
+    TableSalt: { amount: 1 }
+    Potassium: { amount: 1 }
+  products:
+    OxydToxPotassiumChloride: 2
+
+- type: reaction
+  id: OxydPotassiumChlorophoride
+  reactants:
+    OxydToxPotassiumChloride: { amount: 1 }
+    Plasma: { amount: 1 }
+    ChloralHydrate: { amount: 1 }
+  products:
+    OxydToxPotassiumChlorophoride: 4
+
+- type: reaction
+  id: OxydZombiePowder
+  reactants:
+    CarpoToxin: { amount: 5 }
+    ChloralHydrate: { amount: 5 }
+    Copper: { amount: 5 }
+  products:
+    OxydToxZombiePowder: 2
+
+# R2 sweep. Uncapped nanites (overclocked capped nanites) and oddity tea are machine/oddity
+# products, not chem-bench reactions. The positive marker's Eris gate on carrion blood can't
+# be expressed; documented here as plain blood instead.
+
+- type: reaction
+  id: OxydParageneticMarkersNegative
+  reactants:
+    OxydMedRyetalyn: { amount: 1 }
+    Carbon: { amount: 1 }
+  products:
+    OxydMedParageneticMarkersNegative: 1
+  minTemp: 400
+
+- type: reaction
+  id: OxydParageneticMarkersPositive
+  reactants:
+    OxydMedParageneticMarkersNegative: { amount: 1 }
+    Blood: { amount: 1 }
+  products:
+    OxydMedParageneticMarkersPositive: 1
+  minTemp: 700

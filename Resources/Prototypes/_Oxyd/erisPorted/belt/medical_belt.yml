@@ -20,6 +20,8 @@
 - type: entity
   parent: erisport_medical_belt
   id: erisport_medical_belt_filled
+  name: erisport_medical_belt_filled
+  description: Erisport_medical_belt_filled.
   suffix: Filled
   components:
   - type: EntityTableContainerFill
@@ -32,6 +34,6 @@
         - id: ChemistryBottleInaprovaline
           amount: 2
         - id: ChemistryBottleHaloperidol
-        - id: ChemistryBottleEthylredoxazine
+        - id: ChemistryBottleEthylredoxrazine
         - id: ChemistryBottleIpecac
         - id: ChemistryBottleCharcoal

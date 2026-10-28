@@ -1,0 +1,772 @@
+# Eris Moebius medicines (code/modules/reagents/reagents/medicine.dm). Native chems cover
+# bicaridine, kelotane, dylovene, dexalin(+,cryo), inaprovaline, tricordrazine, synaptizine,
+# oculine, hyronalin, arithrazine, ipecac, chloralhydrate, haloperidol, tramadol-free opioids —
+# those are reused, not duplicated. These are the Eris-unique entries.
+# P1 sweep adds kognim (InflictPain) and resuscitator (Resuscitate) from other.dm/medicine.dm.
+# R2 sweep adds the inert positive/negative paragenetic markers (Eris negativeling/positiveling).
+# "Poison" damage type is Eris toxin; "Cellular" covers organ/genetic mending.
+
+- type: reagent
+  id: OxydMedSynthInaprovaline
+  name: oxyd-reagent-synth-inaprovaline
+  desc: oxyd-reagent-synth-inaprovaline-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#9966CC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.04
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Asphyxiation: -0.6
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydMedParacetamol
+  name: oxyd-reagent-paracetamol
+  desc: oxyd-reagent-paracetamol-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#C8A5DC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicParacetamol
+        strength: 10
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydMedTramadol
+  name: oxyd-reagent-tramadol
+  desc: oxyd-reagent-tramadol-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#CB68FC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicTramadol
+        strength: 30
+      - !type:Nsa
+        value: 1
+      - !type:Addictive
+        reagent: OxydMedTramadol
+        threshold: 30
+        addictionChance: 0.1
+
+- type: reagent
+  id: OxydMedOxycodone
+  name: oxyd-reagent-oxycodone
+  desc: oxyd-reagent-oxycodone-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#800080"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicOxycodone
+        strength: 60
+      - !type:Nsa
+        value: 2
+      - !type:Addictive
+        reagent: OxydMedOxycodone
+        threshold: 15
+        addictionChance: 0.25
+
+- type: reagent
+  id: OxydMedDiclofenac
+  name: oxyd-reagent-diclofenac
+  desc: oxyd-reagent-diclofenac-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#AA66CC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicDiclofenac
+        strength: 20
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedAlkysine
+  name: oxyd-reagent-alkysine
+  desc: oxyd-reagent-alkysine-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#FFFF99"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -0.5
+            Asphyxiation: -0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedImidazoline
+  name: oxyd-reagent-imidazoline
+  desc: oxyd-reagent-imidazoline-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#C8A5DC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:EyeDamage
+        amount: -1
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedKyphotorin
+  name: oxyd-reagent-kyphotorin
+  desc: oxyd-reagent-kyphotorin-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#551A8B"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:EyeDamage
+        amount: -2
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedInacusiate
+  name: oxyd-reagent-inacusiate
+  desc: oxyd-reagent-inacusiate-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#6600FF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -0.3
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedPeridaxon
+  name: oxyd-reagent-peridaxon
+  desc: oxyd-reagent-peridaxon-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#561414"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.015
+      effects:
+      - !type:HealOrganDamage
+        amount: 0.5
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedRyetalyn
+  name: oxyd-reagent-ryetalyn
+  desc: oxyd-reagent-ryetalyn-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#AC6D32"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.015
+      effects:
+      - !type:HealOrganDamage
+        amount: 0.3
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -0.5
+            Radiation: -0.5
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedEthylmirinodan
+  name: oxyd-reagent-ethylmirinodan
+  desc: oxyd-reagent-ethylmirinodan-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#8BBA66"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: 1
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedMethylphenidate
+  name: oxyd-reagent-methylphenidate
+  desc: oxyd-reagent-methylphenidate-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF6347"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: methylphenidate
+        skill: Cog
+        amount: 2
+        duration: 10
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedCitalopram
+  name: oxyd-reagent-citalopram
+  desc: oxyd-reagent-citalopram-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF80FF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:ChemSanity
+        amount: 1
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedParoxetine
+  name: oxyd-reagent-paroxetine
+  desc: oxyd-reagent-paroxetine-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF80BF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:ChemSanity
+        amount: 1.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedRezadone
+  name: oxyd-reagent-rezadone
+  desc: oxyd-reagent-rezadone-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#669900"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -2
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydMedRezadone
+          min: 25
+        damage:
+          types:
+            Poison: 1
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedSpaceacillin
+  name: oxyd-reagent-spaceacillin
+  desc: oxyd-reagent-spaceacillin-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-cloudy
+  flavor: medicine
+  color: "#FFFFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -0.3
+            Cellular: -0.2
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedSterilizine
+  name: oxyd-reagent-sterilizine
+  desc: oxyd-reagent-sterilizine-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FFFFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:CleanBloodstream
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.2
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydMedQuickclot
+  name: oxyd-reagent-quickclot
+  desc: oxyd-reagent-quickclot-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#A6DFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:SealWounds
+        bleedReduction: 2
+      - !type:ModifyBleed
+        amount: -0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedOssisine
+  name: oxyd-reagent-ossisine
+  desc: oxyd-reagent-ossisine-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#9D9D9D"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:MendBone
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -0.5
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedNoexcutite
+  name: oxyd-reagent-noexcutite
+  desc: oxyd-reagent-noexcutite-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#66CC99"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ResetNarcolepsy
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -0.3
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedPolystem
+  name: oxyd-reagent-polystem
+  desc: oxyd-reagent-polystem-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#CC00CC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -0.3
+            Slash: -0.3
+            Piercing: -0.3
+            Heat: -0.3
+            Cold: -0.3
+            Shock: -0.3
+      - !type:Nsa
+        value: 1.5
+
+- type: reagent
+  id: OxydMedDetox
+  name: oxyd-reagent-detox
+  desc: oxyd-reagent-detox-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#00CC99"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:NsaTolerance
+        value: 30
+        duration: 30
+      - !type:ReduceAddiction
+        amount: 1
+
+- type: reagent
+  id: OxydMedPurger
+  name: oxyd-reagent-purger
+  desc: oxyd-reagent-purger-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#996666"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:ReduceAddiction
+        amount: 3
+      - !type:CleanBloodstream
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.2
+
+- type: reagent
+  id: OxydMedAddictol
+  name: oxyd-reagent-addictol
+  desc: oxyd-reagent-addictol-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#336633"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:ReduceAddiction
+        amount: 5
+      - !type:SuppressWithdrawal
+
+- type: reagent
+  id: OxydMedAminazine
+  name: oxyd-reagent-aminazine
+  desc: oxyd-reagent-aminazine-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#CCCC66"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:SuppressWithdrawal
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedSuppressital
+  name: oxyd-reagent-suppressital
+  desc: oxyd-reagent-suppressital-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#993366"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:SuppressWithdrawal
+      - !type:ChemSanity
+        amount: 0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedVomitol
+  name: oxyd-reagent-vomitol
+  desc: oxyd-reagent-vomitol-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-cloudy
+  flavor: medicine
+  color: "#999966"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.05
+      effects:
+      - !type:Vomit
+
+- type: reagent
+  id: OxydMedSanguinum
+  name: oxyd-reagent-sanguinum
+  desc: oxyd-reagent-sanguinum-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#BB0000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:ModifyBloodLevel
+        amount: 1
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedClonexadone
+  name: oxyd-reagent-clonexadone
+  desc: oxyd-reagent-clonexadone-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#80BFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.015
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: -3
+            Radiation: -1
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedMeralyne
+  name: oxyd-reagent-meralyne
+  desc: oxyd-reagent-meralyne-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#FD5964"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -1.5
+            Slash: -1.5
+            Piercing: -1.5
+      - !type:Nsa
+        value: 3
+
+- type: reagent
+  id: OxydMedCarthatoline
+  name: oxyd-reagent-carthatoline
+  desc: oxyd-reagent-carthatoline-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#225866"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -2
+            Slash: -2
+            Piercing: -2
+      - !type:Nsa
+        value: 3
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydMedCarthatoline
+          min: 30
+        damage:
+          types:
+            Poison: 1
+
+- type: reagent
+  id: OxydMedVarceptol
+  name: oxyd-reagent-varceptol
+  desc: oxyd-reagent-varceptol-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#6699CC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Blunt: -0.6
+            Slash: -0.6
+            Piercing: -0.6
+            Heat: -0.6
+            Cold: -0.6
+            Shock: -0.6
+      - !type:Nsa
+        value: 1.5
+
+- type: reagent
+  id: OxydMedToxinFilter
+  name: oxyd-reagent-toxin-filter
+  desc: oxyd-reagent-toxin-filter-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#336633"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:CleanBloodstream
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -0.5
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydMedNepotent
+  name: oxyd-reagent-nepotent
+  desc: oxyd-reagent-nepotent-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#444499"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: -1
+      - !type:Nsa
+        value: 2
+
+- type: reagent
+  id: OxydMedParageneticMarkers
+  name: oxyd-reagent-paragenetic-markers
+  desc: oxyd-reagent-paragenetic-markers-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#CCCCFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydMedKognim
+  name: oxyd-reagent-kognim
+  desc: oxyd-reagent-kognim-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-nondescript
+  flavor: medicine
+  color: "#224422"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:InflictPain
+        amount: 4
+      - !type:Nsa
+        value: 1
+
+# Eris resuscitator (reagents/other.dm): injectable-only cardiac stimulant.
+# Wrecks the heart each tick; revives the dead inside the 15-minute window if
+# heart + brain are viable and the body isn't mangled past the dead threshold.
+# No OD effect wired (Eris heart.die() is covered by the per-tick heart damage).
+- type: reagent
+  id: OxydChemResuscitator
+  name: oxyd-reagent-resuscitator
+  desc: oxyd-reagent-resuscitator-desc
+  group: Medicine
+  worksOnTheDead: true
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#A0522D"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 1.0
+      effects:
+      - !type:Resuscitate
+
+- type: reagent
+  id: OxydMedParageneticMarkersNegative
+  name: oxyd-reagent-paragenetic-markers-negative
+  desc: oxyd-reagent-paragenetic-markers-negative-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#022000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydMedParageneticMarkersPositive
+  name: oxyd-reagent-paragenetic-markers-positive
+  desc: oxyd-reagent-paragenetic-markers-positive-desc
+  group: Medicine
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#910000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:Nsa
+        value: 0.5

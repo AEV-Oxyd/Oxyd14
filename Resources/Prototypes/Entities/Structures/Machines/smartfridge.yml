@@ -5,6 +5,7 @@
   description: A refrigerated storage unit for keeping items cold and fresh.
   components:
   - type: StationAiWhitelist
+  - type: OxydOrganStasis # Eris: smartfridge suspends organ decay
   - type: Vocalizer
     hideChat: true
   - type: VocalizerRequiresPower

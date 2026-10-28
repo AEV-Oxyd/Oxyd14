@@ -1,0 +1,20 @@
+# Eris rituals/priest.dm: offerings add 5 Eye power and choose its next reward family.
+- type: oxydOffering
+  id: OxydNtOfferingDivineIntervention
+  name: oxyd-offering-divine-intervention
+  required:
+  - proto: OxydNtBiomatter
+    count: 200
+  power: 5
+  rewards: [Material]
+
+- type: oxydOffering
+  id: OxydNtOfferingHolyGuidance
+  name: oxyd-offering-holy-guidance
+  required:
+  - oddity: true
+    count: 1
+  - proto: FoodProduceBase
+    count: 40
+  power: 5
+  rewards: [Alert, Inspiration, Oddity, StatBuff, Energy]

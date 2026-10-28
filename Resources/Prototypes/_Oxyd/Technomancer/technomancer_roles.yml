@@ -1,0 +1,34 @@
+# Technomancer department roles (Eris DEPARTMENT_ENGINEERING). Mirrors the
+# Moebius layout: unique IDs so upstream prototypes evolve untouched.
+
+- type: playTimeTracker
+  id: JobTechnomancerExultant
+
+- type: playTimeTracker
+  id: JobTechnomancer
+
+- type: department
+  id: TechnomancerEngineering
+  name: department-TechnomancerEngineering
+  description: department-TechnomancerEngineering-description
+  color: "#C59E5A"
+  weight: 20
+  roles:
+  - TechnomancerExultant
+  - Technomancer
+
+- type: department
+  id: TechnomancerCommand
+  name: department-TechnomancerCommand
+  description: department-TechnomancerCommand-description
+  color: "#A8844A"
+  primary: false
+  weight: 100
+  roles:
+  - TechnomancerExultant
+
+- type: jobWeight
+  id: Technomancer
+  weights:
+    TechnomancerExultant: 10
+    Technomancer: 5

@@ -1,0 +1,207 @@
+# Technomancer atmos + console wave — Eris §5/§7/§9/§10 ports.
+# All sprites from Eris DMIs converted to _Oxyd/Technomancer/*.rsi.
+
+# RCON remote power console — Eris rcon_console.dm as fixed console (blueprint §5).
+- type: entity
+  parent: BaseStructure
+  id: OxydRconConsole
+  name: rcon console
+  description: Rcon Console.
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/monitors.rsi
+    state: auth_on
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.4,-0.4,0.4,0.4"
+        density: 100
+        mask: [ MachineMask ]
+        layer: [ MachineLayer ]
+  - type: Anchorable
+  - type: OxydRcon
+  - type: ApcPowerReceiver
+    load: 30
+  - type: UserInterface
+    interfaces:
+      enum.OxydRconUiKey.Key:
+        type: OxydRconBui
+  - type: ActivatableUI
+    key: enum.OxydRconUiKey.Key
+
+# Atmos control console — Eris atmos_control.tmpl as fixed console (§7/§11).
+- type: entity
+  parent: OxydRconConsole
+  id: OxydAtmosConsole
+  name: atmos console
+  description: Atmos Console.
+  suffix: Atmos Control
+  components:
+  - type: Sprite
+    state: auth_off
+  - type: OxydAtmosConsole
+  - type: UserInterface
+    interfaces:
+      enum.OxydAtmosUiKey.Key:
+        type: OxydAtmosBui
+  - type: ActivatableUI
+    key: enum.OxydAtmosUiKey.Key
+
+# Air alarm — Eris /obj/machinery/alarm reskin on stock AirAlarm (§7).
+- type: entity
+  parent: AirAlarm
+  id: OxydAirAlarm
+  name: air alarm
+  description: Air Alarm.
+  suffix: Eris
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/monitors.rsi
+    layers:
+    - state: alarm0
+    - state: alarm0
+      shader: unshaded
+      map: ["airAlarmState"]
+    - state: alarm_build2
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: UserInterface
+    interfaces:
+      enum.SharedAirAlarmInterfaceKey.Key:
+        type: OxydAirAlarmBui
+
+# Gas canister — Eris /obj/machinery/portable_atmospherics/canister reskin (§7).
+- type: entity
+  parent: GasCanister
+  id: OxydCanister
+  name: canister
+  description: Canister.
+  suffix: Eris
+  # Sprite kept stock: stock canister visualizer drives states
+  # (unlocked/can-o0/...) the Eris RSI does not carry — the Eris
+  # surface is delivered via the OxydCanisterBui reskin instead.
+  components:
+  - type: UserInterface
+    interfaces:
+      enum.GasCanisterUiKey.Key:
+        type: OxydCanisterBui
+
+# Omni filter/mixer — Eris omni_devices.dmi on stock trinary devices (§7;
+# standard 3-port semantics as the blueprint fallback).
+- type: entity
+  parent: GasFilter
+  id: OxydOmniFilter
+  name: omni filter
+  description: Omni Filter.
+  suffix: Omni
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/omni_devices.rsi
+    state: filter
+- type: entity
+  parent: GasMixer
+  id: OxydOmniMixer
+  name: omni mixer
+  description: Omni Mixer.
+  suffix: Omni
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/omni_devices.rsi
+    state: mixer
+
+# Pumps/valves — Eris-named stock devices (§7 pump/valve skins).
+- type: entity
+  parent: GasPressurePump
+  id: OxydTermoPump
+  name: termo pump
+  description: Termo Pump.
+  suffix: Eris
+- type: entity
+  parent: GasVolumePump
+  id: OxydTermoVolumePump
+  name: termo volume pump
+  description: Termo Volume Pump.
+  suffix: Eris
+- type: entity
+  parent: GasPassiveGate
+  id: OxydPassiveValve
+  name: passive valve
+  description: Passive Valve.
+  suffix: Eris
+
+# Nanoforge — Eris /obj/machinery/autolathe/nanoforge (§9): items -> matter.
+- type: entity
+  parent: BaseStructure
+  id: OxydNanoforge
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Sprite
+    sprite: _Oxyd/Technomancer/autolathe.rsi
+    state: nanoforge
+  - type: Physics
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.4,-0.4,0.4,0.4"
+        density: 100
+        mask: [ MachineMask ]
+        layer: [ MachineLayer ]
+  - type: Anchorable
+  - type: OxydNanoforge
+  - type: ItemSlots
+    slots:
+      input:
+        name: oxyd-forge-input-slot-name
+  - type: UserInterface
+    interfaces:
+      enum.OxydForgeUiKey.Key:
+        type: OxydForgeBui
+  - type: ActivatableUI
+    key: enum.OxydForgeUiKey.Key
+
+# Compressed matter output stack (Eris matter sheets).
+- type: material
+  id: OxydCompressedMatter
+  name: materials-oxyd-compressed-matter
+  description: Materials oxyd compressed matter.
+  stackEntity: OxydCompressedMatterSingle
+  icon: { sprite: Objects/Materials/Sheets/metal.rsi, state: steel }
+  color: '#5a6a7a'
+  price: 0.1
+- type: entity
+  parent: MaterialBase
+  id: OxydCompressedMatterSingle
+  suffix: Single
+  components:
+  - type: Material
+  - type: PhysicalComposition
+    materialComposition:
+      OxydCompressedMatter: 1
+  - type: Stack
+    stackType: OxydCompressedMatterStack
+    count: 1
+  - type: Sprite
+    sprite: Objects/Materials/Sheets/metal.rsi
+    state: steel
+- type: stack
+  parent: BaseMediumStack
+  id: OxydCompressedMatterStack
+  name: stack-oxyd-compressed-matter
+  description: Stack oxyd compressed matter.
+  spawn: OxydCompressedMatterSingle
+  maxCount: 60
+
+# RCD — Eris IJIRO RCD maps to stock RCD (§10).
+- type: entity
+  parent: RCD
+  id: OxydRapidConstructionDevice
+  name: rapid construction device
+  description: Rapid Construction Device.
+  suffix: IJIRO

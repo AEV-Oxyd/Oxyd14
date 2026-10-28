@@ -1,0 +1,49 @@
+# Moebius department roles (Eris DEPARTMENT_MEDICAL). Mirrors the Ironhammer
+# layout: unique IDs so upstream prototypes can keep evolving untouched.
+
+- type: playTimeTracker
+  id: JobMoebiusBiolabOfficer
+
+- type: playTimeTracker
+  id: JobMoebiusDoctor
+
+- type: playTimeTracker
+  id: JobMoebiusChemist
+
+- type: playTimeTracker
+  id: JobMoebiusParamedic
+
+- type: playTimeTracker
+  id: JobMoebiusBioEngineer
+
+- type: department
+  id: MoebiusMedical
+  name: department-MoebiusMedical
+  description: department-MoebiusMedical-description
+  color: "#94A87F"
+  weight: 20
+  roles:
+  - MoebiusBiolabOfficer
+  - MoebiusDoctor
+  - MoebiusChemist
+  - MoebiusParamedic
+  - MoebiusBioEngineer
+
+- type: department
+  id: MoebiusCommand
+  name: department-MoebiusCommand
+  description: department-MoebiusCommand-description
+  color: "#7A8F68"
+  primary: false
+  weight: 100
+  roles:
+  - MoebiusBiolabOfficer
+
+- type: jobWeight
+  id: Moebius
+  weights:
+    MoebiusBiolabOfficer: 10
+    MoebiusDoctor: 5
+    MoebiusChemist: 0
+    MoebiusParamedic: 0
+    MoebiusBioEngineer: 0

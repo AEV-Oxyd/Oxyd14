@@ -1,0 +1,223 @@
+# Moebius research machines (Eris code/modules/research/{rdconsole,rdmachines,
+# destructive_analyzer,mechfab}.dm + experiment.dm explosion watcher).
+# Sprites: stock look-alikes for now; Eris DMI extraction is a documented gap.
+
+# ---------------------------------------------------------------------------
+# R&D control console (Eris rdconsole): owns research state, drives linked
+# analyzer/lathes. Custom BUI reskin of the Eris NanoUI layout.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydRdConsole
+  name: rd console
+  description: Rd Console.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    state: rdcomp
+  - type: OxydRdConsole
+  - type: OxydRdLinkable
+    kind: Protolathe
+  - type: ActivatableUI
+    key: enum.OxydRdUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydRdUiKey.Key:
+        type: OxydRdConsoleBui
+  - type: ItemSlots
+    slots:
+      disk:
+        name: oxyd-rd-console-disk-slot
+        whitelist:
+          components:
+          - OxydResearchDataDisk
+          - OxydResearchPointsDisk
+      tool:
+        name: oxyd-rd-console-tool-slot
+        whitelist:
+          components:
+          - OxydScienceTool
+          - OxydAutopsyReport
+  - type: ApcPowerReceiver
+    powerLoad: 400
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Destructive analyzer (Eris d_analyzer): eats items, returns research + sheets.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydDestructiveAnalyzer
+  name: destructive analyzer
+  description: Destructive Analyzer.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/artifact_analyzer.rsi
+    state: icon
+  - type: OxydDestructiveAnalyzer
+  - type: OxydRdLinkable
+    kind: Analyzer
+  - type: ItemSlots
+    slots:
+      input:
+        name: oxyd-da-input-slot
+        priority: 1
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Protolathe (Eris protolathe): prints tech items; static pack = Eris free
+# designs; console pushes unlocked packs on research.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ Protolathe ]
+  id: OxydProtolathe
+  name: protolathe
+  description: Protolathe.
+  components:
+  - type: OxydRdLinkable
+    kind: Protolathe
+  - type: Lathe
+    idleState: icon
+    runningState: building
+    unlitIdleState: unlit
+    unlitRunningState: unlit-building
+    staticPacks:
+    - OxydPackProtolatheStatic
+    dynamicPacks: []
+
+# ---------------------------------------------------------------------------
+# Circuit imprinter (Eris imprinter): prints machine/computer boards.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ CircuitImprinter ]
+  id: OxydCircuitImprinter
+  name: circuit imprinter
+  description: Circuit Imprinter.
+  components:
+  - type: OxydRdLinkable
+    kind: Imprinter
+  - type: Lathe
+    idleState: icon
+    runningState: building
+    staticPacks:
+    - OxydPackImprinterStatic
+    dynamicPacks: []
+
+# ---------------------------------------------------------------------------
+# Exosuit fabricator (Eris mechfab): robot parts; static robotics pack.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ CircuitImprinter ]
+  id: OxydMechfab
+  name: mechfab
+  description: Mechfab.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/exosuit_fabricator.rsi
+    layers:
+    - state: fab-idle
+      map: ["enum.LatheVisualLayers.IsRunning"]
+    - state: fab-load
+      map: ["enum.MaterialStorageVisualLayers.Inserting"]
+    - state: fab-o
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: OxydRdLinkable
+    kind: Mechfab
+  - type: Lathe
+    idleState: fab-idle
+    runningState: fab-active
+    unlitIdleState: fab-o
+    unlitRunningState: fab-load
+    staticPacks:
+    # Eris mechfab baseline: robot parts + brains + basic modules (stock
+    # robotics packs — cyborg endoskeleton, limbs, MMI, posibrain).
+    - OxydPackMechfabStatic
+    - RoboticsStatic
+    - BorgLimbsStatic
+    - BorgModulesStatic
+    dynamicPacks: []
+
+# ---------------------------------------------------------------------------
+# Explosion watcher beacon (Eris KES): banks points when it registers blasts.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseItem ]
+  id: OxydExplosionWatcher
+  name: explosion watcher
+  description: Explosion Watcher.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: radio
+  - type: OxydExplosionWatcher
+  - type: Item
+    size: Small
+  - type: Damageable
+  - type: Injurable
+    damageContainer: StructuralInorganic  # must accept Structural (explosion) damage
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Machine boards for the Oxyd machines (Eris circuit/* designs).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseComputerCircuitboard
+  id: OxydRdConsoleCircuitboard
+  name: rd console circuitboard
+  description: Rd Console Circuitboard.
+
+- type: entity
+  parent: BaseMachineCircuitboard
+  id: OxydProtolatheBoard
+  name: protolathe board
+  description: Protolathe Board.
+  components:
+  - type: MachineBoard
+    prototype: OxydProtolathe
+    stackRequirements:
+      Manipulator: 2
+    tagRequirements:
+      GlassBeaker:
+        amount: 1
+        defaultPrototype: Beaker
+
+- type: entity
+  parent: BaseMachineCircuitboard
+  id: OxydCircuitImprinterBoard
+  name: circuit imprinter board
+  description: Circuit Imprinter Board.
+  components:
+  - type: MachineBoard
+    prototype: OxydCircuitImprinter
+    stackRequirements:
+      Manipulator: 2
+
+- type: entity
+  parent: BaseMachineCircuitboard
+  id: OxydMechfabBoard
+  name: mechfab board
+  description: Mechfab Board.
+  components:
+  - type: MachineBoard
+    prototype: OxydMechfab
+    stackRequirements:
+      Manipulator: 2
+
+- type: entity
+  parent: BaseMachineCircuitboard
+  id: OxydDestructiveAnalyzerBoard
+  name: destructive analyzer board
+  description: Destructive Analyzer Board.
+  components:
+  - type: MachineBoard
+    prototype: OxydDestructiveAnalyzer
+    stackRequirements:
+      Manipulator: 2

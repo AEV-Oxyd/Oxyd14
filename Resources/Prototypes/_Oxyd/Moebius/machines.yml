@@ -1,0 +1,515 @@
+# Eris Moebius machines and medical furniture.
+# Eris source: machinery/Sleeper.dm, autodoc.dm, OpTable.dm, adv_med.dm,
+# reagents/machinery/centrifuge.dm + electrolyzer.dm, structures/medical_stand.dm.
+
+# ---------------------------------------------------------------------------
+# Sleeper pod (Eris sleeper): fixed chem injection menu + beaker slot.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydMedicalSleeper
+  name: medical sleeper
+  description: Medical Sleeper.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_sleeper.rsi
+    layers:
+    - state: sleeper_empty
+      map: ["enum.OxydMachineVisualLayers.Base"]
+    - state: sleeper_occupied
+      map: ["enum.OxydMachineVisualLayers.Occupied"]
+      visible: false
+  # Eris sleeper chem menu: Synth-Inaprovaline, Soporific, Paracetamol,
+  # Dylovene, Dexalin, Tricordrazine; each capped at 20u in the patient.
+  - type: OxydSleeper
+    chems:
+    - { reagent: OxydMedSynthInaprovaline, name: oxyd-sleeper-chem-inaprovaline, dose: 5, maxInPatient: 20 }
+    - { reagent: ChloralHydrate, name: oxyd-sleeper-chem-soporific, dose: 5, maxInPatient: 20 }
+    - { reagent: OxydMedParacetamol, name: oxyd-sleeper-chem-paracetamol, dose: 10, maxInPatient: 20 }
+    - { reagent: Dylovene, name: oxyd-sleeper-chem-antitoxin, dose: 10, maxInPatient: 20 }
+    - { reagent: Dexalin, name: oxyd-sleeper-chem-dexalin, dose: 10, maxInPatient: 20 }
+    - { reagent: Tricordrazine, name: oxyd-sleeper-chem-tricordrazine, dose: 10, maxInPatient: 20 }
+  - type: ActivatableUI
+    key: enum.OxydSleeperUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydSleeperUiKey.Key:
+        type: OxydSleeperBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 400
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydMachineVisuals.Occupied:
+        enum.OxydMachineVisualLayers.Occupied:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Autodoc (Eris autodoc): queued automated surgery on the occupant.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydMedicalAutodoc
+  name: medical autodoc
+  description: Medical Autodoc.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autodoc.rsi
+    layers:
+    - state: idle
+      map: ["enum.OxydMachineVisualLayers.Base"]
+    - state: active
+      map: ["enum.OxydMachineVisualLayers.Occupied"]
+      visible: false
+  - type: OxydAutodoc
+  - type: ActivatableUI
+    key: enum.OxydAutodocUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAutodocUiKey.Key:
+        type: OxydAutodocBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 600
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydMachineVisuals.Working:
+        enum.OxydMachineVisualLayers.Occupied:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Centrifuge (Eris centrifuge): splits a beaker's reagents across 3 beakers.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydMedicalCentrifuge
+  name: medical centrifuge
+  description: Medical Centrifuge.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_chemmachines.rsi
+    layers:
+    - state: centrifuge
+      map: ["enum.OxydMachineVisualLayers.Base"]
+    - state: centrifuge_moving
+      map: ["enum.OxydMachineVisualLayers.Occupied"]
+      visible: false
+  - type: OxydChemProcessor
+    mode: Centrifuge
+  - type: ActivatableUI
+    key: enum.OxydChemProcessorUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydChemProcessorUiKey.Key:
+        type: OxydChemProcessorBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydMachineVisuals.Working:
+        enum.OxydMachineVisualLayers.Occupied:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Electrolyzer (Eris electrolyzer): decomposes a reagent back into reactants.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydMedicalElectrolyzer
+  name: medical electrolyzer
+  description: Medical Electrolyzer.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_chemmachines.rsi
+    layers:
+    - state: electrolysis
+      map: ["enum.OxydMachineVisualLayers.Base"]
+    - state: electrolysis_working
+      map: ["enum.OxydMachineVisualLayers.Occupied"]
+      visible: false
+  - type: OxydChemProcessor
+    mode: Electrolyzer
+  - type: ActivatableUI
+    key: enum.OxydChemProcessorUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydChemProcessorUiKey.Key:
+        type: OxydChemProcessorBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 300
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.OxydMachineVisuals.Working:
+        enum.OxydMachineVisualLayers.Occupied:
+          True: { visible: true }
+          False: { visible: false }
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Medical stand / IV drip (Eris medical_stand + iv_drip): hangs a beaker and
+# transfuses reagents into or out of an attached patient.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseStructure
+  id: OxydMedicalIvDrip
+  name: medical iv drip
+  description: Medical Iv Drip.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_ivstand.rsi
+    state: empty
+  - type: OxydIvDrip
+  - type: InteractionOutline
+  - type: Clickable
+  - type: Pullable
+  - type: Fixtures
+    fixtures:
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.15,-0.15,0.15,0.15"
+        density: 60
+        mask:
+        - MachineMask
+
+# ---------------------------------------------------------------------------
+# Operating table (Eris OpTable): surgery flavor + locates patients for the UI.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: TableBase
+  id: OxydMedicalOperatingTable
+  name: medical operating table
+  description: Medical Operating Table.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_optable.rsi
+    state: optable_idle
+  - type: Icon
+    sprite: Oxyd/erisported/eris_optable.rsi
+    state: optable_idle
+  - type: IconSmooth
+    # TableBase inherits Corners smoothing that would request state_* the Eris rsi lacks.
+    mode: NoSprite
+  # Patients can be strapped down for surgery (upstream OperatingTable -> BaseBed).
+  - type: Strap
+    position: Down
+    rotation: -90
+  - type: OxydOperatingTable
+
+# ---------------------------------------------------------------------------
+# Morgue tray (Eris morgue): single-body storage tray.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: Morgue
+  id: OxydMedicalMorgueTray
+  name: medical morgue tray
+  description: Medical Morgue Tray.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_morgue.rsi
+    layers:
+    - state: morgue_empty
+      map: ["enum.MorgueVisualLayers.Base"]
+    - state: morgue_tray
+      offset: 0, -1
+      visible: false
+      map: ["enum.StorageVisualLayers.Door"]
+    - state: morgue_body
+      visible: false
+      map: ["enum.MorgueVisualLayers.Light"]
+  - type: Icon
+    sprite: Oxyd/erisported/eris_morgue.rsi
+    state: morgue_empty
+  - type: OxydMorgueTray
+  - type: GenericVisualizer
+    visuals:
+      enum.StorageVisuals.Open:
+        enum.MorgueVisualLayers.Base:
+          True: { state: morgue_open}
+          False: { state: morgue_empty}
+        enum.StorageVisualLayers.Door:
+          True: { visible: true}
+          False: { visible: false}
+      enum.MorgueVisuals.Contents:
+        enum.MorgueVisualLayers.Light:
+          Empty: {visible: false}
+          HasContents: {visible: true, state: morgue_body}
+          HasMob: {visible: true, state: morgue_body}
+          HasSoul: {visible: true, state: morgue_body}
+
+# ---------------------------------------------------------------------------
+# Body scanner pod (Eris adv_med scanner): non-interactive shell for flavor;
+# the scanner UI itself rides the handheld item + proxy below.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydMedicalScannerPod
+  name: medical scanner pod
+  description: Medical Scanner Pod.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_sleeper.rsi
+    state: scanner_empty
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# ---------------------------------------------------------------------------
+# Surgery and scanner BUIs are registered on the patient (BaseSpeciesMobOrganic
+# UserInterface component), opened by the surgeon/scanner user.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Cryo cell (Eris cryo.dm): piped cryo pod on the engine's CryoPod system,
+# skinned with the Eris cryogenics sprite (pod0/pod1 + lids composited to
+# SS14's two-tall 32x64 layout).
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: CryoPod
+  id: OxydCryoPod
+  name: cryo cell
+  description: A freezing pod designed to slowly restore patients in critical condition with cryo-active reagents.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_cryo.rsi
+    drawdepth: Mobs
+    noRot: true
+    offset: 0, 0.5
+    layers:
+    - sprite: Structures/Piping/Atmospherics/pipe.rsi
+      state: pipeHalf
+      offset: 0, -0.5
+      map: [ "enum.PipeVisualLayers.Pipe" ]
+    - state: pod-open
+      map: [ "enum.CryoPodVisualLayers.Base" ]
+    - state: cover-on
+      map: [ "enum.CryoPodVisualLayers.Cover" ]
+      visible: false
+    - state: pod-panel
+      map: [ "enum.WiresVisualLayers.MaintenancePanel" ]
+      visible: false
+  - type: Icon
+    sprite: Oxyd/erisported/eris_cryo.rsi
+    state: pod-off
+  # Eris cryo cell UI: Oxyd BUI reusing the stock message stream + the Eris
+  # On/Off toggle (OxydCryoPodPowerMessage). Stock pod keeps its stock window.
+  - type: UserInterface
+    interfaces:
+      enum.CryoPodUiKey.Key:
+        type: OxydCryoCellBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+
+# ---------------------------------------------------------------------------
+# Chem Dispenser 5000 (Eris chemical_dispenser): engine ReagentDispenser with
+# the Eris chemical.dmi "dispenser" skin.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: ChemDispenser
+  id: OxydChemDispenser
+  name: Chem Dispenser 5000
+  description: A sophisticated dispenser for industrial-grade chemical synthesis.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_chemmachines.rsi
+    state: dispenser
+    snapCardinals: true
+
+# ---------------------------------------------------------------------------
+# ChemMaster 3000 (Eris chem_master): engine ChemMaster skinned with the Eris
+# mixer0/mixer1 sprites; nopower base + powered overlay + loaded overlay.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: ChemMaster
+  id: OxydChemMaster
+  name: ChemMaster 3000
+  description: A pill and bottle production machine for finished medications.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_chemmachines.rsi
+    snapCardinals: true
+    layers:
+    - state: mixer0_nopower
+    - state: mixer0
+      map: ["enum.PowerDeviceVisualLayers.Powered"]
+  - type: Icon
+    sprite: Oxyd/erisported/eris_chemmachines.rsi
+    state: mixer0
+
+# Organ bioprinter: stock lathe. Meat inserts as Meaterial; recipes print organs.
+- type: entity
+  parent: BaseLathe
+  id: OxydErisBioprinter
+  name: organ bioprinter
+  description: A machine that grows replacement organs from inserted meat.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_bioprinter.rsi
+    layers:
+    - state: bioprinter
+      map: ["enum.LatheVisualLayers.IsRunning"]
+  - type: Machine
+    board: AutolatheMachineCircuitboard
+  - type: MaterialStorage
+    whitelist:
+      tags:
+      - Meat
+  - type: Lathe
+    idleState: bioprinter
+    runningState: bioprinter_working
+    staticPacks:
+    - OxydBioprinterPack
+
+- type: latheRecipePack
+  id: OxydBioprinterPack
+  recipes:
+  - OxydPrintOrganHeart
+  - OxydPrintOrganLungs
+  - OxydPrintOrganKidneys
+  - OxydPrintOrganEyes
+  - OxydPrintOrganLiver
+  - OxydPrintOrganStomach
+
+- type: latheRecipe
+  id: OxydPrintOrganHeart
+  result: OrganHumanHeart
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganLungs
+  result: OrganHumanLungs
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganKidneys
+  result: OrganHumanKidneys
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganEyes
+  result: OrganHumanEyes
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganLiver
+  result: OrganHumanLiver
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+- type: latheRecipe
+  id: OxydPrintOrganStomach
+  result: OrganHumanStomach
+  completetime: 3
+  materials:
+    Meaterial: 300
+
+# ---------------------------------------------------------------------------
+# Excelsior autodoc (Eris excelsior variant): same machine, free surgery -
+# no billing slot, every operation costs 0.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: [ OxydMedicalAutodoc ]
+  id: OxydAutodocExcelsior
+  name: excelsior autodoc
+  description: A refurbished Moebius autodoc with the billing unit ripped out.
+  components:
+  - type: OxydAutodoc
+    scanCost: 0
+    opCosts: {}
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autodoc.rsi
+    layers:
+    - state: idle
+      map: ["enum.OxydMachineVisualLayers.Base"]
+    - state: active
+      map: ["enum.OxydMachineVisualLayers.Occupied"]
+      visible: false
+
+# ---------------------------------------------------------------------------
+# Moebius medical vendor (Eris vending/medical "MiniPharma"): stocks the ported
+# Eris medical set.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: VendingMachineMedicalBase
+  id: OxydMoebiusMedVend
+  name: moebius med vend
+  description: Moebius Med Vend.
+  components:
+  - type: VendingMachine
+    pack: OxydMoebiusMedVendInventory
+  - type: VendingMachineVisuals
+    offState: off
+  - type: Sprite
+    layers:
+    - state: "off"
+      map: ["enum.VendingMachineVisualLayers.Base"]
+    - state: "off"
+      map: ["enum.VendingMachineVisualLayers.BaseUnshaded"]
+      shader: unshaded
+    - state: panel
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: AccessReader
+    access: [["Medical"]]
+
+# ---------------------------------------------------------------------------
+# Operating computer (Eris machinery/computer/Operating.dm): console showing the
+# vitals of the patient buckled to the closest operating table.
+# ---------------------------------------------------------------------------
+- type: entity
+  parent: BaseComputerAiAccess
+  id: OxydMedicalOperatingComputer
+  name: medical operating computer
+  description: Medical Operating Computer.
+  components:
+  - type: OxydOperatingComputer
+  - type: Sprite
+    layers:
+    - map: ["computerLayerBody"]
+      state: computer
+    - map: ["computerLayerKeyboard"]
+      state: generic_keyboard
+    - map: ["computerLayerScreen"]
+      state: crew
+    - map: ["computerLayerKeys"]
+      state: med_key
+    - map: [ "enum.WiresVisualLayers.MaintenancePanel" ]
+      state: generic_panel_open
+  - type: PointLight
+    color: "#1f8c28"
+  - type: Computer
+  - type: ActivatableUI
+    key: enum.OxydOperatingComputerUiKey.Key
+  - type: UserInterface
+    interfaces:
+      enum.OxydOperatingComputerUiKey.Key:
+        type: OxydOpVitalsBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: AmbientMusicMarkerMedical

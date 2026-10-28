@@ -71,8 +71,8 @@
 - type: cargoProduct
   id: ArmoryMartin
   icon:
-    sprite: Oxyd/erisported/martin_sec.rsi
-    state: stun
+    sprite: Oxyd/erisported/pdw.rsi
+    state: PDW
   product: CrateArmoryMartin
   cost: 5000
   category: cargoproduct-category-name-armory

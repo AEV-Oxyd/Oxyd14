@@ -1,0 +1,45 @@
+# Club job icons reuse stock service/civilian states (Eris has no unique job_icon RSI in this port).
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconClubManager
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Bartender
+  jobName: job-name-club-manager
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconClubWorker
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: ServiceWorker
+  jobName: job-name-club-worker
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconClubArtist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Clown
+  jobName: job-name-club-artist
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconVagabond
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Passenger
+  jobName: job-name-vagabond
+
+- type: jobIconGroup
+  id: ClubIconGroup
+  groupName: job-icon-group-club
+  sprite:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Bartender
+  icons:
+  - JobIconClubManager
+  - JobIconClubWorker
+  - JobIconClubArtist
+  - JobIconVagabond

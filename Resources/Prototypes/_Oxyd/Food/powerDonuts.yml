@@ -1,6 +1,7 @@
 - type: entity
   parent: FoodDonutBase
   id: FoodDonutBuffer
+  abstract: true
   name: Debug Item Call Dev Retard If Seen
   components:
     - type: SkillOnEat

@@ -1,0 +1,468 @@
+# Eris combat stims (code/modules/reagents/reagents/stims.dm). Each stim grants a timed skill
+# buff to one stat and a debuff to others while it metabolises; overdose is toxin damage.
+# Buff magnitudes: ADEPT ≈ 3, EXPERT ≈ 5 (Eris 25/40 mapped to the _Oxyd skill scale).
+# P1 sweep adds adrenaline (Organic/Stimulator from other.dm: TGH buff + painkiller + tox).
+
+- type: reagent
+  id: OxydStimMbr
+  name: oxyd-reagent-mbr
+  desc: oxyd-reagent-mbr-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#8B4513"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: mbr
+        skill: Mec
+        amount: 3
+      - !type:Stim
+        stimId: mbr
+        skill: Bio
+        amount: -3
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydStimMbr
+        threshold: 10
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydStimCherryDrops
+  name: oxyd-reagent-cherrydrops
+  desc: oxyd-reagent-cherrydrops-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#B404AE"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: cherrydrops
+        skill: Cog
+        amount: 3
+      - !type:Stim
+        stimId: cherrydrops
+        skill: Mec
+        amount: -3
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydStimCherryDrops
+        threshold: 10
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydStimProSurgeon
+  name: oxyd-reagent-prosurgeon
+  desc: oxyd-reagent-prosurgeon-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#66CCFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: pro_surgeon
+        skill: Bio
+        amount: 3
+      - !type:Stim
+        stimId: pro_surgeon
+        skill: Cog
+        amount: -3
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydStimProSurgeon
+        threshold: 10
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydStimViolence
+  name: oxyd-reagent-violence
+  desc: oxyd-reagent-violence-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF3300"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: violence
+        skill: Rob
+        amount: 3
+      - !type:Stim
+        stimId: violence
+        skill: Vig
+        amount: -3
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydStimViolence
+        threshold: 10
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydStimBouncer
+  name: oxyd-reagent-bouncer
+  desc: oxyd-reagent-bouncer-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#3399FF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: bouncer
+        skill: Tgh
+        amount: 3
+      - !type:Stim
+        stimId: bouncer
+        skill: Rob
+        amount: -3
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydStimBouncer
+        threshold: 10
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydStimSteady
+  name: oxyd-reagent-steady
+  desc: oxyd-reagent-steady-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#999933"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: steady
+        skill: Vig
+        amount: 3
+      - !type:Stim
+        stimId: steady
+        skill: Tgh
+        amount: -3
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydStimSteady
+        threshold: 10
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydStimMachineSpirit
+  name: oxyd-reagent-machine-spirit
+  desc: oxyd-reagent-machine-spirit-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#336699"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: machine_spirit
+        skill: Mec
+        amount: 5
+      - !type:Stim
+        stimId: machine_spirit
+        skill: Bio
+        amount: -3
+      - !type:Stim
+        stimId: machine_spirit
+        skill: Cog
+        amount: -3
+      - !type:Nsa
+        value: 5
+      - !type:Addictive
+        reagent: OxydStimMachineSpirit
+        threshold: 10
+        addictionChance: 0.35
+
+- type: reagent
+  id: OxydStimGrapeDrops
+  name: oxyd-reagent-grape-drops
+  desc: oxyd-reagent-grape-drops-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#663399"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: grape_drops
+        skill: Cog
+        amount: 5
+      - !type:Stim
+        stimId: grape_drops
+        skill: Bio
+        amount: -3
+      - !type:Stim
+        stimId: grape_drops
+        skill: Mec
+        amount: -3
+      - !type:Nsa
+        value: 5
+      - !type:Addictive
+        reagent: OxydStimGrapeDrops
+        threshold: 10
+        addictionChance: 0.35
+
+- type: reagent
+  id: OxydStimUltraSurgeon
+  name: oxyd-reagent-ultra-surgeon
+  desc: oxyd-reagent-ultra-surgeon-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#33FFCC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: ultra_surgeon
+        skill: Bio
+        amount: 5
+      - !type:Stim
+        stimId: ultra_surgeon
+        skill: Cog
+        amount: -3
+      - !type:Stim
+        stimId: ultra_surgeon
+        skill: Mec
+        amount: -3
+      - !type:Nsa
+        value: 5
+      - !type:Addictive
+        reagent: OxydStimUltraSurgeon
+        threshold: 10
+        addictionChance: 0.35
+
+- type: reagent
+  id: OxydStimViolenceUltra
+  name: oxyd-reagent-violence-ultra
+  desc: oxyd-reagent-violence-ultra-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#CC0000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: violence_ultra
+        skill: Rob
+        amount: 5
+      - !type:Stim
+        stimId: violence_ultra
+        skill: Vig
+        amount: -3
+      - !type:Stim
+        stimId: violence_ultra
+        skill: Tgh
+        amount: -3
+      - !type:Nsa
+        value: 5
+      - !type:Addictive
+        reagent: OxydStimViolenceUltra
+        threshold: 10
+        addictionChance: 0.4
+
+- type: reagent
+  id: OxydStimBoxer
+  name: oxyd-reagent-boxer
+  desc: oxyd-reagent-boxer-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#CC6600"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: boxer
+        skill: Tgh
+        amount: 5
+      - !type:Stim
+        stimId: boxer
+        skill: Vig
+        amount: -3
+      - !type:Stim
+        stimId: boxer
+        skill: Rob
+        amount: -3
+      - !type:Nsa
+        value: 5
+      - !type:Addictive
+        reagent: OxydStimBoxer
+        threshold: 10
+        addictionChance: 0.4
+
+- type: reagent
+  id: OxydStimTurbo
+  name: oxyd-reagent-turbo
+  desc: oxyd-reagent-turbo-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FFCC00"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: turbo
+        skill: Vig
+        amount: 5
+      - !type:Stim
+        stimId: turbo
+        skill: Tgh
+        amount: -3
+      - !type:Stim
+        stimId: turbo
+        skill: Rob
+        amount: -3
+      - !type:MovementSpeedModifier
+        walkSpeedModifier: 1.15
+        sprintSpeedModifier: 1.15
+        time: 2
+      - !type:Nsa
+        value: 6
+      - !type:Addictive
+        reagent: OxydStimTurbo
+        threshold: 10
+        addictionChance: 0.4
+
+- type: reagent
+  id: OxydStimPartyDrops
+  name: oxyd-reagent-party-drops
+  desc: oxyd-reagent-party-drops-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF66CC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: party_drops
+        skill: Mec
+        amount: 5
+      - !type:Stim
+        stimId: party_drops
+        skill: Bio
+        amount: 5
+      - !type:Stim
+        stimId: party_drops
+        skill: Cog
+        amount: 5
+      - !type:Stim
+        stimId: party_drops
+        skill: Vig
+        amount: -3
+      - !type:Stim
+        stimId: party_drops
+        skill: Tgh
+        amount: -3
+      - !type:Stim
+        stimId: party_drops
+        skill: Rob
+        amount: -3
+      - !type:Nsa
+        value: 7
+      - !type:Addictive
+        reagent: OxydStimPartyDrops
+        threshold: 10
+        addictionChance: 0.5
+
+- type: reagent
+  id: OxydStimMenace
+  name: oxyd-reagent-menace
+  desc: oxyd-reagent-menace-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#660000"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Stim
+        stimId: menace
+        skill: Vig
+        amount: 5
+      - !type:Stim
+        stimId: menace
+        skill: Tgh
+        amount: 5
+      - !type:Stim
+        stimId: menace
+        skill: Rob
+        amount: 5
+      - !type:Stim
+        stimId: menace
+        skill: Mec
+        amount: -3
+      - !type:Stim
+        stimId: menace
+        skill: Bio
+        amount: -3
+      - !type:Stim
+        stimId: menace
+        skill: Cog
+        amount: -3
+      - !type:Nsa
+        value: 8
+      - !type:Addictive
+        reagent: OxydStimMenace
+        threshold: 8
+        addictionChance: 0.5
+
+- type: reagent
+  id: OxydStimAdrenaline
+  name: oxyd-reagent-adrenaline
+  desc: oxyd-reagent-adrenaline-desc
+  group: Stims
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#C8A5DC"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Analgesic
+        effectProto: OxydAnalgesicAdrenaline
+        strength: 15
+      - !type:Stim
+        stimId: adrenaline
+        skill: Tgh
+        amount: 3
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 1.5
+      - !type:Nsa
+        value: 2

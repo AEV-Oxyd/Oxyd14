@@ -199,6 +199,8 @@
 - type: entity
   parent: [ OrganBaseAppendix, OrganHumanInternal ]
   id: OrganHumanAppendix
+  components:
+  - type: OxydAppendix # Eris spontaneous appendicitis
 
 - type: entity
   parent: [ OrganBaseEars, OrganHumanInternal ]

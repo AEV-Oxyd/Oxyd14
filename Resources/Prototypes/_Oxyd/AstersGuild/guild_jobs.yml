@@ -1,0 +1,96 @@
+# Asters Guild jobs (Eris code/game/jobs/job/guild.dm).
+# Eris access -> fork mapping: merchant = cargo/cargo_bot/merchant/heads/mining/mining_station
+# + command-flavored (RC_announce->Command, keycard_auth->Command, sec_doors->Command,
+# eva->External, maint->Maintenance, mailsorting->OxydGuildCargo, change_cargo->OxydGuildMerchant);
+# tech/miner = maint/mailsorting/cargo/cargo_bot/mining/mining_station.
+
+- type: job
+  id: OxydGuildMerchant
+  name: job-name-oxyd-guild-merchant
+  description: job-description-oxyd-guild-merchant
+  playTimeTracker: JobOxydGuildMerchant
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: AstersGuild
+    time: 5h
+  startingGear: OxydGuildMerchantGear
+  icon: JobIconCargoTechnician
+  supervisors: job-supervisors-captain
+  access:
+  - Command
+  - Cargo
+  - Salvage
+  - External
+  - Maintenance
+  - OxydGuildMerchant
+  - OxydGuildTech
+  - OxydGuildMiner
+  - OxydGuildCargo
+  special:
+  - !type:AddComponentSpecial
+    components:
+    - type: CommandStaff
+
+- type: startingGear
+  id: OxydGuildMerchantGear
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitCargo
+    shoes: ClothingShoesLeather
+    id: CargoPDA
+  storage:
+    back:
+    - OxydCredits500
+
+- type: job
+  id: OxydGuildTechnician
+  name: job-name-oxyd-guild-tech
+  description: job-description-oxyd-guild-tech
+  playTimeTracker: JobOxydGuildTechnician
+  startingGear: OxydGuildTechnicianGear
+  icon: JobIconCargoTechnician
+  supervisors: job-supervisors-captain
+  access:
+  - Cargo
+  - Salvage
+  - External
+  - Maintenance
+  - OxydGuildTech
+  - OxydGuildMiner
+  - OxydGuildCargo
+
+- type: startingGear
+  id: OxydGuildTechnicianGear
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitCargo
+    shoes: ClothingShoesLeather
+    id: CargoPDA
+  storage:
+    back:
+    - OxydCredits100
+
+- type: job
+  id: OxydGuildMiner
+  name: job-name-oxyd-guild-miner
+  description: job-description-oxyd-guild-miner
+  playTimeTracker: JobOxydGuildMiner
+  startingGear: OxydGuildMinerGear
+  icon: JobIconShaftMiner
+  supervisors: job-supervisors-captain
+  access:
+  - Cargo
+  - Salvage
+  - External
+  - Maintenance
+  - OxydGuildMiner
+  - OxydGuildCargo
+
+- type: startingGear
+  id: OxydGuildMinerGear
+  equipment:
+    jumpsuit: ClothingUniformJumpsuitCargo
+    shoes: ClothingShoesLeather
+    id: CargoPDA
+  storage:
+    back:
+    - OxydCredits100
+    - Shovel
