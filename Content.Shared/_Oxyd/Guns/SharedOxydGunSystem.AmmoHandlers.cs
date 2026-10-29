@@ -323,7 +323,23 @@ public abstract partial class SharedOxydGunSystem
             return;
         if (FH.hasAll(data.operatingMode, COM.Boltable & COM.BoltClosedAutoload))
             gcomp.bolted = true;
-        
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineHasAmmo(Entity<OxydMagazineChamberComponent> gun, ref GunHasAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!conts.GetContainer(gun, data.store, out var cont))
+            return;
+        if (!cont.contained.Any())
+            return;
+        var targ = cont.contained.First();
+        if (!TryComp<OxydMagazineComponent>(targ, out var mag))
+            return;
+        if (!conts.GetContainer(targ, data.magstore, out var magcont))
+            return;
+        if(magcont.contained.Any())
     }
 
 
