@@ -120,7 +120,7 @@ public partial class ChamberData
     [ViewVariables] public string store = string.Empty;
     [DataField] public COM operatingMode = COM.None;
     [DataField] public bool pushback = false; // Default is Queue-based, if true, Stack-based
-    [DataField] public int capacity = 1;
+    [DataField] public int capacity = 0;
     [DataField] public int basecapacity = 1;
     [DataField] public EntityWhitelist whitelist = new();
 }
@@ -130,6 +130,11 @@ public partial class MagazineData : ChamberData
 {
     [ViewVariables] public string magstore = string.Empty;
     [DataField] public EntityWhitelist magwhitelist = new();
+
+    public MagazineData()
+    {
+        operatingMode = COM.Auto;
+    }
 }
 
 [RegisterComponent, NetworkedComponent]

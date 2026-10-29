@@ -82,11 +82,15 @@
     - type: OxydHandheldGun
     - type: OxydMagazineChamber
       providers:
-        defaultRevolver:
-          basecapacity: 6
+        defaultMagazine:
+          basecapacity: 1
+          operatingMode: Auto
           whitelist:
             components:
               - OxydBullet
+          magwhitelist:
+            components:
+              - OxydMagazine
     - type: StaticPrice
       price: 500
     - type: RecoilHandler
@@ -280,4 +284,3 @@
           Blunt: 25
   - type: OxydBulletOnFireRecoil
     recoil: 10
-

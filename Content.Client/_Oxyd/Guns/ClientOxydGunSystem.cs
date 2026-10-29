@@ -43,7 +43,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
-        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         //SubscribeLocalEvent<OxydChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
@@ -61,10 +60,9 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
     {
         if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
         {
-            /*
-            if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
+            var firstProvider = mag.providers.Values.FirstOrDefault();
+            if (firstProvider is not null && conts.GetContainer(ent, firstProvider.magstore, out var magCont) && magCont.contained.Any())
                 args.suffix += "mag";
-                */
         }
     }
 
@@ -204,10 +202,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         });
     }
 
-    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
-    {
-        _containerSystem.EnsureContainer<Robust.Shared.Containers.Container>(ent.Owner, oxydContents);
-    }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
     {
         args.Register(0, (ev) =>

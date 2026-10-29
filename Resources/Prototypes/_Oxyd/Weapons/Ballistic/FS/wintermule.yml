@@ -20,24 +20,18 @@
   - type: OxydHandheldGun
   - type: OxydMagazineChamber
     magInhands: true
-    bulletSlot:
-    - name: Chamber
-      insertSound: null
-      ejectSound: null
-      priority: 0
-      whitelist:
-        components:
-        - OxydBullet
-    magazineSlot:
-    - name: Magazine
-      insertSound: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
-      ejectSound: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
-      priority: 2
-      whitelist:
-        components:
-        - OxydMagazine
-        tags:
-        - Magazine20
+    providers:
+      defaultMagazine:
+        basecapacity: 1
+        operatingMode: Auto
+        whitelist:
+          components:
+          - OxydBullet
+        magwhitelist:
+          components:
+          - OxydMagazine
+          tags:
+          - Magazine20
   - type: Clothing
     quickEquip: false
     slots:

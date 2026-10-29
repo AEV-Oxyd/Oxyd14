@@ -69,16 +69,17 @@ public class OxydContainer
             if (index is not null)
             {
                 contained.Insert(index.Value, ent);
+                netContained.Insert(index.Value, netEnt);
             }
             else
             {
                 contained.Add(ent);
+                netContained.Add(netEnt);
             }
 
-            netContained.Add(netEnt);
             checksums.Add(createHash(netEnt, OxydContainerAction.Add));
             if(checksums.Count > 20)
-                checksums = checksums = checksums.GetRange(checksums.Count-10, 10);
+                checksums = checksums.GetRange(checksums.Count-10, 10);
         }
     }
 

@@ -1,9 +1,10 @@
-
 using System.Linq;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.Framework.Bundles;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Interaction;
+using Content.Shared.Interaction.Events;
+using Content.Shared.Verbs;
 using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 using Robust.Shared.Utility;
@@ -25,6 +26,58 @@ public abstract partial class SharedOxydGunSystem
         RaiseLocalEvent(gun,ref ev);
         args.Handled = ev.handled;
     }
+
+    [SubscribeLocalEvent]
+    public void MagazineCompInit(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
+    {
+        if (string.IsNullOrEmpty(ent.Comp.storeKey))
+            ent.Comp.storeKey = oxydContents;
+        conts.CreateContainer(ent, ent.Comp.storeKey, (int)ent.Comp.maxBullets);
+    }
+
+    [SubscribeLocalEvent]
+    public void OnMagazineInteractUsing(Entity<OxydMagazineComponent> mag, ref InteractUsingEvent args)
+    {
+        if (args.Handled)
+            return;
+        if (TerminatingOrDeleted(args.Used))
+            return;
+        if (mag.Comp.whitelist.Components is not null || mag.Comp.whitelist.Tags is not null)
+        {
+            if (!whitelist.IsWhitelistPass(mag.Comp.whitelist, args.Used))
+                return;
+        }
+        else if (!HasComp<OxydBulletComponent>(args.Used))
+        {
+            return;
+        }
+
+        var storeKey = string.IsNullOrEmpty(mag.Comp.storeKey) ? oxydContents : mag.Comp.storeKey;
+        var bullet = args.Used;
+        args.Handled = conts.insertEntity(mag.Owner, storeKey, ref bullet, null, true);
+    }
+
+    [SubscribeLocalEvent]
+    public void OnMagazineUseInHand(Entity<OxydMagazineComponent> mag, ref UseInHandEvent args)
+    {
+        if (args.Handled)
+            return;
+        var storeKey = string.IsNullOrEmpty(mag.Comp.storeKey) ? oxydContents : mag.Comp.storeKey;
+        if (!conts.GetContainer(mag.Owner, storeKey, out var cont))
+            return;
+        EntityUid target = EntityUid.Invalid;
+        if (_gameTiming.IsFirstTimePredicted)
+        {
+            if (cont.contained.Count == 0)
+                return;
+            target = cont.contained[^1];
+        }
+        if (conts.removeEntity(mag.Owner, cont, ref target, null, null, true))
+        {
+            _hands.TryPickupAnyHand(args.User, target);
+            args.Handled = true;
+        }
+    }
     
     [SubscribeLocalEvent]
     public void ChamberInit(Entity<OxydChamberComponent> ent, ref ComponentInit args) => InitializeMappings(ent, ent.Comp.providers);
@@ -37,6 +90,8 @@ public abstract partial class SharedOxydGunSystem
     {
         foreach (var (key, values) in data)
         {
+            if (values.capacity == 0)
+                values.capacity = values.basecapacity;
             values.store = $"{key}-{chamberStoreKey}";
             conts.CreateContainer(uid, values.store, values.capacity);
         }
@@ -46,6 +101,8 @@ public abstract partial class SharedOxydGunSystem
     {
         foreach (var (key, values) in data)
         {
+            if (values.capacity == 0)
+                values.capacity = values.basecapacity;
             values.store = $"{key}-{magazineStoreKey}-{chamberStoreKey}";
             conts.CreateContainer(uid, values.store, values.capacity);
             values.magstore = $"{key}-{magazineStoreKey}";
@@ -142,7 +199,7 @@ public abstract partial class SharedOxydGunSystem
         {
             foreach (var provider in gun.Comp.providers.Values)
             {
-                provider.capacity += args.mods.gunCapacityAdd;
+                provider.capacity = provider.basecapacity + args.mods.gunCapacityAdd;
                 conts.SetContainerCapacity(gun, provider.store, provider.capacity);
                 Array.Resize(ref provider.loaded, provider.capacity);
                 Array.Fill(provider.loaded, EntityUid.Invalid);
@@ -151,6 +208,38 @@ public abstract partial class SharedOxydGunSystem
             Dirty(gun);
         }
         
+    }
+
+    [SubscribeLocalEvent]
+    public void ChamberApplyMods(Entity<OxydChamberComponent> gun, ref ModifiersUpdatedEvent args)
+    {
+        if (_netManager.IsClient)
+            return;
+        if (args.mods.gunCapacityAdd > 0)
+        {
+            foreach (var provider in gun.Comp.providers.Values)
+            {
+                provider.capacity = provider.basecapacity + args.mods.gunCapacityAdd;
+                conts.SetContainerCapacity(gun, provider.store, provider.capacity);
+            }
+            Dirty(gun);
+        }
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineApplyMods(Entity<OxydMagazineChamberComponent> gun, ref ModifiersUpdatedEvent args)
+    {
+        if (_netManager.IsClient)
+            return;
+        if (args.mods.gunCapacityAdd > 0)
+        {
+            foreach (var provider in gun.Comp.providers.Values)
+            {
+                provider.capacity = provider.basecapacity + args.mods.gunCapacityAdd;
+                conts.SetContainerCapacity(gun, provider.store, provider.capacity);
+            }
+            Dirty(gun);
+        }
     }
     
     [SubscribeLocalEvent]
@@ -268,7 +357,8 @@ public abstract partial class SharedOxydGunSystem
             if (!whitelist.IsWhitelistPass(data.whitelist, args.ammo))
                 continue;
             var ammoR = args.ammo;
-            args.handled = conts.insertEntity(gun, cont, ref ammoR, null, args.prediction);
+            int? targetIndex = data.pushback ? 0 : null;
+            args.handled = conts.insertEntity(gun, cont, ref ammoR, null, args.prediction, targetIndex);
             if (args.handled)
                 return;
         }
@@ -300,11 +390,15 @@ public abstract partial class SharedOxydGunSystem
         if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
             return;
         EntityUid target = EntityUid.Invalid;
-        if (!args.prediction)
+        if (_gameTiming.IsFirstTimePredicted)
+        {
             if (cont.contained.Any())
                 target = cont.contained.First();
             else
                 return;
+        }
+        else if (!args.prediction)
+            return;
         conts.removeEntity(gun, cont, ref target, null, null, args.prediction);
         if (!TryComp<OxydBulletComponent>(target, out var bullet))
             return;
@@ -321,8 +415,132 @@ public abstract partial class SharedOxydGunSystem
             return;
         if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
-        if (FH.hasAll(data.operatingMode, COM.Boltable & COM.BoltClosedAutoload))
+        if (FH.hasAll(data.operatingMode, COM.Boltable | COM.BoltClosedAutoload))
             gcomp.bolted = true;
+    }
+
+    // Magazine Chamber
+
+    public bool TryGetLoadedMagazine(EntityUid gun, MagazineData data, out Entity<OxydMagazineComponent> mag, out OxydContainer magCont)
+    {
+        mag = default;
+        magCont = default!;
+        if (!conts.GetContainer(gun, data.magstore, out var magStoreCont))
+            return false;
+        if (!magStoreCont.contained.Any())
+            return false;
+        var magUid = magStoreCont.contained.First();
+        if (!TryComp<OxydMagazineComponent>(magUid, out var magComp))
+            return false;
+        var storeKey = string.IsNullOrEmpty(magComp.storeKey) ? oxydContents : magComp.storeKey;
+        if (!conts.GetContainer(magUid, storeKey, out var foundMagCont))
+            return false;
+        mag = (magUid, magComp);
+        magCont = foundMagCont;
+        return true;
+    }
+
+    public bool ShouldAutoChamber(EntityUid gun, MagazineData data)
+    {
+        if (FH.hasAny(data.operatingMode, COM.Auto))
+            return true;
+        if (TryComp<OxydGunComponent>(gun, out var gcomp) &&
+            FH.hasAll(data.operatingMode, COM.Boltable | COM.BoltClosedAutoload) &&
+            gcomp.bolted)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Cycles rounds from the inserted magazine into the gun's chamber container up to the chamber's capacity.
+    /// Uses OxydPredContainerSystem to move bullets from the magazine's predictive container into the chamber's predictive container.
+    /// </summary>
+    public bool TryChamberFromMagazine(EntityUid gun, MagazineData data, bool handlePredict = false)
+    {
+        if (!conts.GetContainer(gun, data.store, out var chamberCont))
+            return false;
+
+        var chamberedAny = false;
+        if (_gameTiming.IsFirstTimePredicted)
+        {
+            if (!TryGetLoadedMagazine(gun, data, out _, out var magCont))
+                return false;
+
+            while ((chamberCont.capacityLimit is null || chamberCont.contained.Count < chamberCont.capacityLimit) &&
+                   magCont.contained.Count > 0)
+            {
+                var bullet = magCont.contained[^1];
+                int? targetIndex = data.pushback ? 0 : null;
+                if (!conts.insertEntity(gun, chamberCont, ref bullet, null, handlePredict, targetIndex))
+                    break;
+                chamberedAny = true;
+            }
+        }
+        else if (handlePredict)
+        {
+            if (!chamberCont.predictions.Get(_gameTiming.CurTick.Value, out var predQueue) || predQueue.Count == 0)
+                return false;
+            var count = predQueue.Count;
+            for (var i = 0; i < count; i++)
+            {
+                EntityUid bullet = EntityUid.Invalid;
+                int? targetIndex = data.pushback ? 0 : null;
+                if (conts.insertEntity(gun, chamberCont, ref bullet, null, true, targetIndex))
+                    chamberedAny = true;
+            }
+        }
+
+        return chamberedAny;
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineLoadAmmo(Entity<OxydMagazineChamberComponent> gun, ref GunTryLoadAmmoEvent args)
+    {
+        if (args.handled)
+            return;
+
+        var isMag = HasComp<OxydMagazineComponent>(args.ammo);
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (isMag)
+            {
+                if (!conts.GetContainer(gun, data.magstore, out var magStoreCont))
+                    continue;
+                if (data.magwhitelist.Components is not null || data.magwhitelist.Tags is not null)
+                {
+                    if (!whitelist.IsWhitelistPass(data.magwhitelist, args.ammo))
+                        continue;
+                }
+                var ammoR = args.ammo;
+                args.handled = conts.insertEntity(gun, magStoreCont, ref ammoR, null, args.prediction);
+                if (args.handled)
+                {
+                    if (ShouldAutoChamber(gun, data))
+                        TryChamberFromMagazine(gun, data, args.prediction);
+                    doVisUpdate(gun.Owner);
+                    return;
+                }
+            }
+            else
+            {
+                if (!conts.GetContainer(gun, data.store, out var chamberCont))
+                    continue;
+                if (data.whitelist.Components is not null || data.whitelist.Tags is not null)
+                {
+                    if (!whitelist.IsWhitelistPass(data.whitelist, args.ammo))
+                        continue;
+                }
+                else if (!HasComp<OxydBulletComponent>(args.ammo))
+                {
+                    continue;
+                }
+                var ammoR = args.ammo;
+                int? targetIndex = data.pushback ? 0 : null;
+                args.handled = conts.insertEntity(gun, chamberCont, ref ammoR, null, args.prediction, targetIndex);
+                if (args.handled)
+                    return;
+            }
+        }
     }
 
     [SubscribeLocalEvent]
@@ -330,17 +548,168 @@ public abstract partial class SharedOxydGunSystem
     {
         if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
             return;
-        if (!conts.GetContainer(gun, data.store, out var cont))
+        if (!conts.GetContainer(gun, data.store, out var chamberCont))
             return;
-        if (!cont.contained.Any())
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
             return;
-        var targ = cont.contained.First();
-        if (!TryComp<OxydMagazineComponent>(targ, out var mag))
+        if (FH.hasAny(data.operatingMode, COM.Boltable) && !gcomp.bolted)
             return;
-        if (!conts.GetContainer(targ, data.magstore, out var magcont))
+        if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
             return;
-        if(magcont.contained.Any())
+
+        if (!chamberCont.contained.Any() && ShouldAutoChamber(gun, data) && _gameTiming.IsFirstTimePredicted)
+        {
+            TryChamberFromMagazine(gun, data, false);
+        }
+
+        args.hasAmmo = chamberCont.contained.Any();
     }
 
+    [SubscribeLocalEvent]
+    public void MagazineGetAmmo(Entity<OxydMagazineChamberComponent> gun, ref GunTryGetAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!conts.GetContainer(gun, data.store, out var chamberCont))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Boltable) && !gcomp.bolted)
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Pumpable) && !gcomp.pumped)
+            return;
 
+        EntityUid target = EntityUid.Invalid;
+        if (_gameTiming.IsFirstTimePredicted)
+        {
+            if (!chamberCont.contained.Any() && ShouldAutoChamber(gun, data))
+            {
+                TryChamberFromMagazine(gun, data, false);
+            }
+
+            if (chamberCont.contained.Any())
+                target = chamberCont.contained.First();
+            else
+                return;
+        }
+        else if (!args.prediction)
+            return;
+
+        if (!conts.removeEntity(gun, chamberCont, ref target, null, null, args.prediction))
+            return;
+        if (!TryComp<OxydBulletComponent>(target, out var bullet))
+            return;
+        if (!FH.hasAny(data.operatingMode, COM.Auto))
+            gcomp.bolted = false;
+        gcomp.pumped = false;
+        args.ammo = target;
+        args.projectile = bullet.projectileEntity;
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineAfterAmmo(Entity<OxydMagazineChamberComponent> gun, ref GunAfterUseAmmoEvent args)
+    {
+        if (!gun.Comp.providers.TryGetValue(args.providerId, out var data))
+            return;
+        if (!TryComp<OxydGunComponent>(gun, out var gcomp))
+            return;
+        if (FH.hasAny(data.operatingMode, COM.Auto) ||
+            FH.hasAll(data.operatingMode, COM.Boltable | COM.BoltClosedAutoload))
+        {
+            gcomp.bolted = true;
+            TryChamberFromMagazine(gun, data, false);
+        }
+    }
+
+    public bool TryEjectMagazine(Entity<OxydMagazineChamberComponent> gun, EntityUid user, bool handlePredict = true)
+    {
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (!conts.GetContainer(gun, data.magstore, out var magStoreCont))
+                continue;
+            EntityUid target = EntityUid.Invalid;
+            if (_gameTiming.IsFirstTimePredicted)
+            {
+                if (!magStoreCont.contained.Any())
+                    continue;
+                target = magStoreCont.contained.First();
+            }
+
+            if (conts.removeEntity(gun, magStoreCont, ref target, null, null, handlePredict))
+            {
+                _hands.TryPickupAnyHand(user, target);
+                doVisUpdate(gun.Owner);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineUseInHand(Entity<OxydMagazineChamberComponent> gun, ref UseInHandEvent args)
+    {
+        if (args.Handled)
+            return;
+        args.Handled = TryEjectMagazine(gun, args.User, true);
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineAltVerbs(Entity<OxydMagazineChamberComponent> gun, ref GetVerbsEvent<AlternativeVerb> args)
+    {
+        if (!args.CanAccess || !args.CanInteract || args.Hands == null)
+            return;
+
+        var hasMag = false;
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (conts.GetContainer(gun, data.magstore, out var magStoreCont) && magStoreCont.contained.Any())
+            {
+                hasMag = true;
+                break;
+            }
+        }
+
+        if (!hasMag)
+            return;
+
+        var user = args.User;
+        args.Verbs.Add(new AlternativeVerb
+        {
+            Act = () => TryEjectMagazine(gun, user, true),
+            Text = "Eject Magazine",
+        });
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineContInsert(Entity<OxydMagazineChamberComponent> gun, ref PredContInserted args)
+    {
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (args.container.key == data.magstore)
+            {
+                doVisUpdate(gun.Owner);
+                break;
+            }
+        }
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineContRemove(Entity<OxydMagazineChamberComponent> gun, ref PredContRemoved args)
+    {
+        foreach (var (_, data) in gun.Comp.providers)
+        {
+            if (args.container.key == data.magstore)
+            {
+                doVisUpdate(gun.Owner);
+                break;
+            }
+        }
+    }
+
+    [SubscribeLocalEvent]
+    public void MagazineContReset(Entity<OxydMagazineChamberComponent> gun, ref PredContStateReset args)
+    {
+        doVisUpdate(gun.Owner);
+    }
 }
