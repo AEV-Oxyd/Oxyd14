@@ -1,5 +1,6 @@
 using System.Numerics;
 using Content.Client._Oxyd.UI;
+using Content.Client._Oxyd.UI.Style;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 
@@ -25,6 +26,7 @@ public sealed class GridSlot : PanelContainer
     public GridSlot()
     {
         MinSize = new Vector2(64, 64);
+        AddStyleClass(ErisSheetlet.StyleClassErisItemSlot);
         UpdateVisibility();
     }
 

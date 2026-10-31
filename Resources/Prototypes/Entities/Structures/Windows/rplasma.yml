@@ -32,7 +32,7 @@
   - type: IconSmooth
     key: windows-plasma-reinf
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf

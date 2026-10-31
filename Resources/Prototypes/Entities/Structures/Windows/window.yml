@@ -50,7 +50,7 @@
   - type: IconSmooth
     key: windows
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf
@@ -136,7 +136,7 @@
   - type: IconSmooth
     key: windows-tinted
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf

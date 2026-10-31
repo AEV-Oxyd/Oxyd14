@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client._Oxyd.UI;
 using Content.Shared.Speech;
 using Robust.Client.Graphics;
 using Robust.Client.GameObjects;
@@ -16,6 +17,7 @@ public abstract partial class BaseBubble : Control
     [Dependency] protected IEyeManager EyeManager = default!;
     [Dependency] protected IEntityManager EntityManager = default!;
     [Dependency] protected IConfigurationManager ConfigManager = default!;
+    protected OxTagController tags = default!;
     private readonly TransformSystem TransformSystem = default!;
 
     /// <summary>
@@ -34,6 +36,7 @@ public abstract partial class BaseBubble : Control
     protected BaseBubble(EntityUid senderEntity)
     {
         IoCManager.InjectDependencies(this);
+        tags = UserInterfaceManager.GetUIController<OxTagController>();
         SenderEntity = senderEntity;
         TransformSystem = EntityManager.System<TransformSystem>();
         RectClipContent = true;
@@ -68,7 +71,9 @@ public abstract partial class BaseBubble : Control
         var offset = (-EyeManager.CurrentEye.Rotation).ToWorldVec() * -(EntityVerticalOffset + baseOffset);
         var worldPos = TransformSystem.GetWorldPosition(xform) + offset;
 
-        var lowerCenter = EyeManager.WorldToScreen(worldPos) / UIScale;
+        // shit fix for shit issue locked behind engine. Viewport doesn't return a position with its GlobalPixelPos(which is what is expected here)
+        // SPCR 2026
+        var lowerCenter = EyeManager.WorldToScreen(worldPos) / UIScale - tags.getControl("Viewport").GlobalPosition;
         var screenPos = lowerCenter - new Vector2(ContentSize.X / 2, ContentSize.Y + VerticalOffsetAchieved);
         // Round to nearest 0.5
         screenPos = (screenPos * 2).Rounded() / 2;

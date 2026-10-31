@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
 using Robust.Shared.Collections;
@@ -91,7 +91,7 @@ public sealed partial class IconSmoothSystem : EntitySystem
         }
 
         var tile = _map.TileIndicesFor(grid, mapGrid, xform.Coordinates);
-        PopulateAdjacentKeys((grid, iconGrid, mapGrid), xform.LocalRotation, tile);
+        PopulateAdjacentKeys((grid, iconGrid, mapGrid), sprite.NoRotation || sprite.SnapCardinals ? Angle.Zero : xform.LocalRotation, tile);
         ApplyStates((entity, entity.Comp, sprite));
     }
 

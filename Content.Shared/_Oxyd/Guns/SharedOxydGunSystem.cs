@@ -80,6 +80,13 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     protected HashSet<OxydFireDataWrap> checkActive = new();
 
+    public TimeSpan GetSimTime()
+    {
+        return _gameTiming.InSimulation
+            ? _gameTiming.CurTime
+            : _gameTiming.CurTime - _gameTiming.TickRemainder;
+    }
+
     public SpriteSpecifier getSafetySprite(bool toggle)
     {
         var prot = _prototypeManager.Index<OxydGunConfig>(configProto);
@@ -99,19 +106,20 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
 
     public void giveTickInterpTime(GunFiremodePrototype prot)
     {
-        var giving = _gameTiming.CurTime - prot.lastInterpret;
+        var simTime = GetSimTime();
+        var giving = simTime - prot.lastInterpret;
         // we reset and give 1 tick only
         if (giving / _gameTiming.TickPeriod > 10)
         {
-            prot.lastInterpret = _gameTiming.CurTime;
+            prot.lastInterpret = simTime;
             prot.timeBudget = _gameTiming.TickPeriod;
             return;
         }
 
         if(giving.Ticks > 0)
             prot.timeBudget += giving;
-        Log.Debug($"Ran giveTickTime, was given {(_gameTiming.CurTime - prot.lastInterpret).Milliseconds}ms, total: {prot.timeBudget.Milliseconds}ms");
-        prot.lastInterpret = _gameTiming.CurTime;
+        Log.Debug($"Ran giveTickTime, was given {(simTime - prot.lastInterpret).TotalMilliseconds}ms, total: {prot.timeBudget.TotalMilliseconds}ms");
+        prot.lastInterpret = simTime;
     }
 
 
@@ -523,7 +531,7 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             return false;
         }
 
-        if (firemodePrototype.timeBudget.Milliseconds <= 0)
+        if (firemodePrototype.timeBudget <= TimeSpan.Zero)
         {
             Log.Debug($"Interpret failed: time budget");
             return false;
@@ -532,20 +540,20 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
         if (_netManager.IsServer)
         {
             // wait for network update at this stage
-            if (_gameTiming.CurTime - gun.Comp.lastNetMouseUpdate > forceWaitThreshold)
+            if (GetSimTime() - gun.Comp.lastNetMouseUpdate > forceWaitThreshold)
             {
                 Log.Debug($"Interpret failed: force wait");
                 return true;
             }
         }
-        firemodePrototype.lastInterpret = _gameTiming.CurTime;
+        firemodePrototype.lastInterpret = GetSimTime();
         firemodePrototype.Active = true;
-        while(firemodePrototype.timeBudget.Milliseconds > 0)
+        while (firemodePrototype.Active)
         {
-            Log.Debug($"step:{firemodePrototype.Effects[firemodePrototype.currentStep]},index:{firemodePrototype.currentStep},time:{firemodePrototype.timeBudget.Milliseconds},tick: {_gameTiming.CurTick}");
+            Log.Debug($"step:{firemodePrototype.Effects[firemodePrototype.currentStep]},index:{firemodePrototype.currentStep},time:{firemodePrototype.timeBudget.TotalMilliseconds},tick: {_gameTiming.CurTick}");
             if (!InterpretStep(firemodePrototype, firemodePrototype.Effects[firemodePrototype.currentStep], gun, shooter))
             {
-                Log.Debug($"cycle:{firemodePrototype.timeBudget.Milliseconds}");
+                Log.Debug($"cycle:{firemodePrototype.timeBudget.TotalMilliseconds}");
                 break;
             }
             firemodePrototype.currentStep++;
@@ -553,15 +561,9 @@ public abstract partial class SharedOxydGunSystem : EntitySystem
             {
                 firemodePrototype.currentStep = 0;
                 ResetEffs(firemodePrototype);
+                firemodePrototype.Active = false;
                 break;
             }
-        }
-
-        if (firemodePrototype.currentStep == firemodePrototype.maxSteps)
-        {
-            firemodePrototype.currentStep = 0;
-            ResetEffs(firemodePrototype);
-            firemodePrototype.Active = false;
         }
 
         return true;

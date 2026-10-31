@@ -7,6 +7,7 @@ using Content.Client.Chat.Managers;
 using Content.Client.Chat.TypingIndicator;
 using Content.Client.Chat.UI;
 using Content.Client.Examine;
+using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.Ghost;
 using Content.Client.Mind;
@@ -274,6 +275,12 @@ public sealed partial class ChatUIController : UIController
         var panel = chatBox?.ChatWindowPanel;
         if (panel is null)
             return;
+
+        if (UIManager.ActiveScreen is ErisUIGameScreen)
+        {
+            panel.PanelOverride = new StyleBoxEmpty();
+            return;
+        }
 
         Color color;
         if (panel.PanelOverride is StyleBoxFlat styleBoxFlat)

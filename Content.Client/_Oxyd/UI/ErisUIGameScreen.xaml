@@ -18,18 +18,13 @@
     HorizontalAlignment="Left">
     <VBox HorizontalExpand="True" VerticalExpand="True">
         <HBox SizeFlagsStretchRatio="16.875" VerticalExpand="True" HorizontalExpand="True" MinHeight="512">
-            <PanelContainer HorizontalExpand="True" VerticalExpand="True">
+            <PanelContainer StyleClasses="ErisStyle" HorizontalExpand="True" VerticalExpand="True">
                 <ui:OxTag tag="LeftRect"/>
-                <ui:OxTag tag="ErisStyleInit"/>
-                <PanelContainer.PanelOverride>
-                    <graphics:StyleBoxTexture/>
-                </PanelContainer.PanelOverride>
                 <VBox Name="LeftSplit" HorizontalExpand="True" VerticalExpand="True" SizeFlagsStretchRatio="1" MinHeight="512">
                     <actions:ActionsBar Name="Actions" Access="Protected" />
                     <alerts:AlertsUI Name="Alerts" Access="Protected" />
                     <BoxContainer Name="VoteMenu" Access="Public" Orientation="Vertical"/>
-                    <PanelContainer MinWidth="256" MinHeight="128">
-                        <ui:OxTag tag="ErisStyleDigitalInit"/>
+                    <PanelContainer StyleClasses="ErisStyleDigital" MinWidth="256" MinHeight="128">
                         <ui:OxTag tag="DynPanelBox"/>
                         <BoxContainer VerticalExpand="True">
                             <ui:OxTag tag="DynamicPanel"/>
@@ -47,11 +42,8 @@
                     <ui:OxTag tag="Viewport"/>
                 </controls:MainViewport>
             </PanelContainer>
-            <PanelContainer MinWidth="256" MinHeight="512">
+            <PanelContainer StyleClasses="ErisStyle" MinWidth="256" MinHeight="512">
                 <ui:OxTag tag="RightRect"/>
-                <PanelContainer.PanelOverride>
-                    <graphics:StyleBoxFlat BackgroundColor="#2B2C3B" />
-                </PanelContainer.PanelOverride>
                 <VBox HorizontalExpand="True" VerticalExpand="True" SeparationOverride="10" SizeFlagsStretchRatio="1" MinWidth="256" MinHeight="512">
                     <ui:StatPanel HorizontalExpand="True" MinHeight="256" MinWidth="256">
                         <ui:OxTag tag="ControlPanel"/>
@@ -61,8 +53,7 @@
             </PanelContainer>
         </HBox>
         <HBox SizeFlagsStretchRatio="1" HorizontalAlignment="Stretch" VerticalAlignment="Top" HorizontalExpand="True" VerticalExpand="True">
-            <PanelContainer HorizontalExpand="True" VerticalExpand="True">
-                <ui:OxTag tag="ErisStyleDisplay"/>
+            <PanelContainer StyleClasses="ErisStyleDisplay" HorizontalExpand="True" VerticalExpand="True">
                 <ui:OxTag tag="LowerBar"/>
                 <widgets:GhostGui Name="Ghost" Access="Protected"/>
                 <ui:QuickInventorySelector/>

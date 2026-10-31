@@ -50,10 +50,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
-        _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
-        _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
-        _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
-        _netManager.RegisterNetMessage<FiremodeMouseStatus>();
     }
 
     public void onGetInhandVisuals(Entity<OxydHandheldGunComponent> ent, ref GetInhandVisualsKeyEvent args)
@@ -234,13 +230,14 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
 
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (firemode.lastInterpret == _gameTiming.CurTime)
+        var simTime = GetSimTime();
+        if (firemode.lastInterpret == simTime)
             return;
         if (!firemode.Active)
         {
             firemode.timeBudget = _gameTiming.TickPeriod;
             //Log.Debug($"Sending new interpretation start message!");
-            _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
+            RaiseNetworkEvent(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 clientsideStartingStep = firemode.currentStep,
@@ -257,7 +254,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
         {
             //Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
-            _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
+            RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 stoppedAt = firemode.currentStep,
@@ -283,10 +280,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (!_gameTiming.IsFirstTimePredicted)
             return;
         base.Update(frameTime);
+        var simTime = GetSimTime();
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
+            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < simTime)
             {
                 DoInterpret(active.gun, active.shooter.Value);
             }

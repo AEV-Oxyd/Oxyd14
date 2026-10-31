@@ -34,7 +34,7 @@
   - type: IconSmooth
     key: windows-reinf
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf

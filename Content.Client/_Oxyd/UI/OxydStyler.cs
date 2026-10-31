@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using Content.Client._Oxyd.UI;
+using Content.Client._Oxyd.UI.Style;
 using Content.Client.Resources;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
@@ -11,21 +12,25 @@ using Robust.Shared.Timing;
 
 namespace Content.Client;
 
-// this exists because i dont wanna bother with sheetlets.
-// also handles automatic scaling of the UI
-// Horrid , SPCR 2026
-public sealed class OxydStyler : UIController
+/// <summary>
+/// Handles viewport and panel layout scaling based on window aspect ratio.
+/// Visual styling (textures, patch margins, styleboxes) is handled declaratively
+/// via <see cref="ErisSheetlet"/> and standard <see cref="Control.StyleClasses"/>.
+/// </summary>
+public sealed partial class OxydStyler : UIController
 {
-    public const string DefaultTexture = "ErisStyleInit";
-    public const string DigitalTexture = "ErisStyleDigitalInit";
-    public const string ItemSlotTexture = "ErisItemSlot";
-    public const string DisplayTexture = "ErisStyleDisplay";
+    public const string DefaultTexture = ErisSheetlet.StyleClassEris;
+    public const string DigitalTexture = ErisSheetlet.StyleClassErisDigital;
+    public const string ItemSlotTexture = ErisSheetlet.StyleClassErisItemSlot;
+    public const string DisplayTexture = ErisSheetlet.StyleClassErisDisplay;
+
     public const string LeftRectTag = "LeftRect";
     public const string DynPanelTag = "DynPanelBox";
     public const string RightRectTag = "RightRect";
     public const string ViewportRectTag = "ViewportContainer";
     public const string LowerBarTag = "LowerBar";
     public const string InventoryTag = "inventory";
+
     // minimum size of elements in pixels based on width/height report, closest one is used
     // 1 = left rect
     // 2 = viewport rect
@@ -68,51 +73,9 @@ public sealed class OxydStyler : UIController
         leftText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64LeftPane.png");
         middleText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64MiddlePane.png");
         RightText = res.GetTexture(@"/Textures/Oxyd/erisported/UI/ErisStyle64RightPane.png");
-        foreach (var t in tags.getControls(DefaultTexture))
-        {
-            if(t is PanelContainer target)
-                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
-        }
-        foreach (var t in tags.getControls(DigitalTexture))
-        {
-            if (t is PanelContainer target)
-                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
-        }
-
-        foreach (var t in tags.getControls(ItemSlotTexture))
-        {
-            if(t is PanelContainer target)
-                InitTextureEris(target,"/Textures/Oxyd/erisported/UI/ErisItemSlot.png",4,2);
-        }
-
-        foreach (var t in tags.getControls(DisplayTexture))
-        {
-            if (t is PanelContainer target)
-                InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDisplay.png", 0, 2);
-        }
-        tags.Added += (s, control) =>
-        {
-            if (control is PanelContainer target)
-            {
-                switch (s)
-                {
-                    case DefaultTexture:
-                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyle.png", 8, 2);
-                        break;
-                    case DigitalTexture:
-                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDigital.png", 5, 2);
-                        break;
-                    case ItemSlotTexture:
-                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisItemSlot.png", 4, 2);
-                        break;
-                    case DisplayTexture:
-                        InitTextureEris(target, "/Textures/Oxyd/erisported/UI/ErisStyleDisplay.png", 0, 2);
-                        break;
-                }
-            }
-        };
     }
 
+    [Obsolete("Styling is now handled via ErisSheetlet and StyleClasses. Use StyleClasses on PanelContainer instead.")]
     public void InitTextureEris(PanelContainer target, string path, int patchmargin = 0, int scale = 1)
     {
         var text = res.GetTexture(path);
@@ -157,10 +120,6 @@ public sealed class OxydStyler : UIController
             right.SetWidth = leftoverSpace;
             lower.SetWidth = lastSize.X;
             dynPanel.SetHeight = HeightAlloc - tags.getControl(InventoryTag).Height - 256;
-
-
         }
-
-        //Log.Debug(UIManager.RootControl.UIScale.ToString());
     }
 }

@@ -30,7 +30,9 @@
   id: FloorSteelMono
   parent: BaseStationTile
   name: tiles-steel-floor-mono
-  sprite: /Textures/Tiles/Basic/Gray/gray-mono.png
+  sprite: /Textures/Oxyd/erisported/steel_monofloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_monofloor.rsi
   footstepSounds:
     collection: FootstepTile
   itemDrop: FloorTileItemSteelMono

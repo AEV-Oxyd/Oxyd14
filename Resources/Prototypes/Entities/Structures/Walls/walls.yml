@@ -596,7 +596,7 @@
   - type: IconSmooth
     key: walls
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf
@@ -995,7 +995,7 @@
   - type: IconSmooth
     key: walls
     states:
-    - !type:DirectionSpriteSmoothing
+    - !type:CardinalFlagsSpriteSmoothing
       mask:
       - windows
       - windows-reinf

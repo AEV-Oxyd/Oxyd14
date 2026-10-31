@@ -32,6 +32,7 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Guns;
 
+public record struct QueuedClientInterpret(ClientSideInterpretingFiremode Args, ICommonSession Session);
 
 /// <summary>
 /// This handles...
@@ -73,10 +74,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydMagazineComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
-        _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
-        _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
-        _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
-        _netManager.RegisterNetMessage<FiremodeMouseStatus>(OnClientMouseInform);
+        SubscribeNetworkEvent<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
+        SubscribeNetworkEvent<ClientSideInterpretingFiremode>(OnClientInterpret);
+        SubscribeNetworkEvent<FiremodeClientsideFiredEvent>(OnClientFireGun);
+        SubscribeNetworkEvent<FiremodeMouseStatus>(OnClientMouseInform);
         SubscribeNetworkEvent<FiremodeChangedEvent>(OnClientFiremodeChange);
         SubscribeNetworkEvent<GunSafetyChangedEvent>(OnClientSafetyChange);
         //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
@@ -120,8 +121,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             switch (thing)
             {
-                case ClientSideInterpretingFiremode ev:
-                    DoNetMessage(ev, 0);
+                case QueuedClientInterpret ev:
+                    DoNetMessage(ev.Args, 0, ev.Session);
                     break;
                 case ClientSideDoneInterpretingFiremode ev:
                     DoNetMessage(ev, 0);

@@ -43,6 +43,7 @@ public partial class ClientSanityUIHandler : EntitySystem
             ToolTip = "0.75x gain modifier",
             TooltipDelay = 0f,
         };
+        butt.StyleClasses.Add(Content.Client._Oxyd.UI.Style.ErisSheetlet.StyleClassErisHoloButton);
         butt.OnButtonDown += (args) =>
         {
             RaiseNetworkEvent(new RequestInternalFocus());

@@ -25,8 +25,7 @@ public sealed partial class ClientInventorySystem
             quick.UpdateContained();
     }
     
-    [SubscribeLocalEvent]
-    public void OnItemInsert(EntityUid uid, InventoryComponent component, DidEquipEvent args)
+    public void OnItemInsert(InventoryComponent component, DidEquipEvent args)
     {
         if(!TryComp<StorageComponent>(args.Equipment, out var storage))
             return;
@@ -46,9 +45,8 @@ public sealed partial class ClientInventorySystem
         }
         
     }
-
-    [SubscribeLocalEvent]
-    public void OnItemRemove(EntityUid uid, InventoryComponent component, DidUnequipEvent args)
+    
+    public void OnItemRemove( InventoryComponent component, DidUnequipEvent args)
     {
         if(!TryComp<StorageComponent>(args.Equipment, out var storage))
             return;
