@@ -1,5 +1,5 @@
-using Content.Shared._Oxyd.Tools;
 using System.Linq;
+using Content.Shared._Oxyd.Tools;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.DoAfter;
@@ -287,6 +287,19 @@ public abstract partial class SharedToolSystem : EntitySystem
     public bool HasAllQualities(EntityUid uid, [ForbidLiteral] IEnumerable<ProtoId<ToolQualityPrototype>> qualities, ToolComponent? tool = null)
     {
         return Resolve(uid, ref tool, false) && tool.Qualities.IsSupersetOf(qualities);
+    }
+
+    /// <summary>
+    ///     Changes tool applying speed modifier.
+    /// </summary>
+    [PublicAPI]
+    public void ChangeSpeedModifier(Entity<ToolComponent?> tool, float toolSpeedModifier)
+    {
+        if (!Resolve(tool, ref tool.Comp))
+            return;
+
+        tool.Comp.SpeedModifier = toolSpeedModifier;
+        Dirty(tool);
     }
 
     private bool CanStartToolUse(EntityUid tool, EntityUid user, EntityUid? target, float fuel, IEnumerable<ProtoId<ToolQualityPrototype>> toolQualitiesNeeded, ToolComponent? toolComponent = null)

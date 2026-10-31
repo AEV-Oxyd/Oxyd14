@@ -48,9 +48,30 @@
     fx: EffectRCDDeconstruct4
   - type: Airtight
   - type: IconSmooth
-    key: walls
-    base: window
-    mode: CardinalFlags
+    key: windows
+    states:
+    - !type:DirectionSpriteSmoothing
+      mask:
+      - windows
+      - windows-reinf
+      - windows-tinted
+      - windows-plasma
+      - windows-plasma-reinf
+      - windows-uranium
+      - windows-uranium-reinf
+      - windows-exo
+      - windows-shuttle
+      - windows-plastitanium
+      - windows-regal
+      - walls-exo
+      - walls-shuttle
+      - walls-plastitanium
+      - walls-material
+      - walls-marble
+      - walls
+      - grilles
+      - doors
+      base: window
   - type: PlacementReplacement
     key: walls
   - type: InteractionPopup
@@ -82,7 +103,6 @@
   components:
   - type: Sprite
     sprite: Oxyd/erisported/windows/glass.rsi
-    state: window0
   - type: Icon
     sprite: Oxyd/erisported/windows/glass.rsi
     state: full
@@ -110,14 +130,34 @@
   components:
   - type: Sprite
     sprite: Oxyd/erisported/windows/tinted.rsi
-    state: twindow0
   - type: Icon
     sprite: Oxyd/erisported/windows/tinted.rsi
     state: full
   - type: IconSmooth
-    key: walls
-    base: twindow
-    mode: CardinalFlags
+    key: windows-tinted
+    states:
+    - !type:DirectionSpriteSmoothing
+      mask:
+      - windows
+      - windows-reinf
+      - windows-tinted
+      - windows-plasma
+      - windows-plasma-reinf
+      - windows-uranium
+      - windows-uranium-reinf
+      - windows-exo
+      - windows-shuttle
+      - windows-plastitanium
+      - windows-regal
+      - walls-exo
+      - walls-shuttle
+      - walls-plastitanium
+      - walls-material
+      - walls-marble
+      - walls
+      - grilles
+      - doors
+      base: twindow
   - type: Construction
     graph: Window
     node: tintedWindow
@@ -320,15 +360,20 @@
   components:
   - type: Sprite
     sprite: Structures/Windows/window-base-diagonal.rsi
-    state: state0
   - type: Tag
     tags:
     - Diagonal
     - Window
   - type: IconSmooth
-    mode: Diagonal
-    key: walls
-    base: state
+    states:
+    - !type:DiagonalSpriteSmoothing
+      mask:
+      - walls
+      - windows
+      - grilles
+      - marble
+      - doors
+      base: state
   - type: Icon
     sprite: Structures/Windows/window-base-diagonal.rsi
     state: state0

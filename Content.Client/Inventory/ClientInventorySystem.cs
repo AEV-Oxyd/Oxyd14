@@ -261,7 +261,7 @@ namespace Content.Client.Inventory
             if (!TryGetSlotEntity(uid, slot, out var item))
                 return;
 
-            _pointing.TryPointAtEntity(GetNetEntity(item.Value));
+            _pointing.TryPointAtEntity(item.Value);
         }
 
         protected override void UpdateInventoryTemplate(Entity<InventoryComponent> ent)
