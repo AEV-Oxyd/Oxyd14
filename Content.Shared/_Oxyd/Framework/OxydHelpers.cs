@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.Intrinsics;
+using Content.Shared._Oxyd.OxydGunSystem;
 using Content.Shared.Damage;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Whitelist;
@@ -44,9 +45,22 @@ public static class DamageHelpers
  /// </summary>
 public static class FH
 {
+    public static bool hasAny(COM a, COM b)
+    {
+        return (a & b) != 0;
+    }
+    public static bool hasAll(COM a, COM b)
+    {
+        return (a & b) == b;
+    }
     public static bool hasAny(Enum a, Enum b)
     {
-        return (Convert.ToUInt64(a) & Convert.ToUInt64(b)) != 0;
+        foreach (Enum value in Enum.GetValues(a.GetType()))
+        {
+            if (value.GetHashCode() != 0 && a.HasFlag(value) && b.HasFlag(value))
+                return true;
+        }
+        return false;
     }
     public static bool hasAll(Enum a, Enum b)
     {
