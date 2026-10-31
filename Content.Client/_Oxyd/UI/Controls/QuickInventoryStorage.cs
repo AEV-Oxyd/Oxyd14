@@ -10,6 +10,7 @@ using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.UI;
 
@@ -45,10 +46,23 @@ public sealed class QuickInventoryStorage : Container
 
     public void UpdateContained()
     {
-        if (entityManager.Deleted(storage))
+        if (IoCManager.Resolve<IGameTiming>().ApplyingState)
+            return;
+
+        if (entityManager.Deleted(storage) || storage.Comp.LifeStage == ComponentLifeStage.Deleted)
+        {
             contained.Clear();
+        } 
+        else if (storage.Comp?.Container?.ContainedEntities is { } list)
+        {
+            contained = list.ToList();
+        }
         else
-            contained = storage.Comp.Container.ContainedEntities.ToList();
+        {
+            contained.Clear();
+            return;
+        }
+
         foreach (var ent in contained)
         {
             if (existing.TryGetValue(ent, out var _))

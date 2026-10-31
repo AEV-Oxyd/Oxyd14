@@ -56,10 +56,19 @@ namespace Content.Client.Inventory
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-
-            while (_equipEventsQueue.TryDequeue(out var tuple))
+            while (_equipEventsQueue.TryPeek(out var tuple))
             {
                 var (component, args) = tuple;
+                if (component.LifeStage == ComponentLifeStage.Deleted)
+                {
+                    _equipEventsQueue.Dequeue();
+                    continue;
+                }
+
+                if (component.LifeStage != ComponentLifeStage.Running)
+                    continue;
+                    
+                _equipEventsQueue.Dequeue();
 
                 switch (args)
                 {
@@ -82,6 +91,8 @@ namespace Content.Client.Inventory
                 return;
             var update = new SlotSpriteUpdate(null, args.SlotGroup, args.Slot, false);
             OnSpriteUpdate?.Invoke(update);
+            if (TryComp<InventoryComponent>(args.EquipTarget, out var storage))
+                OnItemRemove(storage, args);
         }
 
         private void OnDidEquip(InventorySlotsComponent component, DidEquipEvent args)
@@ -92,6 +103,8 @@ namespace Content.Client.Inventory
             var update = new SlotSpriteUpdate(args.Equipment, args.SlotGroup, args.Slot,
                 HasComp<StorageComponent>(args.Equipment));
             OnSpriteUpdate?.Invoke(update);
+            if (TryComp<InventoryComponent>(args.EquipTarget, out var storage))
+                OnItemInsert(storage, args);
         }
 
         private void OnShutdown(EntityUid uid, InventoryComponent component, ComponentShutdown args)
@@ -261,7 +274,7 @@ namespace Content.Client.Inventory
             if (!TryGetSlotEntity(uid, slot, out var item))
                 return;
 
-            _pointing.TryPointAtEntity(GetNetEntity(item.Value));
+            _pointing.TryPointAtEntity(item.Value);
         }
 
         protected override void UpdateInventoryTemplate(Entity<InventoryComponent> ent)

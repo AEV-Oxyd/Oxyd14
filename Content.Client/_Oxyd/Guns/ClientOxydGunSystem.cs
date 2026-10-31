@@ -43,7 +43,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         base.Initialize();
         SubscribeLocalEvent<OxydHandheldGunComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(HandleHandheldGun);
         SubscribeLocalEvent<OxydHandheldGunComponent, ItemStatusCollectMessage>(onInventoryControlRequest);
-        SubscribeLocalEvent<OxydMagazineComponent, ComponentInit>(onMagazineInitialized);
         //SubscribeLocalEvent<OxydChamberComponent, SyncedEntityEventArgs<UsingMouseDownEvent>>(OnTryInsertChamber);
         SubscribeLocalEvent<OxydGunComponent, GunAfterFireIndividualProjectileEvent>(afterFireIndividual);
         SubscribeLocalEvent<OxydHandheldGunComponent, GetVerbsEvent<InteractionVerb>>(OnGetInteractionVerbs);
@@ -51,20 +50,15 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
         SubscribeNetworkEvent<SetGunChargeEvent>(onChargeSet);
         SubscribeNetworkEvent<GunCompareFired>(onCompare);
-        _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>();
-        _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>();
-        _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>();
-        _netManager.RegisterNetMessage<FiremodeMouseStatus>();
     }
 
     public void onGetInhandVisuals(Entity<OxydHandheldGunComponent> ent, ref GetInhandVisualsKeyEvent args)
     {
         if(TryComp<OxydMagazineChamberComponent>(ent, out var mag) && mag.MagInhands)
         {
-            /*
-            if(mag.magazineSlot.TryFirstOrDefault(out var slot) && slot.HasItem)
+            var firstProvider = mag.providers.Values.FirstOrDefault();
+            if (firstProvider is not null && conts.GetContainer(ent, firstProvider.magstore, out var magCont) && magCont.contained.Any())
                 args.suffix += "mag";
-                */
         }
     }
 
@@ -204,10 +198,6 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         });
     }
 
-    public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref ComponentInit args)
-    {
-        _containerSystem.EnsureContainer<Robust.Shared.Containers.Container>(ent.Owner, oxydContents);
-    }
     public void HandleHandheldGun(Entity<OxydHandheldGunComponent> obj, ref SyncedEntityEventArgs<UsingMouseDownEvent> args)
     {
         args.Register(0, (ev) =>
@@ -240,13 +230,14 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         }
 
         var firemode = gun.Comp.selectedFiremodePrototype;
-        if (firemode.lastInterpret == _gameTiming.CurTime)
+        var simTime = GetSimTime();
+        if (firemode.lastInterpret == simTime)
             return;
         if (!firemode.Active)
         {
             firemode.timeBudget = _gameTiming.TickPeriod;
             //Log.Debug($"Sending new interpretation start message!");
-            _netManager.ClientSendMessage(new ClientSideInterpretingFiremode()
+            RaiseNetworkEvent(new ClientSideInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 clientsideStartingStep = firemode.currentStep,
@@ -263,7 +254,7 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (TryExecuteFiremodeCycle(firemode, gun, shooter) && !firemode.Active)
         {
             //Log.Error($"Sending end interpret at {_gameTiming.RealTime}");
-            _netManager.ClientSendMessage(new ClientSideDoneInterpretingFiremode()
+            RaiseNetworkEvent(new ClientSideDoneInterpretingFiremode()
             {
                 gun = GetNetEntity(gun),
                 stoppedAt = firemode.currentStep,
@@ -289,10 +280,11 @@ public sealed partial class ClientOxydGunSystem : SharedOxydGunSystem
         if (!_gameTiming.IsFirstTimePredicted)
             return;
         base.Update(frameTime);
+        var simTime = GetSimTime();
         var query = EntityQuery<OxydActiveFiremodeUpdatingComponent>();
         foreach (var active in query)
         {
-            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < _gameTiming.CurTime)
+            if (active.shooter is not null && active.gun.Comp.selectedFiremodePrototype.lastInterpret < simTime)
             {
                 DoInterpret(active.gun, active.shooter.Value);
             }

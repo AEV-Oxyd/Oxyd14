@@ -5,6 +5,7 @@ using Content.Server.GameTicking.Events;
 using Content.Shared._Oxyd;
 using Content.Shared.Chat;
 using Content.Shared.GameTicking;
+using Content.Shared.GameTicking.Events;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;

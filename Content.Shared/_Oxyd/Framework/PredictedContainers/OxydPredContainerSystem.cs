@@ -34,6 +34,8 @@ public partial class OxydPredContainerSystem : EntitySystem
     [SubscribeLocalEvent]
     public void OnContRemoved(EntityUid uid, OxydPredContComponent comp, EntRemovedFromContainerMessage args)
     {
+        if (gametime.ApplyingState)
+            return;
         if (args.Container is Container baseCont && comp.containers.TryGetValue(baseCont.ID, out var cont) && cont.contained.Contains(args.Entity))
         {
             var cpy = args.Entity;
@@ -185,7 +187,7 @@ public partial class OxydPredContainerSystem : EntitySystem
             containers.Insert(target, mirror);
         Log.Info($"Inserted {target} into {uid} from {container.key} on tick {gametime.CurTick}, is pred {!gametime.IsFirstTimePredicted}");
         var count = container.contained.Count;
-        container.insert(target, GetNetEntity(target));
+        container.insert(target, GetNetEntity(target), targetIndex);
         if(count != container.contained.Capacity)
             container.lastChange = gametime.CurTick;
         if (!TerminatingOrDeleted(target))
@@ -225,6 +227,13 @@ public partial class OxydPredContainerSystem : EntitySystem
         if (!container.canRemove(target, GetNetEntity(target),prediction.Value))
             return false;
         var mirror = containers.GetContainer(uid, container.key, sc);
+        if(handlePredict && !prediction.Value)
+            StorePredictAct(container, target);
+        Log.Info($"--Removing {target} from {uid} from {container.key}");
+        var count = container.contained.Count;
+        container.remove(target, GetNetEntity(target));
+        if(count != container.contained.Capacity)
+            container.lastChange = gametime.CurTick;
         if (insertionTarget is not null)
         {
             containers.Insert(insertionTarget.Value, mirror);
@@ -233,13 +242,6 @@ public partial class OxydPredContainerSystem : EntitySystem
         {
             containers.Remove(target, mirror);
         }
-        if(handlePredict && !prediction.Value)
-            StorePredictAct(container, target);
-        Log.Info($"--Removing {target} from {uid} from {container.key}");
-        var count = container.contained.Count;
-        container.remove(target, GetNetEntity(target));
-        if(count != container.contained.Capacity)
-            container.lastChange = gametime.CurTick;
         var ev = new PredContRemoved(target, (uid, oc),container, !prediction.Value);
         RaiseLocalEvent(target, ev);
         RaiseLocalEvent(uid, ev);
