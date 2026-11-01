@@ -10,6 +10,7 @@ using Content.Server.Power.EntitySystems;
 using Content.Server.Radio.EntitySystems;
 using Content.Server.Stack;
 using Content.Shared._Oxyd;
+using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared.Atmos;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
@@ -93,7 +94,7 @@ namespace Content.Server.Lathe
                 {
                     if (verified.ID != real.ID)
                         return;
-                    if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
+                    if (!HasComp<DigitalDataHolderComponent>(ev.Entity) && !HasComp<FileSystemComponent>(ev.Entity))
                         return;
                     UpdateUserInterfaceState(ent, comp);
                 }
@@ -109,7 +110,7 @@ namespace Content.Server.Lathe
                 {
                     if (verified.ID != real.ID)
                         return;
-                    if (!TryComp<DigitalDataHolderComponent>(ev.Entity, out var data))
+                    if (!HasComp<DigitalDataHolderComponent>(ev.Entity) && !HasComp<FileSystemComponent>(ev.Entity))
                         return;
                     UpdateUserInterfaceState(ent, comp);
                 }
@@ -207,13 +208,30 @@ namespace Content.Server.Lathe
             return returning;
         }
 
+        public HashSet<ProtoId<LatheRecipePrototype>> GetDiskRecipes(FileSystemComponent fsComp)
+        {
+            HashSet<ProtoId<LatheRecipePrototype>> returning = new();
+            foreach (var file in fsComp.Files.Values)
+            {
+                if (file is RecipeBlueprintFile recipe && !recipe.IsEncrypted)
+                {
+                    returning.Add(recipe.Recipe);
+                }
+            }
+
+            return returning;
+        }
+
         public List<ProtoId<LatheRecipePrototype>> GetAvailableRecipes(EntityUid uid, LatheComponent component, bool getUnavailable = false)
         {
             var ev = new LatheGetRecipesEvent((uid, component), getUnavailable);
             AddRecipesFromPacks(ev.Recipes, component.StaticPacks);
-            if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<DigitalDataHolderComponent>(loaded, out var dataComp))
+            if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded))
             {
-                ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(dataComp)).ToHashSet();
+                if (TryComp<FileSystemComponent>(loaded, out var fsComp))
+                    ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(fsComp)).ToHashSet();
+                else if (TryComp<DigitalDataHolderComponent>(loaded, out var dataComp))
+                    ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(dataComp)).ToHashSet();
             }
             RaiseLocalEvent(uid, ev);
             return ev.Recipes.ToList();
@@ -232,7 +250,31 @@ namespace Content.Server.Lathe
             if (recipe.pointUsage != 0)
             {
                 var usage = recipe.pointUsage * quantity;
-                if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<DigitalDataHolderComponent>(loaded, out var data))
+                if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<FileSystemComponent>(loaded, out var fsComp))
+                {
+                    var found = false;
+                    foreach (var file in fsComp.Files.Values)
+                    {
+                        if (file is RecipeBlueprintFile rFile && rFile.Recipe == recipe.ID)
+                        {
+                            if (rFile.IsEncrypted)
+                                return false;
+
+                            if (rFile.RemainingUses != null)
+                            {
+                                if (rFile.RemainingUses.Value < usage)
+                                    return false;
+                                rFile.RemainingUses -= usage;
+                                Dirty(loaded, fsComp);
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        return false;
+                }
+                else if (component.diskSlot?.Item is EntityUid legacyLoaded && !TerminatingOrDeleted(legacyLoaded) && TryComp<DigitalDataHolderComponent>(legacyLoaded, out var data))
                 {
                     foreach (var file in data.files)
                     {
@@ -351,7 +393,20 @@ namespace Content.Server.Lathe
 
             var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing);
             // todo add selector for multi-file on file util expansion? SPCR 2026
-            if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<DigitalDataHolderComponent>(validDisk, out var dataComp))
+            if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<FileSystemComponent>(validDisk, out var validFs))
+            {
+                foreach (var file in validFs.Files.Values)
+                {
+                    if (file is RecipeBlueprintFile rFile)
+                    {
+                        state.diskName = rFile.Name;
+                        if (rFile.RemainingUses is not null)
+                            state.uses = rFile.RemainingUses.Value;
+                        break;
+                    }
+                }
+            }
+            else if (component.diskSlot?.Item is EntityUid legacyDisk && !TerminatingOrDeleted(legacyDisk) && TryComp<DigitalDataHolderComponent>(legacyDisk, out var dataComp))
             {
                 foreach (var file in dataComp.getFileByData<DigitalDataLathe>())
                 {
@@ -532,7 +587,19 @@ namespace Content.Server.Lathe
             // if its too big of a issue just keep track of which  DiskEntity was used for Each Recipe!!!
             if (recipe!.pointUsage != 0)
             {
-                if (lathe.diskSlot?.Item is EntityUid existing && !TerminatingOrDeleted(existing) && TryComp<DigitalDataHolderComponent>(existing, out var data))
+                if (lathe.diskSlot?.Item is EntityUid existing && !TerminatingOrDeleted(existing) && TryComp<FileSystemComponent>(existing, out var exFs))
+                {
+                    foreach (var file in exFs.Files.Values)
+                    {
+                        if (file is RecipeBlueprintFile rFile && rFile.Recipe == recipe.ID && rFile.RemainingUses != null)
+                        {
+                            rFile.RemainingUses += recipe.pointUsage;
+                            Dirty(existing, exFs);
+                            break;
+                        }
+                    }
+                }
+                else if (lathe.diskSlot?.Item is EntityUid legacyExisting && !TerminatingOrDeleted(legacyExisting) && TryComp<DigitalDataHolderComponent>(legacyExisting, out var data))
                 {
                     foreach (var file in data.getFileByData<DigitalDataLathe>())
                     {

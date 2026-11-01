@@ -74,42 +74,51 @@ public sealed class ErisSheetlet : Sheetlet<PalettedStylesheet>
             E<Button>().Class(OutputPanel.StyleClassOutputPanelScrollDownButton).ParentOf(E<Label>()).FontColor(Color.FromHex("#00D4FF")),
 
             // Holo button states
+            E<Button>().Class(StyleClassErisHoloButton).Box(holoNorm),
             E<Button>().Class(StyleClassErisHoloButton).PseudoNormal().Box(holoNorm),
             E<Button>().Class(StyleClassErisHoloButton).PseudoHovered().Box(holoHov),
             E<Button>().Class(StyleClassErisHoloButton).PseudoPressed().Box(holoPress),
             E<Button>().Class(StyleClassErisHoloButton).PseudoDisabled().Box(holoDis),
 
+            E<ContainerButton>().Class(StyleClassErisHoloButton).Box(holoNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButton).PseudoNormal().Box(holoNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButton).PseudoHovered().Box(holoHov),
             E<ContainerButton>().Class(StyleClassErisHoloButton).PseudoPressed().Box(holoPress),
             E<ContainerButton>().Class(StyleClassErisHoloButton).PseudoDisabled().Box(holoDis),
 
             // Segmented holo buttons
+            E<Button>().Class(StyleClassErisHoloButtonOpenBoth).Box(holoBothNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenBoth).PseudoNormal().Box(holoBothNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenBoth).PseudoHovered().Box(holoBothHov),
             E<Button>().Class(StyleClassErisHoloButtonOpenBoth).PseudoPressed().Box(holoBothPress),
 
+            E<ContainerButton>().Class(StyleClassErisHoloButtonOpenBoth).Box(holoBothNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenBoth).PseudoNormal().Box(holoBothNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenBoth).PseudoHovered().Box(holoBothHov),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenBoth).PseudoPressed().Box(holoBothPress),
 
+            E<Button>().Class(StyleClassErisHoloButtonOpenLeft).Box(holoLeftNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenLeft).PseudoNormal().Box(holoLeftNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenLeft).PseudoHovered().Box(holoLeftHov),
             E<Button>().Class(StyleClassErisHoloButtonOpenLeft).PseudoPressed().Box(holoLeftPress),
 
+            E<ContainerButton>().Class(StyleClassErisHoloButtonOpenLeft).Box(holoLeftNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenLeft).PseudoNormal().Box(holoLeftNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenLeft).PseudoHovered().Box(holoLeftHov),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenLeft).PseudoPressed().Box(holoLeftPress),
 
+            E<Button>().Class(StyleClassErisHoloButtonOpenRight).Box(holoRightNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenRight).PseudoNormal().Box(holoRightNorm),
             E<Button>().Class(StyleClassErisHoloButtonOpenRight).PseudoHovered().Box(holoRightHov),
             E<Button>().Class(StyleClassErisHoloButtonOpenRight).PseudoPressed().Box(holoRightPress),
 
+            E<ContainerButton>().Class(StyleClassErisHoloButtonOpenRight).Box(holoRightNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenRight).PseudoNormal().Box(holoRightNorm),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenRight).PseudoHovered().Box(holoRightHov),
             E<ContainerButton>().Class(StyleClassErisHoloButtonOpenRight).PseudoPressed().Box(holoRightPress),
 
             // Common aliases
+            E<Button>().Class("HoloButton").Box(holoNorm),
             E<Button>().Class("HoloButton").PseudoNormal().Box(holoNorm),
             E<Button>().Class("HoloButton").PseudoHovered().Box(holoHov),
             E<Button>().Class("HoloButton").PseudoPressed().Box(holoPress),

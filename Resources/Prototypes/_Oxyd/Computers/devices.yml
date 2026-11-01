@@ -1,0 +1,200 @@
+# ==============================================================================
+# Oxyd Modular Computing & Unified Electronics Framework
+# Standard .NET String Architecture - No UTF-8 conversions
+# ==============================================================================
+
+- type: entity
+  abstract: true
+  parent: BasePDA
+  id: BaseOxydPDA
+  name: Oxyd PDA
+  description: An advanced Personal Data Assistant running the unified NTOS filesystem architecture.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+    - Pda
+  - type: FileSystem
+    maxStorageBytes: 2097152
+    files:
+      "/sys/os.sys": !type:TextVirtualFile
+        name: os
+        extension: sys
+        directory: /sys/
+        size: 64
+        isReadOnly: true
+        textContent: "NTOS-PORTABLE-EDITION-4.2"
+      "/notes/shift_notes.txt": !type:TextVirtualFile
+        name: shift_notes
+        extension: txt
+        directory: /notes/
+        size: 32
+        isReadOnly: false
+        textContent: "Station operations in progress."
+  - type: ModularComputer
+  - type: ComputerStats
+    cpuSpeedMHz: 400
+    ramSizeMB: 512
+    storageCapacityBytes: 2097152
+    networkBandwidthBytesPerSec: 128000
+    directHardwareAccessOnly: false
+  - type: NetworkBandwidth
+    maxBps: 128000
+    bufferQueueLimit: 50
+
+- type: entity
+  parent: BaseOxydPDA
+  id: OxydTablet
+  name: Oxyd tablet
+  description: A rugged tactical slate tablet with enhanced memory and expandable processing modules.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+    - Pda
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/sys/os.sys": !type:TextVirtualFile
+        name: os
+        extension: sys
+        directory: /sys/
+        size: 64
+        isReadOnly: true
+        textContent: "NTOS-TABLET-ENTERPRISE-4.2"
+      "/records/local_manifest.db": !type:DatabaseVirtualFile
+        name: local_manifest
+        extension: db
+        directory: /records/
+        size: 128
+        tableName: cached_manifest
+        data:
+          ChiefEngineer: "Active"
+          Captain: "Active"
+  - type: ComputerStats
+    cpuSpeedMHz: 800
+    ramSizeMB: 1024
+    storageCapacityBytes: 8388608
+    networkBandwidthBytesPerSec: 500000
+    directHardwareAccessOnly: false
+  - type: NetworkBandwidth
+    maxBps: 500000
+    bufferQueueLimit: 100
+
+- type: entity
+  abstract: true
+  parent: BaseComputer
+  id: BaseOxydComputer
+  name: Oxyd workstation computer
+  description: A heavy-duty modular workstation with high-throughput bus slots and server-link capability.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+  - type: FileSystem
+    maxStorageBytes: 104857600
+    files:
+      "/sys/kernel.sys": !type:TextVirtualFile
+        name: kernel
+        extension: sys
+        directory: /sys/
+        size: 256
+        isReadOnly: true
+        textContent: "NTOS-WORKSTATION-64BIT-KERNEL"
+      "/logs/system.log": !type:TextVirtualFile
+        name: system
+        extension: log
+        directory: /logs/
+        size: 120
+        textContent: "Boot successful. Network connection established."
+  - type: ModularComputer
+  - type: ComputerStats
+    cpuSpeedMHz: 3200
+    ramSizeMB: 8192
+    storageCapacityBytes: 104857600
+    networkBandwidthBytesPerSec: 10000000
+    directHardwareAccessOnly: false
+  - type: NetworkBandwidth
+    maxBps: 10000000
+    bufferQueueLimit: 500
+
+- type: entity
+  parent: BaseItem
+  id: BaseOxydEmbeddedController
+  name: embedded subsystem controller
+  description: An embedded machine controller. Internal registers and diagnostic files are locked behind hardware debugging tool access.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+  - type: FileSystem
+    maxStorageBytes: 65536
+    files:
+      "/firmware/control.bin": !type:TextVirtualFile
+        name: control
+        extension: bin
+        directory: /firmware/
+        size: 64
+        isReadOnly: true
+        textContent: "FIRMWARE-REVISION-1.09"
+      "/config/parameters.cfg": !type:TextVirtualFile
+        name: parameters
+        extension: cfg
+        directory: /config/
+        size: 48
+        isReadOnly: true
+        textContent: "VOLTAGE=240;CYCLE=60HZ;INTERLOCK=TRUE"
+  - type: ComputerStats
+    cpuSpeedMHz: 50
+    ramSizeMB: 32
+    storageCapacityBytes: 65536
+    networkBandwidthBytesPerSec: 10000
+    directHardwareAccessOnly: true
+  - type: NetworkBandwidth
+    maxBps: 10000
+    bufferQueueLimit: 10
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydRecipeDisk
+  name: lathe blueprint disk (Handcuffs)
+  description: A high-density optical data disk containing manufacturing specifications for an autolathe.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/blueprints/handcuffs.lathe": !type:RecipeBlueprintFile
+        name: handcuffs
+        extension: lathe
+        directory: /blueprints/
+        size: 32
+        recipe: Handcuffs
+        remainingUses: 10
+        drmLocked: false
+        isEncrypted: false
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydRecipeDiskEncrypted
+  name: encrypted blueprint disk (Security HUD)
+  description: A restricted corporate blueprint disk protected by DRM cipher. Requires decryption or hardware cracking before lathe manufacturing.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/blueprints/security_hud.lathe": !type:RecipeBlueprintFile
+        name: security_hud
+        extension: lathe
+        directory: /blueprints/
+        size: 64
+        recipe: ClothingEyesHudSecurity
+        remainingUses: 5
+        drmLocked: true
+        isEncrypted: true
+        encryptionKeyHash: "DRM-CYPHER-SEC-01"
