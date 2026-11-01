@@ -18,6 +18,11 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
     public string StatusMessage { get; }
     public string? ViewedFileName { get; }
     public string? ViewedFileContent { get; }
+    public bool ViewedFileIsOnDisk { get; }
+    public bool HasDisk { get; }
+    public string? DiskName { get; }
+    public int? DiskUsedBytes { get; }
+    public int? DiskTotalBytes { get; }
 
     public FileBrowserUiState(
         string currentDirectory,
@@ -32,7 +37,12 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
         bool isNetworkSaturated,
         string statusMessage,
         string? viewedFileName = null,
-        string? viewedFileContent = null)
+        string? viewedFileContent = null,
+        bool viewedFileIsOnDisk = false,
+        bool hasDisk = false,
+        string? diskName = null,
+        int? diskUsedBytes = null,
+        int? diskTotalBytes = null)
     {
         CurrentDirectory = currentDirectory;
         Files = files;
@@ -47,6 +57,11 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
         StatusMessage = statusMessage;
         ViewedFileName = viewedFileName;
         ViewedFileContent = viewedFileContent;
+        ViewedFileIsOnDisk = viewedFileIsOnDisk;
+        HasDisk = hasDisk;
+        DiskName = diskName;
+        DiskUsedBytes = diskUsedBytes;
+        DiskTotalBytes = diskTotalBytes;
     }
 }
 
@@ -60,6 +75,7 @@ public sealed class FileBrowserItemDto
     public bool IsReadOnly { get; }
     public bool IsEncrypted { get; }
     public int? RemainingUses { get; }
+    public bool IsOnDisk { get; }
 
     public FileBrowserItemDto(
         string name,
@@ -68,7 +84,8 @@ public sealed class FileBrowserItemDto
         int size,
         bool isReadOnly,
         bool isEncrypted,
-        int? remainingUses)
+        int? remainingUses,
+        bool isOnDisk = false)
     {
         Name = name;
         Extension = extension;
@@ -77,5 +94,6 @@ public sealed class FileBrowserItemDto
         IsReadOnly = isReadOnly;
         IsEncrypted = isEncrypted;
         RemainingUses = remainingUses;
+        IsOnDisk = isOnDisk;
     }
 }

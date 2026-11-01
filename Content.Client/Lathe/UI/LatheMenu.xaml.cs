@@ -100,7 +100,7 @@ public sealed partial class LatheMenu : FancyWindow
             return;
         }
         DiskName.Text = name;
-        DiskUses.Text = $"L-POINTS:{uses}";
+        DiskUses.Text = uses < 0 ? "UNLIMITED" : $"L-POINTS:{uses}";
     }
 
     /// <summary>
@@ -112,7 +112,7 @@ public sealed partial class LatheMenu : FancyWindow
         var recipesToShow = new List<(LatheRecipePrototype Proto, string Name)>(Recipes.Count);
         foreach (var recipe in Recipes)
         {
-            if (!_prototypeManager.Resolve(recipe, out var proto))
+            if (!_prototypeManager.TryIndex<LatheRecipePrototype>(recipe, out var proto))
                 continue;
 
             // Category filtering
@@ -251,7 +251,8 @@ public sealed partial class LatheMenu : FancyWindow
         var currentCategories = new List<ProtoId<LatheCategoryPrototype>>();
         foreach (var recipeId in Recipes)
         {
-            var recipe = _prototypeManager.Index(recipeId);
+            if (!_prototypeManager.TryIndex<LatheRecipePrototype>(recipeId, out var recipe))
+                continue;
 
             if (recipe.Categories.Count <= 0)
                 continue;
@@ -270,6 +271,7 @@ public sealed partial class LatheMenu : FancyWindow
 
         Categories = currentCategories;
         var sortedCategories = currentCategories
+            .Where(p => _prototypeManager.HasIndex<LatheCategoryPrototype>(p))
             .Select(p => _prototypeManager.Index(p))
             .OrderBy(p => Loc.GetString(p.Name))
             .ToList();

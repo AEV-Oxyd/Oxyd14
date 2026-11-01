@@ -201,7 +201,11 @@ namespace Content.Server.Lathe
             {
                 if (file is DigitalDataLathe recipe)
                 {
-                    returning = returning.Concat(recipe.recipes).ToHashSet();
+                    foreach (var r in recipe.recipes)
+                    {
+                        if (ProtoMan.HasIndex<LatheRecipePrototype>(r))
+                            returning.Add(r);
+                    }
                 }
             }
 
@@ -215,7 +219,11 @@ namespace Content.Server.Lathe
             {
                 if (file is RecipeBlueprintFile recipe && !recipe.IsEncrypted)
                 {
-                    returning.Add(recipe.Recipe);
+                    foreach (var r in recipe.GetAllRecipes())
+                    {
+                        if (ProtoMan.HasIndex<LatheRecipePrototype>(r))
+                            returning.Add(r);
+                    }
                 }
             }
 
@@ -247,25 +255,50 @@ namespace Content.Server.Lathe
             quantity = int.Min(quantity, MaxItemsPerRequest);
             if (!CanProduce(uid, recipe, quantity, component))
                 return false;
-            if (recipe.pointUsage != 0)
+            var isDrmDisk = false;
+            FileSystemComponent? diskFs = null;
+            EntityUid? diskUid = null;
+
+            if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<FileSystemComponent>(loaded, out diskFs))
             {
-                var usage = recipe.pointUsage * quantity;
-                if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<FileSystemComponent>(loaded, out var fsComp))
+                diskUid = loaded;
+                foreach (var file in diskFs.Files.Values)
+                {
+                    if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
+                    {
+                        if (rFile.IsEncrypted)
+                            return false;
+
+                        if (rFile.DrmLocked || rFile.RemainingUses != null)
+                            isDrmDisk = true;
+                        break;
+                    }
+                }
+            }
+
+            if (recipe.pointUsage != 0 || isDrmDisk)
+            {
+                var pointCost = recipe.pointUsage > 0 ? recipe.pointUsage : 1;
+                var usage = pointCost * quantity;
+
+                if (diskFs != null && diskUid != null)
                 {
                     var found = false;
-                    foreach (var file in fsComp.Files.Values)
+                    foreach (var file in diskFs.Files.Values)
                     {
-                        if (file is RecipeBlueprintFile rFile && rFile.Recipe == recipe.ID)
+                        if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
                         {
                             if (rFile.IsEncrypted)
                                 return false;
 
-                            if (rFile.RemainingUses != null)
+                            // Unencrypted disks have unlimited usages.
+                            // Only DRM-locked or disks with explicit usage limits check and consume points.
+                            if (rFile.DrmLocked || rFile.RemainingUses != null)
                             {
-                                if (rFile.RemainingUses.Value < usage)
+                                if (rFile.RemainingUses == null || rFile.RemainingUses.Value < usage)
                                     return false;
                                 rFile.RemainingUses -= usage;
-                                Dirty(loaded, fsComp);
+                                Dirty(diskUid.Value, diskFs);
                             }
                             found = true;
                             break;
@@ -288,7 +321,6 @@ namespace Content.Server.Lathe
                 }
                 else
                     return false;
-            
             }
 
             foreach (var (mat, amount) in GetAdjustedAmount(component, recipe))
@@ -402,6 +434,8 @@ namespace Content.Server.Lathe
                         state.diskName = rFile.Name;
                         if (rFile.RemainingUses is not null)
                             state.uses = rFile.RemainingUses.Value;
+                        else
+                            state.uses = -1; // -1 indicates unlimited usage for unencrypted disks
                         break;
                     }
                 }
@@ -591,7 +625,7 @@ namespace Content.Server.Lathe
                 {
                     foreach (var file in exFs.Files.Values)
                     {
-                        if (file is RecipeBlueprintFile rFile && rFile.Recipe == recipe.ID && rFile.RemainingUses != null)
+                        if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID) && rFile.RemainingUses != null)
                         {
                             rFile.RemainingUses += recipe.pointUsage;
                             Dirty(existing, exFs);

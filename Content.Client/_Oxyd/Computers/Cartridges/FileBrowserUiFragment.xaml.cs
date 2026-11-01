@@ -16,6 +16,12 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
     public event Action? OnClosePreview;
     public event Action<string>? OnDeleteFile;
     public event Action<string>? OnRunFile;
+    public event Action<string>? OnCopyToDisk;
+    public event Action<string>? OnCopyToInternal;
+    public event Action? OnCreateFile;
+    public event Action? OnEjectDisk;
+
+    private string? _lastViewedPath;
 
     public FileBrowserUiFragment()
     {
@@ -30,16 +36,30 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
         RecordsDirButton.OnPressed += _ => OnChangeDirectory?.Invoke("/records/");
         SysDirButton.OnPressed += _ => OnChangeDirectory?.Invoke("/sys/");
         BlueprintsDirButton.OnPressed += _ => OnChangeDirectory?.Invoke("/blueprints/");
+        DiskDirButton.OnPressed += _ => OnChangeDirectory?.Invoke("/disk/");
+        NewFileButton.OnPressed += _ => OnCreateFile?.Invoke();
+        DiskEjectButton.OnPressed += _ => OnEjectDisk?.Invoke();
 
         ClosePreviewButton.OnPressed += _ => OnClosePreview?.Invoke();
     }
 
     public void UpdateState(FileBrowserUiState state)
     {
-
         CurrentPathLabel.Text = state.CurrentDirectory;
         StatusMessageLabel.Text = state.StatusMessage;
         StatusMessageLabel.Visible = !string.IsNullOrWhiteSpace(state.StatusMessage);
+
+        DiskBanner.Visible = state.HasDisk;
+        if (state.HasDisk)
+        {
+            DiskNameLabel.Text = state.DiskName ?? "Data Disk";
+            DiskUsageLabel.Text = $"{FormatStorage(state.DiskUsedBytes ?? 0)} / {FormatStorage(state.DiskTotalBytes ?? 131072)}";
+            DiskDirButton.ModulateSelfOverride = Color.FromHex("#00D4FF");
+        }
+        else
+        {
+            DiskDirButton.ModulateSelfOverride = Color.FromHex("#888888");
+        }
 
         if (!string.IsNullOrEmpty(state.ViewedFileName))
         {
@@ -50,6 +70,24 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
             var text = state.ViewedFileContent ?? "";
             var msg = FormattedMessage.FromMarkupPermissive(text);
             PreviewContentLabel.SetMessage(msg, Color.FromHex("#E0F7FA"));
+
+            PreviewTransferButton.OnPressed -= OnPreviewTransferPressed;
+            if (state.ViewedFileIsOnDisk)
+            {
+                PreviewTransferButton.Text = "-> Copy to PDA";
+                PreviewTransferButton.Visible = true;
+                PreviewTransferButton.OnPressed += OnPreviewTransferPressed;
+            }
+            else if (state.HasDisk)
+            {
+                PreviewTransferButton.Text = "-> Copy to Disk";
+                PreviewTransferButton.Visible = true;
+                PreviewTransferButton.OnPressed += OnPreviewTransferPressed;
+            }
+            else
+            {
+                PreviewTransferButton.Visible = false;
+            }
         }
         else
         {
@@ -60,16 +98,24 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
         FileListContainer.RemoveAllChildren();
 
         var visibleFiles = state.Files;
-        if (state.CurrentDirectory != "/")
+        if (state.CurrentDirectory == "/disk/")
         {
-            visibleFiles = state.Files.Where(f => f.Directory == state.CurrentDirectory).ToList();
+            visibleFiles = state.Files.Where(f => f.IsOnDisk).ToList();
+        }
+        else if (state.CurrentDirectory != "/")
+        {
+            visibleFiles = state.Files.Where(f => !f.IsOnDisk && f.Directory == state.CurrentDirectory).ToList();
+        }
+        else
+        {
+            visibleFiles = state.Files.Where(f => !f.IsOnDisk).ToList();
         }
 
         if (visibleFiles.Count == 0)
         {
             var emptyLabel = new Label
             {
-                Text = "(Directory is empty)",
+                Text = state.CurrentDirectory == "/disk/" && !state.HasDisk ? "(No disk inserted in drive)" : "(Directory is empty)",
                 FontColorOverride = Color.Gray,
                 Margin = new Thickness(6)
             };
@@ -92,7 +138,7 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
             {
                 Text = $"{file.Name}.{file.Extension}",
                 HorizontalExpand = true,
-                FontColorOverride = Color.FromHex("#E0F7FA")
+                FontColorOverride = file.IsOnDisk ? Color.FromHex("#80DEEA") : Color.FromHex("#E0F7FA")
             };
             row.AddChild(nameLabel);
 
@@ -100,12 +146,13 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
             var sizeLabel = new Label
             {
                 Text = sizeText,
-                MinWidth = 60,
+                MinWidth = 55,
                 FontColorOverride = Color.FromHex("#88AAAA")
             };
             row.AddChild(sizeLabel);
 
             var flags = "";
+            if (file.IsOnDisk) flags += "[DISK] ";
             if (file.IsReadOnly) flags += "[RO] ";
             if (file.IsEncrypted) flags += "[DRM] ";
             if (file.RemainingUses != null) flags += $"[{file.RemainingUses}x] ";
@@ -114,26 +161,55 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
             {
                 Text = flags,
                 MinWidth = 60,
-                FontColorOverride = file.IsEncrypted ? Color.Yellow : Color.FromHex("#AAAAAA")
+                FontColorOverride = file.IsEncrypted ? Color.Yellow : (file.IsOnDisk ? Color.FromHex("#00D4FF") : Color.FromHex("#AAAAAA"))
             };
             row.AddChild(flagLabel);
 
             var viewBtn = new Button
             {
                 Text = "View",
-                SetWidth = 50,
+                SetWidth = 46,
                 Margin = new Thickness(2, 0)
             };
             viewBtn.StyleClasses.Add(ErisSheetlet.StyleClassErisHoloButton);
-            viewBtn.OnPressed += _ => OnViewFile?.Invoke(fullPath);
+            viewBtn.OnPressed += _ =>
+            {
+                _lastViewedPath = fullPath;
+                OnViewFile?.Invoke(fullPath);
+            };
             row.AddChild(viewBtn);
 
-            if (file.Extension == "bin")
+            if (file.IsOnDisk)
+            {
+                var toPdaBtn = new Button
+                {
+                    Text = "-> PDA",
+                    SetWidth = 56,
+                    Margin = new Thickness(2, 0)
+                };
+                toPdaBtn.StyleClasses.Add(ErisSheetlet.StyleClassErisHoloButton);
+                toPdaBtn.OnPressed += _ => OnCopyToInternal?.Invoke(fullPath);
+                row.AddChild(toPdaBtn);
+            }
+            else if (state.HasDisk)
+            {
+                var toDiskBtn = new Button
+                {
+                    Text = "-> Disk",
+                    SetWidth = 56,
+                    Margin = new Thickness(2, 0)
+                };
+                toDiskBtn.StyleClasses.Add(ErisSheetlet.StyleClassErisHoloButton);
+                toDiskBtn.OnPressed += _ => OnCopyToDisk?.Invoke(fullPath);
+                row.AddChild(toDiskBtn);
+            }
+
+            if (file.Extension == "bin" && !file.IsOnDisk)
             {
                 var runBtn = new Button
                 {
                     Text = "Run",
-                    SetWidth = 48,
+                    SetWidth = 44,
                     Margin = new Thickness(2, 0),
                     ModulateSelfOverride = Color.FromHex("#33FF88")
                 };
@@ -145,7 +221,7 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
             var delBtn = new Button
             {
                 Text = "Del",
-                SetWidth = 45,
+                SetWidth = 42,
                 Margin = new Thickness(2, 0)
             };
             delBtn.StyleClasses.Add(ErisSheetlet.StyleClassErisHoloButton);
@@ -154,6 +230,17 @@ public sealed partial class FileBrowserUiFragment : BoxContainer
 
             FileListContainer.AddChild(row);
         }
+    }
+
+    private void OnPreviewTransferPressed(BaseButton.ButtonEventArgs args)
+    {
+        if (string.IsNullOrEmpty(_lastViewedPath))
+            return;
+
+        if (_lastViewedPath.StartsWith("/disk/"))
+            OnCopyToInternal?.Invoke(_lastViewedPath);
+        else
+            OnCopyToDisk?.Invoke(_lastViewedPath);
     }
 
     private static string FormatStorage(int bytes)

@@ -32,6 +32,18 @@ public sealed partial class FileBrowserUi : UIFragment
 
         _fragment.OnRunFile += path =>
             SendMessage(new FileBrowserUiMessageEvent(FileBrowserAction.RunProgram, path: path), userInterface);
+
+        _fragment.OnCopyToDisk += path =>
+            SendMessage(new FileBrowserUiMessageEvent(FileBrowserAction.CopyToDisk, path: path), userInterface);
+
+        _fragment.OnCopyToInternal += path =>
+            SendMessage(new FileBrowserUiMessageEvent(FileBrowserAction.CopyToInternal, path: path), userInterface);
+
+        _fragment.OnCreateFile += () =>
+            SendMessage(new FileBrowserUiMessageEvent(FileBrowserAction.CreateFile), userInterface);
+
+        _fragment.OnEjectDisk += () =>
+            SendMessage(new FileBrowserUiMessageEvent(FileBrowserAction.EjectDisk), userInterface);
     }
 
     public override void UpdateState(BoundUserInterfaceState state)

@@ -6,6 +6,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.Research.Prototypes;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.Computers.Cartridges;
@@ -204,7 +205,7 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
             };
             newFile = db;
         }
-        else if (ext == "bp")
+        else if (ext == "bp" || ext == "lathe")
         {
             var bp = new RecipeBlueprintFile
             {
@@ -212,11 +213,14 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                 Extension = ext,
                 Directory = dir,
                 Size = item.Size,
-                Recipe = item.Name,
-                RemainingUses = 5,
+                Recipes = new List<ProtoId<LatheRecipePrototype>>(item.Recipes),
+                Recipe = item.Recipes.Count > 0 ? (ProtoId<LatheRecipePrototype>?)item.Recipes[0] : null,
+                RemainingUses = null,
                 IsEncrypted = false,
                 DrmLocked = false
             };
+            if (bp.Size <= 0)
+                bp.Size = bp.CalculateSize(_prototypeManager);
             newFile = bp;
         }
         else
@@ -369,23 +373,36 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
             // Engineering Schematics & Blueprints
             new(
                 "bp_airlock",
-                "High-Security Airlock Schematic",
+                "Airlock Electronics Schematic",
                 "Blueprints",
-                "Construction schematics for blast-rated reinforced station airlocks.",
+                "Standard and blast door electronics manufacturing schematics.",
                 "/blueprints/airlock_schematic.bp",
                 36864,
                 HasFile("/blueprints/airlock_schematic.bp"),
-                false
+                false,
+                recipes: new() { "DoorElectronics", "FirelockElectronics" }
             ),
             new(
                 "bp_solars",
-                "Solar Array Power Optimizer",
+                "Solar Tracker Electronics Blueprint",
                 "Blueprints",
-                "Engineering alignment algorithms for station photovoltaic panels.",
+                "Engineering alignment circuitry for station photovoltaic solar arrays.",
                 "/blueprints/solar_optimizer.bp",
                 16384,
                 HasFile("/blueprints/solar_optimizer.bp"),
-                false
+                false,
+                recipes: new() { "SolarTrackerElectronics" }
+            ),
+            new(
+                "bp_security",
+                "Security Restraints & Equipment",
+                "Blueprints",
+                "Standard Nanotrasen security equipment: Handcuffs, Security Bolas, and Security HUDs.",
+                "/blueprints/security_gear.bp",
+                32768,
+                HasFile("/blueprints/security_gear.bp"),
+                false,
+                recipes: new() { "Handcuffs", "SecurityBola", "ClothingEyesHudSecurity" }
             ),
 
             // Station Operating Documentation

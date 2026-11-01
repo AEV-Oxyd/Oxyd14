@@ -11,6 +11,7 @@ namespace Content.Shared.PDA
         public const string PdaIdSlotId = "PDA-id";
         public const string PdaPenSlotId = "PDA-pen";
         public const string PdaPaiSlotId = "PDA-pai";
+        public const string PdaDiskSlotId = "PDA-disk";
 
         [DataField]
         public ItemSlot IdSlot = new();
@@ -19,6 +20,8 @@ namespace Content.Shared.PDA
         public ItemSlot PenSlot = new();
         [DataField]
         public ItemSlot PaiSlot = new();
+        [DataField]
+        public ItemSlot DiskSlot = new();
 
         // Really this should just be using ItemSlot.StartingItem. However, seeing as we have so many different starting
         // PDA's and no nice way to inherit the other fields from the ItemSlot data definition, this makes the yaml much
@@ -28,6 +31,7 @@ namespace Content.Shared.PDA
 
         // TODO: Fix persistence
         [ViewVariables] public EntityUid? ContainedId;
+        [ViewVariables] public EntityUid? ContainedDisk;
         [ViewVariables] public bool FlashlightOn;
 
         [ViewVariables(VVAccess.ReadWrite)] public string? OwnerName;

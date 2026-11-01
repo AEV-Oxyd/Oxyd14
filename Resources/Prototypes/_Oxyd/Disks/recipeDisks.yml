@@ -1,15 +1,90 @@
 - type: entity
   parent: BaseItem
   id: BaseRecipeDisk
-  name: Debug Item Call Dev Retard If Seen
+  name: security blueprint disk
+  description: A DRM-locked optical data disk used for authorized lathe manufacturing of security equipment.
   components:
     - type: Sprite
       sprite: Oxyd/erisported/_Manual/discs.rsi
       state: blue
-    - type: DigitalDataHolder
+    - type: Item
+      size: Small
+    - type: Tag
+      tags:
+      - Oxyd
+      - Disk
+    - type: Disk
+    - type: FileSystem
+      maxStorageBytes: 131072
       files:
-        - !type:DigitalDataLathe
-          name: "Placeholder Recipe File Name"
-          uses: 15
+        "/blueprints/security_gear.lathe": !type:RecipeBlueprintFile
+          name: security_gear
+          extension: lathe
+          directory: /blueprints/
+          size: 32768
           recipes:
             - DRMCuffs
+            - DRMBola
+            - DRMHud
+            - Handcuffs
+          remainingUses: 30
+          drmLocked: true
+          isEncrypted: false
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydDataDiskEngineering
+  name: engineering electronics disk
+  description: An unencrypted technical data disk containing airlock and solar electronics blueprints with unlimited manufacturing rights.
+  components:
+    - type: Sprite
+      sprite: Oxyd/erisported/_Manual/discs.rsi
+      state: green
+    - type: FileSystem
+      maxStorageBytes: 131072
+      files:
+        "/blueprints/electronics.lathe": !type:RecipeBlueprintFile
+          name: electronics
+          extension: lathe
+          directory: /blueprints/
+          size: 24576
+          recipes:
+            - DoorElectronics
+            - FirelockElectronics
+            - SolarTrackerElectronics
+          remainingUses: null
+          drmLocked: false
+          isEncrypted: false
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydDataDiskBlank
+  name: blank data disk
+  description: An unformatted optical data disk ready for file storage, copying, and data transfers.
+  components:
+    - type: Sprite
+      sprite: Oxyd/erisported/_Manual/discs.rsi
+      state: data-blue
+    - type: FileSystem
+      maxStorageBytes: 131072
+      files: {}
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydDataDiskNotes
+  name: corporate archive disk
+  description: A data disk containing station operations documents and manuals.
+  components:
+    - type: Sprite
+      sprite: Oxyd/erisported/_Manual/discs.rsi
+      state: yellow
+    - type: FileSystem
+      maxStorageBytes: 131072
+      files:
+        "/notes/operations_guide.txt": !type:TextVirtualFile
+          name: operations_guide
+          extension: txt
+          directory: /notes/
+          size: 48
+          isReadOnly: false
+          textContent: "NTOS FIELD DATA TRANSFER GUIDE:\n1. Insert disk into PDA or tablet.\n2. Access /disk/ directory via File Browser.\n3. Transfer blueprints to autolathe for manufacturing."

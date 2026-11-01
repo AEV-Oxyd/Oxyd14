@@ -1,3 +1,4 @@
+using System.Linq;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Content.Shared.Research.Prototypes;
@@ -43,13 +44,52 @@ public sealed partial class TextVirtualFile : VirtualFile
 [Serializable, NetSerializable]
 public sealed partial class RecipeBlueprintFile : VirtualFile
 {
-    [DataField] public ProtoId<LatheRecipePrototype> Recipe = default!;
+    [DataField] public ProtoId<LatheRecipePrototype>? Recipe = null;
+    [DataField] public List<ProtoId<LatheRecipePrototype>> Recipes = new();
     [DataField] public int? RemainingUses = null;
     [DataField] public bool DrmLocked = true;
 
     public RecipeBlueprintFile()
     {
         Extension = "lathe";
+    }
+
+    public IEnumerable<ProtoId<LatheRecipePrototype>> GetAllRecipes()
+    {
+        if (Recipe != null && !string.IsNullOrEmpty(Recipe.Value.Id))
+            yield return Recipe.Value;
+
+        foreach (var r in Recipes)
+        {
+            if (!string.IsNullOrEmpty(r.Id) && (Recipe == null || r != Recipe.Value))
+                yield return r;
+        }
+    }
+
+    public int CalculateSize(IPrototypeManager proto)
+    {
+        if (Size > 0)
+            return Size;
+
+        var recipes = GetAllRecipes().ToList();
+        if (recipes.Count == 0)
+            return 1024;
+
+        var totalPoints = 0;
+        foreach (var r in recipes)
+        {
+            if (proto.TryIndex<LatheRecipePrototype>(r, out var recipeProto) && recipeProto.pointUsage > 0)
+            {
+                totalPoints += recipeProto.pointUsage;
+            }
+            else
+            {
+                totalPoints += 1;
+            }
+        }
+
+        // Dynamic size: number of designs multiplied by points cost in KB
+        return Math.Max(1024, recipes.Count * totalPoints * 1024);
     }
 }
 

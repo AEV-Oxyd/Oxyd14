@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.FileSystem;
@@ -5,6 +6,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.PDA;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Cartridges;
@@ -23,6 +25,25 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
+    }
+
+    private bool TryGetDisk(EntityUid loaderUid, out EntityUid diskUid, [NotNullWhen(true)] out FileSystemComponent? diskFs, out string diskName)
+    {
+        diskUid = default;
+        diskFs = null;
+        diskName = "Data Disk";
+
+        if (TryComp<PdaComponent>(loaderUid, out var pda) && pda.DiskSlot.Item is { } dUid && !TerminatingOrDeleted(dUid))
+        {
+            if (TryComp<FileSystemComponent>(dUid, out var dfs))
+            {
+                diskUid = dUid;
+                diskFs = dfs;
+                diskName = MetaData(dUid).EntityName;
+                return true;
+            }
+        }
+        return false;
     }
 
     private void OnUiReady(EntityUid uid, TerminalCartridgeComponent comp, CartridgeUiReadyEvent args)
@@ -224,11 +245,68 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 if (!dir.StartsWith('/')) dir = "/" + dir;
                 if (!dir.EndsWith('/')) dir += "/";
 
-                if (TryComp<FileSystemComponent>(loaderUid, out var fs))
+                var hasDisk = TryGetDisk(loaderUid, out _, out var diskFs, out _);
+
+                if (dir == "/disk/")
                 {
+                    if (hasDisk && diskFs != null)
+                    {
+                        var diskSubdirs = new HashSet<string>();
+                        foreach (var f in diskFs.Files.Values)
+                        {
+                            if (f.Directory.StartsWith('/') && f.Directory != "/")
+                            {
+                                var rel = f.Directory.TrimStart('/');
+                                var nextSlash = rel.IndexOf('/');
+                                if (nextSlash != -1)
+                                    diskSubdirs.Add(rel.Substring(0, nextSlash));
+                            }
+                        }
+
+                        comp.History.Add($"Disk Directory: /disk/ ({diskSubdirs.Count} dirs, {diskFs.Files.Count} files)");
+                        foreach (var d in diskSubdirs.OrderBy(s => s))
+                        {
+                            comp.History.Add($"  [DIR]  {d}/");
+                        }
+                        foreach (var f in diskFs.Files.Values.OrderBy(f => f.Name))
+                        {
+                            var flags = f.IsReadOnly ? "[RO]" : "    ";
+                            comp.History.Add($"  {flags} {f.Name}.{f.Extension,-5} {f.Size,6} B");
+                        }
+                    }
+                    else
+                    {
+                        comp.History.Add("ls: /disk/: No disk inserted in drive");
+                    }
+                }
+                else if (TryComp<FileSystemComponent>(loaderUid, out var fs))
+                {
+                    var subdirs = new HashSet<string>();
+                    foreach (var f in fs.Files.Values)
+                    {
+                        if (f.Directory.StartsWith(dir) && f.Directory != dir)
+                        {
+                            var rel = f.Directory.Substring(dir.Length);
+                            var nextSlash = rel.IndexOf('/');
+                            if (nextSlash != -1)
+                            {
+                                subdirs.Add(rel.Substring(0, nextSlash));
+                            }
+                        }
+                    }
+
+                    if (dir == "/" && hasDisk)
+                    {
+                        subdirs.Add("disk");
+                    }
+
                     var files = fs.Files.Values.Where(f => f.Directory == dir).ToList();
-                    comp.History.Add($"Directory: {dir} ({files.Count} files)");
-                    foreach (var f in files)
+                    comp.History.Add($"Directory: {dir} ({subdirs.Count} dirs, {files.Count} files)");
+                    foreach (var d in subdirs.OrderBy(s => s))
+                    {
+                        comp.History.Add($"  [DIR]  {d}/");
+                    }
+                    foreach (var f in files.OrderBy(f => f.Name))
                     {
                         var flags = f.IsReadOnly ? "[RO]" : "    ";
                         comp.History.Add($"  {flags} {f.Name}.{f.Extension,-5} {f.Size,6} B");
@@ -242,11 +320,38 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: cat <file>");
                     return;
                 }
-                if (TryComp<FileSystemComponent>(loaderUid, out var catFs) &&
-                    _fileSystem.TryGetFile<VirtualFile>(loaderUid, parts[1], out var file, catFs))
+                var catTarget = parts[1];
+                if (catTarget.StartsWith("/disk/"))
+                {
+                    var diskRel = catTarget.Substring("/disk".Length);
+                    if (TryGetDisk(loaderUid, out _, out var dFs, out _) &&
+                        (dFs.Files.TryGetValue(diskRel, out var df) || dFs.Files.TryGetValue(catTarget, out df)))
+                    {
+                        if (df is TextVirtualFile tf)
+                            comp.History.Add(tf.TextContent);
+                        else if (df is RecipeBlueprintFile rFile)
+                        {
+                            var rList = string.Join(", ", rFile.GetAllRecipes().Select(r => r.Id));
+                            comp.History.Add($"Lathe Blueprint: [{rList}] Uses: {(rFile.RemainingUses?.ToString() ?? "Unlimited")} DRM: {rFile.DrmLocked}");
+                        }
+                        else
+                            comp.History.Add($"Binary File ({df.Size} B)");
+                    }
+                    else
+                    {
+                        comp.History.Add($"cat: {catTarget}: No such file on disk");
+                    }
+                }
+                else if (TryComp<FileSystemComponent>(loaderUid, out var catFs) &&
+                    _fileSystem.TryGetFile<VirtualFile>(loaderUid, catTarget, out var file, catFs))
                 {
                     if (file is TextVirtualFile tf)
                         comp.History.Add(tf.TextContent);
+                    else if (file is RecipeBlueprintFile rFile)
+                    {
+                        var rList = string.Join(", ", rFile.GetAllRecipes().Select(r => r.Id));
+                        comp.History.Add($"Lathe Blueprint: [{rList}] Uses: {(rFile.RemainingUses?.ToString() ?? "Unlimited")} DRM: {rFile.DrmLocked}");
+                    }
                     else
                         comp.History.Add($"Binary File ({file.Size} B)");
                 }
@@ -337,9 +442,27 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
                 if (TryComp<FileSystemComponent>(targetUid, out var remFs))
                 {
+                    var subdirs = new HashSet<string>();
+                    foreach (var f in remFs.Files.Values)
+                    {
+                        if (f.Directory.StartsWith(dir) && f.Directory != dir)
+                        {
+                            var rel = f.Directory.Substring(dir.Length);
+                            var nextSlash = rel.IndexOf('/');
+                            if (nextSlash != -1)
+                            {
+                                subdirs.Add(rel.Substring(0, nextSlash));
+                            }
+                        }
+                    }
+
                     var files = remFs.Files.Values.Where(f => f.Directory == dir).ToList();
-                    comp.History.Add($"Remote [{targetGuid}]: {dir} ({files.Count} files)");
-                    foreach (var f in files)
+                    comp.History.Add($"Remote [{targetGuid}]: {dir} ({subdirs.Count} dirs, {files.Count} files)");
+                    foreach (var d in subdirs.OrderBy(s => s))
+                    {
+                        comp.History.Add($"  [DIR]  {d}/");
+                    }
+                    foreach (var f in files.OrderBy(f => f.Name))
                     {
                         var flags = f.IsReadOnly ? "[RO]" : "    ";
                         comp.History.Add($"  {flags} {f.Name}.{f.Extension,-5} {f.Size,6} B");

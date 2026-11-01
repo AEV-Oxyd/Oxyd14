@@ -11,6 +11,8 @@ namespace Content.Shared.PDA
         public bool FlashlightEnabled;
         public bool HasPen;
         public bool HasPai;
+        public bool HasDisk;
+        public string? DiskName;
         public PdaIdInfoText PdaOwnerInfo;
         public string? StationName;
         public bool HasUplink;
@@ -45,12 +47,16 @@ namespace Content.Shared.PDA
             int? storageTotalBytes = null,
             bool isNetworkSaturated = false,
             List<NetEntity>? openPrograms = null,
-            BoundUserInterfaceState? cartridgeState = null)
+            BoundUserInterfaceState? cartridgeState = null,
+            bool hasDisk = false,
+            string? diskName = null)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
             HasPen = hasPen;
             HasPai = hasPai;
+            HasDisk = hasDisk;
+            DiskName = diskName;
             PdaOwnerInfo = pdaOwnerInfo;
             HasUplink = hasUplink;
             CanPlayMusic = canPlayMusic;

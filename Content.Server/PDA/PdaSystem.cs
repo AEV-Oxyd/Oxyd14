@@ -311,7 +311,9 @@ namespace Content.Server.PDA
                 storageTotal,
                 bwComp?.IsSaturated ?? false,
                 openPrograms: openNetPrograms,
-                cartridgeState: pda.ActiveCartridgeState);
+                cartridgeState: pda.ActiveCartridgeState,
+                hasDisk: pda.DiskSlot.HasItem,
+                diskName: pda.DiskSlot.Item is { } dEnt ? MetaData(dEnt).EntityName : null);
 
             _ui.SetUiState(uid, PdaUiKey.Key, state);
         }

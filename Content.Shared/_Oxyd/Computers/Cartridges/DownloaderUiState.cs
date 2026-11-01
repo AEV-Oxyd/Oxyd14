@@ -1,3 +1,5 @@
+using Content.Shared.Research.Prototypes;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers.Cartridges;
@@ -44,6 +46,7 @@ public sealed class RepositoryItemDto
     public bool IsDownloaded { get; }
     public bool IsInstalled { get; }
     public string PrototypeId { get; }
+    public List<ProtoId<LatheRecipePrototype>> Recipes { get; }
 
     public RepositoryItemDto(
         string id,
@@ -54,7 +57,8 @@ public sealed class RepositoryItemDto
         int size,
         bool isDownloaded,
         bool isInstalled,
-        string prototypeId = "")
+        string prototypeId = "",
+        List<ProtoId<LatheRecipePrototype>>? recipes = null)
     {
         Id = id;
         Name = name;
@@ -65,5 +69,6 @@ public sealed class RepositoryItemDto
         IsDownloaded = isDownloaded;
         IsInstalled = isInstalled;
         PrototypeId = prototypeId;
+        Recipes = recipes ?? new();
     }
 }

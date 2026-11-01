@@ -13,7 +13,11 @@ public enum FileBrowserAction : byte
     RunProgram,
     DownloadFile,
     PingDevice,
-    RemoteControl
+    RemoteControl,
+    CopyToDisk,
+    CopyToInternal,
+    CreateFile,
+    EjectDisk
 }
 
 [Serializable, NetSerializable]

@@ -31,6 +31,7 @@ namespace Content.Shared.PDA
             ItemSlotsSystem.AddItemSlot(uid, PdaComponent.PdaIdSlotId, pda.IdSlot);
             ItemSlotsSystem.AddItemSlot(uid, PdaComponent.PdaPenSlotId, pda.PenSlot);
             ItemSlotsSystem.AddItemSlot(uid, PdaComponent.PdaPaiSlotId, pda.PaiSlot);
+            ItemSlotsSystem.AddItemSlot(uid, PdaComponent.PdaDiskSlotId, pda.DiskSlot);
 
             UpdatePdaAppearance(uid, pda);
         }
@@ -40,24 +41,31 @@ namespace Content.Shared.PDA
             ItemSlotsSystem.RemoveItemSlot(uid, pda.IdSlot);
             ItemSlotsSystem.RemoveItemSlot(uid, pda.PenSlot);
             ItemSlotsSystem.RemoveItemSlot(uid, pda.PaiSlot);
+            ItemSlotsSystem.RemoveItemSlot(uid, pda.DiskSlot);
         }
 
         protected virtual void OnItemInserted(EntityUid uid, PdaComponent pda, EntInsertedIntoContainerMessage args)
         {
             if (args.Container.ID == PdaComponent.PdaIdSlotId)
                 pda.ContainedId = args.Entity;
+            else if (args.Container.ID == PdaComponent.PdaDiskSlotId)
+                pda.ContainedDisk = args.Entity;
 
             UpdatePdaAppearance(uid, pda);
             UpdateJobStatus(uid);
+            UpdatePdaUi(uid, pda);
         }
 
         protected virtual void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
         {
             if (args.Container.ID == pda.IdSlot.ID)
                 pda.ContainedId = null;
+            else if (args.Container.ID == pda.DiskSlot.ID)
+                pda.ContainedDisk = null;
 
             UpdatePdaAppearance(uid, pda);
             UpdateJobStatus(uid);
+            UpdatePdaUi(uid, pda);
         }
 
         private void OnGetAdditionalAccess(EntityUid uid, PdaComponent component, ref GetAdditionalAccessEvent args)
