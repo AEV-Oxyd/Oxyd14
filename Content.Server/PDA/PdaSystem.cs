@@ -20,11 +20,15 @@ using Content.Shared.PDA;
 using Content.Shared.PDA.Ringer;
 using Content.Shared.Store.Components;
 using Content.Shared.VoiceMask;
+using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.Hardware;
+using Content.Shared._Oxyd.Computers.FileSystem;
 using Robust.Server.Containers;
 using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Server.PDA
@@ -42,6 +46,8 @@ namespace Content.Server.PDA
         [Dependency] private ContainerSystem _containerSystem = default!;
         [Dependency] private IdCardSystem _idCard = default!;
         [Dependency] private IPrototypeManager _prototype = default!;
+        [Dependency] private IGameTiming _timing = default!;
+        [Dependency] private SharedFileSystemSystem _fileSystem = default!;
 
         public override void Initialize()
         {
@@ -57,6 +63,7 @@ namespace Content.Server.PDA
             SubscribeLocalEvent<PdaComponent, PdaShowMusicMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaShowUplinkMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaLockUplinkMessage>(OnUiMessage);
+            SubscribeLocalEvent<PdaComponent, PdaCloseProgramTabMessage>(OnUiMessage);
 
             SubscribeLocalEvent<PdaComponent, CartridgeLoaderNotificationSentEvent>(OnNotification);
 
@@ -65,7 +72,58 @@ namespace Content.Server.PDA
             SubscribeLocalEvent<AlertLevelChangedEvent>(OnAlertLevelChanged);
             SubscribeLocalEvent<PdaComponent, InventoryRelayedEvent<ChameleonControllerOutfitSelectedEvent>>(OnRelayedEventToIdCard);
             SubscribeLocalEvent<PdaComponent, InventoryRelayedEvent<VoiceMaskNameUpdatedEvent>>(OnRelayedEventToIdCard);
+            SubscribeLocalEvent<PdaComponent, CartridgeLoaderProgramActivatedEvent>(OnProgramActivated);
+            SubscribeLocalEvent<PdaComponent, CartridgeLoaderProgramDeactivatedEvent>(OnProgramDeactivated);
+            SubscribeLocalEvent<PdaComponent, CartridgeLoaderProgramUninstalledEvent>(OnProgramUninstalled);
+            SubscribeLocalEvent<PdaComponent, FileSystemChangedEvent>(OnFileSystemChanged);
         }
+
+        private void OnProgramActivated(EntityUid uid, PdaComponent comp, ref CartridgeLoaderProgramActivatedEvent args)
+        {
+            if (!comp.OpenPrograms.Contains(args.Program))
+                comp.OpenPrograms.Add(args.Program);
+            comp.ActiveCartridgeState = null;
+            UpdatePdaUi(uid, comp);
+        }
+
+        private void OnProgramDeactivated(EntityUid uid, PdaComponent comp, ref CartridgeLoaderProgramDeactivatedEvent args)
+        {
+            comp.ActiveCartridgeState = null;
+            UpdatePdaUi(uid, comp);
+        }
+
+        private void OnProgramUninstalled(EntityUid uid, PdaComponent pda, ref CartridgeLoaderProgramUninstalledEvent args)
+        {
+            pda.OpenPrograms.Remove(args.Program);
+
+            if (TryComp<FileSystemComponent>(uid, out var fs))
+            {
+                var targetProtoId = MetaData(args.Program).EntityPrototype?.ID;
+                string? toDeletePath = null;
+                foreach (var (path, file) in fs.Files)
+                {
+                    if (file is ProgramVirtualFile prog && prog.ProgramId == targetProtoId)
+                    {
+                        toDeletePath = path;
+                        break;
+                    }
+                }
+
+                if (toDeletePath != null)
+                {
+                    _fileSystem.TryDeleteFile(uid, toDeletePath, fs);
+                }
+            }
+
+            UpdatePdaUi(uid, pda);
+        }
+
+        private void OnFileSystemChanged(EntityUid uid, PdaComponent pda, ref FileSystemChangedEvent args)
+        {
+            UpdatePdaUi(uid, pda);
+        }
+
+
 
         private void OnRelayedEventToIdCard<T>(Entity<PdaComponent> ent, ref InventoryRelayedEvent<T> args)
         {
@@ -115,9 +173,6 @@ namespace Content.Server.PDA
 
         protected override void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
         {
-            if (args.Container.ID != pda.IdSlot.ID && args.Container.ID != pda.PenSlot.ID && args.Container.ID != pda.PaiSlot.ID)
-                return;
-
             // TODO: This is super cursed just use compstates please.
             if (MetaData(uid).EntityLifeStage >= EntityLifeStage.Terminating)
                 return;
@@ -199,6 +254,37 @@ namespace Content.Server.PDA
 
             var programs = GetNetEntityList(_cartridgeLoader.GetAllPrograms(uid).ToList());
             var id = CompOrNull<IdCardComponent>(pda.ContainedId);
+
+            var guidComp = CompOrNull<DeviceGuidComponent>(uid);
+            var statsComp = CompOrNull<ComputerStatsComponent>(uid);
+            var fsComp = CompOrNull<FileSystemComponent>(uid);
+            var bwComp = CompOrNull<NetworkBandwidthComponent>(uid);
+
+            // Synchronize running open programs
+            pda.OpenPrograms.RemoveAll(p => !Exists(p) || EntityManager.IsQueuedForDeletion(p));
+            if (loader.ActiveProgram.HasValue && !EntityManager.IsQueuedForDeletion(loader.ActiveProgram.Value) && !pda.OpenPrograms.Contains(loader.ActiveProgram.Value))
+            {
+                pda.OpenPrograms.Add(loader.ActiveProgram.Value);
+            }
+
+            var openCount = pda.OpenPrograms.Count > 0 ? pda.OpenPrograms.Count : (loader.ActiveProgram != null && !EntityManager.IsQueuedForDeletion(loader.ActiveProgram.Value) ? 1 : 0);
+
+            ComputerMetricsHelper.CalculateMetrics(
+                openCount,
+                statsComp,
+                fsComp,
+                bwComp,
+                out var cpuPercent,
+                out var ramUsed,
+                out var ramTotal,
+                out var storageUsed,
+                out var storageTotal,
+                out var isSaturated,
+                out _,
+                curTime: _timing.CurTime.TotalSeconds);
+
+            var openNetPrograms = pda.OpenPrograms.Select(p => GetNetEntity(p)).ToList();
+
             var state = new PdaUpdateState(
                 programs,
                 GetNetEntity(loader.ActiveProgram),
@@ -216,7 +302,16 @@ namespace Content.Server.PDA
                 pda.StationName,
                 showUplink,
                 hasInstrument,
-                address);
+                address,
+                guidComp?.Guid,
+                cpuPercent,
+                ramUsed,
+                ramTotal,
+                storageUsed,
+                storageTotal,
+                bwComp?.IsSaturated ?? false,
+                openPrograms: openNetPrograms,
+                cartridgeState: pda.ActiveCartridgeState);
 
             _ui.SetUiState(uid, PdaUiKey.Key, state);
         }
@@ -226,7 +321,92 @@ namespace Content.Server.PDA
             if (!PdaUiKey.Key.Equals(args.UiKey))
                 return;
 
+            EnsureComp<DeviceGuidComponent>(ent.Owner);
+            EnsureComp<ComputerStatsComponent>(ent.Owner);
+            EnsureComp<NetworkBandwidthComponent>(ent.Owner);
+            var fs = EnsureComp<FileSystemComponent>(ent.Owner);
+            if (fs.Files.Count == 0)
+            {
+                var osFile = new TextVirtualFile
+                {
+                    Name = "os",
+                    Extension = "sys",
+                    Directory = "/sys/",
+                    Size = 64,
+                    TextContent = "NTOS-PORTABLE-EDITION-4.2",
+                    IsReadOnly = true
+                };
+                fs.Files[osFile.FullPath] = osFile;
+
+                var notesFile = new TextVirtualFile
+                {
+                    Name = "shift_notes",
+                    Extension = "txt",
+                    Directory = "/notes/",
+                    Size = 32,
+                    TextContent = "Station operations in progress.",
+                    IsReadOnly = false
+                };
+                fs.Files[notesFile.FullPath] = notesFile;
+            }
+
+            if (TryComp<CartridgeLoaderComponent>(ent.Owner, out var loader))
+            {
+                EnsureDefaultPrograms(ent.Owner, loader);
+                EnsureProgramFiles(ent.Owner, loader, fs);
+            }
+
             UpdatePdaUi(ent.Owner, ent.Comp);
+        }
+
+        private void EnsureDefaultPrograms(EntityUid uid, CartridgeLoaderComponent loader)
+        {
+            var existingProtos = _cartridgeLoader.GetAllPrograms(uid)
+                .Select(p => MetaData(p).EntityPrototype?.ID)
+                .Where(id => id != null)
+                .ToHashSet();
+
+            string[] defaultCarts = ["OxydFileBrowserCartridge", "OxydTerminalCartridge", "OxydDownloaderCartridge"];
+            foreach (var cartId in defaultCarts)
+            {
+                if (!existingProtos.Contains(cartId))
+                {
+                    var spawned = Spawn(cartId);
+                    _cartridgeLoader.InstallCartridge((uid, loader), spawned);
+                }
+            }
+        }
+
+        private void EnsureProgramFiles(EntityUid loaderUid, CartridgeLoaderComponent loader, FileSystemComponent fs)
+        {
+            foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid))
+            {
+                var meta = MetaData(prog);
+                if (meta.EntityPrototype == null)
+                    continue;
+
+                var protoId = meta.EntityPrototype.ID;
+                var cleanName = meta.EntityPrototype.Name.ToLowerInvariant().Replace(' ', '_').Replace("-", "_");
+                if (cleanName.EndsWith("_cartridge"))
+                    cleanName = cleanName.Substring(0, cleanName.Length - "_cartridge".Length);
+                var fullPath = $"/bin/{cleanName}.bin";
+
+                if (!fs.Files.TryGetValue(fullPath, out var existingFile) || existingFile.Size == 2048)
+                {
+                    var title = CompOrNull<CartridgeComponent>(prog)?.ProgramName is { } nameLoc ? Loc.GetString(nameLoc) : meta.EntityPrototype.Name;
+                    var progFile = new ProgramVirtualFile
+                    {
+                        Name = cleanName,
+                        Extension = "bin",
+                        Directory = "/bin/",
+                        ProgramId = protoId,
+                        Title = title,
+                        Size = ComputerMetricsHelper.GetProgramSize(protoId),
+                        IsReadOnly = false
+                    };
+                    _fileSystem.TryWriteFile(loaderUid, progFile, fs);
+                }
+            }
         }
 
         private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaRequestUpdateInterfaceMessage msg)
@@ -298,6 +478,28 @@ namespace Content.Server.PDA
                 _ringer.LockUplink((uid, uplink));
                 UpdatePdaUi(uid, pda);
             }
+        }
+
+        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaCloseProgramTabMessage msg)
+        {
+            var progUid = GetEntity(msg.Program);
+            pda.OpenPrograms.Remove(progUid);
+            if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
+            {
+                if (loader.ActiveProgram == progUid)
+                {
+                    if (pda.OpenPrograms.Count > 0)
+                    {
+                        var nextProg = pda.OpenPrograms.Last();
+                        _cartridgeLoader.ActivateProgram((uid, loader), nextProg);
+                    }
+                    else
+                    {
+                        _cartridgeLoader.DeactivateProgram((uid, loader), progUid);
+                    }
+                }
+            }
+            UpdatePdaUi(uid, pda);
         }
 
         /// <summary>

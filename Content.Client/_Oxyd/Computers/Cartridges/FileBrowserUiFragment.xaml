@@ -1,0 +1,53 @@
+<cartridges:FileBrowserUiFragment xmlns:cartridges="clr-namespace:Content.Client._Oxyd.Computers.Cartridges"
+                                    xmlns="https://spacestation14.io" Margin="1 0 2 0">
+    <PanelContainer StyleClasses="BackgroundDark"/>
+    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="6">
+
+        <!-- Browser Directory & File List Mode (Full Height) -->
+        <BoxContainer Name="BrowserViewContainer" Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
+            <!-- Directory Path & Navigation -->
+            <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="0 0 0 6">
+                <Label Text="Path: " StyleClasses="LabelHeading"/>
+                <Label Name="CurrentPathLabel" Text="/" StyleClasses="LabelHeading" FontColorOverride="#00D4FF"/>
+                <Control HorizontalExpand="True"/>
+                <Button Name="RootDirButton" Text="/" SetWidth="28" StyleClasses="ErisHoloButton"/>
+                <Button Name="BinDirButton" Text="/bin/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <Button Name="NotesDirButton" Text="/notes/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <Button Name="RecordsDirButton" Text="/records/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <Button Name="SysDirButton" Text="/sys/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <Button Name="BlueprintsDirButton" Text="/blueprints/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+            </BoxContainer>
+
+            <!-- File List View (Takes entire remaining space) -->
+            <PanelContainer StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True">
+                <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
+                    <BoxContainer Orientation="Vertical" Name="FileListContainer" HorizontalExpand="True" VerticalExpand="True" Margin="4"/>
+                </ScrollContainer>
+            </PanelContainer>
+
+            <!-- Status Message Footer -->
+            <Label Name="StatusMessageLabel" Visible="False" Text="" StyleClasses="LabelSubText" FontColorOverride="#AAAAAA" Margin="2 4 0 0"/>
+        </BoxContainer>
+
+        <!-- Full-Screen File Viewer Mode (Takes Entire Fragment Space) -->
+        <BoxContainer Name="FilePreviewContainer" Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Visible="False">
+            <!-- File Viewer Header Bar -->
+            <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="0 0 0 6">
+                <Label Text="FILE: " StyleClasses="LabelHeading" FontColorOverride="#558899"/>
+                <Label Name="PreviewFileNameLabel" Text="File Preview" StyleClasses="LabelHeading" FontColorOverride="#00D4FF"/>
+                <Control HorizontalExpand="True"/>
+                <Button Name="ClosePreviewButton" Text="&lt; Back to Files" StyleClasses="ErisHoloButton" SetWidth="120"/>
+            </BoxContainer>
+
+            <!-- Full-Screen Document Content -->
+            <PanelContainer StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True">
+                <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
+                    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="10 8">
+                        <RichTextLabel Name="PreviewContentLabel" HorizontalExpand="True"/>
+                    </BoxContainer>
+                </ScrollContainer>
+            </PanelContainer>
+        </BoxContainer>
+
+    </BoxContainer>
+</cartridges:FileBrowserUiFragment>

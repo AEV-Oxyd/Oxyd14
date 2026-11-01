@@ -1,0 +1,62 @@
+- type: entity
+  parent: BasePDACartridge
+  id: OxydFileBrowserCartridge
+  name: file browser cartridge
+  description: A system program for inspecting local files, viewing memory resources, and managing directories.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:FileBrowserUi
+  - type: Cartridge
+    programName: file-browser-program-name
+    icon:
+      sprite: Objects/Misc/books.rsi
+      state: book_icon
+  - type: FileBrowserCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTerminalCartridge
+  name: terminal cartridge
+  description: An interactive command-line terminal with SSH client for network administration and remote shell access.
+  components:
+  - type: Sprite
+    state: cart-b
+  - type: UIFragment
+    ui: !type:TerminalUi
+  - type: Cartridge
+    programName: terminal-program-name
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server
+  - type: TerminalCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydDownloaderCartridge
+  name: central downloader cartridge
+  description: Connects to station central servers to browse and download software packages, blueprints, and records.
+  components:
+  - type: Sprite
+    state: cart-g
+  - type: UIFragment
+    ui: !type:DownloaderUi
+  - type: Cartridge
+    programName: downloader-program-name
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server-on
+  - type: DownloaderCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge

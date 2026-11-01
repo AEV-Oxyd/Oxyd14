@@ -39,5 +39,17 @@ namespace Content.Shared.PDA
         [ViewVariables]
         public ProtoId<AlertLevelPrototype>? StationAlertLevel;
         [ViewVariables] public Color StationAlertColor = Color.White;
+
+        /// <summary>
+        /// List of currently open program cartridges (browser-style tabs).
+        /// </summary>
+        [DataField] public List<EntityUid> OpenPrograms = new();
+
+        /// <summary>
+        /// Cached state of the currently active cartridge program.
+        /// Embedded into PdaUpdateState so PDA metrics and cartridge state don't overwrite each other in the tick buffer.
+        /// </summary>
+        [ViewVariables]
+        public BoundUserInterfaceState? ActiveCartridgeState;
     }
 }

@@ -1,9 +1,11 @@
+using System.Linq;
 using Content.Server.CrewManifest;
 using Content.Server.Station.Systems;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Shared.CCVar;
 using Content.Shared.CrewManifest;
+using Content.Shared._Oxyd.Computers.FileSystem;
 using Robust.Shared.Configuration;
 using Robust.Shared.Prototypes;
 
@@ -15,6 +17,7 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
     [Dependency] private IConfigurationManager _configManager = default!;
     [Dependency] private CrewManifestSystem _crewManifest = default!;
     [Dependency] private ServerStationSystem _stationSystem = default!;
+    [Dependency] private SharedFileSystemSystem _fileSystem = default!;
 
     private static readonly EntProtoId CartridgePrototypeName = "CrewManifestCartridge";
 
@@ -57,7 +60,9 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
         if (!Resolve(uid, ref component))
             return;
 
-        var owningStation = _stationSystem.GetOwningStation(uid);
+        EntityUid? owningStation = _stationSystem.GetOwningStation(loaderUid) ?? _stationSystem.GetOwningStation(uid);
+        if (owningStation == null && _stationSystem.GetStationsSet().Count > 0)
+            owningStation = _stationSystem.GetStationsSet().First();
 
         if (owningStation is null)
         {
@@ -69,6 +74,28 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
         }
 
         var (stationName, entries) = _crewManifest.GetCrewManifest(owningStation.Value);
+
+        // Cache real server manifest to local filesystem
+        if (TryComp<FileSystemComponent>(loaderUid, out var fsComp) && entries?.Entries != null)
+        {
+            var manifestData = new Dictionary<string, string>();
+            foreach (var entry in entries.Entries)
+            {
+                manifestData[entry.Name] = $"{entry.JobTitle} [{entry.JobPrototype}]";
+            }
+
+            var manifestFile = new DatabaseVirtualFile
+            {
+                Name = "local_manifest",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "crew_manifest",
+                Data = manifestData,
+                Size = Math.Max(128, manifestData.Count * 48),
+                IsReadOnly = false
+            };
+            _fileSystem.TryWriteFile(loaderUid, manifestFile, fsComp);
+        }
 
         var state = new CrewManifestUiState(stationName, entries);
         _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);

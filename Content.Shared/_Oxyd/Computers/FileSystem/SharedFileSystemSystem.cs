@@ -112,6 +112,8 @@ public class SharedFileSystemSystem : EntitySystem
         comp.Files[fullPath] = file;
         RecalculateStorageUsage(comp);
         UpdateNetworkedHeaders(uid, comp);
+        var ev = new FileSystemChangedEvent(fullPath);
+        RaiseLocalEvent(uid, ref ev);
         return true;
     }
 
@@ -127,6 +129,8 @@ public class SharedFileSystemSystem : EntitySystem
         {
             RecalculateStorageUsage(comp);
             UpdateNetworkedHeaders(uid, comp);
+            var ev = new FileSystemChangedEvent(fullPath);
+            RaiseLocalEvent(uid, ref ev);
             return true;
         }
 
@@ -147,3 +151,6 @@ public class SharedFileSystemSystem : EntitySystem
         Dirty(uid, comp);
     }
 }
+
+[ByRefEvent]
+public readonly record struct FileSystemChangedEvent(string Path);

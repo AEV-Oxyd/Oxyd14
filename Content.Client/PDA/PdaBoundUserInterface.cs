@@ -14,6 +14,7 @@ namespace Content.Client.PDA
 
         [ViewVariables]
         private PdaMenu? _menu;
+        private bool _userRequestedProgramView;
 
         public PdaBoundUserInterface(EntityUid owner, Enum uiKey) : base(owner, uiKey)
         {
@@ -72,10 +73,27 @@ namespace Content.Client.PDA
                 SendMessage(new PdaLockUplinkMessage());
             };
 
-            _menu.OnProgramItemPressed += ActivateCartridge;
+            _menu.OnProgramItemPressed += uid =>
+            {
+                _userRequestedProgramView = true;
+                ActivateCartridge(uid);
+            };
             _menu.OnInstallButtonPressed += InstallCartridge;
             _menu.OnUninstallButtonPressed += UninstallCartridge;
             _menu.ProgramCloseButton.OnPressed += _ => DeactivateActiveCartridge();
+            _menu.OnTabSelected += uid =>
+            {
+                _userRequestedProgramView = true;
+                if (_activeProgram == uid && _menu != null)
+                {
+                    _menu.ToProgramView(string.Empty);
+                }
+                else
+                {
+                    ActivateCartridge(uid);
+                }
+            };
+            _menu.OnTabClosed += uid => SendMessage(new PdaCloseProgramTabMessage(EntMan.GetNetEntity(uid)));
 
             var borderColorComponent = GetBorderColorComponent();
             if (borderColorComponent == null)
@@ -104,8 +122,24 @@ namespace Content.Client.PDA
 
         protected override void AttachCartridgeUI(Control cartridgeUIFragment, string? title)
         {
-            _menu?.ProgramView.AddChild(cartridgeUIFragment);
-            _menu?.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+            if (_menu != null)
+            {
+                if (cartridgeUIFragment.Parent != _menu.ProgramView)
+                {
+                    cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
+                    _menu.ProgramView.AddChild(cartridgeUIFragment);
+                }
+
+                if (_menu.CurrentView == PdaMenu.ProgramContentView || _userRequestedProgramView)
+                {
+                    _userRequestedProgramView = false;
+                    _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                }
+                else
+                {
+                    _menu.UpdateTabs();
+                }
+            }
         }
 
         protected override void DetachCartridgeUI(Control cartridgeUIFragment)
@@ -113,9 +147,16 @@ namespace Content.Client.PDA
             if (_menu is null)
                 return;
 
-            _menu.ToHomeScreen();
             _menu.HideProgramHeader();
             _menu.ProgramView.RemoveChild(cartridgeUIFragment);
+
+            // Closing a program shouldn't reset to the home tab.
+            // If the user was actively viewing the closed program and no other open program remains,
+            // return to the Program List tab instead of forcibly resetting to the Home tab.
+            if (_menu.CurrentView == PdaMenu.ProgramContentView)
+            {
+                _menu.ToProgramList();
+            }
         }
 
         protected override void UpdateAvailablePrograms(List<(EntityUid, CartridgeComponent)> programs)

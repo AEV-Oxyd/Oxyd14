@@ -1,4 +1,4 @@
-﻿<pda:PdaWindow  xmlns="https://spacestation14.io"
+<pda:PdaWindow  xmlns="https://spacestation14.io"
                 xmlns:pda="clr-namespace:Content.Client.PDA"
                 MouseFilter="Stop">
     <PanelContainer Name="Background" Access="Public" StyleClasses="PdaBackgroundRect" />
@@ -6,26 +6,28 @@
     <PanelContainer Name="AccentH" Margin="-1 170 -2 170" Access="Public" StyleClasses="PdaBackground" />
     <PanelContainer Name="AccentV" Margin="220 -1 220 -1" Access="Public" StyleClasses="PdaBackground" />
     <PanelContainer Name="Border" StyleClasses="PdaBorderRect" />
-    <BoxContainer Orientation="Vertical" HorizontalExpand="True">
+    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
         <!--Heading-->
         <BoxContainer SetHeight="26" Margin="4 2 8 0" Orientation="Horizontal">
             <Control HorizontalExpand="True"/>
             <TextureButton Name="CloseButton" StyleClasses="windowCloseButton"
                            VerticalAlignment="Center" Margin="0 4 4 0"/>
         </BoxContainer>
-        <!--Content-->
-        <Control Margin="18 0" RectClipContent="True" VerticalExpand="true"
-                 HorizontalExpand="True">
+        <!--Content / Physical Screen Inset-->
+        <Control Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer Name="ContentBorder" StyleClasses="PdaBackground"/>
             <Control Margin="3 3">
                 <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
-                <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" StyleClasses="PdaContent"/>
-
+                <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" VerticalExpand="True" StyleClasses="PdaContent"/>
             </Control>
         </Control>
-        <!--Footer-->
-        <BoxContainer Orientation="Horizontal" SetHeight="28">
-            <Label Text="{Loc 'comp-pda-ui-footer'}" StyleClasses="PdaWindowFooterText" Margin="32 0 0 6"/>
-        </BoxContainer>
+        <!--Bottom Bezel with hardware resource status bar-->
+        <PanelContainer Name="BezelFooterPanel" Margin="18 1 18 5" SetHeight="24" StyleClasses="PdaBezelFooter">
+            <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="8 0" VerticalAlignment="Center">
+                <Label Text="Robust#OS™" VerticalAlignment="Center" Margin="2 0 10 0" StyleClasses="PdaBezelFooterText"/>
+                <Label Name="SystemStatsLabel" Access="Public" VerticalAlignment="Center" HorizontalExpand="True" Margin="4 0" StyleClasses="PdaBezelStatsText"/>
+                <Label Name="AddressLabel" Access="Public" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="4 0" StyleClasses="PdaBezelIdText"/>
+            </BoxContainer>
+        </PanelContainer>
     </BoxContainer>
 </pda:PdaWindow>

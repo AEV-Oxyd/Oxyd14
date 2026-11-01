@@ -9,18 +9,20 @@ namespace Content.Client.PDA;
 [GenerateTypedNameReferences]
 public partial class PdaWindow : BaseWindow
 {
-
     public string? BorderColor
     {
-        get => Background.ActualModulateSelf.ToHex();
-
-        set => Background.ModulateSelfOverride = Color.FromHex(value, Color.White);
+        get => Border.ActualModulateSelf.ToHex();
+        set
+        {
+            var col = Color.FromHex(value, Color.FromHex("#5a5a5a"));
+            Border.ModulateSelfOverride = col;
+            Background.ModulateSelfOverride = col.WithAlpha(0.35f);
+        }
     }
 
     public string? AccentHColor
     {
         get => AccentH.ActualModulateSelf.ToHex();
-
         set
         {
             AccentH.ModulateSelfOverride = Color.FromHex(value, Color.White);
@@ -31,7 +33,6 @@ public partial class PdaWindow : BaseWindow
     public string? AccentVColor
     {
         get => AccentV.ActualModulateSelf.ToHex();
-
         set
         {
             AccentV.ModulateSelfOverride = Color.FromHex(value, Color.White);
@@ -48,10 +49,36 @@ public partial class PdaWindow : BaseWindow
 
         AccentH.Visible = false;
         AccentV.Visible = false;
+        Resizable = true;
     }
+
+    public const int DragMarginSize = 7;
 
     protected override DragMode GetDragModeFor(Vector2 relativeMousePos)
     {
-        return DragMode.Move;
+        var mode = DragMode.Move;
+
+        if (Resizable)
+        {
+            if (relativeMousePos.Y < DragMarginSize)
+            {
+                mode = DragMode.Top;
+            }
+            else if (relativeMousePos.Y > Size.Y - DragMarginSize)
+            {
+                mode = DragMode.Bottom;
+            }
+
+            if (relativeMousePos.X < DragMarginSize)
+            {
+                mode |= DragMode.Left;
+            }
+            else if (relativeMousePos.X > Size.X - DragMarginSize)
+            {
+                mode |= DragMode.Right;
+            }
+        }
+
+        return mode;
     }
 }

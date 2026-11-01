@@ -16,6 +16,15 @@ namespace Content.Shared.PDA
         public bool HasUplink;
         public bool CanPlayMusic;
         public string? Address;
+        public string? DeviceGuid;
+        public float? CpuUsagePercent;
+        public int? RamUsedMb;
+        public int? RamTotalMb;
+        public int? StorageUsedBytes;
+        public int? StorageTotalBytes;
+        public bool IsNetworkSaturated;
+        public List<NetEntity> OpenPrograms;
+        public BoundUserInterfaceState? CartridgeState;
 
         public PdaUpdateState(
             List<NetEntity> programs,
@@ -27,7 +36,16 @@ namespace Content.Shared.PDA
             string? stationName,
             bool hasUplink = false,
             bool canPlayMusic = false,
-            string? address = null)
+            string? address = null,
+            string? deviceGuid = null,
+            float? cpuUsagePercent = null,
+            int? ramUsedMb = null,
+            int? ramTotalMb = null,
+            int? storageUsedBytes = null,
+            int? storageTotalBytes = null,
+            bool isNetworkSaturated = false,
+            List<NetEntity>? openPrograms = null,
+            BoundUserInterfaceState? cartridgeState = null)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
@@ -38,6 +56,15 @@ namespace Content.Shared.PDA
             CanPlayMusic = canPlayMusic;
             StationName = stationName;
             Address = address;
+            DeviceGuid = deviceGuid;
+            CpuUsagePercent = cpuUsagePercent;
+            RamUsedMb = ramUsedMb;
+            RamTotalMb = ramTotalMb;
+            StorageUsedBytes = storageUsedBytes;
+            StorageTotalBytes = storageTotalBytes;
+            IsNetworkSaturated = isNetworkSaturated;
+            OpenPrograms = openPrograms ?? new();
+            CartridgeState = cartridgeState;
         }
     }
 

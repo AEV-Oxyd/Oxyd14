@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Shared.PDA;
 using Robust.Shared.Utility;
 using Content.Shared.CartridgeLoader;
@@ -19,6 +20,7 @@ namespace Content.Client.PDA
         [Dependency] private IClipboardManager _clipboard = null!;
         [Dependency] private IGameTiming _gameTiming = default!;
         [Dependency] private IEntitySystemManager _entitySystem = default!;
+        [Dependency] private IEntityManager _entityManager = default!;
         private readonly AlertLevelSystem _alert = default!;
         private readonly GameTicker _gameTicker;
 
@@ -37,10 +39,59 @@ namespace Content.Client.PDA
 
 
         private int _currentView;
+        public int CurrentView => _currentView;
+        private List<EntityUid> _openPrograms = new();
+        private EntityUid? _activeProgram;
+        private readonly Dictionary<EntityUid, CartridgeComponent> _programComponents = new();
+
+        private float? _baseCpuPercent;
+        private int? _ramUsedMb;
+        private int? _ramTotalMb;
+        private int _storageUsedBytes;
+        private int _storageTotalBytes;
+        private bool _isNetworkSaturated;
+        private float _jitterTimer;
+        private float _currentCpuJitter;
+        private readonly System.Random _random = new();
+
+        protected override void FrameUpdate(Robust.Shared.Timing.FrameEventArgs args)
+        {
+            base.FrameUpdate(args);
+
+            if (_baseCpuPercent == null)
+                return;
+
+            _jitterTimer += args.DeltaSeconds;
+            if (_jitterTimer >= 1.0f)
+            {
+                _jitterTimer = 0f;
+                // 1-2% randomized jitter purely on UI: between -1.5% and +1.5%
+                _currentCpuJitter = (float)(_random.NextDouble() * 3.0 - 1.5);
+                UpdateFooterStats();
+            }
+        }
+
+        private void UpdateFooterStats()
+        {
+            if (_baseCpuPercent != null && _ramTotalMb != null)
+            {
+                var saturatedText = _isNetworkSaturated ? " [OVERLOAD]" : "";
+                var memUsed = FormatStorage(_storageUsedBytes);
+                var memTotal = FormatStorage(_storageTotalBytes);
+                var displayCpu = System.Math.Clamp(_baseCpuPercent.Value + _currentCpuJitter, 0f, 100f);
+                SystemStatsLabel.Text = $"CPU: {displayCpu:0}% | RAM: {_ramUsedMb}/{_ramTotalMb}MB | MEM: {memUsed}/{memTotal}{saturatedText}";
+            }
+            else
+            {
+                SystemStatsLabel.Text = string.Empty;
+            }
+        }
 
         public event Action<EntityUid>? OnProgramItemPressed;
         public event Action<EntityUid>? OnUninstallButtonPressed;
         public event Action<EntityUid>? OnInstallButtonPressed;
+        public event Action<EntityUid>? OnTabSelected;
+        public event Action<EntityUid>? OnTabClosed;
         public PdaMenu()
         {
             IoCManager.InjectDependencies(this);
@@ -94,7 +145,7 @@ namespace Content.Client.PDA
             ProgramCloseButton.OnPressed += _ =>
             {
                 HideProgramHeader();
-                ToHomeScreen();
+                ToProgramList();
             };
 
             PdaOwnerButton.OnPressed += _ =>
@@ -189,7 +240,16 @@ namespace Content.Client.PDA
                 ("instructions", _instructions))
             );
 
-            AddressLabel.Text = state.Address?.ToUpper() ?? " - ";
+            _baseCpuPercent = state.CpuUsagePercent;
+            _ramUsedMb = state.RamUsedMb;
+            _ramTotalMb = state.RamTotalMb;
+            _storageUsedBytes = state.StorageUsedBytes ?? 0;
+            _storageTotalBytes = state.StorageTotalBytes ?? 0;
+            _isNetworkSaturated = state.IsNetworkSaturated;
+            UpdateFooterStats();
+
+            var idText = !string.IsNullOrEmpty(state.DeviceGuid) ? $"[{state.DeviceGuid}]" : (state.Address?.ToUpper() ?? " - ");
+            AddressLabel.Text = idText;
 
             EjectIdButton.IsActive = state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null;
             EjectPenButton.IsActive = state.HasPen;
@@ -197,10 +257,20 @@ namespace Content.Client.PDA
             ActivateMusicButton.Visible = state.CanPlayMusic;
             ShowUplinkButton.Visible = state.HasUplink;
             LockUplinkButton.Visible = state.HasUplink;
+
+            _openPrograms = state.OpenPrograms.Select(p => _entityManager.GetEntity(p)).ToList();
+            _activeProgram = state.ActiveUI != null ? _entityManager.GetEntity(state.ActiveUI.Value) : null;
+            UpdateTabs();
         }
 
         public void UpdateAvailablePrograms(List<(EntityUid, CartridgeComponent)> programs)
         {
+            _programComponents.Clear();
+            foreach (var (progUid, comp) in programs)
+            {
+                _programComponents[progUid] = comp;
+            }
+            UpdateTabs();
             if (programs.Count == 0)
             {
                 ProgramList.RemoveAllChildren();
@@ -255,6 +325,66 @@ namespace Content.Client.PDA
                  ProgramList.AddChild(new Control() { HorizontalExpand = true });
         }
 
+        public void UpdateTabs()
+        {
+            ProgramTabsContainer.RemoveAllChildren();
+
+            foreach (var progUid in _openPrograms)
+            {
+                var title = "Program";
+                if (_programComponents.TryGetValue(progUid, out var comp) || _entityManager.TryGetComponent<CartridgeComponent>(progUid, out comp))
+                {
+                    title = Loc.GetString(comp.ProgramName);
+                }
+                else if (_entityManager.TryGetComponent<MetaDataComponent>(progUid, out var meta))
+                {
+                    title = meta.EntityName;
+                }
+
+                var tabBox = new BoxContainer
+                {
+                    Orientation = BoxContainer.LayoutOrientation.Horizontal,
+                    Margin = new Thickness(1, 0)
+                };
+
+                var isActive = _activeProgram == progUid && _currentView == ProgramContentView;
+
+                var tabBtn = new PdaNavigationButton
+                {
+                    LabelText = title,
+                    MinWidth = 75,
+                    SetHeight = 32,
+                    IsCurrent = isActive,
+                    CurrentTabBorderThickness = new Thickness(0, 0, 2, 0),
+                    BorderThickness = new Thickness(0, 0, 0, 2)
+                };
+                var capturedUid = progUid;
+                tabBtn.OnPressed += _ =>
+                {
+                    HomeButton.IsCurrent = false;
+                    ProgramListButton.IsCurrent = false;
+                    SettingsButton.IsCurrent = false;
+                    OnTabSelected?.Invoke(capturedUid);
+                };
+                tabBox.AddChild(tabBtn);
+
+                var closeBtn = new Button
+                {
+                    Text = "✕",
+                    SetWidth = 22,
+                    SetHeight = 32,
+                    StyleClasses = { Content.Client._Oxyd.UI.Style.ErisSheetlet.StyleClassErisHoloButton }
+                };
+                closeBtn.OnPressed += _ =>
+                {
+                    OnTabClosed?.Invoke(capturedUid);
+                };
+                tabBox.AddChild(closeBtn);
+
+                ProgramTabsContainer.AddChild(tabBox);
+            }
+        }
+
         /// <summary>
         /// Changes the current view to the home screen (view 0) and sets the tabs `IsCurrent` flag accordingly
         /// </summary>
@@ -266,6 +396,21 @@ namespace Content.Client.PDA
             ProgramTitle.IsCurrent = false;
 
             ChangeView(HomeView);
+            UpdateTabs();
+        }
+
+        /// <summary>
+        /// Changes the current view to the program list (view 1) and sets the tabs `IsCurrent` flag accordingly
+        /// </summary>
+        public void ToProgramList()
+        {
+            HomeButton.IsCurrent = false;
+            ProgramListButton.IsCurrent = true;
+            SettingsButton.IsCurrent = false;
+            ProgramTitle.IsCurrent = false;
+
+            ChangeView(ProgramListView);
+            UpdateTabs();
         }
 
         /// <summary>
@@ -276,8 +421,7 @@ namespace Content.Client.PDA
             ProgramTitle.IsCurrent = false;
             ProgramTitle.Visible = false;
             ProgramCloseButton.Visible = false;
-            ProgramListButton.Visible = true;
-            SettingsButton.Visible = true;
+            UpdateTabs();
         }
 
         /// <summary>
@@ -288,15 +432,9 @@ namespace Content.Client.PDA
             HomeButton.IsCurrent = false;
             ProgramListButton.IsCurrent = false;
             SettingsButton.IsCurrent = false;
-            ProgramTitle.IsCurrent = false;
-            ProgramTitle.IsCurrent = true;
-            ProgramTitle.Visible = true;
-            ProgramCloseButton.Visible = true;
-            ProgramListButton.Visible = false;
-            SettingsButton.Visible = false;
 
-            ProgramTitle.LabelText = title;
             ChangeView(ProgramContentView);
+            UpdateTabs();
         }
 
 
@@ -320,6 +458,15 @@ namespace Content.Client.PDA
             {
                 view.Visible = false;
             }
+        }
+
+        private static string FormatStorage(int bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            if (bytes < 1024 * 1024)
+                return $"{bytes / 1024.0:0.#} KB";
+            return $"{bytes / (1024.0 * 1024.0):0.##} MB";
         }
 
         protected override void Draw(DrawingHandleScreen handle)

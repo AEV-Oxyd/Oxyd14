@@ -11,6 +11,7 @@ public sealed partial class CartridgeLoaderSystem : EntitySystem
     [Dependency] private SharedAppearanceSystem _appearanceSystem = default!;
     [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private SharedUserInterfaceSystem _userInterface = default!;
+    [Dependency] private Content.Shared.PDA.SharedPdaSystem _pdaSystem = default!;
 
     public override void Initialize()
     {

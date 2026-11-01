@@ -13,7 +13,9 @@
   - type: Tag
     tags:
     - Oxyd
-    - Pda
+  - type: PdaBorderColor
+    borderColor: "#00D4FF"
+  - type: DeviceGuid
   - type: FileSystem
     maxStorageBytes: 2097152
     files:
@@ -31,16 +33,83 @@
         size: 32
         isReadOnly: false
         textContent: "Station operations in progress."
+      "/bin/file_browser.bin": !type:ProgramVirtualFile
+        name: file_browser
+        extension: bin
+        directory: /bin/
+        size: 4096
+        isReadOnly: false
+        programId: OxydFileBrowserCartridge
+        title: "File Browser"
+      "/bin/terminal.bin": !type:ProgramVirtualFile
+        name: terminal
+        extension: bin
+        directory: /bin/
+        size: 3072
+        isReadOnly: false
+        programId: OxydTerminalCartridge
+        title: "Terminal"
+      "/bin/downloader.bin": !type:ProgramVirtualFile
+        name: downloader
+        extension: bin
+        directory: /bin/
+        size: 5120
+        isReadOnly: false
+        programId: OxydDownloaderCartridge
+        title: "Downloader"
+      "/bin/crew_manifest.bin": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: CrewManifestCartridge
+        title: "Crew Manifest"
+      "/bin/notekeeper.bin": !type:ProgramVirtualFile
+        name: notekeeper
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: NotekeeperCartridge
+        title: "Notekeeper"
+      "/bin/nanotask.bin": !type:ProgramVirtualFile
+        name: nanotask
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: NanoTaskCartridge
+        title: "Tasks"
+      "/bin/news_reader.bin": !type:ProgramVirtualFile
+        name: news_reader
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: NewsReaderCartridge
+        title: "News Reader"
   - type: ModularComputer
   - type: ComputerStats
-    cpuSpeedMHz: 400
-    ramSizeMB: 512
-    storageCapacityBytes: 2097152
-    networkBandwidthBytesPerSec: 128000
+    cpuFrequencyMhz: 400
+    ramMb: 512
+    storageBytes: 2097152
+    networkBandwidthBps: 128000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 128000
     bufferQueueLimit: 50
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydFileBrowserCartridge
+        - id: OxydTerminalCartridge
+        - id: OxydDownloaderCartridge
 
 - type: entity
   parent: BaseOxydPDA
@@ -51,7 +120,9 @@
   - type: Tag
     tags:
     - Oxyd
-    - Pda
+  - type: PdaBorderColor
+    borderColor: "#00D4FF"
+  - type: DeviceGuid
   - type: FileSystem
     maxStorageBytes: 8388608
     files:
@@ -67,15 +138,13 @@
         extension: db
         directory: /records/
         size: 128
-        tableName: cached_manifest
-        data:
-          ChiefEngineer: "Active"
-          Captain: "Active"
+        tableName: crew_manifest
+        data: {}
   - type: ComputerStats
-    cpuSpeedMHz: 800
-    ramSizeMB: 1024
-    storageCapacityBytes: 8388608
-    networkBandwidthBytesPerSec: 500000
+    cpuFrequencyMhz: 800
+    ramMb: 1024
+    storageBytes: 8388608
+    networkBandwidthBps: 500000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 500000
@@ -91,6 +160,9 @@
   - type: Tag
     tags:
     - Oxyd
+  - type: PdaBorderColor
+    borderColor: "#00D4FF"
+  - type: DeviceGuid
   - type: FileSystem
     maxStorageBytes: 104857600
     files:
@@ -109,10 +181,10 @@
         textContent: "Boot successful. Network connection established."
   - type: ModularComputer
   - type: ComputerStats
-    cpuSpeedMHz: 3200
-    ramSizeMB: 8192
-    storageCapacityBytes: 104857600
-    networkBandwidthBytesPerSec: 10000000
+    cpuFrequencyMhz: 3200
+    ramMb: 8192
+    storageBytes: 104857600
+    networkBandwidthBps: 10000000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 10000000
@@ -127,6 +199,9 @@
   - type: Tag
     tags:
     - Oxyd
+  - type: PdaBorderColor
+    borderColor: "#00D4FF"
+  - type: DeviceGuid
   - type: FileSystem
     maxStorageBytes: 65536
     files:

@@ -64,3 +64,19 @@ public sealed partial class DatabaseVirtualFile : VirtualFile
         Extension = "db";
     }
 }
+
+[Serializable, NetSerializable]
+public sealed partial class ProgramVirtualFile : VirtualFile
+{
+    [DataField] public string ProgramId = string.Empty;
+    [DataField] public string Title = string.Empty;
+    [DataField] public float CpuUsagePercent = 4.0f;
+    [DataField] public int RamUsageMb = 8;
+
+    public ProgramVirtualFile()
+    {
+        Extension = "bin";
+        Directory = "/bin/";
+        Size = 2048;
+    }
+}

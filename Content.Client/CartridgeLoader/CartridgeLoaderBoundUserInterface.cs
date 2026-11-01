@@ -8,7 +8,7 @@ namespace Content.Client.CartridgeLoader;
 public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
 {
     [ViewVariables]
-    private EntityUid? _activeProgram;
+    protected EntityUid? _activeProgram;
 
     [ViewVariables]
     private UIFragment? _activeCartridgeUI;
@@ -33,34 +33,59 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
             return;
         }
 
+        if (state is Content.Shared.PDA.PdaUpdateState pdaState && pdaState.CartridgeState != null)
+        {
+            _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
+        }
+
         // TODO move this to a component state and ensure the net ids.
         var programs = GetCartridgeComponents(_entManager.GetEntityList(loaderUiState.Programs));
         UpdateAvailablePrograms(programs);
 
         var activeUI = _entManager.GetEntity(loaderUiState.ActiveUI);
 
+        if (activeUI == null)
+        {
+            if (_activeUiFragment is not null)
+            {
+                DetachCartridgeUI(_activeUiFragment);
+                _activeUiFragment.Dispose();
+                _activeUiFragment = null;
+                _activeCartridgeUI = null;
+                _activeProgram = null;
+            }
+            return;
+        }
+
+        // If the active program has not changed and the fragment is already created, do not recreate or re-attach!
+        if (activeUI == _activeProgram && _activeUiFragment is not null)
+        {
+            return;
+        }
+
+        var prevFragment = _activeUiFragment;
         _activeProgram = activeUI;
+
+        if (prevFragment is not null)
+        {
+            DetachCartridgeUI(prevFragment);
+            prevFragment.Dispose();
+            _activeUiFragment = null;
+            _activeCartridgeUI = null;
+        }
 
         var ui = RetrieveCartridgeUI(activeUI);
         var comp = RetrieveCartridgeComponent(activeUI);
         var control = ui?.GetUIFragmentRoot();
 
-        //Prevent the same UI fragment from getting disposed and attached multiple times
-        if (_activeUiFragment?.GetType() == control?.GetType())
-            return;
-
-        if (_activeUiFragment is not null)
-            DetachCartridgeUI(_activeUiFragment);
-
-        if (control is not null && _activeProgram.HasValue)
+        if (control is not null)
         {
             AttachCartridgeUI(control, Loc.GetString(comp?.ProgramName ?? "default-program-name"));
-            SendCartridgeUiReadyEvent(_activeProgram.Value);
-        }
+            SendCartridgeUiReadyEvent(activeUI.Value);
 
-        _activeCartridgeUI = ui;
-        _activeUiFragment?.Dispose();
-        _activeUiFragment = control;
+            _activeCartridgeUI = ui;
+            _activeUiFragment = control;
+        }
     }
 
     protected void ActivateCartridge(EntityUid cartridgeUid)
