@@ -35,7 +35,7 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
 
         _downloadTickTimer += frameTime;
         var shouldPushUi = false;
-        if (_downloadTickTimer >= 0.75f)
+        if (_downloadTickTimer >= 0.15f)
         {
             _downloadTickTimer = 0f;
             shouldPushUi = true;
@@ -287,20 +287,30 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
 
     private float CalculateDownloadTime(EntityUid loaderUid, int sizeBytes)
     {
-        TryComp<NetworkBandwidthComponent>(loaderUid, out var bw);
-        var isSaturated = bw?.IsSaturated ?? false;
+        var availableBps = 250000f; // 250 KB/s (~244 KiB/s) baseline network speed
 
-        // Base wireless connection and SSL/SSH handshake overhead (seconds)
-        var handshake = 2.0f;
+        // Look up server network bandwidth if online
+        var query = EntityQueryEnumerator<DataServerComponent, DeviceGuidComponent>();
+        if (query.MoveNext(out var serverUid, out _, out _))
+        {
+            if (TryComp<NetworkBandwidthComponent>(serverUid, out var serverBw) && serverBw.MaxBps > 0)
+                availableBps = serverBw.MaxBps;
+        }
 
-        // Effective PDA wireless throughput: ~8 KB/sec (8,192 bytes/sec)
-        // If congested or network saturated, transfer rate drops to ~2.5 KB/sec (2,560 bytes/sec)
-        var transferRateBps = isSaturated ? 2560f : 8192f;
+        // Bound by client network bandwidth capacity
+        if (TryComp<NetworkBandwidthComponent>(loaderUid, out var clientBw) && clientBw.MaxBps > 0)
+        {
+            availableBps = Math.Min(availableBps, clientBw.MaxBps);
+        }
 
-        var transferDuration = sizeBytes / transferRateBps;
+        if (clientBw?.IsSaturated ?? false)
+            availableBps *= 0.25f;
 
-        // Total download time scales directly with file size, with a minimum of 2.5s for wireless handshake
-        return Math.Max(2.5f, handshake + transferDuration);
+        availableBps = Math.Max(10000f, availableBps);
+        var transferDuration = (float)sizeBytes / availableBps;
+
+        // Minimal realistic network handshake latency (50ms)
+        return Math.Max(0.15f, 0.05f + transferDuration);
     }
 
     private List<RepositoryItemDto> BuildRepositoryItems(EntityUid loaderUid)

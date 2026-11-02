@@ -423,7 +423,15 @@ namespace Content.Server.Lathe
             if (producing == null && component.Queue.First is { } node)
                 producing = node.Value.Recipe;
 
-            var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing);
+            TimeSpan? prodStart = null;
+            TimeSpan? prodLength = null;
+            if (TryComp<LatheProducingComponent>(uid, out var prodComp))
+            {
+                prodStart = prodComp.StartTime;
+                prodLength = prodComp.ProductionLength;
+            }
+
+            var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing, prodStart, prodLength);
             // todo add selector for multi-file on file util expansion? SPCR 2026
             if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<FileSystemComponent>(validDisk, out var validFs))
             {

@@ -13,14 +13,24 @@ public sealed class LatheUpdateState : BoundUserInterfaceState
 
     public ProtoId<LatheRecipePrototype>? CurrentlyProducing;
 
+    public TimeSpan? ProductionStartTime;
+    public TimeSpan? ProductionLength;
+
     public string diskName = string.Empty;
     public int uses = 0;
 
-    public LatheUpdateState(List<ProtoId<LatheRecipePrototype>> recipes, LatheRecipeBatch[] queue, ProtoId<LatheRecipePrototype>? currentlyProducing = null)
+    public LatheUpdateState(
+        List<ProtoId<LatheRecipePrototype>> recipes,
+        LatheRecipeBatch[] queue,
+        ProtoId<LatheRecipePrototype>? currentlyProducing = null,
+        TimeSpan? productionStartTime = null,
+        TimeSpan? productionLength = null)
     {
         Recipes = recipes;
         Queue = queue;
         CurrentlyProducing = currentlyProducing;
+        ProductionStartTime = productionStartTime;
+        ProductionLength = productionLength;
     }
 }
 

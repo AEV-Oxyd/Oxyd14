@@ -4,7 +4,7 @@
         HorizontalExpand="True"
         Margin="0"
         StyleClasses="ButtonSquare">
-        <BoxContainer Orientation="Horizontal">
+        <BoxContainer Orientation="Horizontal" HorizontalExpand="True">
             <BoxContainer
                 Name="RecipeDisplayContainer"
                 Margin="0 0 4 0"
@@ -12,8 +12,16 @@
                 VerticalAlignment="Center"
                 MinSize="32 32"
                 />
-            <Label Name="RecipeName" HorizontalExpand="True" />
-            <Label Name="DRMCost" Align="Right" Visible="False"/>
+            <Label Name="RecipeName" HorizontalExpand="True" ClipText="True" VerticalAlignment="Center" />
+            <BoxContainer
+                Name="MaterialsContainer"
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Right"
+                Margin="6 0 6 0"
+                SeparationOverride="6"
+                />
+            <Label Name="DRMCost" Align="Right" VerticalAlignment="Center" Visible="False"/>
         </BoxContainer>
     </Button>
 </Control>

@@ -325,7 +325,9 @@ namespace Content.Server.PDA
 
             EnsureComp<DeviceGuidComponent>(ent.Owner);
             EnsureComp<ComputerStatsComponent>(ent.Owner);
-            EnsureComp<NetworkBandwidthComponent>(ent.Owner);
+            var pdaBw = EnsureComp<NetworkBandwidthComponent>(ent.Owner);
+            if (pdaBw.MaxBps < 250000)
+                pdaBw.MaxBps = 250000;
             var fs = EnsureComp<FileSystemComponent>(ent.Owner);
             if (fs.Files.Count == 0)
             {

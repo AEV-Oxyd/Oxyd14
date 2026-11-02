@@ -12,6 +12,7 @@ using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.XAML;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Client.Lathe.UI;
@@ -21,10 +22,14 @@ public sealed partial class LatheMenu : FancyWindow
 {
     [Dependency] private IEntityManager _entityManager = default!;
     [Dependency] private IPrototypeManager _prototypeManager = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
     private readonly SpriteSystem _spriteSystem;
     private readonly LatheSystem _lathe;
     private readonly MaterialStorageSystem _materialStorage;
+
+    private TimeSpan? _productionStartTime;
+    private TimeSpan? _productionLength;
 
     public event Action<BaseButton.ButtonEventArgs>? OnServerListButtonPressed;
     public event Action<string, int>? RecipeQueueAction;
@@ -151,6 +156,7 @@ public sealed partial class LatheMenu : FancyWindow
         _entityManager.TryGetComponent(Entity, out LatheComponent? lathe);
 
         var materials = _materialStorage.GetStoredMaterials(Entity);
+        var multiplier = lathe?.MaterialUseMultiplier ?? 1f;
 
         int idx = 0;
         foreach (var recipe in sortedRecipesToShow)
@@ -167,6 +173,7 @@ public sealed partial class LatheMenu : FancyWindow
                         amount = 1;
                     RecipeQueueAction?.Invoke(s, amount);
                 };
+                control.PopulateMaterials(recipe.Proto, multiplier, materials, quantity, _prototypeManager, _spriteSystem, _materialStorage);
                 RecipeList.AddChild(control);
             }
             else
@@ -187,6 +194,7 @@ public sealed partial class LatheMenu : FancyWindow
                     // NOTE: doesn't nicely handle prototype reloads.
                     child.SetDisplayControl(GetRecipeDisplayControl(recipe.Proto));
                 }
+                child.PopulateMaterials(recipe.Proto, multiplier, materials, quantity, _prototypeManager, _spriteSystem, _materialStorage);
             }
             idx++;
         }
@@ -339,11 +347,18 @@ public sealed partial class LatheMenu : FancyWindow
         }
     }
 
-    public void SetQueueInfo(ProtoId<LatheRecipePrototype>? recipeProto)
+    public void SetQueueInfo(ProtoId<LatheRecipePrototype>? recipeProto, TimeSpan? startTime = null, TimeSpan? length = null)
     {
         FabricatingContainer.Visible = recipeProto != null;
+        _productionStartTime = startTime;
+        _productionLength = length;
+
         if (recipeProto == null)
+        {
+            PrintingProgressBar.Value = 0f;
+            PrintingProgressLabel.Text = string.Empty;
             return;
+        }
 
         var recipe = _prototypeManager.Index(recipeProto.Value);
 
@@ -351,6 +366,26 @@ public sealed partial class LatheMenu : FancyWindow
         FabricatingDisplayContainer.AddChild(GetRecipeDisplayControl(recipe));
 
         NameLabel.Text = _lathe.GetRecipeName(recipe);
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+
+        if (!FabricatingContainer.Visible || _productionStartTime == null || _productionLength == null || _productionLength.Value <= TimeSpan.Zero)
+        {
+            PrintingProgressBar.Value = 0f;
+            PrintingProgressLabel.Text = string.Empty;
+            return;
+        }
+
+        var elapsed = _timing.CurTime - _productionStartTime.Value;
+        var total = _productionLength.Value;
+        var fraction = Math.Clamp((float)(elapsed.TotalSeconds / total.TotalSeconds), 0f, 1f);
+
+        PrintingProgressBar.Value = fraction;
+        var remaining = Math.Max(0, (total - elapsed).TotalSeconds);
+        PrintingProgressLabel.Text = $"{fraction * 100:0}% ({remaining:0.0}s)";
     }
 
     public Control GetRecipeDisplayControl(LatheRecipePrototype recipe)

@@ -9,7 +9,7 @@ public sealed partial class NetworkBandwidthComponent : Component
     /// Maximum bytes per second this entity (or router) can forward/process.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public int MaxBps = 100000; // 100 KB/s default
+    public int MaxBps = 250000; // 250 KB/s (~244 KiB/s) default
 
     /// <summary>
     /// Current throughput utilized in the current evaluation window.
