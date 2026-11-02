@@ -1,4 +1,4 @@
-﻿using static Content.Client.Inventory.ClientInventorySystem;
+using static Content.Client.Inventory.ClientInventorySystem;
 
 namespace Content.Client.UserInterface.Controls
 {
@@ -12,7 +12,7 @@ namespace Content.Client.UserInterface.Controls
             FullButtonTexturePath = slotData.FullTextureName;
             Blocked = slotData.Blocked;
             Highlight = slotData.Highlighted;
-            StorageTexturePath = "Slots/back";
+            StorageTexturePath = "Slots/backstore";
             SlotName = slotData.SlotName;
         }
     }

@@ -1,4 +1,4 @@
-﻿using Content.Client._Oxyd.Framework;
+using Content.Client._Oxyd.Framework;
 using Content.Client._Oxyd.UI;
 using Content.Client.UserInterface.Systems.Gameplay;
 using Content.Client.UserInterface.Systems.Hands;

@@ -1,4 +1,4 @@
-﻿using Content.Client._Oxyd.UI;
+using Content.Client._Oxyd.UI;
 using Content.Client.Administration.Managers;
 using Content.Client.Administration.Systems;
 using Content.Client.Administration.UI;

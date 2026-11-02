@@ -205,7 +205,7 @@
     state: optable_idle
   - type: IconSmooth
     # TableBase inherits Corners smoothing that would request state_* the Eris rsi lacks.
-    mode: NoSprite
+    enabled: false
   # Patients can be strapped down for surgery (upstream OperatingTable -> BaseBed).
   - type: Strap
     position: Down

@@ -22,8 +22,8 @@ namespace Content.Client.UserInterface.Controls
         public TextureButton StorageButton { get; }
         public CooldownGraphic CooldownDisplay { get; }
 
-        private SpriteView SpriteView { get; }
-        private EntityPrototypeView ProtoView { get; }
+        protected SpriteView SpriteView { get; }
+        protected EntityPrototypeView ProtoView { get; }
 
         public EntityUid? Entity => SpriteView.Entity;
 
@@ -38,7 +38,7 @@ namespace Content.Client.UserInterface.Controls
                 //this auto registers the button with it's parent container when it's set
                 if (_slotNameSet)
                 {
-                    Logger.Warning("Tried to set slotName after init for:" + Name);
+                    Log.Warning("Tried to set slotName after init for:" + Name);
                     return;
                 }
                 _slotNameSet = true;
@@ -162,7 +162,7 @@ namespace Content.Client.UserInterface.Controls
 
             AddChild(StorageButton = new TextureButton
             {
-                Scale = new Vector2(0.75f, 0.75f),
+                Scale = new Vector2(1f, 1f),
                 HorizontalAlignment = HAlignment.Right,
                 VerticalAlignment = VAlignment.Bottom,
                 Visible = false,

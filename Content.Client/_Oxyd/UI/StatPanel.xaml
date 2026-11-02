@@ -5,13 +5,12 @@
            VerticalExpand="False"
            Orientation="Vertical"
            VerticalAlignment="Top"
-           SeparationOverride="1"
+           SeparationOverride="2"
 >
-    <BoxContainer Orientation="Horizontal" Name="StatMenus" Access="Public" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="1"/>
-    <PanelContainer Name="SeparatedChatPanel" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="16">
-        <PanelContainer.PanelOverride>
-            <graphics:StyleBoxFlat BackgroundColor="#35353B" />
-        </PanelContainer.PanelOverride>
-        <WrapContainer Name="StatContent" Access="Public"></WrapContainer>
+    <BoxContainer Orientation="Horizontal" Name="StatMenus" Access="Public" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="1" Margin="2 0 2 2"/>
+    <PanelContainer Name="SeparatedChatPanel" StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True" SizeFlagsStretchRatio="16">
+        <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
+            <BoxContainer Name="StatContent" Access="Public" Margin="6 4 6 4" Orientation="Vertical" HorizontalExpand="True"/>
+        </ScrollContainer>
     </PanelContainer>
 </ui1:StatPanel>

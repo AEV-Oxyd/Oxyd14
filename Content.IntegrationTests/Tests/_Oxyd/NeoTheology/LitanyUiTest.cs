@@ -13,6 +13,7 @@ using Content.Shared.Implants;
 using Content.Shared.Prayer;
 using Content.Shared.Storage;
 using Content.Shared.UserInterface;
+using Content.Shared.DoAfter;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -228,10 +229,9 @@ public sealed class LitanyUiTest : GameTest
             var result = _litany.TestingHandleBeginMessage(book, body, msg);
 
             Assert.That(result.Success, Is.True, result.Reason?.Id ?? "begin failed");
-            Assert.That(_litany.TestingPendingCount, Is.EqualTo(1));
-            Assert.That(SComp<CruciformBearerComponent>(body).PendingRequestId, Is.Not.Null);
-
-            _litany.TryCancelLitany(body, SComp<CruciformBearerComponent>(body).PendingRequestId!);
+            // A plain rite is chanted from the book (a do-after); speech then starts the cast.
+            Assert.That(SComp<DoAfterComponent>(body).DoAfters, Is.Not.Empty);
+            Assert.That(_litany.TestingPendingCount, Is.EqualTo(0));
         });
     }
 

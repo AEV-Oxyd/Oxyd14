@@ -12,7 +12,7 @@ namespace Content.Server._Oxyd.Ntos;
 public sealed partial class OxydBountyCartridgeSystem : EntitySystem
 {
     [Dependency] private CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private StationSystem _station = default!;
+    [Dependency] private ServerStationSystem _station = default!;
     [Dependency] private IPrototypeManager _protos = default!;
 
     [SubscribeLocalEvent]

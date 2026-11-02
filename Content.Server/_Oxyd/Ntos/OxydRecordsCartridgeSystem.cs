@@ -12,7 +12,7 @@ namespace Content.Server._Oxyd.Ntos;
 public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
 {
     [Dependency] private CartridgeLoaderSystem _cartridges = default!;
-    [Dependency] private StationSystem _station = default!;
+    [Dependency] private ServerStationSystem _station = default!;
     [Dependency] private StationRecordsSystem _records = default!;
 
 

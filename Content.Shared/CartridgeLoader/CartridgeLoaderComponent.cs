@@ -1,4 +1,4 @@
-﻿using Content.Shared._Oxyd.Pda;
+using Content.Shared._Oxyd.Pda;
 using Content.Shared.Containers.ItemSlots;
 using Robust.Shared.GameStates;
 

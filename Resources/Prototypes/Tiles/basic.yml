@@ -27,6 +27,17 @@
   itemDrop: FloorTileItemSteelPavement
 
 - type: tile
+  id: FloorSteelMono
+  parent: BaseStationTile
+  name: tiles-steel-floor-mono
+  sprite: /Textures/Oxyd/erisported/steel_monofloor_base.png
+  variants: 1
+  borderSprites: /Textures/Oxyd/erisported/steel_monofloor.rsi
+  footstepSounds:
+    collection: FootstepTile
+  itemDrop: FloorTileItemSteelMono
+
+- type: tile
   id: FloorSteelPavementVertical
   parent: BaseStationTile
   name: tiles-steel-floor-pavement-vertical

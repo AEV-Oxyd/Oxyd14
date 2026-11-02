@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Client._Oxyd.UI;
 using Content.Client.Gameplay;
 using Content.Client.Hands.Systems;
 using Content.Client.Interaction;
@@ -31,6 +32,7 @@ public class MouseDownEvent
     public EntityUid clickedOn;
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public bool InViewport = false;
 }
 
 // targeted event , raised on user, used item and the target(if any)
@@ -41,6 +43,7 @@ public class UsingMouseDownEvent
     public EntityUid user;
     public EntityCoordinates clickCoords;
     public EntityUid activeHeld;
+    public bool InViewport = false;
 }
 // raised when the mouse gets released
 public class MouseUpEvent
@@ -48,6 +51,7 @@ public class MouseUpEvent
     public EntityUid clickedOn;
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public bool InViewport = false;
 }
 
 // targeted event , raised on user, used item and the target(if any)
@@ -58,6 +62,7 @@ public class UsingMouseUpEvent
     public EntityUid user;
     public EntityCoordinates clickCoords;
     public EntityUid activeHeld;
+    public bool InViewport = false;
 }
 // raised for every tile-change(on player, on held item if any, on crossed entities)
 public class MouseCrossEvent
@@ -67,6 +72,7 @@ public class MouseCrossEvent
     public EntityUid activeHolding;
     public List<EntityUid> holding = new();
     public MapCoordinates clickCoords;
+    public bool InViewport = false;
 }
 // raised when clicking with alt held
 public class MouseAltClickEvent
@@ -74,12 +80,14 @@ public class MouseAltClickEvent
     public EntityUid clickedOn;
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public bool InViewport = false;
 }
 
 public class MouseAltClickedEvent
 {
     public EntityUid user;
     public EntityCoordinates clickCoords;
+    public bool InViewport = false;
 }
 
 
@@ -95,6 +103,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
     [Dependency] private  IPlayerManager _playerManager = default!;
     [Dependency] private  IStateManager _stateManager = default!;
     [Dependency] private  IUserInterfaceManager _uiManager = default!;
+    private OxTagController tags = default!;
     [Dependency] private  IGameTiming _timing = default!;
     public bool mousedDown = false;
     public bool altDown = false;
@@ -102,10 +111,11 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
     /// <inheritdoc/>
     public override void Initialize()
     {
+        tags = _uiManager.GetUIController<OxTagController>();
         CommandBinds.Builder
             .BindBefore(
                 EngineKeyFunctions.Use,
-                new PointerStateInputCmdHandler(HandleMouseEnabled, HandleMouseDisabled, false),
+                new PointerInputCmdHandler(HandleMouse, false, false),
                 typeof(SharedInteractionSystem),
                 typeof(ActionUIController),
                 typeof(DragDropSystem),
@@ -194,12 +204,31 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
         altDown = false;
     }
 
-    public bool HandleMouseEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    public bool HandleMouse(in PointerInputCmdHandler.PointerInputCmdArgs args)
+    {
+        bool inView = false;
+        if (_uiManager.MouseGetControl(args.ScreenCoordinates) is Control value)
+        {
+            if (tags.getControl("Viewport").Children.Contains(value))
+                inView = true;
+        }
+
+        Log.Debug($"Mouse: {inView}");
+        var handled = false;
+        if(args.State == BoundKeyState.Down)
+            handled = HandleMouseDisabled(args.Session, args.Coordinates, args.EntityUid, inView);
+        else
+            handled = HandleMouseEnabled(args.Session, args.Coordinates, args.EntityUid, inView);
+        return handled;
+    }
+
+    public bool HandleMouseEnabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid, bool viewport = false)
     {
         if (session is null)
             return false;
         if (session.AttachedEntity is null)
             return false;
+        
         //Log.Debug($"Mouse enabled");
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
@@ -212,6 +241,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 clickedOn = mouseData.lastClicked,
                 user = session.AttachedEntity.Value,
                 clickCoords = mouseData.mouseEntity,
+                InViewport = viewport,
             }
         };
         RaiseLocalEvent(ev);
@@ -226,6 +256,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                     clickedOn = mouseData.lastClicked,
                     user = session.AttachedEntity.Value,
                     clickCoords = mouseData.mouseEntity,
+                    InViewport = viewport,
                 }
             };
             RaiseLocalEvent(evAlt);
@@ -237,6 +268,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 {
                     user = session.AttachedEntity.Value,
                     clickCoords = mouseData.mouseEntity,
+                    InViewport = viewport,
                 }
             };
             RaiseLocalEvent(mouseData.lastClicked, evAltClicked);
@@ -256,6 +288,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 holding = heldItems,
                 clickCoords = mouseData.mouseEntity,
                 activeHeld = active.Value,
+                InViewport = viewport,
             }
         };
         RaiseLocalEvent(active.Value, targetedEvent);
@@ -267,7 +300,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
         //return targetedEvent.Execute();
     }
 
-    public bool HandleMouseDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    public bool HandleMouseDisabled(ICommonSession? session, EntityCoordinates coords, EntityUid uid, bool viewport = false)
     {
         if (session is null)
             return false;
@@ -283,6 +316,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 clickedOn = mouseData.lastClicked,
                 user = session.AttachedEntity.Value,
                 clickCoords = mouseData.mouseEntity,
+                InViewport = viewport,
             }
         };
         RaiseLocalEvent(evUp);
@@ -301,6 +335,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 holding = heldItems,
                 clickCoords = mouseData.mouseEntity,
                 activeHeld = active.Value,
+                InViewport = viewport,
             }
         };
         RaiseLocalEvent(active.Value, targetedEvent);

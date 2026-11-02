@@ -1,10 +1,10 @@
 using System.Text;
 using Content.Server.CartridgeLoader.Cartridges;
 using Content.Server.Cargo.Systems;
-using Content.Server.DeviceLinking.Components;
-using Content.Server.DeviceLinking.Systems;
-using Content.Server.DeviceNetwork.Components;
-using Content.Server.Medical.Components;
+using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Systems;
+using Content.Shared.DeviceNetwork.Components;
+using Content.Shared.Medical.HealthAnalyzer;
 using Content.Shared._Oxyd.Pda;
 using Content.Shared.Atmos.Components;
 using Content.Shared.CartridgeLoader;

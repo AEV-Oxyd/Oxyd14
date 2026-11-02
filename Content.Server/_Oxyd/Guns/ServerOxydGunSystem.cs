@@ -5,6 +5,7 @@ using System.Reflection;
 using Content.Server._Crescent.HullrotGunSystem;
 using Content.Server.Hands.Systems;
 using Content.Server.Players.RateLimiting;
+using Content.Shared;
 using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
@@ -31,6 +32,7 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Guns;
 
+public record struct QueuedClientInterpret(ClientSideInterpretingFiremode Args, ICommonSession Session);
 
 /// <summary>
 /// This handles...
@@ -72,10 +74,10 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         SubscribeLocalEvent<OxydMagazineComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydRevolvingChamberComponent, ComponentGetStateAttemptEvent>(onTryStateGeneric);
         SubscribeLocalEvent<OxydHandheldGunComponent, DroppedEvent>(onDrop);
-        _netManager.RegisterNetMessage<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
-        _netManager.RegisterNetMessage<ClientSideInterpretingFiremode>(OnClientInterpret);
-        _netManager.RegisterNetMessage<FiremodeClientsideFiredEvent>(OnClientFireGun);
-        _netManager.RegisterNetMessage<FiremodeMouseStatus>(OnClientMouseInform);
+        SubscribeNetworkEvent<ClientSideDoneInterpretingFiremode>(OnClientEndInterpret);
+        SubscribeNetworkEvent<ClientSideInterpretingFiremode>(OnClientInterpret);
+        SubscribeNetworkEvent<FiremodeClientsideFiredEvent>(OnClientFireGun);
+        SubscribeNetworkEvent<FiremodeMouseStatus>(OnClientMouseInform);
         SubscribeNetworkEvent<FiremodeChangedEvent>(OnClientFiremodeChange);
         SubscribeNetworkEvent<GunSafetyChangedEvent>(OnClientSafetyChange);
         //SubscribeLocalEvent<FiremodeProjectilesFiredEvent>(ev => Dirty(ev.gun));
@@ -119,8 +121,8 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
         {
             switch (thing)
             {
-                case ClientSideInterpretingFiremode ev:
-                    DoNetMessage(ev, 0);
+                case QueuedClientInterpret ev:
+                    DoNetMessage(ev.Args, 0, ev.Session);
                     break;
                 case ClientSideDoneInterpretingFiremode ev:
                     DoNetMessage(ev, 0);
@@ -204,13 +206,18 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
 
     public void onMagazineInitialized(Entity<OxydMagazineComponent> ent, ref MapInitEvent args)
     {
-        var cnt = _containerSystem.GetContainer(ent, oxydContents);
-        /*
+        var storeKey = string.IsNullOrEmpty(ent.Comp.storeKey) ? oxydContents : ent.Comp.storeKey;
+        var cnt = _containerSystem.EnsureContainer<Robust.Shared.Containers.Container>(ent, storeKey);
+        if (!conts.GetContainer(ent, storeKey, out var oxydCont))
+            oxydCont = conts.CreateContainer(ent, storeKey, (int)ent.Comp.maxBullets);
+
         foreach (var bullet in cnt.ContainedEntities)
         {
-            ent.Comp.loadedBullets.Push(GetNetEntity(bullet));
+            oxydCont.insert(bullet, GetNetEntity(bullet));
         }
-        */
+
+        if (TryComp<OxydPredContComponent>(ent, out var predComp))
+            Dirty(ent, predComp);
         Dirty(ent);
     }
 
@@ -235,12 +242,16 @@ public sealed partial class ServerOxydGunSystem : SharedOxydGunSystem
             state.shooterSession = null;
         }
         Dirty(target);
+        if (TryComp<OxydPredContComponent>(target, out var gunPredCont))
+            Dirty(target.Owner, gunPredCont);
         foreach(var comp in AllComps<BaseGunProvider>(target.Owner))
             Dirty(target.Owner, comp);
         foreach (var container in _containerSystem.GetAllContainers(target))
         {
             foreach (var ent in container.ContainedEntities)
             {
+                if (TryComp<OxydPredContComponent>(ent, out var entPredCont))
+                    Dirty(ent, entPredCont);
                 foreach(var comp in AllComps<BaseGunProvider>(ent))
                     Dirty(ent, comp);
             }

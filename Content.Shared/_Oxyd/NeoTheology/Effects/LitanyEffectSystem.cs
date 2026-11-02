@@ -26,7 +26,7 @@ using Content.Shared.Mobs.Systems;
 using Content.Shared.Nutrition.Components;
 using Content.Shared.Nutrition.EntitySystems;
 using Content.Shared.Popups;
-using Content.Shared.Station;
+using Content.Shared.Station.Systems;
 using Content.Shared.Whitelist;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
@@ -64,7 +64,7 @@ public sealed partial class LitanyEffectSystem : EntitySystem
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SatiationSystem _satiation = default!;
     [Dependency] private SharedSkillSystem _skill = default!;
-    [Dependency] private SharedStationSystem _stations = default!;
+    [Dependency] private StationSystem _stations = default!;
     [Dependency] private SharedTransformSystem _xform = default!;
     [Dependency] private EntityWhitelistSystem _whitelist = default!;
     [Dependency] private IRobustRandom _random = default!;

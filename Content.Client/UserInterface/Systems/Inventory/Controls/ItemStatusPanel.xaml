@@ -7,19 +7,17 @@
     <PanelContainer Name="Panel">
         <PanelContainer.PanelOverride>
             <graphics:StyleBoxTexture
-                PatchMarginBottom="4"
-                PatchMarginTop="6"
                 TextureScale="2 2"
                 Mode="Tile"/>
         </PanelContainer.PanelOverride>
     </PanelContainer>
     <PanelContainer Name="HighlightPanel">
         <PanelContainer.PanelOverride>
-            <graphics:StyleBoxTexture PatchMarginBottom="4" PatchMarginTop="6" TextureScale="2 2">
+            <graphics:StyleBoxTexture TextureScale="1 1">
             </graphics:StyleBoxTexture>
         </PanelContainer.PanelOverride>
     </PanelContainer>
-    <BoxContainer Name="Contents" Orientation="Vertical" Margin="2 6 2 4" RectClipContent="True">
+    <BoxContainer Name="Contents" Orientation="Vertical" Margin="2 2 2 2" RectClipContent="True">
         <BoxContainer Name="StatusContents" Orientation="Vertical" VerticalExpand="True" VerticalAlignment="Bottom" />
         <Control>
             <Label Name="NoItemLabel" ClipText="True" StyleClasses="ItemStatusNotHeld" Align="Left" Text="{Loc 'item-status-not-held'}" />

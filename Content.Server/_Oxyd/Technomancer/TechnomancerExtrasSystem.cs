@@ -61,7 +61,7 @@ public sealed partial class TechnomancerExtrasSystem : EntitySystem
                 Group = "SMES",
             };
             if (TryComp<BatteryComponent>(uid, out var bat) && bat.MaxCharge > 0)
-                row.ChargePercent = (int)(_battery.GetCharge(uid) / bat.MaxCharge * 100f);
+                row.ChargePercent = (int)(_battery.GetCharge((uid, bat)) / bat.MaxCharge * 100f);
             if (TryComp<PowerNetworkBatteryComponent>(uid, out var net))
             {
                 row.InputEnabled = net.CanCharge;

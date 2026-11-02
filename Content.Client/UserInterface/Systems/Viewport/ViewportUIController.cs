@@ -1,3 +1,4 @@
+using Content.Client._Oxyd.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.Systems.Gameplay;
 using Content.Shared.CCVar;
@@ -13,12 +14,13 @@ namespace Content.Client.UserInterface.Systems.Viewport;
 public sealed partial class ViewportUIController : UIController
 {
     [Dependency] private IEyeManager _eyeManager = default!;
+    [Dependency] private OxTagController tags = default!;
     [Dependency] private IPlayerManager _playerMan = default!;
     [Dependency] private IEntityManager _entMan = default!;
     [Dependency] private IConfigurationManager _configurationManager = default!;
     public static readonly Vector2i ViewportSize = (EyeManager.PixelsPerMeter * 21, EyeManager.PixelsPerMeter * 15);
     public const int ViewportHeight = 15;
-    private MainViewport? Viewport => UIManager.ActiveScreen?.GetWidget<MainViewport>();
+    private MainViewport? Viewport => (MainViewport) tags.getControl( "Viewport");
 
     public override void Initialize()
     {

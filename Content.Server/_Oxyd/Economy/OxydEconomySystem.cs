@@ -3,7 +3,7 @@ using System.Linq;
 using Content.Server._Oxyd.Framework.JobsAndSpawning;
 using Content.Server.Cargo.Systems;
 using Content.Server.Chat.Systems;
-using Content.Server.GameTicking.Events;
+using Content.Shared.GameTicking.Events;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Cargo.Components;
@@ -28,7 +28,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
     [Dependency] private IRobustRandom _random = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private CargoSystem _cargo = default!;
-    [Dependency] private StationSystem _station = default!;
+    [Dependency] private ServerStationSystem _station = default!;
     [Dependency] private InventorySystem _inventory = default!;
     [Dependency] private ChatSystem _chat = default!;
 
@@ -93,7 +93,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         {
             var balance = dept.StartingBalance;
             if (dept.CargoAccount is { } cargoAccount && station != null &&
-                _cargo.TryGetAccount(station.Value, cargoAccount, out var cargoBalance))
+                _cargo.TryGetAccount(station.Value.Owner, cargoAccount, out var cargoBalance))
                 balance = cargoBalance;
 
             var acc = CreateAccount(ent,
@@ -416,7 +416,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
             return;
 
         var station = _station.GetStations().FirstOrNull();
-        if (station == null || !TryComp<StationBankAccountComponent>(station.Value, out var bank))
+        if (station == null || !TryComp<StationBankAccountComponent>(station.Value.Owner, out var bank))
             return;
 
         var synced = Bank.Comp.CargoSyncedBalance;
@@ -424,7 +424,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (delta == 0)
             return;
 
-        _cargo.UpdateBankAccount((station.Value, bank), delta, (ProtoId<CargoAccountPrototype>)acc.DepartmentId, true);
+        _cargo.UpdateBankAccount((station.Value.Owner, bank), delta, (ProtoId<CargoAccountPrototype>)acc.DepartmentId, true);
         synced[acc.AccountNumber] = acc.Balance;
     }
 
@@ -437,7 +437,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (station == null)
             return;
 
-        if (_cargo.TryGetAccount(station.Value, acc.DepartmentId, out var bal))
+        if (_cargo.TryGetAccount(station.Value.Owner, acc.DepartmentId, out var bal))
         {
             acc.Balance = bal;
             Bank.Comp.CargoSyncedBalance[acc.AccountNumber] = bal;

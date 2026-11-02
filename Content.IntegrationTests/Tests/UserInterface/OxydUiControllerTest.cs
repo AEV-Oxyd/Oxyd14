@@ -18,7 +18,7 @@ public sealed class OxydUiControllerTest : GameTest
         await Client.WaitAssertion(() =>
         {
             var ui = Client.ResolveDependency<IUserInterfaceManager>();
-            var scaler = ui.GetUIController<UIStyler>();
+            var scaler = ui.GetUIController<OxydStyler>();
             Assert.DoesNotThrow(() =>
                 ui.GetUIController<ViewportUIController>().FrameUpdate(new FrameEventArgs(0)));
             Assert.DoesNotThrow(() => scaler.FrameUpdate(new FrameEventArgs(0)));

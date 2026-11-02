@@ -78,8 +78,8 @@ public sealed partial class ArmamentsPrinterSystem : EntitySystem
         if (data.RequireInputValidation)
         {
             var attempt = new BoundUserInterfaceMessageAttempt(args.User, uid, ArmamentsPrinterUiKey.Key, new OpenBoundInterfaceMessage());
-            RaiseLocalEvent(attempt);
-            RaiseLocalEvent(uid, attempt);
+            RaiseLocalEvent(ref attempt);
+            RaiseLocalEvent(uid, ref attempt);
             if (attempt.Cancelled)
                 return;
         }

@@ -10,13 +10,14 @@ using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.UI;
 
-public sealed class QuickInventoryStorage : Container
+public sealed partial class QuickInventoryStorage : Container
 {
     [Dependency] private IEntityManager entityManager = default!;
-    private UIStyler styler = default!;
+    private OxydStyler styler = default!;
     public Entity<StorageComponent> storage = new Entity<StorageComponent>();
     public Dictionary<EntityUid, SpriteView> existing = new ();
     public List<EntityUid> contained = new List<EntityUid>();
@@ -26,7 +27,7 @@ public sealed class QuickInventoryStorage : Container
     public QuickInventoryStorage()
     {
         IoCManager.InjectDependencies(this);
-        styler = IoCManager.Resolve<IUserInterfaceManager>().GetUIController<UIStyler>();
+        styler = IoCManager.Resolve<IUserInterfaceManager>().GetUIController<OxydStyler>();
         containerRender = new SpriteView(storage.Owner, entityManager) {Scale = new Vector2(2f)};
         AddChild(containerRender);
     }
@@ -45,10 +46,23 @@ public sealed class QuickInventoryStorage : Container
 
     public void UpdateContained()
     {
-        if (!storage.Owner.IsValid() || entityManager.Deleted(storage) || storage.Comp.Container is not { } storageContainer)
+        if (IoCManager.Resolve<IGameTiming>().ApplyingState)
+            return;
+
+        if (entityManager.Deleted(storage) || storage.Comp.LifeStage == ComponentLifeStage.Deleted)
+        {
             contained.Clear();
+        } 
+        else if (storage.Comp?.Container?.ContainedEntities is { } list)
+        {
+            contained = list.ToList();
+        }
         else
-            contained = storageContainer.ContainedEntities.ToList();
+        {
+            contained.Clear();
+            return;
+        }
+
         foreach (var ent in contained)
         {
             if (existing.TryGetValue(ent, out var _))
@@ -118,7 +132,7 @@ public sealed class QuickInventoryStorage : Container
 
             }
         }
-        var finalBox = new UIBox2(0f, 0f, Math.Max((bc/2+bc%2 ) * 32f + styler.sideTextWidth * 2, 64f), 64);
+        var finalBox = new UIBox2(0f, 0f, Math.Max((bc/2+bc%2 ) * 32f + styler.sideTextWidth * 2, 64f+styler.sideTextWidth*2), 64);
         containerRender.Arrange(finalBox);
         return finalBox.BottomRight;
     }

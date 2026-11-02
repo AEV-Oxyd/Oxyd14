@@ -14,7 +14,7 @@ namespace Content.Client._Oxyd.NeoTheology;
 /// </summary>
 public sealed partial class NtDiscipleHudSystem : EquipmentHudSystem<NtDiscipleHudComponent>
 {
-    private static readonly ProtoId<SecurityIconPrototype> DiscipleIcon = "OxydNtDiscipleIcon";
+    private static readonly ProtoId<StatusIconPrototype> DiscipleIcon = "OxydNtDiscipleIcon";
 
     [SubscribeLocalEvent]
     private void OnGetStatusIcons(Entity<CruciformBearerComponent> ent, ref GetStatusIconsEvent args)

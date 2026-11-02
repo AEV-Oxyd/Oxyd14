@@ -3,7 +3,7 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: auto
-  providerId: Magazine
+  providerId: defaultMagazine
   addedInaccuracyMaximum: 0
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg
@@ -25,7 +25,7 @@
   icon:
     sprite: /Textures/Oxyd/erisported/gunactions16.rsi
     state: auto
-  providerId: Magazine
+  providerId: defaultMagazine
   addedInaccuracyMaximum: 0
   fireSound:
     path: /Audio/Weapons/Guns/Gunshots/c-20r.ogg

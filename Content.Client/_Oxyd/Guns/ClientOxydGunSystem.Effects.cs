@@ -1,7 +1,6 @@
 using Content.Client._Oxyd.Framework;
 using Content.Shared._Oxyd.OxydGunSystem;
 using Robust.Shared.Map;
-using Lidgren.Network;
 
 namespace Content.Client._Oxyd.OxydGunSystem;
 
@@ -15,7 +14,7 @@ public sealed partial class ClientOxydGunSystem
         //if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
         //    return;
         Log.Debug($"Sending mouse data at {_gameTiming.RealTime}");
-        _netManager.ClientSendMessage(new FiremodeMouseStatus()
+        RaiseNetworkEvent(new FiremodeMouseStatus()
         {
             clientTick = _gameTiming.CurTick,
             gun = GetNetEntity(gun.Owner),
@@ -113,7 +112,7 @@ public sealed partial class ClientOxydGunSystem
         }
         _charge.applyMultiplier(returnedList, _charge.getMultiplier(gun.Owner));
         //Log.Warning($"Trimis event cu datele {gun} , {GetNetEntity(gun)} , {mouseData.mouseMap}, {firemodePrototype.currentStep}");
-        _netManager.ClientSendMessage(new FiremodeClientsideFiredEvent()
+        RaiseNetworkEvent(new FiremodeClientsideFiredEvent()
         {
             gun = GetNetEntity(gun),
             shotFrom = GetNetCoordinates(_transformSystem.ToCoordinates(shootingPos)),

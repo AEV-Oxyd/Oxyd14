@@ -1,5 +1,5 @@
-using Content.Server.DeviceLinking.Components;
-using Content.Server.DeviceLinking.Systems;
+using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared._Oxyd.Ntos;
 using Content.Shared._Oxyd.Pda;
 using Content.Shared.CartridgeLoader;

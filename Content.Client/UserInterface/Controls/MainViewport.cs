@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Content.Client.Viewport;
 using Content.Shared.CCVar;
 using Robust.Client.UserInterface;
@@ -76,8 +76,6 @@ namespace Content.Client.UserInterface.Controls
                 AlwaysRender = true,
                 RenderScaleMode = ScalingViewportRenderScaleMode.CeilInt,
                 MouseFilter = MouseFilterMode.Stop,
-                RectDrawClipMargin = 0,
-                RectClipContent = false,
             };
 
             AddChild(Viewport);

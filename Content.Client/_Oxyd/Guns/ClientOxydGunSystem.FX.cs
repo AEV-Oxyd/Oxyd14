@@ -60,40 +60,46 @@ public partial class ClientOxydGunSystem
 
     public override void doVisUpdate(EntityUid gun)
     {
-        updateGunIcon((gun, Comp<OxydGunComponent>(gun)));
+        if (!TryComp<OxydGunComponent>(gun, out var gunComp))
+            return;
+        updateGunIcon((gun, gunComp));
     }
 
     public void updateGunIcon(Entity<OxydGunComponent> target)
     {
-        var spriteComp = Comp<SpriteComponent>(target.Owner);
+        if (!TryComp<SpriteComponent>(target.Owner, out var spriteComp))
+            return;
         foreach (var key in Enum.GetValues<GVis>())
         {
-            if (!_spriteSystem.LayerMapTryGet(target.Owner, key, out var layer, false))
+            if (!_spriteSystem.LayerMapTryGet((target.Owner, spriteComp), key, out var layer, false))
             {
                 var i = spriteComp.AllLayers.Count();
                 var l = _spriteSystem.AddBlankLayer((target, spriteComp), i);
-                _spriteSystem.LayerMapSet(target.Owner, key, i);
+                _spriteSystem.LayerMapSet((target.Owner, spriteComp), key, i);
             }
         }
 
         var magComp = CompOrNull<OxydMagazineChamberComponent>(target.Owner);
         if (magComp is not null)
         {
-            /*
-            var i = _spriteSystem.LayerMapGet(target.Owner, magComp.magAbove ? GVis.MagAbove : GVis.MagUnder);
-            _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
-            var magaz = magComp.magazineSlot.FirstOrDefault();
-            if (magaz is not null && magaz.HasItem)
+            var i = _spriteSystem.LayerMapGet((target.Owner, spriteComp), magComp.magAbove ? GVis.MagAbove : GVis.MagUnder);
+            _spriteSystem.LayerSetRsiState((target.Owner, spriteComp), i, RSI.StateId.Invalid);
+            var firstProvider = magComp.providers.Values.FirstOrDefault();
+            if (firstProvider is not null &&
+                conts.GetContainer(target.Owner, firstProvider.magstore, out var magCont) &&
+                magCont.contained.Any())
             {
-                var magent = (EntityUid)magaz.ContainerSlot!.ContainedEntity!;
-                // maybe in the future full sprite baking? SPCR 2026
-                _spriteSystem.LayerSetRsi(target.Owner, i, _spriteSystem.LayerGetEffectiveRsi(magent, 0), _spriteSystem.LayerGetRsiState(magent, 0));
+                var magent = magCont.contained.First();
+                if (Exists(magent) && TryComp<SpriteComponent>(magent, out _))
+                {
+                    // maybe in the future full sprite baking? SPCR 2026
+                    _spriteSystem.LayerSetRsi((target.Owner, spriteComp), i, _spriteSystem.LayerGetEffectiveRsi(magent, 0), _spriteSystem.LayerGetRsiState(magent, 0));
+                }
             }
             else
             {
-                _spriteSystem.LayerSetRsiState(target.Owner, i, RSI.StateId.Invalid);
+                _spriteSystem.LayerSetRsiState((target.Owner, spriteComp), i, RSI.StateId.Invalid);
             }
-            */
         }
 
         items.VisualsChanged(target.Owner);

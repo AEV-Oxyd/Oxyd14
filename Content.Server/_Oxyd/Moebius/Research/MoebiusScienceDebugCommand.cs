@@ -32,7 +32,7 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     [CommandImplementation("anchor")]
     public void Anchor(IInvocationContext ctx, EntityUid ent)
     {
-        Transform(ent).Anchored = true;
+        GetSys<SharedTransformSystem>().AnchorEntity(ent);
         ctx.WriteLine($"moebius: anchored {ent}");
     }
 
