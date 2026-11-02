@@ -20,6 +20,7 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
     [Dependency] private PdaSystem _pdaSystem = default!;
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private Content.Shared.CartridgeLoader.Cartridges.NotekeeperCartridgeSystem _notekeeperSystem = default!;
 
     private string? _viewedFileName;
     private string? _viewedFileContent;
@@ -32,20 +33,17 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
 
         SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
         SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
-        SubscribeLocalEvent<FileSystemComponent, FileSystemChangedEvent>(OnFileSystemChanged);
+        SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeRelayedEvent<FileSystemChangedEvent>>(OnRelayedFileSystemChanged);
     }
 
-    private void OnFileSystemChanged(EntityUid uid, FileSystemComponent comp, ref FileSystemChangedEvent args)
+    private void OnRelayedFileSystemChanged(EntityUid uid, FileBrowserCartridgeComponent comp, ref CartridgeRelayedEvent<FileSystemChangedEvent> args)
     {
-        _pdaSystem.UpdatePdaUi(uid);
+        var loaderUid = args.Loader.Owner;
+        _pdaSystem.UpdatePdaUi(loaderUid);
 
-        if (!TryComp<CartridgeLoaderComponent>(uid, out var loader))
-            return;
-
-        if (loader.ActiveProgram != null &&
-            TryComp<FileBrowserCartridgeComponent>(loader.ActiveProgram.Value, out var browserComp))
+        if (args.Loader.Comp.ActiveProgram == uid)
         {
-            UpdateUiState(loader.ActiveProgram.Value, uid, browserComp);
+            UpdateUiState(uid, loaderUid, comp);
         }
     }
 
@@ -143,8 +141,21 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
                 break;
 
             case FileBrowserAction.RunProgram:
-                if (TryComp<FileSystemComponent>(loaderUid, out var runFs) &&
-                    _fileSystem.TryGetFile<VirtualFile>(loaderUid, msg.Path, out var runFile, runFs))
+                VirtualFile? runFile = null;
+                if (msg.Path.StartsWith("/disk/") || comp.CurrentDirectory.StartsWith("/disk"))
+                {
+                    if (TryGetDisk(loaderUid, out var dUid, out var dFs, out _))
+                    {
+                        var searchPath = ResolveDiskSearchPath(dFs, msg.Path);
+                        _fileSystem.TryGetFile(dUid, searchPath, out runFile, dFs);
+                    }
+                }
+                else if (TryComp<FileSystemComponent>(loaderUid, out var runFs))
+                {
+                    _fileSystem.TryGetFile(loaderUid, msg.Path, out runFile, runFs);
+                }
+
+                if (runFile != null)
                 {
                     if (runFile is ProgramVirtualFile prog)
                     {
@@ -170,6 +181,27 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
                             else
                             {
                                 comp.StatusMessage = $"Program cartridge '{prog.ProgramId}' not loaded.";
+                            }
+                        }
+                    }
+                    else if (runFile is TextVirtualFile)
+                    {
+                        if (TryComp<CartridgeLoaderComponent>(loaderUid, out var cLoader))
+                        {
+                            var notekeeperProg = _cartridgeLoader.GetAllPrograms(loaderUid)
+                                .FirstOrDefault(p => HasComp<Content.Shared.CartridgeLoader.Cartridges.NotekeeperCartridgeComponent>(p));
+
+                            if (notekeeperProg != default && TryComp<Content.Shared.CartridgeLoader.Cartridges.NotekeeperCartridgeComponent>(notekeeperProg, out var nkComp))
+                            {
+                                nkComp.CurrentFilePath = msg.Path;
+                                Dirty(notekeeperProg, nkComp);
+                                _cartridgeLoader.ActivateProgram((loaderUid, cLoader), notekeeperProg);
+                                _notekeeperSystem.UpdateUiState(notekeeperProg, loaderUid, nkComp);
+                                return;
+                            }
+                            else
+                            {
+                                comp.StatusMessage = "Notekeeper program not available to open text files.";
                             }
                         }
                     }

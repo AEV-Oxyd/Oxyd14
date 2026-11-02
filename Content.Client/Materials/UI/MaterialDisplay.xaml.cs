@@ -23,7 +23,6 @@ public sealed partial class MaterialDisplay : PanelContainer
     [Dependency] private IEntityManager _entityManager = default!;
 
     private readonly MaterialStorageSystem _materialStorage;
-
     private readonly MaterialStorageUIController _materialUIController;
 
     private int _volume;
@@ -31,7 +30,7 @@ public sealed partial class MaterialDisplay : PanelContainer
     public readonly string Material;
     private readonly bool _canEject;
 
-    private readonly List<Button> _buttons = new();
+    private readonly List<EjectButton> _buttons = new();
 
     public MaterialDisplay(EntityUid ent, string material, int volume, bool canEject)
     {
@@ -40,6 +39,19 @@ public sealed partial class MaterialDisplay : PanelContainer
 
         _materialStorage = _entityManager.System<MaterialStorageSystem>();
         _materialUIController = UserInterfaceManager.GetUIController<MaterialStorageUIController>();
+
+        _ent = ent;
+        Material = material;
+        _canEject = canEject;
+
+        RectClipContent = true;
+
+        CountOverlay.FontColorOverride = Color.White;
+        CountOverlay.FontColorShadowOverride = Color.Black;
+        CountOverlay.ShadowOffsetXOverride = 1;
+        CountOverlay.ShadowOffsetYOverride = 1;
+        CountOverlay.OutlineThicknessOverride = 1;
+        CountOverlay.OutlineColorOverride = Color.FromHex("#000000CC");
 
         var spriteSys = _entityManager.System<SpriteSystem>();
         var matProto = _prototypeManager.Index<MaterialPrototype>(material);
@@ -52,17 +64,12 @@ public sealed partial class MaterialDisplay : PanelContainer
             Icon.Texture = spriteSys.Frame0(matProto.Icon);
         }
 
-        Icon.TextureScale = new Vector2(2.5f, 2.5f);
-
-        _ent = ent;
-        Material = material;
-        _canEject = canEject;
         UpdateVolume(volume);
     }
 
     public void UpdateVolume(int volume)
     {
-        if (_volume == volume)
+        if (_volume == volume && _buttons.Count > 0)
             return;
 
         _volume = volume;
@@ -85,68 +92,38 @@ public sealed partial class MaterialDisplay : PanelContainer
 
     public void PopulateButtons(int maxEjectableSheets)
     {
-        foreach (var btn in _buttons)
-        {
-            RemoveChild(btn);
-        }
-        _buttons.Clear();
-
         if (!_canEject)
             return;
 
         int[] sheetsToEjectArray = { 1, 5, 10, 30 };
 
+        if (_buttons.Count == 0)
+        {
+            for (var i = 0; i < sheetsToEjectArray.Length; i++)
+            {
+                var sheetsToEject = sheetsToEjectArray[i];
+                var button = new EjectButton(sheetsToEject);
+
+                button.OnPressed += _ =>
+                {
+                    _materialUIController.SendLatheEjectMessage(_ent, Material, sheetsToEject);
+                };
+
+                if (_prototypeManager.TryIndex<MaterialPrototype>(Material, out var proto))
+                {
+                    button.ToolTip = Loc.GetString("lathe-menu-tooltip-display", ("amount", sheetsToEject), ("material", Loc.GetString(proto.Name)));
+                }
+
+                _buttons.Add(button);
+                AddChild(button);
+            }
+        }
+
         for (var i = 0; i < sheetsToEjectArray.Length; i++)
         {
             var sheetsToEject = sheetsToEjectArray[i];
-
-            var button = new Button
-            {
-                Name = $"{sheetsToEject}",
-                Access = AccessLevel.Public,
-                Text = sheetsToEject.ToString(),
-                Margin = new Thickness(0),
-                StyleBoxOverride = new StyleBoxEmpty(),
-            };
-
-            button.Label.ClipText = false;
-            button.Label.HorizontalAlignment = HAlignment.Center;
-            button.Label.VerticalAlignment = VAlignment.Center;
-            button.Label.Margin = new Thickness(0);
-            button.Label.StyleClasses.Add("LabelSubText");
-
             var canEjectThis = maxEjectableSheets >= sheetsToEject;
-            button.Disabled = !canEjectThis;
-
-            var normalColor = canEjectThis ? Color.White : Color.FromHex("#777777");
-            var hoverColor = Color.FromHex("#00FFFF");
-
-            button.Label.FontColorOverride = normalColor;
-
-            button.OnMouseEntered += _ =>
-            {
-                if (!button.Disabled)
-                    button.Label.FontColorOverride = hoverColor;
-            };
-
-            button.OnMouseExited += _ =>
-            {
-                if (!button.Disabled)
-                    button.Label.FontColorOverride = normalColor;
-            };
-
-            button.OnPressed += _ =>
-            {
-                _materialUIController.SendLatheEjectMessage(_ent, Material, sheetsToEject);
-            };
-
-            if (_prototypeManager.TryIndex<MaterialPrototype>(Material, out var proto))
-            {
-                button.ToolTip = Loc.GetString("lathe-menu-tooltip-display", ("amount", sheetsToEject), ("material", Loc.GetString(proto.Name)));
-            }
-
-            _buttons.Add(button);
-            AddChild(button);
+            _buttons[i].UpdateState(canEjectThis);
         }
     }
 
@@ -154,7 +131,7 @@ public sealed partial class MaterialDisplay : PanelContainer
     {
         var target = new Vector2(80f, 80f);
         Icon.Measure(target);
-        CountBadge.Measure(target);
+        CountOverlay.Measure(target);
 
         var btnSize = new Vector2(target.X / 4f, 20f);
         foreach (var btn in _buttons)
@@ -167,12 +144,12 @@ public sealed partial class MaterialDisplay : PanelContainer
 
     protected override Vector2 ArrangeOverride(Vector2 finalSize)
     {
-        // 1. Icon spans entire tile
-        Icon.Arrange(new UIBox2(0, 0, finalSize.X, finalSize.Y));
+        // 1. Icon fills the tile prominently, slightly raised above the bottom ejection buttons
+        Icon.Arrange(new UIBox2(4, 2, finalSize.X - 4, finalSize.Y - 14));
 
-        // 2. CountBadge in top-left
-        var countSize = CountBadge.DesiredSize;
-        CountBadge.Arrange(new UIBox2(2, 2, 2 + countSize.X, 2 + countSize.Y));
+        // 2. CountOverlay in top-left
+        var countSize = CountOverlay.DesiredSize;
+        CountOverlay.Arrange(new UIBox2(4, 2, 4 + countSize.X, 2 + countSize.Y));
 
         // 3. Ejection buttons fitted across bottom of image
         var btnHeight = 20f;
@@ -183,5 +160,68 @@ public sealed partial class MaterialDisplay : PanelContainer
         }
 
         return finalSize;
+    }
+
+    private sealed class EjectButton : BaseButton
+    {
+        public readonly Label Label;
+        private readonly Color _normalColor = Color.FromHex("#E0E8F0");
+        private readonly Color _hoverColor = Color.FromHex("#00FFFF");
+        private readonly Color _disabledColor = Color.FromHex("#66666666");
+
+        public EjectButton(int amount)
+        {
+            Name = $"{amount}";
+            Access = AccessLevel.Public;
+            Margin = new Thickness(0);
+
+            Label = new Label
+            {
+                Text = amount.ToString(),
+                Align = Label.AlignMode.Center,
+                VAlign = Label.VAlignMode.Center,
+                ClipText = false,
+                FontColorOverride = _normalColor,
+                FontColorShadowOverride = Color.Black,
+                ShadowOffsetXOverride = 1,
+                ShadowOffsetYOverride = 1,
+                OutlineThicknessOverride = 1,
+                OutlineColorOverride = Color.FromHex("#000000AA"),
+            };
+            Label.StyleClasses.Add("LabelSubText");
+            AddChild(Label);
+
+            OnMouseEntered += _ =>
+            {
+                if (!Disabled)
+                    Label.FontColorOverride = _hoverColor;
+            };
+
+            OnMouseExited += _ =>
+            {
+                if (!Disabled)
+                    Label.FontColorOverride = _normalColor;
+            };
+        }
+
+        public void UpdateState(bool canEject)
+        {
+            Disabled = !canEject;
+            DefaultCursorShape = canEject ? CursorShape.Hand : CursorShape.Arrow;
+            Label.FontColorOverride = canEject ? (IsHovered ? _hoverColor : _normalColor) : _disabledColor;
+            Label.OutlineColorOverride = canEject ? Color.FromHex("#000000AA") : Color.FromHex("#00000033");
+        }
+
+        protected override Vector2 MeasureOverride(Vector2 availableSize)
+        {
+            Label.Measure(availableSize);
+            return availableSize;
+        }
+
+        protected override Vector2 ArrangeOverride(Vector2 finalSize)
+        {
+            Label.Arrange(UIBox2.FromDimensions(Vector2.Zero, finalSize));
+            return finalSize;
+        }
     }
 }

@@ -8,13 +8,17 @@
     <PanelContainer Name="Border" StyleClasses="PdaBorderRect" />
     <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
         <!--Heading-->
-        <BoxContainer SetHeight="26" Margin="4 2 8 0" Orientation="Horizontal">
+        <BoxContainer Name="HeadingBar" Access="Public" SetHeight="28" Margin="18 4 18 2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Label Name="OsTitleLabel" Access="Public" Text="NTOS 1.4™" VerticalAlignment="Center" Margin="2 0 0 0" FontColorOverride="#00D4FF" StyleClasses="LabelSubText"/>
+            <Label Name="OsSubtitleLabel" Access="Public" Text=" | Portable Terminal" VerticalAlignment="Center" FontColorOverride="#5a7a8a" StyleClasses="LabelSubText"/>
             <Control HorizontalExpand="True"/>
-            <TextureButton Name="CloseButton" StyleClasses="windowCloseButton"
-                           VerticalAlignment="Center" Margin="0 4 4 0"/>
+            <ContainerButton Name="CloseButton" SetWidth="22" SetHeight="22" VerticalAlignment="Center">
+                <PanelContainer Name="CloseButtonPanel" HorizontalExpand="True" VerticalExpand="True"/>
+                <Label Name="CloseButtonLabel" Text="✕" FontColorOverride="#cfcfd4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </ContainerButton>
         </BoxContainer>
         <!--Content / Physical Screen Inset-->
-        <Control Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">
+        <Control Name="ScreenInsetControl" Access="Public" Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer Name="ContentBorder" StyleClasses="PdaBackground"/>
             <Control Margin="3 3">
                 <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
@@ -24,7 +28,7 @@
         <!--Bottom Bezel with hardware resource status bar-->
         <PanelContainer Name="BezelFooterPanel" Margin="18 1 18 5" SetHeight="24" StyleClasses="PdaBezelFooter">
             <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="8 0" VerticalAlignment="Center">
-                <Label Text="Robust#OS™" VerticalAlignment="Center" Margin="2 0 10 0" StyleClasses="PdaBezelFooterText"/>
+                <Label Text="NTOS 1.4™" VerticalAlignment="Center" Margin="2 0 10 0" StyleClasses="PdaBezelFooterText"/>
                 <Label Name="SystemStatsLabel" Access="Public" VerticalAlignment="Center" HorizontalExpand="True" Margin="4 0" StyleClasses="PdaBezelStatsText"/>
                 <Label Name="AddressLabel" Access="Public" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="4 0" StyleClasses="PdaBezelIdText"/>
             </BoxContainer>

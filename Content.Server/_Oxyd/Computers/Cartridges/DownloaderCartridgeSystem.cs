@@ -360,13 +360,14 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
         }
         else
         {
+            var content = GetDocumentContent(itemId, item.Name, item.Description);
             var tf = new TextVirtualFile
             {
                 Name = name,
                 Extension = ext,
                 Directory = dir,
-                Size = item.Size,
-                TextContent = $"--- {item.Name} ---\n{item.Description}\nSource: Station Central Mainframe\nVerified OK.",
+                Size = Math.Max(item.Size, content.Length),
+                TextContent = content,
                 IsReadOnly = false
             };
             newFile = tf;
@@ -613,7 +614,7 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                 "Documents",
                 "Official guidelines on alert levels, containment, and command protocols.",
                 "/notes/nanotrasen_sop.txt",
-                2400,
+                2560,
                 HasFile("/notes/nanotrasen_sop.txt"),
                 false
             ),
@@ -623,10 +624,241 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                 "Documents",
                 "Standard investigation template for reporting station anomalies and crimes.",
                 "/notes/incident_template.txt",
-                480,
+                1680,
                 HasFile("/notes/incident_template.txt"),
                 false
+            ),
+            new(
+                "doc_medical",
+                "Medical Emergency & Autopsy Protocol",
+                "Documents",
+                "Standard triage procedures, chemical treatment codes, and coroner autopsy reporting.",
+                "/notes/medical_protocol.txt",
+                1840,
+                HasFile("/notes/medical_protocol.txt"),
+                false
+            ),
+            new(
+                "doc_engineering",
+                "Station Engineering & Atmos Safety Code",
+                "Documents",
+                "Operational safety standards for the AME, Singularity/Tesla, and gas leak containment.",
+                "/notes/engineering_code.txt",
+                1720,
+                HasFile("/notes/engineering_code.txt"),
+                false
+            ),
+            new(
+                "doc_cargo",
+                "Cargo Requisition & Import Manifest",
+                "Documents",
+                "Official supply requisition order form and departmental budget authorization template.",
+                "/notes/cargo_manifest_form.txt",
+                1420,
+                HasFile("/notes/cargo_manifest_form.txt"),
+                false
             )
+        };
+    }
+
+    private string GetDocumentContent(string itemId, string itemName, string itemDescription)
+    {
+        return itemId switch
+        {
+            "doc_sop" =>
+@"================================================================================
+           NANOTRASEN STANDARD OPERATING PROCEDURES (SOP)
+                       SECTOR DIRECTIVE 24-B
+================================================================================
+STATION ALERT CODES:
+--------------------------------------------------------------------------------
+* CODE GREEN (Nominal Conditions):
+  - Standard shift operations. No immediate hazards detected.
+  - Security sidearms holstered. Random searches require Head of Security approval.
+  - Inter-departmental boundaries respected. ID checks at checkpoints.
+
+* CODE BLUE (Heightened Threat / Station Hazard):
+  - Confirmed minor threat, escaped dangerous entity, or sabotage detected.
+  - Security personnel authorized to openly carry lethal weapons.
+  - Random bag & ID checks authorized at all department checkpoints.
+  - Non-essential crew advised to remain in their designated departments.
+
+* CODE RED (Critical Emergency / Imminent Danger):
+  - Major hostile incursion, catastrophic breach, or existential threat.
+  - Curfew enforced in maintenance shafts. Unauthorized persons subject to detention.
+  - All departments report status to Command. Emergency Response Team (ERT) may be requested.
+  - Crew must comply with all direct lawful orders from Command personnel.
+
+* CODE DELTA (Station Destruction Imminent):
+  - Self-destruct sequence initiated or irreversible system failure.
+  - Evacuate immediately to escape shuttles and pods. All protocols suspended.
+
+--------------------------------------------------------------------------------
+COMMAND HIERARCHY & CHAIN OF COMMAND:
+--------------------------------------------------------------------------------
+1. Captain (CO) - Absolute command authority over station and personnel.
+2. Head of Personnel (HoP) - Personnel assignments, civilian affairs, acting CO.
+3. Head of Security (HoS) - Station defense, prisoner custody, martial law.
+4. Chief Engineer (CE) - Station integrity, power grid, atmospheric stability.
+5. Research Director (RD) - Technological development, artifact safety, anomaly containment.
+6. Chief Medical Officer (CMO) - Quarantine enforcement, crew health, virology control.
+7. Quartermaster (QM) - Supply logistics, mining operations, cargo budget oversight.
+
+--------------------------------------------------------------------------------
+PRISONER PROCESSING & BRIG PROTOCOLS:
+--------------------------------------------------------------------------------
+1. Detainee Rights:
+   - Every suspect must be informed of the charges brought against them.
+   - Medical attention must be provided immediately for life-threatening injuries.
+   - Detainees may request a defense representative if one is available.
+2. Contraband Confiscation:
+   - Weapons, unauthorized hacking tools, and stolen items must be logged in evidence.
+   - Lawful personal belongings must be safely stored in the prisoner locker.
+3. Sentence Timing:
+   - Minor infractions (Trespass, Petty Theft, Disorderly Conduct): 2-5 minutes.
+   - Moderate infractions (Assault, Grand Theft, Resisting Arrest): 5-10 minutes.
+   - Major infractions (Attempted Murder, Sabotage, Mutiny): Execution or Permabrig.
+================================================================================",
+
+            "doc_incident" =>
+@"================================================================================
+             NANOTRASEN DEPARTMENT OF CORRECTIONS & SECURITY
+                     INCIDENT & CRIME REPORT FORM
+================================================================================
+CASE FILE ID: SEC-IR-______
+DATE / TIMESTAMP: ____________
+REPORTING OFFICER: ____________, [Rank / Title]
+SUPERVISING HEAD: [ ] HoS  [ ] Warden  [ ] Captain
+
+1. INCIDENT CLASSIFICATION:
+   [ ] Contraband / Theft            [ ] Station Sabotage
+   [ ] Physical Assault / Battery     [ ] Corporate Espionage
+   [ ] Unauthorized Syndicate Tech    [ ] Mutiny / Command Insubordination
+   [ ] Other: __________________________________________________________________
+
+2. INVOLVED PARTIES:
+   * PRIMARY SUSPECT:
+     - Name: ____________________________
+     - Job / Assignment: _________________
+     - Location Apprehended: _____________
+     - Status: [ ] Detained  [ ] Released  [ ] Permabrig  [ ] Deceased
+
+   * VICTIMS / WITNESSES:
+     - Victim(s): _____________________________________________________________
+     - Witness(es): ___________________________________________________________
+
+3. EVIDENCE LOG & SEIZED ITEMS:
+   - Item 1: ____________________________ [Locker ID / Evidence Tag: _________]
+   - Item 2: ____________________________ [Locker ID / Evidence Tag: _________]
+   - Item 3: ____________________________ [Locker ID / Evidence Tag: _________]
+
+4. SUMMARY OF EVENTS & OFFICER STATEMENT:
+   (Provide chronological summary of the incident, response, and apprehension):
+   _____________________________________________________________________________
+   _____________________________________________________________________________
+   _____________________________________________________________________________
+
+5. CHARGES FILED & DISPOSITION:
+   - Charge(s): _______________________________________________________________
+   - Brig Time Assigned: _______ minutes
+   - Fine / Restitution: _______ credits
+   - Officer Signature: _______________________
+================================================================================",
+
+            "doc_medical" =>
+@"================================================================================
+              MED-TEK GENERAL MEDICAL & AUTOPSY DIRECTIVES
+================================================================================
+PRIMARY TRIAGE GUIDELINES:
+--------------------------------------------------------------------------------
+1. CODE GREEN (Minor): Low damage (< 30). Treat with dermaline/bicaridine or suture.
+2. CODE YELLOW (Serious): Moderate damage (30-80). Administer stabilizing meds,
+   inaprovaline, and transfer to sleeper/stasis bed.
+3. CODE RED (Critical): High damage (> 80), internal bleeding or organ failure.
+   Immediate surgical intervention required.
+4. CODE BLACK (Deceased): Brain scan for revival eligibility. Apply defib within
+   window or transport to Cryo/Morgue.
+
+--------------------------------------------------------------------------------
+AUTOPSY & CORONER REPORT TEMPLATE:
+--------------------------------------------------------------------------------
+SUBJECT NAME: ____________________________
+AGE / SPECIES: ______ / __________________
+DATE OF DEATH: ____________  TIME: _______
+EXAMINING PHYSICIAN: Dr. _________________
+
+* EXTERNAL EXAMINATION:
+  - Brute Trauma (Blunt / Slash / Pierce): ____________________________________
+  - Burn Trauma (Heat / Chemical / Electrical): _______________________________
+  - Toxin / Suffocation Signs: _______________________________________________
+
+* INTERNAL / TOXICOLOGY FINDINGS:
+  - Detected Blood Chemicals: ________________________________________________
+  - Organ Status (Heart / Lungs / Brain): _____________________________________
+
+* CONCLUSION & CAUSE OF DEATH:
+  - Primary Cause: ___________________________________________________________
+  - Manner: [ ] Natural  [ ] Accidental  [ ] Homicide  [ ] Unknown
+  - Signed: Dr. ___________________________, CMO / Medical Doctor
+================================================================================",
+
+            "doc_engineering" =>
+@"================================================================================
+             STATION ENGINEERING & ATMOSPHERICS SAFETY CODE
+================================================================================
+SECTION I - POWER GENERATION SAFETY:
+--------------------------------------------------------------------------------
+1. Anti-Matter Engine (AME):
+   - Never exceed fuel injection rate beyond stable shielding core rating.
+   - Ensure magnetic containment coils remain above 80% charge at all times.
+2. Particle Accelerator & Singularity / Tesla:
+   - PA must only be energized after containment field emitters are verified ON.
+   - Dual-frequency containment fields must overlap the gravitational center.
+   - In event of loose singularity: SOUND CODE RED, CUT POWER TO PA, EVACUATE.
+3. Solar Arrays:
+   - Maintain tracker calibration algorithms after solar storms.
+
+SECTION II - ATMOSPHERICS & HAZARDOUS GASES:
+--------------------------------------------------------------------------------
+1. Standard Breathable Mix: 78.4 kPa Nitrogen (N2), 21.6 kPa Oxygen (O2).
+2. Plasma (Toxin) Protocol:
+   - Any plasma leak > 0.5 kPa mandates atmospheric seal and hazmat suit entry.
+   - Scrubbers must be switched to 'Scrub All' or targeted Plasma extraction.
+3. Tritium & Hyper-Toroid Combustions:
+   - Tritium burns must be confined to reinforced burn chambers with cooling.
+================================================================================",
+
+            "doc_cargo" =>
+@"================================================================================
+                  CARGO REQUISITION & IMPORT MANIFEST
+================================================================================
+REQUISITION ID: CRG-ORD-______
+REQUESTING DEPARTMENT: ________________________
+ORDERING OFFICER: ____________________________
+APPROVING HEAD: ______________________________
+
+ITEMS REQUESTED:
+[ ] Medical Supplies (Surgical / Pharma Crate)
+[ ] Engineering Parts (Circuit boards / Tools / Metal)
+[ ] Security Equipment (Armor / Non-Lethal / Restraints)
+[ ] Science Materials (Plasma Sheets / Anomaly Gear)
+[ ] Civilian / Kitchen Commodities (Seeds / Livestock / Booze)
+
+ESTIMATED BUDGET: _________ credits
+PAYMENT METHOD: [ ] Department Budget  [ ] Cash / Credits  [ ] Bounty Payout
+
+CARGO TECHNICIAN APPROVAL: _______________________
+QUARTERMASTER SIGN-OFF: __________________________
+SHUTTLE DOCKING DOCK: Cargo Bay 1
+================================================================================",
+
+            _ =>
+$@"================================================================================
+{itemName.ToUpperInvariant()}
+SOURCE: Station Central Repository
+VERIFIED: OK
+================================================================================
+{itemDescription}"
         };
     }
 

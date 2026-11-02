@@ -1,5 +1,4 @@
 <PanelContainer xmlns="https://spacestation14.io"
-                xmlns:gfx="clr-namespace:Robust.Client.Graphics;assembly=Robust.Client"
                 MinSize="80 80"
                 SetSize="80 80"
                 StyleClasses="PanelDeep"
@@ -7,18 +6,12 @@
     <TextureRect Name="Icon"
                  Access="Public"
                  Stretch="KeepAspectCentered"
-                 TextureScale="2.5 2.5"
                  MouseFilter="Ignore" />
 
-    <PanelContainer Name="CountBadge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2 2 0 0" MouseFilter="Ignore">
-        <PanelContainer.PanelOverride>
-            <gfx:StyleBoxEmpty />
-        </PanelContainer.PanelOverride>
-        <Label Name="CountOverlay"
-               Access="Public"
-               Text="0"
-               Margin="2 1"
-               StyleClasses="LabelKeyText"
-               FontColorOverride="#FFFFFF"/>
-    </PanelContainer>
+    <Label Name="CountOverlay"
+           Access="Public"
+           Text="0"
+           StyleClasses="LabelKeyText"
+           FontColorOverride="#FFFFFF"
+           MouseFilter="Ignore" />
 </PanelContainer>

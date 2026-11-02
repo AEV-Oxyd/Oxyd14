@@ -10,18 +10,27 @@ public sealed class TerminalUiState : BoundUserInterfaceState
     public string DeviceGuid { get; }
     public string? SshHost { get; }
     public bool IsPasswordPrompt { get; }
+    public bool IsSshLocalMode { get; }
+    public bool IsScreenAttached { get; }
+    public Content.Shared.PDA.PdaUpdateState? RemotePdaState { get; }
 
     public TerminalUiState(
         List<string> lines,
         string prompt,
         string deviceGuid,
         string? sshHost,
-        bool isPasswordPrompt)
+        bool isPasswordPrompt,
+        bool isSshLocalMode = false,
+        bool isScreenAttached = false,
+        Content.Shared.PDA.PdaUpdateState? remotePdaState = null)
     {
         Lines = lines;
         Prompt = prompt;
         DeviceGuid = deviceGuid;
         SshHost = sshHost;
         IsPasswordPrompt = isPasswordPrompt;
+        IsSshLocalMode = isSshLocalMode;
+        IsScreenAttached = isScreenAttached;
+        RemotePdaState = remotePdaState;
     }
 }

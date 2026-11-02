@@ -1,10 +1,11 @@
 using Content.Shared.CartridgeLoader;
+using Content.Shared.UserInterface;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.PDA
 {
     [Serializable, NetSerializable]
-    public sealed class PdaUpdateState : CartridgeLoaderUiState // WTF is this. what. I ... fuck me I just want net entities to work
+    public sealed class PdaUpdateState : CartridgeLoaderUiState, IBuiNestedState // WTF is this. what. I ... fuck me I just want net entities to work
         // TODO purge this shit
         //AAAAAAAAAAAAAAAA
     {
@@ -27,6 +28,14 @@ namespace Content.Shared.PDA
         public bool IsNetworkSaturated;
         public List<NetEntity> OpenPrograms;
         public BoundUserInterfaceState? CartridgeState;
+        public bool HasCaptainAccess;
+        public string? SshPassword;
+
+        public IEnumerable<BoundUserInterfaceState> GetNestedStates()
+        {
+            if (CartridgeState != null)
+                yield return CartridgeState;
+        }
 
         public PdaUpdateState(
             List<NetEntity> programs,
@@ -49,7 +58,9 @@ namespace Content.Shared.PDA
             List<NetEntity>? openPrograms = null,
             BoundUserInterfaceState? cartridgeState = null,
             bool hasDisk = false,
-            string? diskName = null)
+            string? diskName = null,
+            bool hasCaptainAccess = false,
+            string? sshPassword = null)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
@@ -71,6 +82,8 @@ namespace Content.Shared.PDA
             IsNetworkSaturated = isNetworkSaturated;
             OpenPrograms = openPrograms ?? new();
             CartridgeState = cartridgeState;
+            HasCaptainAccess = hasCaptainAccess;
+            SshPassword = sshPassword;
         }
     }
 

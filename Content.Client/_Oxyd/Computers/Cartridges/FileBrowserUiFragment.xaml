@@ -49,6 +49,7 @@
                 <Label Text="FILE: " StyleClasses="LabelHeading" FontColorOverride="#558899"/>
                 <Label Name="PreviewFileNameLabel" Text="File Preview" StyleClasses="LabelHeading" FontColorOverride="#00D4FF"/>
                 <Control HorizontalExpand="True"/>
+                <Button Name="PreviewEditButton" Text="Open in Notekeeper" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="140"/>
                 <Button Name="PreviewTransferButton" Text="Copy to Disk" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="110"/>
                 <Button Name="ClosePreviewButton" Text="&lt; Back to Files" StyleClasses="ErisHoloButton" SetWidth="120"/>
             </BoxContainer>

@@ -26,6 +26,13 @@
         size: 64
         isReadOnly: true
         textContent: "NTOS-PORTABLE-EDITION-4.2"
+      "/sys/system.log": !type:TextVirtualFile
+        name: system
+        extension: log
+        directory: /sys/
+        size: 128
+        isReadOnly: false
+        textContent: "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n[00:00:00] [SYSTEM] NTOS 1.4™ kernel initialized."
       "/notes/shift_notes.txt": !type:TextVirtualFile
         name: shift_notes
         extension: txt
@@ -133,6 +140,13 @@
         size: 64
         isReadOnly: true
         textContent: "NTOS-TABLET-ENTERPRISE-4.2"
+      "/sys/system.log": !type:TextVirtualFile
+        name: system
+        extension: log
+        directory: /sys/
+        size: 128
+        isReadOnly: false
+        textContent: "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n[00:00:00] [SYSTEM] NTOS 1.4™ kernel initialized."
       "/records/local_manifest.db": !type:DatabaseVirtualFile
         name: local_manifest
         extension: db

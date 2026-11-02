@@ -5,6 +5,8 @@ namespace Content.Shared._Oxyd.Computers.FileSystem;
 
 public class SharedFileSystemSystem : EntitySystem
 {
+    [Dependency] private Robust.Shared.Timing.IGameTiming _timing = default!;
+
     public override void Initialize()
     {
         base.Initialize();
@@ -149,6 +151,56 @@ public class SharedFileSystemSystem : EntitySystem
             f.IsReadOnly
         )).ToList();
         Dirty(uid, comp);
+    }
+
+    public void LogSystemActivity(
+        EntityUid uid,
+        string sessionType,
+        string command,
+        string? fileName = null,
+        string? packageName = null,
+        string? extra = null,
+        FileSystemComponent? comp = null)
+    {
+        if (!Resolve(uid, ref comp))
+            return;
+
+        var timeStr = _timing.CurTime.ToString(@"hh\:mm\:ss");
+
+        var metaParts = new List<string>();
+        if (!string.IsNullOrEmpty(fileName))
+            metaParts.Add($"[FILE: {fileName}]");
+        if (!string.IsNullOrEmpty(packageName))
+            metaParts.Add($"[PACKAGE: {packageName}]");
+
+        var metaStr = metaParts.Count > 0 ? " " + string.Join(" ", metaParts) : "";
+        var extraStr = !string.IsNullOrEmpty(extra) ? $" -> {extra}" : "";
+
+        var logEntry = $"[{timeStr}] [{sessionType}]{metaStr} {command}{extraStr}";
+
+        if (!TryGetFile<TextVirtualFile>(uid, "/sys/system.log", out var logFile, comp))
+        {
+            logFile = new TextVirtualFile
+            {
+                Name = "system",
+                Extension = "log",
+                Directory = "/sys/",
+                Size = 128,
+                TextContent = $"=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------",
+                IsReadOnly = false
+            };
+        }
+
+        var lines = logFile.TextContent.Split('\n').ToList();
+        lines.Add(logEntry);
+        while (lines.Count > 150)
+        {
+            lines.RemoveAt(1);
+        }
+
+        logFile.TextContent = string.Join("\n", lines);
+        logFile.Size = Math.Max(64, logFile.TextContent.Length);
+        TryWriteFile(uid, logFile, comp);
     }
 }
 

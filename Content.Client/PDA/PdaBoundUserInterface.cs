@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Client.CartridgeLoader;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Containers.ItemSlots;
@@ -32,6 +33,7 @@ namespace Content.Client.PDA
         private void CreateMenu()
         {
             _menu = this.CreateWindowCenteredLeft<PdaMenu>();
+            SetStateScopeRoot(_menu);
 
             _menu.FlashLightToggleButton.OnToggled += _ =>
             {
@@ -140,19 +142,13 @@ namespace Content.Client.PDA
             {
                 if (cartridgeUIFragment.Parent != _menu.ProgramView)
                 {
+                    _menu.ProgramView.RemoveAllChildren();
                     cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                     _menu.ProgramView.AddChild(cartridgeUIFragment);
                 }
 
-                if (_menu.CurrentView == PdaMenu.ProgramContentView || _userRequestedProgramView)
-                {
-                    _userRequestedProgramView = false;
-                    _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
-                }
-                else
-                {
-                    _menu.UpdateTabs();
-                }
+                _userRequestedProgramView = false;
+                _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
             }
         }
 
@@ -167,7 +163,7 @@ namespace Content.Client.PDA
             // Closing a program shouldn't reset to the home tab.
             // If the user was actively viewing the closed program and no other open program remains,
             // return to the Program List tab instead of forcibly resetting to the Home tab.
-            if (_menu.CurrentView == PdaMenu.ProgramContentView)
+            if (_activeProgram == null && _menu.CurrentView == PdaMenu.ProgramContentView)
             {
                 _menu.ToProgramList();
             }
@@ -176,6 +172,11 @@ namespace Content.Client.PDA
         protected override void UpdateAvailablePrograms(List<(EntityUid, CartridgeComponent)> programs)
         {
             _menu?.UpdateAvailablePrograms(programs);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
 
         private PdaBorderColorComponent? GetBorderColorComponent()

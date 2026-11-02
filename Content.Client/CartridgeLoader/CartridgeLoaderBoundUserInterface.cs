@@ -1,11 +1,12 @@
 using Content.Client.UserInterface.Fragments;
+using Content.Client.UserInterface.StateRouting;
 using Content.Shared.CartridgeLoader;
 using Robust.Client.UserInterface;
 
 namespace Content.Client.CartridgeLoader;
 
 
-public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
+public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterface
 {
     [ViewVariables]
     protected EntityUid? _activeProgram;
@@ -33,10 +34,7 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
             return;
         }
 
-        if (state is Content.Shared.PDA.PdaUpdateState pdaState && pdaState.CartridgeState != null)
-        {
-            _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
-        }
+        var pdaState = state as Content.Shared.PDA.PdaUpdateState;
 
         // TODO move this to a component state and ensure the net ids.
         var programs = GetCartridgeComponents(_entManager.GetEntityList(loaderUiState.Programs));
@@ -62,6 +60,10 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
         {
             var existingComp = RetrieveCartridgeComponent(activeUI.Value);
             AttachCartridgeUI(_activeUiFragment, Loc.GetString(existingComp?.ProgramName ?? "default-program-name"));
+            if (pdaState?.CartridgeState != null)
+            {
+                _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
+            }
             return;
         }
 
@@ -87,6 +89,11 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
 
             _activeCartridgeUI = ui;
             _activeUiFragment = control;
+
+            if (pdaState?.CartridgeState != null)
+            {
+                _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
+            }
         }
     }
 

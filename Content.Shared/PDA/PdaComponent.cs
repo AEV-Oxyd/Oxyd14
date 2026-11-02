@@ -33,6 +33,7 @@ namespace Content.Shared.PDA
         [ViewVariables] public EntityUid? ContainedId;
         [ViewVariables] public EntityUid? ContainedDisk;
         [ViewVariables] public bool FlashlightOn;
+        [DataField] public string SshPassword = string.Empty;
 
         [ViewVariables(VVAccess.ReadWrite)] public string? OwnerName;
         // The Entity that "owns" the PDA, usually a player's character.
@@ -55,5 +56,8 @@ namespace Content.Shared.PDA
         /// </summary>
         [ViewVariables]
         public BoundUserInterfaceState? ActiveCartridgeState;
+
+        [ViewVariables]
+        public PdaUpdateState? LastState;
     }
 }

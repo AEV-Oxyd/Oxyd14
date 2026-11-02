@@ -27,4 +27,13 @@ public sealed partial class TerminalCartridgeComponent : Component
 
     [DataField, AutoNetworkedField]
     public string PendingSshUser = "admin";
+
+    [DataField, AutoNetworkedField]
+    public bool SshLocalMode;
+
+    [DataField, AutoNetworkedField]
+    public string CurrentDirectory = "/";
+
+    [DataField, AutoNetworkedField]
+    public bool IsScreenAttached;
 }

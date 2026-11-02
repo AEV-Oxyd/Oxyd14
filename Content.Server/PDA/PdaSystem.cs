@@ -48,6 +48,7 @@ namespace Content.Server.PDA
         [Dependency] private IPrototypeManager _prototype = default!;
         [Dependency] private IGameTiming _timing = default!;
         [Dependency] private SharedFileSystemSystem _fileSystem = default!;
+        [Dependency] private Content.Shared.Access.Systems.AccessReaderSystem _accessReader = default!;
 
         public override void Initialize()
         {
@@ -57,6 +58,7 @@ namespace Content.Server.PDA
 
             // UI Events:
             SubscribeLocalEvent<PdaComponent, BoundUIOpenedEvent>(OnPdaOpen);
+            SubscribeLocalEvent<PdaComponent, BoundUIClosedEvent>(OnPdaClose);
             SubscribeLocalEvent<PdaComponent, PdaRequestUpdateInterfaceMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaToggleFlashlightMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaShowRingtoneMessage>(OnUiMessage);
@@ -82,14 +84,16 @@ namespace Content.Server.PDA
         {
             if (!comp.OpenPrograms.Contains(args.Program))
                 comp.OpenPrograms.Add(args.Program);
-            comp.ActiveCartridgeState = null;
             UpdatePdaUi(uid, comp);
         }
 
         private void OnProgramDeactivated(EntityUid uid, PdaComponent comp, ref CartridgeLoaderProgramDeactivatedEvent args)
         {
-            comp.ActiveCartridgeState = null;
-            UpdatePdaUi(uid, comp);
+            if (TryComp<CartridgeLoaderComponent>(uid, out var loader) && loader.ActiveProgram == null)
+            {
+                comp.ActiveCartridgeState = null;
+                UpdatePdaUi(uid, comp);
+            }
         }
 
         private void OnProgramUninstalled(EntityUid uid, PdaComponent pda, ref CartridgeLoaderProgramUninstalledEvent args)
@@ -285,6 +289,21 @@ namespace Content.Server.PDA
 
             var openNetPrograms = pda.OpenPrograms.Select(p => GetNetEntity(p)).ToList();
 
+            if (string.IsNullOrEmpty(pda.SshPassword))
+            {
+                var guidPart = guidComp?.Guid != null && guidComp.Guid.Length >= 4
+                    ? guidComp.Guid[..4].ToLowerInvariant()
+                    : "sec";
+                pda.SshPassword = $"pda-{guidPart}";
+            }
+
+            var hasCaptainAccess = false;
+            if (pda.ContainedId is { } idUid)
+            {
+                var tags = _accessReader.FindAccessTags(idUid);
+                hasCaptainAccess = tags.Any(t => t.Id == "Captain" || t.Id == "Command");
+            }
+
             var state = new PdaUpdateState(
                 programs,
                 GetNetEntity(loader.ActiveProgram),
@@ -313,9 +332,13 @@ namespace Content.Server.PDA
                 openPrograms: openNetPrograms,
                 cartridgeState: pda.ActiveCartridgeState,
                 hasDisk: pda.DiskSlot.HasItem,
-                diskName: pda.DiskSlot.Item is { } dEnt ? MetaData(dEnt).EntityName : null);
+                diskName: pda.DiskSlot.Item is { } dEnt ? MetaData(dEnt).EntityName : null,
+                hasCaptainAccess: hasCaptainAccess,
+                sshPassword: hasCaptainAccess ? pda.SshPassword : null);
 
+            pda.LastState = state;
             _ui.SetUiState(uid, PdaUiKey.Key, state);
+            Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteDeviceUpdated(uid);
         }
 
         private void OnPdaOpen(Entity<PdaComponent> ent, ref BoundUIOpenedEvent args)
@@ -360,7 +383,21 @@ namespace Content.Server.PDA
                 EnsureProgramFiles(ent.Owner, loader, fs);
             }
 
+            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered ON (User: {args.Actor})");
             UpdatePdaUi(ent.Owner, ent.Comp);
+        }
+
+        private void OnPdaClose(Entity<PdaComponent> ent, ref BoundUIClosedEvent args)
+        {
+            if (!PdaUiKey.Key.Equals(args.UiKey))
+                return;
+
+            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered OFF / standby (User: {args.Actor})");
+
+            if (args.Actor is { } actor)
+            {
+                Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenClosed(actor, ent.Owner);
+            }
         }
 
         private void EnsureDefaultPrograms(EntityUid uid, CartridgeLoaderComponent loader)

@@ -70,13 +70,23 @@ public sealed partial class CartridgeLoaderSystem
         if (!HasProgram(ent, program))
             return;
 
-        if (ent.Comp.ActiveProgram is { } active)
-            DeactivateProgram(ent, active);
+        var prevActive = ent.Comp.ActiveProgram;
+        if (prevActive == program)
+            return;
+
+        ent.Comp.ActiveProgram = program;
+        Dirty(ent);
+
+        if (prevActive is { } active)
+        {
+            var deactEvt = new CartridgeDeactivatedEvent(ent);
+            RaiseLocalEvent(active, ref deactEvt);
+            var loaderDeactEvt = new CartridgeLoaderProgramDeactivatedEvent(active);
+            RaiseLocalEvent(ent, ref loaderDeactEvt);
+        }
 
         var evt = new CartridgeActivatedEvent(ent);
         RaiseLocalEvent(program, ref evt);
-        ent.Comp.ActiveProgram = program;
-        Dirty(ent);
 
         var loaderEvt = new CartridgeLoaderProgramActivatedEvent(program);
         RaiseLocalEvent(ent, ref loaderEvt);

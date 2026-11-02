@@ -30,6 +30,21 @@ namespace Content.Client.PDA
         public const int ProgramContentView = 3;
 
 
+        private static readonly int _loreMonth;
+        private static readonly int _loreDay;
+        private static readonly TimeSpan _loreBaseTime;
+
+        static PdaMenu()
+        {
+            var rand = new System.Random();
+            _loreMonth = rand.Next(1, 13);
+            _loreDay = rand.Next(1, 29);
+            // Hour: guaranteed at least 5 hours away from 24:00 (i.e. 05:00 to 19:00 inclusive)
+            var baseHour = rand.Next(5, 20);
+            var baseMinute = rand.Next(0, 60);
+            _loreBaseTime = new TimeSpan(baseHour, baseMinute, 0);
+        }
+
         private string _pdaOwner = Loc.GetString("comp-pda-ui-unknown");
         private string _owner = Loc.GetString("comp-pda-ui-unknown");
         private string _jobTitle = Loc.GetString("comp-pda-ui-unassigned");
@@ -69,6 +84,25 @@ namespace Content.Client.PDA
                 _currentCpuJitter = (float)(_random.NextDouble() * 3.0 - 1.5);
                 UpdateFooterStats();
             }
+
+            if (ProgramTabsContainer.ChildCount > 0 && ProgramTabsScroll.Width > 0)
+            {
+                var overflow = ProgramTabsContainer.DesiredSize.X > ProgramTabsScroll.Width + 4;
+                TabsScrollHeader.Visible = overflow;
+                if (overflow)
+                {
+                    TabsScrollBar.Page = ProgramTabsScroll.Width;
+                    TabsScrollBar.MaxValue = ProgramTabsContainer.DesiredSize.X;
+                    if (!TabsScrollBar.HasKeyboardFocus())
+                    {
+                        TabsScrollBar.Value = ProgramTabsScroll.HScroll;
+                    }
+                }
+            }
+            else
+            {
+                TabsScrollHeader.Visible = false;
+            }
         }
 
         private void UpdateFooterStats()
@@ -79,7 +113,7 @@ namespace Content.Client.PDA
                 var memUsed = FormatStorage(_storageUsedBytes);
                 var memTotal = FormatStorage(_storageTotalBytes);
                 var displayCpu = System.Math.Clamp(_baseCpuPercent.Value + _currentCpuJitter, 0f, 100f);
-                SystemStatsLabel.Text = $"CPU: {displayCpu:0}% | RAM: {_ramUsedMb}/{_ramTotalMb}MB | MEM: {memUsed}/{memTotal}{saturatedText}";
+                SystemStatsLabel.Text = $"CPU: {displayCpu:0}% | RAM: {_ramUsedMb}/{_ramTotalMb}QB | MEM: {memUsed}/{memTotal}{saturatedText}";
             }
             else
             {
@@ -92,6 +126,7 @@ namespace Content.Client.PDA
         public event Action<EntityUid>? OnInstallButtonPressed;
         public event Action<EntityUid>? OnTabSelected;
         public event Action<EntityUid>? OnTabClosed;
+
         public PdaMenu()
         {
             IoCManager.InjectDependencies(this);
@@ -109,8 +144,11 @@ namespace Content.Client.PDA
             EjectDiskButton.IconTexture = new SpriteSpecifier.Rsi(new("/Textures/Oxyd/erisported/_Manual/discs.rsi"), "blue");
             ProgramCloseButton.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/Nano/cross.svg.png"));
 
+            PowerButton.OnPressed += _ => Close();
+
 
             HomeButton.OnPressed += _ => ToHomeScreen();
+            TabsScrollBar.OnValueChanged += _ => ProgramTabsScroll.HScroll = TabsScrollBar.Value;
 
             ProgramListButton.OnPressed += _ =>
             {
@@ -261,6 +299,17 @@ namespace Content.Client.PDA
             ShowUplinkButton.Visible = state.HasUplink;
             LockUplinkButton.Visible = state.HasUplink;
 
+            if (state.HasCaptainAccess && !string.IsNullOrEmpty(state.SshPassword))
+            {
+                SshPasswordButton.Text = $"SSH Password: {state.SshPassword}";
+                SshPasswordButton.Description = $"Captain Clearance Verified: Remote shell access credential for {state.DeviceGuid ?? "PDA"}.";
+            }
+            else
+            {
+                SshPasswordButton.Text = "SSH Password: [RESTRICTED]";
+                SshPasswordButton.Description = "Captain Clearance Required: Insert an authorized ID card to view SSH credentials.";
+            }
+
             _openPrograms = state.OpenPrograms.Select(p => _entityManager.GetEntity(p)).ToList();
             _activeProgram = state.ActiveUI != null ? _entityManager.GetEntity(state.ActiveUI.Value) : null;
             UpdateTabs();
@@ -371,12 +420,41 @@ namespace Content.Client.PDA
                 };
                 tabBox.AddChild(tabBtn);
 
-                var closeBtn = new Button
+                var closeStyleBox = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex(isActive ? "#2b2b30" : "#202023"),
+                    BorderColor = Color.FromHex(isActive ? "#00D4FF" : "#5a5a5a"),
+                    BorderThickness = isActive ? new Thickness(0, 0, 2, 0) : new Thickness(0, 0, 0, 2)
+                };
+                var closePanel = new PanelContainer
+                {
+                    PanelOverride = closeStyleBox,
+                    HorizontalExpand = true,
+                    VerticalExpand = true
+                };
+                var closeLabel = new Label
                 {
                     Text = "✕",
-                    SetWidth = 22,
-                    SetHeight = 32,
-                    StyleClasses = { Content.Client._Oxyd.UI.Style.ErisSheetlet.StyleClassErisHoloButton }
+                    FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70"),
+                    HorizontalAlignment = Control.HAlignment.Center,
+                    VerticalAlignment = Control.VAlignment.Center,
+                    Margin = new Thickness(0, 0, 2, 0)
+                };
+                var closeBtn = new ContainerButton
+                {
+                    SetWidth = 20,
+                    SetHeight = 32
+                };
+                closeBtn.AddChild(closePanel);
+                closeBtn.AddChild(closeLabel);
+
+                closeBtn.OnMouseEntered += _ =>
+                {
+                    closeLabel.FontColorOverride = Color.FromHex("#ff5555");
+                };
+                closeBtn.OnMouseExited += _ =>
+                {
+                    closeLabel.FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70");
                 };
                 closeBtn.OnPressed += _ =>
                 {
@@ -386,6 +464,19 @@ namespace Content.Client.PDA
 
                 ProgramTabsContainer.AddChild(tabBox);
             }
+
+            var baselineFiller = new PanelContainer
+            {
+                HorizontalExpand = true,
+                MinHeight = 32,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#202023"),
+                    BorderColor = Color.FromHex("#5a5a5a"),
+                    BorderThickness = new Thickness(0, 0, 0, 2)
+                }
+            };
+            ProgramTabsContainer.AddChild(baselineFiller);
         }
 
         /// <summary>
@@ -413,6 +504,17 @@ namespace Content.Client.PDA
             ProgramTitle.IsCurrent = false;
 
             ChangeView(ProgramListView);
+            UpdateTabs();
+        }
+
+        public void ToSettings()
+        {
+            HomeButton.IsCurrent = false;
+            ProgramListButton.IsCurrent = false;
+            SettingsButton.IsCurrent = true;
+            ProgramTitle.IsCurrent = false;
+
+            ChangeView(SettingsView);
             UpdateTabs();
         }
 
@@ -469,7 +571,7 @@ namespace Content.Client.PDA
                 return $"{bytes} B";
             if (bytes < 1024 * 1024)
                 return $"{bytes / 1024.0:0.#} KB";
-            return $"{bytes / (1024.0 * 1024.0):0.##} MB";
+            return $"{bytes / (1024.0 * 1024.0):0.##} QB";
         }
 
         protected override void Draw(DrawingHandleScreen handle)
@@ -477,9 +579,10 @@ namespace Content.Client.PDA
             base.Draw(handle);
 
             var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
+            var currentLoreTime = _loreBaseTime.Add(stationTime);
 
-            StationTimeLabel.SetMarkup(Loc.GetString("comp-pda-ui-station-time",
-                ("time", stationTime.ToString("hh\\:mm\\:ss"))));
+            StationDateLabel.SetMarkup($"Station Date: [color=white]2753-{_loreMonth:D2}-{_loreDay:D2}[/color]");
+            StationTimeLabel.SetMarkup($"Station Time: [color=white]{(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2}[/color] (Shift: {stationTime:hh\\:mm\\:ss})");
         }
     }
 }

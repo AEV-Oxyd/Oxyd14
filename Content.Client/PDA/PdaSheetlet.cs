@@ -39,6 +39,15 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         };
         erisMetalBox.SetPatchMargin(StyleBox.Margin.All, 8);
 
+        var pdaRailingTex = resCache.GetTexture("/Textures/Oxyd/erisported/UI/FuturisticPdaRailing.png");
+        var pdaRailingBox = new StyleBoxTexture
+        {
+            Texture = pdaRailingTex,
+            TextureScale = new Vector2(1, 1),
+            Mode = StyleBoxTexture.StretchMode.Tile,
+        };
+        pdaRailingBox.SetPatchMargin(StyleBox.Margin.All, 10);
+
         var holoTex = resCache.GetTexture("/Textures/Oxyd/erisported/UI/HoloPlateWhite.png");
         var holoPlateBox = new StyleBoxTexture
         {
@@ -79,7 +88,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
 
             E<PanelContainer>()
                 .Class("PdaBorderRect")
-                .Prop(PanelContainer.StylePropertyPanel, erisMetalBox),
+                .Prop(PanelContainer.StylePropertyPanel, pdaRailingBox),
 
             //PDA - Settings Buttons
             E<PdaSettingsButton>()
