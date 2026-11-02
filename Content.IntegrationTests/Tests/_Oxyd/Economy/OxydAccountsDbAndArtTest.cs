@@ -31,10 +31,11 @@ public sealed class OxydAccountsDbAndArtTest : GameTest
             var cargo = eco.CreateAccount("Cargo Department", "Cargo", 5000,
                 null, 0, true, OxydEconomyConstants.EmployerCargo, canMakeAccounts: true);
 
-            Assert.That(eco.TryCreateFundedAccount("HopHire", 500, cargo.AccountNumber, "test",
-                out var created, out var err), Is.True, err);
-            Assert.That(created, Is.Not.Null);
-            Assert.That(created!.Balance, Is.EqualTo(500));
+            // New accounts open empty; funding is a separate step from a chosen account.
+            var created = eco.CreateAccount("HopHire", "HopHire", 0, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
+            Assert.That(created.Balance, Is.EqualTo(0));
+            Assert.That(eco.TryFundAccount(created.AccountNumber, cargo.AccountNumber, 500, "test", out var err), Is.True, err);
+            Assert.That(created.Balance, Is.EqualTo(500));
             Assert.That(cargo.Balance, Is.EqualTo(4500));
 
             Assert.That(eco.TrySetSuspended(created.AccountNumber, true), Is.True);

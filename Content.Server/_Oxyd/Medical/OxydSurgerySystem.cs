@@ -67,18 +67,9 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         public bool Valid => Uid.IsValid();
     }
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<BodyComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<BodyComponent, InteractHandEvent>(OnInteractHand);
-        SubscribeLocalEvent<BodyComponent, OxydSurgeryDoAfterEvent>(OnPatientStepDone);
-        SubscribeLocalEvent<OxydSurgerySessionComponent, OxydSurgerySelectStepMessage>(OnSelectStep);
-        SubscribeLocalEvent<OxydSurgerySessionComponent, BoundUIClosedEvent>(OnUiClosed);
-        SubscribeLocalEvent<BodyComponent, GetVerbsEvent<InteractionVerb>>(OnGetSurgeryVerbs);
-    }
-
     // Context-menu mirror of the click path so the window is reachable without pixel clicks
     // (also the standard SS14 affordance for interactions like this).
+    [SubscribeLocalEvent]
     private void OnGetSurgeryVerbs(EntityUid uid, BodyComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanAccess || !args.CanInteract || !IsOperable(uid))
@@ -107,6 +98,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
     // Sole InteractUsingEvent subscriber on BodyComponent (the bus allows one per comp+event):
     // dispatch by what's being used on the patient. Health/autopsy scanners route through
     // their own item-side AfterInteractEvent handlers instead.
+    [SubscribeLocalEvent]
     private void OnInteractUsing(EntityUid uid, BodyComponent comp, InteractUsingEvent args)
     {
         if (args.Handled)
@@ -190,6 +182,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
     }
 
     // Eris opens the organ window when clicking a patient with an open incision, bare hands too.
+    [SubscribeLocalEvent]
     private void OnInteractHand(EntityUid uid, BodyComponent comp, InteractHandEvent args)
     {
         if (args.Handled || !IsOperable(uid))
@@ -452,6 +445,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
     // UI path. The message is raised on the patient hosting the BUI; the session is
     // looked up by the actor who clicked.
+    [SubscribeLocalEvent]
     private void OnSelectStep(EntityUid patient, OxydSurgerySessionComponent comp, OxydSurgerySelectStepMessage args)
     {
         if (!comp.Sessions.TryGetValue(args.Actor, out var s))
@@ -513,6 +507,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
     }
 
     // DoAfter landing on the patient.
+    [SubscribeLocalEvent]
     private void OnPatientStepDone(EntityUid uid, BodyComponent comp, OxydSurgeryDoAfterEvent args)
     {
         var organ = GetEntity(args.Organ);
@@ -851,6 +846,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         PushState(patient, surgeon);
     }
 
+    [SubscribeLocalEvent]
     private void OnUiClosed(EntityUid patient, OxydSurgerySessionComponent comp, BoundUIClosedEvent args)
     {
         comp.Sessions.Remove(args.Actor);

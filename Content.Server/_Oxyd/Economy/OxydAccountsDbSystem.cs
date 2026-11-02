@@ -12,15 +12,9 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
     [Dependency] private OxydEconomySystem _economy = default!;
     [Dependency] private AccessReaderSystem _access = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-    }
-
     [SubscribeLocalEvent]
     private void OnOpened(Entity<OxydAccountsDbComponent> ent, ref BoundUIOpenedEvent args)
     {
-        _economy.EnsureDepartmentsForRound();
         PushState(ent, args.Actor);
     }
 
@@ -79,32 +73,56 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
             return;
         }
 
-        _economy.EnsureDepartmentsForRound();
-        var funder = _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo)
-                     ?? _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerService);
-        if (funder == null)
-        {
-            // No dept yet — create unfunded personal account.
-            var acc = _economy.CreateAccount(name, name, Math.Max(0, args.StartingFunds),
-                OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
-            ent.Comp.Creating = false;
-            ent.Comp.DetailAccount = acc.AccountNumber;
-            Dirty(ent);
-            PushState(ent, args.Actor, status: $"Created #{acc.AccountNumber} PIN {acc.Pin}");
-            return;
-        }
-
-        if (!_economy.TryCreateFundedAccount(name, args.StartingFunds, funder.AccountNumber, "AccountsDB",
-                out var created, out var err) || created == null)
-        {
-            PushState(ent, args.Actor, error: err ?? "Create failed");
-            return;
-        }
-
+        // Eris opens accounts empty; money is added afterwards from the funding account.
+        var acc = _economy.CreateAccount(name, name, 0, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
         ent.Comp.Creating = false;
-        ent.Comp.DetailAccount = created.AccountNumber;
+        ent.Comp.DetailAccount = acc.AccountNumber;
         Dirty(ent);
-        PushState(ent, args.Actor, status: $"Created #{created.AccountNumber} PIN {created.Pin}");
+        PushState(ent, args.Actor, status: $"Created #{acc.AccountNumber} PIN {acc.Pin}");
+    }
+
+    [SubscribeLocalEvent]
+    private void OnSetFundingAccount(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbSetFundingAccountMessage args)
+    {
+        if (!HasAccess(ent, args.Actor))
+        {
+            PushState(ent, args.Actor, error: "Access denied");
+            return;
+        }
+
+        if (!_economy.TryGetAccount(args.AccountNumber, out var acc))
+        {
+            PushState(ent, args.Actor, error: "Unknown account");
+            return;
+        }
+
+        ent.Comp.FundingAccount = acc.AccountNumber;
+        Dirty(ent);
+        PushState(ent, args.Actor, status: $"Funding from #{acc.AccountNumber}");
+    }
+
+    [SubscribeLocalEvent]
+    private void OnFund(Entity<OxydAccountsDbComponent> ent, ref OxydAccountsDbFundMessage args)
+    {
+        if (!HasAccess(ent, args.Actor) || ent.Comp.DetailAccount is not { } num)
+        {
+            PushState(ent, args.Actor, error: "Access denied");
+            return;
+        }
+
+        if (FundingAccount(ent) is not { } funder)
+        {
+            PushState(ent, args.Actor, error: "Set a funding account");
+            return;
+        }
+
+        if (!_economy.TryFundAccount(num, funder.AccountNumber, args.Amount, "AccountsDB", out var err))
+        {
+            PushState(ent, args.Actor, error: err);
+            return;
+        }
+
+        PushState(ent, args.Actor, status: $"Funded {args.Amount}cr from #{funder.AccountNumber}");
     }
 
     [SubscribeLocalEvent]
@@ -154,10 +172,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
             return;
         }
 
-        _economy.EnsureDepartmentsForRound();
-        var dest = _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo)
-                   ?? _economy.FindDepartmentAccount(OxydEconomyConstants.EmployerService);
-        if (dest == null)
+        if (FundingAccount(ent) is not { } dest)
         {
             PushState(ent, args.Actor, error: "No destination department");
             return;
@@ -170,6 +185,15 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
         }
 
         PushState(ent, args.Actor, status: "Payroll revoked");
+    }
+
+    /// <summary>The chosen funding account, or the configured department's account.</summary>
+    private OxydMoneyAccountData? FundingAccount(Entity<OxydAccountsDbComponent> ent)
+    {
+        if (ent.Comp.FundingAccount is { } number)
+            return _economy.TryGetAccount(number, out var chosen) ? chosen : null;
+
+        return ent.Comp.FundingDepartment is { } dept ? _economy.FindDepartmentAccount(dept) : null;
     }
 
     private bool HasAccess(EntityUid console, EntityUid user)
@@ -189,7 +213,7 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
             Creating = ent.Comp.Creating,
             Error = error,
             Status = status,
-            Accounts = _economy.Accounts.Values
+            Accounts = _economy.EnumerateAccounts()
                 .OrderBy(a => a.AccountNumber)
                 .Select(a => new OxydAccountsDbAccountSummary
                 {
@@ -201,6 +225,12 @@ public sealed partial class OxydAccountsDbSystem : EntitySystem
                 })
                 .ToList(),
         };
+
+        if (FundingAccount(ent) is { } funding)
+        {
+            state.FundingAccount = funding.AccountNumber;
+            state.FundingName = funding.OwnerName;
+        }
 
         if (ent.Comp.DetailAccount is { } num && _economy.TryGetAccount(num, out var detail))
         {

@@ -170,7 +170,6 @@
 - type: material
   id: OxydCompressedMatter
   name: materials-oxyd-compressed-matter
-  description: Materials oxyd compressed matter.
   stackEntity: OxydCompressedMatterSingle
   icon: { sprite: Objects/Materials/Sheets/metal.rsi, state: steel }
   color: '#5a6a7a'
@@ -194,7 +193,6 @@
   parent: BaseMediumStack
   id: OxydCompressedMatterStack
   name: stack-oxyd-compressed-matter
-  description: Stack oxyd compressed matter.
   spawn: OxydCompressedMatterSingle
   maxCount: 60
 

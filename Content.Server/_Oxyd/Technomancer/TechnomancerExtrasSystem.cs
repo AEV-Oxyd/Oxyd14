@@ -27,7 +27,7 @@ namespace Content.Server._Oxyd.Technomancer;
 /// autolathe.dm nanoforge (items -> compressed matter), tools/mods mod items,
 /// and the IJIRO RPD + engineering design disks.
 /// </summary>
-public sealed class TechnomancerExtrasSystem : EntitySystem
+public sealed partial class TechnomancerExtrasSystem : EntitySystem
 {
     [Dependency] private UserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
@@ -38,20 +38,9 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
 
     private TimeSpan _nextPush = TimeSpan.Zero;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydRconComponent, OxydRconToggleMessage>(OnRconToggle);
-        SubscribeLocalEvent<OxydRconComponent, BoundUIOpenedEvent>(OnRconOpened);
-        SubscribeLocalEvent<OxydAtmosConsoleComponent, BoundUIOpenedEvent>(OnAtmosOpened);
-        SubscribeLocalEvent<OxydNanoforgeComponent, EntInsertedIntoContainerMessage>(OnForgeInsert);
-        SubscribeLocalEvent<OxydNanoforgeComponent, OxydForgeEjectMessage>(OnForgeEject);
-        SubscribeLocalEvent<OxydToolModComponent, AfterInteractEvent>(OnToolModApply);
-        SubscribeLocalEvent<OxydDesignDiskComponent, UseInHandEvent>(OnDiskUse);
-        SubscribeLocalEvent<OxydNanoforgeComponent, BoundUIOpenedEvent>(OnForgeOpened);
-    }
-
     // ---- RCON (Eris rcon_console.dm: SMES rows + breaker rows) ----
 
+    [SubscribeLocalEvent]
     private void OnRconOpened(Entity<OxydRconComponent> ent, ref BoundUIOpenedEvent args)
     {
         PushRcon(ent);
@@ -100,6 +89,7 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
     private bool OnConsoleMap(EntityUid console, EntityUid target)
         => Transform(console).MapID == Transform(target).MapID;
 
+    [SubscribeLocalEvent]
     private void OnRconToggle(Entity<OxydRconComponent> ent, ref OxydRconToggleMessage msg)
     {
         // The client names the target, so only act on what this console lists:
@@ -129,6 +119,7 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
 
     // ---- Atmos control console (Eris atmos_control.tmpl alarm list) ----
 
+    [SubscribeLocalEvent]
     private void OnAtmosOpened(Entity<OxydAtmosConsoleComponent> ent, ref BoundUIOpenedEvent args)
     {
         var state = new OxydAtmosUiState();
@@ -149,11 +140,13 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
 
     // ---- Nanoforge (Eris autolathe.dm /obj/machinery/autolathe/nanoforge) ----
 
+    [SubscribeLocalEvent]
     private void OnForgeOpened(Entity<OxydNanoforgeComponent> ent, ref BoundUIOpenedEvent args)
     {
         PushForge(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnForgeInsert(Entity<OxydNanoforgeComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
         // Eris: items consumed -> compressed matter, 0.6 efficiency.
@@ -172,6 +165,7 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
         Dirty(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnForgeEject(Entity<OxydNanoforgeComponent> ent, ref OxydForgeEjectMessage msg)
     {
         if (ent.Comp.StoredMatter < 10)
@@ -192,6 +186,7 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
 
     // ---- Tool mod (Eris tools/mods Adapt: use on a tool -> grants quality) ----
 
+    [SubscribeLocalEvent]
     private void OnToolModApply(Entity<OxydToolModComponent> ent, ref AfterInteractEvent args)
     {
         if (!args.CanReach || args.Target is not { } target || !Exists(target))
@@ -210,6 +205,7 @@ public sealed class TechnomancerExtrasSystem : EntitySystem
 
     // ---- Design disks (readout of licensed designs) ----
 
+    [SubscribeLocalEvent]
     private void OnDiskUse(Entity<OxydDesignDiskComponent> ent, ref UseInHandEvent args)
     {
         foreach (var d in ent.Comp.Designs)

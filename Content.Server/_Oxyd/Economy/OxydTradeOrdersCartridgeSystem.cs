@@ -16,18 +16,13 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
 
 
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydTradeOrdersCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydTradeOrdersCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydTradeOrdersCartridgeComponent component, CartridgeUiReadyEvent args)
     {
         PushUi(uid, args.Loader);
     }
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydTradeOrdersCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydTradeOrdersUiMessageEvent msg)
@@ -199,7 +194,6 @@ public sealed partial class OxydTradeOrdersCartridgeSystem : EntitySystem
     private void PushUi(EntityUid cartUid, EntityUid loader, string? error = null, string? status = null)
     {
         _trade.EnsureSeeded();
-        _economy.EnsureDepartmentsForRound();
 
         var tab = OxydTradeUiTab.Stations;
         string? selected = null;

@@ -10,16 +10,11 @@ public sealed partial class OxydEmailCartridgeSystem : EntitySystem
     [Dependency] private OxydEmailSystem _email = default!;
 
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydEmailCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydEmailCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydEmailCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydEmailCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydEmailUiMessageEvent msg)

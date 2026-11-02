@@ -45,11 +45,7 @@ public sealed partial class OxydMedicalScannerSystem : EntitySystem
     [Dependency] private MobStateSystem _mobs = default!;
     [Dependency] private BloodstreamSystem _bloodstream = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydScannerItemComponent, AfterInteractEvent>(OnScannerInteract);
-    }
-
+    [SubscribeLocalEvent]
     private void OnScannerInteract(Entity<OxydScannerItemComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || args.Target is not { } patient || !HasComp<BodyComponent>(patient))
@@ -162,20 +158,11 @@ public sealed partial class OxydIvDripSystem : EntitySystem
 
     public override void Initialize()
     {
-        SubscribeLocalEvent<OxydIvDripComponent, ComponentInit>(OnInit);
         // Attach/detach by dragging either the drip onto the patient or the patient onto the drip.
-        SubscribeLocalEvent<BodyComponent, DragDropTargetEvent>(OnDragOntoPatient);
-        SubscribeLocalEvent<BodyComponent, CanDropTargetEvent>(OnCanDropOntoPatient);
-        SubscribeLocalEvent<OxydIvDripComponent, DragDropTargetEvent>(OnDropPatientOnDrip);
-        SubscribeLocalEvent<OxydIvDripComponent, CanDropTargetEvent>(OnCanDropPatientOnDrip);
-        SubscribeLocalEvent<OxydIvDripComponent, GetVerbsEvent<AlternativeVerb>>(AddIvVerbs);
-        SubscribeLocalEvent<OxydIvDripComponent, GetVerbsEvent<InteractionVerb>>(AddInsertBeakerVerb);
-        SubscribeLocalEvent<OxydIvDripComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<OxydIvDripComponent, ExaminedEvent>(OnExamine);
-        SubscribeLocalEvent<OxydIvDripComponent, OxydIvAttachDoAfterEvent>(OnAttachDoAfter);
     }
 
     /// <summary>Eris examine: reports the loaded tank and attached vessel + the mode.</summary>
+    [SubscribeLocalEvent]
     private void OnExamine(EntityUid uid, OxydIvDripComponent comp, ExaminedEvent args)
     {
         if (!args.IsInDetailsRange)
@@ -193,6 +180,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
             : "oxyd-medical-iv-examine-mode-inject", ("amount", comp.TransferPerTick)));
     }
 
+    [SubscribeLocalEvent]
     private void OnInit(EntityUid uid, OxydIvDripComponent comp, ComponentInit args)
     {
         _container.EnsureContainer<ContainerSlot>(uid, OxydIvDripComponent.BeakerContainerId);
@@ -201,6 +189,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
     private ContainerSlot BeakerSlot(EntityUid uid) =>
         _container.EnsureContainer<ContainerSlot>(uid, OxydIvDripComponent.BeakerContainerId);
 
+    [SubscribeLocalEvent]
     private void OnCanDropOntoPatient(EntityUid uid, BodyComponent comp, ref CanDropTargetEvent args)
     {
         if (args.Handled || !HasComp<OxydIvDripComponent>(args.Dragged))
@@ -209,6 +198,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnDragOntoPatient(EntityUid uid, BodyComponent comp, DragDropTargetEvent args)
     {
         if (args.Handled || !TryComp<OxydIvDripComponent>(args.Dragged, out var drip))
@@ -218,6 +208,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         ToggleAttach(args.Dragged, drip, uid, args.User);
     }
 
+    [SubscribeLocalEvent]
     private void OnAttachDoAfter(Entity<OxydIvDripComponent> ent, ref OxydIvAttachDoAfterEvent args)
     {
         if (args.Handled)
@@ -240,6 +231,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
             $"{ToPrettyString(args.User):user} attached {ToPrettyString(uid):using} to {ToPrettyString(patient):target}");
     }
 
+    [SubscribeLocalEvent]
     private void OnCanDropPatientOnDrip(EntityUid uid, OxydIvDripComponent comp, ref CanDropTargetEvent args)
     {
         if (args.Handled || !HasComp<BodyComponent>(args.Dragged))
@@ -248,6 +240,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnDropPatientOnDrip(EntityUid uid, OxydIvDripComponent comp, DragDropTargetEvent args)
     {
         if (args.Handled || !HasComp<BodyComponent>(args.Dragged))
@@ -306,6 +299,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void AddIvVerbs(EntityUid uid, OxydIvDripComponent comp, GetVerbsEvent<AlternativeVerb> args)
     {
         if (!args.CanAccess || !args.CanInteract)
@@ -354,6 +348,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
     }
 
     /// <summary>Eris attackby: clicking the drip with a beaker/bloodpack loads it.</summary>
+    [SubscribeLocalEvent]
     private void OnInteractUsing(EntityUid uid, OxydIvDripComponent comp, InteractUsingEvent args)
     {
         if (args.Handled || BeakerSlot(uid).ContainedEntity != null)
@@ -365,6 +360,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         _container.Insert(args.Used, BeakerSlot(uid));
     }
 
+    [SubscribeLocalEvent]
     private void AddInsertBeakerVerb(EntityUid uid, OxydIvDripComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanInteract)

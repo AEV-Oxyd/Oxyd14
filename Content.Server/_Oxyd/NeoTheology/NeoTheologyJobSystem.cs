@@ -12,12 +12,7 @@ public sealed partial class NeoTheologyJobSystem : EntitySystem
 {
     [Dependency] private CruciformSystem _cruciform = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<NeoTheologyTestRoleComponent, MindAddedMessage>(OnTestRoleTaken);
-    }
-
+    [SubscribeLocalEvent]
     private void OnTestRoleTaken(EntityUid uid, NeoTheologyTestRoleComponent component, MindAddedMessage args)
     {
         _cruciform.GrantCruciform(uid, component.Profile);

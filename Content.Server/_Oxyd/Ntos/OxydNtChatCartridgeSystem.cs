@@ -9,16 +9,11 @@ public sealed partial class OxydNtChatCartridgeSystem : EntitySystem
     [Dependency] private CartridgeLoaderSystem _cartridges = default!;
     [Dependency] private OxydNtChatSystem _chat = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydNtChatCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydNtChatCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydNtChatCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydNtChatCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydNtChatUiMessageEvent msg)

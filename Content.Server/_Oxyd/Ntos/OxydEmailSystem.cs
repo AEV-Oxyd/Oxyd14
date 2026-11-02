@@ -6,7 +6,7 @@ namespace Content.Server._Oxyd.Ntos;
 
 /// <summary>Station-wide NT email accounts (Eris email_client parity).
 /// Reviewer round-2: accounts/inboxes live on a lazily-spawned nullspace entity
-/// (OxydBankSystem pattern) so mail resets each round instead of leaking across
+/// (the banking server pattern) so mail resets each round instead of leaking across
 /// rounds, and every collection is bounded by the caps below.</summary>
 public sealed partial class OxydEmailSystem : EntitySystem
 {

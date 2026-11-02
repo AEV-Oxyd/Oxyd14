@@ -16,10 +16,10 @@ public sealed partial class OxydEconomySystem
 
     public void RunPayday()
     {
-        EnsureDepartmentsForRound();
+        var accounts = Bank.Comp.Accounts;
 
         // Refresh department balances from cargo before paying.
-        foreach (var acc in _accounts.Values)
+        foreach (var acc in accounts.Values)
         {
             if (acc.IsDepartment)
                 PullDepartmentFromCargo(acc);
@@ -30,7 +30,7 @@ public sealed partial class OxydEconomySystem
         var totalCredits = 0;
 
         // 1) Department retainers (Command/Cargo → Service/Security/Engineering)
-        foreach (var acc in _accounts.Values.ToList())
+        foreach (var acc in accounts.Values.ToList())
         {
             if (!acc.IsDepartment || acc.Employer == null || acc.Wage <= 0)
                 continue;
@@ -49,7 +49,7 @@ public sealed partial class OxydEconomySystem
         }
 
         // 2) Personal wages
-        foreach (var acc in _accounts.Values.ToList())
+        foreach (var acc in accounts.Values.ToList())
         {
             if (acc.IsDepartment || acc.Employer == null || acc.Wage <= 0)
                 continue;

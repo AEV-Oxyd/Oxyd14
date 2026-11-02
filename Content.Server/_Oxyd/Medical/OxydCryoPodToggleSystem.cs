@@ -19,11 +19,7 @@ public sealed partial class OxydCryoPodToggleSystem : EntitySystem
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private SharedPowerReceiverSystem _power = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<CryoPodComponent, OxydCryoPodPowerMessage>(OnPowerMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnPowerMessage(EntityUid uid, CryoPodComponent comp, OxydCryoPodPowerMessage args)
     {
         if (args.On)

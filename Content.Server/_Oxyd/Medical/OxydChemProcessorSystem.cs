@@ -31,21 +31,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
     [Dependency] private IPrototypeManager _prototypes = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydChemProcessorComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<OxydChemProcessorComponent, GetVerbsEvent<InteractionVerb>>(AddBeakerVerbs);
-        SubscribeLocalEvent<OxydChemProcessorComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<OxydChemProcessorComponent, AfterActivatableUIOpenEvent>(OnUiOpen);
-        SubscribeLocalEvent<OxydChemProcessorComponent, EntInsertedIntoContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydChemProcessorComponent, EntRemovedFromContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydChemProcessorComponent, OxydChemProcessorSetTargetMessage>(OnSetTarget);
-        SubscribeLocalEvent<OxydChemProcessorComponent, OxydChemProcessorStartMessage>(OnStart);
-        SubscribeLocalEvent<OxydChemProcessorComponent, OxydChemProcessorSetDurationMessage>(OnSetDuration);
-        SubscribeLocalEvent<OxydChemProcessorComponent, OxydChemProcessorSetRunningMessage>(OnSetRunning);
-        SubscribeLocalEvent<OxydChemProcessorComponent, OxydChemProcessorEjectMessage>(OnEject);
-    }
-
+    [SubscribeLocalEvent]
     private void OnInit(EntityUid uid, OxydChemProcessorComponent comp, ComponentInit args)
     {
         _container.EnsureContainer<ContainerSlot>(uid, OxydChemProcessorComponent.MainBeakerId);
@@ -58,8 +44,17 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
     private ContainerSlot Slot(EntityUid uid, string id) =>
         _container.EnsureContainer<ContainerSlot>(uid, id);
 
+    [SubscribeLocalEvent]
     private void OnUiOpen(EntityUid uid, OxydChemProcessorComponent comp, AfterActivatableUIOpenEvent args)
         => PushState(uid, comp);
+
+    [SubscribeLocalEvent]
+    private void OnEntInserted(EntityUid uid, OxydChemProcessorComponent comp, EntInsertedIntoContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
+
+    [SubscribeLocalEvent]
+    private void OnEntRemoved(EntityUid uid, OxydChemProcessorComponent comp, EntRemovedFromContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
 
     private void OnContainerChanged(EntityUid uid, OxydChemProcessorComponent comp, ContainerModifiedMessage args)
         => PushState(uid, comp);
@@ -78,6 +73,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
     }
 
     /// <summary>Eris attackby: clicking the machine with a beaker loads it.</summary>
+    [SubscribeLocalEvent]
     private void OnInteractUsing(EntityUid uid, OxydChemProcessorComponent comp, InteractUsingEvent args)
     {
         if (args.Handled || comp.Working || FindFreeSlot(uid) is not { } slotId)
@@ -89,6 +85,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
         _container.Insert(args.Used, Slot(uid, slotId));
     }
 
+    [SubscribeLocalEvent]
     private void AddBeakerVerbs(EntityUid uid, OxydChemProcessorComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanInteract || args.Using is not { } used || comp.Working)
@@ -107,6 +104,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnSetTarget(EntityUid uid, OxydChemProcessorComponent comp, OxydChemProcessorSetTargetMessage args)
     {
         if (comp.Mode != OxydChemProcessorMode.Centrifuge || comp.Working)
@@ -131,6 +129,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
         return null;
     }
 
+    [SubscribeLocalEvent]
     private void OnStart(EntityUid uid, OxydChemProcessorComponent comp, OxydChemProcessorStartMessage args)
     {
         if (comp.Working || Slot(uid, OxydChemProcessorComponent.MainBeakerId).ContainedEntity == null)
@@ -151,6 +150,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
     }
 
     /// <summary>Eris centrifuge: pick the spin-cycle duration (5/10/15/30/60 radios).</summary>
+    [SubscribeLocalEvent]
     private void OnSetDuration(EntityUid uid, OxydChemProcessorComponent comp, OxydChemProcessorSetDurationMessage args)
     {
         if (comp.Mode != OxydChemProcessorMode.Centrifuge || comp.Working)
@@ -161,6 +161,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
 
     /// <summary>Eris electrolyzer On/Off links: On starts continuous processing until
     /// Off is pressed (or nothing is left to decompose).</summary>
+    [SubscribeLocalEvent]
     private void OnSetRunning(EntityUid uid, OxydChemProcessorComponent comp, OxydChemProcessorSetRunningMessage args)
     {
         if (comp.Mode != OxydChemProcessorMode.Electrolyzer)
@@ -172,6 +173,7 @@ public sealed partial class OxydChemProcessorSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnEject(EntityUid uid, OxydChemProcessorComponent comp, OxydChemProcessorEjectMessage args)
     {
         // Reject out-of-range indexes: EnsureContainer would happily create a phantom slot.

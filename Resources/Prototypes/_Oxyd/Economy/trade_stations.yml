@@ -131,3 +131,128 @@
     name: Syringe
     price: 90
     amount: 5
+
+- type: oxydTradeStation
+  id: Zarya
+  name: "TTB 'Zarya'"
+  description: Privet, this is the trade beacon 'Zarya'. We sell electronics, construction, and anything related to engineering!
+  startDiscovered: true
+  markup: 1.0
+  baseIncome: 1600
+  inventory:
+  - product: Crowbar
+    name: crowbar
+    category: Tools
+    price: 24
+    stock: 21
+  - product: Screwdriver
+    name: screwdriver
+    category: Tools
+    price: 24
+    stock: 7
+  - product: Shovel
+    name: shovel
+    category: Tools
+    price: 24
+    stock: 27
+  - product: Wirecutter
+    name: wirecutters
+    category: Tools
+    price: 24
+    stock: 21
+  - product: Wrench
+    name: wrench
+    category: Tools
+    price: 24
+    stock: 20
+  - product: Welder
+    name: welding tool
+    category: Tools
+    price: 24
+    stock: 5
+  - product: ToolboxEmergency
+    name: emergency toolbox
+    category: Tools
+    price: 48
+    stock: 16
+  - product: ToolboxMechanical
+    name: mechanical toolbox
+    category: Tools
+    price: 300
+    stock: 17
+  - product: ToolboxElectrical
+    name: electrical toolbox
+    category: Tools
+    price: 372
+    stock: 10
+  - product: PowerCellSmall
+    name: cell 100S
+    category: Electronics
+    price: 100
+    stock: 20
+  - product: PowerCellMedium
+    name: cell 600M
+    category: Electronics
+    price: 300
+    stock: 15
+  - product: PowerCellHigh
+    name: cell 1500H
+    category: Electronics
+    price: 700
+    stock: 10
+  - product: Multitool
+    name: multitool
+    category: Electronics
+    price: 300
+    stock: 8
+  offers:
+  - product: Crowbar
+    name: crowbar
+    price: 2800
+    amount: 5
+    duration: 300
+  - product: Screwdriver
+    name: screwdriver
+    price: 2800
+    amount: 4
+    duration: 300
+  - product: Shovel
+    name: shovel
+    price: 2800
+    amount: 4
+    duration: 300
+
+- type: oxydTradeStation
+  id: Solnishko
+  name: "IST 'Solnishko'"
+  description: The infamous Solnishko trading station — food, drink, and whatever else moves.
+  startDiscovered: true
+  markup: 1.0
+  baseIncome: 1600
+  inventory:
+  - product: FoodSnackChips
+    name: bag of chips
+    category: Supplies
+    price: 40
+    stock: 30
+  - product: FoodSnackCnDs
+    name: CnD candies
+    category: Supplies
+    price: 40
+    stock: 25
+  - product: DrinkWaterBottleFull
+    name: water bottle
+    category: Supplies
+    price: 24
+    stock: 40
+  - product: DrinkCoffee
+    name: coffee
+    category: Supplies
+    price: 36
+    stock: 20
+  offers:
+  - product: PowerCellSmall
+    name: cell 100S
+    price: 5600
+    amount: 10
+    duration: 300

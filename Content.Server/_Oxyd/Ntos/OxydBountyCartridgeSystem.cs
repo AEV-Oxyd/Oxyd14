@@ -15,16 +15,11 @@ public sealed partial class OxydBountyCartridgeSystem : EntitySystem
     [Dependency] private StationSystem _station = default!;
     [Dependency] private IPrototypeManager _protos = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydBountyCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydBountyCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydBountyCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydBountyCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is OxydBountyUiMessageEvent)

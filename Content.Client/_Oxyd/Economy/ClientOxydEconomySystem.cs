@@ -5,14 +5,9 @@ using Robust.Client.UserInterface.Controls;
 namespace Content.Client._Oxyd.Economy;
 
 /// <summary>Shows the personal bank account on the character window.</summary>
-public sealed class ClientOxydEconomySystem : EntitySystem
+public sealed partial class ClientOxydEconomySystem : EntitySystem
 {
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<CharacterInfoSystem.GetCharacterInfoControlsEvent>(OnGetCharacterInfoControls);
-    }
-
+    [SubscribeLocalEvent]
     private void OnGetCharacterInfoControls(ref CharacterInfoSystem.GetCharacterInfoControlsEvent ev)
     {
         if (!TryComp<OxydPersonalAccountComponent>(ev.Entity, out var account) || account.AccountNumber == 0)

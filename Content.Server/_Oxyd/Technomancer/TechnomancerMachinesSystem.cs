@@ -22,7 +22,7 @@ namespace Content.Server._Oxyd.Technomancer;
 /// ship shield generator (shield_generators/shield_generator.dm), and the
 /// breaker box (machinery/power/breakerbox.dm). Eris procs are cited inline.
 /// </summary>
-public sealed class TechnomancerMachinesSystem : EntitySystem
+public sealed partial class TechnomancerMachinesSystem : EntitySystem
 {
     [Dependency] private IRobustRandom _rand = default!;
     [Dependency] private IGameTiming _timing = default!;
@@ -31,24 +31,9 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
 
     private TimeSpan _nextUpdate = TimeSpan.Zero;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydPulsarComponent, OxydPulsarMoveMessage>(OnPulsarMove);
-        SubscribeLocalEvent<OxydPulsarComponent, OxydPulsarShieldMessage>(OnPulsarShield);
-        SubscribeLocalEvent<OxydPulsarBridgeComponent, OxydPulsarBridgeToggleMessage>(OnBridgeToggle);
-        SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldToggleMessage>(OnShieldToggle);
-        SubscribeLocalEvent<OxydShipShieldComponent, PreventCollideEvent>(OnShieldPreventCollide);
-        SubscribeLocalEvent<OxydShipShieldComponent, StartCollideEvent>(OnShieldCollide);
-        SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldModeMessage>(OnShieldMode);
-        SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldFieldSizeMessage>(OnShieldFieldSize);
-        SubscribeLocalEvent<OxydShipShieldComponent, OxydShieldInputCapMessage>(OnShieldInputCap);
-        SubscribeLocalEvent<OxydBreakerBoxComponent, OxydBreakerToggleMessage>(OnBreakerToggle);
-        SubscribeLocalEvent<OxydPulsarComponent, MapInitEvent>(OnPulsarInit);
-        SubscribeLocalEvent<OxydPulsarBridgeComponent, MapInitEvent>(OnBridgeInit);
-    }
-
     // --- Pulsar console (Eris: pulsar_consoles.dm interactions) ---
 
+    [SubscribeLocalEvent]
     private void OnPulsarInit(Entity<OxydPulsarComponent> ent, ref MapInitEvent args)
     {
         if (ent.Comp.Beams.Count == 0)
@@ -69,6 +54,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
     {
     }
 
+    [SubscribeLocalEvent]
     private void OnPulsarMove(Entity<OxydPulsarComponent> ent, ref OxydPulsarMoveMessage msg)
     {
         var c = ent.Comp;
@@ -87,6 +73,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         Dirty(ent, c);
     }
 
+    [SubscribeLocalEvent]
     private void OnPulsarShield(Entity<OxydPulsarComponent> ent, ref OxydPulsarShieldMessage msg)
     {
         ent.Comp.ShieldPower = Math.Clamp(msg.Pct, 0, 100);
@@ -103,10 +90,12 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
 
     // --- Power bridge (Eris: disconnect/reconnect + RECONNECT_CD) ---
 
+    [SubscribeLocalEvent]
     private void OnBridgeInit(Entity<OxydPulsarBridgeComponent> ent, ref MapInitEvent args)
     {
     }
 
+    [SubscribeLocalEvent]
     private void OnBridgeToggle(Entity<OxydPulsarBridgeComponent> ent, ref OxydPulsarBridgeToggleMessage msg)
     {
         var c = ent.Comp;
@@ -124,6 +113,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
 
     // --- Shield generator (Eris: idle_power/update_upkeep equivalents) ---
 
+    [SubscribeLocalEvent]
     private void OnShieldToggle(Entity<OxydShipShieldComponent> ent, ref OxydShieldToggleMessage msg)
     {
         ent.Comp.Running = !ent.Comp.Running;
@@ -134,6 +124,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         PushShieldState(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnShieldPreventCollide(Entity<OxydShipShieldComponent> ent, ref PreventCollideEvent args)
     {
         if ((args.OurFixture.CollisionLayer & (int) CollisionGroup.BulletImpassable) == 0)
@@ -143,6 +134,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
             args.Cancelled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnShieldCollide(Entity<OxydShipShieldComponent> ent, ref StartCollideEvent args)
     {
         if (args.OurFixtureId != "shield" || !HasComp<ProjectileComponent>(args.OtherEntity))
@@ -220,6 +212,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnShieldMode(Entity<OxydShipShieldComponent> ent, ref OxydShieldModeMessage msg)
     {
         if (msg.On)
@@ -244,6 +237,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         PushShieldState(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnShieldFieldSize(Entity<OxydShipShieldComponent> ent, ref OxydShieldFieldSizeMessage msg)
     {
         ent.Comp.FieldSize = Math.Clamp(msg.Size, 0, ent.Comp.MaxFieldSize);
@@ -252,6 +246,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
         PushShieldState(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnShieldInputCap(Entity<OxydShipShieldComponent> ent, ref OxydShieldInputCapMessage msg)
     {
         ent.Comp.InputCap = Math.Max(0f, msg.Kw);
@@ -260,6 +255,7 @@ public sealed class TechnomancerMachinesSystem : EntitySystem
 
     // --- Breaker box ---
 
+    [SubscribeLocalEvent]
     private void OnBreakerToggle(Entity<OxydBreakerBoxComponent> ent, ref OxydBreakerToggleMessage msg)
     {
         ent.Comp.Enabled = msg.On;

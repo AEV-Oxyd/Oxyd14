@@ -70,6 +70,9 @@ public sealed class OxydTradeState : BoundUserInterfaceState
 {
     public int Balance;
     public bool HasAccount = true;
+    /// <summary>Account the console buys with and is paid into.</summary>
+    public int? AccountNumber;
+    public string AccountName = string.Empty;
     public string ReceivingBeacon = string.Empty; // "✓Receiving Beacon: <loc>" or "No"
     public string SendingBeacon = string.Empty;
     public List<OxydTradeStationEntry> Stations = new();
@@ -163,45 +166,10 @@ public sealed class OxydTradeCompleteRequestMessage : BoundUserInterfaceMessage
 
 // ATM UI types live in Content.Shared._Oxyd.Economy (Eris economy+PDA port).
 
-// ---------------- Ore processor console ----------------
-
+/// <summary>Point the console at a different account (Eris trade program account login).</summary>
 [Serializable, NetSerializable]
-public enum OxydOreProcessorUiKey : byte
+public sealed class OxydTradeSetAccountMessage : BoundUserInterfaceMessage
 {
-    Key,
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydOreProcessorState : BoundUserInterfaceState
-{
-    public bool HasMachine;
-    public bool Running;
-    /// <summary>Material rows: name, loaded count, storing toggle.</summary>
-    public List<OxydOreProcessorMaterial> Materials = new();
-    public List<string> Alloys = new();
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydOreProcessorMaterial
-{
-    public string Name = string.Empty;
-    public int Loaded;
-    public bool Storing;
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydOreProcessorToggleMessage : BoundUserInterfaceMessage
-{
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydOreProcessorStoreMessage : BoundUserInterfaceMessage
-{
-    public string Material = string.Empty;
-}
-
-[Serializable, NetSerializable]
-public sealed class OxydOreProcessorAlloyMessage : BoundUserInterfaceMessage
-{
-    public string Alloy = string.Empty;
+    public int AccountNumber;
+    public int Pin;
 }

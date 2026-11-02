@@ -121,7 +121,6 @@ public sealed partial class EconomyDebugCommand
     private void RunEconomyCore(QaRun run)
     {
         var eco = GetSys<OxydEconomySystem>();
-        eco.EnsureDepartmentsForRound();
 
         var a = eco.CreateAccount("QaAlice", "QaAlice", 1000, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageLabour);
         var b = eco.CreateAccount("QaBob", "QaBob", 100, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
@@ -166,7 +165,6 @@ public sealed partial class EconomyDebugCommand
     private void RunAtmPos(QaRun run, EntityUid actor)
     {
         var eco = GetSys<OxydEconomySystem>();
-        eco.EnsureDepartmentsForRound();
         var coords = Transform(actor).Coordinates;
 
         var acct = eco.CreateAccount("QaTeller", "QaTeller", 2000, OxydEconomyConstants.EmployerService, 0);
@@ -226,19 +224,17 @@ public sealed partial class EconomyDebugCommand
     private void RunAccountsDb(QaRun run)
     {
         var eco = GetSys<OxydEconomySystem>();
-        eco.EnsureDepartmentsForRound();
         var cargo = eco.FindDepartmentAccount(OxydEconomyConstants.EmployerCargo)
                     ?? eco.CreateAccount("Cargo Department", "Cargo", 5000, null, 0, true,
                         OxydEconomyConstants.EmployerCargo, canMakeAccounts: true);
         eco.TrySetBalance(cargo.AccountNumber, 5000);
 
+        var created = eco.CreateAccount("QaHire", "QaHire", 0, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
+        run.Check("accountsdb.unfunded", created.Balance == 0, $"bal={created.Balance}");
         run.Check("accountsdb.funded",
-            eco.TryCreateFundedAccount("QaHire", 500, cargo.AccountNumber, "qa", out var created, out var err)
-            && created != null && created.Balance == 500 && cargo.Balance == 4500,
+            eco.TryFundAccount(created.AccountNumber, cargo.AccountNumber, 500, "qa", out var err)
+            && created.Balance == 500 && cargo.Balance == 4500,
             err);
-
-        if (created == null)
-            return;
 
         run.Check("accountsdb.suspend", eco.TrySetSuspended(created.AccountNumber, true), null);
         run.Check("accountsdb.silent-adjust",
@@ -303,7 +299,6 @@ public sealed partial class EconomyDebugCommand
         var eco = GetSys<OxydEconomySystem>();
         var trade = GetSys<OxydTradeSystem>();
         trade.EnsureSeeded();
-        eco.EnsureDepartmentsForRound();
 
         run.Check("trade.vermouth", trade.TryGetStation("Vermouth", out var vermouth) && vermouth!.Discovered,
             null);

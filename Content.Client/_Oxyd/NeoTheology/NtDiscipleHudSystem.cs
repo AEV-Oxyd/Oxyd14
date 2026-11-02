@@ -16,12 +16,7 @@ public sealed partial class NtDiscipleHudSystem : EquipmentHudSystem<NtDiscipleH
 {
     private static readonly ProtoId<SecurityIconPrototype> DiscipleIcon = "OxydNtDiscipleIcon";
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<CruciformBearerComponent, GetStatusIconsEvent>(OnGetStatusIcons);
-    }
-
+    [SubscribeLocalEvent]
     private void OnGetStatusIcons(Entity<CruciformBearerComponent> ent, ref GetStatusIconsEvent args)
     {
         if (!IsActive ||

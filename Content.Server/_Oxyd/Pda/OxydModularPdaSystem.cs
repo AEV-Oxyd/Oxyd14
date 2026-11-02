@@ -31,13 +31,6 @@ public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
     [Dependency] private SharedSolutionContainerSystem _solutions = default!;
     [Dependency] private CartridgeLoaderSystem _cartridges = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydModularPdaComponent, GetVerbsEvent<AlternativeVerb>>(OnVerbs);
-        SubscribeLocalEvent<OxydModularPdaComponent, AfterInteractEvent>(OnAfterInteract);
-    }
-
     protected override void AfterRecalculate(Entity<OxydModularPdaComponent> ent)
     {
         if (TryComp<WirelessNetworkComponent>(ent, out var wireless))
@@ -84,6 +77,7 @@ public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnAfterInteract(Entity<OxydModularPdaComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target is not { } target)
@@ -128,6 +122,7 @@ public sealed partial class OxydModularPdaSystem : SharedOxydModularPdaSystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnVerbs(Entity<OxydModularPdaComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
     {
         if (!args.CanAccess || !args.CanInteract)

@@ -6,7 +6,7 @@ namespace Content.Server._Oxyd.Ntos;
 
 /// <summary>Eris NTNRC-style channel chat shared across PDAs.
 /// Reviewer round-2: channel/name/join state lives on a lazily-spawned nullspace
-/// entity (OxydBankSystem pattern) so chat resets each round, bounded by caps.</summary>
+/// entity (the banking server pattern) so chat resets each round, bounded by caps.</summary>
 public sealed partial class OxydNtChatSystem : EntitySystem
 {
     // Reviewer round-2 caps: bounded chat storage per round.

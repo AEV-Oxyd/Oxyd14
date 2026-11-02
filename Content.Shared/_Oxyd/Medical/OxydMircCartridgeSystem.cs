@@ -16,11 +16,7 @@ public sealed partial class OxydMircCartridgeSystem : EntitySystem
     [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydMircCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
-    }
-
+    [SubscribeLocalEvent]
     private void OnUiReady(EntityUid uid, OxydMircCartridgeComponent comp, CartridgeUiReadyEvent args)
     {
         _cartridgeLoader.UpdateCartridgeUiState(args.Loader, new OxydMircUiState { Entries = BuildEntries() });

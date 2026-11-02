@@ -33,6 +33,7 @@ public sealed class OxydTradeBoundUserInterface : BoundUserInterface
         _window.DeleteSavedCart += i => SendMessage(new OxydTradeDeleteSavedCartMessage { Index = i });
         _window.SubmitRequest += (i, a) => SendMessage(new OxydTradeSubmitRequestMessage { Item = i, Amount = a });
         _window.CompleteRequest += id => SendMessage(new OxydTradeCompleteRequestMessage { Id = id });
+        _window.SetAccount += (n, pin) => SendMessage(new OxydTradeSetAccountMessage { AccountNumber = n, Pin = pin });
         _window.OnClose += Close;
     }
 
@@ -75,10 +76,13 @@ public sealed partial class OxydTradeWindow : FancyWindow
     public event Action<int>? DeleteSavedCart;
     public event Action<string, int>? SubmitRequest;
     public event Action<int>? CompleteRequest;
+    public event Action<int, int>? SetAccount;
 
     private LineEdit? _savedCartName;
     private LineEdit? _requestItem;
     private LineEdit? _requestAmount;
+    private LineEdit? _accountNumber;
+    private LineEdit? _accountPin;
 
     private OxydTradeState? _state;
     private string _tab = "Goods";
@@ -108,6 +112,30 @@ public sealed partial class OxydTradeWindow : FancyWindow
         var bal = new ErisItemLabel($"Balance: {s.Balance}cr");
         header.AddChild(bal);
         Content.AddChild(ErisCandystripe.Wrap(header, 0));
+
+        // ---- Account the console trades with (Eris: log in another account) ----
+        if (!s.IsRequestConsole)
+        {
+            var accountRow = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 6 };
+            accountRow.AddChild(new Label
+            {
+                Text = s.AccountNumber is { } acct ? $"Account #{acct} {s.AccountName}" : "No account",
+                FontColorOverride = ErisNanoColors.LabelText,
+                HorizontalExpand = true,
+            });
+            _accountNumber = new LineEdit { PlaceHolder = "account #", MinWidth = 90 };
+            _accountPin = new LineEdit { PlaceHolder = "PIN", MinWidth = 60 };
+            accountRow.AddChild(_accountNumber);
+            accountRow.AddChild(_accountPin);
+            var login = new ErisLink("Log in");
+            login.OnPressed += _ =>
+            {
+                if (int.TryParse(_accountNumber.Text, out var number) && int.TryParse(_accountPin.Text, out var pin))
+                    SetAccount?.Invoke(number, pin);
+            };
+            accountRow.AddChild(login);
+            Content.AddChild(accountRow);
+        }
 
         // ---- Main split: station tree (left) | content (right) ----
         var split = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 8 };

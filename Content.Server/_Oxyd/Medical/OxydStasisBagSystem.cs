@@ -25,18 +25,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
     [Dependency] private ContainerSystem _container = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydStasisBagComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<OxydStasisBagComponent, GetVerbsEvent<InteractionVerb>>(AddSealVerb);
-        SubscribeLocalEvent<OxydStasisBagComponent, GetVerbsEvent<AlternativeVerb>>(AddOpenVerb);
-        SubscribeLocalEvent<OxydStasisBagComponent, DragDropTargetEvent>(OnDragDropOn);
-        SubscribeLocalEvent<OxydStasisBagComponent, CanDropTargetEvent>(OnCanDropOn);
-        SubscribeLocalEvent<OxydStasisBagComponent, EntRemovedFromContainerMessage>(OnOccupantRemoved);
-        SubscribeLocalEvent<OxydStasisBagComponent, EntityTerminatingEvent>(OnTerminating);
-        SubscribeLocalEvent<OxydInStasisComponent, DamageModifyEvent>(OnStasisDamage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnInit(EntityUid uid, OxydStasisBagComponent comp, ComponentInit args)
     {
         _container.EnsureContainer<Container>(uid, OxydStasisBagComponent.BodyContainerId);
@@ -45,6 +34,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
     private Container BodySlot(EntityUid uid) =>
         _container.EnsureContainer<Container>(uid, OxydStasisBagComponent.BodyContainerId);
 
+    [SubscribeLocalEvent]
     private void OnCanDropOn(EntityUid uid, OxydStasisBagComponent comp, ref CanDropTargetEvent args)
     {
         if (args.Handled)
@@ -54,6 +44,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
         args.Handled = args.CanDrop;
     }
 
+    [SubscribeLocalEvent]
     private void OnDragDropOn(EntityUid uid, OxydStasisBagComponent comp, DragDropTargetEvent args)
     {
         if (args.Handled || BodySlot(uid).ContainedEntities.Count > 0 || !HasComp<BodyComponent>(args.Dragged))
@@ -63,6 +54,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
         Seal(uid, comp, args.Dragged);
     }
 
+    [SubscribeLocalEvent]
     private void AddSealVerb(EntityUid uid, OxydStasisBagComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanInteract || BodySlot(uid).ContainedEntities.Count > 0)
@@ -79,6 +71,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void AddOpenVerb(EntityUid uid, OxydStasisBagComponent comp, GetVerbsEvent<AlternativeVerb> args)
     {
         if (BodySlot(uid).ContainedEntities.Count == 0)
@@ -115,6 +108,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
     }
 
     /// <summary>Stasis negates incoming damage (Eris stasis_bag prevents body decay/damage).</summary>
+    [SubscribeLocalEvent]
     private void OnStasisDamage(EntityUid uid, OxydInStasisComponent comp, DamageModifyEvent args)
     {
         args.Damage = new DamageSpecifier();
@@ -122,12 +116,14 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
 
     /// <summary>Any occupant leaving the body container loses stasis protection, even when
     /// removed by something other than the Open verb (admin pull, teleport, destroy).</summary>
+    [SubscribeLocalEvent]
     private void OnOccupantRemoved(EntityUid uid, OxydStasisBagComponent comp, EntRemovedFromContainerMessage args)
     {
         RemCompDeferred<OxydInStasisComponent>(args.Entity);
     }
 
     /// <summary>A deleted bag frees its patient instead of leaving them permanently in stasis.</summary>
+    [SubscribeLocalEvent]
     private void OnTerminating(EntityUid uid, OxydStasisBagComponent comp, EntityTerminatingEvent args)
     {
         foreach (var occupant in BodySlot(uid).ContainedEntities.ToArray())

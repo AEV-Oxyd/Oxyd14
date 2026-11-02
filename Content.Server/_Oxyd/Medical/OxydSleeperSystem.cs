@@ -43,23 +43,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
 
     private float _refreshRemaining;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydSleeperComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<OxydSleeperComponent, GetVerbsEvent<InteractionVerb>>(AddInsertVerb);
-        SubscribeLocalEvent<OxydSleeperComponent, GetVerbsEvent<AlternativeVerb>>(AddEjectVerb);
-        SubscribeLocalEvent<OxydSleeperComponent, DragDropTargetEvent>(OnDragDropOn);
-        SubscribeLocalEvent<OxydSleeperComponent, CanDropTargetEvent>(OnCanDropOn);
-        SubscribeLocalEvent<OxydSleeperComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<OxydSleeperComponent, AfterActivatableUIOpenEvent>(OnUiOpen);
-        SubscribeLocalEvent<OxydSleeperComponent, EntInsertedIntoContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydSleeperComponent, EntRemovedFromContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydSleeperComponent, OxydSleeperInjectMessage>(OnInject);
-        SubscribeLocalEvent<OxydSleeperComponent, OxydSleeperEjectMessage>(OnEject);
-        SubscribeLocalEvent<OxydSleeperComponent, OxydSleeperEjectBeakerMessage>(OnEjectBeaker);
-        SubscribeLocalEvent<OxydSleeperComponent, OxydSleeperToggleFilterMessage>(OnToggleFilter);
-    }
-
+    [SubscribeLocalEvent]
     private void OnInit(EntityUid uid, OxydSleeperComponent comp, ComponentInit args)
     {
         _container.EnsureContainer<ContainerSlot>(uid, OxydSleeperComponent.BodyContainerId);
@@ -72,6 +56,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
     private ContainerSlot BeakerSlot(EntityUid uid) =>
         _container.EnsureContainer<ContainerSlot>(uid, OxydSleeperComponent.BeakerContainerId);
 
+    [SubscribeLocalEvent]
     private void OnCanDropOn(EntityUid uid, OxydSleeperComponent comp, ref CanDropTargetEvent args)
     {
         if (args.Handled)
@@ -82,6 +67,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         args.Handled = args.CanDrop;
     }
 
+    [SubscribeLocalEvent]
     private void OnDragDropOn(EntityUid uid, OxydSleeperComponent comp, DragDropTargetEvent args)
     {
         if (args.Handled || BodySlot(uid).ContainedEntity != null || !HasComp<BodyComponent>(args.Dragged))
@@ -91,6 +77,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         _container.Insert(args.Dragged, BodySlot(uid));
     }
 
+    [SubscribeLocalEvent]
     private void AddInsertVerb(EntityUid uid, OxydSleeperComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanInteract)
@@ -121,6 +108,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
     }
 
     /// <summary>Eris: clicking the sleeper with a beaker loads it into the dialysis slot.</summary>
+    [SubscribeLocalEvent]
     private void OnInteractUsing(EntityUid uid, OxydSleeperComponent comp, InteractUsingEvent args)
     {
         if (args.Handled || BeakerSlot(uid).ContainedEntity != null)
@@ -132,6 +120,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         _container.Insert(args.Used, BeakerSlot(uid));
     }
 
+    [SubscribeLocalEvent]
     private void AddEjectVerb(EntityUid uid, OxydSleeperComponent comp, GetVerbsEvent<AlternativeVerb> args)
     {
         if (BodySlot(uid).ContainedEntity is not { } occupant)
@@ -149,8 +138,17 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         _container.Remove(occupant, BodySlot(uid));
     }
 
+    [SubscribeLocalEvent]
     private void OnUiOpen(EntityUid uid, OxydSleeperComponent comp, AfterActivatableUIOpenEvent args)
         => PushState(uid, comp);
+
+    [SubscribeLocalEvent]
+    private void OnEntInserted(EntityUid uid, OxydSleeperComponent comp, EntInsertedIntoContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
+
+    [SubscribeLocalEvent]
+    private void OnEntRemoved(EntityUid uid, OxydSleeperComponent comp, EntRemovedFromContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
 
     private void OnContainerChanged(EntityUid uid, OxydSleeperComponent comp, ContainerModifiedMessage args)
     {
@@ -161,6 +159,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnInject(EntityUid uid, OxydSleeperComponent comp, OxydSleeperInjectMessage args)
     {
         if (BodySlot(uid).ContainedEntity is not { } occupant)
@@ -189,12 +188,14 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnEject(EntityUid uid, OxydSleeperComponent comp, OxydSleeperEjectMessage args)
     {
         if (BodySlot(uid).ContainedEntity is { } occupant)
             EjectBody(uid, occupant);
     }
 
+    [SubscribeLocalEvent]
     private void OnEjectBeaker(EntityUid uid, OxydSleeperComponent comp, OxydSleeperEjectBeakerMessage args)
     {
         comp.Filtering = false;
@@ -202,6 +203,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
             _container.Remove(beaker, BeakerSlot(uid));
     }
 
+    [SubscribeLocalEvent]
     private void OnToggleFilter(EntityUid uid, OxydSleeperComponent comp, OxydSleeperToggleFilterMessage args)
     {
         // Eris toggle_filter: needs an occupant and a beaker, otherwise snaps back to off.

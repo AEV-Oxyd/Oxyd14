@@ -40,11 +40,6 @@ public sealed partial class OxydWoundSystem : EntitySystem
         "LegLeft", "LegRight", "FootLeft", "FootRight",
     };
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<BodyComponent, DamageDealtEvent>(OnBodyDamaged);
-    }
-
     public static bool IsExternal(OrganComponent organ) =>
         organ.Category is { } cat && ExternalCategories.Contains(cat.Id);
 
@@ -82,6 +77,7 @@ public sealed partial class OxydWoundSystem : EntitySystem
         return OxydPulse.Norm;
     }
 
+    [SubscribeLocalEvent]
     private void OnBodyDamaged(EntityUid uid, BodyComponent comp, DamageDealtEvent args)
     {
         if (_mobs.IsDead(uid))

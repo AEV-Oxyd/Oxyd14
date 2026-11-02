@@ -13,11 +13,11 @@ public sealed partial class OxydCatalogUiFragment : BoxContainer
         RobustXamlLoader.Load(this);
     }
 
-    public void UpdateState(OxydCatalogUiState state)
+    public void Populate(OxydCatalogPrototype catalog)
     {
-        TitleLabel.Text = state.Title;
+        TitleLabel.Text = catalog.Title;
         List.RemoveAllChildren();
-        foreach (var entry in state.Entries)
+        foreach (var entry in catalog.Entries)
         {
             var box = new BoxContainer { Orientation = LayoutOrientation.Vertical, Margin = new Thickness(0, 0, 0, 6) };
             box.AddChild(new Label { Text = entry.Name, StyleClasses = { "LabelSubText" } });

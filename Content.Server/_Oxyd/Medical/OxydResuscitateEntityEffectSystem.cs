@@ -32,12 +32,7 @@ public sealed partial class OxydResuscitateEntityEffectSystem : EntityEffectSyst
     [Dependency] private SharedSolutionContainerSystem _solutions = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<MobStateChangedEvent>(OnMobStateChanged);
-    }
-
+    [SubscribeLocalEvent]
     private void OnMobStateChanged(MobStateChangedEvent args)
     {
         if (args.NewMobState == MobState.Dead)

@@ -34,12 +34,7 @@ public sealed partial class NeoTheologyDoorSystem : EntitySystem
 
     private static readonly ProtoId<StackPrototype> BiomatterStack = NeoTheologyPrototypes.BiomatterStack;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<NeoTheologyDoorComponent, DamageDealtEvent>(OnDamaged);
-    }
-
+    [SubscribeLocalEvent]
     private void OnDamaged(EntityUid uid, NeoTheologyDoorComponent component, DamageDealtEvent args)
     {
         if (!_damageable.IsAtLeastTotalDamage(uid, NeoTheologyDoorComponent.BrokenAt))

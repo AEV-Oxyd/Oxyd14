@@ -112,11 +112,8 @@ public sealed class OxydTradeStackTest : GameTest
                             null, 0, true, OxydEconomyConstants.EmployerGuild, canMakeAccounts: true);
             var buyer = eco.CreateAccount("ClubBuyer", "ClubBuyer", 5000, OxydEconomyConstants.EmployerService, 0);
 
-            // Use a dummy cart owner entity number via buyer uidless — spawn a marker
-            // Cart is keyed by EntityUid; use guild entity number fake via Ensure — create with station system
-            // Simplest: use EntityUid with value from Create — we need a real uid. Use buyer's personal as cart key after spawning nothing.
-            // EntityUid is a struct - we can use default invalid? Dictionary allows any key.
-            var loader = new EntityUid(999001);
+            // The cart is a component on the loader, so it needs a real entity.
+            var loader = server.ResolveDependency<IEntityManager>().SpawnEntity(null, MapCoordinates.Nullspace);
             trade.ClearCart(loader);
             Assert.That(trade.TryAddToCart(loader, "AstersCapital", "Crowbar", 1, out var err), Is.True, err);
             Assert.That(trade.TryPlaceOrder(loader, buyer.AccountNumber, "fee test", out var order, out err), Is.True, err);

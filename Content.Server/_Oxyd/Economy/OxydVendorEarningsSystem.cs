@@ -26,12 +26,7 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
     [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private VendingMachineSystem _vending = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydVendorEarningsComponent, VendingMachineEjectAttemptEvent>(OnEjectAttempt);
-    }
-
+    [SubscribeLocalEvent]
     private void OnEjectAttempt(Entity<OxydVendorEarningsComponent> ent, ref VendingMachineEjectAttemptEvent args)
     {
         var price = ent.Comp.DefaultPrice;
@@ -97,7 +92,6 @@ public sealed partial class OxydVendorEarningsSystem : EntitySystem
         if (comp.LinkedAccountNumber != 0 && _economy.TryGetAccount(comp.LinkedAccountNumber, out _))
             return comp.LinkedAccountNumber;
 
-        _economy.EnsureDepartmentsForRound();
         return _economy.FindDepartmentAccount(comp.DepartmentId)?.AccountNumber ?? 0;
     }
 

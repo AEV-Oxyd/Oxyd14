@@ -27,18 +27,8 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydCashRegisterComponent, InteractHandEvent>(OnRegisterHand);
-        SubscribeLocalEvent<OxydCashRegisterComponent, InteractUsingEvent>(OnRegisterUsing);
-        SubscribeLocalEvent<OxydCashRegisterComponent, ExaminedEvent>(OnRegisterExamined);
-        SubscribeLocalEvent<OxydCashRegisterComponent, GetVerbsEvent<AlternativeVerb>>(OnRegisterVerbs);
 
-        SubscribeLocalEvent<OxydEftposComponent, UseInHandEvent>(OnEftposUse);
-        SubscribeLocalEvent<OxydEftposComponent, InteractUsingEvent>(OnEftposUsing);
-        SubscribeLocalEvent<OxydEftposComponent, ExaminedEvent>(OnEftposExamined);
 
-        SubscribeLocalEvent<OxydTipJarComponent, InteractUsingEvent>(OnTipUsing);
-        SubscribeLocalEvent<OxydTipJarComponent, InteractHandEvent>(OnTipHand);
-        SubscribeLocalEvent<OxydTipJarComponent, ExaminedEvent>(OnTipExamined);
     }
 
     private int ResolveLinkedAccount(int linked, string departmentId)
@@ -46,10 +36,10 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         if (linked != 0 && _economy.TryGetAccount(linked, out _))
             return linked;
 
-        _economy.EnsureDepartmentsForRound();
         return _economy.FindDepartmentAccount(departmentId)?.AccountNumber ?? 0;
     }
 
+    [SubscribeLocalEvent]
     private void OnRegisterHand(Entity<OxydCashRegisterComponent> ent, ref InteractHandEvent args)
     {
         ent.Comp.DrawerOpen = !ent.Comp.DrawerOpen;
@@ -61,6 +51,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnRegisterUsing(Entity<OxydCashRegisterComponent> ent, ref InteractUsingEvent args)
     {
         if (!TryComp(args.Used, out StackComponent? stack) || stack.StackTypeId != CreditStack.Id)
@@ -79,6 +70,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnRegisterExamined(Entity<OxydCashRegisterComponent> ent, ref ExaminedEvent args)
     {
         args.PushMarkup(ent.Comp.DrawerOpen
@@ -89,6 +81,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
             args.PushMarkup($"Linked account #{linked} ({ent.Comp.DepartmentId}).");
     }
 
+    [SubscribeLocalEvent]
     private void OnRegisterVerbs(Entity<OxydCashRegisterComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
     {
         if (!args.CanAccess || !args.CanInteract)
@@ -170,6 +163,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnEftposUse(Entity<OxydEftposComponent> ent, ref UseInHandEvent args)
     {
         ent.Comp.Charge = ent.Comp.Charge switch { 0 => 100, 100 => 250, 250 => 500, _ => 0 };
@@ -182,6 +176,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnEftposUsing(Entity<OxydEftposComponent> ent, ref InteractUsingEvent args)
     {
         if (!ent.Comp.Charging || ent.Comp.Charge <= 0)
@@ -250,6 +245,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         Dirty(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnEftposExamined(Entity<OxydEftposComponent> ent, ref ExaminedEvent args)
     {
         args.PushMarkup(ent.Comp.Charging
@@ -257,6 +253,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
             : "Idle — activate in hand to set a charge.");
     }
 
+    [SubscribeLocalEvent]
     private void OnTipUsing(Entity<OxydTipJarComponent> ent, ref InteractUsingEvent args)
     {
         if (!TryComp(args.Used, out StackComponent? stack) || stack.StackTypeId != CreditStack.Id)
@@ -269,6 +266,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnTipHand(Entity<OxydTipJarComponent> ent, ref InteractHandEvent args)
     {
         if (ent.Comp.Stored <= 0)
@@ -285,6 +283,7 @@ public sealed partial class OxydPosDevicesSystem : EntitySystem
         args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnTipExamined(Entity<OxydTipJarComponent> ent, ref ExaminedEvent args)
     {
         args.PushMarkup(ent.Comp.Stored > 0

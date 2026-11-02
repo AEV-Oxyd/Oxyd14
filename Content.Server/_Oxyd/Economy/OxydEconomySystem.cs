@@ -3,12 +3,14 @@ using System.Linq;
 using Content.Server._Oxyd.Framework.JobsAndSpawning;
 using Content.Server.Cargo.Systems;
 using Content.Server.Chat.Systems;
+using Content.Server.GameTicking.Events;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Cargo.Components;
 using Content.Shared.Cargo.Prototypes;
 using Content.Shared.GameTicking;
 using Content.Shared.Inventory;
+using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -30,93 +32,97 @@ public sealed partial class OxydEconomySystem : EntitySystem
     [Dependency] private InventorySystem _inventory = default!;
     [Dependency] private ChatSystem _chat = default!;
 
-    private readonly Dictionary<int, OxydMoneyAccountData> _accounts = new();
-    /// <summary>Balance last pushed to StationBankAccount per account — sync applies the delta only.</summary>
-    private readonly Dictionary<int, int> _cargoSyncedBalance = new();
-    private int _nextAccountNumber = 111111;
-    private TimeSpan _nextPayday;
-    private bool _departmentsReady;
+    private static readonly EntProtoId BankingServerProto = "OxydBankingServer";
 
-    public IReadOnlyDictionary<int, OxydMoneyAccountData> Accounts => _accounts;
+    /// <summary>PIN brute-force guard: failures are counted per account and per user.
+    /// The window is measured from the FIRST failure — 5 inside a minute locks that
+    /// side out for a minute.</summary>
+    private const int LoginMaxFailures = 5;
+    private static readonly TimeSpan LoginFailureWindow = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan LoginLockout = TimeSpan.FromMinutes(1);
 
-    public override void Initialize()
+    private Entity<OxydBankingServerComponent>? _bank;
+
+    /// <summary>The round's banking server. Spawned at round start; also spawned on first use
+    /// when no round has started (tests, admin tools).</summary>
+    public Entity<OxydBankingServerComponent> Bank => _bank is { } bank && !TerminatingOrDeleted(bank) ? bank : EnsureBank();
+
+    public IReadOnlyDictionary<int, OxydMoneyAccountData> Accounts => Bank.Comp.Accounts;
+
+    public IEnumerable<OxydMoneyAccountData> EnumerateAccounts() => Bank.Comp.Accounts.Values;
+
+    public TimeSpan NextPayday => Bank.Comp.NextPayday;
+
+    [SubscribeLocalEvent]
+    private void OnRoundStarting(RoundStartingEvent ev)
     {
-        base.Initialize();
-        _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
-        SubscribeLocalEvent<JobAfterSpawnEvent>(OnJobAfterSpawn);
-        SubscribeLocalEvent<PlayerSpawnCompleteEvent>(OnPlayerSpawnComplete);
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
+        EnsureBank();
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
     {
-        _accounts.Clear();
-        _cargoSyncedBalance.Clear();
-        _nextAccountNumber = 111111;
-        _departmentsReady = false;
-        _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
+        if (_bank is { } bank && !TerminatingOrDeleted(bank))
+            Del(bank);
+        _bank = null;
+    }
+
+    private Entity<OxydBankingServerComponent> EnsureBank()
+    {
+        var query = EntityQueryEnumerator<OxydBankingServerComponent>();
+        if (query.MoveNext(out var existing, out var existingComp))
+        {
+            _bank = (existing, existingComp);
+            return _bank.Value;
+        }
+
+        var uid = Spawn(BankingServerProto, MapCoordinates.Nullspace);
+        _bank = (uid, Comp<OxydBankingServerComponent>(uid));
+        return _bank.Value;
+    }
+
+    /// <summary>The only place department accounts are opened: when the banking server starts.</summary>
+    [SubscribeLocalEvent]
+    private void OnBankStartup(Entity<OxydBankingServerComponent> ent, ref ComponentStartup args)
+    {
+        ent.Comp.NextAccountNumber = ent.Comp.FirstAccountNumber;
+        ent.Comp.NextPayday = _timing.CurTime + ent.Comp.PaydayInterval;
+
+        var station = _station.GetStations().FirstOrNull();
+        foreach (var dept in ent.Comp.Departments)
+        {
+            var balance = dept.StartingBalance;
+            if (dept.CargoAccount is { } cargoAccount && station != null &&
+                _cargo.TryGetAccount(station.Value, cargoAccount, out var cargoBalance))
+                balance = cargoBalance;
+
+            var acc = CreateAccount(ent,
+                ownerName: dept.Name ?? $"{dept.Id} Department",
+                accountName: dept.Id,
+                balance: balance,
+                employer: dept.Employer,
+                wage: dept.Wage,
+                isDepartment: true,
+                departmentId: dept.Id,
+                canMakeAccounts: dept.CanMakeAccounts);
+            ent.Comp.CargoSyncedBalance[acc.AccountNumber] = balance;
+        }
     }
 
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
-        if (_timing.CurTime < _nextPayday)
+        if (_bank is not { } bank || TerminatingOrDeleted(bank) || _timing.CurTime < bank.Comp.NextPayday)
             return;
 
-        _nextPayday = _timing.CurTime + TimeSpan.FromMinutes(OxydEconomyConstants.PaydayIntervalMinutes);
+        bank.Comp.NextPayday = _timing.CurTime + bank.Comp.PaydayInterval;
         RunPayday();
     }
 
+    [SubscribeLocalEvent]
     private void OnJobAfterSpawn(JobAfterSpawnEvent ev)
     {
         SetupAccountForJob(ev.spawned, ev.job);
-    }
-
-    public void EnsureDepartmentAccounts(EntityUid station)
-    {
-        if (!TryComp<StationBankAccountComponent>(station, out var bank))
-            return;
-
-        EnsureDepartmentAccounts((station, bank));
-    }
-
-    public void EnsureDepartmentAccounts(Entity<StationBankAccountComponent> station)
-    {
-        Entity<StationBankAccountComponent?> stationNullable = (station.Owner, station.Comp);
-        foreach (var (accountId, balance) in _cargo.GetAccounts(stationNullable))
-        {
-            var deptId = accountId.Id;
-            var existing = FindDepartmentAccount(deptId);
-            if (existing != null)
-            {
-                existing.Balance = balance;
-                _cargoSyncedBalance[existing.AccountNumber] = balance;
-                continue;
-            }
-
-            var canMake = deptId is OxydEconomyConstants.EmployerCargo or OxydEconomyConstants.EmployerGuild;
-            var employer = deptId switch
-            {
-                OxydEconomyConstants.EmployerSecurity => OxydEconomyConstants.EmployerCargo,
-                OxydEconomyConstants.EmployerEngineering => OxydEconomyConstants.EmployerCargo,
-                OxydEconomyConstants.EmployerService => OxydEconomyConstants.EmployerCargo,
-                _ => null,
-            };
-
-            var wage = employer != null ? OxydEconomyConstants.BudgetBase : 0;
-            CreateAccount(
-                ownerName: $"{deptId} Department",
-                accountName: deptId,
-                balance: balance,
-                employer: employer,
-                wage: wage,
-                isDepartment: true,
-                departmentId: deptId,
-                canMakeAccounts: canMake);
-            _cargoSyncedBalance[_accounts.Values.Last().AccountNumber] = balance;
-        }
-
-        _departmentsReady = true;
     }
 
     public OxydMoneyAccountData CreateAccount(
@@ -129,9 +135,23 @@ public sealed partial class OxydEconomySystem : EntitySystem
         string? departmentId = null,
         bool canMakeAccounts = false)
     {
-        var number = _nextAccountNumber++;
-        while (_accounts.ContainsKey(number))
-            number = _nextAccountNumber++;
+        return CreateAccount(Bank, ownerName, accountName, balance, employer, wage, isDepartment, departmentId, canMakeAccounts);
+    }
+
+    private OxydMoneyAccountData CreateAccount(
+        Entity<OxydBankingServerComponent> bank,
+        string ownerName,
+        string? accountName,
+        int balance,
+        string? employer,
+        int wage,
+        bool isDepartment,
+        string? departmentId,
+        bool canMakeAccounts)
+    {
+        var number = bank.Comp.NextAccountNumber++;
+        while (bank.Comp.Accounts.ContainsKey(number))
+            number = bank.Comp.NextAccountNumber++;
 
         var pin = isDepartment ? _random.Next(1111, 111111) : _random.Next(1111, 9999);
         var data = new OxydMoneyAccountData
@@ -149,17 +169,17 @@ public sealed partial class OxydEconomySystem : EntitySystem
             CanMakeAccounts = canMakeAccounts,
             SecurityLevel = 1,
         };
-        _accounts[number] = data;
+        bank.Comp.Accounts[number] = data;
         LogTransaction(data, "Account creation", balance, "OxydEconomy");
         return data;
     }
 
     public bool TryGetAccount(int number, [NotNullWhen(true)] out OxydMoneyAccountData? account)
-        => _accounts.TryGetValue(number, out account);
+        => Bank.Comp.Accounts.TryGetValue(number, out account);
 
     public OxydMoneyAccountData? FindDepartmentAccount(string departmentId)
     {
-        foreach (var acc in _accounts.Values)
+        foreach (var acc in Bank.Comp.Accounts.Values)
         {
             if (acc.IsDepartment && acc.DepartmentId == departmentId)
                 return acc;
@@ -168,26 +188,19 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return null;
     }
 
-    /// <summary>PIN brute-force guard: failures are counted per account (fields on
-    /// OxydMoneyAccountData, cleared with the round) and per user (component on the
-    /// user entity). The window is measured from the FIRST failure — 5 inside a
-    /// minute locks that side out for a minute.</summary>
-    private const int LoginMaxFailures = 5;
-    private static readonly TimeSpan LoginFailureWindow = TimeSpan.FromMinutes(1);
-    private static readonly TimeSpan LoginLockout = TimeSpan.FromMinutes(1);
-
-    private static void LoginFailed(ref int count, ref TimeSpan firstFailAt, ref TimeSpan lockedUntil, TimeSpan now)
+    private static void LoginFailed(OxydLoginThrottle throttle, TimeSpan now)
     {
-        if (now - firstFailAt > LoginFailureWindow)
+        if (now - throttle.FirstFailAt > LoginFailureWindow)
         {
-            count = 0;
-            firstFailAt = now;
+            throttle.Count = 0;
+            throttle.FirstFailAt = now;
         }
-        count++;
-        if (count >= LoginMaxFailures)
+
+        throttle.Count++;
+        if (throttle.Count >= LoginMaxFailures)
         {
-            lockedUntil = now + LoginLockout;
-            count = 0;
+            throttle.LockedUntil = now + LoginLockout;
+            throttle.Count = 0;
         }
     }
 
@@ -195,39 +208,29 @@ public sealed partial class OxydEconomySystem : EntitySystem
     {
         account = null;
         var now = _timing.CurTime;
-        if (!_accounts.TryGetValue(number, out var found) || found.Suspended)
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var found) || found.Suspended)
             return false;
 
-        if (now < found.LoginLockedUntil)
+        if (now < found.Login.LockedUntil)
             return false;
-        if (user is { } u && TryComp<OxydLoginFailuresComponent>(u, out var lf) && now < lf.LockedUntil)
+        if (user is { } u && TryComp<OxydLoginFailuresComponent>(u, out var lf) && now < lf.Throttle.LockedUntil)
             return false;
 
         if (found.Pin != pin)
         {
             LogTransaction(found, "Failed login", 0, terminal);
-            var fc = found.FailCount;
-            var ff = found.FirstFailAt;
-            var lu = found.LoginLockedUntil;
-            LoginFailed(ref fc, ref ff, ref lu, now);
-            found.FailCount = fc;
-            found.FirstFailAt = ff;
-            found.LoginLockedUntil = lu;
-
-            if (user is { } u2)
-            {
-                var ucomp = EnsureComp<OxydLoginFailuresComponent>(u2);
-                LoginFailed(ref ucomp.Count, ref ucomp.FirstFailAt, ref ucomp.LockedUntil, now);
-            }
+            LoginFailed(found.Login, now);
+            if (user is { } failedUser)
+                LoginFailed(EnsureComp<OxydLoginFailuresComponent>(failedUser).Throttle, now);
             return false;
         }
 
-        found.FailCount = 0;
-        if (user is { } u3)
+        found.Login.Count = 0;
+        if (user is { } loggedIn)
         {
-            var ucomp3 = EnsureComp<OxydLoginFailuresComponent>(u3);
-            ucomp3.Count = 0;
-            ucomp3.LockedUntil = TimeSpan.Zero;
+            var throttle = EnsureComp<OxydLoginFailuresComponent>(loggedIn).Throttle;
+            throttle.Count = 0;
+            throttle.LockedUntil = TimeSpan.Zero;
         }
         account = found;
         return true;
@@ -242,7 +245,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
             return false;
         }
 
-        if (!_accounts.TryGetValue(from, out var src) || !_accounts.TryGetValue(to, out var dst))
+        if (!Bank.Comp.Accounts.TryGetValue(from, out var src) || !Bank.Comp.Accounts.TryGetValue(to, out var dst))
         {
             error = "Unknown account";
             return false;
@@ -284,7 +287,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
 
     public bool TryAdjust(int number, int delta, string purpose, string terminal)
     {
-        if (!_accounts.TryGetValue(number, out var acc) || acc.Suspended)
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var acc) || acc.Suspended)
             return false;
 
         RefreshDepartment(acc);
@@ -300,7 +303,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
 
     public bool TrySetBalance(int number, int balance)
     {
-        if (!_accounts.TryGetValue(number, out var acc))
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var acc))
             return false;
 
         RefreshDepartment(acc);
@@ -313,7 +316,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
     /// <summary>HoP Accounts DB silent adjust — works even on suspended accounts.</summary>
     public bool TrySilentAdjust(int number, int delta, string purpose, string terminal, int fundCap = OxydAccountsDbComponent.FundCap)
     {
-        if (!_accounts.TryGetValue(number, out var acc))
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var acc))
             return false;
 
         RefreshDepartment(acc);
@@ -329,29 +332,23 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return true;
     }
 
-    public IEnumerable<OxydMoneyAccountData> EnumerateAccounts() => _accounts.Values;
-
     /// <summary>Copies the server balance onto the owner's networked component for the character window.</summary>
     private void SyncDisplayedBalance(int number)
     {
-        if (!_accounts.TryGetValue(number, out var acc))
+        var bank = Bank.Comp;
+        if (!bank.Accounts.TryGetValue(number, out var acc) ||
+            !bank.Holders.TryGetValue(number, out var holder) ||
+            !TryComp<OxydPersonalAccountComponent>(holder, out var personal))
             return;
 
-        var query = EntityQueryEnumerator<OxydPersonalAccountComponent>();
-        while (query.MoveNext(out var uid, out var personal))
-        {
-            if (personal.AccountNumber != number)
-                continue;
-
-            personal.Balance = acc.Balance;
-            personal.OwnerName = acc.OwnerName;
-            Dirty(uid, personal);
-        }
+        personal.Balance = acc.Balance;
+        personal.OwnerName = acc.OwnerName;
+        Dirty(holder, personal);
     }
 
     public bool TrySetSuspended(int number, bool suspended)
     {
-        if (!_accounts.TryGetValue(number, out var acc))
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var acc))
             return false;
 
         acc.Suspended = suspended;
@@ -359,52 +356,30 @@ public sealed partial class OxydEconomySystem : EntitySystem
         return true;
     }
 
-    /// <summary>Create a personal account funded from a department (Eris create_account).</summary>
-    public bool TryCreateFundedAccount(
-        string ownerName,
-        int startingFunds,
-        int fundingAccount,
-        string terminal,
-        [NotNullWhen(true)] out OxydMoneyAccountData? created,
-        [NotNullWhen(false)] out string? error)
+    /// <summary>Move money from a funding account into an account (Accounts DB funding).</summary>
+    public bool TryFundAccount(int account, int fundingAccount, int amount, string terminal, [NotNullWhen(false)] out string? error)
     {
-        created = null;
-        error = null;
-        startingFunds = Math.Clamp(startingFunds, 0, OxydAccountsDbComponent.FundCap);
-
-        if (!_accounts.TryGetValue(fundingAccount, out var funder) || funder.Suspended)
+        amount = Math.Clamp(amount, 0, OxydAccountsDbComponent.FundCap);
+        if (!Bank.Comp.Accounts.TryGetValue(account, out var target))
         {
-            error = "Funding account unavailable";
+            error = "Unknown account";
             return false;
         }
 
-        if (startingFunds > funder.Balance)
-        {
-            error = "Insufficient department funds";
-            return false;
-        }
-
-        if (startingFunds > 0 && !TryAdjust(fundingAccount, -startingFunds, $"New account activation ({ownerName})", terminal))
-        {
-            error = "Could not debit funding account";
-            return false;
-        }
-
-        created = CreateAccount(ownerName, ownerName, startingFunds, OxydEconomyConstants.EmployerService, OxydEconomyConstants.WageNone);
-        return true;
+        return TryTransfer(fundingAccount, account, amount, $"Account funding ({target.OwnerName})", terminal, out error);
     }
 
     /// <summary>Zero a personal account and credit Cargo/station (Eris revoke_payroll).</summary>
     public bool TryRevokePayroll(int number, int destinationAccount, string terminal, [NotNullWhen(false)] out string? error)
     {
         error = null;
-        if (!_accounts.TryGetValue(number, out var acc) || acc.IsDepartment)
+        if (!Bank.Comp.Accounts.TryGetValue(number, out var acc) || acc.IsDepartment)
         {
             error = "Invalid account";
             return false;
         }
 
-        if (!_accounts.TryGetValue(destinationAccount, out _))
+        if (!Bank.Comp.Accounts.TryGetValue(destinationAccount, out _))
         {
             error = "Destination missing";
             return false;
@@ -424,8 +399,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
     /// <summary>Pull department balances from StationBankAccount / CargoAccount.</summary>
     public void SyncDepartmentsFromCargo()
     {
-        EnsureDepartmentsForRound();
-        foreach (var acc in _accounts.Values)
+        foreach (var acc in Bank.Comp.Accounts.Values)
         {
             if (acc.IsDepartment)
                 PullDepartmentFromCargo(acc);
@@ -433,8 +407,6 @@ public sealed partial class OxydEconomySystem : EntitySystem
     }
 
     public void ForcePayday() => RunPayday();
-
-    public TimeSpan NextPayday => _nextPayday;
 
     /// <summary>Push only the change since the last sync — cargo's own income/spend
     /// between syncs is preserved instead of being overwritten by our cached balance.</summary>
@@ -447,12 +419,13 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (station == null || !TryComp<StationBankAccountComponent>(station.Value, out var bank))
             return;
 
-        var delta = acc.Balance - _cargoSyncedBalance.GetValueOrDefault(acc.AccountNumber);
+        var synced = Bank.Comp.CargoSyncedBalance;
+        var delta = acc.Balance - synced.GetValueOrDefault(acc.AccountNumber);
         if (delta == 0)
             return;
 
         _cargo.UpdateBankAccount((station.Value, bank), delta, (ProtoId<CargoAccountPrototype>)acc.DepartmentId, true);
-        _cargoSyncedBalance[acc.AccountNumber] = acc.Balance;
+        synced[acc.AccountNumber] = acc.Balance;
     }
 
     private void PullDepartmentFromCargo(OxydMoneyAccountData acc)
@@ -467,7 +440,7 @@ public sealed partial class OxydEconomySystem : EntitySystem
         if (_cargo.TryGetAccount(station.Value, acc.DepartmentId, out var bal))
         {
             acc.Balance = bal;
-            _cargoSyncedBalance[acc.AccountNumber] = bal;
+            Bank.Comp.CargoSyncedBalance[acc.AccountNumber] = bal;
         }
     }
 

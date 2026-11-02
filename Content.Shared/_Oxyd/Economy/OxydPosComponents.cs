@@ -13,10 +13,6 @@ public sealed partial class OxydAtmComponent : Component
     /// <summary>Server-only: the logged-in account. Never networked — the owner gets it via BUI state.</summary>
     [ViewVariables]
     public int? SessionAccount;
-
-    /// <summary>The player who logged in — only they may transact; cleared on UI close.</summary>
-    [ViewVariables]
-    public EntityUid? SessionUser;
 }
 
 /// <summary>Eris Accounts uplink terminal (HoP) — list/create/suspend/adjust.</summary>
@@ -28,6 +24,14 @@ public sealed partial class OxydAccountsDbComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool Creating;
+
+    /// <summary>Account that funding is drawn from. Set at the terminal; starts as <see cref="FundingDepartment"/>.</summary>
+    [DataField, AutoNetworkedField]
+    public int? FundingAccount;
+
+    /// <summary>Department whose account is the funding account until someone picks another.</summary>
+    [DataField]
+    public string? FundingDepartment = "Cargo";
 
     public const int FundCap = 1_000_000;
 }

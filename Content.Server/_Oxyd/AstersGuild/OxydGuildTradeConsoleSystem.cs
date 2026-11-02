@@ -1,72 +1,41 @@
+using System.Linq;
+using Content.Server._Oxyd.Economy;
 using Content.Shared._Oxyd.AstersGuild;
-using Content.Shared.Containers;
-using EconomyBeaconRecv = Content.Shared._Oxyd.Economy.OxydTradeBeaconReceivingComponent;
-using EconomyBeaconSend = Content.Shared._Oxyd.Economy.OxydTradeBeaconSendingComponent;
+using Content.Shared._Oxyd.Economy;
+using Content.Shared.GameTicking;
 using Content.Shared.Storage.Components;
 using Robust.Server.GameObjects;
-using Content.Server._Oxyd.Economy;
-using Content.Shared.GameTicking;
 using Robust.Shared.Containers;
-using Robust.Shared.GameObjects;
-using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
+using EconomyBeaconRecv = Content.Shared._Oxyd.Economy.OxydTradeBeaconReceivingComponent;
+using EconomyBeaconSend = Content.Shared._Oxyd.Economy.OxydTradeBeaconSendingComponent;
+using GoodEntry = Content.Shared._Oxyd.AstersGuild.OxydTradeGoodEntry;
+using OfferEntry = Content.Shared._Oxyd.AstersGuild.OxydTradeOfferEntry;
 
 namespace Content.Server._Oxyd.AstersGuild;
 
 /// <summary>
-/// Server backend for the Asters trade console — ports Eris SStrade
-/// (code/controllers/subsystems/trade.dm): station tree with discovery, per-station goods
-/// catalog w/ stock + prices, favor, rotating special offers with timers, cart -> order to
-/// the receiving beacon, offer fulfillment via the sending beacon, transaction logs.
-///
-/// Beacon component types live in <c>Content.Shared._Oxyd.Economy</c> (shared with the
-/// Eris economy+PDA port). Runtime cart/order state for PDA Trade Orders is owned by
-/// <c>Content.Server._Oxyd.Economy.OxydTradeSystem</c> — this system is console-only.
+/// Server backend for the Asters trade console — ports the Eris trade program
+/// (code/controllers/subsystems/trade.dm). Stations, goods and offers are the
+/// <see cref="OxydTradeStationPrototype"/> YAML, run by <see cref="OxydTradeSystem"/>; this
+/// system only drives the console window. The console spends from and is paid into the
+/// account it is logged into, which starts as its department's account.
 /// </summary>
 public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
 {
+    private static readonly EntProtoId TradeCrate = "OxydTradeCrate";
+
     [Dependency] private UserInterfaceSystem _ui = default!;
-    [Dependency] private OxydBankSystem _bank = default!;
     [Dependency] private OxydEconomySystem _economy = default!;
+    [Dependency] private OxydTradeSystem _trade = default!;
     [Dependency] private SharedContainerSystem _container = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
-    /// <summary>One sellable good (Eris goods_for_sale row).</summary>
-    public sealed class Good
-    {
-        public EntProtoId Proto = string.Empty;
-        public string Name = string.Empty;
-        public string Category = string.Empty;
-        public int Price;
-        public int Stock;
-    }
-
-    /// <summary>One station on the trade tree.</summary>
-    public sealed class Station
-    {
-        public string Name = string.Empty;
-        public string Nick = string.Empty;
-        public string Description = string.Empty;
-        public bool Discovered;
-        public int Favor;
-        public int FavorMax = 100;
-        public List<Good> Goods = new();
-    }
-
-    /// <summary>One rotating special offer (station buying an item type).</summary>
-    public sealed class Offer
-    {
-        public int Id;
-        public string Station = string.Empty;
-        public string Want = string.Empty;      // EntProtoId to deliver
-        public string Name = string.Empty;
-        public int Price;
-        public int Amount;
-        public int AmountOriginal;
-        public float SecondsLeft;
-    }
-
-    /// <summary>One crew order request on the merchant queue (Eris trade_orders).</summary>
-    public sealed class Request
+    /// <summary>One crew order request on the merchant queue (Eris trade_orders).
+    /// Typed in by players at runtime, so there is nothing to put in YAML.</summary>
+    private sealed class Request
     {
         public int Id;
         public string Item = string.Empty;
@@ -74,438 +43,448 @@ public sealed partial class OxydGuildTradeConsoleSystem : EntitySystem
         public string From = string.Empty;
     }
 
-    private readonly List<Station> _stations = new();
-    private readonly List<Offer> _offers = new();
     private readonly List<Request> _requests = new();
     private int _nextRequestId;
     private float _updateTimer;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SeedStations();
-        SeedOffers();
-
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeSelectStationMessage>(OnSelectStation);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeSelectCategoryMessage>(OnSelectCategory);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeCartAdjustMessage>(OnCartAdjust);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeCreateOrderMessage>(OnCreateOrder);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeResetCartMessage>(OnResetCart);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeSendOfferMessage>(OnSendOffer);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeSaveCartMessage>(OnSaveCart);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeLoadCartMessage>(OnLoadCart);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeDeleteSavedCartMessage>(OnDeleteSavedCart);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeSubmitRequestMessage>(OnSubmitRequest);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, OxydTradeCompleteRequestMessage>(OnCompleteRequest);
-        SubscribeLocalEvent<OxydTradeConsoleComponent, ComponentStartup>((u, c, _) => PushState(u, c));
-        SubscribeLocalEvent<OxydTradeConsoleComponent, BoundUIOpenedEvent>((u, c, _) => PushState(u, c));
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
-    }
-
+    [SubscribeLocalEvent]
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
     {
-        _stations.Clear();
-        _offers.Clear();
         _requests.Clear();
         _nextRequestId = 0;
-        SeedStations();
-        SeedOffers();
     }
 
-    /// <summary>The unified Guild department account in OxydEconomy — the same one
-    /// ATMs, EFTPOS and trade beacons move money through.</summary>
-    private Content.Shared._Oxyd.Economy.OxydMoneyAccountData? GuildAccount()
+    [SubscribeLocalEvent]
+    private void OnOpened(Entity<OxydTradeConsoleComponent> ent, ref BoundUIOpenedEvent args)
     {
-        _economy.EnsureDepartmentsForRound();
-        return _economy.FindDepartmentAccount(Content.Shared._Oxyd.Economy.OxydEconomyConstants.EmployerGuild);
-    }
-
-    /// <summary>Eris station catalog — modeled on TradeDestinations/Solnishko goods data.</summary>
-    private void SeedStations()
-    {
-        if (_stations.Count != 0)
-            return;
-        _stations.Add(new Station
-        {
-            Name = "TTB 'Zarya'",
-            Nick = "Zarya",
-            Description = "Privet, this is the trade beacon 'Zarya'. We sell electronics, construction, and anything related to engineering!",
-            Discovered = true,
-            Goods =
-            {
-                new Good { Proto = "Crowbar", Name = "crowbar", Category = "Tools", Price = 24, Stock = 21 },
-                new Good { Proto = "Screwdriver", Name = "screwdriver", Category = "Tools", Price = 24, Stock = 7 },
-                new Good { Proto = "Shovel", Name = "shovel", Category = "Tools", Price = 24, Stock = 27 },
-                new Good { Proto = "Wirecutter", Name = "wirecutters", Category = "Tools", Price = 24, Stock = 21 },
-                new Good { Proto = "Wrench", Name = "wrench", Category = "Tools", Price = 24, Stock = 20 },
-                new Good { Proto = "Welder", Name = "welding tool", Category = "Tools", Price = 24, Stock = 5 },
-                new Good { Proto = "ToolboxEmergency", Name = "emergency toolbox", Category = "Tools", Price = 48, Stock = 16 },
-                new Good { Proto = "ToolboxMechanical", Name = "mechanical toolbox", Category = "Tools", Price = 300, Stock = 17 },
-                new Good { Proto = "ToolboxElectrical", Name = "electrical toolbox", Category = "Tools", Price = 372, Stock = 10 },
-                new Good { Proto = "PowerCellSmall", Name = "cell 100S", Category = "Electronics", Price = 100, Stock = 20 },
-                new Good { Proto = "PowerCellMedium", Name = "cell 600M", Category = "Electronics", Price = 300, Stock = 15 },
-                new Good { Proto = "PowerCellHigh", Name = "cell 1500H", Category = "Electronics", Price = 700, Stock = 10 },
-                new Good { Proto = "Multitool", Name = "multitool", Category = "Electronics", Price = 300, Stock = 8 },
-            },
-        });
-        _stations.Add(new Station
-        {
-            Name = "IST 'Solnishko'",
-            Nick = "Solnishko",
-            Description = "The infamous Solnishko trading station — food, drink, and whatever else moves.",
-            Discovered = true,
-            Goods =
-            {
-                new Good { Proto = "FoodSnackChips", Name = "bag of chips", Category = "Supplies", Price = 40, Stock = 30 },
-                new Good { Proto = "FoodSnackCnDs", Name = "CnD candies", Category = "Supplies", Price = 40, Stock = 25 },
-                new Good { Proto = "DrinkWaterBottleFull", Name = "water bottle", Category = "Supplies", Price = 24, Stock = 40 },
-                new Good { Proto = "DrinkCoffee", Name = "coffee", Category = "Supplies", Price = 36, Stock = 20 },
-            },
-        });
-        _stations.Add(new Station
-        {
-            Name = "???",
-            Nick = "unknown",
-            Description = "An undiscovered trade station.",
-            Discovered = false,
-        });
-    }
-
-    /// <summary>Eris special offers — stations request goods at a markup for favor.</summary>
-    private void SeedOffers()
-    {
-        _offers.Add(new Offer { Id = 0, Station = "Zarya", Want = "Crowbar", Name = "crowbar", Price = 2800, Amount = 5, AmountOriginal = 5, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 1, Station = "Zarya", Want = "Screwdriver", Name = "screwdriver", Price = 2800, Amount = 4, AmountOriginal = 4, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 2, Station = "Zarya", Want = "Shovel", Name = "shovel", Price = 2800, Amount = 4, AmountOriginal = 4, SecondsLeft = 300 });
-        _offers.Add(new Offer { Id = 3, Station = "Solnishko", Want = "PowerCellSmall", Name = "cell 100S", Price = 5600, Amount = 10, AmountOriginal = 10, SecondsLeft = 300 });
+        PushState(ent);
     }
 
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
         _updateTimer -= frameTime;
-        foreach (var o in _offers)
-            o.SecondsLeft -= frameTime;
         if (_updateTimer > 0)
             return;
+
         _updateTimer = 1f;
         var query = EntityQueryEnumerator<OxydTradeConsoleComponent>();
         while (query.MoveNext(out var uid, out var comp))
-            PushState(uid, comp);
+            PushState((uid, comp));
+    }
+
+    /// <summary>Stations in a fixed order so UI indices stay valid between states.</summary>
+    private List<OxydTradeStationRuntime> StationList()
+    {
+        _trade.EnsureSeeded();
+        return _trade.Stations.Values.ToList();
+    }
+
+    private OxydTradeStationRuntime? SelectedStation(OxydTradeConsoleComponent comp)
+    {
+        var stations = StationList();
+        return comp.SelectedStation >= 0 && comp.SelectedStation < stations.Count ? stations[comp.SelectedStation] : null;
+    }
+
+    /// <summary>Open offers, in the order the UI numbers them.</summary>
+    private List<(OxydTradeStationRuntime Station, OxydTradeOfferRuntime Offer)> OpenOffers()
+    {
+        var offers = new List<(OxydTradeStationRuntime, OxydTradeOfferRuntime)>();
+        foreach (var station in StationList())
+        {
+            if (!station.Discovered)
+                continue;
+
+            foreach (var offer in station.Offers.Values)
+            {
+                if (offer.AmountRemaining > 0 && offer.ExpiresAt > _timing.CurTime)
+                    offers.Add((station, offer));
+            }
+        }
+
+        return offers;
+    }
+
+    private OxydMoneyAccountData? ConsoleAccount(OxydTradeConsoleComponent comp)
+    {
+        if (comp.Account is { } number)
+            return _economy.TryGetAccount(number, out var acc) ? acc : null;
+
+        return _economy.FindDepartmentAccount(comp.DefaultDepartment);
     }
 
     private bool BeaconCheck(out string receiving, out string sending)
     {
-        var recv = false; var send = false;
-        var rq = EntityQueryEnumerator<EconomyBeaconRecv>();
-        while (rq.MoveNext(out _, out _)) { recv = true; break; }
-        var sq = EntityQueryEnumerator<EconomyBeaconSend>();
-        while (sq.MoveNext(out _, out _)) { send = true; break; }
+        var recv = EntityQueryEnumerator<EconomyBeaconRecv>().MoveNext(out _, out _);
+        var send = EntityQueryEnumerator<EconomyBeaconSend>().MoveNext(out _, out _);
         receiving = recv ? "✓Receiving Beacon" : "✗No Receiving Beacon";
         sending = send ? "✓Sending Beacon" : "✗No Sending Beacon";
         return recv && send;
     }
 
-    private void PushState(EntityUid uid, OxydTradeConsoleComponent comp)
+    private void PushState(Entity<OxydTradeConsoleComponent> ent)
     {
+        var (uid, comp) = ent;
         if (!_ui.IsUiOpen(uid, OxydTradeUiKey.Key))
             return;
+
         BeaconCheck(out var recv, out var send);
+        var account = ConsoleAccount(comp);
         var s = new OxydTradeState
         {
-            Balance = GuildAccount()?.Balance ?? 0,
+            Balance = account?.Balance ?? 0,
+            HasAccount = account != null,
+            AccountNumber = account?.AccountNumber,
+            AccountName = account?.OwnerName ?? string.Empty,
             ReceivingBeacon = recv,
             SendingBeacon = send,
             SelectedStation = comp.SelectedStation,
             Category = comp.Category,
-            CartCount = 0,
-            CartTotal = 0,
             IsRequestConsole = comp.RequestConsole,
         };
+
         foreach (var r in _requests)
+        {
             s.Requests.Add(new OxydTradeRequestEntry
             {
                 Id = r.Id, Item = r.Item, Amount = r.Amount, From = r.From,
             });
+        }
+
         foreach (var c in comp.SavedCarts)
             s.SavedCartNames.Add(c.Name);
-        foreach (var st in _stations)
+
+        var offers = OpenOffers();
+        foreach (var st in StationList())
+        {
+            var stationOffers = offers.Where(o => o.Station == st).ToList();
             s.Stations.Add(new OxydTradeStationEntry
             {
                 Name = st.Discovered ? st.Name : "???",
-                Nick = st.Nick,
+                Nick = st.Id,
                 Description = st.Description,
                 Discovered = st.Discovered,
                 Favor = st.Favor,
                 FavorMax = st.FavorMax,
-                OfferSecondsLeft = (int)(_offers.Find(o => o.Station == st.Nick)?.SecondsLeft ?? 0),
+                OfferSecondsLeft = stationOffers.Count == 0
+                    ? 0
+                    : (int)stationOffers.Max(o => (o.Offer.ExpiresAt - _timing.CurTime).TotalSeconds),
             });
-        if (comp.SelectedStation >= 0 && comp.SelectedStation < _stations.Count)
+        }
+
+        if (SelectedStation(comp) is { } selected)
         {
-            var st = _stations[comp.SelectedStation];
-            s.SelectedName = st.Name;
-            s.SelectedDesc = st.Description;
-            var cats = new HashSet<string>();
-            foreach (var g in st.Goods) cats.Add(g.Category);
-            s.Categories.AddRange(cats);
-            for (var i = 0; i < st.Goods.Count; i++)
+            s.SelectedName = selected.Name;
+            s.SelectedDesc = selected.Description;
+            var goods = selected.Goods.Values.ToList();
+            s.Categories.AddRange(goods.Select(g => g.Category).Distinct());
+            for (var i = 0; i < goods.Count; i++)
             {
-                var g = st.Goods[i];
+                var g = goods[i];
                 if (comp.Category != null && g.Category != comp.Category)
                     continue;
-                s.Goods.Add(new OxydTradeGoodEntry
+
+                s.Goods.Add(new GoodEntry
                 {
                     Id = i, Name = g.Name, Price = g.Price, Available = g.Stock,
-                    InCart = comp.Cart.TryGetValue(i, out var n) ? n : 0,
+                    InCart = comp.Cart.GetValueOrDefault(i),
                 });
             }
+
             foreach (var (id, n) in comp.Cart)
             {
-                if (id < 0 || id >= st.Goods.Count) continue;
-                var g = st.Goods[id];
-                s.CartCount += n; s.CartTotal += n * g.Price;
+                if (id < 0 || id >= goods.Count)
+                    continue;
+
+                var g = goods[id];
+                s.CartCount += n;
+                s.CartTotal += n * g.Price;
                 s.CartLines.Add($"{g.Name} x{n} — {n * g.Price}cr");
             }
         }
-        foreach (var o in _offers)
-            if (o.SecondsLeft > 0 && o.Amount > 0)
-                s.Offers.Add(new OxydTradeOfferEntry
-                {
-                    Id = o.Id, Station = o.Station, Name = o.Name, Price = o.Price,
-                    Amount = o.Amount, SecondsLeft = (int)o.SecondsLeft,
-                });
+
+        for (var i = 0; i < offers.Count; i++)
+        {
+            var (station, offer) = offers[i];
+            s.Offers.Add(new OfferEntry
+            {
+                Id = i, Station = station.Name, Name = offer.Name, Price = offer.Price,
+                Amount = offer.AmountRemaining,
+                SecondsLeft = (int)(offer.ExpiresAt - _timing.CurTime).TotalSeconds,
+            });
+        }
+
         s.Log.AddRange(comp.Log);
         _ui.SetUiState(uid, OxydTradeUiKey.Key, s);
     }
 
-    private void OnSelectStation(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSelectStationMessage msg)
+    [SubscribeLocalEvent]
+    private void OnSetAccount(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSetAccountMessage msg)
     {
-        if (msg.Index < 0 || msg.Index >= _stations.Count) return;
-        if (!_stations[msg.Index].Discovered) return;
-        comp.SelectedStation = msg.Index;
-        comp.Category = null;
-        comp.Cart.Clear();
-        PushState(uid, comp);
-    }
-
-    private void OnSelectCategory(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSelectCategoryMessage msg)
-    {
-        comp.Category = msg.Category;
-        PushState(uid, comp);
-    }
-
-    private void OnCartAdjust(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeCartAdjustMessage msg)
-    {
-        if (comp.SelectedStation < 0 || comp.SelectedStation >= _stations.Count) return;
-        var st = _stations[comp.SelectedStation];
-        if (msg.GoodId < 0 || msg.GoodId >= st.Goods.Count) return;
-        var g = st.Goods[msg.GoodId];
-        if (msg.Delta == 0)
+        if (!_economy.TryLogin(msg.AccountNumber, msg.Pin, out var acc, "TradeConsole", msg.Actor))
         {
-            comp.Cart.Remove(msg.GoodId);
+            ent.Comp.Log.Add($"[Account] login to #{msg.AccountNumber} failed");
+            PushState(ent);
+            return;
         }
+
+        ent.Comp.Account = acc.AccountNumber;
+        ent.Comp.Log.Add($"[Account] now using #{acc.AccountNumber} {acc.OwnerName}");
+        PushState(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnSelectStation(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSelectStationMessage msg)
+    {
+        var stations = StationList();
+        if (msg.Index < 0 || msg.Index >= stations.Count || !stations[msg.Index].Discovered)
+            return;
+
+        ent.Comp.SelectedStation = msg.Index;
+        ent.Comp.Category = null;
+        ent.Comp.Cart.Clear();
+        PushState(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnSelectCategory(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSelectCategoryMessage msg)
+    {
+        ent.Comp.Category = msg.Category;
+        PushState(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCartAdjust(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeCartAdjustMessage msg)
+    {
+        if (SelectedStation(ent.Comp) is not { } st)
+            return;
+
+        var goods = st.Goods.Values.ToList();
+        if (msg.GoodId < 0 || msg.GoodId >= goods.Count)
+            return;
+
+        var cart = ent.Comp.Cart;
+        var n = msg.Delta == 0 ? 0 : Math.Clamp(cart.GetValueOrDefault(msg.GoodId) + msg.Delta, 0, goods[msg.GoodId].Stock);
+        if (n == 0)
+            cart.Remove(msg.GoodId);
         else
+            cart[msg.GoodId] = n;
+
+        PushState(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnResetCart(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeResetCartMessage msg)
+    {
+        ent.Comp.Cart.Clear();
+        PushState(ent);
+    }
+
+    /// <summary>Eris "Create Order": the console's account pays and the goods arrive in a
+    /// crate on the receiving beacon.</summary>
+    [SubscribeLocalEvent]
+    private void OnCreateOrder(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeCreateOrderMessage msg)
+    {
+        var comp = ent.Comp;
+        // Crew request consoles only file requests — they can't spend.
+        if (comp.RequestConsole || comp.Cart.Count == 0 || SelectedStation(comp) is not { } st)
+            return;
+
+        if (ConsoleAccount(comp) is not { } account)
         {
-            comp.Cart.TryGetValue(msg.GoodId, out var n);
-            n = Math.Clamp(n + msg.Delta, 0, g.Stock);
-            if (n == 0) comp.Cart.Remove(msg.GoodId);
-            else comp.Cart[msg.GoodId] = n;
+            comp.Log.Add("[Order] no account");
+            PushState(ent);
+            return;
         }
-        PushState(uid, comp);
-    }
 
-    private void OnResetCart(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeResetCartMessage _)
-    {
-        comp.Cart.Clear();
-        PushState(uid, comp);
-    }
-
-    /// <summary>Eris "Create Order": goods spawn on the receiving beacon, stock decrements,
-    /// balance decrements, log line written.</summary>
-    private void OnCreateOrder(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeCreateOrderMessage _)
-    {
-        // Crew request consoles only file requests — they can't spend the guild balance.
-        if (comp.RequestConsole) return;
-        if (comp.SelectedStation < 0 || comp.Cart.Count == 0) return;
-        var st = _stations[comp.SelectedStation];
-
-        // Charge only what can actually be delivered — stock is shared across
-        // consoles, so anything short would otherwise vanish with no refund.
-        var takes = new Dictionary<int, int>();
-        var total = 0;
+        var goods = st.Goods.Values.ToList();
+        var wants = new Dictionary<string, int>();
         foreach (var (id, n) in comp.Cart)
         {
-            if (id < 0 || id >= st.Goods.Count) continue;
-            var take = Math.Min(n, st.Goods[id].Stock);
-            takes[id] = take;
-            total += take * st.Goods[id].Price;
+            if (id >= 0 && id < goods.Count)
+                wants[goods[id].Product] = n;
         }
-        if (total <= 0)
-            return;
-        var guild = GuildAccount();
-        if (guild == null || !_economy.TryAdjust(guild.AccountNumber, -total, $"Trade order {st.Nick}", "TradeConsole"))
-            return;
 
-        EntityUid? beacon = null;
-        var bq = EntityQueryEnumerator<EconomyBeaconRecv>();
-        while (bq.MoveNext(out var buid, out var _bc)) { beacon = buid; break; }
-        var at = beacon != null
-            ? Transform(beacon.Value).Coordinates
-            : Transform(uid).Coordinates;
+        if (!_trade.TryPurchase(st.Id, wants, account.AccountNumber, "TradeConsole", out var total, out var taken, out var error))
+        {
+            comp.Log.Add($"[Order] {st.Name}: {error}");
+            PushState(ent);
+            return;
+        }
 
-        // Eris delivers a shipping crate on the receiving beacon
-        // (supply/shipping crates, order.dm) — goods go inside, not loose on the tile.
-        var crate = Spawn("OxydTradeCrate", at);
+        var dropAt = EntityQueryEnumerator<EconomyBeaconRecv>().MoveNext(out var beacon, out _) ? beacon : ent.Owner;
+        var at = Transform(dropAt).Coordinates;
+
+        // Eris delivers a shipping crate on the receiving beacon (order.dm).
+        var crate = Spawn(TradeCrate, at);
+        TryComp(crate, out EntityStorageComponent? storage);
         var delivered = new List<string>();
-        foreach (var (id, n) in comp.Cart)
+        foreach (var (product, take) in taken)
         {
-            if (!takes.TryGetValue(id, out var take) || id < 0 || id >= st.Goods.Count) continue;
-            var g = st.Goods[id];
-            g.Stock -= take;
             for (var i = 0; i < take; i++)
             {
-                var item = Spawn(g.Proto, at);
-                if (TryComp(crate, out EntityStorageComponent? storage))
+                var item = Spawn(product, at);
+                if (storage != null)
                     _container.Insert(item, storage.Contents);
             }
-            delivered.Add($"{g.Name} x{take}");
+
+            delivered.Add($"{st.Goods[product].Name} x{take}");
         }
-        comp.Log.Add($"[Order] {st.Nick}: {string.Join(", ", delivered)} — {total}cr");
+
+        comp.Log.Add($"[Order] {st.Name}: {string.Join(", ", delivered)} — {total}cr");
         comp.Cart.Clear();
-        PushState(uid, comp);
+        PushState(ent);
     }
 
-    /// <summary>Eris offer send: consume matching entities near the sending beacon.</summary>
-    private void OnSendOffer(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSendOfferMessage msg)
+    /// <summary>Eris offer send: the nearest sending beacon exports the matching goods and the
+    /// console's account is paid.</summary>
+    [SubscribeLocalEvent]
+    private void OnSendOffer(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSendOfferMessage msg)
     {
-        // Offers belong to the merchant console — a crew request console must not
-        // spend or deliver goods on the guild's books.
-        if (comp.RequestConsole) return;
+        var comp = ent.Comp;
+        if (comp.RequestConsole)
+            return;
 
-        var o = _offers.Find(x => x.Id == msg.OfferId);
-        if (o == null || o.SecondsLeft <= 0 || o.Amount <= 0) return;
+        var offers = OpenOffers();
+        if (msg.OfferId < 0 || msg.OfferId >= offers.Count || ConsoleAccount(comp) is not { } account)
+            return;
 
-        // Use the nearest sending beacon to THIS console — not the first beacon
-        // anywhere in the world.
+        var (station, offer) = offers[msg.OfferId];
+        if (NearestSendingBeacon(ent.Owner) is not { } beacon)
+            return;
+
+        if (!_trade.TryFulfillOffersNear(beacon, 1.5f, account.AccountNumber, false, out var paid, out var error,
+                (station.Id, offer.Product)))
+        {
+            comp.Log.Add($"[Offer] {station.Name}: {error}");
+            PushState(ent);
+            return;
+        }
+
+        comp.Log.Add($"[Offer] {station.Name}: {offer.Name} x{offer.AmountOriginal} — +{paid}cr");
+        PushState(ent);
+    }
+
+    private EntityUid? NearestSendingBeacon(EntityUid console)
+    {
         EntityUid? beacon = null;
         var bestDist = float.MaxValue;
-        var bq = EntityQueryEnumerator<EconomyBeaconSend>();
-        var myPos = Transform(uid).WorldPosition;
-        while (bq.MoveNext(out var buid, out _))
+        var myPos = _transform.GetWorldPosition(console);
+        var query = EntityQueryEnumerator<EconomyBeaconSend, TransformComponent>();
+        while (query.MoveNext(out var uid, out _, out var xform))
         {
-            var d = (Transform(buid).WorldPosition - myPos).LengthSquared();
-            if (d < bestDist)
-            {
-                bestDist = d;
-                beacon = buid;
-            }
-        }
-        if (beacon == null) return;
+            var d = (_transform.GetWorldPosition(xform) - myPos).LengthSquared();
+            if (d >= bestDist)
+                continue;
 
-        var beaconPos = Transform(beacon.Value).Coordinates;
-        var consumed = 0;
-        var found = new List<EntityUid>();
-        foreach (var ent in _lookup.GetEntitiesInRange(beaconPos, 1.5f))
-        {
-            if (consumed >= o.Amount) break;
-            if (TryComp(ent, out MetaDataComponent? md) && md.EntityPrototype?.ID == o.Want)
-            {
-                found.Add(ent); consumed++;
-            }
+            bestDist = d;
+            beacon = uid;
         }
-        if (consumed <= 0) return;
-        foreach (var e in found) Del(e);
-        o.Amount -= consumed;
-        // Pay pro-rata for partial deliveries — full price only on a full fill.
-        var gained = o.AmountOriginal > 0
-            ? (int)MathF.Floor(o.Price * consumed / (float)o.AmountOriginal)
-            : 0;
-        var guild = GuildAccount();
-        if (guild != null && gained > 0)
-            _economy.TryAdjust(guild.AccountNumber, gained, $"Trade offer {o.Station}", "TradeConsole");
-        var st = _stations.Find(s => s.Nick == o.Station);
-        if (st != null) st.Favor = Math.Min(st.Favor + consumed, st.FavorMax);
-        comp.Log.Add($"[Offer] {o.Station}: {o.Name} x{consumed} — +{gained}cr, favor +{consumed}");
-        PushState(uid, comp);
+
+        return beacon;
     }
 
-    /// <summary>Eris saved_carts: snapshot the cart under a name (saved_carts list).</summary>
-    private void OnSaveCart(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSaveCartMessage msg)
+    /// <summary>Eris saved_carts: snapshot the cart under a name.</summary>
+    [SubscribeLocalEvent]
+    private void OnSaveCart(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSaveCartMessage msg)
     {
-        if (comp.Cart.Count == 0 || string.IsNullOrWhiteSpace(msg.Name))
+        var comp = ent.Comp;
+        if (comp.Cart.Count == 0 || string.IsNullOrWhiteSpace(msg.Name) || SelectedStation(comp) is not { } st)
             return;
-        comp.SavedCarts.RemoveAll(c => c.Name == msg.Name);
+
+        var name = msg.Name.Trim();
+        comp.SavedCarts.RemoveAll(c => c.Name == name);
         comp.SavedCarts.Add(new OxydSavedCart
         {
-            Name = msg.Name.Trim(),
+            Name = name,
+            Station = st.Id,
             Items = new Dictionary<int, int>(comp.Cart),
         });
-        PushState(uid, comp);
+        PushState(ent);
     }
 
-    /// <summary>Eris cart load: replace the cart with a saved one.</summary>
-    private void OnLoadCart(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeLoadCartMessage msg)
+    /// <summary>Eris cart load: return to the cart's station and restore it.</summary>
+    [SubscribeLocalEvent]
+    private void OnLoadCart(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeLoadCartMessage msg)
     {
-        if (msg.Index < 0 || msg.Index >= comp.SavedCarts.Count) return;
+        var comp = ent.Comp;
+        if (msg.Index < 0 || msg.Index >= comp.SavedCarts.Count)
+            return;
+
+        var saved = comp.SavedCarts[msg.Index];
+        var index = StationList().FindIndex(s => s.Id == saved.Station);
+        if (index < 0)
+            return;
+
+        comp.SelectedStation = index;
+        comp.Category = null;
         comp.Cart.Clear();
-        foreach (var (k, v) in comp.SavedCarts[msg.Index].Items)
+        foreach (var (k, v) in saved.Items)
             comp.Cart[k] = v;
-        PushState(uid, comp);
+        PushState(ent);
     }
 
-    private void OnDeleteSavedCart(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeDeleteSavedCartMessage msg)
+    [SubscribeLocalEvent]
+    private void OnDeleteSavedCart(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeDeleteSavedCartMessage msg)
     {
-        if (msg.Index < 0 || msg.Index >= comp.SavedCarts.Count) return;
-        comp.SavedCarts.RemoveAt(msg.Index);
-        PushState(uid, comp);
+        if (msg.Index < 0 || msg.Index >= ent.Comp.SavedCarts.Count)
+            return;
+
+        ent.Comp.SavedCarts.RemoveAt(msg.Index);
+        PushState(ent);
     }
 
-    /// <summary>Eris trade_orders: crew console pushes a request onto the merchant queue.
-    /// The item is looked up by goods name across stations; unknown names still queue as
-    /// free-text requests (Eris lets the merchant read anything).</summary>
-    private void OnSubmitRequest(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeSubmitRequestMessage msg)
+    /// <summary>Eris trade_orders: crew console pushes a request onto the merchant queue.</summary>
+    [SubscribeLocalEvent]
+    private void OnSubmitRequest(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeSubmitRequestMessage msg)
     {
         // Requests come from the crew request console only.
-        if (!comp.RequestConsole) return;
+        if (!ent.Comp.RequestConsole)
+            return;
+
         var item = msg.Item.Trim();
-        if (item.Length == 0 || item.Length > 64) return;
-        _requests.Add(new Request
-        {
-            Id = _nextRequestId++,
-            Item = item,
-            Amount = Math.Clamp(msg.Amount, 1, 50),
-            From = MetaData(uid).EntityPrototype?.ID == "OxydTradeRequestConsole" ? "crew console" : "console",
-        });
-        PushState(uid, comp);
+        if (item.Length == 0 || item.Length > 64)
+            return;
+
+        AddRequest(item, msg.Amount, "crew console");
     }
 
     /// <summary>Merchant clears a request once ordered/fulfilled (Eris order_requests).</summary>
-    private void OnCompleteRequest(EntityUid uid, OxydTradeConsoleComponent comp, OxydTradeCompleteRequestMessage msg)
+    [SubscribeLocalEvent]
+    private void OnCompleteRequest(Entity<OxydTradeConsoleComponent> ent, ref OxydTradeCompleteRequestMessage msg)
     {
-        // Requests are completed on the merchant console, not the crew console.
-        if (comp.RequestConsole) return;
-        var r = _requests.Find(x => x.Id == msg.Id);
-        if (r == null) return;
+        if (ent.Comp.RequestConsole)
+            return;
+
+        var id = msg.Id;
+        var r = _requests.Find(x => x.Id == id);
+        if (r == null)
+            return;
+
         _requests.Remove(r);
-        comp.Log.Add($"[Request] fulfilled: {r.Item} x{r.Amount}");
-        PushState(uid, comp);
+        ent.Comp.Log.Add($"[Request] fulfilled: {r.Item} x{r.Amount}");
+        PushState(ent);
     }
 
     /// <summary>Debug/testing hook (guild:submitrequest): enqueue a crew request as if a
     /// request console submitted it — BUI LineEdits can't be driven in the test client.</summary>
     public void DebugSubmitRequest(string item, int amount, string from)
     {
+        AddRequest(item.Trim(), amount, from);
+    }
+
+    private void AddRequest(string item, int amount, string from)
+    {
         _requests.Add(new Request
         {
             Id = _nextRequestId++,
-            Item = item.Trim(),
+            Item = item,
             Amount = Math.Clamp(amount, 1, 50),
             From = from,
         });
-        var q = EntityQueryEnumerator<OxydTradeConsoleComponent>();
-        while (q.MoveNext(out var u, out var c))
-            PushState(u, c);
-    }
 
-    [Dependency] private EntityLookupSystem _lookup = default!;
+        var query = EntityQueryEnumerator<OxydTradeConsoleComponent>();
+        while (query.MoveNext(out var uid, out var comp))
+            PushState((uid, comp));
+    }
 }

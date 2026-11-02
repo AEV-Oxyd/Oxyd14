@@ -103,6 +103,13 @@
       map: ["enum.OxydGuildVisualLayers.Working"]
       visible: false
   - type: OxydDeepDrill
+    ores:
+    - SteelOre
+    - UraniumOre
+    - PlasmaOre
+    - GoldOre
+    - SilverOre
+    - Coal
   - type: ApcPowerReceiver
     powerLoad: 1000
   - type: Appearance

@@ -21,32 +21,11 @@ public sealed partial class OxydAtmSystem : EntitySystem
     [Dependency] private StackSystem _stacks = default!;
     [Dependency] private InventorySystem _inventory = default!;
 
-    [SubscribeLocalEvent]
-    private void OnClosed(Entity<OxydAtmComponent> ent, ref BoundUIClosedEvent args)
-    {
-        // Log the owner out when their UI session closes — the ATM never stays
-        // logged in for the next person.
-        var closer = args.Actor;
-        if (ent.Comp.SessionAccount != null &&
-            (ent.Comp.SessionUser == null || closer == null || closer == ent.Comp.SessionUser))
-        {
-            ent.Comp.SessionAccount = null;
-            ent.Comp.SessionUser = null;
-            PushState(ent);
-        }
-    }
-
+    // Eris ATMs stay logged in until someone presses Logout. Walking away
+    // leaves the session open for whoever uses the machine next.
     [SubscribeLocalEvent]
     private void OnOpened(Entity<OxydAtmComponent> ent, ref BoundUIOpenedEvent args)
     {
-        // A leftover session belongs to its owner only — close the UI for anyone
-        // else so they never see the account data nor can end the session.
-        if (ent.Comp.SessionAccount != null && ent.Comp.SessionUser != args.Actor)
-        {
-            _ui.CloseUi(ent.Owner, OxydAtmUiKey.Key, args.Actor);
-            return;
-        }
-
         PushState(ent);
     }
 
@@ -60,9 +39,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnLogout(Entity<OxydAtmComponent> ent, ref OxydAtmLogoutMessage args)
     {
-        if (!SessionOwned(ent, args.Actor, out _))
-            return;
-
         TryLogout(ent);
     }
 
@@ -92,16 +68,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
         }
 
         ent.Comp.SessionAccount = accountNumber;
-        ent.Comp.SessionUser = actor;
-
-        // Anyone else who had the UI open must not receive the new session's
-        // account number/name/balance — kick every other viewer.
-        foreach (var other in _ui.GetActors(ent.Owner, OxydAtmUiKey.Key))
-        {
-            if (other != actor)
-                _ui.CloseUi(ent.Owner, OxydAtmUiKey.Key, other);
-        }
-
         PushState(ent);
         return true;
     }
@@ -109,33 +75,15 @@ public sealed partial class OxydAtmSystem : EntitySystem
     public void TryLogout(Entity<OxydAtmComponent> ent)
     {
         ent.Comp.SessionAccount = null;
-        ent.Comp.SessionUser = null;
         PushState(ent);
-    }
-
-    /// <summary>Reject actions from anyone but the player who logged in —
-    /// rejecting must never end the owner's session (a bystander pressing
-    /// buttons is noise, not a logout).</summary>
-    private bool SessionOwned(Entity<OxydAtmComponent> ent, EntityUid actor, out string? error)
-    {
-        error = null;
-        if (ent.Comp.SessionAccount is { } && ent.Comp.SessionUser == actor)
-            return true;
-
-        error = ent.Comp.SessionAccount is { }
-            ? "ATM in use by someone else"
-            : "Not logged in";
-        return false;
     }
 
     public bool TryWithdraw(Entity<OxydAtmComponent> ent, int amount, EntityUid actor, out string? error)
     {
         error = null;
-        if (!SessionOwned(ent, actor, out error) ||
-            ent.Comp.SessionAccount is not { } acct ||
-            amount <= 0)
+        if (ent.Comp.SessionAccount is not { } acct || amount <= 0)
         {
-            error ??= "Not logged in";
+            error = "Not logged in";
             PushState(ent, error);
             return false;
         }
@@ -156,10 +104,9 @@ public sealed partial class OxydAtmSystem : EntitySystem
     public bool TryTransfer(Entity<OxydAtmComponent> ent, int targetAccount, int amount, EntityUid actor, out string? error)
     {
         error = null;
-        if (!SessionOwned(ent, actor, out error) ||
-            ent.Comp.SessionAccount is not { } from)
+        if (ent.Comp.SessionAccount is not { } from)
         {
-            error ??= "Not logged in";
+            error = "Not logged in";
             PushState(ent, error);
             return false;
         }
@@ -209,12 +156,6 @@ public sealed partial class OxydAtmSystem : EntitySystem
         if (ent.Comp.SessionAccount is not { } acct)
         {
             _popup.PopupEntity("Log in before depositing.", ent, args.User);
-            return;
-        }
-
-        if (!SessionOwned(ent, args.User, out var depErr))
-        {
-            _popup.PopupEntity(depErr, ent, args.User);
             return;
         }
 

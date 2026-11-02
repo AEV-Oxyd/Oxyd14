@@ -29,22 +29,16 @@ public sealed partial class OxydResearchSystem
 {
     private void InitializeDevices()
     {
-        SubscribeLocalEvent<OxydRdConsoleComponent, EntInsertedIntoContainerMessage>(OnConsoleSlotInsert);
-        SubscribeLocalEvent<OxydRdConsoleComponent, EntRemovedFromContainerMessage>(OnConsoleSlotRemove);
-        SubscribeLocalEvent<OxydDestructiveAnalyzerComponent, EntInsertedIntoContainerMessage>(OnDaInsert);
-        SubscribeLocalEvent<OxydScienceToolComponent, AfterInteractEvent>(OnScienceToolUse);
-        SubscribeLocalEvent<OxydExplosionWatcherComponent, DamageChangedEvent>(OnWatcherDamaged);
-        SubscribeLocalEvent<OxydMentalImprinterComponent, UseInHandEvent>(OnImprinterUse);
-        SubscribeLocalEvent<OxydDroneFabricatorComponent, ActivateInWorldEvent>(OnDroneFabricate);
-        SubscribeLocalEvent<OxydSlimeExtractorComponent, AfterInteractEvent>(OnSlimeExtract);
-        SubscribeLocalEvent<OxydMaintenanceDroneShellComponent, UseInHandEvent>(OnDroneDeploy);
     }
 
     [Dependency] private SanitySystem _sanity = default!;
 
     // ---- slot plumbing: refresh the UI when disks/tools change ----
+    [SubscribeLocalEvent]
     private void OnConsoleSlotInsert(Entity<OxydRdConsoleComponent> ent, ref EntInsertedIntoContainerMessage args) => UpdateUi(ent);
+    [SubscribeLocalEvent]
     private void OnConsoleSlotRemove(Entity<OxydRdConsoleComponent> ent, ref EntRemovedFromContainerMessage args) => UpdateUi(ent);
+    [SubscribeLocalEvent]
     private void OnDaInsert(Entity<OxydDestructiveAnalyzerComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
         foreach (var console in FindConsolesLinkedTo(ent.Owner))
@@ -62,6 +56,7 @@ public sealed partial class OxydResearchSystem
     }
 
     // ---- destructive analyzer (Eris destructive_analyzer.dm) ----
+    [SubscribeLocalEvent]
     private void OnDeconstruct(Entity<OxydRdConsoleComponent> ent, ref OxydRdDeconstructMessage args)
     {
         var da = FindAnalyzerWithItem(ent);
@@ -202,6 +197,7 @@ public sealed partial class OxydResearchSystem
         return null;
     }
 
+    [SubscribeLocalEvent]
     private void OnEjectItem(Entity<OxydRdConsoleComponent> ent, ref OxydRdEjectItemMessage args)
     {
         var da = FindAnalyzerWithItem(ent);
@@ -213,6 +209,7 @@ public sealed partial class OxydResearchSystem
     }
 
     // ---- disk management (Eris disk_management screens) ----
+    [SubscribeLocalEvent]
     private void OnDisk(Entity<OxydRdConsoleComponent> ent, ref OxydRdDiskMessage args)
     {
         switch (args.Op)
@@ -314,6 +311,7 @@ public sealed partial class OxydResearchSystem
     }
 
     // ---- science tool upload (Eris attackby with science_tool) ----
+    [SubscribeLocalEvent]
     private void OnUploadTool(Entity<OxydRdConsoleComponent> ent, ref OxydRdUploadToolMessage args)
     {
         var item = _slots.GetItemOrNull(ent.Owner, ToolSlot);
@@ -346,6 +344,7 @@ public sealed partial class OxydResearchSystem
     // ---- science tool use (Eris science_tool attack) ----
     // AfterInteractEvent is raised on the USED item (the tool) when the click
     // had no other handler — the right hook for item-side scan/extract behavior.
+    [SubscribeLocalEvent]
     private void OnScienceToolUse(Entity<OxydScienceToolComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach)
@@ -396,6 +395,7 @@ public sealed partial class OxydResearchSystem
 
     // ---- mental imprinter (Eris mental_imprinter: eye-stab stat boost at
     // a heavy sanity toll; adapted — no stat system, so it is flavor + cost) ----
+    [SubscribeLocalEvent]
     private void OnImprinterUse(Entity<OxydMentalImprinterComponent> ent, ref UseInHandEvent args)
     {
         if (args.Handled)
@@ -409,6 +409,7 @@ public sealed partial class OxydResearchSystem
 
     // ---- drone fabricator (Eris drone_fabricator: produces drone shells on a
     // cycle; shells can't be inhabited without a silicon stack) ----
+    [SubscribeLocalEvent]
     private void OnDroneFabricate(Entity<OxydDroneFabricatorComponent> ent, ref ActivateInWorldEvent args)
     {
         if (args.Handled)
@@ -426,6 +427,7 @@ public sealed partial class OxydResearchSystem
 
     // ---- slime core extraction (Eris xenobiology extract tooling: cores are
     // research specimens; adapted — draws from any refinable biological mob) ----
+    [SubscribeLocalEvent]
     private void OnSlimeExtract(Entity<OxydSlimeExtractorComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target == null)
@@ -447,6 +449,7 @@ public sealed partial class OxydResearchSystem
 
     // ---- maintenance drone shell (Eris maint drone folded form; unfolds into
     // a non-player NPC — inhabited drones need a silicon stack) ----
+    [SubscribeLocalEvent]
     private void OnDroneDeploy(Entity<OxydMaintenanceDroneShellComponent> ent, ref UseInHandEvent args)
     {
         if (args.Handled)
@@ -459,6 +462,7 @@ public sealed partial class OxydResearchSystem
 
 
     // ---- explosion watcher (Eris KES: banks points per explosion) ----
+    [SubscribeLocalEvent]
     private void OnWatcherDamaged(Entity<OxydExplosionWatcherComponent> ent, ref DamageChangedEvent args)
     {
         if (args.DamageDelta == null || !Transform(ent).Anchored)

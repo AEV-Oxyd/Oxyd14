@@ -22,8 +22,9 @@ public sealed class OxydAccountsDbBoundUserInterface : BoundUserInterface
         _window.OnSelect += n => SendMessage(new OxydAccountsDbSelectMessage { AccountNumber = n });
         _window.OnBack += () => SendMessage(new OxydAccountsDbBackMessage());
         _window.OnBeginCreate += () => SendMessage(new OxydAccountsDbBeginCreateMessage());
-        _window.OnCreate += (name, funds) =>
-            SendMessage(new OxydAccountsDbCreateMessage { OwnerName = name, StartingFunds = funds });
+        _window.OnCreate += name => SendMessage(new OxydAccountsDbCreateMessage { OwnerName = name });
+        _window.OnSetFunding += n => SendMessage(new OxydAccountsDbSetFundingAccountMessage { AccountNumber = n });
+        _window.OnFund += amount => SendMessage(new OxydAccountsDbFundMessage { Amount = amount });
         _window.OnToggleSuspend += () => SendMessage(new OxydAccountsDbToggleSuspendMessage());
         _window.OnAdjust += d => SendMessage(new OxydAccountsDbAdjustMessage { Delta = d });
         _window.OnRevoke += () => SendMessage(new OxydAccountsDbRevokePayrollMessage());
@@ -42,7 +43,9 @@ public sealed class OxydAccountsDbWindow : FancyWindow
     public event Action<int>? OnSelect;
     public event Action? OnBack;
     public event Action? OnBeginCreate;
-    public event Action<string, int>? OnCreate;
+    public event Action<string>? OnCreate;
+    public event Action<int>? OnSetFunding;
+    public event Action<int>? OnFund;
     public event Action? OnToggleSuspend;
     public event Action<int>? OnAdjust;
     public event Action? OnRevoke;
@@ -58,7 +61,8 @@ public sealed class OxydAccountsDbWindow : FancyWindow
     };
 
     private readonly LineEdit _holder = new() { PlaceHolder = "Holder name", HorizontalExpand = true };
-    private readonly LineEdit _funds = new() { PlaceHolder = "Starting funds", MinWidth = 90 };
+    private readonly LineEdit _funds = new() { PlaceHolder = "Credits", MinWidth = 90 };
+    private readonly LineEdit _fundingAccount = new() { PlaceHolder = "Account #", MinWidth = 90 };
     private readonly LineEdit _adjust = new() { PlaceHolder = "Δ credits", MinWidth = 90 };
 
     public OxydAccountsDbWindow()
@@ -99,13 +103,8 @@ public sealed class OxydAccountsDbWindow : FancyWindow
             _body.AddChild(new Label { Text = "Create personal account" });
             var row = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 4 };
             row.AddChild(_holder);
-            row.AddChild(_funds);
             var create = new Button { Text = "Finalize" };
-            create.OnPressed += _ =>
-            {
-                int.TryParse(_funds.Text, out var f);
-                OnCreate?.Invoke(_holder.Text ?? string.Empty, f);
-            };
+            create.OnPressed += _ => OnCreate?.Invoke(_holder.Text ?? string.Empty);
             row.AddChild(create);
             _body.AddChild(row);
             var back = new Button { Text = "Back" };
@@ -149,6 +148,21 @@ public sealed class OxydAccountsDbWindow : FancyWindow
             adjRow.AddChild(rem);
             _body.AddChild(adjRow);
 
+            var fundRow = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 4 };
+            fundRow.AddChild(_funds);
+            var fund = new Button
+            {
+                Text = state.FundingAccount is { } from ? $"Fund from #{from}" : "Fund (no source)",
+                Disabled = state.FundingAccount == null,
+            };
+            fund.OnPressed += _ =>
+            {
+                int.TryParse(_funds.Text, out var f);
+                OnFund?.Invoke(Math.Abs(f));
+            };
+            fundRow.AddChild(fund);
+            _body.AddChild(fundRow);
+
             foreach (var tx in state.Transactions)
             {
                 _body.AddChild(new Label
@@ -169,6 +183,22 @@ public sealed class OxydAccountsDbWindow : FancyWindow
         top.AddChild(newBtn);
         top.AddChild(new Label { Text = $"{state.Accounts.Count} accounts" });
         _body.AddChild(top);
+
+        var fundingRow = new BoxContainer { Orientation = LayoutOrientation.Horizontal, SeparationOverride = 4 };
+        fundingRow.AddChild(new Label
+        {
+            Text = state.FundingAccount is { } funding ? $"Funding: #{funding} {state.FundingName}" : "Funding: none",
+            HorizontalExpand = true,
+        });
+        fundingRow.AddChild(_fundingAccount);
+        var setFunding = new Button { Text = "Set" };
+        setFunding.OnPressed += _ =>
+        {
+            if (int.TryParse(_fundingAccount.Text, out var n))
+                OnSetFunding?.Invoke(n);
+        };
+        fundingRow.AddChild(setFunding);
+        _body.AddChild(fundingRow);
 
         var scroll = new ScrollContainer { VerticalExpand = true, HorizontalExpand = true, MinHeight = 300 };
         var list = new BoxContainer { Orientation = LayoutOrientation.Vertical, SeparationOverride = 2 };

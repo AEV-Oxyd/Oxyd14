@@ -29,6 +29,8 @@ public sealed class OxydAccountsDbUiState : BoundUserInterfaceState
     public bool DetailSuspended;
     public int DetailWage;
     public string? DetailEmployer;
+    public int? FundingAccount;
+    public string FundingName = string.Empty;
     public List<OxydAccountsDbAccountSummary> Accounts = new();
     public List<OxydTransactionData> Transactions = new();
     public string? Error;
@@ -51,7 +53,20 @@ public sealed class OxydAccountsDbBeginCreateMessage : BoundUserInterfaceMessage
 public sealed class OxydAccountsDbCreateMessage : BoundUserInterfaceMessage
 {
     public string OwnerName = string.Empty;
-    public int StartingFunds;
+}
+
+/// <summary>Choose the account that new-account funding is drawn from.</summary>
+[Serializable, NetSerializable]
+public sealed class OxydAccountsDbSetFundingAccountMessage : BoundUserInterfaceMessage
+{
+    public int AccountNumber;
+}
+
+/// <summary>Fund the open account from the funding account.</summary>
+[Serializable, NetSerializable]
+public sealed class OxydAccountsDbFundMessage : BoundUserInterfaceMessage
+{
+    public int Amount;
 }
 
 [Serializable, NetSerializable]

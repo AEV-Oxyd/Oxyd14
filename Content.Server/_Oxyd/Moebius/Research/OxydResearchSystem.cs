@@ -47,28 +47,19 @@ public sealed partial class OxydResearchSystem : EntitySystem
 
     public override void Initialize()
     {
-        SubscribeLocalEvent<OxydRdConsoleComponent, MapInitEvent>(OnConsoleMapInit);
-        SubscribeLocalEvent<OxydRdConsoleComponent, AfterActivatableUIOpenEvent>(OnConsoleUIOpen);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdScreenMessage>(OnScreenMsg);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdSelectTreeMessage>(OnSelectTree);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdSelectDeviceMessage>(OnSelectDevice);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdUnlockMessage>(OnUnlock);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdDeconstructMessage>(OnDeconstruct);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdEjectItemMessage>(OnEjectItem);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdRescanMessage>(OnRescan);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdPrintMessage>(OnPrint);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdDiskMessage>(OnDisk);
-        SubscribeLocalEvent<OxydRdConsoleComponent, OxydRdUploadToolMessage>(OnUploadTool);
         InitializeDevices();
     }
 
     // ---- linkage (Eris rdconsole auto-link on init + "Rescan" verb) ----
+    [SubscribeLocalEvent]
     private void OnConsoleMapInit(Entity<OxydRdConsoleComponent> ent, ref MapInitEvent args)
         => RescanDevices(ent);
 
+    [SubscribeLocalEvent]
     private void OnConsoleUIOpen(Entity<OxydRdConsoleComponent> ent, ref AfterActivatableUIOpenEvent args)
         => UpdateUi(ent);
 
+    [SubscribeLocalEvent]
     private void OnRescan(Entity<OxydRdConsoleComponent> ent, ref OxydRdRescanMessage args)
     {
         RescanDevices(ent);
@@ -145,6 +136,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     }
 
     // ---- screen / selection ----
+    [SubscribeLocalEvent]
     private void OnScreenMsg(Entity<OxydRdConsoleComponent> ent, ref OxydRdScreenMessage args)
     {
         ent.Comp.Screen = (int) args.Screen;
@@ -152,12 +144,14 @@ public sealed partial class OxydResearchSystem : EntitySystem
         UpdateUi(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnSelectTree(Entity<OxydRdConsoleComponent> ent, ref OxydRdSelectTreeMessage args)
     {
         _selectedTree[ent.Owner] = args.Tree;
         UpdateUi(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnSelectDevice(Entity<OxydRdConsoleComponent> ent, ref OxydRdSelectDeviceMessage args)
     {
         _selectedDevice[ent.Owner] = GetEntity(args.Device);
@@ -168,6 +162,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     private readonly Dictionary<EntityUid, EntityUid> _selectedDevice = new();
 
     // ---- tech unlock (Eris Research_Tech / CanResearch) ----
+    [SubscribeLocalEvent]
     private void OnUnlock(Entity<OxydRdConsoleComponent> ent, ref OxydRdUnlockMessage args)
     {
         if (!_proto.TryIndex<OxydTechNodePrototype>(args.Node, out var node))
@@ -199,6 +194,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     }
 
     // ---- remote print (Eris console queues designs on linked lathes) ----
+    [SubscribeLocalEvent]
     private void OnPrint(Entity<OxydRdConsoleComponent> ent, ref OxydRdPrintMessage args)
     {
         var dev = GetEntity(args.Device);

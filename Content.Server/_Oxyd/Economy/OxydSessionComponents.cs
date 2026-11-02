@@ -45,9 +45,7 @@ public sealed partial class OxydTradeCartComponent : Component
 [RegisterComponent]
 public sealed partial class OxydLoginFailuresComponent : Component
 {
-    public int Count;
-    public TimeSpan FirstFailAt;
-    public TimeSpan LockedUntil;
+    public OxydLoginThrottle Throttle = new();
 }
 
 /// <summary>Which email message is open in the mail cartridge on this loader.</summary>

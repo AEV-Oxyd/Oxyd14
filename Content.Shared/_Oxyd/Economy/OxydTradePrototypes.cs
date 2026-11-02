@@ -39,6 +39,10 @@ public sealed partial class OxydTradeOfferEntry
 
     [DataField]
     public int Amount = 3;
+
+    /// <summary>How long the offer stays open before the station drops it until the next restock.</summary>
+    [DataField]
+    public TimeSpan Duration = TimeSpan.FromMinutes(10);
 }
 
 /// <summary>Discovered trade beacon / station catalog (Eris trade_station).</summary>
@@ -62,6 +66,10 @@ public sealed partial class OxydTradeStationPrototype : IPrototype
 
     [DataField]
     public int BaseIncome = 1600;
+
+    /// <summary>Favor cap shown on the trade console.</summary>
+    [DataField]
+    public int FavorMax = 10000;
 
     [DataField]
     public List<OxydTradeGoodEntry> Inventory = new();

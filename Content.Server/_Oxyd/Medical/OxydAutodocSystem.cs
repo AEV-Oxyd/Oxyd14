@@ -62,30 +62,19 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         return OxydDamageTypes.Sum(spec, types);
     }
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydAutodocComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<OxydAutodocComponent, GetVerbsEvent<InteractionVerb>>(AddInsertVerb);
-        SubscribeLocalEvent<OxydAutodocComponent, GetVerbsEvent<AlternativeVerb>>(AddEjectVerb);
-        SubscribeLocalEvent<OxydAutodocComponent, DragDropTargetEvent>(OnDragDropOn);
-        SubscribeLocalEvent<OxydAutodocComponent, CanDropTargetEvent>(OnCanDropOn);
-        SubscribeLocalEvent<OxydAutodocComponent, InteractUsingEvent>(OnInteractUsing);
-        SubscribeLocalEvent<OxydAutodocComponent, EntInsertedIntoContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydAutodocComponent, EntRemovedFromContainerMessage>(OnContainerChanged);
-        SubscribeLocalEvent<OxydAutodocComponent, AfterActivatableUIOpenEvent>(OnUiOpen);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocScanMessage>(OnScan);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocProcessAllMessage>(OnProcessAll);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocProcessPickedMessage>(OnProcessPicked);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocAbortMessage>(OnAbort);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocToggleMessage>(OnToggle);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocEjectMessage>(OnEject);
-        SubscribeLocalEvent<OxydAutodocComponent, OxydAutodocEjectCreditsMessage>(OnEjectCredits);
-    }
-
+    [SubscribeLocalEvent]
     private void OnUiOpen(EntityUid uid, OxydAutodocComponent comp, AfterActivatableUIOpenEvent args)
     {
         PushState(uid, comp);
     }
+
+    [SubscribeLocalEvent]
+    private void OnEntInserted(EntityUid uid, OxydAutodocComponent comp, EntInsertedIntoContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
+
+    [SubscribeLocalEvent]
+    private void OnEntRemoved(EntityUid uid, OxydAutodocComponent comp, EntRemovedFromContainerMessage args)
+        => OnContainerChanged(uid, comp, args);
 
     private void OnContainerChanged(EntityUid uid, OxydAutodocComponent comp, ContainerModifiedMessage args)
     {
@@ -93,6 +82,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnInit(EntityUid uid, OxydAutodocComponent comp, ComponentInit args)
     {
         _container.EnsureContainer<ContainerSlot>(uid, OxydAutodocComponent.BodyContainerId);
@@ -144,6 +134,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnInteractUsing(EntityUid uid, OxydAutodocComponent comp, InteractUsingEvent args)
     {
         if (args.Handled || !HasComp<CashComponent>(args.Used))
@@ -153,6 +144,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnEjectCredits(EntityUid uid, OxydAutodocComponent comp, OxydAutodocEjectCreditsMessage args)
     {
         if (comp.Operating)
@@ -168,6 +160,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
 
     // ---------------- Occupant in/out ----------------
 
+    [SubscribeLocalEvent]
     private void OnCanDropOn(EntityUid uid, OxydAutodocComponent comp, ref CanDropTargetEvent args)
     {
         if (args.Handled)
@@ -177,6 +170,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         args.Handled = args.CanDrop;
     }
 
+    [SubscribeLocalEvent]
     private void OnDragDropOn(EntityUid uid, OxydAutodocComponent comp, DragDropTargetEvent args)
     {
         if (args.Handled || comp.Operating || BodySlot(uid).ContainedEntity != null ||
@@ -189,6 +183,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void AddInsertVerb(EntityUid uid, OxydAutodocComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
         if (!args.CanInteract || comp.Operating || BodySlot(uid).ContainedEntity != null)
@@ -210,6 +205,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void AddEjectVerb(EntityUid uid, OxydAutodocComponent comp, GetVerbsEvent<AlternativeVerb> args)
     {
         // Eris: locked = processor.active — can't eject mid-procedure.
@@ -240,6 +236,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
     // ---------------- UI handlers ----------------
 
     /// <summary>Eris scan_user(): builds patchnotes for the occupant, auto-picked.</summary>
+    [SubscribeLocalEvent]
     private void OnScan(EntityUid uid, OxydAutodocComponent comp, OxydAutodocScanMessage args)
     {
         if (comp.Operating || BodySlot(uid).ContainedEntity is not { } patient)
@@ -297,6 +294,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnProcessAll(EntityUid uid, OxydAutodocComponent comp, OxydAutodocProcessAllMessage args)
     {
         if (comp.Operating || BodySlot(uid).ContainedEntity == null || comp.Notes.Count == 0)
@@ -306,6 +304,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         StartProcessing(uid, comp, TotalCost(comp));
     }
 
+    [SubscribeLocalEvent]
     private void OnProcessPicked(EntityUid uid, OxydAutodocComponent comp, OxydAutodocProcessPickedMessage args)
     {
         if (comp.Operating || BodySlot(uid).ContainedEntity == null || comp.Notes.Count == 0)
@@ -331,6 +330,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnAbort(EntityUid uid, OxydAutodocComponent comp, OxydAutodocAbortMessage args)
     {
         // Eris stop(): halts the run and clears the picked operations.
@@ -342,6 +342,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnToggle(EntityUid uid, OxydAutodocComponent comp, OxydAutodocToggleMessage args)
     {
         if (comp.Operating || args.EntryId < 0 || args.EntryId >= comp.Notes.Count)
@@ -354,6 +355,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         PushState(uid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnEject(EntityUid uid, OxydAutodocComponent comp, OxydAutodocEjectMessage args)
     {
         Eject(uid, comp);

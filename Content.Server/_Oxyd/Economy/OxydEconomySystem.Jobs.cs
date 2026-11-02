@@ -1,4 +1,3 @@
-using System.Linq;
 using Content.Shared._Oxyd.Economy;
 using Content.Shared.Access.Components;
 using Content.Server.Chat.Managers;
@@ -7,6 +6,7 @@ using Content.Shared.GameTicking;
 using Robust.Shared.Player;
 using Content.Shared.PDA;
 using Content.Shared.Roles;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server._Oxyd.Economy;
 
@@ -14,56 +14,35 @@ public sealed partial class OxydEconomySystem
 {
     [Dependency] private IChatManager _chatManager = default!;
 
+    /// <summary>Economy settings for jobs without their own entry.</summary>
+    private static readonly ProtoId<OxydJobEconomyPrototype> DefaultJobEconomy = "Default";
+
     public void SetupAccountForJob(EntityUid mob, JobPrototype job)
     {
         if (HasComp<OxydPersonalAccountComponent>(mob))
             return;
 
-        EnsureDepartmentsForRound();
-
-        if (!_protos.TryIndex<OxydJobEconomyPrototype>(job.ID, out var eco))
-        {
-            ApplyDefaults(mob,
-                wage: OxydEconomyConstants.WageLabour,
-                initialBalance: -1,
-                accountAllowed: true,
-                deptAccess: false,
-                employer: OxydEconomyConstants.EmployerService,
-                canMakeAccounts: false);
-            return;
-        }
-
-        ApplyDefaults(mob, eco.Wage, eco.InitialBalance, eco.AccountAllowed, eco.DepartmentAccountAccess, eco.Employer, eco.CanMakeAccounts);
-    }
-
-    private void ApplyDefaults(
-        EntityUid mob,
-        int wage,
-        int initialBalance,
-        bool accountAllowed,
-        bool deptAccess,
-        string? employer,
-        bool canMakeAccounts)
-    {
-        if (!accountAllowed)
+        var eco = _protos.TryIndex<OxydJobEconomyPrototype>(job.ID, out var jobEco) ? jobEco : _protos.Index(DefaultJobEconomy);
+        if (!eco.AccountAllowed)
             return;
 
+        var employer = eco.Employer;
         var meta = MetaData(mob);
-        var money = ComputeSpawnBalance(wage, initialBalance);
         var account = CreateAccount(
             ownerName: meta.EntityName,
             accountName: meta.EntityName,
-            balance: money,
+            balance: ComputeSpawnBalance(eco),
             employer: employer,
-            wage: wage,
-            canMakeAccounts: canMakeAccounts);
+            wage: eco.Wage,
+            canMakeAccounts: eco.CanMakeAccounts);
+        Bank.Comp.Holders[account.AccountNumber] = mob;
 
         var personal = EnsureComp<OxydPersonalAccountComponent>(mob);
         personal.AccountNumber = account.AccountNumber;
         personal.Balance = account.Balance;
         personal.OwnerName = account.OwnerName;
 
-        if (deptAccess && employer != null)
+        if (eco.DepartmentAccountAccess && employer != null)
         {
             var dept = FindDepartmentAccount(employer);
             if (dept != null)
@@ -85,6 +64,7 @@ public sealed partial class OxydEconomySystem
         personal.PendingPinMessage = msg;
     }
 
+    [SubscribeLocalEvent]
     private void OnPlayerSpawnComplete(PlayerSpawnCompleteEvent args)
     {
         if (!TryComp<OxydPersonalAccountComponent>(args.Mob, out var personal) ||
@@ -95,16 +75,17 @@ public sealed partial class OxydEconomySystem
         _chatManager.ChatMessageToOne(ChatChannel.Server, msg, msg, args.Mob, false, args.Player.Channel);
     }
 
-    private int ComputeSpawnBalance(int wage, int initialBalance)
+    private int ComputeSpawnBalance(OxydJobEconomyPrototype eco)
     {
-        // Eris one_time_payment: initial_balance * rand(14,17)/10 or wage * rand(30,70)/10
-        if (initialBalance >= 0)
-            return (int)Math.Round(initialBalance * _random.Next(14, 18) / 10.0);
+        // Eris one_time_payment: initial_balance * rand(14,17)/10 or wage * rand(30,70)/10.
+        // Each job can set its own range.
+        if (eco.InitialBalance >= 0)
+            return (int)Math.Round(eco.InitialBalance * _random.NextFloat(eco.InitialBalanceMultiplier.X, eco.InitialBalanceMultiplier.Y));
 
-        if (wage <= 0)
+        if (eco.Wage <= 0)
             return 0;
 
-        return (int)Math.Round(wage * _random.Next(30, 71) / 10.0);
+        return (int)Math.Round(eco.Wage * _random.NextFloat(eco.WageBalanceMultiplier.X, eco.WageBalanceMultiplier.Y));
     }
 
     private void LinkIdCard(EntityUid mob, int accountNumber)
@@ -122,16 +103,5 @@ public sealed partial class OxydEconomySystem
         var bankId = EnsureComp<OxydBankIdComponent>(cardId);
         bankId.AccountNumber = accountNumber;
         Dirty(cardId, bankId);
-    }
-
-    public void EnsureDepartmentsForRound()
-    {
-        if (_departmentsReady && _accounts.Values.Any(a => a.IsDepartment))
-            return;
-
-        foreach (var station in _station.GetStations())
-        {
-            EnsureDepartmentAccounts(station);
-        }
     }
 }

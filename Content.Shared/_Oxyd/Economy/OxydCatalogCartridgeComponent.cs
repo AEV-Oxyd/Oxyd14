@@ -1,26 +1,21 @@
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
-using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Economy;
 
-/// <summary>Read-only catalog cartridge (Eris drink/cook catalog programs).</summary>
+/// <summary>
+/// Read-only catalog cartridge (Eris drink/cook catalog programs). The client builds the
+/// page from the catalog prototype; nothing is sent in UI state.
+/// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydCatalogCartridgeComponent : Component
 {
     /// <summary>Which catalog dataset to show.</summary>
     [DataField, AutoNetworkedField]
-    public string CatalogId = "drinks";
+    public ProtoId<OxydCatalogPrototype> CatalogId = "drinks";
 }
 
-[Serializable, NetSerializable]
-public sealed class OxydCatalogUiState : BoundUserInterfaceState
-{
-    public string Title = string.Empty;
-    public List<OxydCatalogEntry> Entries = new();
-}
-
-[DataDefinition, Serializable, NetSerializable]
+[DataDefinition]
 public sealed partial class OxydCatalogEntry
 {
     [DataField]

@@ -22,23 +22,23 @@ public sealed partial class TaxQuicklyCartridgeSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<TaxQuicklyCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-        SubscribeLocalEvent<TaxQuicklyCartridgeComponent, ComponentShutdown>(OnShutdown);
 
     }
 
 
+    [SubscribeLocalEvent]
     private void OnShutdown(Entity<TaxQuicklyCartridgeComponent> ent, ref ComponentShutdown args)
     {
         // Sessions are on loader; ignore.
     }
 
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, TaxQuicklyCartridgeComponent component, CartridgeUiReadyEvent args)
     {
         UpdateUi(uid, args.Loader);
     }
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, TaxQuicklyCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not TaxQuicklyUiMessageEvent msg)

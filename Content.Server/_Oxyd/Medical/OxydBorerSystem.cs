@@ -61,28 +61,15 @@ public sealed partial class OxydBorerSystem : EntitySystem
     {
         // Standalone abilities: alt verbs on the potential victim/host, shown to nearby borers
         // (BodyComponent+InteractionVerb is already claimed by OxydSurgerySystem).
-        SubscribeLocalEvent<BodyComponent, GetVerbsEvent<AlternativeVerb>>(AddTargetVerbs);
         // In-host abilities: self verbs on the borer (it cannot click the host from inside).
-        SubscribeLocalEvent<OxydBorerComponent, GetVerbsEvent<InnateVerb>>(AddInHostVerbs);
 
-        SubscribeLocalEvent<OxydBorerComponent, OxydBorerInfestDoAfterEvent>(OnInfestDone);
-        SubscribeLocalEvent<OxydBorerComponent, OxydBorerReleaseDoAfterEvent>(OnReleaseDone);
-        SubscribeLocalEvent<OxydBorerComponent, MobStateChangedEvent>(OnBorerStateChanged);
-        SubscribeLocalEvent<OxydBorerComponent, ComponentShutdown>(OnBorerShutdown);
-        SubscribeLocalEvent<OxydBorerComponent, OxydBorerAssumeControlDoAfterEvent>(OnAssumeControlDone);
-        SubscribeLocalEvent<OxydBorerHostComponent, GetVerbsEvent<InnateVerb>>(AddControlVerbs);
-        SubscribeLocalEvent<OxydBorerHostComponent, MobStateChangedEvent>(OnHostStateChanged);
-        SubscribeLocalEvent<OxydBorerHostComponent, EntRemovedFromContainerMessage>(OnBorerRemoved);
-        SubscribeLocalEvent<OxydBorerHostComponent, EntityTerminatingEvent>(OnHostTerminating);
-        SubscribeLocalEvent<OxydBorerCaptiveComponent, GetVerbsEvent<InnateVerb>>(AddCaptiveVerbs);
-        SubscribeLocalEvent<OxydBorerCaptiveComponent, OxydBorerResistDoAfterEvent>(OnResistDone);
-        SubscribeLocalEvent<OxydBorerCaptiveComponent, EntityTerminatingEvent>(OnCaptiveTerminating);
     }
 
     // ------------------------------------------------------------------
     // Verbs
     // ------------------------------------------------------------------
 
+    [SubscribeLocalEvent]
     private void AddTargetVerbs(EntityUid uid, BodyComponent comp, GetVerbsEvent<AlternativeVerb> args)
     {
         if (!args.CanInteract || _mobs.IsDead(args.User) || args.User == uid)
@@ -125,6 +112,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void AddInHostVerbs(EntityUid uid, OxydBorerComponent comp, GetVerbsEvent<InnateVerb> args)
     {
         if (args.User != uid || _mobs.IsDead(uid))
@@ -274,6 +262,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnInfestDone(EntityUid uid, OxydBorerComponent comp, OxydBorerInfestDoAfterEvent args)
     {
         if (args.Handled || args.Cancelled || args.Target is not { } host || comp.Host != null)
@@ -373,6 +362,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
     // (Eris abilities_in_control: release_control / talk_host / spawn_larvae)
     // ------------------------------------------------------------------
 
+    [SubscribeLocalEvent]
     private void AddControlVerbs(EntityUid uid, OxydBorerHostComponent comp, GetVerbsEvent<InnateVerb> args)
     {
         if (args.User != uid ||
@@ -407,6 +397,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
     }
 
     /// <summary>Captive brain verbs (Eris captive_brain say + process_resist).</summary>
+    [SubscribeLocalEvent]
     private void AddCaptiveVerbs(EntityUid uid, OxydBorerCaptiveComponent comp, GetVerbsEvent<InnateVerb> args)
     {
         if (args.User != uid)
@@ -479,6 +470,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnReleaseDone(EntityUid uid, OxydBorerComponent comp, OxydBorerReleaseDoAfterEvent args)
     {
         if (args.Handled || args.Cancelled)
@@ -559,6 +551,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
     // Lifecycle / upkeep
     // ------------------------------------------------------------------
 
+    [SubscribeLocalEvent]
     private void OnBorerStateChanged(EntityUid uid, OxydBorerComponent comp, MobStateChangedEvent args)
     {
         // Eris death(): detach control, then a dead borer falls out of its host.
@@ -570,6 +563,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnBorerShutdown(EntityUid uid, OxydBorerComponent comp, ComponentShutdown args)
     {
         if (comp.Host is { } host && comp.Controlling)
@@ -583,6 +577,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
         comp.Host = null;
     }
 
+    [SubscribeLocalEvent]
     private void OnHostStateChanged(EntityUid uid, OxydBorerHostComponent comp, MobStateChangedEvent args)
     {
         // Eris host_death(): control stops instantly; the borer stays inside the corpse.
@@ -599,6 +594,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
 
     /// <summary>Borer pulled out of the host container by anything other than LeaveHost
     /// (admin verbs, other container ops) — keep both sides consistent.</summary>
+    [SubscribeLocalEvent]
     private void OnBorerRemoved(EntityUid uid, OxydBorerHostComponent comp, EntRemovedFromContainerMessage args)
     {
         if (args.Container.ID != OxydBorerHostComponent.BorerContainerId)
@@ -617,6 +613,7 @@ public sealed partial class OxydBorerSystem : EntitySystem
     }
 
     /// <summary>Gibbed/deleted hosts free the borer instead of deleting it with them.</summary>
+    [SubscribeLocalEvent]
     private void OnHostTerminating(EntityUid uid, OxydBorerHostComponent comp, EntityTerminatingEvent args)
     {
         if (comp.Borer is { } borer && !TerminatingOrDeleted(borer))

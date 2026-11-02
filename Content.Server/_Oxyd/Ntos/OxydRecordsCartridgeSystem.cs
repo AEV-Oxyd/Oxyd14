@@ -16,16 +16,11 @@ public sealed partial class OxydRecordsCartridgeSystem : EntitySystem
     [Dependency] private StationRecordsSystem _records = default!;
 
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydRecordsCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydRecordsCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydRecordsCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(uid, args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydRecordsCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydRecordsUiMessageEvent msg)

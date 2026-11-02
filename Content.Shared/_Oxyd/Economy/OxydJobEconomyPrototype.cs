@@ -1,3 +1,4 @@
+using System.Numerics;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.Economy;
@@ -21,6 +22,14 @@ public sealed partial class OxydJobEconomyPrototype : IPrototype
     /// </summary>
     [DataField]
     public int InitialBalance = -1;
+
+    /// <summary>Spawn balance range as a multiple of <see cref="InitialBalance"/>.</summary>
+    [DataField]
+    public Vector2 InitialBalanceMultiplier = new(1.4f, 1.7f);
+
+    /// <summary>Spawn balance range as a multiple of <see cref="Wage"/> when there is no initial balance.</summary>
+    [DataField]
+    public Vector2 WageBalanceMultiplier = new(3.0f, 7.0f);
 
     [DataField]
     public bool AccountAllowed = true;

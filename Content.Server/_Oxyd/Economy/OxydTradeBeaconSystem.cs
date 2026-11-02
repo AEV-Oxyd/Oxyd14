@@ -19,22 +19,18 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<OxydTradeBeaconSendingComponent, BoundUIOpenedEvent>(OnSendOpened);
-        SubscribeLocalEvent<OxydTradeBeaconSendingComponent, OxydTradeBeaconLinkMessage>(OnSendLink);
-        SubscribeLocalEvent<OxydTradeBeaconSendingComponent, OxydTradeBeaconExportMessage>(OnExport);
-        SubscribeLocalEvent<OxydTradeBeaconSendingComponent, InteractUsingEvent>(OnSendInteract);
 
-        SubscribeLocalEvent<OxydTradeBeaconReceivingComponent, BoundUIOpenedEvent>(OnRecvOpened);
-        SubscribeLocalEvent<OxydTradeBeaconReceivingComponent, OxydTradeBeaconLinkMessage>(OnRecvLink);
-        SubscribeLocalEvent<OxydTradeBeaconReceivingComponent, OxydTradeBeaconPurchaseMessage>(OnPurchase);
     }
 
+    [SubscribeLocalEvent]
     private void OnSendOpened(Entity<OxydTradeBeaconSendingComponent> ent, ref BoundUIOpenedEvent args)
         => PushSending(ent);
 
+    [SubscribeLocalEvent]
     private void OnRecvOpened(Entity<OxydTradeBeaconReceivingComponent> ent, ref BoundUIOpenedEvent args)
         => PushReceiving(ent);
 
+    [SubscribeLocalEvent]
     private void OnSendLink(Entity<OxydTradeBeaconSendingComponent> ent, ref OxydTradeBeaconLinkMessage args)
     {
         if (!_economy.TryGetAccount(args.AccountNumber, out _))
@@ -48,6 +44,7 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
         PushSending(ent, status: $"Linked #{args.AccountNumber}");
     }
 
+    [SubscribeLocalEvent]
     private void OnRecvLink(Entity<OxydTradeBeaconReceivingComponent> ent, ref OxydTradeBeaconLinkMessage args)
     {
         if (!_economy.TryGetAccount(args.AccountNumber, out _))
@@ -61,6 +58,7 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
         PushReceiving(ent, status: $"Linked #{args.AccountNumber}");
     }
 
+    [SubscribeLocalEvent]
     private void OnExport(Entity<OxydTradeBeaconSendingComponent> ent, ref OxydTradeBeaconExportMessage args)
     {
         if (ent.Comp.NextExportReady > _timing.CurTime)
@@ -77,18 +75,22 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
         }
 
         var slave = !(acct.IsDepartment && acct.DepartmentId == OxydEconomyConstants.EmployerGuild);
-        if (!_trade.TryFulfillOffersNear(ent, ent.Comp.Range, acct.AccountNumber, slave, out var paid, out var exportErr))
+        var offered = _trade.TryFulfillOffersNear(ent, ent.Comp.Range, acct.AccountNumber, slave, out var offerPaid, out var exportErr);
+        var exported = _trade.ExportGoodsNear(ent, ent.Comp.Range, acct.AccountNumber);
+        if (!offered && exported == 0)
         {
             PushSending(ent, error: exportErr);
             return;
         }
 
+        var paid = (offered ? offerPaid : 0) + exported;
         ent.Comp.NextExportReady = _timing.CurTime + ent.Comp.Cooldown;
         Dirty(ent);
-        _popup.PopupEntity($"Exported offers for {paid}cr.", ent, args.Actor);
+        _popup.PopupEntity($"Exported goods for {paid}cr.", ent, args.Actor);
         PushSending(ent, status: $"Paid {paid}cr");
     }
 
+    [SubscribeLocalEvent]
     private void OnPurchase(Entity<OxydTradeBeaconReceivingComponent> ent, ref OxydTradeBeaconPurchaseMessage args)
     {
         if (string.IsNullOrWhiteSpace(args.OrderId))
@@ -107,6 +109,7 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
         PushReceiving(ent, status: $"Delivered {args.OrderId}");
     }
 
+    [SubscribeLocalEvent]
     private void OnSendInteract(Entity<OxydTradeBeaconSendingComponent> ent, ref InteractUsingEvent args)
     {
         // Swipe ID with OxydBankId to link
@@ -128,7 +131,6 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
     {
         acct = null;
         error = null;
-        _economy.EnsureDepartmentsForRound();
         if (linked is { } num && _economy.TryGetAccount(num, out acct))
             return;
 
@@ -146,7 +148,7 @@ public sealed partial class OxydTradeBeaconSystem : EntitySystem
             LinkedAccount = ent.Comp.LinkedAccountNumber,
             Ready = ready,
             Error = error,
-            Status = status ?? (ready ? "Ready to export offers" : "Cooling down"),
+            Status = status ?? (ready ? "Ready to export" : "Cooling down"),
         });
     }
 

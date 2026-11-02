@@ -31,13 +31,7 @@ public sealed partial class NtHolinessPanelSystem : EntitySystem
     private ErisSpecRow? _row;
     private ErisBar? _bar;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<CruciformBearerComponent, CollectEntityPanels>(OnPanelRequest);
-        SubscribeLocalEvent<CruciformBearerComponent, ComponentStartup>(OnBearerStartup);
-        SubscribeLocalEvent<LocalPlayerDetachedEvent>(OnDetached);
-    }
-
+    [SubscribeLocalEvent]
     private void OnPanelRequest(Entity<CruciformBearerComponent> ent, ref CollectEntityPanels ev)
     {
         // The collect event is also raised on examine targets; only the local player's own
@@ -51,6 +45,7 @@ public sealed partial class NtHolinessPanelSystem : EntitySystem
         ev.adding[Category].Add(row);
     }
 
+    [SubscribeLocalEvent]
     private void OnBearerStartup(Entity<CruciformBearerComponent> ent, ref ComponentStartup args)
     {
         // A cruciform implanted mid-round doesn't re-trigger panel collection — append directly.
@@ -77,6 +72,7 @@ public sealed partial class NtHolinessPanelSystem : EntitySystem
         => _panels.panelContent.TryGetValue(Category, out var category) &&
            ClientOxydHelpers.FindControl<BoxContainer>(category, PanelName, out _);
 
+    [SubscribeLocalEvent]
     private void OnDetached(LocalPlayerDetachedEvent ev)
     {
         _row = null;

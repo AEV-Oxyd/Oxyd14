@@ -14,16 +14,11 @@ public sealed partial class OxydScannerCartridgeSystem : EntitySystem
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private MetaDataSystem _meta = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydScannerCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydScannerCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydScannerCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydScannerCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydScannerUiMessageEvent msg)

@@ -18,20 +18,9 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
     private static readonly ProtoId<TagPrototype> TagNet = "OxydHwNet";
     private static readonly ProtoId<TagPrototype> TagPeripheral = "OxydHwPeripheral";
 
-    [Dependency] protected readonly ItemSlotsSystem Slots = default!;
+    [Dependency] protected ItemSlotsSystem Slots = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydModularPdaComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<OxydModularPdaComponent, ComponentRemove>(OnRemove);
-        SubscribeLocalEvent<OxydModularPdaComponent, MapInitEvent>(OnMapInit);
-        SubscribeLocalEvent<OxydModularPdaComponent, EntInsertedIntoContainerMessage>(OnInserted);
-        SubscribeLocalEvent<OxydModularPdaComponent, EntRemovedFromContainerMessage>(OnRemoved);
-        SubscribeLocalEvent<OxydModularPdaComponent, ExaminedEvent>(OnExamined);
-        SubscribeLocalEvent<OxydComputerHardwareComponent, ExaminedEvent>(OnHwExamined);
-    }
-
+    [SubscribeLocalEvent]
     private void OnInit(Entity<OxydModularPdaComponent> ent, ref ComponentInit args)
     {
         ConfigureSlot(ent.Comp.CpuSlot, TagCpu, ent.Comp.StartingCpu, "CPU");
@@ -45,11 +34,13 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
         Slots.AddItemSlot(ent.Owner, OxydModularPdaComponent.PeripheralSlotId, ent.Comp.PeripheralSlot);
     }
 
+    [SubscribeLocalEvent]
     private void OnMapInit(Entity<OxydModularPdaComponent> ent, ref MapInitEvent args)
     {
         Recalculate(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnRemove(Entity<OxydModularPdaComponent> ent, ref ComponentRemove args)
     {
         Slots.RemoveItemSlot(ent.Owner, ent.Comp.CpuSlot);
@@ -58,6 +49,7 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
         Slots.RemoveItemSlot(ent.Owner, ent.Comp.PeripheralSlot);
     }
 
+    [SubscribeLocalEvent]
     private void OnInserted(Entity<OxydModularPdaComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
         if (!IsHwSlot(args.Container.ID))
@@ -73,6 +65,7 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
         Recalculate(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnRemoved(Entity<OxydModularPdaComponent> ent, ref EntRemovedFromContainerMessage args)
     {
         if (!IsHwSlot(args.Container.ID))
@@ -81,6 +74,7 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
         Recalculate(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnExamined(Entity<OxydModularPdaComponent> ent, ref ExaminedEvent args)
     {
         if (!args.IsInDetailsRange)
@@ -93,6 +87,7 @@ public abstract partial class SharedOxydModularPdaSystem : EntitySystem
             + $", draw {ent.Comp.TotalPowerUsage}W");
     }
 
+    [SubscribeLocalEvent]
     private void OnHwExamined(Entity<OxydComputerHardwareComponent> ent, ref ExaminedEvent args)
     {
         if (!args.IsInDetailsRange)

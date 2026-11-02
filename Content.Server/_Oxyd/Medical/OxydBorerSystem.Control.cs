@@ -79,6 +79,7 @@ public sealed partial class OxydBorerSystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnAssumeControlDone(EntityUid uid, OxydBorerComponent comp, OxydBorerAssumeControlDoAfterEvent args)
     {
         if (args.Handled || args.Cancelled)
@@ -197,6 +198,7 @@ public sealed partial class OxydBorerSystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnResistDone(EntityUid uid, OxydBorerCaptiveComponent comp, OxydBorerResistDoAfterEvent args)
     {
         if (args.Handled || args.Cancelled)
@@ -214,6 +216,7 @@ public sealed partial class OxydBorerSystem
 
     /// <summary>If the captive entity dies while holding a mind, the mind goes back to the
     /// host body (or ghosts if the host is gone too).</summary>
+    [SubscribeLocalEvent]
     private void OnCaptiveTerminating(EntityUid uid, OxydBorerCaptiveComponent comp, EntityTerminatingEvent args)
     {
         if (!_mind.TryGetMind(uid, out var captiveMindId, out _))

@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Content.Server.Cargo.Systems;
 using Content.Shared._Oxyd.Economy;
+using Content.Shared.Mobs.Components;
 using Content.Shared.GameTicking;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
@@ -20,6 +22,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private OxydEconomySystem _economy = default!;
     [Dependency] private EntityLookupSystem _lookup = default!;
+    [Dependency] private PricingSystem _pricing = default!;
 
     private readonly Dictionary<string, OxydTradeStationRuntime> _stations = new();
     private readonly List<OxydTradeOrderRuntime> _orders = new();
@@ -29,9 +32,6 @@ public sealed partial class OxydTradeSystem : EntitySystem
     private bool _seeded;
     private TimeSpan _nextRestock;
 
-    /// <summary>Per-loader shopping carts keyed by loader EntityUid.</summary>
-
-
     public IReadOnlyDictionary<string, OxydTradeStationRuntime> Stations => _stations;
     public IReadOnlyList<OxydTradeOrderRuntime> Orders => _orders;
     public IReadOnlyList<OxydTradeLogRuntime> Logs => _logs;
@@ -40,9 +40,9 @@ public sealed partial class OxydTradeSystem : EntitySystem
     {
         base.Initialize();
         _nextRestock = _timing.CurTime + TimeSpan.FromMinutes(6);
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundCleanup);
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundCleanup(RoundRestartCleanupEvent ev)
     {
         _stations.Clear();
@@ -89,6 +89,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
             Discovered = proto.StartDiscovered,
             Markup = proto.Markup,
             BaseIncome = proto.BaseIncome,
+            FavorMax = proto.FavorMax,
             Wealth = 0,
             Favor = 0,
         };
@@ -115,6 +116,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
                 Price = offer.Price,
                 AmountRemaining = offer.Amount,
                 AmountOriginal = offer.Amount,
+                ExpiresAt = _timing.CurTime + offer.Duration,
             };
         }
 
@@ -199,7 +201,6 @@ public sealed partial class OxydTradeSystem : EntitySystem
         order = null;
         error = null;
         EnsureSeeded();
-        _economy.EnsureDepartmentsForRound();
 
         var cart = GetCart(loader);
         if (cart.Count == 0)
@@ -278,7 +279,6 @@ public sealed partial class OxydTradeSystem : EntitySystem
     {
         error = null;
         EnsureSeeded();
-        _economy.EnsureDepartmentsForRound();
 
         var order = _orders.FirstOrDefault(o => o.OrderId == orderId);
         if (order == null || order.Fulfilled)
@@ -363,7 +363,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
             var good = st.Goods[line.Product];
             good.Stock -= line.Amount;
             st.Wealth += line.Price * line.Amount;
-            st.Favor += line.Price * line.Amount;
+            st.Favor = Math.Min(st.Favor + line.Price * line.Amount, st.FavorMax);
 
             for (var i = 0; i < line.Amount; i++)
                 Spawn(line.Product, dropAt);
@@ -374,19 +374,78 @@ public sealed partial class OxydTradeSystem : EntitySystem
         return true;
     }
 
-    /// <summary>Fulfill all matching offers using entities near a sending beacon.</summary>
+    /// <summary>Buy goods from a station straight away: charge the account, take the stock.
+    /// Returns how many of each product were taken; the caller delivers them.</summary>
+    public bool TryPurchase(
+        string stationId,
+        IReadOnlyDictionary<string, int> wants,
+        int account,
+        string terminal,
+        out int total,
+        out Dictionary<string, int> taken,
+        [NotNullWhen(false)] out string? error)
+    {
+        total = 0;
+        taken = new Dictionary<string, int>();
+        EnsureSeeded();
+        if (!TryGetStation(stationId, out var station))
+        {
+            error = "Unknown station";
+            return false;
+        }
+
+        // Charge only what can be delivered; stock is shared with every console and PDA.
+        foreach (var (product, amount) in wants)
+        {
+            if (!station.Goods.TryGetValue(product, out var good))
+                continue;
+
+            var take = Math.Min(amount, good.Stock);
+            if (take <= 0)
+                continue;
+
+            taken[product] = take;
+            total += take * good.Price;
+        }
+
+        if (total <= 0)
+        {
+            error = "Nothing in stock";
+            return false;
+        }
+
+        if (!_economy.TryAdjust(account, -total, $"Trade order {station.Name}", terminal))
+        {
+            error = "Insufficient funds";
+            return false;
+        }
+
+        foreach (var (product, take) in taken)
+        {
+            var good = station.Goods[product];
+            good.Stock -= take;
+            station.Wealth += take * good.Price;
+            station.Favor = Math.Min(station.Favor + take * good.Price, station.FavorMax);
+        }
+
+        error = null;
+        return true;
+    }
+
+    /// <summary>Fulfill all matching offers using entities near a sending beacon.
+    /// <paramref name="only"/> limits the export to one station's offer for one product.</summary>
     public bool TryFulfillOffersNear(
         EntityUid beacon,
         float range,
         int payoutAccount,
         bool slaveCut,
         out int paidTotal,
-        [NotNullWhen(false)] out string? error)
+        [NotNullWhen(false)] out string? error,
+        (string Station, string Product)? only = null)
     {
         paidTotal = 0;
         error = null;
         EnsureSeeded();
-        _economy.EnsureDepartmentsForRound();
 
         if (!_economy.TryGetAccount(payoutAccount, out var payout) || payout.Suspended)
         {
@@ -419,9 +478,14 @@ public sealed partial class OxydTradeSystem : EntitySystem
 
         foreach (var station in _stations.Values.Where(s => s.Discovered).Reverse())
         {
+            if (only is { } stationFilter && stationFilter.Station != station.Id)
+                continue;
+
             foreach (var (product, offer) in station.Offers.ToList())
             {
-                if (offer.AmountRemaining <= 0)
+                if (offer.AmountRemaining <= 0 || offer.ExpiresAt < _timing.CurTime)
+                    continue;
+                if (only is { } productFilter && productFilter.Product != product)
                     continue;
                 if (!byProto.TryGetValue(product, out var items) || items.Count < offer.AmountRemaining)
                     continue;
@@ -438,7 +502,7 @@ public sealed partial class OxydTradeSystem : EntitySystem
                 var price = offer.Price;
                 offer.AmountRemaining = 0;
                 station.Wealth += price;
-                station.Favor += price;
+                station.Favor = Math.Min(station.Favor + price, station.FavorMax);
                 paidTotal += price;
                 any = true;
 
@@ -472,6 +536,42 @@ public sealed partial class OxydTradeSystem : EntitySystem
 
         LogEntry("Special Offer", payout.OwnerName, string.Join(", ", invoice), paidTotal);
         return true;
+    }
+
+    /// <summary>Eris export: everything else lying on the sending beacon is sold at its
+    /// appraised price, and the money goes to the account linked to the trade program.</summary>
+    public int ExportGoodsNear(EntityUid beacon, float range, int payoutAccount)
+    {
+        if (!_economy.TryGetAccount(payoutAccount, out var payout) || payout.Suspended)
+            return 0;
+
+        var beaconParent = Transform(beacon).ParentUid;
+        var paid = 0;
+        var invoice = new List<string>();
+        foreach (var ent in _lookup.GetEntitiesInRange(Transform(beacon).Coordinates, range))
+        {
+            if (ent == beacon || EntityManager.IsQueuedForDeletion(ent) || HasComp<MobStateComponent>(ent))
+                continue;
+
+            var xform = Transform(ent);
+            if (xform.Anchored || xform.ParentUid != beaconParent)
+                continue;
+
+            var price = (int)Math.Round(_pricing.GetPrice(ent));
+            if (price <= 0)
+                continue;
+
+            paid += price;
+            invoice.Add(MetaData(ent).EntityName);
+            QueueDel(ent);
+        }
+
+        if (paid <= 0)
+            return 0;
+
+        _economy.TrySilentAdjust(payoutAccount, paid, "Trade export", "TradeBeacon");
+        LogEntry("Export", payout.OwnerName, string.Join(", ", invoice), paid);
+        return paid;
     }
 
     public void DiscoverStation(string id)
@@ -508,15 +608,18 @@ public sealed partial class OxydTradeSystem : EntitySystem
                 good.Stock += add;
             }
 
-            // Refresh exhausted offers from prototype
+            // Refresh exhausted or expired offers from prototype
             if (_protos.TryIndex<OxydTradeStationPrototype>(st.Id, out var proto))
             {
                 foreach (var offer in proto.Offers)
                 {
-                    if (!st.Offers.TryGetValue(offer.Product.Id, out var rt) || rt.AmountRemaining > 0)
+                    if (!st.Offers.TryGetValue(offer.Product.Id, out var rt) ||
+                        rt.AmountRemaining > 0 && rt.ExpiresAt > _timing.CurTime)
                         continue;
                     rt.AmountRemaining = offer.Amount;
+                    rt.AmountOriginal = offer.Amount;
                     rt.Price = offer.Price;
+                    rt.ExpiresAt = _timing.CurTime + offer.Duration;
                 }
             }
         }
@@ -556,6 +659,7 @@ public sealed class OxydTradeStationRuntime
     public int BaseIncome;
     public int Wealth;
     public int Favor;
+    public int FavorMax;
     public Dictionary<string, OxydTradeGoodRuntime> Goods = new();
     public Dictionary<string, OxydTradeOfferRuntime> Offers = new();
 }
@@ -576,6 +680,7 @@ public sealed class OxydTradeOfferRuntime
     public int Price;
     public int AmountRemaining;
     public int AmountOriginal;
+    public TimeSpan ExpiresAt;
 }
 
 public sealed class OxydTradeCartLineRuntime

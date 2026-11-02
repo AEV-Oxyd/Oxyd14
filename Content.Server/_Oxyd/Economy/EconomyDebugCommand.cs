@@ -68,9 +68,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
     [CommandImplementation("dept")]
     public void Dept(IInvocationContext ctx, string departmentId)
     {
-        var station = GetSys<StationSystem>().GetStations().FirstOrDefault();
-        if (station != default)
-            Eco.EnsureDepartmentAccounts(station);
         var acc = Eco.FindDepartmentAccount(departmentId);
         if (acc == null)
         {
@@ -287,7 +284,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
     public void Setup(IInvocationContext ctx, string scenario)
     {
         var uid = ExecutingEntity(ctx) ?? throw new InvalidOperationException("no executing entity");
-        Eco.EnsureDepartmentsForRound();
         var service = Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerService);
         switch (scenario)
         {
@@ -312,7 +308,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
             case "accountsdb":
                 Place(ctx, "accountsdb");
                 Place(ctx, "bench");
-                Eco.EnsureDepartmentsForRound();
                 SeedNearestBench(ctx, uid);
                 ctx.WriteLine("accounts uplink + artist bench placed (materials seeded)");
                 break;
@@ -328,7 +323,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
             case "trade":
                 Place(ctx, "send");
                 Place(ctx, "recv");
-                Eco.EnsureDepartmentsForRound();
                 GetSys<OxydTradeSystem>().EnsureSeeded();
                 if (Eco.FindDepartmentAccount(OxydEconomyConstants.EmployerGuild) is { } guild)
                 {
@@ -379,7 +373,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
     [CommandImplementation("list")]
     public void List(IInvocationContext ctx)
     {
-        Eco.EnsureDepartmentsForRound();
         foreach (var acc in Eco.Accounts.Values.OrderBy(a => a.AccountNumber))
         {
             ctx.WriteLine(
@@ -399,7 +392,6 @@ public sealed partial class EconomyDebugCommand : ToolshedCommand
     {
         var trade = GetSys<OxydTradeSystem>();
         trade.EnsureSeeded();
-        Eco.EnsureDepartmentsForRound();
 
         switch (mode.ToLowerInvariant())
         {

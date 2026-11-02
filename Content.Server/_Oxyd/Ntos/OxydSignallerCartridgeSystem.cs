@@ -14,16 +14,11 @@ public sealed partial class OxydSignallerCartridgeSystem : EntitySystem
     [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<OxydSignallerCartridgeComponent, CartridgeUiReadyEvent>(OnReady);
-        SubscribeLocalEvent<OxydSignallerCartridgeComponent, CartridgeMessageEvent>(OnMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnReady(EntityUid uid, OxydSignallerCartridgeComponent component, CartridgeUiReadyEvent args)
         => Push(args.Loader);
 
+    [SubscribeLocalEvent]
     private void OnMessage(EntityUid uid, OxydSignallerCartridgeComponent component, CartridgeMessageEvent args)
     {
         if (args is not OxydSignallerUiMessageEvent msg)

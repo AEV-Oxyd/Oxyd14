@@ -26,18 +26,14 @@ public sealed partial class PainSystem : EntitySystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private ISharedPlayerManager _player = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<AnalgesicComponent, StatusEffectAppliedEvent>(OnAnalgesicApplied);
-        SubscribeLocalEvent<AnalgesicComponent, StatusEffectRemovedEvent>(OnAnalgesicRemoved);
-    }
-
+    [SubscribeLocalEvent]
     private void OnAnalgesicApplied(Entity<AnalgesicComponent> ent, ref StatusEffectAppliedEvent args)
     {
         if (TryComp<PainComponent>(args.Target, out var pain))
             Refresh((args.Target, pain));
     }
 
+    [SubscribeLocalEvent]
     private void OnAnalgesicRemoved(Entity<AnalgesicComponent> ent, ref StatusEffectRemovedEvent args)
     {
         if (TryComp<PainComponent>(args.Target, out var pain))

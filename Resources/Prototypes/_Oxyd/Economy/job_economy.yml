@@ -1,5 +1,9 @@
 # Eris job economy wiring (code/game/jobs/job/civilian.dm + wages.dm)
 
+# Used by jobs without their own entry.
+- type: oxydJobEconomy
+  id: Default
+
 - type: oxydJobEconomy
   id: ClubManager
   wage: 0

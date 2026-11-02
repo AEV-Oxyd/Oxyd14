@@ -12,11 +12,7 @@ public sealed partial class OxydBorerHiddenVisualizerSystem : EntitySystem
     [Dependency] private SpriteSystem _sprite = default!;
     [Dependency] private AppearanceSystem _appearance = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydBorerComponent, AppearanceChangeEvent>(OnAppearanceChange);
-    }
-
+    [SubscribeLocalEvent]
     private void OnAppearanceChange(EntityUid uid, OxydBorerComponent comp, ref AppearanceChangeEvent args)
     {
         if (args.Sprite == null)

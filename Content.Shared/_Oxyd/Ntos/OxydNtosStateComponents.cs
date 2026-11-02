@@ -3,7 +3,7 @@ namespace Content.Shared._Oxyd.Ntos;
 /// <summary>
 /// Round-scoped NT mail state (reviewer round-2: accounts/inboxes must reset each
 /// round instead of living in a system dictionary). Carried on one lazily-spawned
-/// nullspace entity — the OxydBankSystem / OxydBankAccountComponent pattern.
+/// nullspace entity — the same pattern as the banking server.
 /// </summary>
 [RegisterComponent]
 public sealed partial class OxydEmailStateComponent : Component

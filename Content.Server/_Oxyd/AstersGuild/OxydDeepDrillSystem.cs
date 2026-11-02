@@ -1,6 +1,7 @@
 using Content.Shared._Oxyd.AstersGuild;
 using Content.Shared.Interaction;
 using Robust.Server.GameObjects;
+using Robust.Shared.Random;
 
 namespace Content.Server._Oxyd.AstersGuild;
 
@@ -9,6 +10,7 @@ public sealed partial class OxydDeepDrillSystem : EntitySystem
 {
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private AppearanceSystem _appearance = default!;
+    [Dependency] private IRobustRandom _random = default!;
 
     [SubscribeLocalEvent]
     private void OnDrillInteract(Entity<OxydDeepDrillComponent> ent, ref InteractHandEvent args)
@@ -31,11 +33,10 @@ public sealed partial class OxydDeepDrillSystem : EntitySystem
                 continue;
 
             drill.Accum = 0;
-            if (!RockNearby(uid))
+            if (drill.Ores.Count == 0 || !RockNearby(uid))
                 continue;
 
-            var ores = new[] { "SteelOre", "UraniumOre", "PlasmaOre", "GoldOre", "SilverOre", "Coal" };
-            Spawn(ores[Random.Shared.Next(ores.Length)], Transform(uid).Coordinates);
+            Spawn(_random.Pick(drill.Ores), Transform(uid).Coordinates);
         }
     }
 

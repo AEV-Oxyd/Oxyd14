@@ -13,11 +13,7 @@ public sealed partial class OxydStaticMaterialWhitelistSystem : EntitySystem
 {
     [Dependency] private IPrototypeManager _proto = default!;
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydStaticMaterialWhitelistComponent, GetMaterialWhitelistEvent>(OnGetWhitelist);
-    }
-
+    [SubscribeLocalEvent]
     private void OnGetWhitelist(EntityUid uid, OxydStaticMaterialWhitelistComponent comp, ref GetMaterialWhitelistEvent args)
     {
         if (args.Storage != uid)

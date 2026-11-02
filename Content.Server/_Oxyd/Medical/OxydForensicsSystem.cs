@@ -52,18 +52,12 @@ public sealed partial class OxydForensicsSystem : EntitySystem
 
     private static readonly EntProtoId PaperProto = "Paper";
 
-    public override void Initialize()
-    {
-        SubscribeLocalEvent<OxydAutopsyScannerComponent, AfterInteractEvent>(OnAutopsyInteract);
-        SubscribeLocalEvent<OxydAutopsyScannerComponent, OxydAutopsyDoAfterEvent>(OnAutopsyDoAfter);
-        SubscribeLocalEvent<OxydMassSpectrometerComponent, AfterInteractEvent>(OnSpectrometerInteract);
-    }
-
     // ---------------------------------------------------------------------------
     // Autopsy scanner (Eris autopsy.dm). Eris accumulates per-weapon wound data over
     // repeated limb scans; the SS14 port snapshots the whole body in one do_after.
     // ---------------------------------------------------------------------------
 
+    [SubscribeLocalEvent]
     private void OnAutopsyInteract(Entity<OxydAutopsyScannerComponent> uid, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target is not { } target)
@@ -95,6 +89,7 @@ public sealed partial class OxydForensicsSystem : EntitySystem
         return true;
     }
 
+    [SubscribeLocalEvent]
     private void OnAutopsyDoAfter(Entity<OxydAutopsyScannerComponent> uid, ref OxydAutopsyDoAfterEvent args)
     {
         if (args.Handled || args.Cancelled || args.Target is not { } target || TerminatingOrDeleted(target))
@@ -199,6 +194,7 @@ public sealed partial class OxydForensicsSystem : EntitySystem
     // readout of every solution carried by the target (beakers, mob bloodstream, ...).
     // ---------------------------------------------------------------------------
 
+    [SubscribeLocalEvent]
     private void OnSpectrometerInteract(Entity<OxydMassSpectrometerComponent> uid, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target is not { } target)
