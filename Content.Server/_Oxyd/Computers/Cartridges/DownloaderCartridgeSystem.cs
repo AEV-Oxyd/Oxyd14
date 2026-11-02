@@ -102,7 +102,31 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                 }
                 else if (comp.PendingFile != null && TryComp<FileSystemComponent>(loaderUid, out var localFs))
                 {
-                    if (_fileSystem.TryWriteFile(loaderUid, comp.PendingFile, localFs))
+                    if (comp.PendingFile is RecipeBlueprintFile rbp && !rbp.IsEncrypted && !rbp.DrmLocked && rbp.Recipes.Count > 1)
+                    {
+                        var allSuccess = true;
+                        foreach (var r in rbp.Recipes)
+                        {
+                            var singleBp = new RecipeBlueprintFile
+                            {
+                                Name = r.Id.ToLowerInvariant(),
+                                Extension = "lathe",
+                                Directory = "/blueprints/",
+                                Recipe = r,
+                                Recipes = new() { r },
+                                Size = 8192,
+                                IsEncrypted = false,
+                                DrmLocked = false
+                            };
+                            if (!_fileSystem.TryWriteFile(loaderUid, singleBp, localFs))
+                                allSuccess = false;
+                        }
+                        comp.StatusMessage = allSuccess
+                            ? $"Download complete: '{comp.PendingItemName}' (unpacked {rbp.Recipes.Count} blueprints)"
+                            : "Download partially failed: Insufficient storage space.";
+                        _pdaSystem.UpdatePdaUi(loaderUid);
+                    }
+                    else if (_fileSystem.TryWriteFile(loaderUid, comp.PendingFile, localFs))
                     {
                         comp.StatusMessage = $"Download complete: '{comp.PendingItemName}' ({comp.PendingFile.Size} B) -> {comp.PendingFile.FullPath}";
                         _pdaSystem.UpdatePdaUi(loaderUid);
@@ -380,26 +404,37 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                 false
             ),
 
-            // Engineering Schematics & Blueprints
+            // Engineering Schematics & Blueprints (1 file per unencrypted prototype design)
             new(
-                "bp_airlock",
-                "Airlock Electronics Schematic",
+                "bp_door",
+                "Airlock Electronics Blueprint",
                 "Blueprints",
-                "Standard and blast door electronics manufacturing schematics.",
-                "/blueprints/airlock_schematic.bp",
-                36864,
-                HasFile("/blueprints/airlock_schematic.bp"),
+                "Standard airlock door electronics manufacturing schematic.",
+                "/blueprints/door_electronics.lathe",
+                8192,
+                HasFile("/blueprints/door_electronics.lathe"),
                 false,
-                recipes: new() { "DoorElectronics", "FirelockElectronics" }
+                recipes: new() { "DoorElectronics" }
+            ),
+            new(
+                "bp_firelock",
+                "Firelock Electronics Blueprint",
+                "Blueprints",
+                "Emergency firelock door electronics manufacturing schematic.",
+                "/blueprints/firelock_electronics.lathe",
+                8192,
+                HasFile("/blueprints/firelock_electronics.lathe"),
+                false,
+                recipes: new() { "FirelockElectronics" }
             ),
             new(
                 "bp_solars",
                 "Solar Tracker Electronics Blueprint",
                 "Blueprints",
                 "Engineering alignment circuitry for station photovoltaic solar arrays.",
-                "/blueprints/solar_optimizer.bp",
-                16384,
-                HasFile("/blueprints/solar_optimizer.bp"),
+                "/blueprints/solar_tracker.lathe",
+                8192,
+                HasFile("/blueprints/solar_tracker.lathe"),
                 false,
                 recipes: new() { "SolarTrackerElectronics" }
             ),

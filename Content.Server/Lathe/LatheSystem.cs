@@ -77,6 +77,7 @@ namespace Content.Server.Lathe
             SubscribeLocalEvent<LatheComponent, LatheDeleteRequestMessage>(OnLatheDeleteRequestMessage);
             SubscribeLocalEvent<LatheComponent, LatheMoveRequestMessage>(OnLatheMoveRequestMessage);
             SubscribeLocalEvent<LatheComponent, LatheAbortFabricationMessage>(OnLatheAbortFabricationMessage);
+            SubscribeLocalEvent<LatheComponent, LatheSelectBlueprintFileMessage>(OnLatheSelectBlueprintFileMessage);
 
             SubscribeLocalEvent<LatheComponent, BeforeActivatableUIOpenEvent>((u, c, _) => UpdateUserInterfaceState(u, c));
             SubscribeLocalEvent<LatheComponent, MaterialAmountChangedEvent>(OnMaterialAmountChanged);
@@ -212,9 +213,20 @@ namespace Content.Server.Lathe
             return returning;
         }
 
-        public HashSet<ProtoId<LatheRecipePrototype>> GetDiskRecipes(FileSystemComponent fsComp)
+        public HashSet<ProtoId<LatheRecipePrototype>> GetDiskRecipes(FileSystemComponent fsComp, string? selectedFilePath = null)
         {
             HashSet<ProtoId<LatheRecipePrototype>> returning = new();
+
+            if (!string.IsNullOrEmpty(selectedFilePath) && fsComp.Files.TryGetValue(selectedFilePath, out var selFile) && selFile is RecipeBlueprintFile chosenBp && !chosenBp.IsEncrypted)
+            {
+                foreach (var r in chosenBp.GetAllRecipes())
+                {
+                    if (ProtoMan.HasIndex<LatheRecipePrototype>(r))
+                        returning.Add(r);
+                }
+                return returning;
+            }
+
             foreach (var file in fsComp.Files.Values)
             {
                 if (file is RecipeBlueprintFile recipe && !recipe.IsEncrypted)
@@ -237,7 +249,7 @@ namespace Content.Server.Lathe
             if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded))
             {
                 if (TryComp<FileSystemComponent>(loaded, out var fsComp))
-                    ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(fsComp)).ToHashSet();
+                    ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(fsComp, component.SelectedBlueprintFile)).ToHashSet();
                 else if (TryComp<DigitalDataHolderComponent>(loaded, out var dataComp))
                     ev.Recipes = ev.Recipes.Concat(GetDiskRecipes(dataComp)).ToHashSet();
             }
@@ -262,17 +274,34 @@ namespace Content.Server.Lathe
             if (component.diskSlot?.Item is EntityUid loaded && !TerminatingOrDeleted(loaded) && TryComp<FileSystemComponent>(loaded, out diskFs))
             {
                 diskUid = loaded;
-                foreach (var file in diskFs.Files.Values)
-                {
-                    if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
-                    {
-                        if (rFile.IsEncrypted)
-                            return false;
+                RecipeBlueprintFile? targetBp = null;
 
-                        if (rFile.DrmLocked || rFile.RemainingUses != null)
-                            isDrmDisk = true;
-                        break;
+                if (!string.IsNullOrEmpty(component.SelectedBlueprintFile) &&
+                    diskFs.Files.TryGetValue(component.SelectedBlueprintFile, out var chosenFile) &&
+                    chosenFile is RecipeBlueprintFile chosenBp &&
+                    chosenBp.GetAllRecipes().Contains(recipe.ID))
+                {
+                    targetBp = chosenBp;
+                }
+                else
+                {
+                    foreach (var file in diskFs.Files.Values)
+                    {
+                        if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
+                        {
+                            targetBp = rFile;
+                            break;
+                        }
                     }
+                }
+
+                if (targetBp != null)
+                {
+                    if (targetBp.IsEncrypted)
+                        return false;
+
+                    if (targetBp.DrmLocked || targetBp.RemainingUses != null)
+                        isDrmDisk = true;
                 }
             }
 
@@ -283,29 +312,36 @@ namespace Content.Server.Lathe
 
                 if (diskFs != null && diskUid != null)
                 {
-                    var found = false;
-                    foreach (var file in diskFs.Files.Values)
+                    RecipeBlueprintFile? targetBp = null;
+                    if (!string.IsNullOrEmpty(component.SelectedBlueprintFile) &&
+                        diskFs.Files.TryGetValue(component.SelectedBlueprintFile, out var chosenFile) &&
+                        chosenFile is RecipeBlueprintFile chosenBp &&
+                        chosenBp.GetAllRecipes().Contains(recipe.ID))
                     {
-                        if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
+                        targetBp = chosenBp;
+                    }
+                    else
+                    {
+                        foreach (var file in diskFs.Files.Values)
                         {
-                            if (rFile.IsEncrypted)
-                                return false;
-
-                            // Unencrypted disks have unlimited usages.
-                            // Only DRM-locked or disks with explicit usage limits check and consume points.
-                            if (rFile.DrmLocked || rFile.RemainingUses != null)
+                            if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID))
                             {
-                                if (rFile.RemainingUses == null || rFile.RemainingUses.Value < usage)
-                                    return false;
-                                rFile.RemainingUses -= usage;
-                                Dirty(diskUid.Value, diskFs);
+                                targetBp = rFile;
+                                break;
                             }
-                            found = true;
-                            break;
                         }
                     }
-                    if (!found)
+
+                    if (targetBp == null || targetBp.IsEncrypted)
                         return false;
+
+                    if (targetBp.DrmLocked || targetBp.RemainingUses != null)
+                    {
+                        if (targetBp.RemainingUses == null || targetBp.RemainingUses.Value < usage)
+                            return false;
+                        targetBp.RemainingUses -= usage;
+                        Dirty(diskUid.Value, diskFs);
+                    }
                 }
                 else if (component.diskSlot?.Item is EntityUid legacyLoaded && !TerminatingOrDeleted(legacyLoaded) && TryComp<DigitalDataHolderComponent>(legacyLoaded, out var data))
                 {
@@ -431,36 +467,87 @@ namespace Content.Server.Lathe
                 prodLength = prodComp.ProductionLength;
             }
 
-            var state = new LatheUpdateState(GetAvailableRecipes(uid, component), component.Queue.ToArray(), producing, prodStart, prodLength);
-            // todo add selector for multi-file on file util expansion? SPCR 2026
+            var blueprintFiles = new List<LatheBlueprintFileDto>();
+            string? activeFile = component.SelectedBlueprintFile;
+            var diskName = string.Empty;
+            var uses = 0;
+
             if (component.diskSlot?.Item is EntityUid validDisk && !TerminatingOrDeleted(validDisk) && TryComp<FileSystemComponent>(validDisk, out var validFs))
             {
-                foreach (var file in validFs.Files.Values)
+                foreach (var (path, file) in validFs.Files)
                 {
                     if (file is RecipeBlueprintFile rFile)
                     {
-                        state.diskName = rFile.Name;
-                        if (rFile.RemainingUses is not null)
-                            state.uses = rFile.RemainingUses.Value;
-                        else
-                            state.uses = -1; // -1 indicates unlimited usage for unencrypted disks
-                        break;
+                        var fileRecipes = rFile.GetAllRecipes().ToList();
+                        blueprintFiles.Add(new LatheBlueprintFileDto(
+                            rFile.Name,
+                            rFile.FullPath,
+                            rFile.RemainingUses,
+                            rFile.DrmLocked,
+                            rFile.IsEncrypted,
+                            fileRecipes
+                        ));
                     }
+                }
+
+                // Only reset activeFile if a specific file was selected that no longer exists on the disk
+                if (!string.IsNullOrEmpty(activeFile) && !blueprintFiles.Any(f => f.FullPath == activeFile))
+                {
+                    activeFile = null;
+                    component.SelectedBlueprintFile = null;
+                }
+
+                var diskEntityName = MetaData(validDisk).EntityName;
+                diskName = diskEntityName;
+                if (!string.IsNullOrEmpty(activeFile) && validFs.Files.TryGetValue(activeFile, out var chosen) && chosen is RecipeBlueprintFile chosenBp)
+                {
+                    uses = chosenBp.RemainingUses ?? -1;
+                }
+                else
+                {
+                    uses = -1;
                 }
             }
             else if (component.diskSlot?.Item is EntityUid legacyDisk && !TerminatingOrDeleted(legacyDisk) && TryComp<DigitalDataHolderComponent>(legacyDisk, out var dataComp))
             {
                 foreach (var file in dataComp.getFileByData<DigitalDataLathe>())
                 {
-                    state.diskName = file.name;
+                    diskName = file.name;
                     if (file.uses is not null)
                     {
-                        state.uses = file.uses.Value;
+                        uses = file.uses.Value;
                     }
                     break;
                 }
             }
+            else
+            {
+                component.SelectedBlueprintFile = null;
+                activeFile = null;
+            }
+
+            var recipes = GetAvailableRecipes(uid, component);
+            var state = new LatheUpdateState(
+                recipes,
+                component.Queue.ToArray(),
+                producing,
+                prodStart,
+                prodLength,
+                blueprintFiles,
+                activeFile
+            )
+            {
+                diskName = diskName,
+                uses = uses
+            };
+
             _uiSys.SetUiState(uid, LatheUiKey.Key, state);
+        }
+
+        private void OnLatheSelectBlueprintFileMessage(EntityUid uid, LatheComponent component, LatheSelectBlueprintFileMessage args)
+        {
+            component.SelectedBlueprintFile = args.FilePath;
+            UpdateUserInterfaceState(uid, component);
         }
 
         /// <summary>
@@ -620,56 +707,95 @@ namespace Content.Server.Lathe
         /// <summary>
         /// Refunds the material cost of the currently running recipe,
         /// without cancelling production
-        /// </summary>
-        private void RefundCurrentRecipe(EntityUid uid, LatheComponent lathe)
+        private void RefundLicensePoints(EntityUid uid, LatheComponent lathe, ProtoId<LatheRecipePrototype> recipeId, int count)
         {
-            ProtoMan.Resolve(lathe.CurrentRecipe, out var recipe);
-            // This is shit and lets people move license points to one disk if they share a recipe.
-            // Im too lazy to fix it and disks are not meant to share recipes in general tho. SPCR 2026
-            // if its too big of a issue just keep track of which  DiskEntity was used for Each Recipe!!!
-            if (recipe!.pointUsage != 0)
+            if (count <= 0)
+                return;
+
+            if (!ProtoMan.TryIndex(recipeId, out LatheRecipePrototype? recipe))
+                return;
+
+            var pointCost = recipe.pointUsage > 0 ? recipe.pointUsage : 1;
+            var pointsToRefund = pointCost * count;
+
+            if (lathe.diskSlot?.Item is EntityUid diskUid && !TerminatingOrDeleted(diskUid) && TryComp<FileSystemComponent>(diskUid, out var diskFs))
             {
-                if (lathe.diskSlot?.Item is EntityUid existing && !TerminatingOrDeleted(existing) && TryComp<FileSystemComponent>(existing, out var exFs))
+                RecipeBlueprintFile? targetBp = null;
+                // If a specific blueprint file was selected and contains this recipe, refund to that file first
+                if (!string.IsNullOrEmpty(lathe.SelectedBlueprintFile) &&
+                    diskFs.Files.TryGetValue(lathe.SelectedBlueprintFile, out var chosenFile) &&
+                    chosenFile is RecipeBlueprintFile chosenBp &&
+                    chosenBp.GetAllRecipes().Contains(recipe.ID) &&
+                    chosenBp.RemainingUses != null)
                 {
-                    foreach (var file in exFs.Files.Values)
+                    targetBp = chosenBp;
+                }
+                else
+                {
+                    foreach (var file in diskFs.Files.Values)
                     {
                         if (file is RecipeBlueprintFile rFile && rFile.GetAllRecipes().Contains(recipe.ID) && rFile.RemainingUses != null)
                         {
-                            rFile.RemainingUses += recipe.pointUsage;
-                            Dirty(existing, exFs);
+                            targetBp = rFile;
                             break;
                         }
                     }
                 }
-                else if (lathe.diskSlot?.Item is EntityUid legacyExisting && !TerminatingOrDeleted(legacyExisting) && TryComp<DigitalDataHolderComponent>(legacyExisting, out var data))
+
+                if (targetBp != null && targetBp.RemainingUses != null)
                 {
-                    foreach (var file in data.getFileByData<DigitalDataLathe>())
+                    targetBp.RemainingUses += pointsToRefund;
+                    Dirty(diskUid, diskFs);
+                }
+            }
+            else if (lathe.diskSlot?.Item is EntityUid legacyDisk && !TerminatingOrDeleted(legacyDisk) && TryComp<DigitalDataHolderComponent>(legacyDisk, out var legacyData))
+            {
+                foreach (var file in legacyData.getFileByData<DigitalDataLathe>())
+                {
+                    if (file.recipes.Contains(recipe.ID) && file.uses != null)
                     {
-                        if (file.recipes.Contains(recipe.ID))
-                        {
-                            file.uses += recipe.pointUsage;
-                            break;
-                        }
+                        file.uses += pointsToRefund;
+                        break;
                     }
                 }
             }
-
-            foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
-                _materialStorage.TryChangeMaterialAmount(uid, mat, amount);
         }
 
         /// <summary>
-        /// Refunds the material cost of a given batch,
+        /// Refunds the material and license point cost of the recipe currently being printed
+        /// </summary>
+        private void RefundCurrentRecipe(EntityUid uid, LatheComponent lathe)
+        {
+            if (lathe.CurrentRecipe == null)
+                return;
+
+            var recipeId = lathe.CurrentRecipe.Value;
+            if (ProtoMan.Resolve(recipeId, out var recipe))
+            {
+                foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
+                    _materialStorage.TryChangeMaterialAmount(uid, mat, amount);
+            }
+
+            RefundLicensePoints(uid, lathe, recipeId, 1);
+        }
+
+        /// <summary>
+        /// Refunds the material and license point cost of a given batch,
         /// without deleting it
         /// </summary>
         private void RefundBatch(EntityUid uid, LatheComponent lathe, LatheRecipeBatch batch)
         {
             var delta = batch.ItemsRequested - batch.ItemsPrinted;
+            if (delta <= 0)
+                return;
 
-            ProtoMan.Resolve(batch.Recipe, out var recipe);
+            if (ProtoMan.Resolve(batch.Recipe, out var recipe))
+            {
+                foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
+                    _materialStorage.TryChangeMaterialAmount(uid, mat, amount * delta);
+            }
 
-            foreach (var (mat, amount) in GetAdjustedAmount(lathe, recipe!))
-                _materialStorage.TryChangeMaterialAmount(uid, mat, amount * delta);
+            RefundLicensePoints(uid, lathe, batch.Recipe, delta);
         }
 
         /// <summary>

@@ -34,6 +34,7 @@ namespace Content.Client.Lathe.UI
             _menu.QueueMoveUpAction += index => SendMessage(new LatheMoveRequestMessage(index, -1));
             _menu.QueueMoveDownAction += index => SendMessage(new LatheMoveRequestMessage(index, 1));
             _menu.DeleteFabricatingAction += () => SendMessage(new LatheAbortFabricationMessage());
+            _menu.OnBlueprintFileSelected += path => SendMessage(new LatheSelectBlueprintFileMessage(path));
         }
 
         protected override void UpdateState(BoundUserInterfaceState state)
@@ -46,6 +47,7 @@ namespace Content.Client.Lathe.UI
                     if (_menu != null)
                         _menu.Recipes = msg.Recipes;
                     _menu?.UpdateDisk(msg.diskName, msg.uses);
+                    _menu?.UpdateBlueprintFiles(msg.BlueprintFiles, msg.SelectedBlueprintFile);
                     _menu?.PopulateRecipes();
                     _menu?.UpdateCategories();
                     _menu?.PopulateQueueList(msg.Queue);

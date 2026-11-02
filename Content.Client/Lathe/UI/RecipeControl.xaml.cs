@@ -19,6 +19,7 @@ namespace Content.Client.Lathe.UI;
 public sealed partial class RecipeControl : Control
 {
     public Action<string>? OnButtonPressed;
+    public Action<string, int>? OnQueueAction;
     public Func<string> TooltipTextSupplier;
 
     public ProtoId<LatheRecipePrototype> RecipeId { get; private set; }
@@ -38,22 +39,28 @@ public sealed partial class RecipeControl : Control
         Button.OnPressed += (_) =>
         {
             OnButtonPressed?.Invoke(RecipeId);
+            OnQueueAction?.Invoke(RecipeId, 1);
+        };
+        Button3x.OnPressed += (_) =>
+        {
+            OnQueueAction?.Invoke(RecipeId, 3);
+        };
+        Button5x.OnPressed += (_) =>
+        {
+            OnQueueAction?.Invoke(RecipeId, 5);
         };
         Button.TooltipSupplier = SupplyTooltip;
+        Button3x.TooltipSupplier = SupplyTooltip;
+        Button5x.TooltipSupplier = SupplyTooltip;
     }
 
     public void SetRecipe(LatheRecipePrototype recipe, string? recipeName = null)
     {
         RecipeName.Text = recipeName ?? _latheSystem.GetRecipeName(recipe);
-        if (recipe.pointUsage != 0)
-        {
-            DRMCost.Text = $"L-COST:{recipe.pointUsage.ToString()}";
-            DRMCost.Visible = true;
-        }
-        else
-        {
-            DRMCost.Visible = false;
-        }
+        var pointCost = recipe.pointUsage > 0 ? recipe.pointUsage : 1;
+        DRMCost.Text = $"{pointCost} LP";
+        DRMCost.ToolTip = $"License points: {pointCost}";
+        DRMCost.Visible = true;
 
         RecipeId = recipe.ID;
     }
@@ -147,6 +154,15 @@ public sealed partial class RecipeControl : Control
     public void SetCanProduce(bool canProduce)
     {
         Button.Disabled = !canProduce;
+        Button3x.Disabled = !canProduce;
+        Button5x.Disabled = !canProduce;
+    }
+
+    public void SetCanProduce(bool canProduce1, bool canProduce3, bool canProduce5)
+    {
+        Button.Disabled = !canProduce1;
+        Button3x.Disabled = !canProduce3;
+        Button5x.Disabled = !canProduce5;
     }
 
     public void SetDisplayControl(Control displayControl)

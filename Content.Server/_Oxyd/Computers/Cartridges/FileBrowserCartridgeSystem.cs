@@ -456,6 +456,7 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
                 Size = rf.Size,
                 IsReadOnly = false,
                 Recipe = rf.Recipe,
+                Recipes = new(rf.Recipes),
                 RemainingUses = rf.RemainingUses,
                 DrmLocked = rf.DrmLocked,
                 IsEncrypted = rf.IsEncrypted,

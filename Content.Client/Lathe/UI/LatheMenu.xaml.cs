@@ -37,8 +37,11 @@ public sealed partial class LatheMenu : FancyWindow
     public event Action<int>? QueueMoveUpAction;
     public event Action<int>? QueueMoveDownAction;
     public event Action? DeleteFabricatingAction;
+    public event Action<string?>? OnBlueprintFileSelected;
 
     public List<ProtoId<LatheRecipePrototype>> Recipes = new();
+    public List<LatheBlueprintFileDto> BlueprintFiles = new();
+    public string? SelectedBlueprintFile;
 
     public List<ProtoId<LatheCategoryPrototype>>? Categories;
 
@@ -59,18 +62,6 @@ public sealed partial class LatheMenu : FancyWindow
         {
             PopulateRecipes();
         };
-        AmountLineEdit.OnTextChanged += _ =>
-        {
-            if (int.TryParse(AmountLineEdit.Text, out var amount))
-            {
-                if (amount > LatheSystem.MaxItemsPerRequest)
-                    AmountLineEdit.Text = LatheSystem.MaxItemsPerRequest.ToString();
-                else if (amount < 0)
-                    AmountLineEdit.Text = "0";
-            }
-
-            PopulateRecipes();
-        };
 
         FilterOption.OnItemSelected += OnItemSelected;
 
@@ -89,8 +80,6 @@ public sealed partial class LatheMenu : FancyWindow
             {
                 ServerListButton.Visible = false;
             }
-
-            AmountLineEdit.SetText(latheComponent.DefaultProductionAmount.ToString());
         }
 
         MaterialsList.SetOwner(Entity);
@@ -98,14 +87,110 @@ public sealed partial class LatheMenu : FancyWindow
 
     public void UpdateDisk(string name, int uses)
     {
-        if (name == string.Empty)
+        DiskName.Text = string.IsNullOrEmpty(name) ? "No Disk Loaded" : name;
+    }
+
+    public void UpdateBlueprintFiles(List<LatheBlueprintFileDto> files, string? selectedFile)
+    {
+        BlueprintFiles = files;
+        SelectedBlueprintFile = selectedFile;
+        PopulateBlueprintFiles();
+    }
+
+    public void PopulateBlueprintFiles()
+    {
+        BlueprintFileList.Children.Clear();
+
+        if (BlueprintFiles.Count == 0)
         {
-            DiskName.Text = "No disk loaded";
-            DiskUses.Text = "N/A";
+            DiskStatusLabel.Text = "No Disk Loaded";
+            var internalBtn = new Button
+            {
+                Text = "Internal Memory",
+                HorizontalExpand = true,
+                StyleClasses = { "ButtonSquare" },
+                ToggleMode = true,
+                Pressed = true
+            };
+            BlueprintFileList.AddChild(internalBtn);
             return;
         }
-        DiskName.Text = name;
-        DiskUses.Text = uses < 0 ? "UNLIMITED" : $"L-POINTS:{uses}";
+
+        DiskStatusLabel.Text = $"{BlueprintFiles.Count} blueprint file(s)";
+
+        var buttonGroup = new ButtonGroup();
+
+        // "All Blueprints" option
+        var allBtn = new Button
+        {
+            HorizontalExpand = true,
+            StyleClasses = { "ButtonSquare" },
+            ToggleMode = true,
+            Group = buttonGroup,
+            Pressed = string.IsNullOrEmpty(SelectedBlueprintFile)
+        };
+        var allBox = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, Margin = new Thickness(4, 2) };
+        allBox.AddChild(new Label { Text = "All Blueprints", StyleClasses = { "LabelKeyText" }, ClipText = true });
+        allBox.AddChild(new Label { Text = "All available designs", StyleClasses = { "LabelSubText" } });
+        allBtn.AddChild(allBox);
+        allBtn.OnPressed += _ =>
+        {
+            SelectedBlueprintFile = null;
+            OnBlueprintFileSelected?.Invoke(null);
+        };
+        BlueprintFileList.AddChild(allBtn);
+
+        // List each blueprint file on the disk
+        foreach (var file in BlueprintFiles)
+        {
+            var isSelected = file.FullPath == SelectedBlueprintFile;
+            var fileBtn = new Button
+            {
+                HorizontalExpand = true,
+                StyleClasses = { "ButtonSquare" },
+                ToggleMode = true,
+                Group = buttonGroup,
+                Pressed = isSelected
+            };
+
+            var fileBox = new BoxContainer { Orientation = BoxContainer.LayoutOrientation.Vertical, Margin = new Thickness(4, 2) };
+            fileBox.AddChild(new Label { Text = file.FileName, StyleClasses = { "LabelKeyText" }, ClipText = true });
+
+            string statusText;
+            Color statusColor;
+            if (file.IsEncrypted)
+            {
+                statusText = "🔒 Encrypted";
+                statusColor = Color.FromHex("#FF6666");
+            }
+            else if (file.RemainingUses != null)
+            {
+                statusText = $"Points: {file.RemainingUses} LP";
+                statusColor = Color.FromHex("#FFD700");
+            }
+            else
+            {
+                statusText = "Points: Unlimited";
+                statusColor = Color.FromHex("#00FF88");
+            }
+
+            fileBox.AddChild(new Label
+            {
+                Text = statusText,
+                FontColorOverride = statusColor,
+                StyleClasses = { "LabelSubText" }
+            });
+            fileBtn.AddChild(fileBox);
+
+            var path = file.FullPath;
+            fileBtn.OnPressed += _ =>
+            {
+                SelectedBlueprintFile = path;
+                OnBlueprintFileSelected?.Invoke(path);
+            };
+
+            BlueprintFileList.AddChild(fileBtn);
+        }
     }
 
     /// <summary>
@@ -144,9 +229,6 @@ public sealed partial class LatheMenu : FancyWindow
             }
         }
 
-        if (!int.TryParse(AmountLineEdit.Text, out var quantity) || quantity <= 0)
-            quantity = 1;
-
         RecipeCount.Text = Loc.GetString("lathe-menu-recipe-count", ("count", recipesToShow.Count));
 
         var sortedRecipesToShow = recipesToShow.OrderBy(x => x.Name);
@@ -161,19 +243,17 @@ public sealed partial class LatheMenu : FancyWindow
         int idx = 0;
         foreach (var recipe in sortedRecipesToShow)
         {
-            var canProduce = _lathe.CanProduce((Entity, lathe), recipe.Proto, materials, quantity);
+            var canProduce1 = _lathe.CanProduce((Entity, lathe), recipe.Proto, materials, 1);
+            var canProduce3 = _lathe.CanProduce((Entity, lathe), recipe.Proto, materials, 3);
+            var canProduce5 = _lathe.CanProduce((Entity, lathe), recipe.Proto, materials, 5);
             var tooltipFunction = () => GenerateTooltipText(recipe.Proto);
 
             if (idx >= oldChildCount)
             {
-                var control = new RecipeControl(_lathe, recipe.Proto, tooltipFunction, canProduce, GetRecipeDisplayControl(recipe.Proto), recipe.Name);
-                control.OnButtonPressed += s =>
-                {
-                    if (!int.TryParse(AmountLineEdit.Text, out var amount) || amount <= 0)
-                        amount = 1;
-                    RecipeQueueAction?.Invoke(s, amount);
-                };
-                control.PopulateMaterials(recipe.Proto, multiplier, materials, quantity, _prototypeManager, _spriteSystem, _materialStorage);
+                var control = new RecipeControl(_lathe, recipe.Proto, tooltipFunction, canProduce1, GetRecipeDisplayControl(recipe.Proto), recipe.Name);
+                control.OnQueueAction += (s, amount) => RecipeQueueAction?.Invoke(s, amount);
+                control.SetCanProduce(canProduce1, canProduce3, canProduce5);
+                control.PopulateMaterials(recipe.Proto, multiplier, materials, 1, _prototypeManager, _spriteSystem, _materialStorage);
                 RecipeList.AddChild(control);
             }
             else
@@ -187,14 +267,14 @@ public sealed partial class LatheMenu : FancyWindow
                 }
 
                 child.SetTooltipSupplier(tooltipFunction);
-                child.SetCanProduce(canProduce);
+                child.SetCanProduce(canProduce1, canProduce3, canProduce5);
                 if (recipe.Proto.ID != child.RecipeId)
                 {
                     child.SetRecipe(recipe.Proto, recipe.Name);
                     // NOTE: doesn't nicely handle prototype reloads.
                     child.SetDisplayControl(GetRecipeDisplayControl(recipe.Proto));
                 }
-                child.PopulateMaterials(recipe.Proto, multiplier, materials, quantity, _prototypeManager, _spriteSystem, _materialStorage);
+                child.PopulateMaterials(recipe.Proto, multiplier, materials, 1, _prototypeManager, _spriteSystem, _materialStorage);
             }
             idx++;
         }
@@ -363,7 +443,7 @@ public sealed partial class LatheMenu : FancyWindow
         var recipe = _prototypeManager.Index(recipeProto.Value);
 
         FabricatingDisplayContainer.Children.Clear();
-        FabricatingDisplayContainer.AddChild(GetRecipeDisplayControl(recipe));
+        FabricatingDisplayContainer.AddChild(GetRecipeDisplayControl(recipe, new System.Numerics.Vector2(2f, 2f)));
 
         NameLabel.Text = _lathe.GetRecipeName(recipe);
     }
@@ -388,13 +468,30 @@ public sealed partial class LatheMenu : FancyWindow
         PrintingProgressLabel.Text = $"{fraction * 100:0}% ({remaining:0.0}s)";
     }
 
-    public Control GetRecipeDisplayControl(LatheRecipePrototype recipe)
+    public Control GetRecipeDisplayControl(LatheRecipePrototype recipe, System.Numerics.Vector2? scale = null)
     {
         if (recipe.Icon != null)
-            return new TextureRect() { Texture = _spriteSystem.Frame0(recipe.Icon) };
+        {
+            var tr = new TextureRect
+            {
+                Texture = _spriteSystem.Frame0(recipe.Icon),
+                Stretch = TextureRect.StretchMode.KeepAspectCentered
+            };
+            if (scale != null)
+                tr.SetSize = new System.Numerics.Vector2(32 * scale.Value.X, 32 * scale.Value.Y);
+            return tr;
+        }
 
         if (recipe.Result is { } result)
-            return new EntityPrototypeView(result, _entityManager);
+        {
+            var view = new EntityPrototypeView(result, _entityManager);
+            if (scale != null)
+            {
+                view.Scale = scale.Value;
+                view.SetSize = new System.Numerics.Vector2(32 * scale.Value.X, 32 * scale.Value.Y);
+            }
+            return view;
+        }
 
         return new Control();
     }

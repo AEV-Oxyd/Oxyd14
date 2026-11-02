@@ -43,15 +43,30 @@
     - type: FileSystem
       maxStorageBytes: 131072
       files:
-        "/blueprints/electronics.lathe": !type:RecipeBlueprintFile
-          name: electronics
+        "/blueprints/door_electronics.lathe": !type:RecipeBlueprintFile
+          name: door_electronics
           extension: lathe
           directory: /blueprints/
-          size: 24576
-          recipes:
-            - DoorElectronics
-            - FirelockElectronics
-            - SolarTrackerElectronics
+          size: 8192
+          recipe: DoorElectronics
+          remainingUses: null
+          drmLocked: false
+          isEncrypted: false
+        "/blueprints/firelock_electronics.lathe": !type:RecipeBlueprintFile
+          name: firelock_electronics
+          extension: lathe
+          directory: /blueprints/
+          size: 8192
+          recipe: FirelockElectronics
+          remainingUses: null
+          drmLocked: false
+          isEncrypted: false
+        "/blueprints/solar_tracker.lathe": !type:RecipeBlueprintFile
+          name: solar_tracker
+          extension: lathe
+          directory: /blueprints/
+          size: 8192
+          recipe: SolarTrackerElectronics
           remainingUses: null
           drmLocked: false
           isEncrypted: false

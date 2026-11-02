@@ -5,6 +5,16 @@ using Robust.Shared.Serialization;
 namespace Content.Shared.Lathe;
 
 [Serializable, NetSerializable]
+public sealed record LatheBlueprintFileDto(
+    string FileName,
+    string FullPath,
+    int? RemainingUses,
+    bool DrmLocked,
+    bool IsEncrypted,
+    List<ProtoId<LatheRecipePrototype>> Recipes
+);
+
+[Serializable, NetSerializable]
 public sealed class LatheUpdateState : BoundUserInterfaceState
 {
     public List<ProtoId<LatheRecipePrototype>> Recipes;
@@ -19,18 +29,25 @@ public sealed class LatheUpdateState : BoundUserInterfaceState
     public string diskName = string.Empty;
     public int uses = 0;
 
+    public List<LatheBlueprintFileDto> BlueprintFiles = new();
+    public string? SelectedBlueprintFile;
+
     public LatheUpdateState(
         List<ProtoId<LatheRecipePrototype>> recipes,
         LatheRecipeBatch[] queue,
         ProtoId<LatheRecipePrototype>? currentlyProducing = null,
         TimeSpan? productionStartTime = null,
-        TimeSpan? productionLength = null)
+        TimeSpan? productionLength = null,
+        List<LatheBlueprintFileDto>? blueprintFiles = null,
+        string? selectedBlueprintFile = null)
     {
         Recipes = recipes;
         Queue = queue;
         CurrentlyProducing = currentlyProducing;
         ProductionStartTime = productionStartTime;
         ProductionLength = productionLength;
+        BlueprintFiles = blueprintFiles ?? new();
+        SelectedBlueprintFile = selectedBlueprintFile;
     }
 }
 
@@ -83,6 +100,20 @@ public sealed class LatheMoveRequestMessage(int index, int change) : BoundUserIn
 [Serializable, NetSerializable]
 public sealed class LatheAbortFabricationMessage() : BoundUserInterfaceMessage
 {
+}
+
+/// <summary>
+///     Sent to the server when a client selects a blueprint file in the lathe file browser.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed class LatheSelectBlueprintFileMessage : BoundUserInterfaceMessage
+{
+    public readonly string? FilePath;
+
+    public LatheSelectBlueprintFileMessage(string? filePath)
+    {
+        FilePath = filePath;
+    }
 }
 
 [NetSerializable, Serializable]
