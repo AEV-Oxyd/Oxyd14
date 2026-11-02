@@ -81,7 +81,16 @@ namespace Content.Client.PDA
             _menu.OnProgramItemPressed += uid =>
             {
                 _userRequestedProgramView = true;
-                ActivateCartridge(uid);
+                if (_activeProgram == uid && _menu != null)
+                {
+                    var comp = RetrieveCartridgeComponent(uid);
+                    var title = Loc.GetString(comp?.ProgramName ?? "comp-pda-io-program-fallback-title");
+                    _menu.ToProgramView(title);
+                }
+                else
+                {
+                    ActivateCartridge(uid);
+                }
             };
             _menu.OnInstallButtonPressed += InstallCartridge;
             _menu.OnUninstallButtonPressed += UninstallCartridge;

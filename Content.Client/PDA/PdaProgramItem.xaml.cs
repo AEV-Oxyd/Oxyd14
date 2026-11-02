@@ -55,9 +55,6 @@ public sealed partial class PdaProgramItem : ContainerButton
                 break;
 
             case InstallationStatus.Installed:
-                OnUninstallButtonPressed?.Invoke(_cartridge.Owner);
-                break;
-
             case InstallationStatus.Readonly:
             default:
                 break;
@@ -87,8 +84,8 @@ public sealed partial class PdaProgramItem : ContainerButton
                 InstallButton.Text = Loc.GetString("cartridge-bound-user-interface-install-button");
                 break;
             case InstallationStatus.Installed:
-                InstallButton.Visible = true;
-                InstallButton.Text = Loc.GetString("cartridge-bound-user-interface-uninstall-button");
+                // Downloaded apps cannot be removed from the app hub
+                InstallButton.Visible = false;
                 break;
             case InstallationStatus.Readonly:
                 InstallButton.Visible = false;

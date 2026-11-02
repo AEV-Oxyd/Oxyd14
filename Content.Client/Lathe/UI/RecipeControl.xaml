@@ -1,32 +1,43 @@
-<Control xmlns="https://spacestation14.io">
+<Control xmlns="https://spacestation14.io" HorizontalExpand="True">
     <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="0 1">
         <Button
             Name="Button"
             HorizontalExpand="True"
+            VerticalExpand="True"
+            MinHeight="46"
             Margin="0"
             StyleClasses="ButtonSquare OpenRight">
-            <BoxContainer Orientation="Horizontal" HorizontalExpand="True">
+            <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="4 2">
                 <BoxContainer
                     Name="RecipeDisplayContainer"
-                    Margin="0 0 4 0"
+                    Margin="0 0 6 0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    MinSize="32 32"
+                    MinSize="36 36"
                     />
-                <Label Name="RecipeName" HorizontalExpand="True" ClipText="True" VerticalAlignment="Center" />
                 <BoxContainer
-                    Name="MaterialsContainer"
-                    Orientation="Horizontal"
+                    Orientation="Vertical"
+                    HorizontalExpand="True"
                     VerticalAlignment="Center"
-                    HorizontalAlignment="Right"
-                    Margin="6 0 6 0"
-                    SeparationOverride="4"
-                    />
+                    SeparationOverride="2">
+                    <Label
+                        Name="RecipeName"
+                        HorizontalExpand="True"
+                        ClipText="True"
+                        StyleClasses="LabelKeyText"
+                        />
+                    <BoxContainer
+                        Name="MaterialsContainer"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        SeparationOverride="6"
+                        />
+                </BoxContainer>
                 <Label
                     Name="DRMCost"
                     Align="Right"
                     VerticalAlignment="Center"
-                    Margin="4 0 4 0"
+                    Margin="6 0 4 0"
                     FontColorOverride="#FFD700"
                     StyleClasses="LabelSubText"
                     />
@@ -36,6 +47,7 @@
             Name="Button3x"
             Text="3x"
             MinWidth="34"
+            VerticalExpand="True"
             Margin="0"
             StyleClasses="OpenBoth"
             ToolTip="Queue 3 items"
@@ -44,6 +56,7 @@
             Name="Button5x"
             Text="5x"
             MinWidth="34"
+            VerticalExpand="True"
             Margin="0"
             StyleClasses="OpenLeft"
             ToolTip="Queue 5 items"

@@ -36,6 +36,18 @@ public sealed partial class NetworkBandwidthComponent : Component
     public bool IsSaturated = false;
 
     /// <summary>
+    /// Stored data packets retained by this router or network device.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public List<NetworkDataPacket> StoredPackets = new();
+
+    /// <summary>
+    /// Maximum number of data packets this device or router can buffer/store.
+    /// </summary>
+    [DataField]
+    public int MaxStoredPackets = 64;
+
+    /// <summary>
     /// Timestamp for resetting the 1-second rolling rate window.
     /// </summary>
     public TimeSpan NextRateReset = TimeSpan.Zero;

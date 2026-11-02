@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Content.Server._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
@@ -18,6 +19,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
     [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private Content.Server.PDA.PdaSystem _pdaSystem = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
 
     public override void Initialize()
     {
@@ -226,10 +228,38 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     var saturated = bw?.IsSaturated ?? false;
                     var latency = saturated ? 480 : 16;
                     comp.History.Add($"PING {pingGuid}: 64 bytes received. rtt={latency}ms saturated={saturated}");
+
+                    _bandwidth.StorePacket(loaderUid, localGuid, pingGuid, "ICMP/PING", "Echo request (64 B)", 64);
+                    _bandwidth.StorePacket(pingTarget, localGuid, pingGuid, "ICMP/PING", "Echo request (64 B)", 64);
+                    _bandwidth.StorePacket(pingTarget, pingGuid, localGuid, "ICMP/PONG", $"Echo reply (64 B, rtt={latency}ms)", 64);
+                    _bandwidth.StorePacket(loaderUid, pingGuid, localGuid, "ICMP/PONG", $"Echo reply (64 B, rtt={latency}ms)", 64);
+                    _bandwidth.LogPacketToRouters(localGuid, pingGuid, "ICMP/PING", "Echo request (64 B)", 64);
+                    _bandwidth.LogPacketToRouters(pingGuid, localGuid, "ICMP/PONG", $"Echo reply (64 B, rtt={latency}ms)", 64);
                 }
                 else
                 {
                     comp.History.Add($"ping: Host {pingGuid} unreachable (100% packet loss)");
+                    _bandwidth.StorePacket(loaderUid, localGuid, pingGuid, "ICMP/PING", "Echo request (Unreachable)", 64, dropped: true);
+                    _bandwidth.LogPacketToRouters(localGuid, pingGuid, "ICMP/PING", "Echo request (Unreachable)", 64, dropped: true);
+                }
+                break;
+
+            case "packets":
+            case "tcpdump":
+            case "netlog":
+                if (TryComp<NetworkBandwidthComponent>(loaderUid, out var localPktBw) && localPktBw.StoredPackets.Count > 0)
+                {
+                    comp.History.Add($"--- Packet Buffer on {localGuid} [{localPktBw.StoredPackets.Count} packets] ---");
+                    foreach (var pkt in localPktBw.StoredPackets.TakeLast(8))
+                    {
+                        var status = pkt.Dropped ? " [DROPPED]" : "";
+                        var timeStr = pkt.Timestamp.ToString(@"mm\:ss");
+                        comp.History.Add($"[{timeStr}] {pkt.SourceAddress} -> {pkt.TargetAddress} [{pkt.Protocol}] {pkt.ByteSize}B {status}");
+                    }
+                }
+                else
+                {
+                    comp.History.Add($"No packets recorded in buffer on {localGuid}.");
                 }
                 break;
 
@@ -533,6 +563,13 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                         {
                             comp.History.Add($"Initiating encrypted transfer for '{dlFile.Name}.{dlFile.Extension}' ({dlFile.Size} B)...");
                             comp.History.Add($"[====================] 100% Transferred to local /notes/");
+
+                            var srcGuid = CompOrNull<DeviceGuidComponent>(targetUid)?.Guid ?? targetGuid;
+                            var destGuid = CompOrNull<DeviceGuidComponent>(loaderUid)?.Guid ?? $"DEV:{loaderUid}";
+                            _bandwidth.StorePacket(loaderUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
+                            _bandwidth.StorePacket(targetUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
+                            _bandwidth.LogPacketToRouters(srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
+
                             _pdaSystem.UpdatePdaUi(loaderUid);
                         }
                         else
@@ -544,6 +581,25 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 else
                 {
                     comp.History.Add($"fetch: {parts[1]}: File not found on remote");
+                }
+                break;
+
+            case "packets":
+            case "tcpdump":
+            case "netlog":
+                if (TryComp<NetworkBandwidthComponent>(targetUid, out var remPktBw) && remPktBw.StoredPackets.Count > 0)
+                {
+                    comp.History.Add($"--- Packet Buffer on {targetGuid} [{remPktBw.StoredPackets.Count} packets] ---");
+                    foreach (var pkt in remPktBw.StoredPackets.TakeLast(8))
+                    {
+                        var status = pkt.Dropped ? " [DROPPED]" : "";
+                        var timeStr = pkt.Timestamp.ToString(@"mm\:ss");
+                        comp.History.Add($"[{timeStr}] {pkt.SourceAddress} -> {pkt.TargetAddress} [{pkt.Protocol}] {pkt.ByteSize}B {status}");
+                    }
+                }
+                else
+                {
+                    comp.History.Add($"No packets recorded in buffer on {targetGuid}.");
                 }
                 break;
 

@@ -60,6 +60,8 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
         // If the active program has not changed and the fragment is already created, do not recreate or re-attach!
         if (activeUI == _activeProgram && _activeUiFragment is not null)
         {
+            var existingComp = RetrieveCartridgeComponent(activeUI.Value);
+            AttachCartridgeUI(_activeUiFragment, Loc.GetString(existingComp?.ProgramName ?? "default-program-name"));
             return;
         }
 

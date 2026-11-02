@@ -20,7 +20,7 @@ public sealed partial class CartridgeLoaderSystem
                 InstallCartridge(ent, cartridge);
                 break;
             case CartridgeUiMessageAction.Uninstall:
-                UninstallProgram(ent, cartridge);
+                // Do not allow uninstalling installed programs via UI message from app hub
                 break;
             case CartridgeUiMessageAction.UIReady:
                 if (ent.Comp.ActiveProgram is { } foreground)

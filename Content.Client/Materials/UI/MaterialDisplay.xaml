@@ -12,12 +12,12 @@
 
     <PanelContainer Name="CountBadge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2 2 0 0" MouseFilter="Ignore">
         <PanelContainer.PanelOverride>
-            <gfx:StyleBoxFlat BackgroundColor="#00000099" />
+            <gfx:StyleBoxEmpty />
         </PanelContainer.PanelOverride>
         <Label Name="CountOverlay"
                Access="Public"
                Text="0"
-               Margin="3 1"
+               Margin="2 1"
                StyleClasses="LabelKeyText"
                FontColorOverride="#FFFFFF"/>
     </PanelContainer>

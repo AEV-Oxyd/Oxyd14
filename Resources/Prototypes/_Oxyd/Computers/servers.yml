@@ -18,6 +18,7 @@
   - type: DeviceNetwork
     deviceNetId: Wired
     autoConnect: true
+  - type: DeviceGuid
   - type: NetworkBandwidth
     maxBps: 250000
     bufferQueueLimit: 150
@@ -66,3 +67,15 @@
     sprite: Objects/Devices/network_configurator.rsi
     state: icon
   - type: HardwareDebugger
+
+- type: entity
+  id: StationNetworkRouter
+  parent: BaseDataServer
+  name: station network router
+  description: High-throughput core network routing appliance for directing, caching, and logging station packet traffic.
+  components:
+  - type: DeviceNetworkRouter
+  - type: DeviceGuid
+  - type: NetworkBandwidth
+    maxBps: 10000000
+    bufferQueueLimit: 500

@@ -24,6 +24,15 @@ public sealed partial class DownloaderCartridgeComponent : Component
     [DataField, AutoNetworkedField]
     public float DownloadTotalSeconds;
 
+    [DataField, AutoNetworkedField]
+    public int DownloadTotalBytes;
+
+    [DataField, AutoNetworkedField]
+    public float DownloadedBytes;
+
+    [DataField, AutoNetworkedField]
+    public NetEntity? SourceServerNetEntity;
+
     [DataField]
     public VirtualFile? PendingFile;
 

@@ -1,11 +1,13 @@
 using Content.Server.PDA;
 using System.Linq;
+using Content.Server._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.Research.Prototypes;
 using Robust.Shared.Prototypes;
 
@@ -18,6 +20,7 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
     [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     [Dependency] private PdaSystem _pdaSystem = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
 
     private float _downloadTickTimer = 0f;
 
@@ -41,31 +44,139 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
             shouldPushUi = true;
         }
 
+        // 1. Gather all active downloading cartridges and count how many clients share each server/router
+        var activeDownloads = new List<(EntityUid CartUid, DownloaderCartridgeComponent Comp, EntityUid LoaderUid, EntityUid? ServerUid)>();
+        var serverActiveCount = new Dictionary<EntityUid, int>();
+        var fallbackCount = 0;
+
         var query = EntityQueryEnumerator<DownloaderCartridgeComponent>();
         while (query.MoveNext(out var uid, out var comp))
         {
             if (comp.ActiveDownloadItemId == null)
                 continue;
 
-            comp.DownloadRemainingSeconds -= frameTime;
-
             var loaderUid = Transform(uid).ParentUid;
             if (!loaderUid.IsValid())
                 continue;
 
-            if (comp.DownloadRemainingSeconds > 0)
+            EntityUid? serverUid = null;
+            if (comp.SourceServerNetEntity != null && TryGetEntity(comp.SourceServerNetEntity.Value, out var sUid) && Exists(sUid))
             {
-                var pct = Math.Clamp((int)((1f - comp.DownloadRemainingSeconds / comp.DownloadTotalSeconds) * 100f), 0, 99);
-                var itemName = comp.PendingItemName ?? comp.PendingProgramName ?? "package";
-                var actionWord = comp.PendingProgramProtoId != null ? "Downloading & Installing" : "Downloading";
-                comp.StatusMessage = $"{actionWord} '{itemName}'... {pct}% ({comp.DownloadRemainingSeconds:0.#}s remaining)";
-
-                if (shouldPushUi)
-                    UpdateUiState(uid, loaderUid, comp);
+                serverUid = sUid;
             }
             else
             {
+                serverUid = GetSourceServer(loaderUid);
+                if (serverUid != null)
+                    comp.SourceServerNetEntity = GetNetEntity(serverUid.Value);
+            }
+
+            if (serverUid != null)
+            {
+                serverActiveCount[serverUid.Value] = serverActiveCount.GetValueOrDefault(serverUid.Value, 0) + 1;
+            }
+            else
+            {
+                fallbackCount++;
+            }
+
+            activeDownloads.Add((uid, comp, loaderUid, serverUid));
+        }
+
+        if (activeDownloads.Count == 0)
+            return;
+
+        // 2. Process each download with dynamically split server/router bandwidth
+        foreach (var (cartUid, comp, loaderUid, serverUid) in activeDownloads)
+        {
+            float serverShareBps;
+            int clientCount;
+
+            if (serverUid != null)
+            {
+                clientCount = serverActiveCount.GetValueOrDefault(serverUid.Value, 1);
+                var serverBw = CompOrNull<NetworkBandwidthComponent>(serverUid.Value);
+                var serverCapacity = (float)(serverBw?.MaxBps ?? 250000);
+                if (serverBw?.IsSaturated ?? false)
+                    serverCapacity *= 0.25f;
+
+                // Dynamically divide available server throughput among all active clients
+                serverShareBps = serverCapacity / clientCount;
+            }
+            else
+            {
+                clientCount = Math.Max(1, fallbackCount);
+                serverShareBps = 250000f / clientCount;
+            }
+
+            // Client device network adapter constraint
+            var clientBw = CompOrNull<NetworkBandwidthComponent>(loaderUid);
+            var clientCapacity = (float)(clientBw?.MaxBps ?? 128000);
+            if (clientBw?.IsSaturated ?? false)
+                clientCapacity *= 0.25f;
+
+            var effectiveBps = Math.Min(serverShareBps, clientCapacity);
+            effectiveBps = Math.Max(1000f, effectiveBps); // at least 1 KB/s crawl so downloads do not freeze completely
+
+            if (comp.DownloadTotalBytes <= 0)
+                comp.DownloadTotalBytes = 4096;
+
+            var bytesThisFrame = effectiveBps * frameTime;
+            comp.DownloadedBytes += bytesThisFrame;
+
+            // Transmit throughput across network adapter queues
+            if (serverUid != null)
+                _bandwidth.RecordDataTransmitted(serverUid.Value, (int)bytesThisFrame);
+            _bandwidth.RecordDataTransmitted(loaderUid, (int)bytesThisFrame);
+
+            var clientGuid = CompOrNull<DeviceGuidComponent>(loaderUid)?.Guid ?? $"DEV:{loaderUid}";
+            var serverGuid = serverUid != null ? (CompOrNull<DeviceGuidComponent>(serverUid.Value)?.Guid ?? $"SRV:{serverUid.Value}") : "CENTRAL-SRV";
+            var itemName = comp.PendingItemName ?? comp.PendingProgramName ?? "package";
+            var pct = Math.Clamp((int)((comp.DownloadedBytes / comp.DownloadTotalBytes) * 100f), 0, 99);
+
+            // Log data packets for the file transfer chunk
+            if (shouldPushUi || comp.DownloadedBytes >= comp.DownloadTotalBytes)
+            {
+                var chunkSize = (int)Math.Max(1, bytesThisFrame);
+                _bandwidth.StorePacket(loaderUid, serverGuid, clientGuid, "HTTP/DOWNLOAD", $"Chunk: '{itemName}' ({chunkSize} B, {pct}%)", chunkSize);
+                if (serverUid != null)
+                    _bandwidth.StorePacket(serverUid.Value, serverGuid, clientGuid, "HTTP/DOWNLOAD", $"Chunk: '{itemName}' ({chunkSize} B, {pct}%)", chunkSize);
+                _bandwidth.LogPacketToRouters(serverGuid, clientGuid, "HTTP/DOWNLOAD", $"Chunk: '{itemName}' ({chunkSize} B, {pct}%)", chunkSize);
+            }
+
+            var remainingBytes = Math.Max(0f, comp.DownloadTotalBytes - comp.DownloadedBytes);
+            comp.DownloadRemainingSeconds = remainingBytes / effectiveBps;
+
+            if (comp.DownloadedBytes < comp.DownloadTotalBytes)
+            {
+                var actionWord = comp.PendingProgramProtoId != null ? "Downloading & Installing" : "Downloading";
+                var speedKb = effectiveBps / 1024f;
+
+                if (clientCount > 1)
+                {
+                    comp.StatusMessage = $"{actionWord} '{itemName}'... {pct}% ({speedKb:0.0} KB/s [{clientCount} clients sharing link], {comp.DownloadRemainingSeconds:0.#}s remaining)";
+                }
+                else
+                {
+                    comp.StatusMessage = $"{actionWord} '{itemName}'... {pct}% ({speedKb:0.0} KB/s, {comp.DownloadRemainingSeconds:0.#}s remaining)";
+                }
+
+                if (shouldPushUi)
+                    UpdateUiState(cartUid, loaderUid, comp);
+            }
+            else
+            {
+                var totalBytes = comp.DownloadTotalBytes;
+                _bandwidth.StorePacket(loaderUid, serverGuid, clientGuid, "HTTP/COMPLETE", $"Transfer verified: '{itemName}' ({totalBytes} B)", 128);
+                if (serverUid != null)
+                    _bandwidth.StorePacket(serverUid.Value, serverGuid, clientGuid, "HTTP/COMPLETE", $"Transfer verified: '{itemName}' ({totalBytes} B)", 128);
+                _bandwidth.LogPacketToRouters(serverGuid, clientGuid, "HTTP/COMPLETE", $"Transfer verified: '{itemName}' ({totalBytes} B)", 128);
+
                 comp.ActiveDownloadItemId = null;
+                comp.DownloadedBytes = 0f;
+                comp.DownloadTotalBytes = 0;
+                comp.SourceServerNetEntity = null;
+
                 if (comp.PendingProgramProtoId != null)
                 {
                     if (TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
@@ -138,7 +249,7 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
                     comp.PendingFile = null;
                     comp.PendingItemName = null;
                 }
-                UpdateUiState(uid, loaderUid, comp);
+                UpdateUiState(cartUid, loaderUid, comp);
             }
         }
     }
@@ -261,7 +372,19 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
             newFile = tf;
         }
 
-        var duration = CalculateDownloadTime(loaderUid, item.Size);
+        var sourceServer = GetSourceServer(loaderUid);
+        comp.SourceServerNetEntity = sourceServer.HasValue ? GetNetEntity(sourceServer.Value) : null;
+        comp.DownloadTotalBytes = Math.Max(2048, item.Size);
+        comp.DownloadedBytes = 0f;
+
+        var clientGuid = CompOrNull<DeviceGuidComponent>(loaderUid)?.Guid ?? $"DEV:{loaderUid}";
+        var serverGuid = sourceServer != null ? (CompOrNull<DeviceGuidComponent>(sourceServer.Value)?.Guid ?? $"SRV:{sourceServer.Value}") : "CENTRAL-SRV";
+        _bandwidth.StorePacket(loaderUid, clientGuid, serverGuid, "HTTP/REQ", $"GET {item.RemotePath} ({item.Size} B)", 128);
+        if (sourceServer != null)
+            _bandwidth.StorePacket(sourceServer.Value, clientGuid, serverGuid, "HTTP/REQ", $"GET {item.RemotePath} ({item.Size} B)", 128);
+        _bandwidth.LogPacketToRouters(clientGuid, serverGuid, "HTTP/REQ", $"GET {item.RemotePath} ({item.Size} B)", 128);
+
+        var duration = CalculateDownloadTime(loaderUid, comp.DownloadTotalBytes, sourceServer);
         comp.ActiveDownloadItemId = itemId;
         comp.DownloadRemainingSeconds = duration;
         comp.DownloadTotalSeconds = duration;
@@ -299,36 +422,69 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
             }
         }
 
-        var duration = CalculateDownloadTime(loaderUid, item.Size);
+        var sourceServer = GetSourceServer(loaderUid);
+        comp.SourceServerNetEntity = sourceServer.HasValue ? GetNetEntity(sourceServer.Value) : null;
+        var pkgSize = Math.Max(2048, item.Size);
+        comp.DownloadTotalBytes = pkgSize;
+        comp.DownloadedBytes = 0f;
+
+        var clientGuid = CompOrNull<DeviceGuidComponent>(loaderUid)?.Guid ?? $"DEV:{loaderUid}";
+        var serverGuid = sourceServer != null ? (CompOrNull<DeviceGuidComponent>(sourceServer.Value)?.Guid ?? $"SRV:{sourceServer.Value}") : "CENTRAL-SRV";
+        _bandwidth.StorePacket(loaderUid, clientGuid, serverGuid, "HTTP/REQ", $"INSTALL {item.Name} ({pkgSize} B)", 128);
+        if (sourceServer != null)
+            _bandwidth.StorePacket(sourceServer.Value, clientGuid, serverGuid, "HTTP/REQ", $"INSTALL {item.Name} ({pkgSize} B)", 128);
+        _bandwidth.LogPacketToRouters(clientGuid, serverGuid, "HTTP/REQ", $"INSTALL {item.Name} ({pkgSize} B)", 128);
+
+        var duration = CalculateDownloadTime(loaderUid, pkgSize, sourceServer);
         comp.ActiveDownloadItemId = itemId;
         comp.DownloadRemainingSeconds = duration;
         comp.DownloadTotalSeconds = duration;
         comp.PendingProgramProtoId = item.PrototypeId;
         comp.PendingProgramName = item.Name;
-        comp.PendingProgramSize = Math.Max(2048, item.Size);
+        comp.PendingProgramSize = pkgSize;
         comp.StatusMessage = $"Connecting to Central Package Server... Downloading '{item.Name}' [0%]";
     }
 
-    private float CalculateDownloadTime(EntityUid loaderUid, int sizeBytes)
+    private EntityUid? GetSourceServer(EntityUid loaderUid)
+    {
+        // 1. Check if there is an online physical DataServer on station
+        var query = EntityQueryEnumerator<DataServerComponent, DeviceGuidComponent>();
+        while (query.MoveNext(out var serverUid, out _, out _))
+        {
+            return serverUid;
+        }
+
+        // 2. Check for any NetworkBandwidth router or server
+        var bwQuery = EntityQueryEnumerator<NetworkBandwidthComponent, DeviceNetworkComponent>();
+        while (bwQuery.MoveNext(out var bwUid, out _, out _))
+        {
+            if (bwUid != loaderUid)
+                return bwUid;
+        }
+
+        return null;
+    }
+
+    private float CalculateDownloadTime(EntityUid loaderUid, int sizeBytes, EntityUid? sourceServer = null)
     {
         var availableBps = 250000f; // 250 KB/s (~244 KiB/s) baseline network speed
 
         // Look up server network bandwidth if online
-        var query = EntityQueryEnumerator<DataServerComponent, DeviceGuidComponent>();
-        if (query.MoveNext(out var serverUid, out _, out _))
+        var serverUid = sourceServer ?? GetSourceServer(loaderUid);
+        if (serverUid != null && TryComp<NetworkBandwidthComponent>(serverUid.Value, out var serverBw) && serverBw.MaxBps > 0)
         {
-            if (TryComp<NetworkBandwidthComponent>(serverUid, out var serverBw) && serverBw.MaxBps > 0)
-                availableBps = serverBw.MaxBps;
+            availableBps = serverBw.MaxBps;
+            if (serverBw.IsSaturated)
+                availableBps *= 0.25f;
         }
 
         // Bound by client network bandwidth capacity
         if (TryComp<NetworkBandwidthComponent>(loaderUid, out var clientBw) && clientBw.MaxBps > 0)
         {
             availableBps = Math.Min(availableBps, clientBw.MaxBps);
+            if (clientBw.IsSaturated)
+                availableBps *= 0.25f;
         }
-
-        if (clientBw?.IsSaturated ?? false)
-            availableBps *= 0.25f;
 
         availableBps = Math.Max(10000f, availableBps);
         var transferDuration = (float)sizeBytes / availableBps;
