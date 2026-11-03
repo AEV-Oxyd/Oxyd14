@@ -1,6 +1,7 @@
 using System.Linq;
 using Content.Shared.UserInterface;
 using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
 
 namespace Content.Client.UserInterface.StateRouting;
 
@@ -51,6 +52,15 @@ public interface IBuiStateScope
     /// (see <see cref="RoutedBoundUserInterface.LastStateConsumed"/>).
     /// </summary>
     bool ConsumesBuiState(BoundUserInterfaceState state) => false;
+}
+
+/// <summary>
+/// Container that hides its whole subtree from routed states. Use it around UI that belongs to a
+/// different state source (e.g. a remote machine's screen embedded in a terminal).
+/// </summary>
+public sealed class BuiStateBarrier : BoxContainer, IBuiStateScope
+{
+    public bool AcceptsBuiState(BoundUserInterfaceState state) => false;
 }
 
 /// <summary>
@@ -166,6 +176,10 @@ public sealed class BuiStateRouter
 
         var result = BuiStateReceiveResult.Ignored;
 
+        // Snapshot before the receiver runs: controls a receiver creates while handling this state
+        // (e.g. an embedded remote screen) must not be offered the same state, or they can recurse forever.
+        var children = control.ChildCount > 0 ? control.Children.ToArray() : null;
+
         if (control is IBuiStateReceiver receiver)
         {
             result = receiver.ReceiveBuiState(state);
@@ -175,10 +189,9 @@ public sealed class BuiStateRouter
                 return result;
         }
 
-        if (control.ChildCount > 0)
+        if (children != null)
         {
-            // Snapshot: receivers are allowed to add/remove controls while handling.
-            foreach (var child in control.Children.ToArray())
+            foreach (var child in children)
             {
                 var childResult = Visit(child, state, out var childAny);
                 any |= childAny;

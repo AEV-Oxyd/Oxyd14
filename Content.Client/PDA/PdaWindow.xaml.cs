@@ -96,7 +96,8 @@ public partial class PdaWindow : BaseWindow
         if (stripped)
         {
             MinSize = System.Numerics.Vector2.Zero;
-            SetSize = System.Numerics.Vector2.Zero;
+            // NaN = unset. Zero would force the control to be 0x0 and make it invisible.
+            SetSize = new System.Numerics.Vector2(float.NaN, float.NaN);
             HorizontalExpand = true;
             VerticalExpand = true;
             OsTitleLabel.Text = "NTOS 1.4™ [REMOTE MATRIX]";

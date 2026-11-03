@@ -132,7 +132,11 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
                 };
 
                 TerminalScreenSlot.RemoveAllChildren();
-                TerminalScreenSlot.AddChild(_remoteMenu);
+                // The embedded screen is a different machine's UI: it must never receive this host's states,
+                // otherwise a remote terminal would be fed (and re-embed) our own state endlessly.
+                var barrier = new BuiStateBarrier { HorizontalExpand = true, VerticalExpand = true };
+                barrier.AddChild(_remoteMenu);
+                TerminalScreenSlot.AddChild(barrier);
             }
 
             ScreenStatusLabel.Text = $"REMOTE SCREEN MATRIX [{state.SshHost ?? "TARGET"}] [LIVE STREAM]";
