@@ -349,11 +349,14 @@ namespace Content.Server.PDA
 
         public void EnsurePdaInitialized(EntityUid uid)
         {
-            EnsureComp<DeviceGuidComponent>(uid);
+            var guid = EnsureComp<DeviceGuidComponent>(uid);
             EnsureComp<ComputerStatsComponent>(uid);
             var pdaBw = EnsureComp<NetworkBandwidthComponent>(uid);
             if (pdaBw.MaxBps < 250000)
+            {
                 pdaBw.MaxBps = 250000;
+                Dirty(uid, pdaBw);
+            }
             var fs = EnsureComp<FileSystemComponent>(uid);
             if (fs.Files.Count == 0)
             {
@@ -423,8 +426,7 @@ namespace Content.Server.PDA
             {
                 if (!existingProtos.Contains(cartId))
                 {
-                    var spawned = Spawn(cartId);
-                    _cartridgeLoader.InstallCartridge((uid, loader), spawned);
+                    _cartridgeLoader.InstallProgram((uid, loader), cartId, deinstallable: false);
                 }
             }
         }

@@ -518,6 +518,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 }
 
                 guid = guid.ToUpperInvariant();
+                _remoteScreen.EnsureAllDevicesProvisioned();
 
                 if (!_guidSystem.TryGetEntityByGuid(guid, out var optTarget) || !optTarget.HasValue)
                 {
@@ -826,6 +827,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
     private void AppendDeviceScan(EntityUid sourceUid, TerminalCartridgeComponent comp, string? filterArg)
     {
+        _remoteScreen.EnsureAllDevicesProvisioned();
         var sourceXform = Transform(sourceUid);
         var sourceMap = sourceXform.MapID;
         var filter = filterArg?.Trim().ToUpperInvariant();

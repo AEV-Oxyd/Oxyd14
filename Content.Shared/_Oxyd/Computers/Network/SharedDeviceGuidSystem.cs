@@ -6,19 +6,22 @@ namespace Content.Shared._Oxyd.Computers.Network;
 
 public sealed partial class SharedDeviceGuidSystem : EntitySystem
 {
+    [Dependency] private readonly INetManager _netManager = default!;
+
     private readonly Dictionary<string, EntityUid> _guidToEntity = new(StringComparer.OrdinalIgnoreCase);
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<DeviceGuidComponent, ComponentInit>(OnInit);
+        SubscribeLocalEvent<DeviceGuidComponent, ComponentStartup>(OnStartup);
         SubscribeLocalEvent<DeviceGuidComponent, MapInitEvent>(OnMapInit);
+        SubscribeLocalEvent<DeviceGuidComponent, AfterAutoHandleStateEvent>(OnAfterAutoHandleState);
         SubscribeLocalEvent<DeviceGuidComponent, ComponentShutdown>(OnShutdown);
         SubscribeLocalEvent<DeviceGuidComponent, ExaminedEvent>(OnExamined);
     }
 
-    private void OnInit(EntityUid uid, DeviceGuidComponent comp, ComponentInit args)
+    private void OnStartup(EntityUid uid, DeviceGuidComponent comp, ComponentStartup args)
     {
         EnsureGuid(uid, comp);
     }
@@ -26,6 +29,12 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
     private void OnMapInit(EntityUid uid, DeviceGuidComponent comp, MapInitEvent args)
     {
         EnsureGuid(uid, comp);
+    }
+
+    private void OnAfterAutoHandleState(EntityUid uid, DeviceGuidComponent comp, ref AfterAutoHandleStateEvent args)
+    {
+        if (!string.IsNullOrEmpty(comp.Guid))
+            _guidToEntity[comp.Guid] = uid;
     }
 
     private void OnShutdown(EntityUid uid, DeviceGuidComponent comp, ComponentShutdown args)
@@ -48,6 +57,9 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
     {
         if (string.IsNullOrEmpty(comp.Guid))
         {
+            if (!_netManager.IsServer)
+                return;
+
             comp.Guid = System.Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
             Dirty(uid, comp);
         }

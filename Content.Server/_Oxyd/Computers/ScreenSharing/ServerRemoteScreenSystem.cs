@@ -11,6 +11,7 @@ using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.APC;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.DeviceNetwork.Components;
 using Content.Server.Construction.Components;
 using Content.Shared.PDA;
 using Content.Shared.Strip;
@@ -18,6 +19,7 @@ using Content.Shared.UserInterface;
 using Robust.Server.GameObjects;
 using Robust.Server.GameStates;
 using Robust.Shared.Player;
+using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.ScreenSharing;
 
@@ -34,6 +36,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     [Dependency] private ISharedPlayerManager _playerManager = default!;
     [Dependency] private PdaSystem _pdaSystem = default!;
     [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private EntityQuery<DeviceGuidComponent> _guidQuery = default!;
 
     private sealed class TerminalViewerSession
     {
@@ -48,31 +52,54 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     {
         base.Initialize();
 
-        SubscribeLocalEvent<ApcComponent, MapInitEvent>(OnApcMapInit);
-        SubscribeLocalEvent<AirAlarmComponent, MapInitEvent>(OnAirAlarmMapInit);
-        SubscribeLocalEvent<ComputerComponent, MapInitEvent>(OnComputerMapInit);
-        SubscribeLocalEvent<PdaComponent, MapInitEvent>(OnPdaMapInit);
         SubscribeLocalEvent<TerminalCartridgeComponent, ComponentShutdown>(OnTerminalShutdown);
     }
 
-    private void OnApcMapInit(EntityUid uid, ApcComponent comp, MapInitEvent args)
+    /// <summary>
+    /// Ensures all map-initialized APCs, Air Alarms, Static Computers, and PDAs have a network GUID
+    /// registered for network scanning without mass-spawning cartridges or mutating unvisited entities every tick.
+    /// </summary>
+    public void EnsureAllDevicesProvisioned()
     {
-        EnsureDeviceProvisioned(uid);
-    }
+        var apcQuery = AllEntityQuery<ApcComponent, MetaDataComponent>();
+        while (apcQuery.MoveNext(out var uid, out _, out var meta))
+        {
+            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            {
+                var guid = EnsureComp<DeviceGuidComponent>(uid);
+                _guidSystem.EnsureGuid(uid, guid);
+            }
+        }
 
-    private void OnAirAlarmMapInit(EntityUid uid, AirAlarmComponent comp, MapInitEvent args)
-    {
-        EnsureDeviceProvisioned(uid);
-    }
+        var alarmQuery = AllEntityQuery<AirAlarmComponent, MetaDataComponent>();
+        while (alarmQuery.MoveNext(out var uid, out _, out var meta))
+        {
+            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            {
+                var guid = EnsureComp<DeviceGuidComponent>(uid);
+                _guidSystem.EnsureGuid(uid, guid);
+            }
+        }
 
-    private void OnComputerMapInit(EntityUid uid, ComputerComponent comp, MapInitEvent args)
-    {
-        EnsureDeviceProvisioned(uid);
-    }
+        var compQuery = AllEntityQuery<ComputerComponent, MetaDataComponent>();
+        while (compQuery.MoveNext(out var uid, out _, out var meta))
+        {
+            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            {
+                var guid = EnsureComp<DeviceGuidComponent>(uid);
+                _guidSystem.EnsureGuid(uid, guid);
+            }
+        }
 
-    private void OnPdaMapInit(EntityUid uid, PdaComponent comp, MapInitEvent args)
-    {
-        EnsureDeviceProvisioned(uid);
+        var pdaQuery = AllEntityQuery<PdaComponent, MetaDataComponent>();
+        while (pdaQuery.MoveNext(out var uid, out _, out var meta))
+        {
+            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            {
+                var guid = EnsureComp<DeviceGuidComponent>(uid);
+                _guidSystem.EnsureGuid(uid, guid);
+            }
+        }
     }
 
     private void OnTerminalShutdown(EntityUid uid, TerminalCartridgeComponent comp, ComponentShutdown args)
@@ -137,6 +164,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                     "Station console terminal active.");
             }
         }
+
+        Dirty(uid, stats);
+        Dirty(uid, bw);
     }
 
     private static void WriteDefaultEmbeddedFiles(FileSystemComponent fs, string osContent, string logContent)
@@ -177,7 +207,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return "ATMOS-MON";
         if (HasComp<PdaComponent>(uid))
             return "PDA";
-        if (HasComp<RouterServerComponent>(uid))
+        if (HasComp<DeviceNetworkRouterComponent>(uid))
             return "ROUTER";
         if (HasComp<DataServerComponent>(uid))
             return "SERVER";
@@ -208,39 +238,26 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         uiKey = null;
         interfaceData = null;
 
-        if (!TryComp<UserInterfaceComponent>(uid, out var uiComp) || uiComp.Interfaces.Count == 0)
+        if (!TryComp<UserInterfaceComponent>(uid, out var uiComp))
             return false;
 
         if (TryComp<ActivatableUIComponent>(uid, out var actUi) &&
-            actUi.Key != null &&
-            uiComp.Interfaces.TryGetValue(actUi.Key, out var actData))
+            actUi.Key is { } key &&
+            _uiSystem.TryGetInterfaceData((uid, uiComp), key, out var actData))
         {
-            uiKey = actUi.Key;
+            uiKey = key;
             interfaceData = actData;
             return true;
         }
 
-        if (uiComp.Interfaces.TryGetValue(ApcUiKey.Key, out var apcData))
+        if (_uiSystem.TryGetInterfaceData((uid, uiComp), ApcUiKey.Key, out var apcData))
         {
             uiKey = ApcUiKey.Key;
             interfaceData = apcData;
             return true;
         }
 
-        foreach (var (key, data) in uiComp.Interfaces)
-        {
-            if (key is StrippableUiKey)
-                continue;
-
-            uiKey = key;
-            interfaceData = data;
-            return true;
-        }
-
-        var first = uiComp.Interfaces.First();
-        uiKey = first.Key;
-        interfaceData = first.Value;
-        return true;
+        return false;
     }
 
     /// <summary>
@@ -321,9 +338,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 
             if (TryGetPrimaryUiKey(target, out var uiKey, out _) && uiKey != null)
             {
+                RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
                 _uiSystem.OpenUi(target, uiKey, actor);
-                var afterOpenEv = new AfterActivatableUIOpenEvent(actor, target);
-                RaiseLocalEvent(target, afterOpenEv);
+                RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
             }
         }
     }

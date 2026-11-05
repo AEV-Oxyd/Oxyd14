@@ -89,6 +89,7 @@
     savableAddress: false
   - type: WirelessNetwork
     range: 500
+  - type: DeviceGuid
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     cartridgeSlot:

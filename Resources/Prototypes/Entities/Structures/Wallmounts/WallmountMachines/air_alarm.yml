@@ -47,6 +47,7 @@
       - AirAlarm
   - type: AtmosDevice
   - type: AirAlarm
+  - type: DeviceGuid
   - type: AtmosAlertsDevice
     group: AirAlarm
   - type: Clickable
