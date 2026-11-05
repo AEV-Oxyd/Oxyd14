@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers.Cartridges;
@@ -13,6 +14,7 @@ public sealed class TerminalUiState : BoundUserInterfaceState
     public bool IsSshLocalMode { get; }
     public bool IsScreenAttached { get; }
     public Content.Shared.PDA.PdaUpdateState? RemotePdaState { get; }
+    public RemoteScreenState? RemoteScreen { get; }
 
     public TerminalUiState(
         List<string> lines,
@@ -22,7 +24,8 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         bool isPasswordPrompt,
         bool isSshLocalMode = false,
         bool isScreenAttached = false,
-        Content.Shared.PDA.PdaUpdateState? remotePdaState = null)
+        Content.Shared.PDA.PdaUpdateState? remotePdaState = null,
+        RemoteScreenState? remoteScreen = null)
     {
         Lines = lines;
         Prompt = prompt;
@@ -32,5 +35,6 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         IsSshLocalMode = isSshLocalMode;
         IsScreenAttached = isScreenAttached;
         RemotePdaState = remotePdaState;
+        RemoteScreen = remoteScreen;
     }
 }

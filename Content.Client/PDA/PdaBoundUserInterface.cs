@@ -80,6 +80,10 @@ namespace Content.Client.PDA
                 SendMessage(new PdaLockUplinkMessage());
             };
 
+            _menu.HomeButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.HomeView));
+            _menu.ProgramListButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramListView));
+            _menu.SettingsButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.SettingsView));
+
             _menu.OnProgramItemPressed += uid =>
             {
                 _userRequestedProgramView = true;
@@ -88,6 +92,7 @@ namespace Content.Client.PDA
                     var comp = RetrieveCartridgeComponent(uid);
                     var title = Loc.GetString(comp?.ProgramName ?? "comp-pda-io-program-fallback-title");
                     _menu.ToProgramView(title);
+                    SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramContentView));
                 }
                 else
                 {
@@ -103,6 +108,7 @@ namespace Content.Client.PDA
                 if (_activeProgram == uid && _menu != null)
                 {
                     _menu.ToProgramView(string.Empty);
+                    SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramContentView));
                 }
                 else
                 {
@@ -140,15 +146,23 @@ namespace Content.Client.PDA
         {
             if (_menu != null)
             {
-                if (cartridgeUIFragment.Parent != _menu.ProgramView)
+                var isNewAttachment = cartridgeUIFragment.Parent != _menu.ProgramView;
+                if (isNewAttachment)
                 {
                     _menu.ProgramView.RemoveAllChildren();
                     cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                     _menu.ProgramView.AddChild(cartridgeUIFragment);
                 }
 
-                _userRequestedProgramView = false;
-                _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                if (_userRequestedProgramView || isNewAttachment)
+                {
+                    _userRequestedProgramView = false;
+                    _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                }
+                else
+                {
+                    _menu.UpdateTabs();
+                }
             }
         }
 

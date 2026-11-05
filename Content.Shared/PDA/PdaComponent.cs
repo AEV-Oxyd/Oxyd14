@@ -51,6 +51,13 @@ namespace Content.Shared.PDA
         [DataField] public List<EntityUid> OpenPrograms = new();
 
         /// <summary>
+        /// Currently displayed PDA navigation view (0 = Home, 1 = ProgramList, 2 = Settings, 3 = ProgramContent).
+        /// Synchronized across local and remote screen viewers.
+        /// </summary>
+        [ViewVariables]
+        public int CurrentView;
+
+        /// <summary>
         /// Cached state of the currently active cartridge program.
         /// Embedded into PdaUpdateState so PDA metrics and cartridge state don't overwrite each other in the tick buffer.
         /// </summary>

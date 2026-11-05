@@ -29,7 +29,13 @@ public sealed partial class DownloaderCartridgeSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<DownloaderCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
+        SubscribeLocalEvent<DownloaderCartridgeComponent, CartridgeActivatedEvent>(OnCartridgeActivated);
         SubscribeLocalEvent<DownloaderCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
+    }
+
+    private void OnCartridgeActivated(EntityUid uid, DownloaderCartridgeComponent comp, ref CartridgeActivatedEvent args)
+    {
+        UpdateUiState(uid, args.Loader, comp);
     }
 
     public override void Update(float frameTime)

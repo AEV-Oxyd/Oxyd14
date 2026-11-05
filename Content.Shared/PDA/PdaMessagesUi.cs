@@ -48,3 +48,14 @@ public sealed class PdaCloseProgramTabMessage : BoundUserInterfaceMessage
         Program = program;
     }
 }
+
+[Serializable, NetSerializable]
+public sealed class PdaSwitchViewMessage : BoundUserInterfaceMessage
+{
+    public int View { get; }
+
+    public PdaSwitchViewMessage(int view)
+    {
+        View = view;
+    }
+}

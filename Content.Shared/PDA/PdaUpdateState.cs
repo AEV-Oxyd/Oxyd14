@@ -30,6 +30,7 @@ namespace Content.Shared.PDA
         public BoundUserInterfaceState? CartridgeState;
         public bool HasCaptainAccess;
         public string? SshPassword;
+        public int CurrentView;
 
         public IEnumerable<BoundUserInterfaceState> GetNestedStates()
         {
@@ -60,7 +61,8 @@ namespace Content.Shared.PDA
             bool hasDisk = false,
             string? diskName = null,
             bool hasCaptainAccess = false,
-            string? sshPassword = null)
+            string? sshPassword = null,
+            int currentView = 0)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
@@ -84,6 +86,7 @@ namespace Content.Shared.PDA
             CartridgeState = cartridgeState;
             HasCaptainAccess = hasCaptainAccess;
             SshPassword = sshPassword;
+            CurrentView = currentView;
         }
     }
 

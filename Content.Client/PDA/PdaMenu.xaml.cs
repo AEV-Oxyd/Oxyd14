@@ -289,6 +289,7 @@ namespace Content.Client.PDA
 
             var idText = !string.IsNullOrEmpty(state.DeviceGuid) ? $"[{state.DeviceGuid}]" : (state.Address?.ToUpper() ?? " - ");
             AddressLabel.Text = idText;
+            ScreenSurface.DeviceGuid = state.DeviceGuid;
 
             EjectIdButton.IsActive = state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null;
             EjectPenButton.IsActive = state.HasPen;
@@ -312,7 +313,25 @@ namespace Content.Client.PDA
 
             _openPrograms = state.OpenPrograms.Select(p => _entityManager.GetEntity(p)).ToList();
             _activeProgram = state.ActiveUI != null ? _entityManager.GetEntity(state.ActiveUI.Value) : null;
-            UpdateTabs();
+
+            switch (state.CurrentView)
+            {
+                case HomeView:
+                    ToHomeScreen();
+                    break;
+                case ProgramListView:
+                    ToProgramList();
+                    break;
+                case SettingsView:
+                    ToSettings();
+                    break;
+                case ProgramContentView when _activeProgram != null:
+                    ToProgramView(string.Empty);
+                    break;
+                default:
+                    UpdateTabs();
+                    break;
+            }
         }
 
         public void UpdateAvailablePrograms(List<(EntityUid, CartridgeComponent)> programs)

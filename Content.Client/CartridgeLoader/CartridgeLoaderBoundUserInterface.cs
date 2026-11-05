@@ -2,6 +2,7 @@ using Content.Client.UserInterface.Fragments;
 using Content.Client.UserInterface.StateRouting;
 using Content.Shared.CartridgeLoader;
 using Robust.Client.UserInterface;
+using Robust.Shared.Serialization.Manager;
 
 namespace Content.Client.CartridgeLoader;
 
@@ -60,7 +61,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         {
             var existingComp = RetrieveCartridgeComponent(activeUI.Value);
             AttachCartridgeUI(_activeUiFragment, Loc.GetString(existingComp?.ProgramName ?? "default-program-name"));
-            if (pdaState?.CartridgeState != null)
+            if (pdaState?.CartridgeState != null && _activeUiFragment is not IBuiStateReceiver)
             {
                 _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
             }
@@ -172,7 +173,11 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
     private UIFragment? RetrieveCartridgeUI(EntityUid? cartridgeUid)
     {
         var component = EntMan.GetComponentOrNull<UIFragmentComponent>(cartridgeUid);
-        component?.Ui?.Setup(this, cartridgeUid);
-        return component?.Ui;
+        if (component?.Ui == null)
+            return null;
+
+        var ui = IoCManager.Resolve<ISerializationManager>().CreateCopy(component.Ui, notNullableOverride: true);
+        ui.Setup(this, cartridgeUid);
+        return ui;
     }
 }

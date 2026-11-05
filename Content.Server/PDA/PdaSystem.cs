@@ -66,6 +66,7 @@ namespace Content.Server.PDA
             SubscribeLocalEvent<PdaComponent, PdaShowUplinkMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaLockUplinkMessage>(OnUiMessage);
             SubscribeLocalEvent<PdaComponent, PdaCloseProgramTabMessage>(OnUiMessage);
+            SubscribeLocalEvent<PdaComponent, PdaSwitchViewMessage>(OnUiMessage);
 
             SubscribeLocalEvent<PdaComponent, CartridgeLoaderNotificationSentEvent>(OnNotification);
 
@@ -84,6 +85,7 @@ namespace Content.Server.PDA
         {
             if (!comp.OpenPrograms.Contains(args.Program))
                 comp.OpenPrograms.Add(args.Program);
+            comp.CurrentView = 3;
             UpdatePdaUi(uid, comp);
         }
 
@@ -92,6 +94,8 @@ namespace Content.Server.PDA
             if (TryComp<CartridgeLoaderComponent>(uid, out var loader) && loader.ActiveProgram == null)
             {
                 comp.ActiveCartridgeState = null;
+                if (comp.CurrentView == 3)
+                    comp.CurrentView = 1;
                 UpdatePdaUi(uid, comp);
             }
         }
@@ -240,8 +244,8 @@ namespace Content.Server.PDA
             if (!Resolve(uid, ref pda, false))
                 return;
 
-            if (!_ui.HasUi(uid, PdaUiKey.Key))
-                return;
+            if (!HasComp<DeviceGuidComponent>(uid) || !HasComp<FileSystemComponent>(uid))
+                EnsurePdaInitialized(uid);
 
             var address = GetDeviceNetAddress(uid);
             var hasInstrument = HasComp<InstrumentComponent>(uid);
@@ -334,24 +338,23 @@ namespace Content.Server.PDA
                 hasDisk: pda.DiskSlot.HasItem,
                 diskName: pda.DiskSlot.Item is { } dEnt ? MetaData(dEnt).EntityName : null,
                 hasCaptainAccess: hasCaptainAccess,
-                sshPassword: hasCaptainAccess ? pda.SshPassword : null);
+                sshPassword: hasCaptainAccess ? pda.SshPassword : null,
+                currentView: pda.CurrentView);
 
             pda.LastState = state;
-            _ui.SetUiState(uid, PdaUiKey.Key, state);
+            if (_ui.HasUi(uid, PdaUiKey.Key))
+                _ui.SetUiState(uid, PdaUiKey.Key, state);
             Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteDeviceUpdated(uid);
         }
 
-        private void OnPdaOpen(Entity<PdaComponent> ent, ref BoundUIOpenedEvent args)
+        public void EnsurePdaInitialized(EntityUid uid)
         {
-            if (!PdaUiKey.Key.Equals(args.UiKey))
-                return;
-
-            EnsureComp<DeviceGuidComponent>(ent.Owner);
-            EnsureComp<ComputerStatsComponent>(ent.Owner);
-            var pdaBw = EnsureComp<NetworkBandwidthComponent>(ent.Owner);
+            EnsureComp<DeviceGuidComponent>(uid);
+            EnsureComp<ComputerStatsComponent>(uid);
+            var pdaBw = EnsureComp<NetworkBandwidthComponent>(uid);
             if (pdaBw.MaxBps < 250000)
                 pdaBw.MaxBps = 250000;
-            var fs = EnsureComp<FileSystemComponent>(ent.Owner);
+            var fs = EnsureComp<FileSystemComponent>(uid);
             if (fs.Files.Count == 0)
             {
                 var osFile = new TextVirtualFile
@@ -377,11 +380,19 @@ namespace Content.Server.PDA
                 fs.Files[notesFile.FullPath] = notesFile;
             }
 
-            if (TryComp<CartridgeLoaderComponent>(ent.Owner, out var loader))
+            if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
             {
-                EnsureDefaultPrograms(ent.Owner, loader);
-                EnsureProgramFiles(ent.Owner, loader, fs);
+                EnsureDefaultPrograms(uid, loader);
+                EnsureProgramFiles(uid, loader, fs);
             }
+        }
+
+        private void OnPdaOpen(Entity<PdaComponent> ent, ref BoundUIOpenedEvent args)
+        {
+            if (!PdaUiKey.Key.Equals(args.UiKey))
+                return;
+
+            EnsurePdaInitialized(ent.Owner);
 
             _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered ON (User: {args.Actor})");
             UpdatePdaUi(ent.Owner, ent.Comp);
@@ -540,6 +551,16 @@ namespace Content.Server.PDA
                     }
                 }
             }
+            UpdatePdaUi(uid, pda);
+        }
+
+        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaSwitchViewMessage msg)
+        {
+            var clamped = Math.Clamp(msg.View, 0, 3);
+            if (pda.CurrentView == clamped)
+                return;
+
+            pda.CurrentView = clamped;
             UpdatePdaUi(uid, pda);
         }
 

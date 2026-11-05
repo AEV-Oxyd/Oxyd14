@@ -32,8 +32,20 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
+        SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeActivatedEvent>(OnCartridgeActivated);
         SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
         SubscribeLocalEvent<FileBrowserCartridgeComponent, CartridgeRelayedEvent<FileSystemChangedEvent>>(OnRelayedFileSystemChanged);
+    }
+
+    private void OnCartridgeActivated(EntityUid uid, FileBrowserCartridgeComponent comp, ref CartridgeActivatedEvent args)
+    {
+        var loaderUid = args.Loader;
+        if (TryComp<FileSystemComponent>(loaderUid, out var fsComp) &&
+            TryComp<CartridgeLoaderComponent>(loaderUid, out var cLoaderComp))
+        {
+            EnsureProgramFiles(loaderUid, cLoaderComp, fsComp);
+        }
+        UpdateUiState(uid, loaderUid, comp);
     }
 
     private void OnRelayedFileSystemChanged(EntityUid uid, FileBrowserCartridgeComponent comp, ref CartridgeRelayedEvent<FileSystemChangedEvent> args)

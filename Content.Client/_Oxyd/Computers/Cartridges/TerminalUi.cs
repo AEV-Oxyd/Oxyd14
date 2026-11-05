@@ -17,12 +17,15 @@ public sealed partial class TerminalUi : UIFragment
     public override void Setup(BoundUserInterface userInterface, EntityUid? fragmentOwner)
     {
         _fragment = new TerminalUiFragment { HostBui = userInterface };
+        var targetProg = fragmentOwner.HasValue
+            ? IoCManager.Resolve<IEntityManager>().GetNetEntity(fragmentOwner.Value)
+            : (NetEntity?)null;
 
         _fragment.OnSendCommand += cmd =>
-            SendMessage(new TerminalUiMessageEvent(cmd), userInterface);
+            SendMessage(new TerminalUiMessageEvent(cmd, targetProgram: targetProg), userInterface);
 
         _fragment.OnRemoteAction += (act, arg) =>
-            SendMessage(new TerminalUiMessageEvent(string.Empty, act, arg), userInterface);
+            SendMessage(new TerminalUiMessageEvent(string.Empty, act, arg, targetProgram: targetProg), userInterface);
     }
 
     public override void UpdateState(BoundUserInterfaceState state)

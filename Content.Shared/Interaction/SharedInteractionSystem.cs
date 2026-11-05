@@ -30,6 +30,7 @@ using Content.Shared.Timing.Systems;
 using Content.Shared.UserInterface;
 using Content.Shared.Verbs;
 using Content.Shared.Wall;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using JetBrains.Annotations;
 using Robust.Shared.Containers;
 using Robust.Shared.Input;
@@ -72,6 +73,7 @@ namespace Content.Shared.Interaction
         [Dependency] private SharedPlayerRateLimitManager _rateLimit = default!;
         [Dependency] private TagSystem _tagSystem = default!;
         [Dependency] private UseDelaySystem _useDelay = default!;
+        [Dependency] private SharedRemoteScreenSystem _remoteScreen = default!;
 
         [Dependency] private EntityQuery<IgnoreUIRangeComponent> _ignoreUiRangeQuery = default!;
         [Dependency] private EntityQuery<FixturesComponent> _fixtureQuery = default!;
@@ -171,7 +173,7 @@ namespace Content.Shared.Interaction
                 return;
             }
 
-            if (range <= 0 && !IsAccessible(ev.Actor, ev.Target))
+            if (range <= 0 && !IsAccessible(ev.Actor, ev.Target) && !_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
             {
                 ev.Cancel();
                 return;
@@ -206,7 +208,7 @@ namespace Content.Shared.Interaction
             if (target.Comp.ParentUid == user.Owner)
                 return true;
 
-            return InRangeAndAccessible(user, target, range) || _ignoreUiRangeQuery.HasComp(user);
+            return InRangeAndAccessible(user, target, range) || _ignoreUiRangeQuery.HasComp(user) || _remoteScreen.IsRemoteScreenAuthorized(user.Owner, target.Owner);
         }
 
         /// <summary>

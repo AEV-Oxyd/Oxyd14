@@ -1,5 +1,6 @@
 <pda:PdaWindow  xmlns="https://spacestation14.io"
                 xmlns:pda="clr-namespace:Content.Client.PDA"
+                xmlns:pip="clr-namespace:Content.Client._Oxyd.Computers.ScreenSharing"
                 MouseFilter="Stop">
     <PanelContainer Name="Background" Access="Public" StyleClasses="PdaBackgroundRect" />
     <!-- The negative markin fixes a gap between the window edges and the decorative panel -->
@@ -20,10 +21,12 @@
         <!--Content / Physical Screen Inset-->
         <Control Name="ScreenInsetControl" Access="Public" Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer Name="ContentBorder" StyleClasses="PdaBackground"/>
-            <Control Margin="3 3">
-                <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
-                <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" VerticalExpand="True" StyleClasses="PdaContent"/>
-            </Control>
+            <pip:PipScreenSurface Name="ScreenSurface" Access="Public" Margin="3 3" HorizontalExpand="True" VerticalExpand="True">
+                <Control HorizontalExpand="True" VerticalExpand="True">
+                    <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
+                    <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" VerticalExpand="True" StyleClasses="PdaContent"/>
+                </Control>
+            </pip:PipScreenSurface>
         </Control>
         <!--Bottom Bezel with hardware resource status bar-->
         <PanelContainer Name="BezelFooterPanel" Margin="18 1 18 5" SetHeight="24" StyleClasses="PdaBezelFooter">

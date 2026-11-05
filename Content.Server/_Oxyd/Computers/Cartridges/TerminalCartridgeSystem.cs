@@ -1,10 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
+using Content.Server._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Interaction;
@@ -28,12 +30,18 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
     [Dependency] private PvsOverrideSystem _pvsOverride = default!;
     [Dependency] private ISharedPlayerManager _playerManager = default!;
+    [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
 
     /// <summary>
     /// Viewer actor -> remote device whose screen they are currently streaming.
     /// Used to keep the remote device (and its programs) inside the viewer's PVS so the client can resolve its NetEntities.
     /// </summary>
     private readonly Dictionary<EntityUid, EntityUid> _activeRemoteScreens = new();
+
+    /// <summary>
+    /// Terminal entity -> most recent interacting viewer actor.
+    /// </summary>
+    private readonly Dictionary<EntityUid, EntityUid> _terminalViewers = new();
 
     /// <summary>
     /// Terminals whose UI state is currently being rebuilt; prevents infinite update loops when two devices view each other.
@@ -45,7 +53,13 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
+        SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeActivatedEvent>(OnCartridgeActivated);
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
+    }
+
+    private void OnCartridgeActivated(EntityUid uid, TerminalCartridgeComponent comp, ref CartridgeActivatedEvent args)
+    {
+        UpdateUiState(uid, args.Loader, comp);
     }
 
     private void AttachRemoteScreen(EntityUid actor, EntityUid target)
@@ -72,6 +86,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
     {
         if (_activeRemoteScreens.TryGetValue(actor, out var target) && target == uid)
             DetachRemoteScreen(actor);
+        _remoteScreen.DetachAllForHostDevice(actor, uid);
     }
     private bool TryGetDisk(EntityUid loaderUid, out EntityUid diskUid, [NotNullWhen(true)] out FileSystemComponent? diskFs, out string diskName)
     {
@@ -116,9 +131,13 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
     private void OnUiMessage(EntityUid uid, TerminalCartridgeComponent comp, CartridgeMessageEvent args)
     {
-        if (args is not TerminalUiMessageEvent msg)
+        if (args.Actor != EntityUid.Invalid)
+            _terminalViewers[uid] = args.Actor;
+
+        if (args is not TerminalUiMessageEvent msg ||
+            (msg.TargetProgram is { } targetProg && GetEntity(targetProg) != uid))
         {
-            // Not a message for the terminal itself: while a remote screen is embedded, it comes from the
+            // Not a message for this terminal itself: while a remote screen is embedded, it comes from the
             // remote program's UI fragment (which the client hosts inside this terminal), so forward it.
             ForwardToRemoteProgram(comp, args);
             return;
@@ -128,7 +147,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
         if (!string.IsNullOrEmpty(msg.RemoteAction))
         {
-            HandleRemoteScreenAction(loaderUid, comp, msg.RemoteAction, msg.RemoteActionArg, args.Actor);
+            HandleRemoteScreenAction(uid, loaderUid, comp, msg.RemoteAction, msg.RemoteActionArg, args.Actor);
             UpdateUiState(uid, loaderUid, comp);
             return;
         }
@@ -203,7 +222,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 {
                     _fileSystem.LogSystemActivity(optRem.Value, $"SSH-IN <- {_guidSystem.GetGuid(loaderUid)}", input, fName, pName);
                 }
-                HandleRemoteSshCommand(loaderUid, comp, input, args.Actor);
+                HandleRemoteSshCommand(uid, loaderUid, comp, input, args.Actor);
             }
         }
         else
@@ -407,6 +426,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         {
             case "help":
                 comp.History.Add("Available Local Commands:");
+                comp.History.Add("  scan [type]           - Scan network for devices (APC, AIR-ALARM, COMPUTER, PDA)");
                 comp.History.Add("  ssh <guid> [user]     - Connect to remote host via SSH key/auth");
                 comp.History.Add("  ping <guid>           - Test network connectivity to target device");
                 comp.History.Add("  ifconfig / ip         - Display local network configuration");
@@ -424,6 +444,12 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  keygen                - Generate local ed25519 SSH public key");
                 comp.History.Add("  clear                 - Clear terminal screen");
                 comp.History.Add("  exit                  - Close terminal session");
+                break;
+
+            case "scan":
+            case "devices":
+            case "arp":
+                AppendDeviceScan(loaderUid, comp, parts.Length > 1 ? parts[1] : null);
                 break;
 
             case "pwd":
@@ -798,7 +824,53 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         }
     }
 
-    private void HandleRemoteSshCommand(EntityUid loaderUid, TerminalCartridgeComponent comp, string input, EntityUid? userActor = null)
+    private void AppendDeviceScan(EntityUid sourceUid, TerminalCartridgeComponent comp, string? filterArg)
+    {
+        var sourceXform = Transform(sourceUid);
+        var sourceMap = sourceXform.MapID;
+        var filter = filterArg?.Trim().ToUpperInvariant();
+
+        var results = new List<(string Guid, string Category, bool HasGui, string Name)>();
+        var query = EntityQueryEnumerator<DeviceGuidComponent, TransformComponent>();
+        while (query.MoveNext(out var devUid, out var guidComp, out var xform))
+        {
+            if (xform.MapID != sourceMap || string.IsNullOrEmpty(guidComp.Guid))
+                continue;
+
+            var cat = _remoteScreen.GetDeviceCategory(devUid);
+            var name = MetaData(devUid).EntityName;
+            var hasGui = _remoteScreen.CanShareScreen(devUid);
+
+            if (!string.IsNullOrEmpty(filter) &&
+                !cat.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !name.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !guidComp.Guid.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            results.Add((guidComp.Guid, cat, hasGui, name));
+        }
+
+        results.Sort((a, b) =>
+        {
+            var catCmp = string.Compare(a.Category, b.Category, StringComparison.Ordinal);
+            return catCmp != 0 ? catCmp : string.Compare(a.Guid, b.Guid, StringComparison.Ordinal);
+        });
+
+        comp.History.Add($"--- Network Device Discovery ({results.Count} nodes online) ---");
+        foreach (var item in results.Take(25))
+        {
+            var guiTag = item.HasGui ? "[GUI]" : "[CLI]";
+            comp.History.Add($"  [{item.Guid}]  {item.Category,-10} {guiTag}  {item.Name}");
+        }
+        if (results.Count > 25)
+        {
+            comp.History.Add($"  ... ({results.Count - 25} more; use 'scan <apc|alarm|computer|pda>' to filter)");
+        }
+    }
+
+    private void HandleRemoteSshCommand(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp, string input, EntityUid? userActor = null)
     {
         var targetGuid = comp.ConnectedRemoteGuid!;
         if (!_guidSystem.TryGetEntityByGuid(targetGuid, out var optTargetUid) || !optTargetUid.HasValue)
@@ -808,6 +880,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             return;
         }
         var targetUid = optTargetUid.Value;
+        _remoteScreen.EnsureDeviceProvisioned(targetUid);
 
         var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var cmd = parts[0].ToLowerInvariant();
@@ -819,6 +892,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             case "logout":
                 comp.IsScreenAttached = false;
                 DetachRemoteScreen(userActor);
+                _remoteScreen.DetachViewer(uid, userActor);
 
                 comp.History.Add($"Connection to {targetGuid} closed.");
                 _fileSystem.LogSystemActivity(loaderUid, "SSH-EXIT", $"Disconnected from {targetGuid}");
@@ -830,6 +904,12 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
             case "clear":
                 comp.History.Clear();
+                break;
+
+            case "scan":
+            case "devices":
+            case "arp":
+                AppendDeviceScan(targetUid, comp, parts.Length > 1 ? parts[1] : null);
                 break;
 
             case "help":
@@ -1168,6 +1248,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     if (wasAttached)
                     {
                         DetachRemoteScreen(userActor);
+                        _remoteScreen.DetachViewer(uid, userActor);
                         comp.History.Add($"Remote screen for [{targetGuid}] detached.");
                     }
                     else
@@ -1179,46 +1260,52 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
                 if (sub is "status" or "info")
                 {
-                    var activeTitle = "Home Screen";
+                    var category = _remoteScreen.GetDeviceCategory(targetUid);
+                    var activeTitle = MetaData(targetUid).EntityName;
                     if (TryComp<CartridgeLoaderComponent>(targetUid, out var cl) && cl.ActiveProgram is { } ap)
                         activeTitle = MetaData(ap).EntityName;
+                    else if (HasComp<PdaComponent>(targetUid))
+                        activeTitle = "Home Screen";
+
                     var openCount = 0;
                     if (TryComp<PdaComponent>(targetUid, out var pdaC))
                         openCount = pdaC.OpenPrograms.Count;
 
                     var isAttached = comp.IsScreenAttached;
-                    comp.History.Add($"--- Display Server on [{targetGuid}] ---");
-                    comp.History.Add($"  Status: ACTIVE");
+                    comp.History.Add($"--- Display Server on [{targetGuid}] ({category}) ---");
+                    comp.History.Add($"  Status: {(_remoteScreen.CanShareScreen(targetUid) ? "ACTIVE" : "HEADLESS")}");
                     comp.History.Add($"  Active Window: {activeTitle}");
-                    comp.History.Add($"  Open Tabs: {openCount}");
+                    if (HasComp<PdaComponent>(targetUid))
+                        comp.History.Add($"  Open Tabs: {openCount}");
                     comp.History.Add($"  Attached Viewers: {(isAttached ? "1 (Local User)" : "0")}");
-                    comp.History.Add($"  Resolution: 480x320 Holo Matrix");
+                    comp.History.Add($"  Resolution: 480x320 Holo Matrix (PiP Enabled)");
                     break;
                 }
 
-                if (!TryComp<PdaComponent>(targetUid, out _) && !TryComp<CartridgeLoaderComponent>(targetUid, out _))
+                if (!_remoteScreen.CanShareScreen(targetUid))
                 {
                     comp.History.Add($"screen: Remote device [{targetGuid}] has no graphical screen/display interface.");
                     break;
                 }
 
-                if (!userActor.HasValue)
-                {
-                    comp.History.Add("screen: No active user session detected.");
-                    break;
-                }
-
                 comp.IsScreenAttached = true;
-                AttachRemoteScreen(userActor.Value, targetUid);
-                _pdaSystem.UpdatePdaUi(targetUid);
+                if (userActor.HasValue)
+                    AttachRemoteScreen(userActor.Value, targetUid);
+                if (HasComp<PdaComponent>(targetUid))
+                    _pdaSystem.UpdatePdaUi(targetUid);
 
-                var curProgName = "Home Screen";
+                var devCategory = _remoteScreen.GetDeviceCategory(targetUid);
+                var curProgName = MetaData(targetUid).EntityName;
                 if (TryComp<CartridgeLoaderComponent>(targetUid, out var cLoader) && cLoader.ActiveProgram is { } actProg)
                 {
                     curProgName = MetaData(actProg).EntityName;
                 }
+                else if (HasComp<PdaComponent>(targetUid))
+                {
+                    curProgName = "Home Screen";
+                }
 
-                comp.History.Add($"Connecting to remote display on [{targetGuid}]...");
+                comp.History.Add($"Connecting to remote display on [{targetGuid}] ({devCategory})...");
                 comp.History.Add($"[====================] 100% Display stream established.");
                 comp.History.Add($"Display: [{targetGuid}] | Foreground: {curProgName}");
                 comp.History.Add("Remote screen embedded in terminal. Click 'Detach Screen' or type 'screen close' to return to shell.");
@@ -1283,7 +1370,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         }
     }
 
-    private void HandleRemoteScreenAction(EntityUid loaderUid, TerminalCartridgeComponent comp, string action, string? arg, EntityUid? actor = null)
+    private void HandleRemoteScreenAction(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp, string action, string? arg, EntityUid? actor = null)
     {
         if (comp.ConnectedRemoteGuid == null ||
             !_guidSystem.TryGetEntityByGuid(comp.ConnectedRemoteGuid, out var optTarget) ||
@@ -1298,6 +1385,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         {
             comp.IsScreenAttached = false;
             DetachRemoteScreen(actor);
+            _remoteScreen.DetachViewer(uid, actor);
             comp.History.Add($"Remote display stream detached from [{comp.ConnectedRemoteGuid}].");
             return;
         }
@@ -1307,6 +1395,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             if (NetEntity.TryParse(arg, out var netProg))
             {
                 var prog = GetEntity(netProg);
+                if (TryComp<PdaComponent>(targetUid, out var tabPda))
+                    tabPda.CurrentView = 3;
                 _cartridgeLoader.ActivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoader), prog);
                 _pdaSystem.UpdatePdaUi(targetUid);
             }
@@ -1319,24 +1409,43 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 pda.OpenPrograms.Remove(prog);
                 if (TryComp<CartridgeLoaderComponent>(targetUid, out var cLoaderClose) && cLoaderClose.ActiveProgram == prog)
                 {
-                    _cartridgeLoader.DeactivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoaderClose), prog);
+                    if (pda.OpenPrograms.Count > 0)
+                    {
+                        var nextProg = pda.OpenPrograms.Last();
+                        _cartridgeLoader.ActivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoaderClose), nextProg);
+                    }
+                    else
+                    {
+                        _cartridgeLoader.DeactivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoaderClose), prog);
+                        if (pda.CurrentView == 3)
+                            pda.CurrentView = 1;
+                    }
                 }
                 _pdaSystem.UpdatePdaUi(targetUid, pda);
             }
         }
-        else if (action == "home" && TryComp<CartridgeLoaderComponent>(targetUid, out var cLoaderHome))
+        else if (action == "home" && TryComp<PdaComponent>(targetUid, out var homePda))
         {
-            if (cLoaderHome.ActiveProgram is { } active)
-            {
-                _cartridgeLoader.DeactivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoaderHome), active);
-            }
-            _pdaSystem.UpdatePdaUi(targetUid);
+            homePda.CurrentView = 0;
+            _pdaSystem.UpdatePdaUi(targetUid, homePda);
+        }
+        else if (action == "programs" && TryComp<PdaComponent>(targetUid, out var progsPda))
+        {
+            progsPda.CurrentView = 1;
+            _pdaSystem.UpdatePdaUi(targetUid, progsPda);
+        }
+        else if (action == "settings" && TryComp<PdaComponent>(targetUid, out var settingsPda))
+        {
+            settingsPda.CurrentView = 2;
+            _pdaSystem.UpdatePdaUi(targetUid, settingsPda);
         }
         else if (action == "run_program" && !string.IsNullOrEmpty(arg) && TryComp<CartridgeLoaderComponent>(targetUid, out var cLoaderRun))
         {
             if (NetEntity.TryParse(arg, out var netProg))
             {
                 var prog = GetEntity(netProg);
+                if (TryComp<PdaComponent>(targetUid, out var runPda))
+                    runPda.CurrentView = 3;
                 _cartridgeLoader.ActivateProgram(new Entity<CartridgeLoaderComponent>(targetUid, cLoaderRun), prog);
                 _pdaSystem.UpdatePdaUi(targetUid);
             }
@@ -1372,15 +1481,36 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 : $"{comp.ConnectedRemoteUser ?? "admin"}@{comp.ConnectedRemoteGuid}:~$ ")
             : (comp.AwaitingPassword ? "Password: " : $"[{localGuid}]$ ");
 
+        RemoteScreenState? remoteScreen = null;
         Content.Shared.PDA.PdaUpdateState? remotePdaState = null;
+
         if (comp.IsScreenAttached && comp.ConnectedRemoteGuid != null &&
             _guidSystem.TryGetEntityByGuid(comp.ConnectedRemoteGuid, out var optTarget) &&
             optTarget.HasValue)
         {
-            if (TryComp<PdaComponent>(optTarget.Value, out var remPda))
-            {
-                remotePdaState = remPda.LastState;
-            }
+            var visitedGuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { localGuid };
+            var chainTargets = new HashSet<EntityUid>();
+            var chainPvs = new HashSet<EntityUid>();
+
+            remoteScreen = _remoteScreen.BuildRemoteScreenState(
+                optTarget.Value,
+                visitedGuids,
+                chainTargets,
+                chainPvs);
+
+            remotePdaState = remoteScreen?.PdaState;
+
+            EntityUid? viewerActor = null;
+            if (_terminalViewers.TryGetValue(uid, out var recordedActor) && Exists(recordedActor))
+                viewerActor = recordedActor;
+            else if (Transform(loaderUid).ParentUid is { } parentUid && HasComp<ActorComponent>(parentUid))
+                viewerActor = parentUid;
+
+            _remoteScreen.SyncViewerChain(uid, viewerActor, chainTargets, chainPvs);
+        }
+        else
+        {
+            _remoteScreen.DetachViewer(uid);
         }
 
         var state = new TerminalUiState(
@@ -1391,7 +1521,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             comp.AwaitingPassword,
             comp.SshLocalMode,
             comp.IsScreenAttached,
-            remotePdaState);
+            remotePdaState,
+            remoteScreen);
 
         _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
     }
