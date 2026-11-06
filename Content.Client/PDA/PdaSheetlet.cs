@@ -26,7 +26,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         {
             Texture = erisDigitalTex,
             TextureScale = new Vector2(2, 2),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         erisDigitalBox.SetPatchMargin(StyleBox.Margin.All, 5);
 
@@ -35,7 +35,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         {
             Texture = erisStyleTex,
             TextureScale = new Vector2(2, 2),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         erisMetalBox.SetPatchMargin(StyleBox.Margin.All, 8);
 
@@ -44,7 +44,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         {
             Texture = pdaRailingTex,
             TextureScale = new Vector2(1, 1),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         pdaRailingBox.SetPatchMargin(StyleBox.Margin.All, 10);
 
@@ -53,7 +53,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         {
             Texture = holoTex,
             TextureScale = new Vector2(2, 2),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         holoPlateBox.SetPatchMargin(StyleBox.Margin.All, 6);
 
@@ -61,7 +61,7 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
         {
             Texture = erisStyleTex,
             TextureScale = new Vector2(1, 1),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         erisBezelBox.SetPatchMargin(StyleBox.Margin.All, 6);
 

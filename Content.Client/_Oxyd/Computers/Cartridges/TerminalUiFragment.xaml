@@ -12,7 +12,6 @@
                 <CheckBox Name="AutoScrollCheckBox" Text="Auto-Scroll" Margin="4 0" Pressed="True"/>
                 <Button Name="SwitchShellButton" Text="Local" StyleClasses="ErisHoloButton" SetWidth="75" Visible="False" Margin="2 0"/>
                 <Button Name="ScreenButton" Text="Screen" StyleClasses="ErisHoloButton" SetWidth="70" Visible="False" Margin="2 0"/>
-                <Button Name="KeygenButton" Text="Keygen" StyleClasses="ErisHoloButton" SetWidth="70" Margin="2 0"/>
                 <Button Name="ClearButton" Text="Clear" StyleClasses="ErisHoloButton" SetWidth="60" Margin="2 0"/>
                 <Button Name="ExitSshButton" Text="Exit SSH" StyleClasses="ErisHoloButton" SetWidth="70" Visible="False" Margin="2 0 0 0"/>
             </BoxContainer>
@@ -25,14 +24,7 @@
 
         <!-- Remote Screen View (Embedded In Terminal) -->
         <PanelContainer Name="TerminalScreenContainer" StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True" Margin="0 0 0 4" Visible="False">
-            <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="2">
-                <BoxContainer Orientation="Horizontal" SetHeight="22" Margin="4 2" VerticalAlignment="Center">
-                    <Label Name="ScreenStatusLabel" Text="REMOTE SCREEN [ATTACHED]" FontColorOverride="#00D4FF" StyleClasses="LabelSubText" VerticalAlignment="Center"/>
-                    <Control HorizontalExpand="True"/>
-                    <Button Name="DetachScreenButton" Text="Detach Screen ✕" StyleClasses="ErisHoloButton" SetHeight="20" VerticalAlignment="Center"/>
-                </BoxContainer>
-                <Control Name="TerminalScreenSlot" HorizontalExpand="True" VerticalExpand="True" RectClipContent="True" Margin="0 2 0 0"/>
-            </BoxContainer>
+            <Control Name="TerminalScreenSlot" HorizontalExpand="True" VerticalExpand="True" RectClipContent="True" Margin="2"/>
         </PanelContainer>
 
         <!-- Command Input Line -->

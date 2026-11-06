@@ -59,6 +59,15 @@ namespace Content.Client.PDA
         private EntityUid? _activeProgram;
         private readonly Dictionary<EntityUid, CartridgeComponent> _programComponents = new();
 
+        private readonly List<EntityUid> _lastRenderedTabPrograms = new();
+        private EntityUid? _lastRenderedActiveProgram;
+        private int _lastRenderedTabView = -1;
+        private int _lastRenderedProgramCompCount = -1;
+        private bool _tabsDirty = true;
+
+        private bool _dateInitialized;
+        private int _lastClockSeconds = int.MinValue;
+
         private float? _baseCpuPercent;
         private int? _ramUsedMb;
         private int? _ramTotalMb;
@@ -73,22 +82,26 @@ namespace Content.Client.PDA
         {
             base.FrameUpdate(args);
 
-            if (_baseCpuPercent == null)
-                return;
+            if (_currentView == HomeView)
+                UpdateStationClock();
 
-            _jitterTimer += args.DeltaSeconds;
-            if (_jitterTimer >= 1.0f)
+            if (_baseCpuPercent != null)
             {
-                _jitterTimer = 0f;
-                // 1-2% randomized jitter purely on UI: between -1.5% and +1.5%
-                _currentCpuJitter = (float)(_random.NextDouble() * 3.0 - 1.5);
-                UpdateFooterStats();
+                _jitterTimer += args.DeltaSeconds;
+                if (_jitterTimer >= 1.0f)
+                {
+                    _jitterTimer = 0f;
+                    // 1-2% randomized jitter purely on UI: between -1.5% and +1.5%
+                    _currentCpuJitter = (float)(_random.NextDouble() * 3.0 - 1.5);
+                    UpdateFooterStats();
+                }
             }
 
             if (ProgramTabsContainer.ChildCount > 0 && ProgramTabsScroll.Width > 0)
             {
                 var overflow = ProgramTabsContainer.DesiredSize.X > ProgramTabsScroll.Width + 4;
-                TabsScrollHeader.Visible = overflow;
+                if (TabsScrollHeader.Visible != overflow)
+                    TabsScrollHeader.Visible = overflow;
                 if (overflow)
                 {
                     TabsScrollBar.Page = ProgramTabsScroll.Width;
@@ -99,10 +112,28 @@ namespace Content.Client.PDA
                     }
                 }
             }
-            else
+            else if (TabsScrollHeader.Visible)
             {
                 TabsScrollHeader.Visible = false;
             }
+        }
+
+        private void UpdateStationClock(bool force = false)
+        {
+            if (!_dateInitialized)
+            {
+                _dateInitialized = true;
+                StationDateLabel.SetMarkup($"Station Date: [color=white]2753-{_loreMonth:D2}-{_loreDay:D2}[/color]");
+            }
+
+            var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
+            var totalSec = (int)stationTime.TotalSeconds;
+            if (!force && totalSec == _lastClockSeconds)
+                return;
+
+            _lastClockSeconds = totalSec;
+            var currentLoreTime = _loreBaseTime.Add(stationTime);
+            StationTimeLabel.SetMarkup($"Station Time: [color=white]{(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2}[/color] (Shift: {stationTime:hh\\:mm\\:ss})");
         }
 
         private void UpdateFooterStats()
@@ -222,6 +253,7 @@ namespace Content.Client.PDA
 
 
             HideAllViews();
+            UpdateStationClock(force: true);
             ToHomeScreen();
         }
 
@@ -260,11 +292,7 @@ namespace Content.Client.PDA
             StationNameLabel.SetMarkup(Loc.GetString("comp-pda-ui-station",
                 ("station", _stationName)));
 
-
-            var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
-
-            StationTimeLabel.SetMarkup(Loc.GetString("comp-pda-ui-station-time",
-                ("time", stationTime.ToString("hh\\:mm\\:ss"))));
+            UpdateStationClock();
 
             var alertColor = state.PdaOwnerInfo.StationAlertColor;
             (_alertLevel, _, _instructions) = _alert.AlertLevelData(state.PdaOwnerInfo.StationAlertLevel);
@@ -289,7 +317,8 @@ namespace Content.Client.PDA
 
             var idText = !string.IsNullOrEmpty(state.DeviceGuid) ? $"[{state.DeviceGuid}]" : (state.Address?.ToUpper() ?? " - ");
             AddressLabel.Text = idText;
-            ScreenSurface.DeviceGuid = state.DeviceGuid;
+            ScreenSurface.DeviceGuid = IsEmbedded ? null : state.DeviceGuid;
+            ScreenSurface.InvalidateCapture();
 
             EjectIdButton.IsActive = state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null;
             EjectPenButton.IsActive = state.HasPen;
@@ -398,6 +427,22 @@ namespace Content.Client.PDA
 
         public void UpdateTabs()
         {
+            if (!_tabsDirty &&
+                _lastRenderedActiveProgram == _activeProgram &&
+                _lastRenderedTabView == _currentView &&
+                _lastRenderedProgramCompCount == _programComponents.Count &&
+                _lastRenderedTabPrograms.SequenceEqual(_openPrograms))
+            {
+                return;
+            }
+
+            _tabsDirty = false;
+            _lastRenderedActiveProgram = _activeProgram;
+            _lastRenderedTabView = _currentView;
+            _lastRenderedProgramCompCount = _programComponents.Count;
+            _lastRenderedTabPrograms.Clear();
+            _lastRenderedTabPrograms.AddRange(_openPrograms);
+
             ProgramTabsContainer.RemoveAllChildren();
 
             foreach (var progUid in _openPrograms)
@@ -509,6 +554,7 @@ namespace Content.Client.PDA
             ProgramTitle.IsCurrent = false;
 
             ChangeView(HomeView);
+            UpdateStationClock();
             UpdateTabs();
         }
 
@@ -591,17 +637,6 @@ namespace Content.Client.PDA
             if (bytes < 1024 * 1024)
                 return $"{bytes / 1024.0:0.#} KB";
             return $"{bytes / (1024.0 * 1024.0):0.##} QB";
-        }
-
-        protected override void Draw(DrawingHandleScreen handle)
-        {
-            base.Draw(handle);
-
-            var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
-            var currentLoreTime = _loreBaseTime.Add(stationTime);
-
-            StationDateLabel.SetMarkup($"Station Date: [color=white]2753-{_loreMonth:D2}-{_loreDay:D2}[/color]");
-            StationTimeLabel.SetMarkup($"Station Time: [color=white]{(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2}[/color] (Shift: {stationTime:hh\\:mm\\:ss})");
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Client._Oxyd.Computers.ScreenSharing;
 using Content.Client.UserInterface.Fragments;
 using Content.Client.UserInterface.StateRouting;
@@ -23,6 +24,7 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
     public event Action<string?, string?>? OnRemoteAction;
     private bool _isScreenAttached;
     private RemoteScreenView? _remoteScreenView;
+    private readonly List<string> _lastRenderedLines = new();
 
     /// <summary>
     /// The bound user interface hosting this terminal (the viewer's PDA). Remote program fragments send their
@@ -42,10 +44,8 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
         SendButton.OnPressed += _ => SubmitCommand(CommandLineInput.Text);
 
         ClearButton.OnPressed += _ => OnSendCommand?.Invoke("clear");
-        KeygenButton.OnPressed += _ => OnSendCommand?.Invoke("keygen");
         ExitSshButton.OnPressed += _ => OnSendCommand?.Invoke("exit");
         SwitchShellButton.OnPressed += _ => OnSendCommand?.Invoke("switch");
-        DetachScreenButton.OnPressed += _ => OnSendCommand?.Invoke("screen close");
         ScreenButton.OnPressed += _ =>
         {
             if (_isScreenAttached)
@@ -112,10 +112,6 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
                 _remoteScreenView.HostBui = HostBui;
             }
 
-            var devTitle = string.IsNullOrEmpty(remoteScreen.DeviceName)
-                ? $"[{state.SshHost ?? remoteScreen.DeviceGuid}]"
-                : $"{remoteScreen.DeviceName.ToUpperInvariant()} [{state.SshHost ?? remoteScreen.DeviceGuid}]";
-            ScreenStatusLabel.Text = $"REMOTE SCREEN MATRIX: {devTitle} [PIP STREAM]";
             _remoteScreenView.UpdateState(remoteScreen);
         }
         else
@@ -165,21 +161,27 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
             CommandLineInput.PlaceHolder = "Enter command (e.g. 'help', 'ssh [guid]', 'ls', 'ping [guid]')...";
         }
 
-        TerminalOutput.Clear();
-        TerminalOutput.ScrollFollowing = AutoScrollCheckBox.Pressed;
-
-        foreach (var line in state.Lines)
+        if (!_lastRenderedLines.SequenceEqual(state.Lines))
         {
-            var msg = new FormattedMessage();
-            msg.PushColor(GetColorForLine(line));
-            msg.AddText(line);
-            msg.Pop();
-            TerminalOutput.AddMessage(msg);
-        }
+            _lastRenderedLines.Clear();
+            _lastRenderedLines.AddRange(state.Lines);
 
-        if (AutoScrollCheckBox.Pressed)
-        {
-            TerminalOutput.ScrollToBottom();
+            TerminalOutput.Clear();
+            TerminalOutput.ScrollFollowing = AutoScrollCheckBox.Pressed;
+
+            foreach (var line in state.Lines)
+            {
+                var msg = new FormattedMessage();
+                msg.PushColor(GetColorForLine(line));
+                msg.AddText(line);
+                msg.Pop();
+                TerminalOutput.AddMessage(msg);
+            }
+
+            if (AutoScrollCheckBox.Pressed)
+            {
+                TerminalOutput.ScrollToBottom();
+            }
         }
     }
 

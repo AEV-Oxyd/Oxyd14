@@ -67,6 +67,7 @@ public static class PipSurfaceRegistry
         for (var cur = start.Parent; cur != null; cur = cur.Parent)
         {
             if (cur is PipScreenSurface surface &&
+                !surface.Disposed &&
                 string.Equals(surface.DeviceGuid, deviceGuid, StringComparison.OrdinalIgnoreCase))
             {
                 return surface;
@@ -87,20 +88,18 @@ public static class PipSurfaceRegistry
             return null;
 
         var ancestor = FindAncestorSurface(requester, deviceGuid);
-        if (ancestor != null)
+        if (ancestor != null && !ancestor.Disposed)
             return ancestor;
 
         if (s_Surfaces.TryGetValue(deviceGuid, out var list))
         {
-            for (var i = list.Count - 1; i >= 0; i--)
+            // Prefer top-level (non-nested) visible surfaces first if available
+            for (var i = 0; i < list.Count; i++)
             {
                 var candidate = list[i];
                 if (!candidate.Disposed && candidate.VisibleInTree)
                     return candidate;
             }
-
-            if (list.Count > 0 && !list[^1].Disposed)
-                return list[^1];
         }
 
         return null;
@@ -118,14 +117,56 @@ public partial class PipScreenSurface : BoxContainer
 {
     [Dependency] private IClyde _clyde = default!;
 
+    private static readonly Queue<IRenderTexture> s_DeferredDisposeQueue = new();
     private static int s_CaptureDepth;
+    private static uint s_CurrentFrameId;
+    private static uint s_LastGlobalCaptureFrameId;
+
+    /// <summary>
+    /// Minimum interval between steady-state background captures once the initial cascade bounces are seeded.
+    /// </summary>
+    private const float BackgroundCaptureIntervalSeconds = 0.10f;
+
     public static bool IsCapturingOffscreen => s_CaptureDepth > 0;
+
+    public static void BeginUiFrame()
+    {
+        s_CurrentFrameId++;
+        FlushDeferredDisposals();
+    }
+
+    /// <summary>
+    /// Enqueues a render target for disposal outside the Clyde render pass so a texture handle
+    /// is never deleted while draw batches referencing it are still queued in Clyde.
+    /// </summary>
+    public static void DeferDispose(IRenderTexture? target)
+    {
+        if (target != null)
+            s_DeferredDisposeQueue.Enqueue(target);
+    }
+
+    /// <summary>
+    /// Disposes all retired render targets when not inside an active render pass.
+    /// </summary>
+    public static void FlushDeferredDisposals()
+    {
+        if (s_CaptureDepth > 0)
+            return;
+
+        while (s_DeferredDisposeQueue.TryDequeue(out var target))
+        {
+            target.Dispose();
+        }
+    }
 
     private string? _deviceGuid;
     private IRenderTexture? _readTarget;
     private IRenderTexture? _writeTarget;
     private bool _hasValidReadFrame;
     private int _observedFramesRemaining;
+    private int _dirtyPassesRemaining = 3;
+    private float _timeSinceLastCapture;
+    private Vector2i _lastCapturedSize;
 
     public string? DeviceGuid
     {
@@ -141,7 +182,10 @@ public partial class PipScreenSurface : BoxContainer
             _deviceGuid = value;
 
             if (_deviceGuid != null && !Disposed)
+            {
                 PipSurfaceRegistry.Register(_deviceGuid, this);
+                InvalidateCapture();
+            }
         }
     }
 
@@ -150,7 +194,7 @@ public partial class PipScreenSurface : BoxContainer
     /// Double-buffered so a nested <see cref="PipMirrorViewport"/> can safely sample <see cref="ReadTexture"/>
     /// while this surface renders its next frame into the write buffer.
     /// </summary>
-    public Texture? ReadTexture => _hasValidReadFrame ? _readTarget?.Texture : null;
+    public Texture? ReadTexture => _hasValidReadFrame && !Disposed ? _readTarget?.Texture : null;
 
     public PipScreenSurface()
     {
@@ -165,23 +209,25 @@ public partial class PipScreenSurface : BoxContainer
     /// </summary>
     public void RequestCaptureFrame(int frames = 3)
     {
+        if (_observedFramesRemaining <= 0)
+            _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, 3);
+
         _observedFramesRemaining = Math.Max(_observedFramesRemaining, frames);
     }
 
-    protected override void PreRenderChildren(ref ControlRenderArguments args)
+    /// <summary>
+    /// Marks the surface content as changed so the next 3 cascade bounces are captured promptly.
+    /// </summary>
+    public void InvalidateCapture(int cascadeBounces = 3)
     {
-        base.PreRenderChildren(ref args);
+        _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, cascadeBounces);
+    }
 
-        // When a PipMirrorViewport first attaches and we don't have a seeded read frame yet,
-        // run 4 quick ping-pong passes so the nested Hall-of-Mirrors cascade is immediately populated.
-        if (_observedFramesRemaining > 0 && s_CaptureDepth == 0 && !_hasValidReadFrame)
-        {
-            for (var i = 0; i < 4; i++)
-            {
-                if (!CaptureToTarget(args.Handle))
-                    break;
-            }
-        }
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+        _timeSinceLastCapture += args.DeltaSeconds;
+        FlushDeferredDisposals();
     }
 
     protected override void PostRenderChildren(ref ControlRenderArguments args)
@@ -192,7 +238,25 @@ public partial class PipScreenSurface : BoxContainer
             return;
 
         _observedFramesRemaining--;
-        CaptureToTarget(args.Handle);
+
+        // Stagger offscreen FBO captures so at most 1 surface captures in any single UI render pass.
+        if (s_LastGlobalCaptureFrameId == s_CurrentFrameId)
+            return;
+
+        if (!_hasValidReadFrame || _lastCapturedSize != PixelSize)
+            _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, 3);
+
+        if (_dirtyPassesRemaining <= 0 && _timeSinceLastCapture < BackgroundCaptureIntervalSeconds)
+            return;
+
+        if (CaptureToTarget(args.Handle))
+        {
+            s_LastGlobalCaptureFrameId = s_CurrentFrameId;
+            _timeSinceLastCapture = 0f;
+            _lastCapturedSize = PixelSize;
+            if (_dirtyPassesRemaining > 0)
+                _dirtyPassesRemaining--;
+        }
     }
 
     private bool CaptureToTarget(IRenderHandle renderHandle)
@@ -205,8 +269,8 @@ public partial class PipScreenSurface : BoxContainer
             Vector2i.ComponentMax(rawSize, new Vector2i(32, 32)),
             new Vector2i(1024, 1024));
 
-        EnsureRenderTargets(targetSize);
-        if (_writeTarget == null || _readTarget == null)
+        EnsureWriteTarget(targetSize);
+        if (_writeTarget == null)
             return false;
 
         s_CaptureDepth++;
@@ -226,33 +290,39 @@ public partial class PipScreenSurface : BoxContainer
 
         (_readTarget, _writeTarget) = (_writeTarget, _readTarget);
         _hasValidReadFrame = true;
+
+        if (_writeTarget != null && _writeTarget.Size != targetSize)
+        {
+            DeferDispose(_writeTarget);
+            _writeTarget = null;
+        }
+
         return true;
     }
 
-    private void EnsureRenderTargets(Vector2i size)
+    private void EnsureWriteTarget(Vector2i size)
     {
-        if (_readTarget != null && _readTarget.Size == size &&
-            _writeTarget != null && _writeTarget.Size == size)
-        {
+        if (_writeTarget != null && _writeTarget.Size == size)
             return;
-        }
 
-        DisposeRenderTargets();
+        if (_writeTarget != null)
+        {
+            DeferDispose(_writeTarget);
+            _writeTarget = null;
+        }
 
         var format = new RenderTargetFormatParameters(RenderTargetColorFormat.Rgba8Srgb);
         var sampleParams = new TextureSampleParameters { Filter = true };
         var label = string.IsNullOrEmpty(_deviceGuid) ? "Unknown" : _deviceGuid;
 
-        _readTarget = _clyde.CreateRenderTarget(size, format, sampleParams, $"PipSurface_{label}_Read");
-        _writeTarget = _clyde.CreateRenderTarget(size, format, sampleParams, $"PipSurface_{label}_Write");
-        _hasValidReadFrame = false;
+        _writeTarget = _clyde.CreateRenderTarget(size, format, sampleParams, $"PipSurface_{label}_Buffer");
     }
 
     private void DisposeRenderTargets()
     {
-        _readTarget?.Dispose();
+        DeferDispose(_readTarget);
         _readTarget = null;
-        _writeTarget?.Dispose();
+        DeferDispose(_writeTarget);
         _writeTarget = null;
         _hasValidReadFrame = false;
     }

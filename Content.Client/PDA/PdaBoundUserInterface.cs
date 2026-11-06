@@ -128,6 +128,9 @@ namespace Content.Client.PDA
 
         protected override void UpdateState(BoundUserInterfaceState state)
         {
+            if (_menu != null && state is PdaUpdateState preState && !_menu.IsEmbedded)
+                _menu.ScreenSurface.DeviceGuid = preState.DeviceGuid;
+
             base.UpdateState(state);
 
             if (state is not PdaUpdateState updateState)

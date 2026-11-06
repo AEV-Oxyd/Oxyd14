@@ -103,6 +103,8 @@ public sealed partial class RemoteScreenView : BoxContainer
 
         _surface.Visible = true;
         _surface.DeviceGuid = state.DeviceGuid;
+        _surface.InvalidateCapture();
+        PipSurfaceRegistry.FindAncestorSurface(this, state.ViewingTargetGuid)?.InvalidateCapture();
 
         // Branch 1: PDA / Cartridge Host Screen
         if (state.PdaState != null)
@@ -350,7 +352,8 @@ internal sealed partial class RemoteBuiScreenHost : BoxContainer
     {
         base.FrameUpdate(args);
 
-        TryEnsureBuiAndWindow();
+        if (_embeddedWindow == null)
+            TryEnsureBuiAndWindow();
 
         if (_pendingWindow != null && !_pendingWindow.Disposed)
         {

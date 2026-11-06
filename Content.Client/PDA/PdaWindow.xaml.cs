@@ -80,10 +80,13 @@ public partial class PdaWindow : BaseWindow
     }
 
     private bool _embedded;
+    public bool IsEmbedded => _embedded;
 
     public void StripDetailElements(bool stripped = true)
     {
         _embedded = stripped;
+        if (stripped)
+            ScreenSurface.DeviceGuid = null;
         Resizable = !stripped;
         Background.Visible = !stripped;
         AccentH.Visible = !stripped;

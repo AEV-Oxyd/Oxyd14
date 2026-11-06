@@ -190,7 +190,7 @@ public sealed class ErisSheetlet : Sheetlet<PalettedStylesheet>
         {
             Texture = texture,
             TextureScale = new Vector2(scale, scale),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         box.SetPatchMargin(StyleBox.Margin.All, patchMargin);
         return box;
@@ -203,7 +203,7 @@ public sealed class ErisSheetlet : Sheetlet<PalettedStylesheet>
         {
             Texture = texture,
             TextureScale = new Vector2(scale, scale),
-            Mode = StyleBoxTexture.StretchMode.Tile,
+            Mode = StyleBoxTexture.StretchMode.Stretch,
         };
         box.PatchMarginLeft = patchLeft;
         box.PatchMarginTop = patchTop;

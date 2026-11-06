@@ -88,6 +88,22 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             DetachRemoteScreen(actor);
         _remoteScreen.DetachAllForHostDevice(actor, uid);
     }
+
+    public bool OnRemoteScreenOpened(EntityUid actor, EntityUid hostPdaUid)
+    {
+        if (!TryComp<CartridgeLoaderComponent>(hostPdaUid, out var loader) ||
+            loader.ActiveProgram is not { } activeProg ||
+            !TryComp<TerminalCartridgeComponent>(activeProg, out var termComp))
+        {
+            return false;
+        }
+
+        if (actor != EntityUid.Invalid)
+            _terminalViewers[activeProg] = actor;
+
+        UpdateUiState(activeProg, hostPdaUid, termComp);
+        return true;
+    }
     private bool TryGetDisk(EntityUid loaderUid, out EntityUid diskUid, [NotNullWhen(true)] out FileSystemComponent? diskFs, out string diskName)
     {
         diskUid = default;

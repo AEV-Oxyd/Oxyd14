@@ -398,7 +398,8 @@ namespace Content.Server.PDA
             EnsurePdaInitialized(ent.Owner);
 
             _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered ON (User: {args.Actor})");
-            UpdatePdaUi(ent.Owner, ent.Comp);
+            if (!Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenOpened(args.Actor, ent.Owner))
+                UpdatePdaUi(ent.Owner, ent.Comp);
         }
 
         private void OnPdaClose(Entity<PdaComponent> ent, ref BoundUIClosedEvent args)
