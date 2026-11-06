@@ -14,7 +14,7 @@ Avoid networking data that can be built locally from prototypes, client & server
 Prototypes
 - Can be serialized/read from YML
 - Commonly used as a way to configure behaviours / store data, a Research computer for example can keep a ProtoId referencing a TechTreePrototype that it reads for its unlock options / when building the UI.
-- to be used in entity systems(as a variable on the EntSys or component) to implement configurable value / declarable value SETS that shouldn't be duplicated for every instance
+- to be used in entity systems(as a variable on the EntSys or component) to implement declarable value SETS that shouldn't be duplicated for every instance & rarely/never change during active gameplay
  
 Entity Systems
 - should make use of the [SubscribeLocalEvent], [SubscribeNetworkEvent] attributes instead of doing subscriptions in Initialize() WHEN possible.
