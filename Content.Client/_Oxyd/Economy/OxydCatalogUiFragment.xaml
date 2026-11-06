@@ -1,0 +1,11 @@
+<control:OxydCatalogUiFragment xmlns:control="clr-namespace:Content.Client._Oxyd.Economy"
+                               xmlns="https://spacestation14.io"
+                               Orientation="Vertical"
+                               HorizontalExpand="True"
+                               VerticalExpand="True"
+                               Margin="4">
+    <Label Name="TitleLabel" StyleClasses="LabelHeading"/>
+    <ScrollContainer VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Name="List" Orientation="Vertical" HorizontalExpand="True"/>
+    </ScrollContainer>
+</control:OxydCatalogUiFragment>

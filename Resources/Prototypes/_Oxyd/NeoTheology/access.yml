@@ -1,0 +1,11 @@
+- type: accessLevel
+  id: OxydNtFollower
+  name: oxyd-access-follower
+
+- type: accessLevel
+  id: OxydNtCommon
+  name: oxyd-access-common
+
+- type: accessLevel
+  id: OxydNtClergy
+  name: oxyd-access-clergy

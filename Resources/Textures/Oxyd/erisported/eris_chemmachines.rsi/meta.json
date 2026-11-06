@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "States taken from CEV-Eris (https://github.com/discordia-space/CEV-Eris), converted for SS14 via Tools/eris_medical_bake.py.",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "centrifuge"
+    },
+    {
+      "name": "centrifuge_off"
+    },
+    {
+      "name": "centrifuge_moving"
+    },
+    {
+      "name": "electrolysis"
+    },
+    {
+      "name": "electrolysis_off"
+    },
+    {
+      "name": "electrolysis_working"
+    },
+    {
+      "name": "dispenser"
+    },
+    {
+      "name": "mixer0"
+    },
+    {
+      "name": "mixer0_nopower"
+    },
+    {
+      "name": "mixer1"
+    },
+    {
+      "name": "mixer1_nopower"
+    },
+    {
+      "name": "mixer_loaded"
+    }
+  ]
+}

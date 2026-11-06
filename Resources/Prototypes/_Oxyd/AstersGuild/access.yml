@@ -1,0 +1,19 @@
+# Asters Guild access levels (Eris code/game/jobs/job/guild.dm access lists +
+# code/game/jobs/access_datum.dm). Eris-only permissions with no SS14 equivalent map to
+# guild-scoped levels; shared ones reuse the stock access.
+
+- type: accessLevel
+  id: OxydGuildMerchant
+  name: oxyd-access-guild-merchant
+
+- type: accessLevel
+  id: OxydGuildTech
+  name: oxyd-access-guild-tech
+
+- type: accessLevel
+  id: OxydGuildMiner
+  name: oxyd-access-guild-miner
+
+- type: accessLevel
+  id: OxydGuildCargo
+  name: oxyd-access-guild-cargo

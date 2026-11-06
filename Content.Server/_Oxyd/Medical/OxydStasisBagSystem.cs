@@ -1,0 +1,138 @@
+using System.Linq;
+using Content.Shared._Oxyd.Medical;
+using Content.Shared.Body;
+using Content.Shared.Damage.Systems;
+using Content.Shared.Damage;
+using Content.Shared.DragDrop;
+using Content.Shared.Interaction;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Systems;
+using Content.Shared.Movement.Pulling.Components;
+using Content.Shared.Popups;
+using Content.Shared.Verbs;
+using Robust.Server.Containers;
+using Robust.Shared.Containers;
+using Robust.Shared.GameObjects;
+
+namespace Content.Server._Oxyd.Medical;
+
+/// <summary>
+/// Ports the Eris stasis bag (items/bodybag stasis variant): a one-use bag that halts all
+/// incoming damage and wound decay while a patient is sealed inside.
+/// </summary>
+public sealed partial class OxydStasisBagSystem : EntitySystem
+{
+    [Dependency] private ContainerSystem _container = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+
+    [SubscribeLocalEvent]
+    private void OnInit(EntityUid uid, OxydStasisBagComponent comp, ComponentInit args)
+    {
+        _container.EnsureContainer<Container>(uid, OxydStasisBagComponent.BodyContainerId);
+    }
+
+    private Container BodySlot(EntityUid uid) =>
+        _container.EnsureContainer<Container>(uid, OxydStasisBagComponent.BodyContainerId);
+
+    [SubscribeLocalEvent]
+    private void OnCanDropOn(EntityUid uid, OxydStasisBagComponent comp, ref CanDropTargetEvent args)
+    {
+        if (args.Handled)
+            return;
+        // Only claim the drop for a body we can accept so other drop handlers can still run.
+        args.CanDrop = !comp.Used && BodySlot(uid).ContainedEntities.Count == 0 && HasComp<BodyComponent>(args.Dragged);
+        args.Handled = args.CanDrop;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnDragDropOn(EntityUid uid, OxydStasisBagComponent comp, DragDropTargetEvent args)
+    {
+        if (args.Handled || comp.Used || BodySlot(uid).ContainedEntities.Count > 0 || !HasComp<BodyComponent>(args.Dragged))
+            return;
+
+        args.Handled = true;
+        Seal(uid, comp, args.Dragged);
+    }
+
+    [SubscribeLocalEvent]
+    private void AddSealVerb(EntityUid uid, OxydStasisBagComponent comp, GetVerbsEvent<InteractionVerb> args)
+    {
+        if (comp.Used || !args.CanInteract || BodySlot(uid).ContainedEntities.Count > 0)
+            return;
+
+        // Seal the body the user is pulling (args.Target is the bag itself).
+        if (!TryComp<PullerComponent>(args.User, out var puller) || puller.Pulling is not { } target ||
+            !HasComp<BodyComponent>(target))
+            return;
+        args.Verbs.Add(new InteractionVerb
+        {
+            Act = () => Seal(uid, comp, target),
+            Text = Loc.GetString("oxyd-medical-stasis-seal"),
+        });
+    }
+
+    [SubscribeLocalEvent]
+    private void AddOpenVerb(EntityUid uid, OxydStasisBagComponent comp, GetVerbsEvent<AlternativeVerb> args)
+    {
+        if (BodySlot(uid).ContainedEntities.Count == 0)
+            return;
+
+        args.Verbs.Add(new AlternativeVerb
+        {
+            Act = () => Open(uid, comp),
+            Text = Loc.GetString("oxyd-medical-stasis-open"),
+        });
+    }
+
+    private void Seal(EntityUid uid, OxydStasisBagComponent comp, EntityUid patient)
+    {
+        if (comp.Used)
+        {
+            _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-spent"), uid, uid);
+            return;
+        }
+        _container.Insert(patient, BodySlot(uid));
+        EnsureComp<OxydInStasisComponent>(patient);
+        _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-sealed"), uid, uid);
+    }
+
+    private void Open(EntityUid uid, OxydStasisBagComponent comp)
+    {
+        foreach (var occupant in BodySlot(uid).ContainedEntities.ToArray())
+        {
+            _container.Remove(occupant, BodySlot(uid));
+            RemComp<OxydInStasisComponent>(occupant);
+        }
+
+        // Eris stasis bags are non-reusable: opening leaves a spent bag behind
+        // (Eris spawns the used item) rather than deleting it.
+        if (comp.OneUse && !comp.Used)
+        {
+            comp.Used = true;
+            _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-discarded"), uid, uid);
+        }
+    }
+
+    /// <summary>Stasis negates incoming damage (Eris stasis_bag prevents body decay/damage).</summary>
+    [SubscribeLocalEvent]
+    private void OnStasisDamage(EntityUid uid, OxydInStasisComponent comp, DamageModifyEvent args)
+    {
+        args.Damage = new DamageSpecifier();
+    }
+
+    /// <summary>Any occupant leaving the body container loses stasis protection, even when
+    /// removed by something other than the Open verb (admin pull, teleport, destroy).</summary>
+    [SubscribeLocalEvent]
+    private void OnOccupantRemoved(EntityUid uid, OxydStasisBagComponent comp, EntRemovedFromContainerMessage args)
+    {
+        RemCompDeferred<OxydInStasisComponent>(args.Entity);
+    }
+
+    /// <summary>A deleted bag frees its patient instead of leaving them permanently in stasis.</summary>
+    [SubscribeLocalEvent]
+    private void OnTerminating(EntityUid uid, OxydStasisBagComponent comp, EntityTerminatingEvent args)
+    {
+        foreach (var occupant in BodySlot(uid).ContainedEntities.ToArray())
+            RemComp<OxydInStasisComponent>(occupant);
+    }
+}

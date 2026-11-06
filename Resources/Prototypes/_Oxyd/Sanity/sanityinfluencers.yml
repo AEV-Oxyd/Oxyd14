@@ -2,6 +2,8 @@
   suffix: inaprovaline
   parent: SyringeInaprovaline
   id: SyringeInfluencing
+  name: syringe influencing
+  description: Syringe Influencing.
   components:
   - type: Label
     currentLabel: reagent-name-inaprovaline

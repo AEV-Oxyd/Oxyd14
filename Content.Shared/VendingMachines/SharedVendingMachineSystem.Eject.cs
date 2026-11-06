@@ -22,6 +22,11 @@ public abstract partial class SharedVendingMachineSystem
         if (args.Actor is not { Valid: true } actor)
             return;
 
+        var attempt = new VendingMachineEjectAttemptEvent(actor, args.Type, args.ID);
+        RaiseLocalEvent(entity.Owner, ref attempt);
+        if (attempt.Cancelled)
+            return;
+
         AuthorizedVend(entity.Owner, actor, args.Type, args.ID, entity.Comp);
     }
 

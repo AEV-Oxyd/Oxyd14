@@ -101,3 +101,9 @@ signal-port-description-target-receiver = Receives target information from a tar
 
 signal-port-name-target-source = Target finder
 signal-port-description-target-source = Sends target information to a target receiver.
+
+signal-port-name-oxyd-rd-device = R&D device
+signal-port-description-oxyd-rd-device = Research device input port for the R&D console.
+
+signal-port-name-oxyd-op-table = Operating table
+signal-port-description-oxyd-op-table = Operating table input port for the operating computer.

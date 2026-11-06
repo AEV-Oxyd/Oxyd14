@@ -174,28 +174,6 @@
       "directions": 4
     },
     {
-      "name": "wielded-inhand-right-25",
-      "directions": 4,
-      "delays": [
-        [
-          0.1,
-          0.1
-        ],
-        [
-          0.1,
-          0.1
-        ],
-        [
-          0.1,
-          0.1
-        ],
-        [
-          0.1,
-          0.1
-        ]
-      ]
-    },
-    {
       "name": "wielded-inhand-left-25",
       "directions": 4,
       "delays": [

@@ -1,0 +1,10 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-biogenerator-console-title'}"
+               MinSize="340 190"
+               SetSize="360 210">
+    <!-- Eris NanoUI dark skin (nt_biogen.tmpl): flat body, gold itemLabel field names. -->
+    <PanelContainer Name="Body" VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Name="Content" Orientation="Vertical" Margin="8" SeparationOverride="6"/>
+    </PanelContainer>
+</controls:FancyWindow>

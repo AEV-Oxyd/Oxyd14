@@ -1,0 +1,252 @@
+# Eris recreational drugs and toxins used by Moebius (code/modules/reagents/reagents/drugs.dm).
+# Space drugs, nicotine and cryptobiolin exist natively — these are the Eris-unique entries.
+# P1 sweep adds arectine (Glow + Ignite overdose) from other.dm.
+# R2 sweep adds oddity tea (speedboost + sanity; Eris CE_SPEEDBOOST/CE_PULSE mapped loosely).
+
+- type: reagent
+  id: OxydDrugSerotrotium
+  name: oxyd-reagent-serotrotium
+  desc: oxyd-reagent-serotrotium-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#AAAA77"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Emote
+        emote: Laugh
+      - !type:Drunk
+      - !type:Nsa
+        value: 2
+      - !type:Addictive
+        reagent: OxydDrugSerotrotium
+        threshold: 20
+        addictionChance: 0.15
+
+- type: reagent
+  id: OxydDrugImpedrezene
+  name: oxyd-reagent-impedrezene
+  desc: oxyd-reagent-impedrezene-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#777744"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: -2
+      - !type:HealthChange
+        damage:
+          types:
+            Cellular: 0.3
+      - !type:Jitter
+      - !type:Nsa
+        value: 2
+      - !type:Addictive
+        reagent: OxydDrugImpedrezene
+        threshold: 15
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydDrugMindbreaker
+  name: oxyd-reagent-mindbreaker
+  desc: oxyd-reagent-mindbreaker-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#770077"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: -3
+      - !type:ModifyStatusEffect
+        effectProto: StatusEffectSeeingRainbow
+        time: 30
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydDrugMindbreaker
+        threshold: 15
+        addictionChance: 0.25
+
+- type: reagent
+  id: OxydDrugMindwipe
+  name: oxyd-reagent-mindwipe
+  desc: oxyd-reagent-mindwipe-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#440066"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: -5
+      - !type:GenericStatusEffect
+        key: Stutter
+        component: StutteringAccent
+        time: 10
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydDrugMindwipe
+        threshold: 10
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydDrugPsilocybin
+  name: oxyd-reagent-psilocybin
+  desc: oxyd-reagent-psilocybin-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#BB8866"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ChemSanity
+        amount: -2
+      - !type:ModifyStatusEffect
+        effectProto: StatusEffectSeeingRainbow
+        time: 20
+      - !type:Drunk
+      - !type:Nsa
+        value: 3
+      - !type:Addictive
+        reagent: OxydDrugPsilocybin
+        threshold: 20
+        addictionChance: 0.15
+
+- type: reagent
+  id: OxydDrugHyperzine
+  name: oxyd-reagent-hyperzine
+  desc: oxyd-reagent-hyperzine-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#FF6666"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:MovementSpeedModifier
+        walkSpeedModifier: 1.2
+        sprintSpeedModifier: 1.2
+        time: 2
+      - !type:Stim
+        stimId: hyperzine
+        skill: Vig
+        amount: 2
+      - !type:Nsa
+        value: 4
+      - !type:Addictive
+        reagent: OxydDrugHyperzine
+        threshold: 10
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydDrugNicotinePlus
+  name: oxyd-reagent-nicotine-plus
+  desc: oxyd-reagent-nicotine-plus-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#886644"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:Stim
+        stimId: nicotine_plus
+        skill: Vig
+        amount: 1
+      - !type:Nsa
+        value: 2
+      - !type:Addictive
+        reagent: OxydDrugNicotinePlus
+        threshold: 10
+        addictionChance: 0.4
+
+- type: reagent
+  id: OxydDrugSanguinumExtract
+  name: oxyd-reagent-sanguinum-extract
+  desc: oxyd-reagent-sanguinum-extract-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: medicine
+  color: "#660011"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:ModifyBloodLevel
+        amount: 2
+      - !type:ChemSanity
+        amount: -1
+      - !type:Nsa
+        value: 2
+      - !type:Addictive
+        reagent: OxydDrugSanguinumExtract
+        threshold: 15
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydDrugArectine
+  name: oxyd-reagent-arectine
+  desc: oxyd-reagent-arectine-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: medicine
+  color: "#a6b85b"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:Glow
+        color: "#a6b85b"
+        radius: 2
+      - !type:Addictive
+        reagent: OxydDrugArectine
+        threshold: 25
+        addictionChance: 0.05
+      - !type:Ignite
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydDrugArectine
+          min: 25
+        probability: 0.1
+
+- type: reagent
+  id: OxydDrugOddityTea
+  name: oxyd-reagent-oddity-tea
+  desc: oxyd-reagent-oddity-tea-desc
+  group: Drugs
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#cf820f"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.04
+      effects:
+      - !type:MovementSpeedModifier
+        walkSpeedModifier: 1.05
+        sprintSpeedModifier: 1.05
+      - !type:ChemSanity
+        amount: 0.5
+      - !type:Nsa
+        value: 2
+    Digestion:
+      metabolismRate: 0.04
+      effects:
+      - !type:ChemSanity
+        amount: 0.5
+      - !type:Nsa
+        value: 1

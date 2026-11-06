@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "States taken from CEV-Eris (https://github.com/discordia-space/CEV-Eris), converted for SS14 via Tools/eris_medical_bake.py.",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "scalpel"
+    },
+    {
+      "name": "scalpel_adv"
+    },
+    {
+      "name": "scalpel_laser"
+    },
+    {
+      "name": "hemostat"
+    },
+    {
+      "name": "retractor"
+    },
+    {
+      "name": "cautery"
+    },
+    {
+      "name": "bonesetter"
+    },
+    {
+      "name": "saw"
+    },
+    {
+      "name": "saw_circular"
+    },
+    {
+      "name": "saw_advanced"
+    },
+    {
+      "name": "drill"
+    }
+  ]
+}

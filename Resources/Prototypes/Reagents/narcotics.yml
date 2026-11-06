@@ -13,6 +13,10 @@
     Bloodstream:
       # Main effects
       effects:
+      - !type:Addictive
+        reagent: Desoxyephedrine
+        threshold: 20
+        addictionChance: 0.1
       - !type:HealthChange
         damage:
           types:
@@ -77,6 +81,10 @@
   metabolisms:
     Bloodstream:
       effects:
+      - !type:Addictive
+        reagent: Ephedrine
+        threshold: 20
+        addictionChance: 0.1
       # Main effects
       - !type:MovementSpeedModifier
         walkSpeedModifier: 1.15
@@ -244,6 +252,10 @@
   metabolisms:
     Bloodstream:
       effects:
+      - !type:Addictive
+        reagent: THC
+        threshold: 20
+        addictionChance: 0.1
       - !type:ModifyStatusEffect
         effectProto: StatusEffectSeeingRainbow
         time: 16
@@ -257,6 +269,13 @@
   flavor: bitter
   color: "#C0C0C0"
   physicalDesc: reagent-physical-desc-strong-smelling
+  metabolisms:
+    Bloodstream:
+      effects:
+      - !type:Addictive
+        reagent: Nicotine
+        threshold: 20
+        addictionChance: 0.2
   plantMetabolism:
   - !type:PlantAdjustHealth
     amount: -5
@@ -301,6 +320,10 @@
   metabolisms:
     Bloodstream:
       effects:
+      - !type:Addictive
+        reagent: SpaceDrugs
+        threshold: 20
+        addictionChance: 1
       - !type:GiveSanityEffect
         sanityDelta: 2
         sanityType: Chemical
