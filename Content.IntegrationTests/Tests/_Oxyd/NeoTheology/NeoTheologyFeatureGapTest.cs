@@ -25,6 +25,7 @@ using Content.Shared.Mobs.Systems;
 using Content.Shared.Roles;
 using Content.Shared.Stacks;
 using Content.Shared.Store;
+using Content.Shared.Store.Components;
 using Content.Shared.Warps;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -313,7 +314,9 @@ public sealed class NeoTheologyFeatureGapTest : SocialNoticeGameTest
             var store = _uplink.GetOrCreateStore(body, implant, uplink!);
             Assert.That(_cruciform.Deactivate(body), Is.True);
             Assert.That(_uplink.TryGetUplink(implant, out _), Is.False);
-            Assert.That(SEntMan.IsQueuedForDeletion(store), Is.True);
+            // The store is hosted on the cruciform itself: deactivation strips
+            // StoreComponent rather than deleting the implant entity.
+            Assert.That(SEntMan.HasComponent<StoreComponent>(store), Is.False);
             Assert.That(SComp<NtUplinkComponent>(implant).StoredTelecrystals.Float(), Is.EqualTo(15f));
         });
     }

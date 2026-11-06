@@ -2,12 +2,10 @@ using System.Linq;
 // Eris Moebius research port: destructive analyzer + experiment sources.
 // Eris source: destructive_analyzer.dm, experiment.dm (science_tool,
 // autopsy_scanner, explosion_watcher, points disks).
-using Content.Server._Oxyd.SanityInsightAndResting;
-using Content.Shared._Oxyd.Sanity;
 using Content.Server.Materials;
 using Content.Shared._Oxyd.Moebius.Research;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.Interaction.Events;
-using Content.Shared.Tools.Components;
 using Content.Shared.Containers.ItemSlots;
 using Content.Server.Stack;
 using Content.Shared.Damage;
@@ -27,11 +25,31 @@ namespace Content.Server._Oxyd.Moebius.Research;
 
 public sealed partial class OxydResearchSystem
 {
-    private void InitializeDevices()
-    {
-    }
+    [Dependency] private StackSystem _stack = default!;
 
-    [Dependency] private SanitySystem _sanity = default!;
+    /// <summary>Material units in one sheet/ingot stack unit (SS14 materials use 100).</summary>
+    private const int MaterialPerSheet = 100;
+
+    public override void Update(float frameTime)
+    {
+        var q = EntityQueryEnumerator<OxydActiveAnalyzerComponent, OxydDestructiveAnalyzerComponent>();
+        while (q.MoveNext(out var da, out _, out var comp))
+        {
+            if (comp.PendingItem is not { } item)
+                continue;
+            // If the item left the input slot (destroyed, teleported, merged),
+            // abort: never delete or award points for an item the analyzer no
+            // longer holds, and clear Busy so the machine isn't stuck forever.
+            if (TerminatingOrDeleted(item) || _slots.GetItemOrNull(da, InputSlot) != item)
+            {
+                ClearPending(da, comp);
+                continue;
+            }
+            if (_timing.CurTime < comp.BusyUntil)
+                continue;
+            FinishDeconstruct(da, item, comp.PendingConsole ?? EntityUid.Invalid, comp);
+        }
+    }
 
     // ---- slot plumbing: refresh the UI when disks/tools change ----
     [SubscribeLocalEvent]
@@ -45,13 +63,15 @@ public sealed partial class OxydResearchSystem
             UpdateUi(console);
     }
 
+    /// <summary>R&D consoles device-linked to this sink — resolved through
+    /// DeviceLinkSystem (LinkedSources is access-restricted to it).</summary>
     private IEnumerable<Entity<OxydRdConsoleComponent>> FindConsolesLinkedTo(EntityUid device)
     {
-        var q = EntityQuery<OxydRdConsoleComponent>();
-        foreach (var c in EntityManager.EntityQuery<OxydRdConsoleComponent>())
+        var query = EntityQueryEnumerator<OxydRdConsoleComponent, DeviceLinkSourceComponent>();
+        while (query.MoveNext(out var uid, out var console, out var source))
         {
-            if (c.LinkedDevices.Contains(device))
-                yield return (c.Owner, c);
+            if (_deviceLink.GetLinkedSinks((uid, source), RdSourcePort).Contains(device))
+                yield return (uid, console);
         }
     }
 
@@ -77,6 +97,7 @@ public sealed partial class OxydResearchSystem
         // Reviewer round-2: pending work lives on the component, not a system dict.
         daComp.PendingItem = item.Value;
         daComp.PendingConsole = ent.Owner;
+        EnsureComp<OxydActiveAnalyzerComponent>(daUid);
         // Lock the input slot while Busy — an ejected item could be merged into a
         // stack (Busy never cleared, analyzer stuck) or kept and then deleted
         // from a player's hand while still awarding points.
@@ -86,34 +107,12 @@ public sealed partial class OxydResearchSystem
         UpdateUi(ent);
     }
 
-    public override void Update(float frameTime)
-    {
-        var q = EntityQueryEnumerator<OxydDestructiveAnalyzerComponent>();
-        while (q.MoveNext(out var da, out var comp))
-        {
-            if (comp.PendingItem is not { } item)
-                continue;
-            if (TerminatingOrDeleted(da))
-                continue;
-            // If the item left the input slot (destroyed, teleported, merged),
-            // abort: never delete or award points for an item the analyzer no
-            // longer holds, and clear Busy so the machine isn't stuck forever.
-            if (TerminatingOrDeleted(item) || _slots.GetItemOrNull(da, InputSlot) != item)
-            {
-                ClearPending(da, comp);
-                continue;
-            }
-            if (_timing.CurTime < comp.BusyUntil)
-                continue;
-            FinishDeconstruct(da, item, comp.PendingConsole ?? EntityUid.Invalid, comp);
-        }
-    }
-
     private void ClearPending(EntityUid da, OxydDestructiveAnalyzerComponent comp)
     {
         comp.Busy = false;
         comp.PendingItem = null;
         comp.PendingConsole = null;
+        RemComp<OxydActiveAnalyzerComponent>(da);
         _slots.SetLock(da, InputSlot, false);
         Dirty(da, comp);
     }
@@ -139,7 +138,10 @@ public sealed partial class OxydResearchSystem
                 console.TreeLevels.TryGetValue(tree, out var cur);
                 if (level > cur)
                 {
-                    var value = TreePointValues.GetValueOrDefault(tree, 250);
+                    // PointValue lives on the tree prototype (research_trees.yml).
+                    var value = _proto.TryIndex<OxydTechTreePrototype>(tree, out var treeProto)
+                        ? treeProto.PointValue
+                        : 250;
                     console.Points += value;
                     console.TreeLevels[tree] = level;
                 }
@@ -178,14 +180,9 @@ public sealed partial class OxydResearchSystem
         UpdateUi(consoleEnt);
     }
 
-    [Dependency] private StackSystem _stack = default!;
-
-    /// <summary>Material units in one sheet/ingot stack unit (SS14 materials use 100).</summary>
-    private const int MaterialPerSheet = 100;
-
     private EntityUid? FindAnalyzerWithItem(Entity<OxydRdConsoleComponent> ent)
     {
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
         {
             if (TerminatingOrDeleted(dev))
                 continue;
@@ -263,7 +260,7 @@ public sealed partial class OxydResearchSystem
             }
         }
         var changed = false;
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
         {
             if (!TryComp<LatheComponent>(dev, out var lathe))
                 continue;
@@ -279,7 +276,7 @@ public sealed partial class OxydResearchSystem
             if (changed)
                 Dirty(dev, lathe);
         }
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
             SyncLatheRecipes(ent, dev);
         Dirty(ent);
     }
@@ -383,7 +380,7 @@ public sealed partial class OxydResearchSystem
             return;
         }
         var value = 0;
-        foreach (var (tree, lvl) in origin.Techs)
+        foreach (var (_, lvl) in origin.Techs)
             value += lvl * 100;
         ent.Comp.Blocks.Add(new OxydScanBlock { Subject = Name(target.Value), Value = value });
         ent.Comp.TotalValue += value;
@@ -393,73 +390,8 @@ public sealed partial class OxydResearchSystem
         args.Handled = true;
     }
 
-    // ---- mental imprinter (Eris mental_imprinter: eye-stab stat boost at
-    // a heavy sanity toll; adapted — no stat system, so it is flavor + cost) ----
-    [SubscribeLocalEvent]
-    private void OnImprinterUse(Entity<OxydMentalImprinterComponent> ent, ref UseInHandEvent args)
-    {
-        if (args.Handled)
-            return;
-        args.Handled = true;
-        if (TryComp<SanityComponent>(args.User, out var sanity))
-            _sanity.ApplySanityDelta((args.User, sanity), SanitySource.Mental, -ent.Comp.SanityDamage);
-        _popup.PopupEntity("You drive the imprinter needle into your eye. Design data floods your mind.", args.User, args.User);
-        QueueDel(ent);
-    }
-
-    // ---- drone fabricator (Eris drone_fabricator: produces drone shells on a
-    // cycle; shells can't be inhabited without a silicon stack) ----
-    [SubscribeLocalEvent]
-    private void OnDroneFabricate(Entity<OxydDroneFabricatorComponent> ent, ref ActivateInWorldEvent args)
-    {
-        if (args.Handled)
-            return;
-        args.Handled = true;
-        if (_timing.CurTime < ent.Comp.NextUse)
-        {
-            _popup.PopupEntity("The fabricator is still assembling a shell.", ent, args.User);
-            return;
-        }
-        ent.Comp.NextUse = _timing.CurTime + TimeSpan.FromSeconds(ent.Comp.CooldownSeconds);
-        Spawn(ent.Comp.ShellProto, Transform(ent).Coordinates);
-        _popup.PopupEntity("The fabricator deposits a folded drone shell.", ent, args.User);
-    }
-
-    // ---- slime core extraction (Eris xenobiology extract tooling: cores are
-    // research specimens; adapted — draws from any refinable biological mob) ----
-    [SubscribeLocalEvent]
-    private void OnSlimeExtract(Entity<OxydSlimeExtractorComponent> ent, ref AfterInteractEvent args)
-    {
-        if (args.Handled || !args.CanReach || args.Target == null)
-            return;
-        if (!HasComp<MobStateComponent>(args.Target.Value) || !HasComp<ToolRefinableComponent>(args.Target.Value))
-            return;
-        args.Handled = true;
-        if (ent.Comp.Uses <= 0)
-        {
-            _popup.PopupEntity("The extractor is empty.", ent, args.User);
-            return;
-        }
-        ent.Comp.Uses--;
-        Spawn(ent.Comp.CoreProto, Transform(args.Target.Value).Coordinates);
-        _popup.PopupEntity($"You draw a specimen core from {Name(args.Target.Value)}.", ent, args.User);
-        if (ent.Comp.Uses <= 0)
-            QueueDel(ent);
-    }
-
-    // ---- maintenance drone shell (Eris maint drone folded form; unfolds into
-    // a non-player NPC — inhabited drones need a silicon stack) ----
-    [SubscribeLocalEvent]
-    private void OnDroneDeploy(Entity<OxydMaintenanceDroneShellComponent> ent, ref UseInHandEvent args)
-    {
-        if (args.Handled)
-            return;
-        args.Handled = true;
-        Spawn(ent.Comp.DroneProto, Transform(args.User).Coordinates);
-        _popup.PopupEntity("The shell unfolds into a maintenance drone.", args.User, args.User);
-        QueueDel(ent);
-    }
-
+    // NOTE: mental imprinter, drone fabricator/shell and slime extractor
+    // handlers moved to _Oxyd/Skill/, _Oxyd/Silicons/ and _Oxyd/Xenobiology/.
 
     // ---- explosion watcher (Eris KES: banks points per explosion) ----
     [SubscribeLocalEvent]
@@ -491,7 +423,7 @@ public sealed partial class OxydResearchSystem
         state.Trees.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
 
         // analyzer card
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
         {
             if (TerminatingOrDeleted(dev))
                 continue;
@@ -523,7 +455,8 @@ public sealed partial class OxydResearchSystem
         }
 
         // devices
-        foreach (var dev in ent.Comp.LinkedDevices)
+        var linkedDevices = GetLinkedDevices(ent.Owner);
+        foreach (var dev in linkedDevices)
         {
             if (TerminatingOrDeleted(dev) || !TryComp<OxydRdLinkableComponent>(dev, out var link))
                 continue;
@@ -531,8 +464,8 @@ public sealed partial class OxydResearchSystem
         }
 
         // lathe screen: selected device's known recipes
-        var selDev = _selectedDevice.GetValueOrDefault(ent.Owner);
-        if (selDev == default || !ent.Comp.LinkedDevices.Contains(selDev))
+        var selDev = ent.Comp.SelectedDevice;
+        if (selDev == default || !linkedDevices.Contains(selDev))
             selDev = state.Devices.Count > 0 ? GetEntity(state.Devices[0].Uid) : default;
         if (selDev != default && TryComp<LatheComponent>(selDev, out var lathe))
         {
@@ -559,7 +492,7 @@ public sealed partial class OxydResearchSystem
         }
 
         // trees screen
-        var selTree = _selectedTree.GetValueOrDefault(ent.Owner);
+        var selTree = ent.Comp.SelectedTree;
         if (string.IsNullOrEmpty(selTree))
             selTree = state.Trees.Count > 0 ? state.Trees[0].Id : null;
         state.SelectedTree = selTree;

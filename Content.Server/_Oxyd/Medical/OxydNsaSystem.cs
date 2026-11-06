@@ -1,12 +1,16 @@
 using System.Linq;
 using Content.Shared._Oxyd.Medical;
+using Content.Shared.Bed.Sleep;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Body.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Chemistry.Reagent;
 using Content.Shared.Damage;
+using Content.Shared.Medical;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Popups;
+using Content.Shared.StatusEffectNew;
+using Content.Shared.Stunnable;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -25,6 +29,10 @@ public sealed partial class OxydNsaSystem : EntitySystem
     [Dependency] private MobStateSystem _mobs = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private IPrototypeManager _prototypes = default!;
+    [Dependency] private VomitSystem _vomit = default!;
+    [Dependency] private SharedStunSystem _stun = default!;
+    [Dependency] private StatusEffectsSystem _statusEffects = default!;
+    [Dependency] private OxydWoundSystem _wounds = default!;
 
     public override void Update(float frameTime)
     {
@@ -45,7 +53,10 @@ public sealed partial class OxydNsaSystem : EntitySystem
             var isOver = comp.Current > EffectiveThreshold(comp, uid);
 
             if (isOver && !wasOver)
+            {
                 _popup.PopupEntity(Loc.GetString("oxyd-medical-nsa-overload"), uid, uid);
+                ApplyOverloadEffects(uid, comp);
+            }
 
             if (isOver)
             {
@@ -57,6 +68,25 @@ public sealed partial class OxydNsaSystem : EntitySystem
             }
 
             Dirty(uid, comp);
+        }
+    }
+
+    /// <summary>Eris NSA overload onset: violent nausea, stun, forced sleep and
+    /// cardiac strain on top of the ongoing toxin damage.</summary>
+    private void ApplyOverloadEffects(EntityUid uid, OxydNsaComponent comp)
+    {
+        _vomit.Vomit(uid, force: true);
+        _stun.TryAddStunDuration(uid, TimeSpan.FromSeconds(comp.OverloadStunSeconds));
+        _statusEffects.TryAddStatusEffectDuration(uid, SleepingSystem.StatusEffectForcedSleeping,
+            TimeSpan.FromSeconds(comp.OverloadSleepSeconds));
+
+        foreach (var organ in _wounds.GetOrgans(uid))
+        {
+            if (organ.Organ.Category != comp.HeartOrgan)
+                continue;
+            OxydWoundSystem.AddOrganDamage(organ.Surgery, comp.OverloadHeartDamage);
+            Dirty(organ.Uid, organ.Surgery);
+            break;
         }
     }
 

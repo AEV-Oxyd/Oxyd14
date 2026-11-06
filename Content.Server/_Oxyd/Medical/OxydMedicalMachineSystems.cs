@@ -15,6 +15,7 @@ using Robust.Shared.Prototypes;
 using Content.Shared.Body;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Systems;
+using Content.Shared.Buckle.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Chemistry.Events;
 using Content.Shared.Damage;
@@ -142,6 +143,7 @@ public sealed partial class OxydMedicalScannerSystem : EntitySystem
 /// <summary>
 /// Ports the Eris IV drip (machinery/iv_drip.dm): attach to a patient to transfer blood,
 /// detach to stop. Ticks transfer a few units between the attached beaker and the bloodstream.
+/// Attach/detach by dragging either the drip onto the patient or the patient onto the drip.
 /// </summary>
 public sealed partial class OxydIvDripSystem : EntitySystem
 {
@@ -156,11 +158,6 @@ public sealed partial class OxydIvDripSystem : EntitySystem
     /// <summary>Max distance the drip can be from the patient before the line detaches.</summary>
     private const float IvRange = 1.5f;
 
-    public override void Initialize()
-    {
-        // Attach/detach by dragging either the drip onto the patient or the patient onto the drip.
-    }
-
     /// <summary>Eris examine: reports the loaded tank and attached vessel + the mode.</summary>
     [SubscribeLocalEvent]
     private void OnExamine(EntityUid uid, OxydIvDripComponent comp, ExaminedEvent args)
@@ -171,8 +168,9 @@ public sealed partial class OxydIvDripSystem : EntitySystem
             args.PushMarkup(Loc.GetString("oxyd-medical-iv-examine-tank", ("tank", Name(beaker))));
         else
             args.PushMarkup(Loc.GetString("oxyd-medical-iv-examine-no-tank"));
-        if (comp.AttachedTo is { } net && !TerminatingOrDeleted(GetEntity(net)))
-            args.PushMarkup(Loc.GetString("oxyd-medical-iv-examine-vessel", ("vessel", Name(GetEntity(net)))));
+        if (TryComp<OxydActiveIvDripComponent>(uid, out var active) &&
+            !TerminatingOrDeleted(GetEntity(active.AttachedTo)))
+            args.PushMarkup(Loc.GetString("oxyd-medical-iv-examine-vessel", ("vessel", Name(GetEntity(active.AttachedTo)))));
         else
             args.PushMarkup(Loc.GetString("oxyd-medical-iv-examine-no-vessel"));
         args.PushMarkup(Loc.GetString(comp.DrainMode
@@ -220,11 +218,13 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         var (uid, comp) = ent;
         if (args.Target is not { } patient || TerminatingOrDeleted(patient))
             return;
-        if (comp.AttachedTo != null || !_transform.InRange(uid, patient, IvRange))
+        if (HasComp<OxydActiveIvDripComponent>(uid) || !_transform.InRange(uid, patient, IvRange))
             return;
 
-        comp.AttachedTo = GetNetEntity(patient);
-        Dirty(uid, comp);
+        var active = EnsureComp<OxydActiveIvDripComponent>(uid);
+        active.AttachedTo = GetNetEntity(patient);
+        active.AttachedBy = GetNetEntity(args.User);
+        Dirty(uid, active);
         _popup.PopupEntity(Loc.GetString("oxyd-medical-iv-attached", ("patient", Name(patient))),
             uid, args.User);
         _adminLogger.Add(LogType.ForceFeed, LogImpact.Medium,
@@ -252,13 +252,14 @@ public sealed partial class OxydIvDripSystem : EntitySystem
 
     private void ToggleAttach(EntityUid dripUid, OxydIvDripComponent drip, EntityUid patient, EntityUid user)
     {
-        if (drip.AttachedTo == GetNetEntity(patient))
+        if (TryComp<OxydActiveIvDripComponent>(dripUid, out var active) &&
+            GetEntity(active.AttachedTo) == patient)
         {
             Detach(dripUid, drip, user);
             return;
         }
 
-        if (drip.AttachedTo != null || !_transform.InRange(dripUid, patient, IvRange))
+        if (HasComp<OxydActiveIvDripComponent>(dripUid) || !_transform.InRange(dripUid, patient, IvRange))
             return;
 
         // Mirror the stock injector: inject blockers (jugsuits etc.) veto the jab
@@ -288,9 +289,10 @@ public sealed partial class OxydIvDripSystem : EntitySystem
 
     private void Detach(EntityUid dripUid, OxydIvDripComponent drip, EntityUid user)
     {
-        var previous = drip.AttachedTo is { } net ? GetEntity(net) : (EntityUid?) null;
-        drip.AttachedTo = null;
-        Dirty(dripUid, drip);
+        var previous = TryComp<OxydActiveIvDripComponent>(dripUid, out var active)
+            ? GetEntity(active.AttachedTo)
+            : (EntityUid?) null;
+        RemComp<OxydActiveIvDripComponent>(dripUid);
         _popup.PopupEntity(Loc.GetString("oxyd-medical-iv-detached"), dripUid, user);
         if (previous is { } patient && !TerminatingOrDeleted(patient))
         {
@@ -305,7 +307,7 @@ public sealed partial class OxydIvDripSystem : EntitySystem
         if (!args.CanAccess || !args.CanInteract)
             return;
 
-        if (comp.AttachedTo != null)
+        if (HasComp<OxydActiveIvDripComponent>(uid))
         {
             args.Verbs.Add(new AlternativeVerb
             {
@@ -392,22 +394,42 @@ public sealed partial class OxydIvDripSystem : EntitySystem
 
     public override void Update(float frameTime)
     {
-        var query = EntityQueryEnumerator<OxydIvDripComponent>();
-        while (query.MoveNext(out var uid, out var comp))
+        var query = EntityQueryEnumerator<OxydActiveIvDripComponent, OxydIvDripComponent>();
+        while (query.MoveNext(out var uid, out var active, out var comp))
         {
-            if (comp.AttachedTo is not { } netPatient)
-                continue;
-
             var now = _timing.CurTime;
             if (now < comp.NextTick)
                 continue;
             comp.NextTick = now + TimeSpan.FromSeconds(comp.TickInterval);
 
-            var patient = GetEntity(netPatient);
-            if (TerminatingOrDeleted(patient) || !_transform.InRange(uid, patient, IvRange))
+            var patient = GetEntity(active.AttachedTo);
+            if (TerminatingOrDeleted(patient))
             {
-                comp.AttachedTo = null;
-                Dirty(uid, comp);
+                RemComp<OxydActiveIvDripComponent>(uid);
+                continue;
+            }
+
+            // Rollers: a patient strapped to a wheeled bed keeps the line as
+            // long as the *bed* stays in range — rolling away doesn't snap it.
+            var anchor = patient;
+            if (TryComp<BuckleComponent>(patient, out var buckle) && buckle.BuckledTo is { } mounted)
+                anchor = mounted;
+            if (!_transform.InRange(uid, anchor, IvRange))
+            {
+                RemComp<OxydActiveIvDripComponent>(uid);
+                continue;
+            }
+
+            // Clothing/implants that veto injections (jugsuits etc.) force the
+            // line back out — re-checked every tick so mid-infusion gear
+            // changes are caught, not just the attach-time check.
+            var injectEv = new TargetBeforeInjectEvent(GetEntity(active.AttachedBy), uid, patient);
+            RaiseLocalEvent(patient, ref injectEv);
+            if (injectEv.Cancelled)
+            {
+                RemComp<OxydActiveIvDripComponent>(uid);
+                _popup.PopupEntity(Loc.GetString("oxyd-medical-iv-forced-out", ("patient", Name(patient))),
+                    uid, patient, PopupType.SmallCaution);
                 continue;
             }
 

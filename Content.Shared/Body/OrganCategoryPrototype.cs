@@ -10,4 +10,9 @@ public sealed partial class OrganCategoryPrototype : IPrototype
 {
     [IdDataField]
     public string ID { get; private set; } = default!;
+
+    /// <summary>External/body-wall categories (limbs, head, torso) that take
+    /// attributable wound damage, as opposed to internal organs.</summary>
+    [DataField]
+    public bool External;
 }

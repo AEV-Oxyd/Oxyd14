@@ -34,14 +34,11 @@ public sealed partial class OxydWoundSystem : EntitySystem
     private const float FractureThreshold = 12f;
     private const float FractureChance = 0.5f;
 
-    private static readonly ProtoId<OrganCategoryPrototype>[] ExternalCategories =
-    {
-        "Torso", "Head", "ArmLeft", "ArmRight", "HandLeft", "HandRight",
-        "LegLeft", "LegRight", "FootLeft", "FootRight",
-    };
-
-    public static bool IsExternal(OrganComponent organ) =>
-        organ.Category is { } cat && ExternalCategories.Contains(cat.Id);
+    /// <summary>External/body-wall organs take attributable wound damage;
+    /// the flag lives on the organ category prototype (organ_categories.yml).</summary>
+    public bool IsExternal(OrganComponent organ) =>
+        organ.Category is { } cat &&
+        _prototypes.TryIndex<OrganCategoryPrototype>(cat, out var proto) && proto.External;
 
     /// <summary>All organs of a body together with their surgery state (lazily ensured).</summary>
     public List<(EntityUid Uid, OrganComponent Organ, OxydOrganSurgeryComponent Surgery)> GetOrgans(EntityUid body)
@@ -94,7 +91,18 @@ public sealed partial class OxydWoundSystem : EntitySystem
         if (externals.Count == 0)
             return;
 
-        var (orgUid, organ, surg) = _random.Pick(externals);
+        // Eris zone_sel: the attacker's targeted zone picks which external
+        // organ takes the hit; untargeted attackers fall back to random.
+        var pool = externals;
+        if (args.Origin is { } origin &&
+            TryComp<OxydBodyTargetingComponent>(origin, out var targeting))
+        {
+            var zoned = externals.Where(o => o.Organ.Category == targeting.TargetedZone).ToList();
+            if (zoned.Count > 0)
+                pool = zoned;
+        }
+
+        var (orgUid, organ, surg) = _random.Pick(pool);
         surg.BruteDamage += brute * 0.35f;
         surg.BurnDamage += burn * 0.5f * 0.35f;
         surg.OrganDamage = surg.BruteDamage + surg.BurnDamage;

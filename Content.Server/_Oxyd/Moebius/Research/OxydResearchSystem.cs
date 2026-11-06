@@ -5,6 +5,9 @@ using Content.Server.Lathe;
 using Content.Server.Popups;
 using Content.Shared._Oxyd.Moebius.Research;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Lathe;
 using Content.Shared.Lathe.Prototypes;
 using Content.Shared.Materials;
@@ -25,30 +28,16 @@ public sealed partial class OxydResearchSystem : EntitySystem
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private IPrototypeManager _proto = default!;
     [Dependency] private IGameTiming _timing = default!;
-
-    /// <summary>Eris tech_points values per tree (destructive_analyzer.dm get_object_research_value).</summary>
-    private static readonly Dictionary<string, int> TreePointValues = new()
-    {
-        ["OxydTreeEngineering"] = 250,
-        ["OxydTreeBiotech"] = 300,
-        ["OxydTreeCombat"] = 500,
-        ["OxydTreePowerstorage"] = 300,
-        ["OxydTreeBluespace"] = 1000,
-        ["OxydTreeRobotics"] = 350,
-        ["OxydTreeCovert"] = 5000,
-    };
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
 
     public const string DiskSlot = "disk";
     public const string ToolSlot = "tool";
     public const string InputSlot = "input";
 
-    /// <summary>Eris console device-link scan radius (~3 tiles, generous).</summary>
-    private const float LinkRange = 6f;
-
-    public override void Initialize()
-    {
-        InitializeDevices();
-    }
+    /// <summary>Eris console device-link port pair (range lives on
+    /// DeviceLinkSourceComponent in research_machines.yml).</summary>
+    private static readonly ProtoId<SourcePortPrototype> RdSourcePort = "OxydRdConsole";
+    private static readonly ProtoId<SinkPortPrototype> RdSinkPort = "OxydRdDevice";
 
     // ---- linkage (Eris rdconsole auto-link on init + "Rescan" verb) ----
     [SubscribeLocalEvent]
@@ -66,27 +55,44 @@ public sealed partial class OxydResearchSystem : EntitySystem
         UpdateUi(ent);
     }
 
+    /// <summary>Eris rdconsole auto-link on init + "Rescan" verb: link every
+    /// R&D device within the console's DeviceLinkSource range. Links persist
+    /// until the device is deleted (DeviceLinkSystem cleanup) — same union
+    /// semantics as the old LinkedDevices set.</summary>
     private void RescanDevices(Entity<OxydRdConsoleComponent> ent)
     {
+        if (!TryComp<DeviceLinkSourceComponent>(ent.Owner, out var source))
+            return;
+
         var xform = Transform(ent);
-        var found = new HashSet<EntityUid>();
-        foreach (var dev in EntityManager.EntityQuery<OxydRdLinkableComponent>())
+        var query = EntityQueryEnumerator<DeviceLinkSinkComponent, OxydRdLinkableComponent, TransformComponent>();
+        while (query.MoveNext(out var uid, out var sink, out _, out var sxform))
         {
-            var uid = dev.Owner;
             if (uid == ent.Owner || TerminatingOrDeleted(uid))
                 continue;
-            if (!xform.Coordinates.TryDistance(EntityManager, Transform(uid).Coordinates, out var dist) || dist > LinkRange)
+            if (!xform.Coordinates.TryDistance(EntityManager, sxform.Coordinates, out var dist) || dist > source.Range)
                 continue;
-            found.Add(uid);
+            _deviceLink.SaveLinks(null, (ent.Owner, source), (uid, sink),
+                [new DeviceLink(RdSourcePort, RdSinkPort)]);
         }
-        // keep manual links valid, drop vanished ones
-        ent.Comp.LinkedDevices.RemoveWhere(u => TerminatingOrDeleted(u));
-        ent.Comp.LinkedDevices.UnionWith(found);
-        Dirty(ent);
+
         // Eris mechfab/protolathe sync: push every unlocked recipe to all linked lathes.
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
             SyncLatheRecipes(ent, dev);
     }
+
+    /// <summary>Devices currently linked to this console via DeviceLinkSystem.</summary>
+    private HashSet<EntityUid> GetLinkedDevices(EntityUid console)
+    {
+        if (!TryComp<DeviceLinkSourceComponent>(console, out var source))
+            return [];
+        return _deviceLink.GetLinkedSinks((console, source), RdSourcePort);
+    }
+
+    /// <summary>True when <paramref name="device"/> is device-linked to this console.</summary>
+    private bool IsLinkedToConsole(EntityUid console, EntityUid device)
+        => TryComp<DeviceLinkSourceComponent>(console, out var source) &&
+           _deviceLink.GetLinkedSinks((console, source), RdSourcePort).Contains(device);
 
     /// <summary>Push recipes for all unlocked nodes into a linked lathe
     /// (Eris lathes mirror console known_designs after sync).</summary>
@@ -123,7 +129,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     }
 
     /// <summary>Debug-command helper: force-unlock a node and sync every
-    /// linked lathe (moebiusscience:unlock — same effect as the BUI unlock
+    /// linked lathe (moebiusresearch:unlock — same effect as the BUI unlock
     /// without point cost or prereq checks).</summary>
     public void DebugForceUnlock(EntityUid console, string nodeId)
     {
@@ -131,7 +137,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
             return;
         comp.UnlockedNodes.Add(nodeId);
         Dirty(console, comp);
-        foreach (var dev in comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(console))
             SyncLatheRecipes((console, comp), dev);
     }
 
@@ -147,19 +153,16 @@ public sealed partial class OxydResearchSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnSelectTree(Entity<OxydRdConsoleComponent> ent, ref OxydRdSelectTreeMessage args)
     {
-        _selectedTree[ent.Owner] = args.Tree;
+        ent.Comp.SelectedTree = args.Tree;
         UpdateUi(ent);
     }
 
     [SubscribeLocalEvent]
     private void OnSelectDevice(Entity<OxydRdConsoleComponent> ent, ref OxydRdSelectDeviceMessage args)
     {
-        _selectedDevice[ent.Owner] = GetEntity(args.Device);
+        ent.Comp.SelectedDevice = GetEntity(args.Device);
         UpdateUi(ent);
     }
-
-    private readonly Dictionary<EntityUid, string> _selectedTree = new();
-    private readonly Dictionary<EntityUid, EntityUid> _selectedDevice = new();
 
     // ---- tech unlock (Eris Research_Tech / CanResearch) ----
     [SubscribeLocalEvent]
@@ -188,7 +191,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
         ent.Comp.TreeLevels.TryGetValue(node.Tree, out var lvl);
         ent.Comp.TreeLevels[node.Tree] = lvl + 1;
         Dirty(ent);
-        foreach (var dev in ent.Comp.LinkedDevices)
+        foreach (var dev in GetLinkedDevices(ent.Owner))
             SyncLatheRecipes(ent, dev);
         UpdateUi(ent);
     }
@@ -198,7 +201,7 @@ public sealed partial class OxydResearchSystem : EntitySystem
     private void OnPrint(Entity<OxydRdConsoleComponent> ent, ref OxydRdPrintMessage args)
     {
         var dev = GetEntity(args.Device);
-        if (!ent.Comp.LinkedDevices.Contains(dev) || !TryComp<LatheComponent>(dev, out var lathe))
+        if (!IsLinkedToConsole(ent.Owner, dev) || !TryComp<LatheComponent>(dev, out var lathe))
             return;
         if (!_proto.TryIndex<LatheRecipePrototype>(args.Recipe, out var recipe))
             return;

@@ -20,7 +20,6 @@ public sealed partial class ClientOxydEconomySystem : EntitySystem
         };
         var owner = string.IsNullOrWhiteSpace(account.OwnerName) ? "Account" : account.OwnerName;
         box.AddChild(new Label { Text = $"{owner}  #{account.AccountNumber}" });
-        box.AddChild(new Label { Text = $"{account.Balance} cr" });
         if (account.DepartmentAccountNumber is { } department)
             box.AddChild(new Label { Text = $"Department #{department}" });
 

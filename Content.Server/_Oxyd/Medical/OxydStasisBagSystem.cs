@@ -40,14 +40,14 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
         if (args.Handled)
             return;
         // Only claim the drop for a body we can accept so other drop handlers can still run.
-        args.CanDrop = BodySlot(uid).ContainedEntities.Count == 0 && HasComp<BodyComponent>(args.Dragged);
+        args.CanDrop = !comp.Used && BodySlot(uid).ContainedEntities.Count == 0 && HasComp<BodyComponent>(args.Dragged);
         args.Handled = args.CanDrop;
     }
 
     [SubscribeLocalEvent]
     private void OnDragDropOn(EntityUid uid, OxydStasisBagComponent comp, DragDropTargetEvent args)
     {
-        if (args.Handled || BodySlot(uid).ContainedEntities.Count > 0 || !HasComp<BodyComponent>(args.Dragged))
+        if (args.Handled || comp.Used || BodySlot(uid).ContainedEntities.Count > 0 || !HasComp<BodyComponent>(args.Dragged))
             return;
 
         args.Handled = true;
@@ -57,7 +57,7 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
     [SubscribeLocalEvent]
     private void AddSealVerb(EntityUid uid, OxydStasisBagComponent comp, GetVerbsEvent<InteractionVerb> args)
     {
-        if (!args.CanInteract || BodySlot(uid).ContainedEntities.Count > 0)
+        if (comp.Used || !args.CanInteract || BodySlot(uid).ContainedEntities.Count > 0)
             return;
 
         // Seal the body the user is pulling (args.Target is the bag itself).
@@ -86,6 +86,11 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
 
     private void Seal(EntityUid uid, OxydStasisBagComponent comp, EntityUid patient)
     {
+        if (comp.Used)
+        {
+            _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-spent"), uid, uid);
+            return;
+        }
         _container.Insert(patient, BodySlot(uid));
         EnsureComp<OxydInStasisComponent>(patient);
         _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-sealed"), uid, uid);
@@ -99,11 +104,12 @@ public sealed partial class OxydStasisBagSystem : EntitySystem
             RemComp<OxydInStasisComponent>(occupant);
         }
 
-        // Eris stasis bags are non-reusable.
-        if (comp.OneUse)
+        // Eris stasis bags are non-reusable: opening leaves a spent bag behind
+        // (Eris spawns the used item) rather than deleting it.
+        if (comp.OneUse && !comp.Used)
         {
+            comp.Used = true;
             _popup.PopupEntity(Loc.GetString("oxyd-medical-stasis-discarded"), uid, uid);
-            QueueDel(uid);
         }
     }
 

@@ -6,6 +6,7 @@ using Content.Shared.Database;
 using Content.Shared.Body;
 using Content.Shared.Body.Components;
 using Content.Shared.Chemistry.EntitySystems;
+using Content.Shared.Chemistry.Events;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
@@ -15,6 +16,8 @@ using Content.Shared.Item;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Movement.Pulling.Components;
 using Content.Shared.Popups;
+using Content.Shared.Power.Components;
+using Content.Shared.Power.EntitySystems;
 using Content.Shared.UserInterface;
 using Content.Shared.Verbs;
 using Robust.Server.Containers;
@@ -40,6 +43,7 @@ public sealed partial class OxydSleeperSystem : EntitySystem
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private OxydWoundSystem _wounds = default!;
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
+    [Dependency] private SharedBatterySystem _battery = default!;
 
     private float _refreshRemaining;
 
@@ -182,6 +186,35 @@ public sealed partial class OxydSleeperSystem : EntitySystem
         }
 
         var dose = Math.Min(args.Dose > 0 ? args.Dose : chem.Dose, chem.Dose);
+
+        // Eris gates the chem buttons on the occupant being alive; a corpse
+        // can't be injected (stale BUI state could still send the message).
+        if (_mobs.IsDead(occupant))
+        {
+            _popup.PopupEntity(Loc.GetString("oxyd-medical-sleeper-cannot-inject"), uid, args.Actor);
+            return;
+        }
+
+        // Same veto injectors give: jugsuits/implants that block injections
+        // refuse the sleeper's synthesized dose too.
+        var injectEv = new TargetBeforeInjectEvent(args.Actor, uid, occupant);
+        RaiseLocalEvent(occupant, ref injectEv);
+        if (injectEv.Cancelled)
+        {
+            _popup.PopupEntity(injectEv.OverrideMessage ?? Loc.GetString("injector-component-blocked-user"),
+                uid, args.Actor);
+            return;
+        }
+
+        // Eris charges power for synthesized chems; the sleeper's battery
+        // buffer pays for each dose and recharges from the APC net.
+        if (!TryComp<BatteryComponent>(uid, out var battery) ||
+            !_battery.TryUseCharge((uid, battery), dose * comp.ChemPowerCost))
+        {
+            _popup.PopupEntity(Loc.GetString("oxyd-medical-sleeper-no-power"), uid, args.Actor);
+            return;
+        }
+
         _solutions.TryAddReagent(solEnt.Value, chem.Reagent, dose);
         _adminLogger.Add(LogType.Action, LogImpact.Medium,
             $"{ToPrettyString(args.Actor):user} injected {dose}u of {chem.Reagent} into {ToPrettyString(occupant):target} via {ToPrettyString(uid)}");

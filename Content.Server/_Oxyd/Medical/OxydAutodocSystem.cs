@@ -268,7 +268,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
         foreach (var (orgUid, organ, surg) in _wounds.GetOrgans(patient))
         {
             var note = new OxydAutodocPatchnote { Organ = orgUid };
-            if (OxydWoundSystem.IsExternal(organ))
+            if (_wounds.IsExternal(organ))
             {
                 if (surg.OrganDamage > 0)
                     note.Scanned.Add(OxydAutodocOp.Damage);
@@ -557,7 +557,7 @@ public sealed partial class OxydAutodocSystem : EntitySystem
                 entry.Name = Name(orgUid);
                 if (TryComp<OxydOrganSurgeryComponent>(orgUid, out var surg))
                 {
-                    entry.Internal = !(TryComp<OrganComponent>(orgUid, out var oc) && OxydWoundSystem.IsExternal(oc));
+                    entry.Internal = !(TryComp<OrganComponent>(orgUid, out var oc) && _wounds.IsExternal(oc));
                     entry.BruteDamage = surg.BruteDamage;
                     entry.BurnDamage = surg.BurnDamage;
                     entry.InnerDamage = surg.OrganDamage;

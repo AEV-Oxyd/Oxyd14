@@ -142,3 +142,13 @@
   id: SetParticleSigma
   name: signal-port-name-set-particle-sigma
   description: signal-port-description-set-particle-sigma
+
+- type: sinkPort
+  id: OxydRdDevice
+  name: signal-port-name-oxyd-rd-device
+  description: signal-port-description-oxyd-rd-device
+
+- type: sinkPort
+  id: OxydOpTable
+  name: signal-port-name-oxyd-op-table
+  description: signal-port-description-oxyd-op-table

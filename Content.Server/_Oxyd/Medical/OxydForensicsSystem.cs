@@ -139,7 +139,7 @@ public sealed partial class OxydForensicsSystem : EntitySystem
 
         // Per-limb wound section from the ported organ wound model.
         var organs = _wounds.GetOrgans(target);
-        var external = organs.Where(o => OxydWoundSystem.IsExternal(o.Organ)).ToList();
+        var external = organs.Where(o => _wounds.IsExternal(o.Organ)).ToList();
         if (external.Count > 0)
         {
             sb.AppendLine(Loc.GetString("oxyd-autopsy-report-wounds"));

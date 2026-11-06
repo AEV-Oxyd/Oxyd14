@@ -38,6 +38,15 @@
         type: OxydSleeperBoundUserInterface
   - type: ApcPowerReceiver
     powerLoad: 400
+  # Eris synthesizes chems on injection and charges power per unit; the battery
+  # buffer is what each injection drains (recharges from the APC net).
+  - type: Battery
+    netsync: false
+    maxCharge: 30000
+    startingCharge: 30000
+  - type: ApcPowerReceiverBattery
+    idleLoad: 50
+    batteryRechargeRate: 500
   - type: Appearance
   - type: GenericVisualizer
     visuals:
@@ -211,6 +220,9 @@
     position: Down
     rotation: -90
   - type: OxydOperatingTable
+  - type: DeviceLinkSink
+    ports:
+    - OxydOpTable
 
 # ---------------------------------------------------------------------------
 # Morgue tray (Eris morgue): single-body storage tray.
@@ -489,6 +501,10 @@
   description: Medical Operating Computer.
   components:
   - type: OxydOperatingComputer
+  - type: DeviceLinkSource
+    ports:
+    - OxydOpComputer
+    range: 1.8
   - type: Sprite
     layers:
     - map: ["computerLayerBody"]

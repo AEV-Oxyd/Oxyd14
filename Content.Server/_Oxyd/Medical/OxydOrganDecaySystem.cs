@@ -1,7 +1,10 @@
 using Content.Shared._Oxyd.Medical;
+using Content.Shared.Atmos;
 using Content.Shared.Body;
 using Content.Shared.Examine;
+using Content.Shared.Medical.Cryogenics;
 using Content.Shared.Random.Helpers;
+using Content.Shared.Temperature.Components;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Medical;
@@ -20,9 +23,10 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
     private const int DecayChance = 5;
     private const float DecayDamage = 12f;
 
-    public override void Initialize()
-    {
-    }
+    /// <summary>Freezing halts metabolic decay but deals cold damage instead
+    /// (Eris: frozen organs take cold damage, skip oxygenation/decay).</summary>
+    private const int FreezeDamageChance = 20;
+    private const float FreezeDamage = 4f;
 
     [SubscribeLocalEvent]
     private void OnOrganMapInit(Entity<OrganComponent> ent, ref MapInitEvent args)
@@ -81,6 +85,22 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
             if (InStasis(uid))
                 continue;
 
+            // Frozen organs skip metabolic decay but take cold damage.
+            if (IsFrozen(uid))
+            {
+                if (SharedRandomExtensions.PredictedProb(_timing, FreezeDamageChance / 100f, GetNetEntity(uid)))
+                {
+                    OxydWoundSystem.AddOrganDamage(surg, FreezeDamage);
+                    if (surg.OrganDamage >= OxydOrganSurgeryComponent.OrganMaxDamage)
+                    {
+                        surg.OrganDamage = OxydOrganSurgeryComponent.OrganMaxDamage;
+                        surg.Decayed = true;
+                    }
+                    Dirty(uid, surg);
+                }
+                continue;
+            }
+
             // OXYD: per-organ scheduled roll on a predicted stream so it doesn't
             // shift the global RNG sequence mid-frame.
             if (!SharedRandomExtensions.PredictedProb(_timing, DecayChance / 100f, GetNetEntity(uid)))
@@ -94,6 +114,22 @@ public sealed partial class OxydOrganDecaySystem : EntitySystem
             }
             Dirty(uid, surg);
         }
+    }
+
+    /// <summary>True when the organ is cryo-preserved or below freezing —
+    /// inside a cryo pod, or itself/an ancestor under 0°C.</summary>
+    private bool IsFrozen(EntityUid uid)
+    {
+        var parent = uid;
+        while (parent.IsValid())
+        {
+            if (HasComp<InsideCryoPodComponent>(parent))
+                return true;
+            if (TryComp<TemperatureComponent>(parent, out var temp) && temp.Temperature <= Atmospherics.T0C)
+                return true;
+            parent = Transform(parent).ParentUid;
+        }
+        return false;
     }
 
     /// <summary>True when any entity up the container chain suspends organ decay.</summary>

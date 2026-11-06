@@ -7,6 +7,7 @@ using Content.Shared.Administration;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared._Oxyd.Moebius.Research;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Hands.EntitySystems;
@@ -22,7 +23,7 @@ using Robust.Shared.Toolshed.Syntax;
 namespace Content.Server._Oxyd.Moebius.Research;
 
 [ToolshedCommand, AdminCommand(AdminFlags.Debug)]
-public sealed class MoebiusScienceCommand : ToolshedCommand
+public sealed class MoebiusResearchCommand : ToolshedCommand
 {
     private DamageableSystem? _dmg;
     private SharedMaterialStorageSystem? _mat;
@@ -193,7 +194,10 @@ public sealed class MoebiusScienceCommand : ToolshedCommand
     public void Probe(IInvocationContext ctx, EntityUid ent)
     {
         if (TryComp<OxydRdConsoleComponent>(ent, out var con))
-            ctx.WriteLine($"probe:console pts={con.Points} unlocked={con.UnlockedNodes.Count} linked={con.LinkedDevices.Count} trees=[{string.Join(", ", con.TreeLevels)}]");
+        {
+            var linked = TryComp<DeviceLinkSourceComponent>(ent, out var src) ? src.LinkedPorts.Count : 0;
+            ctx.WriteLine($"probe:console pts={con.Points} unlocked={con.UnlockedNodes.Count} linked={linked} trees=[{string.Join(", ", con.TreeLevels)}]");
+        }
         if (TryComp<OxydDestructiveAnalyzerComponent>(ent, out var da))
             ctx.WriteLine($"probe:da busy={da.Busy} until={da.BusyUntil}");
         if (TryComp<OxydScienceToolComponent>(ent, out var t))

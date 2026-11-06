@@ -1,6 +1,7 @@
 using System.Linq;
 using Content.Server.DoAfter;
 using Content.Shared._Oxyd.Medical;
+using Content.Shared._Oxyd.Skills;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Database;
 using Content.Shared.Damage.Systems;
@@ -157,7 +158,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         // (Eris attach_or_replace_organ), not a cavity implant — AttachOrgan still
         // validates Incision/decay itself.
         var cavity = FindOrgan(uid, o =>
-            o.Surg is { Incision: OxydIncisionStage.Retracted } && OxydWoundSystem.IsExternal(o.Organ));
+            o.Surg is { Incision: OxydIncisionStage.Retracted } && _wounds.IsExternal(o.Organ));
         if (cavity.Valid && (IsTransplantItem(args.Used) || CanImplant(args.Used)))
         {
             args.Handled = true;
@@ -245,7 +246,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         if ((tool.Tools & OxydSurgeryTool.Cautery) != 0)
         {
             var wounded = FindOrgan(patient, o =>
-                OxydWoundSystem.IsExternal(o.Organ) &&
+                _wounds.IsExternal(o.Organ) &&
                 (o.Surg.OrganDamage > 0 || o.Surg.WoundBleedRate > 0 || o.Surg.Incision != OxydIncisionStage.None));
             if (wounded.Valid)
             {
@@ -264,7 +265,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         var organs = GetOrganEntries(patient);
 
         OrganEntry FirstExternal(Func<OxydOrganSurgeryComponent, bool> pred) =>
-            organs.FirstOrDefault(o => OxydWoundSystem.IsExternal(o.Organ) && !o.Surg.Robotic && pred(o.Surg));
+            organs.FirstOrDefault(o => _wounds.IsExternal(o.Organ) && !o.Surg.Robotic && pred(o.Surg));
 
         OrganEntry FirstRobotic(Func<OxydOrganSurgeryComponent, bool> pred) =>
             organs.FirstOrDefault(o => o.Surg.Robotic && pred(o.Surg));
@@ -400,6 +401,48 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         _ => 10f,
     };
 
+    // ---- Eris scaling: pain level, surgeon skill (STAT_BIO) and tool quality ----
+
+    /// <summary>Eris required_stat = STAT_BIO: the skill surgery rolls against.</summary>
+    private static readonly ProtoId<SkillPrototype> SurgerySkill = "Bio";
+
+    /// <summary>Reference "expert" skill level (Eris STAT_LEVEL_GODLIKE analogue).</summary>
+    private const int SkillExpertLevel = 100;
+
+    /// <summary>Patient pain adds up to +50% operation time at SevereThreshold.</summary>
+    private const float PainDurationScale = 0.5f;
+
+    /// <summary>Skill shaves up to 25% off operation time at expert level.</summary>
+    private const float SkillDurationScale = 0.25f;
+
+    /// <summary>Low-quality tools add up to +40% operation time vs a perfect tool.</summary>
+    private const float QualityDurationScale = 0.4f;
+
+    /// <summary>Effective skill level (base + buffs) on a mob; 0 when unknown.</summary>
+    private int SkillLevel(EntityUid mob)
+    {
+        if (!TryComp<MobSkillComponent>(mob, out var skills) ||
+            !skills.skills.TryGetValue(SurgerySkill, out var arr) || arr.Length < 2)
+            return 0;
+        return arr[0] + arr[1];
+    }
+
+    /// <summary>A pained patient struggles — operations take longer.</summary>
+    private float PainDurationMult(EntityUid patient)
+    {
+        if (!TryComp<PainComponent>(patient, out var pain) || pain.SevereThreshold <= 0)
+            return 1f;
+        return 1f + Math.Min(pain.CurrentPain / pain.SevereThreshold, 2f) * PainDurationScale;
+    }
+
+    /// <summary>Skilled surgeons work faster; clumsy ones slower.</summary>
+    private float SkillDurationMult(EntityUid surgeon)
+        => Math.Max(1f - SkillLevel(surgeon) / (float) SkillExpertLevel * SkillDurationScale, 0.5f);
+
+    /// <summary>Better tools finish steps faster (Eris tool_qualities tiers).</summary>
+    private static float QualityDurationMult(int quality)
+        => 1f + Math.Clamp((100f - quality) / 100f, 0f, 1.5f) * QualityDurationScale;
+
     /// <summary>Starts a surgery step DoAfter; the completion event lands on the patient.</summary>
     private void RunStep(EntityUid surgeon, EntityUid patient, EntityUid organ, OxydSurgeryStep step,
         EntityUid? tool, OxydSurgeryToolComponent? toolComp)
@@ -418,14 +461,17 @@ public sealed partial class OxydSurgerySystem : EntitySystem
             _popup.PopupEntity("You're not holding that tool anymore.", surgeon, surgeon);
             return;
         }
-        var speed = toolComp?.Speed ?? 1f;
+        // Eris: duration scales with patient pain, surgeon skill and tool quality.
+        var quality = toolComp?.Quality ?? BestHeldToolQuality(surgeon);
+        var duration = StepDuration(step) * (toolComp?.Speed ?? 1f)
+            * PainDurationMult(patient) * SkillDurationMult(surgeon) * QualityDurationMult(quality);
         var ev = new OxydSurgeryDoAfterEvent(GetNetEntity(patient), GetNetEntity(organ), step,
             tool is { } t ? GetNetEntity(t) : NetEntity.Invalid)
         {
             SelfSurgery = surgeon == patient,
         };
 
-        var doArgs = new DoAfterArgs(EntityManager, surgeon, TimeSpan.FromSeconds(StepDuration(step) * speed), ev,
+        var doArgs = new DoAfterArgs(EntityManager, surgeon, TimeSpan.FromSeconds(duration), ev,
             patient, patient, tool)
         {
             BreakOnMove = true,
@@ -554,10 +600,13 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         // (e.g. a held organ) — Eris rolls the required tool's quality instead,
         // so take the best surgical quality across the surgeon's hands.
         var quality = toolComp?.Quality ?? BestHeldToolQuality(surgeon);
-        var chance = Math.Clamp(quality - StepDifficulty(args.Step) - (args.SelfSurgery ? 20 : 0), 5, 95);
+        // Eris use_tool_extended(required_stat): skill shifts the success roll too.
+        var skillBonus = (int) Math.Clamp(SkillLevel(surgeon) / 10f, -15, 20);
+        var chance = Math.Clamp(quality - StepDifficulty(args.Step) - (args.SelfSurgery ? 20 : 0)
+            + skillBonus, 5, 95);
         var success = _random.Prob(chance / 100f);
 
-        InflictAgony(patient, args.Step);
+        InflictAgony(surgeon, patient, args.Step);
 
         if (!success)
         {
@@ -572,12 +621,14 @@ public sealed partial class OxydSurgerySystem : EntitySystem
             Announce(surgeon, patient, "oxyd-medical-surgery-success", organ);
     }
 
-    /// <summary>Eris after_attempted_step pain (scaled down; no stat system to key off).</summary>
-    private void InflictAgony(EntityUid patient, OxydSurgeryStep step)
+    /// <summary>Eris after_attempted_step pain: skilled surgeons (STAT_BIO) inflict
+    /// less agony — (GODLIKE - stat)/GODLIKE in Eris, here scaled to our skill range.</summary>
+    private void InflictAgony(EntityUid surgeon, EntityUid patient, OxydSurgeryStep step)
     {
         if (!_mobs.IsAlive(patient) || !TryComp<PainComponent>(patient, out var pain))
             return;
-        pain.TemporaryPain += StepAgony(step) * pain.TemporaryPainMultiplier;
+        var strength = StepAgony(step) * Math.Max(0f, 1f - SkillLevel(surgeon) / (float) SkillExpertLevel);
+        pain.TemporaryPain += strength * pain.TemporaryPainMultiplier;
     }
 
     /// <summary>Eris fail_step: malpractice — organ takes damage, the site keeps bleeding,
@@ -675,7 +726,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
                 break;
             case OxydSurgeryStep.Amputate:
             case OxydSurgeryStep.DetachOrgan:
-                if (!OxydWoundSystem.IsExternal(organComp) && surg.Incision != OxydIncisionStage.Retracted)
+                if (!_wounds.IsExternal(organComp) && surg.Incision != OxydIncisionStage.Retracted)
                     return true;
                 _detach.Detach(organ);
                 _adminLogger.Add(LogType.Action, LogImpact.High,
@@ -901,7 +952,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
 
         foreach (var (orgUid, organ, surg) in _wounds.GetOrgans(patient))
         {
-            var external = OxydWoundSystem.IsExternal(organ);
+            var external = _wounds.IsExternal(organ);
             var efficiency = Math.Clamp(
                 (OxydOrganSurgeryComponent.OrganMaxDamage - surg.OrganDamage) /
                 OxydOrganSurgeryComponent.OrganMaxDamage * 100f, 0f, 100f);
@@ -1083,7 +1134,7 @@ public sealed partial class OxydSurgerySystem : EntitySystem
         bool implantable = false)
     {
         var steps = new List<OxydSurgeryStep>();
-        var external = OxydWoundSystem.IsExternal(organ);
+        var external = _wounds.IsExternal(organ);
 
         void Add(OxydSurgeryStep step)
         {

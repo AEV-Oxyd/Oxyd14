@@ -63,6 +63,10 @@ public sealed partial class OxydResuscitateEntityEffectSystem : EntityEffectSyst
         if (!_mobState.IsDead(uid))
             return;
 
+        // Eris true death: a destroyed brain cannot be resuscitated.
+        if (HasComp<OxydTrueDeathComponent>(uid))
+            return;
+
         // ---- Eris resuscitate() preconditions ----
         var brain = OrganByCategory(uid, args.Effect.BrainOrgan);
         if (!Viable(heart) || !Viable(brain))

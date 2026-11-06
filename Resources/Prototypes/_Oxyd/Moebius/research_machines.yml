@@ -18,6 +18,10 @@
   - type: OxydRdConsole
   - type: OxydRdLinkable
     kind: Protolathe
+  - type: DeviceLinkSource
+    ports:
+    - OxydRdConsole
+    range: 6
   - type: ActivatableUI
     key: enum.OxydRdUiKey.Key
   - type: ActivatableUIRequiresPower
@@ -60,6 +64,9 @@
   - type: OxydDestructiveAnalyzer
   - type: OxydRdLinkable
     kind: Analyzer
+  - type: DeviceLinkSink
+    ports:
+    - OxydRdDevice
   - type: ItemSlots
     slots:
       input:
@@ -83,6 +90,9 @@
   components:
   - type: OxydRdLinkable
     kind: Protolathe
+  - type: DeviceLinkSink
+    ports:
+    - OxydRdDevice
   - type: Lathe
     idleState: icon
     runningState: building
@@ -103,6 +113,9 @@
   components:
   - type: OxydRdLinkable
     kind: Imprinter
+  - type: DeviceLinkSink
+    ports:
+    - OxydRdDevice
   - type: Lathe
     idleState: icon
     runningState: building
@@ -130,6 +143,9 @@
       map: ["enum.WiresVisualLayers.MaintenancePanel"]
   - type: OxydRdLinkable
     kind: Mechfab
+  - type: DeviceLinkSink
+    ports:
+    - OxydRdDevice
   - type: Lathe
     idleState: fab-idle
     runningState: fab-active

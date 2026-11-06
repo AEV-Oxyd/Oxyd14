@@ -160,7 +160,7 @@ xeno* content simplified to Adapt-level core loops per the task brief.
 
 Live-verified in the running server (spawned + interacted + observed
 working — via client where noted, otherwise through the real event
-chain driven by `moebiusscience:*` toolshed subs, which raise the same
+chain driven by `moebiusresearch:*` toolshed subs, which raise the same
 InteractUsing/AfterInteract/UseInHand/BUI-message events real play
 raises):
 

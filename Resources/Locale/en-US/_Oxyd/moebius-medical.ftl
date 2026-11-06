@@ -151,6 +151,8 @@ oxyd-medical-sleeper-verb-eject = Eject occupant
 oxyd-medical-sleeper-verb-insert-beaker = Insert beaker
 oxyd-medical-sleeper-chem-max = Patient is saturated with {$chem}.
 oxyd-medical-sleeper-chem-saturated = Cannot inject: bloodstream saturated.
+oxyd-medical-sleeper-cannot-inject = The sleeper cannot inject a corpse.
+oxyd-medical-sleeper-no-power = The sleeper's power cell is too depleted to synthesize chemicals.
 
 ## Autodoc UI
 oxyd-autodoc-window-title = Autodoc Surgeon
@@ -235,6 +237,7 @@ oxyd-medical-stasis-seal = Seal inside
 oxyd-medical-stasis-sealed = You seal {$patient} inside the stasis bag.
 oxyd-medical-stasis-open = Open bag
 oxyd-medical-stasis-discarded = The stasis bag is spent and discarded.
+oxyd-medical-stasis-spent = The stasis bag has already been used.
 
 ## Entity auto-localization (ent-<id>)
 ent-OxydMedicalSleeper = sleeper
@@ -482,6 +485,7 @@ oxyd-medical-iv-examine-vessel = It's attached to {$vessel}.
 oxyd-medical-iv-examine-no-vessel = There is no vessel.
 oxyd-medical-iv-examine-mode-inject = It's set to inject mode, transferring {$amount}u per tick.
 oxyd-medical-iv-examine-mode-draw = It's set to draw mode, transferring {$amount}u per tick.
+oxyd-medical-iv-forced-out = Something about {$patient} forces the IV line back out.
 
 ## Organ decay / transplant
 oxyd-organ-decayed = The decay has set in.
@@ -711,3 +715,6 @@ oxyd-borer-write-host = Your head spins as new information fills your mind!
 oxyd-borer-hide-on = You are now hiding under floor clutter.
 oxyd-borer-hide-off = You have stopped hiding.
 oxyd-borer-level-up = Congratulations! You've reached Evolution Level {$level} — new synthesis reagents and abilities are now available.
+
+oxyd-medical-target-zone = Target: {$zone}
+oxyd-medical-target-zone-set = You aim for the {$zone}.

@@ -1,3 +1,4 @@
+using Content.Shared.Body;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
@@ -41,6 +42,22 @@ public sealed partial class OxydNsaComponent : Component
     [DataField]
     public float OverloadToxinPerSecond = 1.5f;
 
+    /// <summary>Organ category that takes cardiac damage on overload onset.</summary>
+    [DataField]
+    public ProtoId<OrganCategoryPrototype> HeartOrgan = "Heart";
+
+    /// <summary>Heart organ damage applied once when overload begins.</summary>
+    [DataField]
+    public float OverloadHeartDamage = 4f;
+
+    /// <summary>Stun duration applied once when overload begins (seconds).</summary>
+    [DataField]
+    public float OverloadStunSeconds = 2f;
+
+    /// <summary>Forced-sleep duration applied once when overload begins (seconds).</summary>
+    [DataField]
+    public float OverloadSleepSeconds = 4f;
+
     /// <summary>Seconds between checks.</summary>
     [DataField]
     public float UpdateInterval = 1f;
@@ -70,6 +87,11 @@ public sealed partial class OxydSleeperComponent : Component
     /// beaker; auto-stops when the beaker fills or is removed.</summary>
     [DataField]
     public float DialysisRate = 3f;
+
+    /// <summary>Energy drained from the sleeper's battery per reagent unit injected
+    /// (Eris use_power(amount * CHEM_SYNTH_ENERGY) — chems are synthesized, not free).</summary>
+    [DataField]
+    public float ChemPowerCost = 30f;
 
     /// <summary>Whether dialysis is currently running (Eris `filtering`).</summary>
     public bool Filtering;
@@ -195,9 +217,6 @@ public sealed partial class OxydIvDripComponent : Component
     public static readonly float[] TransferRates = { 1f, 3f, 5f, 8f, 10f };
 
     [DataField, AutoNetworkedField]
-    public NetEntity? AttachedTo;
-
-    [DataField, AutoNetworkedField]
     public float TransferPerTick = 5f;
 
     [DataField]
@@ -216,6 +235,20 @@ public sealed partial class OxydIvDripComponent : Component
     public bool DrainMode;
 }
 
+/// <summary>Present on an IV drip only while a line is attached — keeps the
+/// per-tick update off idle drips and records who attached it.</summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydActiveIvDripComponent : Component
+{
+    /// <summary>Patient entity the line runs to.</summary>
+    [DataField, AutoNetworkedField]
+    public NetEntity AttachedTo;
+
+    /// <summary>User who attached the line (admin-log/consent trail).</summary>
+    [DataField, AutoNetworkedField]
+    public NetEntity AttachedBy;
+}
+
 /// <summary>Stasis bag (Eris stasis_bag.dm): one-use bodybag that halts a patient's deterioration.</summary>
 [RegisterComponent, NetworkedComponent]
 public sealed partial class OxydStasisBagComponent : Component
@@ -225,6 +258,10 @@ public sealed partial class OxydStasisBagComponent : Component
     /// <summary>Eris: bags are non-reusable.</summary>
     [DataField]
     public bool OneUse = true;
+
+    /// <summary>Server-side: set once the bag has been opened — Eris leaves a
+    /// spent (used) bag behind instead of deleting it.</summary>
+    public bool Used;
 }
 
 /// <summary>Flag on the patient inside a stasis bag while folded in.</summary>
@@ -324,12 +361,28 @@ public sealed partial class OxydMassSpectrometerComponent : Component
 }
 
 /// <summary>Operating computer (Eris machinery/computer/Operating.dm): console showing the
-/// vitals of the patient buckled to the closest operating table.</summary>
+/// vitals of the patient buckled to a device-linked operating table.</summary>
 [RegisterComponent]
 public sealed partial class OxydOperatingComputerComponent : Component
 {
-    /// <summary>Search radius for the linked operating table. Eris checks the four cardinal
-    /// tiles; a short range also covers diagonal tables.</summary>
-    [DataField]
-    public float TableSearchRadius = 1.8f;
+}
+
+/// <summary>Eris zone_sel / mob.targeted_organ: the body zone a mob aims attacks
+/// at. Stored as an external organ category id — the ten external categories
+/// double as Eris's BP_* hit zones. <see cref="Content.Server._Oxyd.Medical.OxydWoundSystem"/>
+/// attributes incoming damage to the attacker's zone instead of picking an
+/// organ at random.</summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class OxydBodyTargetingComponent : Component
+{
+    /// <summary>Organ category the mob is aiming at (Eris targeted_organ zone).</summary>
+    [DataField, AutoNetworkedField]
+    public ProtoId<OrganCategoryPrototype> TargetedZone = "Torso";
+}
+
+/// <summary>Eris true death: the brain organ was destroyed. Server-only marker
+/// that blocks resuscitation — a true-dead mob stays dead.</summary>
+[RegisterComponent]
+public sealed partial class OxydTrueDeathComponent : Component
+{
 }

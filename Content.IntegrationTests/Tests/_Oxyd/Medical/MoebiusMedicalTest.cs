@@ -155,19 +155,22 @@ public sealed class MoebiusMedicalTest : GameTest
                 Is.True);
 
             var comp = SComp<OxydIvDripComponent>(drip);
-            Assert.That(comp.AttachedTo, Is.Null, "Fresh drip is unattached.");
+            Assert.That(SEntMan.TryGetComponent<OxydActiveIvDripComponent>(drip, out _), Is.False,
+                "Fresh drip is unattached.");
 
             // Dragging the drip onto the patient starts a do-after; it must not
             // attach instantly — the link only happens on do-after completion.
             var drag = new DragDropTargetEvent(surgeon, drip);
             SEntMan.EventBus.RaiseLocalEvent(patient, ref drag);
-            Assert.That(comp.AttachedTo, Is.Null, "Attach must wait on the do-after.");
+            Assert.That(SEntMan.TryGetComponent<OxydActiveIvDripComponent>(drip, out _), Is.False,
+                "Attach must wait on the do-after.");
 
             // Completed do-after: attached.
             var done = new OxydIvAttachDoAfterEvent();
             done.DoAfter = FakeDoAfter(done, surgeon, patient, drip);
             SEntMan.EventBus.RaiseLocalEvent(drip, done);
-            Assert.That(comp.AttachedTo, Is.EqualTo(SEntMan.GetNetEntity(patient)),
+            Assert.That(SEntMan.TryGetComponent<OxydActiveIvDripComponent>(drip, out var dripActive)
+                && dripActive.AttachedTo == SEntMan.GetNetEntity(patient), Is.True,
                 "The completed attach do-after must link the drip to the patient.");
 
             // Fill the beaker and top the bloodstream to capacity.

@@ -57,8 +57,8 @@ public sealed partial class OxydPersonalAccountComponent : Component
     [DataField, AutoNetworkedField]
     public int AccountNumber;
 
-    /// <summary>Mirrored balance for the character window. The PIN stays server-side.</summary>
-    [DataField, AutoNetworkedField]
+    /// <summary>Server-only mirror of the account balance — networking it let any
+    /// client in range read it; balance is only shown at terminals (Eris parity).</summary>
     public int Balance;
 
     [DataField, AutoNetworkedField]

@@ -21,6 +21,10 @@ public sealed partial class OxydTechTreePrototype : IPrototype
 
     /// <summary>UI accent color for the tree's level bar.</summary>
     [DataField] public Color Color = Color.White;
+
+    /// <summary>Eris tech_points granted per deconstruction level in this tree
+    /// (destructive_analyzer.dm get_object_research_value).</summary>
+    [DataField] public int PointValue = 250;
 }
 
 /// <summary>Eris /datum/technology: one unlockable research node.
