@@ -31,11 +31,14 @@
   - type: WiresPanel
   - type: ActivatableUI
     key: enum.LatheUiKey.Key
+    singleUser: false
   - type: ActivatableUIRequiresPower
   - type: UserInterface
     interfaces:
       enum.LatheUiKey.Key:
         type: LatheBoundUserInterface
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
       enum.ResearchClientUiKey.Key:
         type: ResearchClientBoundUserInterface
   - type: Transform
@@ -111,6 +114,20 @@
       map: ["enum.WiresVisualLayers.MaintenancePanel"]
   - type: Machine
     board: AutolatheMachineCircuitboard
+  - type: DeviceGuid
+  - type: EmbeddedComputerHost
+    defaultPrograms:
+    - OxydLatheControlCartridge
+    - OxydOsCartridge
+    - OxydTerminalCartridge
+  - type: DiskSlot
+  - type: ItemSlots
+    slots:
+      disk_slot:
+        name: Data Disk
+        whitelist:
+          components:
+          - FileSystem
   - type: MaterialStorage
     whitelist: &StandardMaterialWhitelist
       tags:
@@ -152,9 +169,11 @@
       machine_board: !type:Container
       machine_parts: !type:Container
       blueprint: !type:Container
+      disk_slot: !type:ContainerSlot
   - type: EmptyOnMachineDeconstruct
     containers:
     - blueprint
+    - disk_slot
 
 - type: entity
   id: AutolatheHyperConvection

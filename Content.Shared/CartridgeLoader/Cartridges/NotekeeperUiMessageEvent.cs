@@ -25,5 +25,6 @@ public enum NotekeeperUiAction
     OpenFile,
     SaveFile,
     CreateFile,
-    DeleteFile
+    DeleteFile,
+    LiveDraftUpdate
 }

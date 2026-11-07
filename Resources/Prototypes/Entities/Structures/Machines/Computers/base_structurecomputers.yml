@@ -17,6 +17,20 @@
       - board
   - type: Computer
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 680, 520
+    requireHardDriveToBoot: false
+    requireRamToBoot: false
+  - type: ComputerStats
+    processingPowerMHz: 1000
+    memoryMB: 512
+    storageCapacityKB: 4096
+  - type: NetworkBandwidth
+    maxSpeedBps: 2048
+    maxUploadBps: 2048
+  - type: FileSystem
+    maxCapacityBytes: 4194304
   - type: ApcPowerReceiver
     powerLoad: 50
   - type: PowerState
@@ -73,7 +87,7 @@
   - type: WiresVisuals
   - type: Wires
     boardName: wires-board-name-computer
-    layoutId: Computer
+    layoutId: OxydComputerMotherboard
 #
 #     This is overwritten by children, so needs to be defined there
 #  - type: UserInterface

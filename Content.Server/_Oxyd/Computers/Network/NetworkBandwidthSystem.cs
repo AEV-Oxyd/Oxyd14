@@ -30,6 +30,7 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
 
             comp.NextRateReset = curTime + TimeSpan.FromSeconds(1);
             comp.CurrentBytesReceived = 0;
+            comp.CurrentBytesSent = 0;
 
             // Drain queued packets based on maximum processing capacity
             var drainRate = Math.Max(10, comp.MaxBps / 1024);
@@ -57,6 +58,8 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         var approxSize = 128; // Standard packet header / routing metadata overhead
         var protocol = "DATA";
         var summary = args.Data.GetType().Name;
+        var rawPayload = summary;
+        var isEncrypted = false;
 
         switch (args.Data)
         {
@@ -64,34 +67,41 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
                 approxSize += ft.FileContent.Length + ft.FileName.Length + ft.Path.Length;
                 protocol = "TCP/FILE";
                 summary = $"Transfer {ft.FileName}.{ft.Extension} ({approxSize} B)";
+                rawPayload = ft.FileContent;
                 break;
             case DdosFloodPayload df:
                 approxSize += df.FloodData.Length;
                 protocol = "UDP/FLOOD";
                 summary = $"DDoS Flood Packet ({df.FloodData.Length} B)";
+                rawPayload = df.FloodData;
                 break;
             case FileDownloadRequestPayload dr:
                 approxSize += dr.TargetPath.Length + dr.AuthToken.Length;
                 protocol = "HTTP/REQ";
                 summary = $"Download request: {dr.TargetPath}";
+                rawPayload = dr.TargetPath;
                 break;
             case FileDeleteRequestPayload del:
                 approxSize += del.TargetPath.Length + del.AuthToken.Length;
                 protocol = "HTTP/DEL";
                 summary = $"Delete request: {del.TargetPath}";
+                rawPayload = del.TargetPath;
                 break;
             case PingPayload ping:
                 protocol = "ICMP/PING";
                 summary = $"Ping from {ping.SenderGuid}";
+                rawPayload = ping.SenderGuid;
                 break;
             case PongPayload pong:
                 protocol = "ICMP/PONG";
                 summary = $"Pong to {pong.TargetGuid}";
+                rawPayload = pong.TargetGuid;
                 break;
             case RemoteControlRequestPayload rc:
                 approxSize += rc.Command.Length + rc.AuthToken.Length;
                 protocol = "RPC/CMD";
                 summary = $"Remote command: {rc.Command}";
+                rawPayload = rc.Command;
                 break;
             default:
                 approxSize += 128;
@@ -125,14 +135,14 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             ? tgtGuid.Guid
             : $"DEV:{uid}";
 
-        StorePacket(uid, sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated, comp);
-        LogPacketToRouters(sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated);
+        StorePacket(uid, sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated, comp, rawPayload, isEncrypted);
+        LogPacketToRouters(sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated, rawPayload, isEncrypted);
     }
 
     /// <summary>
     /// Stores a data packet in the entity's network packet buffer.
     /// </summary>
-    public void StorePacket(
+    public NetworkDataPacket StorePacket(
         EntityUid uid,
         string source,
         string target,
@@ -140,11 +150,10 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         string summary,
         int byteSize,
         bool dropped = false,
-        NetworkBandwidthComponent? comp = null)
+        NetworkBandwidthComponent? comp = null,
+        string rawPayload = "",
+        bool isEncrypted = false)
     {
-        if (!Resolve(uid, ref comp, false))
-            return;
-
         var packet = new NetworkDataPacket
         {
             PacketId = Guid.NewGuid().ToString("N")[..8],
@@ -152,10 +161,15 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             TargetAddress = target,
             Protocol = protocol,
             PayloadSummary = summary,
+            RawPayload = string.IsNullOrEmpty(rawPayload) ? summary : rawPayload,
+            IsEncrypted = isEncrypted,
             ByteSize = byteSize,
             Timestamp = _timing.CurTime,
             Dropped = dropped
         };
+
+        if (!Resolve(uid, ref comp, false))
+            return packet;
 
         comp.StoredPackets.Add(packet);
         if (comp.StoredPackets.Count > comp.MaxStoredPackets)
@@ -164,30 +178,49 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         }
 
         Dirty(uid, comp);
+        return packet;
     }
 
     /// <summary>
     /// Broadcasts a data packet to all station routers and data servers for network monitoring, traffic routing, and auditing.
     /// </summary>
-    public void LogPacketToRouters(string source, string target, string protocol, string summary, int byteSize, bool dropped = false)
+    public void LogPacketToRouters(
+        string source,
+        string target,
+        string protocol,
+        string summary,
+        int byteSize,
+        bool dropped = false,
+        string rawPayload = "",
+        bool isEncrypted = false)
     {
         var routerQuery = EntityQueryEnumerator<DeviceNetworkRouterComponent, NetworkBandwidthComponent>();
         while (routerQuery.MoveNext(out var rUid, out _, out var rBw))
         {
-            StorePacket(rUid, source, target, protocol, summary, byteSize, dropped, rBw);
+            var pkt = StorePacket(rUid, source, target, protocol, summary, byteSize, dropped, rBw, rawPayload, isEncrypted);
+            if (TryComp<NetworkRouterComponent>(rUid, out var netRouter))
+            {
+                if (netRouter.RecordedPackets.Count >= netRouter.MaxRecordedPackets)
+                    netRouter.RecordedPackets.RemoveAt(0);
+                netRouter.RecordedPackets.Add(pkt);
+                netRouter.ConnectedDevices.Add(source);
+                netRouter.ConnectedDevices.Add(target);
+            }
         }
     }
 
     /// <summary>
-    /// Explicitly records outgoing data transmission against the entity's network card.
+    /// Explicitly records outgoing data transmission against the entity's network card (upload speed limit).
     /// </summary>
     public void RecordDataTransmitted(EntityUid uid, int byteCount, NetworkBandwidthComponent? comp = null)
     {
         if (!Resolve(uid, ref comp, false))
             return;
 
+        comp.CurrentBytesSent += byteCount;
         comp.CurrentBytesReceived += byteCount;
-        if (comp.CurrentBytesReceived > comp.MaxBps)
+        var limit = comp.MaxUploadBps > 0 ? Math.Min(comp.MaxBps, comp.MaxUploadBps) : comp.MaxBps;
+        if (comp.CurrentBytesSent > limit || comp.CurrentBytesReceived > comp.MaxBps)
         {
             comp.CurrentQueuedPackets += 1 + (byteCount / 512);
             if (comp.CurrentQueuedPackets > comp.BufferQueueLimit && !comp.IsSaturated)

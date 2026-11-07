@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Shared._Oxyd.Computers;
 
 namespace Content.Shared.CartridgeLoader;
 
@@ -62,6 +63,16 @@ public sealed partial class CartridgeLoaderSystem
     {
         if (!Resolve(loaderUid, ref loader))
             return;
+
+        // Store the program's UI state directly on the Program entity's ProgramStateComponent
+        // so that each program entity owns its own networked state for PVS and BUI load reduction.
+        if (loader.ActiveProgram is { } activeProg && Exists(activeProg))
+        {
+            var progState = EnsureComp<ProgramStateComponent>(activeProg);
+            progState.State = state;
+            progState.LoaderEntity = GetNetEntity(loaderUid);
+            Dirty(activeProg, progState);
+        }
 
         if (TryComp<Content.Shared.PDA.PdaComponent>(loaderUid, out var pda))
         {

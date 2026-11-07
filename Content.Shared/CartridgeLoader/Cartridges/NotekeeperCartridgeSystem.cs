@@ -70,13 +70,17 @@ public sealed partial class NotekeeperCartridgeSystem : EntitySystem
                 break;
 
             case NotekeeperUiAction.SaveFile:
+            case NotekeeperUiAction.LiveDraftUpdate:
                 var savePath = string.IsNullOrWhiteSpace(message.Path) ? component.CurrentFilePath : message.Path;
                 if (TrySaveTextFile(loaderUid, savePath, message.Content))
                 {
                     component.CurrentFilePath = savePath;
                     Dirty(uid, component);
-                    _adminLogger.Add(LogType.PdaInteract, LogImpact.Low,
-                        $"{ToPrettyString(args.Actor)} saved text file '{savePath}' in Notekeeper on: {ToPrettyString(uid)}");
+                    if (message.Action == NotekeeperUiAction.SaveFile)
+                    {
+                        _adminLogger.Add(LogType.PdaInteract, LogImpact.Low,
+                            $"{ToPrettyString(args.Actor)} saved text file '{savePath}' in Notekeeper on: {ToPrettyString(uid)}");
+                    }
                 }
                 break;
 

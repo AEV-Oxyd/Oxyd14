@@ -1,0 +1,21 @@
+- type: sourcePort
+  id: ComputerCommandSender
+  name: computer command output
+  description: Transmits terminal and program commands from an Oxyd computer to a linked machine.
+  defaultLinks: [ MachineCommandReceiver ]
+
+- type: sinkPort
+  id: ComputerStatusReceiver
+  name: computer status input
+  description: Receives machine telemetry and status updates on an Oxyd computer.
+
+- type: sinkPort
+  id: MachineCommandReceiver
+  name: machine command input
+  description: Receives control commands from a linked Oxyd computer.
+
+- type: sourcePort
+  id: MachineStatusSender
+  name: machine status output
+  description: Transmits machine telemetry and status changes to a linked Oxyd computer.
+  defaultLinks: [ ComputerStatusReceiver ]

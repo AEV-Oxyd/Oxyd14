@@ -1,4 +1,6 @@
 using System.Linq;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared.PDA;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared.CartridgeLoader;
@@ -99,6 +101,22 @@ public sealed partial class CartridgeLoaderSystem
         if (!HasProgram(ent, program) || ent.Comp.ActiveProgram != program)
             return;
 
+        // If this computer has a mandatory BootProgram (such as the OS or single-purpose lock program),
+        // do not allow closing the BootProgram itself while the computer is running; if closing another app,
+        // return to the BootProgram.
+        if (TryComp<OxydComputerComponent>(ent.Owner, out var computer) &&
+            computer.BootState == ComputerBootState.Running &&
+            computer.BootProgram is { } bootProg &&
+            Exists(bootProg) &&
+            HasProgram(ent, bootProg))
+        {
+            if (program == bootProg)
+                return;
+
+            ActivateProgram(ent, bootProg);
+            return;
+        }
+
         var evt = new CartridgeDeactivatedEvent(ent);
         RaiseLocalEvent(program, ref evt);
         ent.Comp.ActiveProgram = null;
@@ -143,6 +161,9 @@ public sealed partial class CartridgeLoaderSystem
     public bool UninstallProgram(Entity<CartridgeLoaderComponent> ent, EntityUid program)
     {
         if (!GetDiskPrograms(ent).Contains(program))
+            return false;
+
+        if (TryComp<OxydComputerComponent>(ent.Owner, out var computer) && computer.BootProgram == program)
             return false;
 
         if (ent.Comp.ActiveProgram == program)

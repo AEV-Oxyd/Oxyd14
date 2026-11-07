@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using Content.Server.Access.Systems;
 using Content.Server.Chat.Managers;
 using Content.Server.Instruments;
 using Content.Server.PDA.Ringer;
 using Content.Server.Station.Systems;
 using Content.Server.Store.Systems;
+using Content.Shared._Oxyd.Computers;
 using Content.Shared.Access.Components;
 using Content.Shared.AlertLevel;
 using Content.Shared.CartridgeLoader;
@@ -256,7 +258,7 @@ namespace Content.Server.PDA
             // TODO: Update the level and name of the station with each call to UpdatePdaUi is only needed for latejoin players.
             // TODO: If someone can implement changing the level and name of the station when changing the PDA grid, this can be removed.
 
-            // TODO don't make this depend on cartridge loader!?!?
+            // TODO don't make this depend on cartridge loader!?!
             if (!TryComp(uid, out CartridgeLoaderComponent? loader))
                 return;
 
@@ -267,9 +269,14 @@ namespace Content.Server.PDA
             var statsComp = CompOrNull<ComputerStatsComponent>(uid);
             var fsComp = CompOrNull<FileSystemComponent>(uid);
             var bwComp = CompOrNull<NetworkBandwidthComponent>(uid);
+            var oxydComp = CompOrNull<OxydComputerComponent>(uid);
 
             // Synchronize running open programs
             pda.OpenPrograms.RemoveAll(p => !Exists(p) || EntityManager.IsQueuedForDeletion(p));
+            if (oxydComp?.BootProgram is { } bootProg && Exists(bootProg) && !EntityManager.IsQueuedForDeletion(bootProg) && !pda.OpenPrograms.Contains(bootProg))
+            {
+                pda.OpenPrograms.Insert(0, bootProg);
+            }
             if (loader.ActiveProgram.HasValue && !EntityManager.IsQueuedForDeletion(loader.ActiveProgram.Value) && !pda.OpenPrograms.Contains(loader.ActiveProgram.Value))
             {
                 pda.OpenPrograms.Add(loader.ActiveProgram.Value);
@@ -308,6 +315,12 @@ namespace Content.Server.PDA
                 hasCaptainAccess = tags.Any(t => t.Id == "Captain" || t.Id == "Command");
             }
 
+            var template = oxydComp?.Template ?? ComputerUiTemplate.Pda;
+            var bootState = oxydComp?.BootState ?? ComputerBootState.Running;
+            var bootMsg = oxydComp?.BootDiagnosticMessage ?? string.Empty;
+            var screenSize = oxydComp?.DefaultScreenSize ?? new Vector2(580f, 480f);
+            var bootProgramNet = oxydComp?.BootProgram != null ? GetNetEntity(oxydComp.BootProgram) : null;
+
             var state = new PdaUpdateState(
                 programs,
                 GetNetEntity(loader.ActiveProgram),
@@ -339,7 +352,16 @@ namespace Content.Server.PDA
                 diskName: pda.DiskSlot.Item is { } dEnt ? MetaData(dEnt).EntityName : null,
                 hasCaptainAccess: hasCaptainAccess,
                 sshPassword: hasCaptainAccess ? pda.SshPassword : null,
-                currentView: pda.CurrentView);
+                currentView: pda.CurrentView,
+                template: template,
+                bootState: bootState,
+                bootDiagnosticMessage: bootMsg,
+                defaultScreenSize: screenSize,
+                bootProgram: bootProgramNet,
+                uploadBps: bwComp?.CurrentBytesSent ?? 0,
+                downloadBps: bwComp?.CurrentBytesReceived ?? 0,
+                batteryChargePercent: statsComp?.BatteryChargePercent ?? 100f,
+                hasBattery: statsComp?.HasBattery ?? false);
 
             pda.LastState = state;
             if (_ui.HasUi(uid, PdaUiKey.Key))
@@ -422,10 +444,10 @@ namespace Content.Server.PDA
                 .Where(id => id != null)
                 .ToHashSet();
 
-            string[] defaultCarts = ["OxydFileBrowserCartridge", "OxydTerminalCartridge", "OxydDownloaderCartridge"];
+            string[] defaultCarts = ["OxydOsCartridge", "OxydFileBrowserCartridge", "OxydTerminalCartridge", "OxydDownloaderCartridge"];
             foreach (var cartId in defaultCarts)
             {
-                if (!existingProtos.Contains(cartId))
+                if (!existingProtos.Contains(cartId) && _prototype.HasIndex<EntityPrototype>(cartId))
                 {
                     _cartridgeLoader.InstallProgram((uid, loader), cartId, deinstallable: false);
                 }
@@ -538,6 +560,9 @@ namespace Content.Server.PDA
         private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaCloseProgramTabMessage msg)
         {
             var progUid = GetEntity(msg.Program);
+            if (TryComp<OxydComputerComponent>(uid, out var oxydComp) && oxydComp.BootProgram == progUid)
+                return;
+
             pda.OpenPrograms.Remove(progUid);
             if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
             {

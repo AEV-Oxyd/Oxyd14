@@ -21,6 +21,7 @@ public sealed partial class NotekeeperUi : UIFragment
         _fragment.OnNoteAdded += note => SendNotekeeperMessage(NotekeeperUiAction.Add, note, "", userInterface);
         _fragment.OnOpenFile += path => SendNotekeeperMessage(NotekeeperUiAction.OpenFile, path, "", userInterface);
         _fragment.OnSaveFile += (path, content) => SendNotekeeperMessage(NotekeeperUiAction.SaveFile, path, content, userInterface);
+        _fragment.OnLiveDraftChanged += (path, content) => SendNotekeeperMessage(NotekeeperUiAction.LiveDraftUpdate, path, content, userInterface);
         _fragment.OnCreateFile += (name, content) => SendNotekeeperMessage(NotekeeperUiAction.CreateFile, name, content, userInterface);
         _fragment.OnDeleteFile += path => SendNotekeeperMessage(NotekeeperUiAction.DeleteFile, path, "", userInterface);
     }

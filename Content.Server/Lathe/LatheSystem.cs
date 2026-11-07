@@ -9,7 +9,10 @@ using Content.Server.Popups;
 using Content.Server.Power.EntitySystems;
 using Content.Server.Radio.EntitySystems;
 using Content.Server.Stack;
+using Content.Server._Oxyd.Computers;
 using Content.Shared._Oxyd;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared.DeviceLinking.Events;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared.Atmos;
 using Content.Shared.Chemistry.Components;
@@ -57,6 +60,7 @@ namespace Content.Server.Lathe
         [Dependency] private TransformSystem _transform = default!;
         [Dependency] private RadioSystem _radio = default!;
         [Dependency] private ItemSlotsSystem itemslots = default!;
+        [Dependency] private OxydComputerSystem _oxydComputer = default!;
         /// <summary>
         /// Per-tick cache
         /// </summary>
@@ -84,8 +88,44 @@ namespace Content.Server.Lathe
             SubscribeLocalEvent<TechnologyDatabaseComponent, LatheGetRecipesEvent>(OnGetRecipes);
             SubscribeLocalEvent<EmagLatheRecipesComponent, LatheGetRecipesEvent>(GetEmagLatheRecipes);
             SubscribeLocalEvent<LatheHeatProducingComponent, LatheStartPrintingEvent>(OnHeatStartPrinting);
+            SubscribeLocalEvent<LatheComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
         }
         
+        private void OnComputerDeviceLinkSignal(Entity<LatheComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
+        {
+            var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+            if (cmd is "lathe_print" or "print")
+            {
+                var parts = (args.Data.Argument ?? string.Empty).Split(new[] { ' ', ':' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 0 && ProtoMan.TryIndex<LatheRecipePrototype>(parts[0], out var recipe))
+                {
+                    var amount = parts.Length > 1 && int.TryParse(parts[1], out var parsed) ? Math.Max(1, parsed) : 1;
+                    if (TryAddToQueue(ent.Owner, recipe, amount, ent.Comp))
+                        TryStartProducing(ent.Owner, ent.Comp);
+                }
+                UpdateUserInterfaceState(ent.Owner, ent.Comp);
+            }
+            else if (cmd is "lathe_cancel" or "cancel")
+            {
+                while (ent.Comp.Queue.First is { } node)
+                {
+                    RefundBatch(ent.Owner, ent.Comp, node.Value);
+                    ent.Comp.Queue.RemoveFirst();
+                }
+                if (ent.Comp.CurrentRecipe != null)
+                {
+                    RefundCurrentRecipe(ent.Owner, ent.Comp);
+                    ent.Comp.CurrentRecipe = null;
+                    FinishProducing(ent.Owner, ent.Comp);
+                }
+                UpdateUserInterfaceState(ent.Owner, ent.Comp);
+            }
+            else if (cmd is "lathe_sync_disk" or "lathe_status" or "sync_disk" or "status")
+            {
+                UpdateUserInterfaceState(ent.Owner, ent.Comp);
+            }
+        }
+
         [SubscribeLocalEvent]
         public void OnInsert(EntityUid ent, LatheComponent comp, EntInsertedIntoContainerMessage ev)
         {
@@ -542,6 +582,7 @@ namespace Content.Server.Lathe
             };
 
             _uiSys.SetUiState(uid, LatheUiKey.Key, state);
+            _oxydComputer.NotifyComputerFromMachine(uid, "lathe_state_changed");
         }
 
         private void OnLatheSelectBlueprintFileMessage(EntityUid uid, LatheComponent component, LatheSelectBlueprintFileMessage args)

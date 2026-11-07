@@ -1,4 +1,7 @@
+using Content.Server._Oxyd.Computers;
 using Content.Server.Atmos.Monitor.Components;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceNetwork.Systems;
 using Content.Server.Popups;
 using Content.Shared.Access.Components;
@@ -35,6 +38,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
     [Dependency] private DeviceNetworkSystem _deviceNet = default!;
     [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private DeviceListSystem _deviceList = default!;
+    [Dependency] private OxydComputerSystem _oxydComputer = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
 
@@ -169,6 +173,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
         SubscribeLocalEvent<AirAlarmComponent, MapInitEvent>(OnMapInit);
         SubscribeLocalEvent<AirAlarmComponent, ComponentShutdown>(OnShutdown);
         SubscribeLocalEvent<AirAlarmComponent, AfterActivatableUIOpenEvent>(OnActivate);
+        SubscribeLocalEvent<AirAlarmComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
 
         Subs.BuiEvents<AirAlarmComponent>(SharedAirAlarmInterfaceKey.Key, subs =>
         {
@@ -180,6 +185,30 @@ public sealed partial class AirAlarmSystem : EntitySystem
             subs.Event<AirAlarmUpdateDeviceDataMessage>(OnUpdateDeviceData);
             subs.Event<AirAlarmCopyDeviceDataMessage>(OnCopyDeviceData);
         });
+    }
+
+    private void OnComputerDeviceLinkSignal(Entity<AirAlarmComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
+    {
+        var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (cmd is "atmos_set_mode" or "set_mode" or "mode")
+        {
+            var modeStr = args.Data.Argument.Trim().ToLowerInvariant();
+            var mode = modeStr switch
+            {
+                "filtering" => AirAlarmMode.Filtering,
+                "widefiltering" => AirAlarmMode.WideFiltering,
+                "fill" => AirAlarmMode.Fill,
+                "panic" => AirAlarmMode.Panic,
+                "none" or "off" => AirAlarmMode.None,
+                _ => ent.Comp.CurrentMode
+            };
+
+            var addr = DeviceAddress.Invalid;
+            if (TryComp<DeviceNetworkComponent>(ent.Owner, out var netConn))
+                addr = netConn.Address;
+
+            SetMode(ent.Owner, addr, mode, false, ent.Comp);
+        }
     }
 
     private void OnDeviceListUpdate(EntityUid uid, AirAlarmComponent component, ref DeviceListUpdateEvent args)
@@ -652,6 +681,8 @@ public sealed partial class AirAlarmSystem : EntitySystem
             uid,
             SharedAirAlarmInterfaceKey.Key,
             new AirAlarmUIState((devNet.Address, devNet.Prefix), deviceCount, pressure, temperature, dataToSend, alarm.CurrentMode, highestAlarm.Value, alarm.AutoMode, alarm.PanicWireCut));
+
+        _oxydComputer.NotifyComputerFromMachine(uid, "atmos_state_changed");
     }
 
     private const float Delay = 8f;

@@ -21,6 +21,7 @@
   - type: DeviceGuid
   - type: NetworkBandwidth
     maxBps: 250000
+    maxUploadBps: 250000
     bufferQueueLimit: 150
   - type: ComputerStats
     cpuFrequencyMhz: 1200
@@ -75,7 +76,38 @@
   description: High-throughput core network routing appliance for directing, caching, and logging station packet traffic.
   components:
   - type: DeviceNetworkRouter
+  - type: NetworkRouter
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 760, 560
+    allowRemoteControl: true
+    requiresPower: true
+  - type: PDA
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    preinstalled:
+    - OxydOsCartridge
+    - OxydRouterCartridge
+    - OxydPacketSnifferCartridge
+    - OxydTerminalCartridge
+  - type: ActivatableUI
+    key: enum.PdaUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: WiresPanel
+  - type: Wires
+    layoutId: OxydComputerMotherboard
+  - type: ModularComputer
+    maxHardDrives: 2
+    maxRamSlots: 2
+    maxBatterySize: Small
   - type: NetworkBandwidth
     maxBps: 10000000
+    maxUploadBps: 10000000
     bufferQueueLimit: 500

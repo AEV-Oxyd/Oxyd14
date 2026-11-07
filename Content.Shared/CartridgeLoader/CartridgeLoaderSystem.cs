@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Computers;
 using Content.Shared.Containers.ItemSlots;
 using Robust.Shared.Containers;
 using Robust.Shared.Timing;
@@ -29,6 +30,7 @@ public sealed partial class CartridgeLoaderSystem : EntitySystem
         SubscribeLocalEvent<CartridgeLoaderComponent, CartridgeUiMessage>(OnUiMessage);
 
         SubscribeLocalEvent<CartridgeComponent, AfterAutoHandleStateEvent>(OnCartridgeState);
+        SubscribeLocalEvent<ProgramStateComponent, AfterAutoHandleStateEvent>(OnProgramState);
     }
 
     private void OnComponentInit(Entity<CartridgeLoaderComponent> ent, ref ComponentInit args)
@@ -72,6 +74,8 @@ public sealed partial class CartridgeLoaderSystem : EntitySystem
             else
                 UpdateCartridgeInstallationStatus((args.Entity, cartridge), InstallationStatus.Cartridge);
         }
+
+        EnsureComp<ProgramStateComponent>(args.Entity);
 
         var evt = new CartridgeAddedEvent(ent);
         RaiseLocalEvent(args.Entity, ref evt);
@@ -132,6 +136,20 @@ public sealed partial class CartridgeLoaderSystem : EntitySystem
             return;
 
         UpdateUiState(loader);
+    }
+
+    private void OnProgramState(Entity<ProgramStateComponent> ent, ref AfterAutoHandleStateEvent args)
+    {
+        if (ent.Comp.LoaderEntity is not { } netLoader || !TryGetEntity(netLoader, out var loaderUid))
+            return;
+
+        if (TryComp<Content.Shared.PDA.PdaComponent>(loaderUid.Value, out var pda) && ent.Comp.State != null)
+        {
+            pda.ActiveCartridgeState = ent.Comp.State;
+            _pdaSystem.UpdatePdaUi(loaderUid.Value, pda);
+        }
+
+        UpdateUiState(loaderUid.Value);
     }
 }
 

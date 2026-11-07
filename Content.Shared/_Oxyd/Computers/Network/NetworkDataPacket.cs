@@ -21,6 +21,15 @@ public sealed partial class NetworkDataPacket
     public string PayloadSummary = string.Empty;
 
     [DataField]
+    public string RawPayload = string.Empty;
+
+    [DataField]
+    public bool IsEncrypted = false;
+
+    [DataField]
+    public Dictionary<string, string> Parameters = new();
+
+    [DataField]
     public int ByteSize = 0;
 
     [DataField]

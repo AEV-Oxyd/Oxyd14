@@ -1,3 +1,4 @@
+using System.Numerics;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.UserInterface;
 using Robust.Shared.Serialization;
@@ -31,6 +32,15 @@ namespace Content.Shared.PDA
         public bool HasCaptainAccess;
         public string? SshPassword;
         public int CurrentView;
+        public ComputerUiTemplate Template;
+        public ComputerBootState BootState;
+        public string BootDiagnosticMessage;
+        public Vector2 DefaultScreenSize;
+        public NetEntity? BootProgram;
+        public int UploadBps;
+        public int DownloadBps;
+        public float BatteryChargePercent;
+        public bool HasBattery;
 
         public IEnumerable<BoundUserInterfaceState> GetNestedStates()
         {
@@ -62,7 +72,16 @@ namespace Content.Shared.PDA
             string? diskName = null,
             bool hasCaptainAccess = false,
             string? sshPassword = null,
-            int currentView = 0)
+            int currentView = 0,
+            ComputerUiTemplate template = ComputerUiTemplate.Pda,
+            ComputerBootState bootState = ComputerBootState.Running,
+            string bootDiagnosticMessage = "",
+            Vector2 defaultScreenSize = default,
+            NetEntity? bootProgram = null,
+            int uploadBps = 0,
+            int downloadBps = 0,
+            float batteryChargePercent = 100f,
+            bool hasBattery = false)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
@@ -87,6 +106,15 @@ namespace Content.Shared.PDA
             HasCaptainAccess = hasCaptainAccess;
             SshPassword = sshPassword;
             CurrentView = currentView;
+            Template = template;
+            BootState = bootState;
+            BootDiagnosticMessage = bootDiagnosticMessage;
+            DefaultScreenSize = defaultScreenSize;
+            BootProgram = bootProgram;
+            UploadBps = uploadBps;
+            DownloadBps = downloadBps;
+            BatteryChargePercent = batteryChargePercent;
+            HasBattery = hasBattery;
         }
     }
 

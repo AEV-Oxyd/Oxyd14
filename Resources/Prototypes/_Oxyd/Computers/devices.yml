@@ -16,6 +16,11 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Pda
+    defaultScreenSize: 580, 480
+    allowRemoteControl: true
+    requiresPower: false
   - type: FileSystem
     maxStorageBytes: 2097152
     files:
@@ -40,6 +45,14 @@
         size: 32
         isReadOnly: false
         textContent: "Station operations in progress."
+      "/bin/os.bin": !type:ProgramVirtualFile
+        name: os
+        extension: bin
+        directory: /bin/
+        size: 4096
+        isReadOnly: true
+        programId: OxydOsCartridge
+        title: "NTOS System"
       "/bin/file_browser.bin": !type:ProgramVirtualFile
         name: file_browser
         extension: bin
@@ -97,19 +110,24 @@
         programId: NewsReaderCartridge
         title: "News Reader"
   - type: ModularComputer
+    maxHardDrives: 1
+    maxBatterySize: Small
   - type: ComputerStats
     cpuFrequencyMhz: 400
     ramMb: 512
     storageBytes: 2097152
     networkBandwidthBps: 128000
+    maxUploadBps: 64000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 128000
+    maxUploadBps: 64000
     bufferQueueLimit: 50
   - type: EntityTableContainerFill
     containers:
       preinstalled-program-container: !type:AllSelector
         children:
+        - id: OxydOsCartridge
         - id: CrewManifestCartridge
         - id: NotekeeperCartridge
         - id: NanoTaskCartridge
@@ -130,6 +148,11 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Pda
+    defaultScreenSize: 680, 520
+    allowRemoteControl: true
+    requiresPower: false
   - type: FileSystem
     maxStorageBytes: 8388608
     files:
@@ -159,9 +182,11 @@
     ramMb: 1024
     storageBytes: 8388608
     networkBandwidthBps: 500000
+    maxUploadBps: 250000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 500000
+    maxUploadBps: 250000
     bufferQueueLimit: 100
 
 - type: entity
@@ -177,6 +202,40 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 780, 580
+    allowRemoteControl: true
+    requiresPower: true
+  - type: PDA
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    preinstalled:
+    - OxydOsCartridge
+    - OxydTerminalCartridge
+    - OxydFileBrowserCartridge
+    - OxydDownloaderCartridge
+    - OxydPacketSnifferCartridge
+    - CrewManifestCartridge
+    - NotekeeperCartridge
+  - type: ActivatableUI
+    key: enum.PdaUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: WiresPanel
+  - type: Wires
+    layoutId: OxydComputerMotherboard
+  - type: DeviceLinkSource
+    ports:
+    - ComputerCommandSender
+  - type: DeviceLinkSink
+    ports:
+    - ComputerStatusReceiver
   - type: FileSystem
     maxStorageBytes: 104857600
     files:
@@ -194,15 +253,26 @@
         size: 120
         textContent: "Boot successful. Network connection established."
   - type: ModularComputer
+    maxHardDrives: 3
+    maxRamSlots: 2
+    maxBatterySize: Small
   - type: ComputerStats
     cpuFrequencyMhz: 3200
     ramMb: 8192
     storageBytes: 104857600
     networkBandwidthBps: 10000000
+    maxUploadBps: 5000000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 10000000
+    maxUploadBps: 5000000
     bufferQueueLimit: 500
+
+- type: entity
+  parent: BaseOxydComputer
+  id: OxydWorkstationComputer
+  name: Oxyd workstation computer
+  description: A modular desktop computer running NTOS with hardware expansion bays, network packet tools, and remote terminal support.
 
 - type: entity
   parent: BaseItem
@@ -216,6 +286,36 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 640, 480
+    allowRemoteControl: true
+    requiresPower: false
+  - type: PDA
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    preinstalled:
+    - OxydOsCartridge
+    - OxydTerminalCartridge
+    - OxydFileBrowserCartridge
+  - type: ActivatableUI
+    key: enum.PdaUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: WiresPanel
+  - type: Wires
+    layoutId: OxydComputerMotherboard
+  - type: DeviceLinkSource
+    ports:
+    - ComputerCommandSender
+  - type: DeviceLinkSink
+    ports:
+    - ComputerStatusReceiver
   - type: FileSystem
     maxStorageBytes: 65536
     files:
@@ -233,15 +333,141 @@
         size: 48
         isReadOnly: true
         textContent: "VOLTAGE=240;CYCLE=60HZ;INTERLOCK=TRUE"
+  - type: ModularComputer
+    maxHardDrives: 2
+    maxRamSlots: 2
+    maxBatterySize: Small
   - type: ComputerStats
     cpuSpeedMHz: 50
     ramSizeMB: 32
     storageCapacityBytes: 65536
     networkBandwidthBytesPerSec: 10000
+    maxUploadBps: 10000
     directHardwareAccessOnly: true
   - type: NetworkBandwidth
     maxBps: 10000
+    maxUploadBps: 10000
     bufferQueueLimit: 10
+
+# ==============================================================================
+# Standalone Computer Hardware Parts
+# ==============================================================================
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartCpuBasic
+  name: modular CPU unit
+  description: A standalone microprocessor module for Oxyd computer motherboards.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu
+  - type: ComputerCpu
+    frequencyMhz: 800
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartRamBasic
+  name: modular RAM stick (512 MB)
+  description: A volatile memory module required for computer boot and program execution.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: ram
+  - type: ComputerRam
+    capacityMb: 512
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartHardDriveBasic
+  name: modular hard drive (8 MB)
+  description: Non-volatile storage drive containing the bootable program list and filesystem.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: harddrive
+  - type: ComputerStorageDevice
+    capacityBytes: 8388608
+    partSize: Medium
+    storedPrograms:
+    - OxydOsCartridge
+    - OxydTerminalCartridge
+    - OxydFileBrowserCartridge
+  - type: ComputerHardDrive
+    capacityBytes: 8388608
+    partSize: Medium
+    storedPrograms:
+    - OxydOsCartridge
+    - OxydTerminalCartridge
+    - OxydFileBrowserCartridge
+  - type: FileSystem
+    maxStorageBytes: 8388608
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartNetworkCardBasic
+  name: modular network interface card
+  description: Provides wired and wireless packet routing capabilities with configurable download and upload speeds.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: netcard
+  - type: ComputerNetworkCard
+    maxBps: 500000
+    maxUploadBps: 250000
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartBatterySmall
+  name: small computer battery module
+  description: A compact backup battery module for embedded controllers and portable computers.
+  components:
+  - type: Sprite
+    sprite: Objects/Power/power_cells.rsi
+    state: small
+  - type: ComputerBatteryModule
+    maxCharge: 1000
+    currentCharge: 1000
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartSensorBasic
+  name: computer diagnostic sensor module
+  description: Internal telemetry sensor module for monitoring local machine state.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: sensor
+  - type: ComputerSensorModule
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartIdSlotModule
+  name: modular ID card slot
+  description: Peripheral slot module allowing a computer to read access credentials from an ID card.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: id_slot
+  - type: ComputerIdCardSlotModule
+    partSize: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartDiskSlotModule
+  name: modular data disk slot
+  description: Optical/magnetic disk drive module allowing a computer to read blueprint and data disks.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: disk_slot
+  - type: ComputerDiskSlotModule
+    partSize: Small
 
 - type: entity
   parent: BaseRecipeDisk

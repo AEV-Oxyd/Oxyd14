@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using Content.Client.PDA;
 using Content.Client.Power.APC.UI;
 using Content.Client.UserInterface.Controls;
@@ -14,7 +13,6 @@ using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Input;
-using Robust.Shared.Map;
 using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Computers.ScreenSharing;
@@ -24,7 +22,7 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 /// - BoundUserInterface devices (APCs, Atmospheric Alarms, Static Computers, Consoles, PDAs, etc.)
 /// - Arbitrary custom IRemoteTargetUi implementations
 /// Fits the remote display cleanly to the terminal viewport and streams user interactions
-/// (mouse clicks, hovers, scroll, keyboard typing, focus) directly to the target UI.
+/// (mouse clicks, hovers, scroll, keyboard typing, focus) directly to the target UI without reflection.
 /// Infinite recursive cycles (A -> B -> A or A -> A) are rendered via Picture-in-Picture (PiP) mirror textures.
 /// </summary>
 public sealed partial class RemoteScreenView : LayoutContainer
@@ -32,21 +30,6 @@ public sealed partial class RemoteScreenView : LayoutContainer
     [Dependency] private IEntityManager _entManager = default!;
     [Dependency] private IPlayerManager _playerManager = default!;
     [Dependency] private IUserInterfaceManager _uiManager = default!;
-
-    private static readonly MethodInfo? s_ControlKeyBindDown =
-        typeof(Control).GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-    private static readonly MethodInfo? s_ControlKeyBindUp =
-        typeof(Control).GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-    private static readonly MethodInfo? s_ControlMouseMove =
-        typeof(Control).GetMethod("MouseMove", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-    private static readonly MethodInfo? s_ControlMouseWheel =
-        typeof(Control).GetMethod("MouseWheel", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-    private static readonly FieldInfo? s_ButtonAttemptingPress =
-        typeof(BaseButton).GetField("_attemptingPress", BindingFlags.Instance | BindingFlags.NonPublic);
 
     public BoundUserInterface? HostBui
     {
@@ -68,11 +51,10 @@ public sealed partial class RemoteScreenView : LayoutContainer
     private string? _deviceGuid;
     private bool _isCycle;
 
-    private readonly Dictionary<BoundKeyFunction, Control> _relayedPressedControls = new();
+    private Control? _lastFocusedRemoteControl;
 
     private Control? GetCaptureTarget()
     {
-        
         if (_activeTargetUi?.RootControl is not { } root || root.Disposed)
             return null;
 
@@ -144,6 +126,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
             _surface.Visible = false;
             _surface.DeviceGuid = null;
             _statusLabel.Visible = false;
+            ClearRemoteControlFocus();
 
             if (!string.IsNullOrEmpty(_deviceGuid))
             {
@@ -188,14 +171,26 @@ public sealed partial class RemoteScreenView : LayoutContainer
         _surface.InvalidateCapture();
     }
 
+    private void ClearRemoteControlFocus()
+    {
+        if (_lastFocusedRemoteControl != null)
+        {
+            if (_uiManager.ControlFocused == _lastFocusedRemoteControl)
+                _uiManager.ControlFocused = null;
+
+            _lastFocusedRemoteControl = null;
+        }
+    }
+
     private void DisposeActiveTarget()
     {
+        ClearRemoteControlFocus();
+
         if (_activeTargetUi != null)
         {
             _activeTargetUi.Dispose();
             _activeTargetUi = null;
         }
-        _relayedPressedControls.Clear();
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
@@ -209,6 +204,65 @@ public sealed partial class RemoteScreenView : LayoutContainer
         }
 
         _activeTargetUi?.FrameUpdate(args);
+        UpdateHoveredRemoteControlFocus();
+    }
+
+    private void UpdateHoveredRemoteControlFocus()
+    {
+        if (!VisibleInTree || _isCycle || GetCaptureTarget() is not { } targetRoot)
+        {
+            ClearRemoteControlFocus();
+            return;
+        }
+
+        var mousePosScaled = _uiManager.MousePositionScaled.Position;
+        var localPixelPos = (mousePosScaled * UIScale) - GlobalPixelPosition;
+
+        if (!TryMapToTarget(localPixelPos, out var targetPixelPos))
+        {
+            ClearRemoteControlFocus();
+            return;
+        }
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        if (hit == null)
+        {
+            ClearRemoteControlFocus();
+            return;
+        }
+
+        Control? cur = hit.Value.control;
+        BaseButton? hitButton = null;
+        while (cur != null)
+        {
+            if (cur is BaseButton btn && !btn.Disabled)
+            {
+                hitButton = btn;
+                break;
+            }
+
+            if (cur == targetRoot)
+                break;
+
+            cur = cur.Parent;
+        }
+
+        if (hitButton != null)
+        {
+            hitButton.Mode = BaseButton.ActionMode.Press;
+            _uiManager.ControlFocused = hitButton;
+            _lastFocusedRemoteControl = hitButton;
+        }
+        else
+        {
+            ClearRemoteControlFocus();
+        }
+    }
+
+    protected override void MouseExited()
+    {
+        base.MouseExited();
+        ClearRemoteControlFocus();
     }
 
     protected override void RenderChildOverride(ref ControlRenderArguments args, int childIndex, Vector2i position)
@@ -337,7 +391,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         }
     }
 
-    #region Input Event Relaying
+    #region Input Event Relaying (Zero-Reflection)
 
     public static (Control control, Vector2 relPixelPos)? FindControlAtPos(Control control, Vector2 position)
     {
@@ -384,36 +438,38 @@ public sealed partial class RemoteScreenView : LayoutContainer
             return;
 
         var (leafControl, leafPixelPos) = hit.Value;
-        var windowId = args.PointerLocation.Window;
-
         var curPixelPos = leafPixelPos;
         Control? cur = leafControl;
+
         while (cur != null)
         {
             if (cur.MouseFilter != MouseFilterMode.Ignore)
             {
-                var curVirtualPos = curPixelPos / cur.UIScale;
-                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
-                var curEvent = new GUIBoundKeyEventArgs(
-                    args.Function,
-                    args.State,
-                    pointerLoc,
-                    args.CanFocus,
-                    curVirtualPos,
-                    curPixelPos);
-
-                s_ControlKeyBindDown?.Invoke(cur, new object[] { curEvent });
-
                 if (cur.CanKeyboardFocus && cur.KeyboardFocusOnClick)
                 {
                     cur.GrabKeyboardFocus();
                 }
 
-                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
                 {
-                    _relayedPressedControls[args.Function] = cur;
+                    var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
+                    slider.Value = slider.MinValue + ratio * (slider.MaxValue - slider.MinValue);
                     break;
                 }
+
+                if (cur is TabContainer tabContainer && args.Function == EngineKeyFunctions.UIClick)
+                {
+                    if (curPixelPos.Y <= 32f * tabContainer.UIScale && tabContainer.ChildCount > 0)
+                    {
+                        var tabWidth = Math.Max(1f, (float)tabContainer.PixelWidth / tabContainer.ChildCount);
+                        var tabIdx = Math.Clamp((int)(curPixelPos.X / tabWidth), 0, tabContainer.ChildCount - 1);
+                        tabContainer.CurrentTab = tabIdx;
+                        break;
+                    }
+                }
+
+                if (cur.MouseFilter == MouseFilterMode.Stop)
+                    break;
             }
 
             if (cur == targetRoot)
@@ -423,6 +479,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
             cur = cur.Parent;
         }
 
+        _surface.InvalidateCapture(2);
         args.Handle();
     }
 
@@ -430,168 +487,17 @@ public sealed partial class RemoteScreenView : LayoutContainer
     {
         base.KeyBindUp(args);
 
-        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+        if (GetCaptureTarget() is not { } || _isCycle)
             return;
 
-        Control? targetControl = null;
-        Vector2 leafPixelPos = Vector2.Zero;
-
-        if (_relayedPressedControls.Remove(args.Function, out var pressed) && pressed.VisibleInTree)
-        {
-            targetControl = pressed;
-            if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
-            {
-                leafPixelPos = targetPixelPos - (pressed.GlobalPixelPosition - targetRoot.GlobalPixelPosition);
-            }
-        }
-        else if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
-        {
-            var hit = FindControlAtPos(targetRoot, targetPixelPos);
-            if (hit != null)
-            {
-                targetControl = hit.Value.control;
-                leafPixelPos = hit.Value.relPixelPos;
-            }
-        }
-
-        if (targetControl == null)
-            return;
-
-        var windowId = args.PointerLocation.Window;
-        var curPixelPos = leafPixelPos;
-        Control? cur = targetControl;
-        while (cur != null)
-        {
-            if (cur.MouseFilter != MouseFilterMode.Ignore)
-            {
-                var curVirtualPos = curPixelPos / cur.UIScale;
-                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
-                var curEvent = new GUIBoundKeyEventArgs(
-                    args.Function,
-                    args.State,
-                    pointerLoc,
-                    args.CanFocus,
-                    curVirtualPos,
-                    curPixelPos);
-
-                // Ensure BaseButton attempting press counter is at least 1 so KeyBindUp triggers OnPressed
-                if (cur is BaseButton btn && !btn.Disabled && s_ButtonAttemptingPress != null)
-                {
-                    var attempting = (int)(s_ButtonAttemptingPress.GetValue(btn) ?? 0);
-                    if (attempting <= 0)
-                        s_ButtonAttemptingPress.SetValue(btn, 1);
-                }
-
-                s_ControlKeyBindUp?.Invoke(cur, new object[] { curEvent });
-
-                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
-                    break;
-            }
-
-            if (cur == targetRoot)
-                break;
-
-            curPixelPos += cur.PixelPosition;
-            cur = cur.Parent;
-        }
-
+        _surface.InvalidateCapture(2);
         args.Handle();
     }
 
     protected override void MouseMove(GUIMouseMoveEventArgs args)
     {
         base.MouseMove(args);
-
-        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
-            return;
-
-        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
-            return;
-
-        var hit = FindControlAtPos(targetRoot, targetPixelPos);
-        if (hit == null)
-            return;
-
-        var (leafControl, leafPixelPos) = hit.Value;
-        var windowId = args.GlobalPixelPosition.Window;
-
-        var curPixelPos = leafPixelPos;
-        Control? cur = leafControl;
-        while (cur != null)
-        {
-            if (cur.MouseFilter != MouseFilterMode.Ignore)
-            {
-                var curVirtualPos = curPixelPos / cur.UIScale;
-                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
-                var curEvent = new GUIMouseMoveEventArgs(
-                    args.Relative / cur.UIScale,
-                    cur,
-                    curVirtualPos,
-                    pointerLoc,
-                    curVirtualPos,
-                    curPixelPos);
-
-                s_ControlMouseMove?.Invoke(cur, new object[] { curEvent });
-
-                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
-                    break;
-            }
-
-            if (cur == targetRoot)
-                break;
-
-            curPixelPos += cur.PixelPosition;
-            cur = cur.Parent;
-        }
-    }
-
-    protected override void MouseWheel(GUIMouseWheelEventArgs args)
-    {
-        base.MouseWheel(args);
-
-        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
-            return;
-
-        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
-            return;
-
-        var hit = FindControlAtPos(targetRoot, targetPixelPos);
-        if (hit == null)
-            return;
-
-        var (leafControl, leafPixelPos) = hit.Value;
-        var windowId = args.GlobalPixelPosition.Window;
-
-        var curPixelPos = leafPixelPos;
-        Control? cur = leafControl;
-        while (cur != null)
-        {
-            if (cur.MouseFilter != MouseFilterMode.Ignore)
-            {
-                var curVirtualPos = curPixelPos / cur.UIScale;
-                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
-                var curEvent = new GUIMouseWheelEventArgs(
-                    args.Delta,
-                    cur,
-                    curVirtualPos,
-                    pointerLoc,
-                    curVirtualPos,
-                    curPixelPos);
-
-                s_ControlMouseWheel?.Invoke(cur, new object[] { curEvent });
-
-                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
-                    break;
-            }
-
-            if (cur == targetRoot)
-                break;
-
-            curPixelPos += cur.PixelPosition;
-            cur = cur.Parent;
-        }
-
-        args.Handle();
+        UpdateHoveredRemoteControlFocus();
     }
 
     #endregion
@@ -607,7 +513,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
     }
 
     /// <summary>
-    /// Generic abstraction for any UI that can be streamed into a <see cref=\"RemoteScreenView\"/>.
+    /// Generic abstraction for any UI that can be streamed into a <see cref="RemoteScreenView"/>.
     /// </summary>
     public interface IRemoteTargetUi : IDisposable
     {

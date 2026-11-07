@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using Content.Shared.PDA;
 using Robust.Shared.Utility;
 using Content.Shared.CartridgeLoader;
@@ -57,6 +58,7 @@ namespace Content.Client.PDA
         public int CurrentView => _currentView;
         private List<EntityUid> _openPrograms = new();
         private EntityUid? _activeProgram;
+        private EntityUid? _bootProgram;
         private readonly Dictionary<EntityUid, CartridgeComponent> _programComponents = new();
 
         private readonly List<EntityUid> _lastRenderedTabPrograms = new();
@@ -77,6 +79,7 @@ namespace Content.Client.PDA
         private float _jitterTimer;
         private float _currentCpuJitter;
         private readonly System.Random _random = new();
+        private Vector2 _appliedScreenSize;
 
         protected override void FrameUpdate(Robust.Shared.Timing.FrameEventArgs args)
         {
@@ -259,9 +262,42 @@ namespace Content.Client.PDA
 
         public void UpdateState(PdaUpdateState state)
         {
+            if (!IsEmbedded && state.DefaultScreenSize.X > 100f && state.DefaultScreenSize.Y > 100f && _appliedScreenSize != state.DefaultScreenSize)
+            {
+                _appliedScreenSize = state.DefaultScreenSize;
+                SetSize = state.DefaultScreenSize;
+                MinSize = state.DefaultScreenSize;
+            }
+
+            if (state.Template == ComputerUiTemplate.Desktop)
+            {
+                EjectPenButton.Visible = false;
+                EjectPaiButton.Visible = false;
+                FlashLightToggleButton.Visible = false;
+            }
+            else if (state.Template == ComputerUiTemplate.Embedded)
+            {
+                EjectPenButton.Visible = false;
+                EjectPaiButton.Visible = false;
+                FlashLightToggleButton.Visible = false;
+                EjectIdButton.Visible = false;
+            }
+            else
+            {
+                EjectPenButton.Visible = true;
+                EjectPaiButton.Visible = true;
+                FlashLightToggleButton.Visible = true;
+                EjectIdButton.Visible = true;
+            }
+
             FlashLightToggleButton.IsActive = state.FlashlightEnabled;
 
-            if (state.PdaOwnerInfo.ActualOwnerName != null)
+            if (state.BootState != ComputerBootState.Running)
+            {
+                PdaOwnerLabel.SetMarkup($"[color=red]BOOT HALTED ({state.BootState}): {FormattedMessage.EscapeText(state.BootDiagnosticMessage)}[/color]");
+                PdaOwnerLabel.Visible = true;
+            }
+            else if (state.PdaOwnerInfo.ActualOwnerName != null)
             {
                 _pdaOwner = state.PdaOwnerInfo.ActualOwnerName;
                 PdaOwnerLabel.SetMarkup(Loc.GetString("comp-pda-ui-owner",
@@ -342,6 +378,13 @@ namespace Content.Client.PDA
 
             _openPrograms = state.OpenPrograms.Select(p => _entityManager.GetEntity(p)).ToList();
             _activeProgram = state.ActiveUI != null ? _entityManager.GetEntity(state.ActiveUI.Value) : null;
+            _bootProgram = state.BootProgram != null ? _entityManager.GetEntity(state.BootProgram.Value) : null;
+
+            if (state.BootState != ComputerBootState.Running)
+            {
+                ToHomeScreen();
+                return;
+            }
 
             switch (state.CurrentView)
             {
@@ -484,47 +527,51 @@ namespace Content.Client.PDA
                 };
                 tabBox.AddChild(tabBtn);
 
-                var closeStyleBox = new StyleBoxFlat
+                // The boot program (OS / locked default app) cannot be closed.
+                if (_bootProgram != progUid)
                 {
-                    BackgroundColor = Color.FromHex(isActive ? "#2b2b30" : "#202023"),
-                    BorderColor = Color.FromHex(isActive ? "#00D4FF" : "#5a5a5a"),
-                    BorderThickness = isActive ? new Thickness(0, 0, 2, 0) : new Thickness(0, 0, 0, 2)
-                };
-                var closePanel = new PanelContainer
-                {
-                    PanelOverride = closeStyleBox,
-                    HorizontalExpand = true,
-                    VerticalExpand = true
-                };
-                var closeLabel = new Label
-                {
-                    Text = "✕",
-                    FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70"),
-                    HorizontalAlignment = Control.HAlignment.Center,
-                    VerticalAlignment = Control.VAlignment.Center,
-                    Margin = new Thickness(0, 0, 2, 0)
-                };
-                var closeBtn = new ContainerButton
-                {
-                    SetWidth = 20,
-                    SetHeight = 32
-                };
-                closeBtn.AddChild(closePanel);
-                closeBtn.AddChild(closeLabel);
+                    var closeStyleBox = new StyleBoxFlat
+                    {
+                        BackgroundColor = Color.FromHex(isActive ? "#2b2b30" : "#202023"),
+                        BorderColor = Color.FromHex(isActive ? "#00D4FF" : "#5a5a5a"),
+                        BorderThickness = isActive ? new Thickness(0, 0, 2, 0) : new Thickness(0, 0, 0, 2)
+                    };
+                    var closePanel = new PanelContainer
+                    {
+                        PanelOverride = closeStyleBox,
+                        HorizontalExpand = true,
+                        VerticalExpand = true
+                    };
+                    var closeLabel = new Label
+                    {
+                        Text = "✕",
+                        FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70"),
+                        HorizontalAlignment = Control.HAlignment.Center,
+                        VerticalAlignment = Control.VAlignment.Center,
+                        Margin = new Thickness(0, 0, 2, 0)
+                    };
+                    var closeBtn = new ContainerButton
+                    {
+                        SetWidth = 20,
+                        SetHeight = 32
+                    };
+                    closeBtn.AddChild(closePanel);
+                    closeBtn.AddChild(closeLabel);
 
-                closeBtn.OnMouseEntered += _ =>
-                {
-                    closeLabel.FontColorOverride = Color.FromHex("#ff5555");
-                };
-                closeBtn.OnMouseExited += _ =>
-                {
-                    closeLabel.FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70");
-                };
-                closeBtn.OnPressed += _ =>
-                {
-                    OnTabClosed?.Invoke(capturedUid);
-                };
-                tabBox.AddChild(closeBtn);
+                    closeBtn.OnMouseEntered += _ =>
+                    {
+                        closeLabel.FontColorOverride = Color.FromHex("#ff5555");
+                    };
+                    closeBtn.OnMouseExited += _ =>
+                    {
+                        closeLabel.FontColorOverride = Color.FromHex(isActive ? "#cfcfd4" : "#6a6a70");
+                    };
+                    closeBtn.OnPressed += _ =>
+                    {
+                        OnTabClosed?.Invoke(capturedUid);
+                    };
+                    tabBox.AddChild(closeBtn);
+                }
 
                 ProgramTabsContainer.AddChild(tabBox);
             }

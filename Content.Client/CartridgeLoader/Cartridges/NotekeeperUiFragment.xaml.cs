@@ -17,6 +17,7 @@ public sealed partial class NotekeeperUiFragment : BoxContainer, IBuiStateReceiv
     public event Action<string>? OnNoteRemoved;
     public event Action<string>? OnOpenFile;
     public event Action<string, string>? OnSaveFile;
+    public event Action<string, string>? OnLiveDraftChanged;
     public event Action<string, string>? OnCreateFile;
     public event Action<string>? OnDeleteFile;
 
@@ -87,6 +88,11 @@ public sealed partial class NotekeeperUiFragment : BoxContainer, IBuiStateReceiv
             {
                 StatusIndicator.Text = "[Modified]";
                 StatusIndicator.FontColorOverride = Color.FromHex("#FFE066");
+                if (!string.IsNullOrEmpty(_currentLoadedPath))
+                {
+                    var content = Rope.Collapse(DocumentEditor.TextRope);
+                    OnLiveDraftChanged?.Invoke(_currentLoadedPath, content);
+                }
             }
         };
     }
@@ -143,7 +149,10 @@ public sealed partial class NotekeeperUiFragment : BoxContainer, IBuiStateReceiv
                 DeleteFileButton.Disabled = state.CurrentFilePath == "/notes/shift_notes.txt";
             }
 
-            if (state.CurrentFilePath != _currentLoadedPath || !_isDirty)
+            var currentEditorText = Rope.Collapse(DocumentEditor.TextRope);
+            if (state.CurrentFilePath != _currentLoadedPath ||
+                !_isDirty ||
+                (!DocumentEditor.HasKeyboardFocus() && currentEditorText != state.FileContent))
             {
                 _currentLoadedPath = state.CurrentFilePath;
                 _isDirty = false;

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.ScreenSharing;
+using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
@@ -26,6 +27,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private Content.Server.PDA.PdaSystem _pdaSystem = default!;
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
+    [Dependency] private NetworkRouterSystem _router = default!;
+    [Dependency] private OxydComputerSystem _oxydComputer = default!;
     [Dependency] private UserInterfaceSystem _uiSystem = default!;
 
     [Dependency] private PvsOverrideSystem _pvsOverride = default!;
@@ -309,14 +312,16 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
         if (valid)
         {
+            var localGuid = _guidSystem.GetGuid(loaderUid);
             comp.ConnectedRemoteGuid = targetGuid;
             comp.ConnectedRemoteUser = comp.PendingSshUser;
             comp.History.Add($"Authentication successful. Connection established.");
-            comp.History.Add($"Last login: {DateTime.Now:yyyy-MM-dd HH:mm:ss} from {_guidSystem.GetGuid(loaderUid)}");
+            comp.History.Add($"Last login: {DateTime.Now:yyyy-MM-dd HH:mm:ss} from {localGuid}");
             comp.History.Add($"Type 'help' for remote commands or 'exit' to disconnect.");
 
+            _router.RegisterActiveConnection(loaderUid, localGuid, targetGuid, "SSH", $"SSH session ({comp.ConnectedRemoteUser})");
             _fileSystem.LogSystemActivity(loaderUid, "SSH-AUTH", $"Connected to {targetGuid} as {comp.ConnectedRemoteUser}");
-            _fileSystem.LogSystemActivity(targetUid, "SSH-AUTH", $"Accepted connection from {_guidSystem.GetGuid(loaderUid)} as {comp.ConnectedRemoteUser}");
+            _fileSystem.LogSystemActivity(targetUid, "SSH-AUTH", $"Accepted connection from {localGuid} as {comp.ConnectedRemoteUser}");
         }
         else
         {
@@ -447,6 +452,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  ping <guid>           - Test network connectivity to target device");
                 comp.History.Add("  ifconfig / ip         - Display local network configuration");
                 comp.History.Add("  packets / tcpdump     - Inspect local packet buffers and router traffic log");
+                comp.History.Add("  devlink [scan|list]   - Scan or list local DeviceLink port connections");
+                comp.History.Add("  lathe / apc / atmos   - Control linked local machinery via DeviceLink");
                 comp.History.Add("  ls [dir]              - List files in local directory");
                 comp.History.Add("  cd [dir]              - Change current working directory");
                 comp.History.Add("  pwd                   - Print current working directory");
@@ -536,12 +543,25 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 guid = guid.ToUpperInvariant();
                 _remoteScreen.EnsureAllDevicesProvisioned();
 
+                if (_router.IsGuidBlacklisted(loaderUid, localGuid) || _router.IsGuidBlacklisted(loaderUid, guid))
+                {
+                    comp.History.Add($"ssh: Connection to {guid} refused by network router (GUID blacklisted).");
+                    return;
+                }
+
                 if (!_guidSystem.TryGetEntityByGuid(guid, out var optTarget) || !optTarget.HasValue)
                 {
                     comp.History.Add($"ssh: Could not resolve hostname {guid}: Host unreachable");
                     return;
                 }
                 var targetUid = optTarget.Value;
+
+                if (TryComp<OxydComputerComponent>(targetUid, out var targetOxyd) &&
+                    (!targetOxyd.AllowRemoteControl || targetOxyd.RemoteControlWireCut || targetOxyd.NetworkWireCut || targetOxyd.PowerWireCut))
+                {
+                    comp.History.Add($"ssh: Connection to {guid}:22 refused (remote control disabled or hardware offline).");
+                    return;
+                }
 
                 comp.History.Add($"Initiating SSH handshake with {guid}:22...");
 
@@ -566,6 +586,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add($"Authenticated with public key (id_ed25519). Access granted.");
                     comp.History.Add($"Welcome to NT-OS Remote Shell [{guid}]");
 
+                    _router.RegisterActiveConnection(loaderUid, localGuid, guid, "SSH", $"SSH session ({user})");
                     _fileSystem.LogSystemActivity(loaderUid, "SSH-AUTH", $"Connected to {guid} as {user} (publickey)");
                     _fileSystem.LogSystemActivity(targetUid, "SSH-AUTH", $"Accepted connection from {localGuid} as {user} (publickey)");
                 }
@@ -631,7 +652,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             case "ip":
                 TryComp<NetworkBandwidthComponent>(loaderUid, out var myBw);
                 comp.History.Add($"eth0: GUID: {localGuid} Link: ONLINE");
-                comp.History.Add($"      MaxBps: {myBw?.MaxBps ?? 128000} B/s | Queued: {myBw?.CurrentQueuedPackets ?? 0} | Saturated: {myBw?.IsSaturated ?? false}");
+                comp.History.Add($"      MaxDL: {myBw?.MaxBps ?? 128000} B/s | MaxUL: {myBw?.MaxUploadBps ?? 128000} B/s | Queued: {myBw?.CurrentQueuedPackets ?? 0} | Saturated: {myBw?.IsSaturated ?? false}");
                 break;
 
             case "ls":
@@ -836,6 +857,11 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 break;
 
             default:
+                if (_oxydComputer.ExecuteComputerCommand(loaderUid, input, out var cmdOutput) && !string.IsNullOrEmpty(cmdOutput))
+                {
+                    comp.History.Add(cmdOutput);
+                    break;
+                }
                 comp.History.Add($"command not found: {cmd}. Type 'help' for commands.");
                 break;
         }
@@ -891,6 +917,16 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
     private void HandleRemoteSshCommand(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp, string input, EntityUid? userActor = null)
     {
         var targetGuid = comp.ConnectedRemoteGuid!;
+        var localGuid = _guidSystem.GetGuid(loaderUid);
+
+        if (_router.IsGuidBlacklisted(loaderUid, localGuid) || _router.IsGuidBlacklisted(loaderUid, targetGuid))
+        {
+            comp.History.Add($"ssh: Connection to {targetGuid} terminated by router blacklist.");
+            comp.ConnectedRemoteGuid = null;
+            comp.IsScreenAttached = false;
+            return;
+        }
+
         if (!_guidSystem.TryGetEntityByGuid(targetGuid, out var optTargetUid) || !optTargetUid.HasValue)
         {
             comp.History.Add($"ssh: Connection reset by peer {targetGuid}.");
@@ -899,6 +935,15 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         }
         var targetUid = optTargetUid.Value;
         _remoteScreen.EnsureDeviceProvisioned(targetUid);
+
+        if (TryComp<OxydComputerComponent>(targetUid, out var targetOxyd) &&
+            (!targetOxyd.AllowRemoteControl || targetOxyd.RemoteControlWireCut || targetOxyd.NetworkWireCut || targetOxyd.PowerWireCut))
+        {
+            comp.History.Add($"ssh: Connection reset by peer {targetGuid} (remote control disabled or hardware offline).");
+            comp.ConnectedRemoteGuid = null;
+            comp.IsScreenAttached = false;
+            return;
+        }
 
         var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var cmd = parts[0].ToLowerInvariant();
@@ -911,10 +956,12 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.IsScreenAttached = false;
                 DetachRemoteScreen(userActor);
                 _remoteScreen.DetachViewer(uid, userActor);
+                _router.UnregisterActiveConnection(loaderUid, $"SSH-{localGuid}-{targetGuid}");
+                _router.UnregisterActiveConnection(loaderUid, $"SCREEN-{localGuid}-{targetGuid}");
 
                 comp.History.Add($"Connection to {targetGuid} closed.");
                 _fileSystem.LogSystemActivity(loaderUid, "SSH-EXIT", $"Disconnected from {targetGuid}");
-                _fileSystem.LogSystemActivity(targetUid, "SSH-EXIT", $"Session closed by {_guidSystem.GetGuid(loaderUid)}");
+                _fileSystem.LogSystemActivity(targetUid, "SSH-EXIT", $"Session closed by {localGuid}");
                 comp.ConnectedRemoteGuid = null;
                 comp.ConnectedRemoteUser = null;
                 comp.SshLocalMode = false;
@@ -938,6 +985,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  cat <file>                - Print remote file (e.g. /sys/system.log)");
                 comp.History.Add("  run / exec <program>      - Execute / launch program on remote host");
                 comp.History.Add("  screen [open|close|info]  - View and use remote machine's screen/GUI");
+                comp.History.Add("  devlink / lathe / apc     - Control remote linked machinery via DeviceLink");
                 comp.History.Add("  switch / local            - Switch to local shell context for dirs/files");
                 comp.History.Add("  upload / put <file> [dir] - Upload local file to remote host");
                 comp.History.Add("  fetch / scp <file>        - Download file from remote host to local /notes/");
@@ -1068,9 +1116,9 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
                             var srcGuid = CompOrNull<DeviceGuidComponent>(targetUid)?.Guid ?? targetGuid;
                             var destGuid = CompOrNull<DeviceGuidComponent>(loaderUid)?.Guid ?? $"DEV:{loaderUid}";
-                            _bandwidth.StorePacket(loaderUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
-                            _bandwidth.StorePacket(targetUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
-                            _bandwidth.LogPacketToRouters(srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size);
+                            _bandwidth.StorePacket(loaderUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size, isEncrypted: true);
+                            _bandwidth.StorePacket(targetUid, srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size, isEncrypted: true);
+                            _bandwidth.LogPacketToRouters(srcGuid, destGuid, "TCP/FILE", $"File download: {dlFile.Name}.{dlFile.Extension} ({dlFile.Size} B)", dlFile.Size, isEncrypted: true);
 
                             _pdaSystem.UpdatePdaUi(loaderUid);
                         }
@@ -1195,10 +1243,10 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add($"Initiating encrypted upload for '{uploadSrcFile.Name}.{uploadSrcFile.Extension}' ({uploadSrcFile.Size} B)...");
                     comp.History.Add($"[====================] 100% Uploaded to remote {remoteCopy.FullPath}");
 
-                    var localGuidStr = _guidSystem.GetGuid(loaderUid);
-                    _bandwidth.StorePacket(loaderUid, localGuidStr, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size);
-                    _bandwidth.StorePacket(targetUid, localGuidStr, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size);
-                    _bandwidth.LogPacketToRouters(localGuidStr, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size);
+                    _bandwidth.RecordDataTransmitted(loaderUid, uploadSrcFile.Size);
+                    _bandwidth.StorePacket(loaderUid, localGuid, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size, isEncrypted: true);
+                    _bandwidth.StorePacket(targetUid, localGuid, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size, isEncrypted: true);
+                    _bandwidth.LogPacketToRouters(localGuid, targetGuid, "TCP/UPLOAD", $"Upload: {uploadSrcFile.Name}.{uploadSrcFile.Extension} ({uploadSrcFile.Size} B)", uploadSrcFile.Size, isEncrypted: true);
 
                     _pdaSystem.UpdatePdaUi(targetUid);
                 }
@@ -1267,6 +1315,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     {
                         DetachRemoteScreen(userActor);
                         _remoteScreen.DetachViewer(uid, userActor);
+                        _router.UnregisterActiveConnection(loaderUid, $"SCREEN-{localGuid}-{targetGuid}");
                         comp.History.Add($"Remote screen for [{targetGuid}] detached.");
                     }
                     else
@@ -1312,6 +1361,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 if (HasComp<PdaComponent>(targetUid))
                     _pdaSystem.UpdatePdaUi(targetUid);
 
+                _router.RegisterActiveConnection(loaderUid, localGuid, targetGuid, "SCREEN", $"Screen share ({targetGuid})");
+
                 var devCategory = _remoteScreen.GetDeviceCategory(targetUid);
                 var curProgName = MetaData(targetUid).EntityName;
                 if (TryComp<CartridgeLoaderComponent>(targetUid, out var cLoader) && cLoader.ActiveProgram is { } actProg)
@@ -1353,7 +1404,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 TryComp<ComputerStatsComponent>(targetUid, out var rStats);
                 TryComp<NetworkBandwidthComponent>(targetUid, out var rBw);
                 comp.History.Add($"Host: {targetGuid} | CPU: {rStats?.CpuFrequencyMhz ?? 100}MHz | RAM: {rStats?.RamMb ?? 64}QB");
-                comp.History.Add($"Net Bandwidth: {rBw?.MaxBps ?? 100000} B/s | Saturated: {rBw?.IsSaturated ?? false}");
+                comp.History.Add($"Net Bandwidth: DL {rBw?.MaxBps ?? 100000} B/s | UL {rBw?.MaxUploadBps ?? 100000} B/s | Saturated: {rBw?.IsSaturated ?? false}");
                 break;
 
             case "reboot":
@@ -1367,6 +1418,11 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 break;
 
             default:
+                if (_oxydComputer.ExecuteComputerCommand(targetUid, input, out var remCmdOut) && !string.IsNullOrEmpty(remCmdOut))
+                {
+                    comp.History.Add(remCmdOut);
+                    break;
+                }
                 comp.History.Add($"remote: command '{cmd}' executed.");
                 break;
         }
@@ -1401,9 +1457,11 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
         if (action == "detach")
         {
+            var localGuid = _guidSystem.GetGuid(loaderUid);
             comp.IsScreenAttached = false;
             DetachRemoteScreen(actor);
             _remoteScreen.DetachViewer(uid, actor);
+            _router.UnregisterActiveConnection(loaderUid, $"SCREEN-{localGuid}-{comp.ConnectedRemoteGuid}");
             comp.History.Add($"Remote display stream detached from [{comp.ConnectedRemoteGuid}].");
             return;
         }
@@ -1424,6 +1482,9 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             if (NetEntity.TryParse(arg, out var netProg))
             {
                 var prog = GetEntity(netProg);
+                if (TryComp<OxydComputerComponent>(targetUid, out var oxydComp) && oxydComp.BootProgram == prog)
+                    return;
+
                 pda.OpenPrograms.Remove(prog);
                 if (TryComp<CartridgeLoaderComponent>(targetUid, out var cLoaderClose) && cLoaderClose.ActiveProgram == prog)
                 {
@@ -1470,7 +1531,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         }
     }
 
-    private void UpdateUiState(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp)
+    public void UpdateUiState(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp)
     {
         if (!_updatingTerminals.Add(uid))
             return;

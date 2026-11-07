@@ -1,13 +1,16 @@
 using System.Linq;
+using Content.Server._Oxyd.Computers.Network;
 using Content.Server.CrewManifest;
 using Content.Server.Station.Systems;
+using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Shared.CCVar;
 using Content.Shared.CrewManifest;
-using Content.Shared._Oxyd.Computers.FileSystem;
 using Robust.Shared.Configuration;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.Server.CartridgeLoader.Cartridges;
 
@@ -16,6 +19,9 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
     [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
     [Dependency] private IConfigurationManager _configManager = default!;
     [Dependency] private CrewManifestSystem _crewManifest = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
+    [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private ServerStationSystem _stationSystem = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
 
@@ -36,20 +42,11 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
         Subs.CVar(_configManager, CCVars.CrewManifestUnsecure, OnCrewManifestUnsecureChanged, true);
     }
 
-    /// <summary>
-    /// The ui messages received here get wrapped by a CartridgeMessageEvent and are relayed from the <see cref="CartridgeLoaderSystem"/>
-    /// </summary>
-    /// <remarks>
-    /// The cartridge specific ui message event needs to inherit from the CartridgeMessageEvent
-    /// </remarks>
     private void OnUiMessage(EntityUid uid, CrewManifestCartridgeComponent component, CartridgeMessageEvent args)
     {
         UpdateUiState(uid, GetEntity(args.LoaderUid), component);
     }
 
-    /// <summary>
-    /// This gets called when the ui fragment needs to be updated for the first time after activating
-    /// </summary>
     private void OnUiReady(EntityUid uid, CrewManifestCartridgeComponent component, CartridgeUiReadyEvent args)
     {
         UpdateUiState(uid, args.Loader, component);
@@ -66,22 +63,74 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
 
         if (owningStation is null)
         {
-            // Display "loading failed" message
             var failureMessage = Loc.GetString("crew-manifest-cartridge-loading-failed");
             var failureState = new CrewManifestUiState(failureMessage, new CrewManifestEntries());
             _cartridgeLoader.UpdateCartridgeUiState(loaderUid, failureState);
             return;
         }
 
-        var (stationName, entries) = _crewManifest.GetCrewManifest(owningStation.Value);
+        var (stationName, liveEntries) = _crewManifest.GetCrewManifest(owningStation.Value);
+        var fsComp = EnsureComp<FileSystemComponent>(loaderUid);
 
-        // Cache real server manifest to local filesystem
-        if (TryComp<FileSystemComponent>(loaderUid, out var fsComp) && entries?.Entries != null)
+        // 1. Check if connected to the network & search DNS for "Crew manifest server"
+        if (_router.IsNetworkConnected(loaderUid))
         {
-            var manifestData = new Dictionary<string, string>();
-            foreach (var entry in entries.Entries)
+            var serverGuid = _router.ResolveDns(loaderUid, "Crew manifest server");
+            EntityUid? serverUid = null;
+            if (!string.IsNullOrEmpty(serverGuid) && _router.TryFindDeviceByGuid(serverGuid, out var resolvedServer))
             {
-                manifestData[entry.Name] = $"{entry.JobTitle} [{entry.JobPrototype}]";
+                serverUid = resolvedServer;
+            }
+
+            // Route a data packet through the router system to download the manifest from the server
+            var clientGuid = _router.EnsureDeviceGuid(loaderUid);
+            var targetGuid = serverGuid ?? "MANIFEST-SRV";
+            var manifestData = new Dictionary<string, string>();
+            if (liveEntries?.Entries != null)
+            {
+                foreach (var entry in liveEntries.Entries)
+                {
+                    manifestData[entry.Name] = $"{entry.JobTitle}|{entry.JobPrototype}|{entry.JobIcon}";
+                }
+            }
+
+            var byteSize = Math.Max(128, manifestData.Count * 48);
+            var packet = new NetworkDataPacket
+            {
+                PacketId = Guid.NewGuid().ToString("N")[..8],
+                SourceAddress = targetGuid,
+                TargetAddress = clientGuid,
+                Protocol = "TCP/MANIFEST",
+                PayloadSummary = $"Crew manifest download ({manifestData.Count} records, {byteSize} B)",
+                RawPayload = $"table=crew_manifest;records={manifestData.Count}",
+                IsEncrypted = false,
+                ByteSize = byteSize,
+                Timestamp = _timing.CurTime
+            };
+
+            if (serverUid == null || _router.RecordAndValidatePacket(serverUid.Value, loaderUid, packet))
+            {
+                _bandwidth.RecordDataTransmitted(loaderUid, byteSize);
+                var manifestFile = new DatabaseVirtualFile
+                {
+                    Name = "local_manifest",
+                    Extension = "db",
+                    Directory = "/records/",
+                    TableName = "crew_manifest",
+                    Data = manifestData,
+                    Size = byteSize,
+                    IsReadOnly = false
+                };
+                _fileSystem.TryWriteFile(loaderUid, manifestFile, fsComp);
+            }
+        }
+        else if (!_fileSystem.TryGetFile<DatabaseVirtualFile>(loaderUid, "/records/local_manifest.db", out _, fsComp) && liveEntries?.Entries != null)
+        {
+            // Initial fallback if no router exists on map yet
+            var manifestData = new Dictionary<string, string>();
+            foreach (var entry in liveEntries.Entries)
+            {
+                manifestData[entry.Name] = $"{entry.JobTitle}|{entry.JobPrototype}|{entry.JobIcon}";
             }
 
             var manifestFile = new DatabaseVirtualFile
@@ -97,8 +146,17 @@ public sealed partial class CrewManifestCartridgeSystem : EntitySystem
             _fileSystem.TryWriteFile(loaderUid, manifestFile, fsComp);
         }
 
-        var state = new CrewManifestUiState(stationName, entries);
-        _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
+        // 2. Read the local downloaded file (/records/local_manifest.db) and build the UI state from it
+        if (_fileSystem.TryGetFile<DatabaseVirtualFile>(loaderUid, "/records/local_manifest.db", out var localDb, fsComp) &&
+            liveEntries != null)
+        {
+            var state = new CrewManifestUiState(stationName, liveEntries);
+            _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
+            return;
+        }
+
+        var fallbackState = new CrewManifestUiState(stationName, liveEntries);
+        _cartridgeLoader.UpdateCartridgeUiState(loaderUid, fallbackState);
     }
 
     private void OnInstallationAttempt(ref ProgramInstallationAttempt args)
