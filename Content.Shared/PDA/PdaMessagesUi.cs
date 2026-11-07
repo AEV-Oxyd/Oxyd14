@@ -37,3 +37,25 @@ public sealed class PdaRequestUpdateInterfaceMessage : BoundUserInterfaceMessage
 {
     public PdaRequestUpdateInterfaceMessage() { }
 }
+
+[Serializable, NetSerializable]
+public sealed class PdaCloseProgramTabMessage : BoundUserInterfaceMessage
+{
+    public NetEntity Program { get; }
+
+    public PdaCloseProgramTabMessage(NetEntity program)
+    {
+        Program = program;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class PdaSwitchViewMessage : BoundUserInterfaceMessage
+{
+    public int View { get; }
+
+    public PdaSwitchViewMessage(int view)
+    {
+        View = view;
+    }
+}

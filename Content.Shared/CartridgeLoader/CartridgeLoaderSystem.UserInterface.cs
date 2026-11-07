@@ -20,7 +20,7 @@ public sealed partial class CartridgeLoaderSystem
                 InstallCartridge(ent, cartridge);
                 break;
             case CartridgeUiMessageAction.Uninstall:
-                UninstallProgram(ent, cartridge);
+                // Do not allow uninstalling installed programs via UI message from app hub
                 break;
             case CartridgeUiMessageAction.UIReady:
                 if (ent.Comp.ActiveProgram is { } foreground)
@@ -63,6 +63,13 @@ public sealed partial class CartridgeLoaderSystem
         if (!Resolve(loaderUid, ref loader))
             return;
 
+        if (TryComp<Content.Shared.PDA.PdaComponent>(loaderUid, out var pda))
+        {
+            pda.ActiveCartridgeState = state;
+            _pdaSystem.UpdatePdaUi(loaderUid, pda);
+            return;
+        }
+
         if (_userInterface.HasUi(loaderUid, loader.UiKey))
             _userInterface.SetUiState(loaderUid, loader.UiKey, state);
     }
@@ -82,6 +89,9 @@ public sealed partial class CartridgeLoaderSystem
             return;
 
         if (!_userInterface.HasUi(ent.Owner, ent.Comp.UiKey))
+            return;
+
+        if (HasComp<Content.Shared.PDA.PdaComponent>(ent.Owner))
             return;
 
         var programs = GetNetEntityList(GetAllPrograms(ent).ToList());

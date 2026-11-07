@@ -5,3 +5,20 @@
   pointUsage: 2
   materials:
     Steel: 300
+
+- type: latheRecipe
+  parent: BaseToolRecipe
+  id: DRMBola
+  result: SecurityBola
+  pointUsage: 2
+  materials:
+    Steel: 500
+
+- type: latheRecipe
+  parent: BaseToolRecipe
+  id: DRMHud
+  result: ClothingEyesHudSecurity
+  pointUsage: 4
+  materials:
+    Steel: 100
+    Glass: 200

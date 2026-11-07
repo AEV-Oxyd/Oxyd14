@@ -10,6 +10,7 @@ using Content.Shared.Emp;
 using Content.Shared.Popups;
 using Content.Shared.Power;
 using Content.Shared.Rounding;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
@@ -32,6 +33,7 @@ public sealed partial class ApcSystem : EntitySystem
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private SharedRemoteScreenSystem _remoteScreen = default!;
 
     /// <inheritdoc />
     public override void Initialize()
@@ -125,7 +127,7 @@ public sealed partial class ApcSystem : EntitySystem
             return;
         }
 
-        if (_accessReader.IsAllowed(args.Actor, ent))
+        if (_accessReader.IsAllowed(args.Actor, ent) || _remoteScreen.IsRemoteScreenAuthorized(args.Actor, ent.Owner))
         {
             ApcToggleBreaker(ent, ent.Comp, user: args.Actor);
         }

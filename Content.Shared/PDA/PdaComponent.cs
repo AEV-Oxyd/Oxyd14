@@ -11,6 +11,7 @@ namespace Content.Shared.PDA
         public const string PdaIdSlotId = "PDA-id";
         public const string PdaPenSlotId = "PDA-pen";
         public const string PdaPaiSlotId = "PDA-pai";
+        public const string PdaDiskSlotId = "PDA-disk";
 
         [DataField]
         public ItemSlot IdSlot = new();
@@ -19,6 +20,8 @@ namespace Content.Shared.PDA
         public ItemSlot PenSlot = new();
         [DataField]
         public ItemSlot PaiSlot = new();
+        [DataField]
+        public ItemSlot DiskSlot = new();
 
         // Really this should just be using ItemSlot.StartingItem. However, seeing as we have so many different starting
         // PDA's and no nice way to inherit the other fields from the ItemSlot data definition, this makes the yaml much
@@ -28,7 +31,9 @@ namespace Content.Shared.PDA
 
         // TODO: Fix persistence
         [ViewVariables] public EntityUid? ContainedId;
+        [ViewVariables] public EntityUid? ContainedDisk;
         [ViewVariables] public bool FlashlightOn;
+        [DataField] public string SshPassword = string.Empty;
 
         [ViewVariables(VVAccess.ReadWrite)] public string? OwnerName;
         // The Entity that "owns" the PDA, usually a player's character.
@@ -39,5 +44,27 @@ namespace Content.Shared.PDA
         [ViewVariables]
         public ProtoId<AlertLevelPrototype>? StationAlertLevel;
         [ViewVariables] public Color StationAlertColor = Color.White;
+
+        /// <summary>
+        /// List of currently open program cartridges (browser-style tabs).
+        /// </summary>
+        [DataField] public List<EntityUid> OpenPrograms = new();
+
+        /// <summary>
+        /// Currently displayed PDA navigation view (0 = Home, 1 = ProgramList, 2 = Settings, 3 = ProgramContent).
+        /// Synchronized across local and remote screen viewers.
+        /// </summary>
+        [ViewVariables]
+        public int CurrentView;
+
+        /// <summary>
+        /// Cached state of the currently active cartridge program.
+        /// Embedded into PdaUpdateState so PDA metrics and cartridge state don't overwrite each other in the tick buffer.
+        /// </summary>
+        [ViewVariables]
+        public BoundUserInterfaceState? ActiveCartridgeState;
+
+        [ViewVariables]
+        public PdaUpdateState? LastState;
     }
 }

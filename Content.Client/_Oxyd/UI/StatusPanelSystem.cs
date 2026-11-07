@@ -159,6 +159,7 @@ public sealed partial class StatusPanelSystem : EntitySystem
 
     public void setContent(string key, Control content)
     {
+        ApplyHoloButtonStyles(content);
         if (!panelContent.ContainsKey(key))
         {
             addStatCategory(key, content);
@@ -341,11 +342,32 @@ public sealed partial class StatusPanelSystem : EntitySystem
             }
         }
 
+        ApplyHoloButtonStyles(content);
+
         content.Orphan();
         container.AddChild(content);
 
         if (CurrentCategory == name)
             refreshContent(name);
+    }
+
+    private void ApplyHoloButtonStyles(Control control)
+    {
+        if (control is Button btn)
+        {
+            if (!btn.StyleClasses.Contains(ErisSheetlet.StyleClassErisHoloButton) &&
+                !btn.StyleClasses.Contains(ErisSheetlet.StyleClassErisHoloButtonOpenBoth) &&
+                !btn.StyleClasses.Contains(ErisSheetlet.StyleClassErisHoloButtonOpenLeft) &&
+                !btn.StyleClasses.Contains(ErisSheetlet.StyleClassErisHoloButtonOpenRight))
+            {
+                btn.StyleClasses.Add(ErisSheetlet.StyleClassErisHoloButton);
+            }
+        }
+
+        foreach (var child in control.Children)
+        {
+            ApplyHoloButtonStyles(child);
+        }
     }
 
     public void ClearEntityPanels()

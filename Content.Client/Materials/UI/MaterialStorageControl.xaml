@@ -1,11 +1,13 @@
 <ScrollContainer xmlns="https://spacestation14.io"
               SizeFlagsStretchRatio="8"
               HorizontalExpand="True"
-              VerticalExpand="True">
-    <BoxContainer Orientation="Vertical" VerticalExpand="True">
-        <BoxContainer Name="MaterialList" Orientation="Vertical" VerticalExpand="True">
-            <Label Name="NoMatsLabel" Text="{Loc 'lathe-menu-no-materials-message'}" HorizontalAlignment="Center" VerticalAlignment="Center" VerticalExpand="True"/>
-        </BoxContainer>
-        <Label Name="SiloLinkedLabel" Text="{Loc 'lathe-menu-silo-linked-message'}" StyleClasses="LabelSubText" Visible="False" HorizontalAlignment="Center"/>
+              VerticalExpand="True"
+              HScrollEnabled="False">
+    <BoxContainer Orientation="Vertical" VerticalExpand="True" HorizontalExpand="True" Margin="2">
+        <Label Name="NoMatsLabel" Text="{Loc 'lathe-menu-no-materials-message'}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0 10 0 0"/>
+        <GridContainer Name="MaterialList" Columns="3" HSeparationOverride="4" VSeparationOverride="4" HorizontalAlignment="Center">
+            <!-- MaterialDisplay tiles added in C# -->
+        </GridContainer>
+        <Label Name="SiloLinkedLabel" Text="{Loc 'lathe-menu-silo-linked-message'}" StyleClasses="LabelSubText" Visible="False" HorizontalAlignment="Center" Margin="0 6 0 0"/>
     </BoxContainer>
 </ScrollContainer>

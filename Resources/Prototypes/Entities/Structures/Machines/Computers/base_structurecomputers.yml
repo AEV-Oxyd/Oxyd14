@@ -16,6 +16,7 @@
     containers:
       - board
   - type: Computer
+  - type: DeviceGuid
   - type: ApcPowerReceiver
     powerLoad: 50
   - type: PowerState

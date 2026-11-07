@@ -77,6 +77,13 @@ namespace Content.Shared.Lathe
         /// <returns></returns>
         [DataField(required: false)] public ItemSlot? diskSlot = null;
 
+        /// <summary>
+        /// The currently selected blueprint file on the inserted disk (full path, e.g. /blueprints/handcuffs.lathe).
+        /// If null, all available recipes are shown.
+        /// </summary>
+        [DataField]
+        public string? SelectedBlueprintFile = null;
+
         #region MachineUpgrading
         /// <summary>
         /// A modifier that changes how long it takes to print a recipe

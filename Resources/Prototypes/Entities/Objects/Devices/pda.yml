@@ -45,6 +45,16 @@
       whitelist:
         components:
         - IdCard
+    diskSlot:
+      name: pda-slot-component-slot-name-disk
+      priority: 0
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+        - Disk
+        tags:
+        - Disk
   - type: PdaVisuals
   - type: Item
     size: Small
@@ -53,6 +63,7 @@
       PDA-id: !type:ContainerSlot {}
       PDA-pen: !type:ContainerSlot {}
       PDA-pai: !type:ContainerSlot {}
+      PDA-disk: !type:ContainerSlot {}
       Cartridge-Slot: !type:ContainerSlot {}
       preinstalled-program-container: !type:Container
       removable-program-container: !type:Container
@@ -78,6 +89,7 @@
     savableAddress: false
   - type: WirelessNetwork
     range: 500
+  - type: DeviceGuid
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
     cartridgeSlot:

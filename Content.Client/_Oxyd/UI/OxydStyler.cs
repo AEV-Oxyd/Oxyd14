@@ -85,7 +85,7 @@ public sealed partial class OxydStyler : UIController
         };
         style.SetPatchMargin(StyleBox.Margin.All, patchmargin);
         style.TextureScale = Vector2.One * scale;
-        style.Mode = StyleBoxTexture.StretchMode.Tile;
+        style.Mode = StyleBoxTexture.StretchMode.Stretch;
         target.PanelOverride = style;
     }
 

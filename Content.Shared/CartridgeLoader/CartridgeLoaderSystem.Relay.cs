@@ -8,6 +8,7 @@ public sealed partial class CartridgeLoaderSystem
     {
         SubscribeLocalEvent<CartridgeLoaderComponent, AfterInteractEvent>(RelayEvent);
         SubscribeLocalEvent<CartridgeLoaderComponent, InteractUsingEvent>(RelayEvent);
+        SubscribeLocalEvent<CartridgeLoaderComponent, Content.Shared._Oxyd.Computers.FileSystem.FileSystemChangedEvent>(RefRelayEvent);
     }
 
     private void RefRelayEvent<T>(EntityUid uid, CartridgeLoaderComponent component, ref T args) where T : struct

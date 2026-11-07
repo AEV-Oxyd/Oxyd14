@@ -71,6 +71,7 @@
     voltage: Apc
   - type: Apc
     voltage: Apc
+  - type: DeviceGuid
   - type: ExtensionCableProvider
   - type: UserInterface
     interfaces:

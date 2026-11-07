@@ -1,31 +1,40 @@
-﻿<pda:PdaWindow  xmlns="https://spacestation14.io"
+<pda:PdaWindow  xmlns="https://spacestation14.io"
                 xmlns:pda="clr-namespace:Content.Client.PDA"
+                xmlns:pip="clr-namespace:Content.Client._Oxyd.Computers.ScreenSharing"
                 MouseFilter="Stop">
     <PanelContainer Name="Background" Access="Public" StyleClasses="PdaBackgroundRect" />
     <!-- The negative markin fixes a gap between the window edges and the decorative panel -->
     <PanelContainer Name="AccentH" Margin="-1 170 -2 170" Access="Public" StyleClasses="PdaBackground" />
     <PanelContainer Name="AccentV" Margin="220 -1 220 -1" Access="Public" StyleClasses="PdaBackground" />
     <PanelContainer Name="Border" StyleClasses="PdaBorderRect" />
-    <BoxContainer Orientation="Vertical" HorizontalExpand="True">
+    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
         <!--Heading-->
-        <BoxContainer SetHeight="26" Margin="4 2 8 0" Orientation="Horizontal">
+        <BoxContainer Name="HeadingBar" Access="Public" SetHeight="28" Margin="18 4 18 2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Label Name="OsTitleLabel" Access="Public" Text="NTOS 1.4™" VerticalAlignment="Center" Margin="2 0 0 0" FontColorOverride="#00D4FF" StyleClasses="LabelSubText"/>
+            <Label Name="OsSubtitleLabel" Access="Public" Text=" | Portable Terminal" VerticalAlignment="Center" FontColorOverride="#5a7a8a" StyleClasses="LabelSubText"/>
             <Control HorizontalExpand="True"/>
-            <TextureButton Name="CloseButton" StyleClasses="windowCloseButton"
-                           VerticalAlignment="Center" Margin="0 4 4 0"/>
+            <ContainerButton Name="CloseButton" SetWidth="22" SetHeight="22" VerticalAlignment="Center">
+                <PanelContainer Name="CloseButtonPanel" HorizontalExpand="True" VerticalExpand="True"/>
+                <Label Name="CloseButtonLabel" Text="✕" FontColorOverride="#cfcfd4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </ContainerButton>
         </BoxContainer>
-        <!--Content-->
-        <Control Margin="18 0" RectClipContent="True" VerticalExpand="true"
-                 HorizontalExpand="True">
+        <!--Content / Physical Screen Inset-->
+        <Control Name="ScreenInsetControl" Access="Public" Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">
             <PanelContainer Name="ContentBorder" StyleClasses="PdaBackground"/>
-            <Control Margin="3 3">
-                <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
-                <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" StyleClasses="PdaContent"/>
-
-            </Control>
+            <pip:PipScreenSurface Name="ScreenSurface" Access="Public" Margin="3 3" HorizontalExpand="True" VerticalExpand="True">
+                <Control HorizontalExpand="True" VerticalExpand="True">
+                    <PanelContainer Name="ContentBackground" StyleClasses="PdaContentBackground"/>
+                    <BoxContainer Access="Public" Name="ContentsContainer" Orientation="Vertical" VerticalExpand="True" StyleClasses="PdaContent"/>
+                </Control>
+            </pip:PipScreenSurface>
         </Control>
-        <!--Footer-->
-        <BoxContainer Orientation="Horizontal" SetHeight="28">
-            <Label Text="{Loc 'comp-pda-ui-footer'}" StyleClasses="PdaWindowFooterText" Margin="32 0 0 6"/>
-        </BoxContainer>
+        <!--Bottom Bezel with hardware resource status bar-->
+        <PanelContainer Name="BezelFooterPanel" Margin="18 1 18 5" SetHeight="24" StyleClasses="PdaBezelFooter">
+            <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="8 0" VerticalAlignment="Center">
+                <Label Text="NTOS 1.4™" VerticalAlignment="Center" Margin="2 0 10 0" StyleClasses="PdaBezelFooterText"/>
+                <Label Name="SystemStatsLabel" Access="Public" VerticalAlignment="Center" HorizontalExpand="True" Margin="4 0" StyleClasses="PdaBezelStatsText"/>
+                <Label Name="AddressLabel" Access="Public" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="4 0" StyleClasses="PdaBezelIdText"/>
+            </BoxContainer>
+        </PanelContainer>
     </BoxContainer>
 </pda:PdaWindow>

@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Client.CartridgeLoader;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Containers.ItemSlots;
@@ -14,6 +15,7 @@ namespace Content.Client.PDA
 
         [ViewVariables]
         private PdaMenu? _menu;
+        private bool _userRequestedProgramView;
 
         public PdaBoundUserInterface(EntityUid owner, Enum uiKey) : base(owner, uiKey)
         {
@@ -31,6 +33,7 @@ namespace Content.Client.PDA
         private void CreateMenu()
         {
             _menu = this.CreateWindowCenteredLeft<PdaMenu>();
+            SetStateScopeRoot(_menu);
 
             _menu.FlashLightToggleButton.OnToggled += _ =>
             {
@@ -50,6 +53,11 @@ namespace Content.Client.PDA
             _menu.EjectPaiButton.OnPressed += _ =>
             {
                 SendPredictedMessage(new ItemSlotButtonPressedEvent(PdaComponent.PdaPaiSlotId));
+            };
+
+            _menu.EjectDiskButton.OnPressed += _ =>
+            {
+                SendPredictedMessage(new ItemSlotButtonPressedEvent(PdaComponent.PdaDiskSlotId));
             };
 
             _menu.ActivateMusicButton.OnPressed += _ =>
@@ -72,10 +80,42 @@ namespace Content.Client.PDA
                 SendMessage(new PdaLockUplinkMessage());
             };
 
-            _menu.OnProgramItemPressed += ActivateCartridge;
+            _menu.HomeButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.HomeView));
+            _menu.ProgramListButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramListView));
+            _menu.SettingsButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.SettingsView));
+
+            _menu.OnProgramItemPressed += uid =>
+            {
+                _userRequestedProgramView = true;
+                if (_activeProgram == uid && _menu != null)
+                {
+                    var comp = RetrieveCartridgeComponent(uid);
+                    var title = Loc.GetString(comp?.ProgramName ?? "comp-pda-io-program-fallback-title");
+                    _menu.ToProgramView(title);
+                    SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramContentView));
+                }
+                else
+                {
+                    ActivateCartridge(uid);
+                }
+            };
             _menu.OnInstallButtonPressed += InstallCartridge;
             _menu.OnUninstallButtonPressed += UninstallCartridge;
             _menu.ProgramCloseButton.OnPressed += _ => DeactivateActiveCartridge();
+            _menu.OnTabSelected += uid =>
+            {
+                _userRequestedProgramView = true;
+                if (_activeProgram == uid && _menu != null)
+                {
+                    _menu.ToProgramView(string.Empty);
+                    SendMessage(new PdaSwitchViewMessage(PdaMenu.ProgramContentView));
+                }
+                else
+                {
+                    ActivateCartridge(uid);
+                }
+            };
+            _menu.OnTabClosed += uid => SendMessage(new PdaCloseProgramTabMessage(EntMan.GetNetEntity(uid)));
 
             var borderColorComponent = GetBorderColorComponent();
             if (borderColorComponent == null)
@@ -88,6 +128,9 @@ namespace Content.Client.PDA
 
         protected override void UpdateState(BoundUserInterfaceState state)
         {
+            if (_menu != null && state is PdaUpdateState preState && !_menu.IsEmbedded)
+                _menu.ScreenSurface.DeviceGuid = preState.DeviceGuid;
+
             base.UpdateState(state);
 
             if (state is not PdaUpdateState updateState)
@@ -104,8 +147,26 @@ namespace Content.Client.PDA
 
         protected override void AttachCartridgeUI(Control cartridgeUIFragment, string? title)
         {
-            _menu?.ProgramView.AddChild(cartridgeUIFragment);
-            _menu?.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+            if (_menu != null)
+            {
+                var isNewAttachment = cartridgeUIFragment.Parent != _menu.ProgramView;
+                if (isNewAttachment)
+                {
+                    _menu.ProgramView.RemoveAllChildren();
+                    cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
+                    _menu.ProgramView.AddChild(cartridgeUIFragment);
+                }
+
+                if (_userRequestedProgramView || isNewAttachment)
+                {
+                    _userRequestedProgramView = false;
+                    _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                }
+                else
+                {
+                    _menu.UpdateTabs();
+                }
+            }
         }
 
         protected override void DetachCartridgeUI(Control cartridgeUIFragment)
@@ -113,14 +174,26 @@ namespace Content.Client.PDA
             if (_menu is null)
                 return;
 
-            _menu.ToHomeScreen();
             _menu.HideProgramHeader();
             _menu.ProgramView.RemoveChild(cartridgeUIFragment);
+
+            // Closing a program shouldn't reset to the home tab.
+            // If the user was actively viewing the closed program and no other open program remains,
+            // return to the Program List tab instead of forcibly resetting to the Home tab.
+            if (_activeProgram == null && _menu.CurrentView == PdaMenu.ProgramContentView)
+            {
+                _menu.ToProgramList();
+            }
         }
 
         protected override void UpdateAvailablePrograms(List<(EntityUid, CartridgeComponent)> programs)
         {
             _menu?.UpdateAvailablePrograms(programs);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
 
         private PdaBorderColorComponent? GetBorderColorComponent()
