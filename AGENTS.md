@@ -11,6 +11,13 @@ UI State Management
 Server sends UI states to Clients at the end of each tick, only sending the most recently assigned state.
 Avoid networking data that can be built locally from prototypes, client & server have a system to sync their prototypes.
 
+Input Management
+Inputs register through the IInputManager and the CommandBinds.Builder()
+Input execution is at it follows
+- Each bind has a priority , undefined priority means bottom priority in general
+- All binds valid for a context get executed in the order of their priority
+- A execution that handles the event stops the iteration , other binds won't be triggered
+
 Prototypes
 - Can be serialized/read from YML
 - Commonly used as a way to configure behaviours / store data, a Research computer for example can keep a ProtoId referencing a TechTreePrototype that it reads for its unlock options / when building the UI.
