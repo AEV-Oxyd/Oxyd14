@@ -110,14 +110,14 @@
         programId: NewsReaderCartridge
         title: "News Reader"
   - type: ModularComputer
-    maxHardDrives: 1
+    maxHardDriveSlots: 1
     maxBatterySize: Small
   - type: ComputerStats
     cpuFrequencyMhz: 400
     ramMb: 512
     storageBytes: 2097152
     networkBandwidthBps: 128000
-    maxUploadBps: 64000
+    networkUploadBandwidthBps: 64000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 128000
@@ -182,7 +182,7 @@
     ramMb: 1024
     storageBytes: 8388608
     networkBandwidthBps: 500000
-    maxUploadBps: 250000
+    networkUploadBandwidthBps: 250000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 500000
@@ -199,6 +199,7 @@
   - type: Tag
     tags:
     - Oxyd
+  - type: Appearance
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
@@ -207,10 +208,7 @@
     defaultScreenSize: 780, 580
     allowRemoteControl: true
     requiresPower: true
-  - type: PDA
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-    preinstalled:
+    defaultPrograms:
     - OxydOsCartridge
     - OxydTerminalCartridge
     - OxydFileBrowserCartridge
@@ -218,6 +216,31 @@
     - OxydPacketSnifferCartridge
     - CrewManifestCartridge
     - NotekeeperCartridge
+  - type: Pda
+  - type: ItemSlots
+  - type: ContainerContainer
+    containers:
+      PDA-id: !type:ContainerSlot {}
+      PDA-pen: !type:ContainerSlot {}
+      PDA-pai: !type:ContainerSlot {}
+      PDA-disk: !type:ContainerSlot {}
+      Cartridge-Slot: !type:ContainerSlot {}
+      preinstalled-program-container: !type:Container
+      removable-program-container: !type:Container
+      computer_board_slots: !type:Container
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: OxydOsCartridge
+        - id: OxydTerminalCartridge
+        - id: OxydFileBrowserCartridge
+        - id: OxydDownloaderCartridge
+        - id: OxydPacketSnifferCartridge
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
   - type: ActivatableUI
     key: enum.PdaUiKey.Key
     singleUser: false
@@ -253,7 +276,7 @@
         size: 120
         textContent: "Boot successful. Network connection established."
   - type: ModularComputer
-    maxHardDrives: 3
+    maxHardDriveSlots: 3
     maxRamSlots: 2
     maxBatterySize: Small
   - type: ComputerStats
@@ -261,7 +284,7 @@
     ramMb: 8192
     storageBytes: 104857600
     networkBandwidthBps: 10000000
-    maxUploadBps: 5000000
+    networkUploadBandwidthBps: 5000000
     directHardwareAccessOnly: false
   - type: NetworkBandwidth
     maxBps: 10000000
@@ -283,6 +306,7 @@
   - type: Tag
     tags:
     - Oxyd
+  - type: Appearance
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
@@ -291,13 +315,24 @@
     defaultScreenSize: 640, 480
     allowRemoteControl: true
     requiresPower: false
-  - type: PDA
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-    preinstalled:
+    defaultPrograms:
     - OxydOsCartridge
     - OxydTerminalCartridge
     - OxydFileBrowserCartridge
+  - type: Pda
+  - type: ItemSlots
+  - type: ContainerContainer
+    containers:
+      PDA-id: !type:ContainerSlot {}
+      PDA-pen: !type:ContainerSlot {}
+      PDA-pai: !type:ContainerSlot {}
+      PDA-disk: !type:ContainerSlot {}
+      Cartridge-Slot: !type:ContainerSlot {}
+      preinstalled-program-container: !type:Container
+      removable-program-container: !type:Container
+      computer_board_slots: !type:Container
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
   - type: ActivatableUI
     key: enum.PdaUiKey.Key
     singleUser: false
@@ -334,15 +369,15 @@
         isReadOnly: true
         textContent: "VOLTAGE=240;CYCLE=60HZ;INTERLOCK=TRUE"
   - type: ModularComputer
-    maxHardDrives: 2
+    maxHardDriveSlots: 2
     maxRamSlots: 2
     maxBatterySize: Small
   - type: ComputerStats
-    cpuSpeedMHz: 50
-    ramSizeMB: 32
-    storageCapacityBytes: 65536
-    networkBandwidthBytesPerSec: 10000
-    maxUploadBps: 10000
+    cpuFrequencyMhz: 50
+    ramMb: 32
+    storageBytes: 65536
+    networkBandwidthBps: 10000
+    networkUploadBandwidthBps: 10000
     directHardwareAccessOnly: true
   - type: NetworkBandwidth
     maxBps: 10000
@@ -364,7 +399,7 @@
     state: cpu
   - type: ComputerCpu
     frequencyMhz: 800
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -376,8 +411,8 @@
     sprite: Objects/Misc/module.rsi
     state: ram
   - type: ComputerRam
-    capacityMb: 512
-    partSize: Small
+    sizeMb: 512
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -390,15 +425,15 @@
     state: harddrive
   - type: ComputerStorageDevice
     capacityBytes: 8388608
-    partSize: Medium
-    storedPrograms:
+    size: Medium
+    preloadedPrograms:
     - OxydOsCartridge
     - OxydTerminalCartridge
     - OxydFileBrowserCartridge
   - type: ComputerHardDrive
     capacityBytes: 8388608
-    partSize: Medium
-    storedPrograms:
+    size: Medium
+    preloadedPrograms:
     - OxydOsCartridge
     - OxydTerminalCartridge
     - OxydFileBrowserCartridge
@@ -415,9 +450,9 @@
     sprite: Objects/Misc/module.rsi
     state: netcard
   - type: ComputerNetworkCard
-    maxBps: 500000
+    bandwidthBps: 500000
     maxUploadBps: 250000
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -431,7 +466,7 @@
   - type: ComputerBatteryModule
     maxCharge: 1000
     currentCharge: 1000
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -443,7 +478,7 @@
     sprite: Objects/Misc/module.rsi
     state: sensor
   - type: ComputerSensorModule
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -455,7 +490,7 @@
     sprite: Objects/Misc/module.rsi
     state: id_slot
   - type: ComputerIdCardSlotModule
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseItem
@@ -467,7 +502,7 @@
     sprite: Objects/Misc/module.rsi
     state: disk_slot
   - type: ComputerDiskSlotModule
-    partSize: Small
+    size: Small
 
 - type: entity
   parent: BaseRecipeDisk

@@ -26,7 +26,7 @@
   dummyWires: 4
 
 - type: wireLayout
-  id:Alerts
+  id: Alerts
   wires:
     - !type:PowerWireAction
   dummyWires: 4
@@ -54,7 +54,7 @@
   dummyWires: 4
 
 - type: wireLayout
-  id:BoozeDispenser
+  id: BoozeDispenser
   wires:
     - !type:PowerWireAction
     - !type:EmagWireAction
@@ -67,25 +67,25 @@
   dummyWires: 4
 
 - type: wireLayout
-  id:ChemDispenser
+  id: ChemDispenser
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:ChemMaster
+  id: ChemMaster
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:CloningPod
+  id: CloningPod
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:CryoPod
+  id: CryoPod
   wires:
     - !type:PowerWireAction
   dummyWires: 2
@@ -97,61 +97,61 @@
   dummyWires: 2
 
 - type: wireLayout
-  id:Disposal
+  id: Disposal
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Electroplater
+  id: Electroplater
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:FatExtractor
+  id: FatExtractor
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Firelock
+  id: Firelock
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Generator
+  id: Generator
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:HydroponicsTray
+  id: HydroponicsTray
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Jukebox
+  id: Jukebox
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:MedicalScanner
+  id: MedicalScanner
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:MiniGravityGenerator
+  id: MiniGravityGenerator
   wires:
     - !type:PowerWireAction
   dummyWires: 5
 
 - type: wireLayout
-  id:Morgue
+  id: Morgue
   wires:
     - !type:PowerWireAction
   dummyWires: 2
@@ -173,7 +173,7 @@
   dummyWires: 1
 
 - type: wireLayout
-  id:ParticleAccelerator
+  id: ParticleAccelerator
   wires:
     - !type:PowerWireAction
     - !type:PaPowerWireAction
@@ -190,44 +190,44 @@
   dummyWires: 4
 
 - type: wireLayout
-  id:ReagentGrinder
+  id: ReagentGrinder
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:ResearchAndDevelopment
+  id: ResearchAndDevelopment
   wires:
     - !type:PowerWireAction
   dummyWires: 4
 
 - type: wireLayout
-  id:ReverseEngineering
+  id: ReverseEngineering
   wires:
     - !type:PowerWireAction
   dummyWires: 4
 
 - type: wireLayout
-  id:SecTech
+  id: SecTech
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:SmartFridge
+  id: SmartFridge
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:SodaDispenser
+  id: SodaDispenser
   wires:
     - !type:PowerWireAction
     - !type:EmagWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:HighVoltage
+  id: HighVoltage
   wires:
     - !type:PowerWireAction
     - !type:PowerWireAction
@@ -236,52 +236,52 @@
   dummyWires: 4
 
 - type: wireLayout
-  id:Substation
+  id: Substation
   wires:
     - !type:PowerWireAction
     - !type:PowerWireAction
   dummyWires: 4
 
 - type: wireLayout
-  id:SuitStorage
+  id: SuitStorage
   wires:
     - !type:PowerWireAction
     - !type:EmagWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:SurveillanceCamera
+  id: SurveillanceCamera
   wires:
     - !type:PowerWireAction
     - !type:CameraWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:SurveillanceCameraRouter
+  id: SurveillanceCameraRouter
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:SurveillanceCameraMonitor
+  id: SurveillanceCameraMonitor
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Telecom
+  id: Telecom
   wires:
     - !type:PowerWireAction
   dummyWires: 4
 
 - type: wireLayout
-  id:ThermoMachine
+  id: ThermoMachine
   wires:
     - !type:PowerWireAction
   dummyWires: 2
 
 - type: wireLayout
-  id:Vending
+  id: Vending
   wires:
     - !type:PowerWireAction
     - !type:VendingContrabandWireAction

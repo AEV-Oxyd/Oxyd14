@@ -20,7 +20,7 @@ public sealed partial class ComputerPowerWireAction : BaseWireAction
         return StatusLightState.On;
     }
 
-    public override object StatusKey => ComputerPowerWireKey.Key;
+    public override object StatusKey => OxydComputerWireStatusKey.Power;
 
     public override bool Cut(EntityUid user, Wire wire)
     {
@@ -54,11 +54,6 @@ public sealed partial class ComputerPowerWireAction : BaseWireAction
             EntityManager.System<OxydComputerSystem>().RefreshComputerBootState(wire.Owner, comp);
         }
     }
-
-    private enum ComputerPowerWireKey : byte
-    {
-        Key
-    }
 }
 
 [DataDefinition]
@@ -75,7 +70,7 @@ public sealed partial class ComputerRemoteWireAction : BaseWireAction
         return StatusLightState.On;
     }
 
-    public override object StatusKey => ComputerRemoteWireKey.Key;
+    public override object StatusKey => OxydComputerWireStatusKey.RemoteControl;
 
     public override bool Cut(EntityUid user, Wire wire)
     {
@@ -111,11 +106,6 @@ public sealed partial class ComputerRemoteWireAction : BaseWireAction
             EntityManager.System<OxydComputerSystem>().OnRemoteControlCut(wire.Owner, comp);
         }
     }
-
-    private enum ComputerRemoteWireKey : byte
-    {
-        Key
-    }
 }
 
 [DataDefinition]
@@ -132,7 +122,7 @@ public sealed partial class ComputerNetworkWireAction : BaseWireAction
         return StatusLightState.On;
     }
 
-    public override object StatusKey => ComputerNetworkWireKey.Key;
+    public override object StatusKey => OxydComputerWireStatusKey.Network;
 
     public override bool Cut(EntityUid user, Wire wire)
     {
@@ -162,11 +152,6 @@ public sealed partial class ComputerNetworkWireAction : BaseWireAction
     {
         base.Pulse(user, wire);
     }
-
-    private enum ComputerNetworkWireKey : byte
-    {
-        Key
-    }
 }
 
 [DataDefinition]
@@ -183,7 +168,7 @@ public sealed partial class ComputerStorageWireAction : BaseWireAction
         return StatusLightState.On;
     }
 
-    public override object StatusKey => ComputerStorageWireKey.Key;
+    public override object StatusKey => OxydComputerWireStatusKey.Storage;
 
     public override bool Cut(EntityUid user, Wire wire)
     {
@@ -213,11 +198,6 @@ public sealed partial class ComputerStorageWireAction : BaseWireAction
     {
         base.Pulse(user, wire);
     }
-
-    private enum ComputerStorageWireKey : byte
-    {
-        Key
-    }
 }
 
 [DataDefinition]
@@ -234,7 +214,7 @@ public sealed partial class ComputerDeviceLinkWireAction : BaseWireAction
         return StatusLightState.On;
     }
 
-    public override object StatusKey => ComputerDeviceLinkWireKey.Key;
+    public override object StatusKey => OxydComputerWireStatusKey.DeviceLink;
 
     public override bool Cut(EntityUid user, Wire wire)
     {
@@ -263,10 +243,5 @@ public sealed partial class ComputerDeviceLinkWireAction : BaseWireAction
     public override void Pulse(EntityUid user, Wire wire)
     {
         base.Pulse(user, wire);
-    }
-
-    private enum ComputerDeviceLinkWireKey : byte
-    {
-        Key
     }
 }

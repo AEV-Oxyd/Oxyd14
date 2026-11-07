@@ -120,14 +120,7 @@
     - OxydLatheControlCartridge
     - OxydOsCartridge
     - OxydTerminalCartridge
-  - type: DiskSlot
   - type: ItemSlots
-    slots:
-      disk_slot:
-        name: Data Disk
-        whitelist:
-          components:
-          - FileSystem
   - type: MaterialStorage
     whitelist: &StandardMaterialWhitelist
       tags:
@@ -140,6 +133,11 @@
     runningState: building
     unlitIdleState: unlit
     unlitRunningState: unlit-building
+    diskSlot:
+      name: Data Disk
+      whitelist:
+        components:
+        - FileSystem
     staticPacks:
     - ToolsStatic
     - PartsStatic

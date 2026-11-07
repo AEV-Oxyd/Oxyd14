@@ -10,6 +10,16 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers;
 
+[Serializable, NetSerializable]
+public enum OxydComputerWireStatusKey : byte
+{
+    Power,
+    RemoteControl,
+    Network,
+    Storage,
+    DeviceLink
+}
+
 /// <summary>
 /// Universal computer root component shared across Workstations, Laptops, PDAs, Routers,
 /// APC controllers, Atmos controllers, and Autolathe embedded computers.

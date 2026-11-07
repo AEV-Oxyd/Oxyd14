@@ -27,6 +27,8 @@
     cpuFrequencyMhz: 1200
     ramMb: 4096
     storageBytes: 104857600
+    networkBandwidthBps: 250000
+    networkUploadBandwidthBps: 250000
   - type: FileSystem
     maxStorageBytes: 104857600
   - type: DataServer
@@ -83,14 +85,33 @@
     defaultScreenSize: 760, 560
     allowRemoteControl: true
     requiresPower: true
-  - type: PDA
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-    preinstalled:
+    defaultPrograms:
     - OxydOsCartridge
     - OxydRouterCartridge
     - OxydPacketSnifferCartridge
     - OxydTerminalCartridge
+  - type: Pda
+  - type: ItemSlots
+  - type: ContainerContainer
+    containers:
+      PDA-id: !type:ContainerSlot {}
+      PDA-pen: !type:ContainerSlot {}
+      PDA-pai: !type:ContainerSlot {}
+      PDA-disk: !type:ContainerSlot {}
+      Cartridge-Slot: !type:ContainerSlot {}
+      preinstalled-program-container: !type:Container
+      removable-program-container: !type:Container
+      computer_board_slots: !type:Container
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: OxydOsCartridge
+        - id: OxydRouterCartridge
+        - id: OxydPacketSnifferCartridge
+        - id: OxydTerminalCartridge
   - type: ActivatableUI
     key: enum.PdaUiKey.Key
     singleUser: false
@@ -104,7 +125,7 @@
   - type: Wires
     layoutId: OxydComputerMotherboard
   - type: ModularComputer
-    maxHardDrives: 2
+    maxHardDriveSlots: 2
     maxRamSlots: 2
     maxBatterySize: Small
   - type: NetworkBandwidth

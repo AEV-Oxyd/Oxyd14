@@ -68,6 +68,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
     public const string MachineCommandSinkPort = "MachineCommandReceiver";
     public const string MachineStatusSourcePort = "MachineStatusSender";
 
+    private bool _spawningDefaultHardware;
+
     public override void Initialize()
     {
         base.Initialize();
@@ -131,7 +133,6 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (container.ContainedEntities.Count > 0)
             return;
 
-        var coords = Transform(uid).Coordinates;
         var initialStats = CompOrNull<ComputerStatsComponent>(uid);
         var initialCpu = initialStats?.CpuFrequencyMhz ?? 400f;
         var initialRam = initialStats != null && initialStats.RamMb > 0 ? initialStats.RamMb : 512;
@@ -139,53 +140,62 @@ public sealed partial class OxydComputerSystem : EntitySystem
         var initialNetDown = initialStats != null && initialStats.NetworkBandwidthBps > 0 ? initialStats.NetworkBandwidthBps : 128000;
         var initialNetUp = initialStats != null && initialStats.NetworkUploadBandwidthBps > 0 ? initialStats.NetworkUploadBandwidthBps : 64000;
 
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartCpuBasic"))
+        var prevSpawning = _spawningDefaultHardware;
+        _spawningDefaultHardware = true;
+        try
         {
-            var cpuEnt = Spawn("ComputerPartCpuBasic", coords);
-            if (TryComp<ComputerCpuComponent>(cpuEnt, out var cpuComp))
-                cpuComp.FrequencyMhz = initialCpu;
-            _container.Insert(cpuEnt, container);
-        }
-
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartRamBasic"))
-        {
-            var ramEnt = Spawn("ComputerPartRamBasic", coords);
-            if (TryComp<ComputerRamComponent>(ramEnt, out var ramComp))
-                ramComp.SizeMb = initialRam;
-            _container.Insert(ramEnt, container);
-        }
-
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartHardDriveBasic"))
-        {
-            var hddEnt = Spawn("ComputerPartHardDriveBasic", coords);
-            if (TryComp<ComputerStorageDeviceComponent>(hddEnt, out var storageComp))
-                storageComp.CapacityBytes = initialStorage;
-            if (TryComp<ComputerHardDriveComponent>(hddEnt, out var hddComp))
-                hddComp.CapacityBytes = initialStorage;
-            _container.Insert(hddEnt, container);
-        }
-
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartNetworkCardBasic"))
-        {
-            var netEnt = Spawn("ComputerPartNetworkCardBasic", coords);
-            if (TryComp<ComputerNetworkCardComponent>(netEnt, out var netComp))
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartCpuBasic"))
             {
-                netComp.BandwidthBps = initialNetDown;
-                netComp.MaxUploadBps = initialNetUp;
+                var cpuEnt = Spawn("ComputerPartCpuBasic");
+                if (TryComp<ComputerCpuComponent>(cpuEnt, out var cpuComp))
+                    cpuComp.FrequencyMhz = initialCpu;
+                _container.Insert(cpuEnt, container);
             }
-            _container.Insert(netEnt, container);
-        }
 
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartBatterySmall"))
-        {
-            var batEnt = Spawn("ComputerPartBatterySmall", coords);
-            _container.Insert(batEnt, container);
-        }
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartRamBasic"))
+            {
+                var ramEnt = Spawn("ComputerPartRamBasic");
+                if (TryComp<ComputerRamComponent>(ramEnt, out var ramComp))
+                    ramComp.SizeMb = initialRam;
+                _container.Insert(ramEnt, container);
+            }
 
-        if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartDiskSlotModule"))
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartHardDriveBasic"))
+            {
+                var hddEnt = Spawn("ComputerPartHardDriveBasic");
+                if (TryComp<ComputerStorageDeviceComponent>(hddEnt, out var storageComp))
+                    storageComp.CapacityBytes = initialStorage;
+                if (TryComp<ComputerHardDriveComponent>(hddEnt, out var hddComp))
+                    hddComp.CapacityBytes = initialStorage;
+                _container.Insert(hddEnt, container);
+            }
+
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartNetworkCardBasic"))
+            {
+                var netEnt = Spawn("ComputerPartNetworkCardBasic");
+                if (TryComp<ComputerNetworkCardComponent>(netEnt, out var netComp))
+                {
+                    netComp.BandwidthBps = initialNetDown;
+                    netComp.MaxUploadBps = initialNetUp;
+                }
+                _container.Insert(netEnt, container);
+            }
+
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartBatterySmall"))
+            {
+                var batEnt = Spawn("ComputerPartBatterySmall");
+                _container.Insert(batEnt, container);
+            }
+
+            if (_prototypeManager.HasIndex<EntityPrototype>("ComputerPartDiskSlotModule"))
+            {
+                var diskSlotEnt = Spawn("ComputerPartDiskSlotModule");
+                _container.Insert(diskSlotEnt, container);
+            }
+        }
+        finally
         {
-            var diskSlotEnt = Spawn("ComputerPartDiskSlotModule", coords);
-            _container.Insert(diskSlotEnt, container);
+            _spawningDefaultHardware = prevSpawning;
         }
     }
 
@@ -228,8 +238,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             if (!_prototypeManager.HasIndex<EntityPrototype>(ent.Comp.ComputerPrototype))
                 return;
 
-            var coords = Transform(ent.Owner).Coordinates;
-            var compUid = Spawn(ent.Comp.ComputerPrototype, coords);
+            var compUid = Spawn(ent.Comp.ComputerPrototype);
             _container.Insert(compUid, container);
             ent.Comp.ComputerEntity = compUid;
 
@@ -307,16 +316,25 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     private void OnHardwareModified(Entity<OxydComputerComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
+        if (_spawningDefaultHardware || TerminatingOrDeleted(ent.Owner))
+            return;
+
         RecalculateHardwareAndBoot(ent);
     }
 
     private void OnHardwareModified(Entity<OxydComputerComponent> ent, ref EntRemovedFromContainerMessage args)
     {
+        if (_spawningDefaultHardware || TerminatingOrDeleted(ent.Owner))
+            return;
+
         RecalculateHardwareAndBoot(ent);
     }
 
     private void OnComputerPowerChanged(Entity<OxydComputerComponent> ent, ref PowerChangedEvent args)
     {
+        if (TerminatingOrDeleted(ent.Owner))
+            return;
+
         RecalculateHardwareAndBoot(ent);
     }
 
@@ -338,6 +356,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
     public void RecalculateHardwareAndBoot(Entity<OxydComputerComponent> ent)
     {
         var uid = ent.Owner;
+        if (TerminatingOrDeleted(uid))
+            return;
+
         var comp = ent.Comp;
         var stats = EnsureComp<ComputerStatsComponent>(uid);
         var bw = EnsureComp<NetworkBandwidthComponent>(uid);

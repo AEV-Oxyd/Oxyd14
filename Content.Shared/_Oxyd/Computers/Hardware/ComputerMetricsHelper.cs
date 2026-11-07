@@ -28,7 +28,9 @@ public static class ComputerMetricsHelper
 
         // RAM: base OS (16MB) + open programs (8MB each) + cache for storage
         var storageCacheMb = storageUsedBytes / (1024 * 128);
-        ramUsedMb = Math.Clamp(16 + (openProgramCount * 8) + storageCacheMb, 16, ramTotalMb);
+        var minRam = Math.Min(16, Math.Max(0, ramTotalMb));
+        var maxRam = Math.Max(0, ramTotalMb);
+        ramUsedMb = maxRam <= 0 ? 0 : Math.Clamp(16 + (openProgramCount * 8) + storageCacheMb, minRam, maxRam);
 
         // Fluctuate CPU slightly by a few percentages (±1.5% to 3.5%) based on time
         var jitter = (float)(Math.Sin(curTime * 1.4) * 2.1 + Math.Sin(curTime * 0.7 + 0.9) * 1.4);
