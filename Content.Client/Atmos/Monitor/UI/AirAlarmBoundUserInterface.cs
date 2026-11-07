@@ -1,3 +1,4 @@
+using Content.Client.UserInterface.StateRouting;
 using Content.Shared.Atmos;
 using Content.Shared.Atmos.Monitor;
 using Content.Shared.Atmos.Monitor.Components;
@@ -6,7 +7,7 @@ using Robust.Client.UserInterface;
 
 namespace Content.Client.Atmos.Monitor.UI;
 
-public sealed class AirAlarmBoundUserInterface : BoundUserInterface
+public sealed class AirAlarmBoundUserInterface : RoutedBoundUserInterface
 {
     private AirAlarmWindow? _window;
 
@@ -19,6 +20,7 @@ public sealed class AirAlarmBoundUserInterface : BoundUserInterface
         base.Open();
 
         _window = this.CreateWindow<AirAlarmWindow>();
+        SetStateScopeRoot(_window);
         _window.SetEntity(Owner);
 
         _window.AtmosDeviceDataChanged += OnDeviceDataChanged;

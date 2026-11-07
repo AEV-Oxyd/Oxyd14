@@ -96,6 +96,7 @@ public partial class PdaWindow : BaseWindow
         HeadingBar.Visible = !stripped;
         ContentBorder.Visible = !stripped;
         ScreenInsetControl.Margin = stripped ? new Thickness(0) : new Thickness(18, 0, 18, 2);
+        ScreenSurface.Margin = stripped ? new Thickness(0) : new Thickness(3, 3);
         if (stripped)
         {
             MinSize = System.Numerics.Vector2.Zero;

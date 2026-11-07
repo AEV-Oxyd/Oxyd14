@@ -250,12 +250,21 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return true;
         }
 
+        if (HasComp<PdaComponent>(uid) &&
+            _uiSystem.TryGetInterfaceData((uid, uiComp), PdaUiKey.Key, out var pdaData))
+        {
+            uiKey = PdaUiKey.Key;
+            interfaceData = pdaData;
+            return true;
+        }
+
         if (_uiSystem.TryGetInterfaceData((uid, uiComp), ApcUiKey.Key, out var apcData))
         {
             uiKey = ApcUiKey.Key;
             interfaceData = apcData;
             return true;
         }
+
 
         return false;
     }
@@ -330,17 +339,17 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         // Rebuild the actor's AuthorizedTargets set across all active terminals for this actor
         RebuildActorAuthorizedTargets(actor);
 
-        // Now that AuthorizedTargets is updated, open any newly added non-PDA device BUIs
-        foreach (var target in newlyAddedTargets)
+        // Now that AuthorizedTargets is updated, ensure all active device BUIs (including PDAs) are open for the actor
+        foreach (var target in session.ActiveTargets)
         {
-            if (HasComp<PdaComponent>(target))
-                continue;
-
             if (TryGetPrimaryUiKey(target, out var uiKey, out _) && uiKey != null)
             {
-                RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
-                _uiSystem.OpenUi(target, uiKey, actor);
-                RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
+                if (!_uiSystem.IsUiOpen(target, uiKey, actor))
+                {
+                    RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
+                    _uiSystem.OpenUi(target, uiKey, actor);
+                    RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
+                }
             }
         }
     }
@@ -441,7 +450,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         var deviceName = MetaData(targetUid).EntityName;
 
         // Cycle detected (e.g., A -> A, A -> B -> A, or A -> B -> C -> A):
-        // Emit a lightweight PiP cycle reference so the client renders the ancestor surface viaPipMirrorViewport!
+        // Emit a lightweight PiP cycle reference so the client renders the ancestor surface via PipMirrorViewport!
         if (!visitedGuids.Add(targetGuid))
         {
             return new RemoteScreenState(
@@ -531,10 +540,19 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                     lastState.SshPassword,
                     lastState.CurrentView);
 
+                InterfaceData? pdaData = null;
+                if (TryComp<UserInterfaceComponent>(targetUid, out var uiComp))
+                    _uiSystem.TryGetInterfaceData((targetUid, uiComp), PdaUiKey.Key, out pdaData);
+
+                _uiSystem.TryGetUiState<BoundUserInterfaceState>(targetUid, PdaUiKey.Key, out var pdaBuiState);
+
                 return new RemoteScreenState(
                     GetNetEntity(targetUid),
                     targetGuid,
                     deviceName,
+                    uiKey: PdaUiKey.Key,
+                    buiClientType: pdaData?.ClientType,
+                    buiState: pdaBuiState ?? pdaState,
                     pdaState: pdaState,
                     viewingTargetGuid: viewingGuid);
             }

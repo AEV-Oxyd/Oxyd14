@@ -79,6 +79,9 @@ namespace Content.Client.UserInterface.Controls
             set
             {
                 _isEmbedded = value;
+                HeaderContainer.Visible = !value;
+                HeaderDivider.Visible = !value;
+                WindowBackground.Visible = !value;
                 CloseButton.Visible = !value;
                 if (value)
                     HelpButton.Visible = false;

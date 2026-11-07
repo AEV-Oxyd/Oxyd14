@@ -58,7 +58,7 @@ public interface IBuiStateScope
 /// Container that hides its whole subtree from routed states. Use it around UI that belongs to a
 /// different state source (e.g. a remote machine's screen embedded in a terminal).
 /// </summary>
-public sealed class BuiStateBarrier : BoxContainer, IBuiStateScope
+public sealed class BuiStateBarrier : LayoutContainer, IBuiStateScope
 {
     public bool AcceptsBuiState(BoundUserInterfaceState state) => false;
 }
@@ -112,6 +112,8 @@ public sealed class BuiStateHandlers
 public sealed class BuiStateRouter
 {
     private Control? _root;
+    public Control? Root => _root;
+    public event Action<Control?>? OnRootChanged;
 
     /// <summary>
     /// Whether <see cref="IBuiNestedState"/> states are flattened and delivered individually. Default true.
@@ -123,7 +125,14 @@ public sealed class BuiStateRouter
     /// </summary>
     public bool Enabled = true;
 
-    public void SetRoot(Control? root) => _root = root;
+    public void SetRoot(Control? root)
+    {
+        if (_root == root)
+            return;
+
+        _root = root;
+        OnRootChanged?.Invoke(root);
+    }
 
     /// <summary>
     /// Delivers <paramref name="state"/> (and any nested states) to all receivers under the root.
@@ -222,6 +231,13 @@ public abstract class RoutedBoundUserInterface : BoundUserInterface
 {
     [ViewVariables]
     public BuiStateRouter Router { get; } = new();
+
+    public Control? RootControl => Router.Root;
+    public event Action<Control?>? OnRootChanged
+    {
+        add => Router.OnRootChanged += value;
+        remove => Router.OnRootChanged -= value;
+    }
 
     /// <summary>
     /// True if the most recent state was consumed by a receiver/scope. Implementers who want consumption

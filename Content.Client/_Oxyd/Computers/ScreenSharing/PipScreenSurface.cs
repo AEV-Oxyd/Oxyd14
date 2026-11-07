@@ -120,12 +120,11 @@ public partial class PipScreenSurface : BoxContainer
     private static readonly Queue<IRenderTexture> s_DeferredDisposeQueue = new();
     private static int s_CaptureDepth;
     private static uint s_CurrentFrameId;
-    private static uint s_LastGlobalCaptureFrameId;
 
     /// <summary>
     /// Minimum interval between steady-state background captures once the initial cascade bounces are seeded.
     /// </summary>
-    private const float BackgroundCaptureIntervalSeconds = 0.10f;
+    private const float BackgroundCaptureIntervalSeconds = 0.05f;
 
     public static bool IsCapturingOffscreen => s_CaptureDepth > 0;
 
@@ -239,10 +238,6 @@ public partial class PipScreenSurface : BoxContainer
 
         _observedFramesRemaining--;
 
-        // Stagger offscreen FBO captures so at most 1 surface captures in any single UI render pass.
-        if (s_LastGlobalCaptureFrameId == s_CurrentFrameId)
-            return;
-
         if (!_hasValidReadFrame || _lastCapturedSize != PixelSize)
             _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, 3);
 
@@ -251,7 +246,6 @@ public partial class PipScreenSurface : BoxContainer
 
         if (CaptureToTarget(args.Handle))
         {
-            s_LastGlobalCaptureFrameId = s_CurrentFrameId;
             _timeSinceLastCapture = 0f;
             _lastCapturedSize = PixelSize;
             if (_dirtyPassesRemaining > 0)
@@ -259,17 +253,20 @@ public partial class PipScreenSurface : BoxContainer
         }
     }
 
-    private bool CaptureToTarget(IRenderHandle renderHandle)
+    /// <summary>
+    /// Renders any specified control tree offscreen into this surface's double-buffered render target.
+    /// Double-buffered so viewports observing this surface's <see cref="DeviceGuid"/> can immediately sample <see cref="ReadTexture"/>.
+    /// </summary>
+    public bool CaptureControl(IRenderHandle renderHandle, Control control, Vector2i targetSize)
     {
-        var rawSize = PixelSize;
-        if (rawSize.X <= 4 || rawSize.Y <= 4)
+        if (targetSize.X <= 4 || targetSize.Y <= 4)
             return false;
 
-        var targetSize = Vector2i.ComponentMin(
-            Vector2i.ComponentMax(rawSize, new Vector2i(32, 32)),
+        var clampedSize = Vector2i.ComponentMin(
+            Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
             new Vector2i(1024, 1024));
 
-        EnsureWriteTarget(targetSize);
+        EnsureWriteTarget(clampedSize);
         if (_writeTarget == null)
             return false;
 
@@ -280,7 +277,7 @@ public partial class PipScreenSurface : BoxContainer
             {
                 renderHandle.SetScissor(null);
                 renderHandle.DrawingHandleScreen.SetTransform(Matrix3x2.Identity);
-                UserInterfaceManager.RenderControl(renderHandle, this, Vector2i.Zero);
+                UserInterfaceManager.RenderControl(renderHandle, control, Vector2i.Zero);
             }, Color.FromHex("#070B12"));
         }
         finally
@@ -291,13 +288,18 @@ public partial class PipScreenSurface : BoxContainer
         (_readTarget, _writeTarget) = (_writeTarget, _readTarget);
         _hasValidReadFrame = true;
 
-        if (_writeTarget != null && _writeTarget.Size != targetSize)
+        if (_writeTarget != null && _writeTarget.Size != clampedSize)
         {
             DeferDispose(_writeTarget);
             _writeTarget = null;
         }
 
         return true;
+    }
+
+    private bool CaptureToTarget(IRenderHandle renderHandle)
+    {
+        return CaptureControl(renderHandle, this, PixelSize);
     }
 
     private void EnsureWriteTarget(Vector2i size)

@@ -1,512 +1,768 @@
+using System.Numerics;
+using System.Reflection;
 using Content.Client.PDA;
 using Content.Client.Power.APC.UI;
 using Content.Client.UserInterface.Controls;
-using Content.Client.UserInterface.Fragments;
 using Content.Client.UserInterface.StateRouting;
-using Content.Shared._Oxyd.Computers.Cartridges;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared.APC;
-using Content.Shared.CartridgeLoader;
 using Content.Shared.PDA;
+using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
-using Robust.Shared.GameObjects;
-using Robust.Shared.Maths;
-using Robust.Shared.Serialization.Manager;
+using Robust.Shared.Input;
+using Robust.Shared.Map;
 using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Computers.ScreenSharing;
 
 /// <summary>
-/// Universal remote screen container capable of embedding:
-/// - PDAs and CartridgeLoader devices (including nested terminals)
-/// - Any BoundUserInterface device (APCs, Atmospheric Alarms, Static Computers, etc.)
-/// - Picture-in-Picture (PiP) Hall-of-Mirrors viewports (<see cref="PipMirrorViewport"/>) whenever
-///   a screen-sharing cycle (<c>A -> B -> A</c> or <c>A -> A</c>) is detected.
+/// Universal remote screen container capable of generic PIP-rendering of any target UI:
+/// - BoundUserInterface devices (APCs, Atmospheric Alarms, Static Computers, Consoles, PDAs, etc.)
+/// - Arbitrary custom IRemoteTargetUi implementations
+/// Fits the remote display cleanly to the terminal viewport and streams user interactions
+/// (mouse clicks, hovers, scroll, keyboard typing, focus) directly to the target UI.
+/// Infinite recursive cycles (A -> B -> A or A -> A) are rendered via Picture-in-Picture (PiP) mirror textures.
 /// </summary>
-public sealed partial class RemoteScreenView : BoxContainer
-{
-    [Dependency] private IEntityManager _entManager = default!;
-    [Dependency] private ISerializationManager _serManager = default!;
-
-    public BoundUserInterface? HostBui { get; set; }
-    public event Action<string?, string?>? OnRemoteAction;
-
-    private readonly PipScreenSurface _surface;
-    private readonly BuiStateBarrier _barrier;
-
-    private PipMirrorViewport? _mirrorViewport;
-    private PdaMenu? _remotePdaMenu;
-    private UIFragment? _remoteUi;
-    private Control? _remoteControl;
-    private EntityUid? _remoteProgram;
-    private RemoteBuiScreenHost? _remoteBuiHost;
-
-    public RemoteScreenView()
-    {
-        IoCManager.InjectDependencies(this);
-
-        Orientation = LayoutOrientation.Vertical;
-        HorizontalExpand = true;
-        VerticalExpand = true;
-        RectClipContent = true;
-
-        _surface = new PipScreenSurface
-        {
-            HorizontalExpand = true,
-            VerticalExpand = true
-        };
-
-        _barrier = new BuiStateBarrier
-        {
-            HorizontalExpand = true,
-            VerticalExpand = true
-        };
-
-        _surface.AddChild(_barrier);
-        AddChild(_surface);
-    }
-
-    public void UpdateState(RemoteScreenState state)
-    {
-        // Detect if this remote device is already an ancestor in the UI hierarchy (or flagged as a cycle by the server).
-        // If so, render a Picture-in-Picture mirror viewport sampling the ancestor's offscreen texture instead of
-        // recursively parenting a duplicate widget tree.
-        var isCycle = state.IsCycleReference ||
-                      PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid);
-
-        if (isCycle)
-        {
-            DisposePdaContent();
-            DisposeBuiContent();
-            _surface.Visible = false;
-            _surface.DeviceGuid = null;
-
-            if (_mirrorViewport == null)
-            {
-                _mirrorViewport = new PipMirrorViewport();
-                AddChild(_mirrorViewport);
-            }
-
-            _mirrorViewport.SetTarget(state.DeviceGuid, state.DeviceName);
-            return;
-        }
-
-        if (_mirrorViewport != null)
-        {
-            _mirrorViewport.Orphan();
-            _mirrorViewport.Dispose();
-            _mirrorViewport = null;
-        }
-
-        _surface.Visible = true;
-        _surface.DeviceGuid = state.DeviceGuid;
-        _surface.InvalidateCapture();
-        PipSurfaceRegistry.FindAncestorSurface(this, state.ViewingTargetGuid)?.InvalidateCapture();
-
-        // Branch 1: PDA / Cartridge Host Screen
-        if (state.PdaState != null)
-        {
-            DisposeBuiContent();
-            EnsurePdaMenu();
-            _remotePdaMenu!.UpdateState(state.PdaState);
-            UpdateRemoteCartridgeProgram(state.PdaState);
-            return;
-        }
-
-        // Branch 2: Generic BoundUserInterface Device (APC, Air Alarm, Static Computer, etc.)
-        if (state.UiKey != null && !string.IsNullOrEmpty(state.BuiClientType))
-        {
-            DisposePdaContent();
-            EnsureBuiHost(state);
-            _remoteBuiHost!.UpdateFromState(state);
-            return;
-        }
-    }
-
-    private void EnsurePdaMenu()
-    {
-        if (_remotePdaMenu != null)
-            return;
-
-        _remotePdaMenu = new PdaMenu();
-        _remotePdaMenu.StripDetailElements(true);
-        _remotePdaMenu.FlashLightToggleButton.Visible = false;
-        _remotePdaMenu.EjectPenButton.Visible = false;
-        _remotePdaMenu.EjectIdButton.Visible = false;
-        _remotePdaMenu.EjectPaiButton.Visible = false;
-        _remotePdaMenu.EjectDiskButton.Visible = false;
-        _remotePdaMenu.PowerButton.Visible = false;
-
-        _remotePdaMenu.OnTabSelected += progUid =>
-        {
-            var netUid = _entManager.GetNetEntity(progUid);
-            OnRemoteAction?.Invoke("tab", netUid.ToString());
-        };
-        _remotePdaMenu.ProgramCloseButton.OnPressed += _ => OnRemoteAction?.Invoke("home", null);
-        _remotePdaMenu.OnTabClosed += progUid =>
-        {
-            var netUid = _entManager.GetNetEntity(progUid);
-            OnRemoteAction?.Invoke("close_tab", netUid.ToString());
-        };
-        _remotePdaMenu.HomeButton.OnPressed += _ => OnRemoteAction?.Invoke("home", null);
-        _remotePdaMenu.ProgramListButton.OnPressed += _ => OnRemoteAction?.Invoke("programs", null);
-        _remotePdaMenu.SettingsButton.OnPressed += _ => OnRemoteAction?.Invoke("settings", null);
-        _remotePdaMenu.OnProgramItemPressed += progUid =>
-        {
-            var netUid = _entManager.GetNetEntity(progUid);
-            OnRemoteAction?.Invoke("run_program", netUid.ToString());
-        };
-
-        _barrier.RemoveAllChildren();
-        _barrier.AddChild(_remotePdaMenu);
-    }
-
-    private void UpdateRemoteCartridgeProgram(PdaUpdateState remote)
-    {
-        if (_remotePdaMenu == null)
-            return;
-
-        var programs = new List<(EntityUid, CartridgeComponent)>();
-        foreach (var net in remote.Programs)
-        {
-            if (_entManager.TryGetEntity(net, out var prog) &&
-                _entManager.TryGetComponent(prog, out CartridgeComponent? comp))
-            {
-                programs.Add((prog.Value, comp));
-            }
-        }
-        _remotePdaMenu.UpdateAvailablePrograms(programs);
-
-        EntityUid? active = null;
-        if (remote.ActiveUI is { } activeNet && _entManager.TryGetEntity(activeNet, out var activeUid))
-            active = activeUid;
-
-        if (active == null)
-        {
-            if (_remoteControl != null)
-            {
-                DisposeRemoteProgram();
-                _remotePdaMenu.ProgramView.RemoveAllChildren();
-                _remotePdaMenu.HideProgramHeader();
-                if (_remotePdaMenu.CurrentView == PdaMenu.ProgramContentView)
-                    _remotePdaMenu.ToProgramList();
-            }
-            return;
-        }
-
-        if (_remoteProgram != active)
-        {
-            DisposeRemoteProgram();
-            _remotePdaMenu.ProgramView.RemoveAllChildren();
-
-            var fragmentComp = _entManager.GetComponentOrNull<UIFragmentComponent>(active.Value);
-            var templateUi = fragmentComp?.Ui;
-            if (templateUi != null && HostBui != null)
-            {
-                var ui = _serManager.CreateCopy(templateUi, notNullableOverride: true);
-                ui.Setup(HostBui, active.Value);
-                var control = ui.GetUIFragmentRoot();
-                _remoteUi = ui;
-                _remoteControl = control;
-                _remoteProgram = active;
-                _remotePdaMenu.ProgramView.AddChild(control);
-
-                var title = _entManager.TryGetComponent(active.Value, out CartridgeComponent? cart)
-                    ? Loc.GetString(cart.ProgramName)
-                    : string.Empty;
-                if (remote.CurrentView == PdaMenu.ProgramContentView)
-                    _remotePdaMenu.ToProgramView(title);
-            }
-        }
-
-        // Pass the remote cartridge state through unflattened so nested terminals can render
-        // either a 2nd-hop remote device or a PiP Hall-of-Mirrors cascade!
-        if (_remoteUi != null && remote.CartridgeState != null)
-        {
-            _remoteUi.UpdateState(remote.CartridgeState);
-        }
-    }
-
-    private void EnsureBuiHost(RemoteScreenState state)
-    {
-        if (_remoteBuiHost != null &&
-            _remoteBuiHost.TargetNetEntity == state.TargetEntity &&
-            Equals(_remoteBuiHost.UiKey, state.UiKey))
-        {
-            return;
-        }
-
-        DisposeBuiContent();
-        _remoteBuiHost = new RemoteBuiScreenHost(state.TargetEntity, state.UiKey!, state.DeviceName);
-        _barrier.RemoveAllChildren();
-        _barrier.AddChild(_remoteBuiHost);
-    }
-
-    private void DisposeRemoteProgram()
-    {
-        _remoteControl?.Orphan();
-        _remoteControl?.Dispose();
-        _remoteControl = null;
-        _remoteUi = null;
-        _remoteProgram = null;
-    }
-
-    private void DisposePdaContent()
-    {
-        DisposeRemoteProgram();
-        if (_remotePdaMenu != null)
-        {
-            _remotePdaMenu.Orphan();
-            _remotePdaMenu.Dispose();
-            _remotePdaMenu = null;
-        }
-    }
-
-    private void DisposeBuiContent()
-    {
-        if (_remoteBuiHost != null)
-        {
-            _remoteBuiHost.Orphan();
-            _remoteBuiHost.Dispose();
-            _remoteBuiHost = null;
-        }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            DisposePdaContent();
-            DisposeBuiContent();
-            _mirrorViewport?.Dispose();
-            _mirrorViewport = null;
-        }
-
-        base.Dispose(disposing);
-    }
-}
-
-/// <summary>
-/// Hosts the live <see cref="BoundUserInterface"/> window of any BUI-based device
-/// (such as an APC, Atmospheric Alarm, or Static Computer) inside an embedded container
-/// so the user can view and interact with it remotely.
-/// </summary>
-internal sealed partial class RemoteBuiScreenHost : BoxContainer
+public sealed partial class RemoteScreenView : LayoutContainer
 {
     [Dependency] private IEntityManager _entManager = default!;
     [Dependency] private IPlayerManager _playerManager = default!;
     [Dependency] private IUserInterfaceManager _uiManager = default!;
 
-    public NetEntity TargetNetEntity { get; }
-    public Enum UiKey { get; }
-    private readonly string _deviceName;
+    private static readonly MethodInfo? s_ControlKeyBindDown =
+        typeof(Control).GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
-    private EntityUid? _targetUid;
-    private BoundUserInterface? _bui;
-    private bool _wasBuiOpened;
-    private BaseWindow? _pendingWindow;
-    private BaseWindow? _embeddedWindow;
-    private BoundUserInterfaceState? _latestState;
-    private readonly Label _loadingLabel;
+    private static readonly MethodInfo? s_ControlKeyBindUp =
+        typeof(Control).GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
-    public RemoteBuiScreenHost(NetEntity targetNetEntity, Enum uiKey, string deviceName)
+    private static readonly MethodInfo? s_ControlMouseMove =
+        typeof(Control).GetMethod("MouseMove", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+    private static readonly MethodInfo? s_ControlMouseWheel =
+        typeof(Control).GetMethod("MouseWheel", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+    private static readonly FieldInfo? s_ButtonAttemptingPress =
+        typeof(BaseButton).GetField("_attemptingPress", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    public BoundUserInterface? HostBui
+    {
+        get => _hostBui;
+        set
+        {
+            _hostBui = value;
+            _activeTargetUi?.SetHostBui(value);
+        }
+    }
+    private BoundUserInterface? _hostBui;
+
+    public event Action<string?, string?>? OnRemoteAction;
+
+    private readonly PipScreenSurface _surface;
+    private readonly Label _statusLabel;
+
+    private IRemoteTargetUi? _activeTargetUi;
+    private string? _deviceGuid;
+    private bool _isCycle;
+
+    private readonly Dictionary<BoundKeyFunction, Control> _relayedPressedControls = new();
+
+    private Control? GetCaptureTarget()
+    {
+        
+        if (_activeTargetUi?.RootControl is not { } root || root.Disposed)
+            return null;
+
+        if (root is PdaWindow pdaWin)
+            return pdaWin.ScreenInsetControl;
+
+        if (root is FancyWindow fancy)
+            return fancy.ContentsContainer;
+
+        return root;
+    }
+
+    private Vector2 TargetResolution
+    {
+        get
+        {
+            if (GetCaptureTarget() is { } target)
+            {
+                if (target.PixelSize.X > 0 && target.PixelSize.Y > 0)
+                    return target.Size;
+                if (target.SetSize.X > 0 && target.SetSize.Y > 0)
+                    return target.SetSize;
+                if (target.MinSize.X > 0 && target.MinSize.Y > 0)
+                    return target.MinSize;
+            }
+
+            return _activeTargetUi?.TargetSize ?? new Vector2(640, 520);
+        }
+    }
+
+    public RemoteScreenView()
     {
         IoCManager.InjectDependencies(this);
 
-        TargetNetEntity = targetNetEntity;
-        UiKey = uiKey;
-        _deviceName = deviceName;
-
-        Orientation = LayoutOrientation.Vertical;
         HorizontalExpand = true;
         VerticalExpand = true;
         RectClipContent = true;
+        MouseFilter = MouseFilterMode.Stop;
 
-        _loadingLabel = new Label
+        _statusLabel = new Label
         {
-            Text = $"ESTABLISHING BUI STREAM: {_deviceName}...",
+            Text = "INITIALIZING REMOTE STREAM...",
             FontColorOverride = Color.FromHex("#00D4FF"),
             HorizontalAlignment = HAlignment.Center,
             VerticalAlignment = VAlignment.Center,
-            HorizontalExpand = true,
-            VerticalExpand = true
+            Visible = true
         };
-        AddChild(_loadingLabel);
+        AddChild(_statusLabel);
+        LayoutContainer.SetAnchorAndMarginPreset(_statusLabel, LayoutPreset.Wide);
 
-        _uiManager.WindowRoot.OnChildAdded += OnWindowRootChildAdded;
+        _surface = new PipScreenSurface
+        {
+            MouseFilter = MouseFilterMode.Ignore
+        };
+        AddChild(_surface);
+        LayoutContainer.SetAnchorAndMarginPreset(_surface, LayoutPreset.Wide);
     }
 
-    public void UpdateFromState(RemoteScreenState state)
+    public void UpdateState(RemoteScreenState state)
     {
-        if (state.BuiState != null)
-            _latestState = state.BuiState;
+        _deviceGuid = state.DeviceGuid;
 
-        TryEnsureBuiAndWindow();
-        ApplyLatestState();
+        var isCycle = state.IsCycleReference ||
+                      PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid);
+
+        if (isCycle)
+        {
+            _isCycle = true;
+            _surface.Visible = false;
+            _surface.DeviceGuid = null;
+            _statusLabel.Visible = false;
+
+            if (!string.IsNullOrEmpty(_deviceGuid))
+            {
+                var surface = PipSurfaceRegistry.ResolveSurface(this, _deviceGuid);
+                surface?.RequestCaptureFrame(4);
+                surface?.InvalidateCapture(3);
+            }
+            return;
+        }
+
+        _isCycle = false;
+        _surface.Visible = true;
+        _surface.DeviceGuid = state.DeviceGuid;
+        _surface.InvalidateCapture();
+        PipSurfaceRegistry.FindAncestorSurface(this, state.ViewingTargetGuid)?.InvalidateCapture();
+
+        // Universal BoundUserInterface Device (APC, Air Alarm, Static Computer, Consoles, PDAs, etc.)
+        if (state.TargetEntity != NetEntity.Invalid)
+        {
+            var uiKey = state.UiKey ?? PdaUiKey.Key;
+            if (_activeTargetUi is not RemoteBuiTarget buiTarget || !buiTarget.Matches(state.TargetEntity, uiKey))
+            {
+                SetTargetUi(new RemoteBuiTarget(state.TargetEntity, uiKey, state.DeviceName, _entManager, _playerManager, _uiManager));
+            }
+
+            _activeTargetUi?.UpdateState(state);
+            return;
+        }
+
+        DisposeActiveTarget();
+        _statusLabel.Text = $"STREAM CONNECTED: {state.DeviceName} (NO ACTIVE UI)";
+        _statusLabel.Visible = true;
+    }
+
+    public void SetTargetUi(IRemoteTargetUi targetUi)
+    {
+        DisposeActiveTarget();
+        _activeTargetUi = targetUi;
+        _activeTargetUi.SetHostBui(_hostBui);
+
+        _statusLabel.Visible = false;
+        _surface.InvalidateCapture();
+    }
+
+    private void DisposeActiveTarget()
+    {
+        if (_activeTargetUi != null)
+        {
+            _activeTargetUi.Dispose();
+            _activeTargetUi = null;
+        }
+        _relayedPressedControls.Clear();
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
     {
         base.FrameUpdate(args);
 
-        if (_embeddedWindow == null)
-            TryEnsureBuiAndWindow();
-
-        if (_pendingWindow != null && !_pendingWindow.Disposed)
+        if (_isCycle && !string.IsNullOrEmpty(_deviceGuid))
         {
-            var win = _pendingWindow;
-            _pendingWindow = null;
-            EmbedWindow(win);
+            var surface = PipSurfaceRegistry.ResolveSurface(this, _deviceGuid);
+            surface?.RequestCaptureFrame(4);
         }
 
-        if (_embeddedWindow is ApcMenu apcMenu)
-            apcMenu.SetAccessEnabled(true);
+        _activeTargetUi?.FrameUpdate(args);
     }
 
-    private void TryEnsureBuiAndWindow()
+    protected override void RenderChildOverride(ref ControlRenderArguments args, int childIndex, Vector2i position)
     {
-        if (_targetUid == null || !_entManager.EntityExists(_targetUid.Value))
-        {
-            if (!_entManager.TryGetEntity(TargetNetEntity, out var resolved) || !resolved.HasValue)
-                return;
-            _targetUid = resolved.Value;
-        }
-
-        var uid = _targetUid.Value;
-        if (!_entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp))
+        var child = GetChild(childIndex);
+        if (child == _surface)
             return;
 
-        var uiSys = _entManager.System<SharedUserInterfaceSystem>();
+        base.RenderChildOverride(ref args, childIndex, position);
+    }
 
-        // Ensure the client BUI is queued/open for the local player
-        if (!uiComp.ClientOpenInterfaces.TryGetValue(UiKey, out _bui))
+    private UIBox2 GetFittedScreenRect()
+    {
+        var targetPixelSize = (Vector2i)(TargetResolution * UIScale);
+        if (targetPixelSize.X <= 0 || targetPixelSize.Y <= 0 || PixelWidth <= 0 || PixelHeight <= 0)
+            return new UIBox2(Vector2.Zero, PixelSize);
+
+        // Aspect ratio fit (preserves proportions, adds letterbox/pillarbox inside CRT frame)
+        var scaleX = (float)PixelWidth / targetPixelSize.X;
+        var scaleY = (float)PixelHeight / targetPixelSize.Y;
+        var scale = MathF.Min(scaleX, scaleY);
+
+        var fittedW = MathF.Round(targetPixelSize.X * scale);
+        var fittedH = MathF.Round(targetPixelSize.Y * scale);
+
+        var offsetX = MathF.Round((PixelWidth - fittedW) / 2f);
+        var offsetY = MathF.Round((PixelHeight - fittedH) / 2f);
+
+        return new UIBox2(offsetX, offsetY, offsetX + fittedW, offsetY + fittedH);
+    }
+
+    private bool TryMapToTarget(Vector2 localPixelPos, out Vector2 targetPixelPos)
+    {
+        targetPixelPos = Vector2.Zero;
+        var destRect = GetFittedScreenRect();
+        if (!destRect.Contains(localPixelPos) || destRect.Width <= 0 || destRect.Height <= 0)
+            return false;
+
+        var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
+        if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
+            return false;
+
+        var normX = (localPixelPos.X - destRect.Left) / destRect.Width;
+        var normY = (localPixelPos.Y - destRect.Top) / destRect.Height;
+
+        targetPixelPos = new Vector2(
+            Math.Clamp(normX * hostPixelSize.X, 0, hostPixelSize.X - 1),
+            Math.Clamp(normY * hostPixelSize.Y, 0, hostPixelSize.Y - 1)
+        );
+        return true;
+    }
+
+    protected override void Draw(IRenderHandle renderHandle)
+    {
+        base.Draw(renderHandle);
+
+        var handle = renderHandle.DrawingHandleScreen;
+        var screenRect = new UIBox2(Vector2.Zero, PixelSize);
+
+        // Dark CRT glass base
+        handle.DrawRect(screenRect, Color.FromHex("#070B12"));
+
+        if (_isCycle)
         {
-            if (_playerManager.LocalEntity is { } player)
+            Texture? cycleTex = null;
+            if (!string.IsNullOrEmpty(_deviceGuid))
             {
-                uiSys.OpenUi((uid, uiComp), UiKey, player, predicted: false);
-                uiComp.ClientOpenInterfaces.TryGetValue(UiKey, out _bui);
+                var surface = PipSurfaceRegistry.ResolveSurface(this, _deviceGuid);
+                surface?.RequestCaptureFrame(4);
+                cycleTex = surface?.ReadTexture;
             }
+
+            var destRect = GetFittedScreenRect();
+            if (cycleTex != null)
+            {
+                handle.DrawTextureRect(cycleTex, destRect);
+            }
+            else
+            {
+                handle.DrawRect(destRect, Color.FromHex("#05121E"));
+            }
+
+            DrawCrtOverlays(handle, destRect, isCycle: true);
+            return;
         }
 
-        if (_bui != null)
-            _wasBuiOpened = _bui.IsOpened;
-
-        // If the window was already added to WindowRoot, locate and claim it
-        if (_embeddedWindow == null && _pendingWindow == null)
+        if (GetCaptureTarget() is { } captureTarget && !captureTarget.Disposed && captureTarget.Visible)
         {
-            foreach (var child in _uiManager.WindowRoot.Children)
+            var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
+            if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
+                hostPixelSize = captureTarget.PixelSize;
+
+            if (hostPixelSize.X > 0 && hostPixelSize.Y > 0)
+                _surface.CaptureControl(renderHandle, captureTarget, hostPixelSize);
+        }
+
+        var screenTex = _surface.ReadTexture;
+        var fittedRect = GetFittedScreenRect();
+        if (screenTex != null)
+        {
+            handle.DrawTextureRect(screenTex, fittedRect);
+        }
+
+        DrawCrtOverlays(handle, fittedRect, isCycle: false);
+    }
+
+    private void DrawCrtOverlays(DrawingHandleScreen handle, UIBox2 screenRect, bool isCycle)
+    {
+        // Scanlines overlay: fine horizontal raster bands
+        var scanlineColor = new Color(0, 0, 0, 0.12f);
+        for (float y = screenRect.Top; y < screenRect.Bottom; y += 4f)
+        {
+            handle.DrawRect(new UIBox2(screenRect.Left, y, screenRect.Right, y + 1.5f), scanlineColor);
+        }
+
+        // Phosphor edge vignette
+        var edgeColor = isCycle ? Color.FromHex("#FF3355") : Color.FromHex("#00D4FF");
+        var alpha = isCycle ? 0.45f : 0.20f;
+        handle.DrawRect(screenRect, edgeColor.WithAlpha(alpha), filled: false);
+
+        // Inner border bevel
+        if (screenRect.Width > 2f && screenRect.Height > 2f)
+        {
+            var innerRect = new UIBox2(screenRect.Left + 1f, screenRect.Top + 1f, screenRect.Right - 1f, screenRect.Bottom - 1f);
+            handle.DrawRect(innerRect, Color.FromHex("#000000").WithAlpha(0.35f), filled: false);
+        }
+    }
+
+    #region Input Event Relaying
+
+    public static (Control control, Vector2 relPixelPos)? FindControlAtPos(Control control, Vector2 position)
+    {
+        if (!control.Visible)
+            return null;
+
+        for (var i = control.ChildCount - 1; i >= 0; i--)
+        {
+            var child = control.GetChild(i);
+            if (!child.Visible)
+                continue;
+
+            if (child.RectClipContent && !child.PixelRect.Contains((Vector2i)position))
+                continue;
+
+            var childRelPos = position - child.PixelPosition;
+            var maybeFound = FindControlAtPos(child, childRelPos);
+            if (maybeFound != null)
+                return maybeFound;
+        }
+
+        if (control.MouseFilter != Control.MouseFilterMode.Ignore &&
+            position.X >= 0 && position.X <= control.PixelWidth &&
+            position.Y >= 0 && position.Y <= control.PixelHeight)
+        {
+            return (control, position);
+        }
+
+        return null;
+    }
+
+    protected override void KeyBindDown(GUIBoundKeyEventArgs args)
+    {
+        base.KeyBindDown(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+            return;
+
+        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+            return;
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        if (hit == null)
+            return;
+
+        var (leafControl, leafPixelPos) = hit.Value;
+        var windowId = args.PointerLocation.Window;
+
+        var curPixelPos = leafPixelPos;
+        Control? cur = leafControl;
+        while (cur != null)
+        {
+            if (cur.MouseFilter != MouseFilterMode.Ignore)
             {
-                if (child is FancyWindow fancy &&
-                    !string.IsNullOrEmpty(_deviceName) &&
-                    string.Equals(fancy.Title, _deviceName, StringComparison.OrdinalIgnoreCase))
+                var curVirtualPos = curPixelPos / cur.UIScale;
+                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
+                var curEvent = new GUIBoundKeyEventArgs(
+                    args.Function,
+                    args.State,
+                    pointerLoc,
+                    args.CanFocus,
+                    curVirtualPos,
+                    curPixelPos);
+
+                s_ControlKeyBindDown?.Invoke(cur, new object[] { curEvent });
+
+                if (cur.CanKeyboardFocus && cur.KeyboardFocusOnClick)
                 {
-                    _pendingWindow = fancy;
+                    cur.GrabKeyboardFocus();
+                }
+
+                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                {
+                    _relayedPressedControls[args.Function] = cur;
                     break;
                 }
             }
+
+            if (cur == targetRoot)
+                break;
+
+            curPixelPos += cur.PixelPosition;
+            cur = cur.Parent;
         }
+
+        args.Handle();
     }
 
-    private void OnWindowRootChildAdded(Control child)
+    protected override void KeyBindUp(GUIBoundKeyEventArgs args)
     {
-        if (_embeddedWindow != null || child is not BaseWindow window)
+        base.KeyBindUp(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
             return;
 
-        if (_targetUid is { } uid &&
-            _entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp) &&
-            uiComp.ClientOpenInterfaces.TryGetValue(UiKey, out var currentBui))
+        Control? targetControl = null;
+        Vector2 leafPixelPos = Vector2.Zero;
+
+        if (_relayedPressedControls.Remove(args.Function, out var pressed) && pressed.VisibleInTree)
         {
-            _bui = currentBui;
+            targetControl = pressed;
+            if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+            {
+                leafPixelPos = targetPixelPos - (pressed.GlobalPixelPosition - targetRoot.GlobalPixelPosition);
+            }
+        }
+        else if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+        {
+            var hit = FindControlAtPos(targetRoot, targetPixelPos);
+            if (hit != null)
+            {
+                targetControl = hit.Value.control;
+                leafPixelPos = hit.Value.relPixelPos;
+            }
         }
 
-        // When bui.Open() runs, base.Open() sets _bui.IsOpened = true immediately before CreateWindow adds
-        // the window to WindowRoot.
-        if (_bui != null && _bui.IsOpened && !_wasBuiOpened)
-        {
-            _wasBuiOpened = true;
-            _pendingWindow = window;
-            return;
-        }
-
-        if (window is FancyWindow fancy &&
-            !string.IsNullOrEmpty(_deviceName) &&
-            string.Equals(fancy.Title, _deviceName, StringComparison.OrdinalIgnoreCase))
-        {
-            _pendingWindow = window;
-        }
-    }
-
-    private void EmbedWindow(BaseWindow window)
-    {
-        if (window.Disposed)
+        if (targetControl == null)
             return;
 
-        _embeddedWindow = window;
-        _loadingLabel.Visible = false;
-
-        // Remove from WindowRoot without triggering BaseWindow.Close()
-        window.Parent?.RemoveChild(window);
-
-        window.Resizable = false;
-        window.HorizontalExpand = true;
-        window.VerticalExpand = true;
-        window.HorizontalAlignment = HAlignment.Stretch;
-        window.VerticalAlignment = VAlignment.Stretch;
-        window.Visible = true;
-
-        if (window is FancyWindow fancy)
+        var windowId = args.PointerLocation.Window;
+        var curPixelPos = leafPixelPos;
+        Control? cur = targetControl;
+        while (cur != null)
         {
-            fancy.IsEmbedded = true;
+            if (cur.MouseFilter != MouseFilterMode.Ignore)
+            {
+                var curVirtualPos = curPixelPos / cur.UIScale;
+                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
+                var curEvent = new GUIBoundKeyEventArgs(
+                    args.Function,
+                    args.State,
+                    pointerLoc,
+                    args.CanFocus,
+                    curVirtualPos,
+                    curPixelPos);
+
+                // Ensure BaseButton attempting press counter is at least 1 so KeyBindUp triggers OnPressed
+                if (cur is BaseButton btn && !btn.Disabled && s_ButtonAttemptingPress != null)
+                {
+                    var attempting = (int)(s_ButtonAttemptingPress.GetValue(btn) ?? 0);
+                    if (attempting <= 0)
+                        s_ButtonAttemptingPress.SetValue(btn, 1);
+                }
+
+                s_ControlKeyBindUp?.Invoke(cur, new object[] { curEvent });
+
+                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                    break;
+            }
+
+            if (cur == targetRoot)
+                break;
+
+            curPixelPos += cur.PixelPosition;
+            cur = cur.Parent;
         }
 
-        AddChild(window);
-        ApplyLatestState();
+        args.Handle();
     }
 
-    private void ApplyLatestState()
+    protected override void MouseMove(GUIMouseMoveEventArgs args)
     {
-        if (_targetUid is { } uid && _latestState != null)
-        {
-            var uiSys = _entManager.System<SharedUserInterfaceSystem>();
-            uiSys.SetUiState(uid, UiKey, _latestState);
-        }
+        base.MouseMove(args);
 
-        if (_embeddedWindow is ApcMenu apcMenu)
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+            return;
+
+        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+            return;
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        if (hit == null)
+            return;
+
+        var (leafControl, leafPixelPos) = hit.Value;
+        var windowId = args.GlobalPixelPosition.Window;
+
+        var curPixelPos = leafPixelPos;
+        Control? cur = leafControl;
+        while (cur != null)
         {
-            if (_latestState is ApcBoundInterfaceState apcState)
-                apcMenu.UpdateState(apcState);
-            apcMenu.SetAccessEnabled(true);
+            if (cur.MouseFilter != MouseFilterMode.Ignore)
+            {
+                var curVirtualPos = curPixelPos / cur.UIScale;
+                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
+                var curEvent = new GUIMouseMoveEventArgs(
+                    args.Relative / cur.UIScale,
+                    cur,
+                    curVirtualPos,
+                    pointerLoc,
+                    curVirtualPos,
+                    curPixelPos);
+
+                s_ControlMouseMove?.Invoke(cur, new object[] { curEvent });
+
+                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                    break;
+            }
+
+            if (cur == targetRoot)
+                break;
+
+            curPixelPos += cur.PixelPosition;
+            cur = cur.Parent;
         }
     }
+
+    protected override void MouseWheel(GUIMouseWheelEventArgs args)
+    {
+        base.MouseWheel(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+            return;
+
+        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+            return;
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        if (hit == null)
+            return;
+
+        var (leafControl, leafPixelPos) = hit.Value;
+        var windowId = args.GlobalPixelPosition.Window;
+
+        var curPixelPos = leafPixelPos;
+        Control? cur = leafControl;
+        while (cur != null)
+        {
+            if (cur.MouseFilter != MouseFilterMode.Ignore)
+            {
+                var curVirtualPos = curPixelPos / cur.UIScale;
+                var pointerLoc = new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, windowId);
+                var curEvent = new GUIMouseWheelEventArgs(
+                    args.Delta,
+                    cur,
+                    curVirtualPos,
+                    pointerLoc,
+                    curVirtualPos,
+                    curPixelPos);
+
+                s_ControlMouseWheel?.Invoke(cur, new object[] { curEvent });
+
+                if (curEvent.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                    break;
+            }
+
+            if (cur == targetRoot)
+                break;
+
+            curPixelPos += cur.PixelPosition;
+            cur = cur.Parent;
+        }
+
+        args.Handle();
+    }
+
+    #endregion
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _uiManager.WindowRoot.OnChildAdded -= OnWindowRootChildAdded;
-
-            if (_targetUid is { } uid &&
-                _entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp))
-            {
-                if (_playerManager.LocalEntity is { } player)
-                {
-                    var uiSys = _entManager.System<SharedUserInterfaceSystem>();
-                    uiSys.CloseUi((uid, uiComp), UiKey, player, predicted: false);
-                }
-                uiComp.ClientOpenInterfaces.Remove(UiKey);
-            }
-
-            if (_embeddedWindow != null && !_embeddedWindow.Disposed)
-            {
-                _embeddedWindow.Orphan();
-                _embeddedWindow.Dispose();
-                _embeddedWindow = null;
-            }
+            DisposeActiveTarget();
         }
 
         base.Dispose(disposing);
+    }
+
+    /// <summary>
+    /// Generic abstraction for any UI that can be streamed into a <see cref=\"RemoteScreenView\"/>.
+    /// </summary>
+    public interface IRemoteTargetUi : IDisposable
+    {
+        Control? RootControl { get; }
+        Vector2 TargetSize { get; }
+        void UpdateState(RemoteScreenState state);
+        void FrameUpdate(FrameEventArgs args);
+        void SetHostBui(BoundUserInterface? hostBui);
+    }
+
+    /// <summary>
+    /// Embeds any BoundUserInterface device (e.g. APC, Air Alarm, Static Computer, Consoles, PDAs, etc.)
+    /// directly using the target entity's real client BoundUserInterface instance.
+    /// </summary>
+    public sealed class RemoteBuiTarget : IRemoteTargetUi
+    {
+        private readonly IEntityManager _entManager;
+        private readonly IPlayerManager _playerManager;
+        private readonly IUserInterfaceManager _uiManager;
+
+        public NetEntity TargetNetEntity { get; }
+        public Enum UiKey { get; }
+        private readonly string _deviceName;
+
+        private EntityUid? _targetUid;
+        private RoutedBoundUserInterface? _routedBui;
+        private BoundUserInterfaceState? _latestState;
+
+        public Control? RootControl => _routedBui?.RootControl;
+        public Vector2 TargetSize { get; private set; } = new Vector2(640, 520);
+
+        public RemoteBuiTarget(
+            NetEntity targetNetEntity,
+            Enum uiKey,
+            string deviceName,
+            IEntityManager entManager,
+            IPlayerManager playerManager,
+            IUserInterfaceManager uiManager)
+        {
+            TargetNetEntity = targetNetEntity;
+            UiKey = uiKey;
+            _deviceName = deviceName;
+            _entManager = entManager;
+            _playerManager = playerManager;
+            _uiManager = uiManager;
+        }
+
+        public bool Matches(NetEntity target, Enum uiKey)
+        {
+            return TargetNetEntity == target && Equals(UiKey, uiKey);
+        }
+
+        public void SetHostBui(BoundUserInterface? hostBui)
+        {
+        }
+
+        public void UpdateState(RemoteScreenState state)
+        {
+            if (state.BuiState != null)
+                _latestState = state.BuiState;
+
+            TryEnsureBui();
+            ApplyLatestState();
+        }
+
+        public void FrameUpdate(FrameEventArgs args)
+        {
+            if (_routedBui == null || !_routedBui.IsOpened)
+                TryEnsureBui();
+
+            if (_routedBui?.RootControl is ApcMenu apcMenu)
+                apcMenu.SetAccessEnabled(true);
+        }
+
+        private void TryEnsureBui()
+        {
+            if (_targetUid == null || !_entManager.EntityExists(_targetUid.Value))
+            {
+                if (!_entManager.TryGetEntity(TargetNetEntity, out var resolved) || !resolved.HasValue)
+                    return;
+                _targetUid = resolved.Value;
+            }
+
+            var uid = _targetUid.Value;
+            if (!_entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp))
+                return;
+
+            uiComp.ClientOpenInterfaces.TryGetValue(UiKey, out var currentBui);
+            var routed = currentBui as RoutedBoundUserInterface;
+
+            if (_routedBui != routed)
+            {
+                if (_routedBui != null)
+                    _routedBui.OnRootChanged -= OnRootChanged;
+
+                _routedBui = routed;
+
+                if (_routedBui != null)
+                {
+                    _routedBui.OnRootChanged += OnRootChanged;
+                    if (_routedBui.RootControl != null)
+                        OnTargetRootAttached(_routedBui.RootControl);
+                }
+            }
+            else if (_routedBui != null && _routedBui.RootControl != null)
+            {
+                OnTargetRootAttached(_routedBui.RootControl);
+            }
+        }
+
+        private void OnRootChanged(Control? root)
+        {
+            if (root != null)
+                OnTargetRootAttached(root);
+        }
+
+        private void OnTargetRootAttached(Control control)
+        {
+            if (control.Disposed)
+                return;
+
+            if (control is ApcMenu apcMenu)
+                apcMenu.SetAccessEnabled(true);
+
+            ApplyLatestState();
+        }
+
+        private void ApplyLatestState()
+        {
+            if (_targetUid is { } uid && _latestState != null)
+            {
+                var uiSys = _entManager.System<UserInterfaceSystem>();
+                uiSys.SetUiState(uid, UiKey, _latestState);
+            }
+
+            if (_routedBui?.RootControl is ApcMenu apcMenu)
+            {
+                if (_latestState is ApcBoundInterfaceState apcState)
+                    apcMenu.UpdateState(apcState);
+                apcMenu.SetAccessEnabled(true);
+            }
+            else if (_routedBui?.RootControl is PdaMenu pdaMenu)
+            {
+                if (_latestState is PdaUpdateState pdaState)
+                    pdaMenu.UpdateState(pdaState);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_routedBui != null)
+            {
+                _routedBui.OnRootChanged -= OnRootChanged;
+                _routedBui = null;
+            }
+        }
     }
 }

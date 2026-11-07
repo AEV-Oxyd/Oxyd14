@@ -1523,6 +1523,25 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 viewerActor = recordedActor;
             else if (Transform(loaderUid).ParentUid is { } parentUid && HasComp<ActorComponent>(parentUid))
                 viewerActor = parentUid;
+            else if (TryComp<UserInterfaceComponent>(loaderUid, out var loaderUi))
+            {
+                foreach (var actorSet in loaderUi.Actors.Values)
+                {
+                    foreach (var actor in actorSet)
+                    {
+                        if (Exists(actor))
+                        {
+                            viewerActor = actor;
+                            break;
+                        }
+                    }
+                    if (viewerActor != null)
+                        break;
+                }
+            }
+
+            if (viewerActor != null)
+                _terminalViewers[uid] = viewerActor.Value;
 
             _remoteScreen.SyncViewerChain(uid, viewerActor, chainTargets, chainPvs);
         }

@@ -153,6 +153,9 @@ namespace Content.Shared.Interaction
         {
             _uiQuery.TryComp(ev.Target, out var aUiComp);
 
+            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+                return;
+
             if (!_actionBlockerSystem.CanInteract(ev.Actor, ev.Target))
             {
                 // We permit ghosts to open uis unless explicitly blocked
@@ -173,7 +176,7 @@ namespace Content.Shared.Interaction
                 return;
             }
 
-            if (range <= 0 && !IsAccessible(ev.Actor, ev.Target) && !_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+            if (range <= 0 && !IsAccessible(ev.Actor, ev.Target))
             {
                 ev.Cancel();
                 return;
@@ -1450,6 +1453,12 @@ namespace Content.Shared.Interaction
         {
             if (ev.Result == BoundUserInterfaceRangeResult.Fail)
                 return;
+
+            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+            {
+                ev.Result = BoundUserInterfaceRangeResult.Pass;
+                return;
+            }
 
             ev.Result = UiRangeCheck(ev.Actor!, ev.Target, ev.Data.InteractionRange)
                     ? BoundUserInterfaceRangeResult.Pass
