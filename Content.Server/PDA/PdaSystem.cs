@@ -446,12 +446,18 @@ namespace Content.Server.PDA
                 if (loader.ActiveProgram == null && oxydComp.BootProgram is { } bootProg)
                     _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProg);
 
-                var activeProg = loader.ActiveProgram;
-
-                if (activeProg is { } prog)
+                // OS is always ready and in charge
+                if (oxydComp.BootProgram is { } boot && Exists(boot))
                 {
                     var readyEvt = new CartridgeUiReadyEvent((ent.Owner, loader));
-                    RaiseLocalEvent(prog, ref readyEvt);
+                    RaiseLocalEvent(boot, ref readyEvt);
+                }
+
+                // Foreground running program (if different from OS) is also made ready
+                if (loader.ActiveProgram is { } activeProg && activeProg != oxydComp.BootProgram && Exists(activeProg))
+                {
+                    var readyEvt = new CartridgeUiReadyEvent((ent.Owner, loader));
+                    RaiseLocalEvent(activeProg, ref readyEvt);
                 }
             }
 
@@ -465,12 +471,12 @@ namespace Content.Server.PDA
             if (!PdaUiKey.Key.Equals(args.UiKey) && !ComputerUiKey.Key.Equals(args.UiKey))
                 return;
 
-            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered OFF / standby (User: {args.Actor})");
-
             if (args.Actor is { } actor)
             {
                 Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenClosed(actor, ent.Owner);
             }
+
+            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered OFF / standby (User: {args.Actor})");
         }
 
         private void EnsureDefaultPrograms(EntityUid uid, CartridgeLoaderComponent loader)

@@ -318,7 +318,11 @@ public enum OsUiAction : byte
     EjectPen,
     EjectPai,
     EjectDisk,
-    PowerOff
+    PowerOff,
+    InsertId,
+    InsertPen,
+    InsertPai,
+    InsertDisk
 }
 
 [Serializable, NetSerializable]

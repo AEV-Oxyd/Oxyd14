@@ -266,23 +266,19 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         _hwFlashlightBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleFlashlight));
         _hwPenBtn.OnPressed += _ =>
         {
-            if (_lastState?.HasPen == true)
-                _send(new OsUiMessageEvent(OsUiAction.EjectPen));
+            _send(new OsUiMessageEvent(_lastState?.HasPen == true ? OsUiAction.EjectPen : OsUiAction.InsertPen));
         };
         _hwIdBtn.OnPressed += _ =>
         {
-            if (_lastState?.HasId == true)
-                _send(new OsUiMessageEvent(OsUiAction.EjectId));
+            _send(new OsUiMessageEvent(_lastState?.HasId == true ? OsUiAction.EjectId : OsUiAction.InsertId));
         };
         _hwPaiBtn.OnPressed += _ =>
         {
-            if (_lastState?.HasPai == true)
-                _send(new OsUiMessageEvent(OsUiAction.EjectPai));
+            _send(new OsUiMessageEvent(_lastState?.HasPai == true ? OsUiAction.EjectPai : OsUiAction.InsertPai));
         };
         _hwDiskBtn.OnPressed += _ =>
         {
-            if (_lastState?.HasDisk == true)
-                _send(new OsUiMessageEvent(OsUiAction.EjectDisk));
+            _send(new OsUiMessageEvent(_lastState?.HasDisk == true ? OsUiAction.EjectDisk : OsUiAction.InsertDisk));
         };
         _hwPowerBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.PowerOff));
 
@@ -595,14 +591,14 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 
         _hwIdBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasId;
         _hwIdBtn.IsActive = state.HasId;
-        _hwIdBtn.ToolTip = state.HasId ? "Eject Inserted ID" : "No ID Inserted";
+        _hwIdBtn.ToolTip = state.HasId ? "Eject Inserted ID" : "Insert ID Card";
 
         _hwPaiBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasPai;
         _hwPaiBtn.IsActive = state.HasPai;
 
         _hwDiskBtn.Visible = state.Template != ComputerUiTemplate.Embedded;
         _hwDiskBtn.IsActive = state.HasDisk;
-        _hwDiskBtn.ToolTip = state.HasDisk ? $"Eject {state.DiskName ?? "Disk"}" : "No Disk Inserted";
+        _hwDiskBtn.ToolTip = state.HasDisk ? $"Eject {state.DiskName ?? "Disk"}" : "Insert Data Disk";
 
         _hwPowerBtn.Visible = true;
 
@@ -876,45 +872,45 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         {
             var ejectId = new PdaSettingsButton
             {
-                Text = state.HasId ? "Eject ID Card" : "Eject ID Card [No ID]",
-                Description = state.HasId ? "Eject the currently inserted identity card." : "No ID card currently inserted in the reader slot.",
-                Disabled = !state.HasId
+                Text = state.HasId ? "Eject ID Card" : "Insert ID Card",
+                Description = state.HasId ? "Eject the currently inserted identity card." : "Insert an identity card into the reader slot.",
+                Disabled = false
             };
-            ejectId.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectId));
+            ejectId.OnPressed += _ => _send(new OsUiMessageEvent(state.HasId ? OsUiAction.EjectId : OsUiAction.InsertId));
             _settingsBox.AddChild(ejectId);
         }
         if (state.Template == ComputerUiTemplate.Pda || state.HasPen)
         {
             var ejectPen = new PdaSettingsButton
             {
-                Text = state.HasPen ? "Eject Pen" : "Eject Pen [No Pen]",
-                Description = "Eject the pen or stylus from the accessory slot.",
-                Disabled = !state.HasPen
+                Text = state.HasPen ? "Eject Pen" : "Insert Pen",
+                Description = state.HasPen ? "Eject the pen or stylus from the accessory slot." : "Insert a pen or stylus into the accessory slot.",
+                Disabled = false
             };
-            ejectPen.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectPen));
+            ejectPen.OnPressed += _ => _send(new OsUiMessageEvent(state.HasPen ? OsUiAction.EjectPen : OsUiAction.InsertPen));
             _settingsBox.AddChild(ejectPen);
         }
         if (state.Template == ComputerUiTemplate.Pda || state.HasPai)
         {
             var ejectPai = new PdaSettingsButton
             {
-                Text = state.HasPai ? "Eject Personal AI (pAI)" : "Eject Personal AI [Empty]",
-                Description = "Eject the personal AI card from the device.",
-                Disabled = !state.HasPai
+                Text = state.HasPai ? "Eject Personal AI (pAI)" : "Insert Personal AI",
+                Description = state.HasPai ? "Eject the personal AI card from the device." : "Insert a personal AI card into the device slot.",
+                Disabled = false
             };
-            ejectPai.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectPai));
+            ejectPai.OnPressed += _ => _send(new OsUiMessageEvent(state.HasPai ? OsUiAction.EjectPai : OsUiAction.InsertPai));
             _settingsBox.AddChild(ejectPai);
         }
         if (state.Template != ComputerUiTemplate.Embedded)
         {
-            var diskTxt = state.HasDisk ? $"Eject Disk ({state.DiskName ?? "Inserted"})" : "Eject Disk [No Disk]";
+            var diskTxt = state.HasDisk ? $"Eject Disk ({state.DiskName ?? "Inserted"})" : "Insert Disk";
             var ejectDisk = new PdaSettingsButton
             {
                 Text = diskTxt,
-                Description = "Eject the inserted data disk.",
-                Disabled = !state.HasDisk
+                Description = state.HasDisk ? "Eject the inserted data disk." : "Insert a data disk into the drive slot.",
+                Disabled = false
             };
-            ejectDisk.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectDisk));
+            ejectDisk.OnPressed += _ => _send(new OsUiMessageEvent(state.HasDisk ? OsUiAction.EjectDisk : OsUiAction.InsertDisk));
             _settingsBox.AddChild(ejectDisk);
         }
 

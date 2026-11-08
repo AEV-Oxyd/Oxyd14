@@ -1,5 +1,6 @@
 <cartridges:FileBrowserUiFragment xmlns:cartridges="clr-namespace:Content.Client._Oxyd.Computers.Cartridges"
-                                     xmlns="https://spacestation14.io" Margin="1 0 2 0">
+                                       xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+                                       xmlns="https://spacestation14.io" Margin="1 0 2 0">
     <PanelContainer StyleClasses="BackgroundDark"/>
     <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="6">
 
@@ -10,14 +11,14 @@
                 <Label Text="Path: " StyleClasses="LabelHeading"/>
                 <Label Name="CurrentPathLabel" Text="/" StyleClasses="LabelHeading" FontColorOverride="#00D4FF"/>
                 <Control HorizontalExpand="True"/>
-                <Button Name="RootDirButton" Text="/" SetWidth="28" StyleClasses="ErisHoloButton"/>
-                <Button Name="BinDirButton" Text="/bin/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
-                <Button Name="NotesDirButton" Text="/notes/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
-                <Button Name="RecordsDirButton" Text="/records/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
-                <Button Name="SysDirButton" Text="/sys/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
-                <Button Name="BlueprintsDirButton" Text="/blueprints/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
-                <Button Name="DiskDirButton" Text="/disk/" StyleClasses="ErisHoloButton" Margin="3 0 0 0"/>
-                <Button Name="NewFileButton" Text="+ New" StyleClasses="ErisHoloButton" Margin="3 0 0 0" SetWidth="46"/>
+                <controls:ContentStandardButton Name="RootDirButton" Text="/" SetWidth="28" StyleClasses="ErisHoloButton"/>
+                <controls:ContentStandardButton Name="BinDirButton" Text="/bin/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <controls:ContentStandardButton Name="NotesDirButton" Text="/notes/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <controls:ContentStandardButton Name="RecordsDirButton" Text="/records/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <controls:ContentStandardButton Name="SysDirButton" Text="/sys/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <controls:ContentStandardButton Name="BlueprintsDirButton" Text="/blueprints/" StyleClasses="ErisHoloButton" Margin="2 0 0 0"/>
+                <controls:ContentStandardButton Name="DiskDirButton" Text="/disk/" StyleClasses="ErisHoloButton" Margin="3 0 0 0"/>
+                <controls:ContentStandardButton Name="NewFileButton" Text="+ New" StyleClasses="ErisHoloButton" Margin="3 0 0 0" SetWidth="46"/>
             </BoxContainer>
 
             <!-- Mounted Disk Status Banner -->
@@ -27,15 +28,15 @@
                     <Label Name="DiskNameLabel" Text="Data Disk" StyleClasses="LabelSubText" FontColorOverride="#FFFFFF"/>
                     <Control HorizontalExpand="True"/>
                     <Label Name="DiskUsageLabel" Text="0 / 128 KB" StyleClasses="LabelSubText" FontColorOverride="#88AAAA" Margin="0 0 8 0"/>
-                    <Button Name="DiskEjectButton" Text="Eject" StyleClasses="ErisHoloButton" SetWidth="60"/>
+                    <controls:ContentStandardButton Name="DiskEjectButton" Text="Eject" StyleClasses="ErisHoloButton" SetWidth="60"/>
                 </BoxContainer>
             </PanelContainer>
 
             <!-- File List View (Takes entire remaining space) -->
             <PanelContainer StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True">
-                <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
+                <controls:ContentScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
                     <BoxContainer Orientation="Vertical" Name="FileListContainer" HorizontalExpand="True" VerticalExpand="True" Margin="4"/>
-                </ScrollContainer>
+                </controls:ContentScrollContainer>
             </PanelContainer>
 
             <!-- Status Message Footer -->
@@ -49,18 +50,18 @@
                 <Label Text="FILE: " StyleClasses="LabelHeading" FontColorOverride="#558899"/>
                 <Label Name="PreviewFileNameLabel" Text="File Preview" StyleClasses="LabelHeading" FontColorOverride="#00D4FF"/>
                 <Control HorizontalExpand="True"/>
-                <Button Name="PreviewEditButton" Text="Open in Notekeeper" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="140"/>
-                <Button Name="PreviewTransferButton" Text="Copy to Disk" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="110"/>
-                <Button Name="ClosePreviewButton" Text="&lt; Back to Files" StyleClasses="ErisHoloButton" SetWidth="120"/>
+                <controls:ContentStandardButton Name="PreviewEditButton" Text="Open in Notekeeper" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="140"/>
+                <controls:ContentStandardButton Name="PreviewTransferButton" Text="Copy to Disk" StyleClasses="ErisHoloButton" Margin="0 0 6 0" Visible="False" SetWidth="110"/>
+                <controls:ContentStandardButton Name="ClosePreviewButton" Text="&lt; Back to Files" StyleClasses="ErisHoloButton" SetWidth="120"/>
             </BoxContainer>
 
             <!-- Full-Screen Document Content -->
             <PanelContainer StyleClasses="ErisStyleDigital" VerticalExpand="True" HorizontalExpand="True">
-                <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
+                <controls:ContentScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="False">
                     <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="10 8">
                         <RichTextLabel Name="PreviewContentLabel" HorizontalExpand="True"/>
                     </BoxContainer>
-                </ScrollContainer>
+                </controls:ContentScrollContainer>
             </PanelContainer>
         </BoxContainer>
 

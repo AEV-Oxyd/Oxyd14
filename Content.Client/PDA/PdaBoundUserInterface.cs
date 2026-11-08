@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Client._Oxyd.Computers.Cartridges;
+using Content.Client._Oxyd.Computers.ScreenSharing;
 using Content.Client.CartridgeLoader;
 using Content.Client.UserInterface.Controls;
 using Content.Shared.CartridgeLoader;
@@ -33,7 +34,18 @@ namespace Content.Client.PDA
             base.Open();
 
             if (_menu == null)
+            {
                 CreateMenu();
+            }
+            else
+            {
+                if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(Owner))
+                    return;
+
+                _menu.Parent?.RemoveChild(_menu);
+                _menu.Visible = true;
+                _menu.OpenCenteredLeft();
+            }
         }
 
         private void CreateMenu()
@@ -93,13 +105,12 @@ namespace Content.Client.PDA
             if (_menu == null)
                 return;
 
-            cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
-
             if (cartridgeUIFragment is OsUiFragment osFrag)
             {
                 _osFragment = osFrag;
                 if (!_menu.ProgramView.Children.Contains(osFrag))
                 {
+                    osFrag.Parent?.RemoveChild(osFrag);
                     _menu.ProgramView.RemoveAllChildren();
                     _menu.ProgramView.AddChild(osFrag);
                 }
@@ -113,6 +124,7 @@ namespace Content.Client.PDA
             {
                 if (!_menu.ProgramView.Children.Contains(_osFragment))
                 {
+                    _osFragment.Parent?.RemoveChild(_osFragment);
                     _menu.ProgramView.RemoveAllChildren();
                     _menu.ProgramView.AddChild(_osFragment);
                 }
@@ -122,6 +134,7 @@ namespace Content.Client.PDA
             else
             {
                 _menu.ProgramView.RemoveAllChildren();
+                cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                 _menu.ProgramView.AddChild(cartridgeUIFragment);
             }
         }
@@ -133,7 +146,7 @@ namespace Content.Client.PDA
 
             if (cartridgeUIFragment is OsUiFragment)
             {
-                _menu.ProgramView.RemoveAllChildren();
+                cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                 _osFragment = null;
             }
             else if (_osFragment != null)
@@ -155,7 +168,11 @@ namespace Content.Client.PDA
             base.Dispose(disposing);
 
             if (disposing)
+            {
                 _menu?.Dispose();
+                _menu = null;
+                _osFragment = null;
+            }
         }
 
         private PdaBorderColorComponent? GetBorderColorComponent()

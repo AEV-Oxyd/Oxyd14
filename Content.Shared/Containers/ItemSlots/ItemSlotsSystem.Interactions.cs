@@ -125,9 +125,20 @@ public sealed partial class ItemSlotsSystem
         if (!ent.Comp.Slots.TryGetValue(args.SlotId, out var slot))
             return;
 
+        var inRange = _interactionSystem.InRangeUnobstructed(args.Actor, ent.Owner);
         if (args.TryEject && slot.HasItem && !slot.DisableEject)
-            TryEjectToHands(ent, slot, args.Actor, true);
+        {
+            if (inRange)
+                TryEjectToHands(ent, slot, args.Actor, true);
+            else
+                TryEject(ent, slot, null, out _, true);
+        }
         else if (args.TryInsert && !slot.HasItem)
-            TryInsertFromHand(ent, slot, args.Actor);
+        {
+            if (inRange)
+                TryInsertFromHand(ent, slot, args.Actor);
+            else
+                _handsSystem.TryDrop(args.Actor);
+        }
     }
 }

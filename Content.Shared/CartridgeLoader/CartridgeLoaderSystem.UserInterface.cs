@@ -24,10 +24,11 @@ public sealed partial class CartridgeLoaderSystem
                 // Do not allow uninstalling installed programs via UI message from app hub
                 break;
             case CartridgeUiMessageAction.UIReady:
-                if (ent.Comp.ActiveProgram is { } foreground)
+                var targetProg = Exists(cartridge) ? cartridge : ent.Comp.ActiveProgram;
+                if (targetProg is { } target && Exists(target))
                 {
                     var evt = new CartridgeUiReadyEvent(ent);
-                    RaiseLocalEvent(foreground, ref evt);
+                    RaiseLocalEvent(target, ref evt);
                 }
                 break;
             default:

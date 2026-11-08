@@ -1,3 +1,4 @@
+using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.StateRouting;
 using Content.Client._Oxyd.UI.Style;
 using Content.Shared._Oxyd.Computers.Cartridges;
@@ -137,7 +138,7 @@ public sealed partial class DownloaderUiFragment : BoxContainer, IBuiStateReceiv
                 }
                 else
                 {
-                    var instBtn = new Button
+                    var instBtn = new ContentStandardButton
                     {
                         Text = "Install",
                         SetWidth = 85,
@@ -163,7 +164,7 @@ public sealed partial class DownloaderUiFragment : BoxContainer, IBuiStateReceiv
                 }
                 else
                 {
-                    var dlBtn = new Button
+                    var dlBtn = new ContentStandardButton
                     {
                         Text = "Download",
                         SetWidth = 85,

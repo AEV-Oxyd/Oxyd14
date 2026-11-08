@@ -7,6 +7,7 @@ using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.PDA;
+using Content.Shared.Interaction;
 using Content.Server.PDA;
 using Robust.Shared.Timing;
 
@@ -21,6 +22,7 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private Content.Shared.CartridgeLoader.Cartridges.NotekeeperCartridgeSystem _notekeeperSystem = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
 
     private string? _viewedFileName;
     private string? _viewedFileContent;
@@ -422,7 +424,10 @@ public sealed partial class FileBrowserCartridgeSystem : EntitySystem
             case FileBrowserAction.EjectDisk:
                 if (TryComp<PdaComponent>(loaderUid, out var ejectPdaComp) && ejectPdaComp.DiskSlot.HasItem)
                 {
-                    _itemSlots.TryEject(loaderUid, ejectPdaComp.DiskSlot, null, out _);
+                    if (_interaction.InRangeUnobstructed(args.Actor, loaderUid))
+                        _itemSlots.TryEjectToHands(loaderUid, ejectPdaComp.DiskSlot, args.Actor);
+                    else
+                        _itemSlots.TryEject(loaderUid, ejectPdaComp.DiskSlot, null, out _);
                     comp.StatusMessage = "Disk ejected.";
                     if (comp.CurrentDirectory.StartsWith("/disk"))
                         comp.CurrentDirectory = "/";

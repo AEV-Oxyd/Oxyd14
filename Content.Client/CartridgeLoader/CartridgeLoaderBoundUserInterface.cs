@@ -61,37 +61,87 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         var pdaState = state as Content.Shared.PDA.PdaUpdateState;
         var osStateFromPda = pdaState?.OsState ?? (pdaState?.CartridgeState as Content.Shared._Oxyd.Computers.OsUiState);
         if (osStateFromPda != null)
-        {
             _primaryCartridgeUI?.UpdateState(osStateFromPda);
-            if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                primaryFrag.UpdateState(osStateFromPda);
-        }
 
         // TODO move this to a component state and ensure the net ids.
         var programs = GetCartridgeComponents(_entManager.GetEntityList(loaderUiState.Programs));
         UpdateAvailablePrograms(programs);
 
+        // Ensure OS is established as the primary shell if an OS program exists on this device
+        if (_primaryUiFragment is null)
+        {
+            EntityUid? osProg = null;
+            if (pdaState?.BootProgram is { } bootNet)
+            {
+                var bootEnt = _entManager.GetEntity(bootNet);
+                if (bootEnt.IsValid() && _entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(bootEnt))
+                    osProg = bootEnt;
+            }
+
+            if (osProg is null)
+            {
+                foreach (var netProg in loaderUiState.Programs)
+                {
+                    var p = _entManager.GetEntity(netProg);
+                    if (p.IsValid() && _entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p))
+                    {
+                        osProg = p;
+                        break;
+                    }
+                }
+            }
+
+            if (osProg is not null)
+            {
+                var osUi = RetrieveCartridgeUI(osProg);
+                var osComp = RetrieveCartridgeComponent(osProg);
+                var osControl = osUi?.GetUIFragmentRoot();
+
+                if (osControl is not null)
+                {
+                    _primaryCartridgeUI = osUi;
+                    _primaryUiFragment = osControl;
+                    _primaryProgram = osProg;
+
+                    AttachCartridgeUI(osControl, Loc.GetString(osComp?.ProgramName ?? "default-program-name"));
+                    SendCartridgeUiReadyEvent(osProg.Value);
+
+                    if (osStateFromPda != null)
+                    {
+                        _primaryCartridgeUI?.UpdateState(osStateFromPda);
+                    }
+                }
+            }
+        }
+
         var activeUI = _entManager.GetEntity(loaderUiState.ActiveUI);
 
         if (activeUI == null)
         {
-            if (_subUiFragment is not null)
+            if (_primaryProgram is not null)
             {
-                DetachCartridgeUI(_subUiFragment);
-                _subUiFragment.Dispose();
-                _subUiFragment = null;
-                _subCartridgeUI = null;
-                _subProgram = null;
+                activeUI = _primaryProgram;
             }
-            if (_activeUiFragment is not null)
+            else
             {
-                DetachCartridgeUI(_activeUiFragment);
-                _activeUiFragment.Dispose();
-                _activeUiFragment = null;
-                _activeCartridgeUI = null;
-                _activeProgram = null;
+                if (_subUiFragment is not null)
+                {
+                    DetachCartridgeUI(_subUiFragment);
+                    _subUiFragment.Dispose();
+                    _subUiFragment = null;
+                    _subCartridgeUI = null;
+                    _subProgram = null;
+                }
+                if (_activeUiFragment is not null)
+                {
+                    DetachCartridgeUI(_activeUiFragment);
+                    _activeUiFragment.Dispose();
+                    _activeUiFragment = null;
+                    _activeCartridgeUI = null;
+                    _activeProgram = null;
+                }
+                return;
             }
-            return;
         }
 
         // Sub-program running under the OS: maintain the OS as the primary shell
@@ -111,36 +161,20 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 _activeProgram = activeUI;
                 _activeCartridgeUI = _primaryCartridgeUI;
                 _activeUiFragment = _primaryUiFragment;
-                var primaryComp = RetrieveCartridgeComponent(activeUI.Value);
-                AttachCartridgeUI(_primaryUiFragment, Loc.GetString(primaryComp?.ProgramName ?? "default-program-name"));
                 if (osStateFromPda != null)
-                {
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                    if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                        primaryFrag.UpdateState(osStateFromPda);
-                }
                 else if (_lastCartridgeState is Content.Shared._Oxyd.Computers.OsUiState lastOsState)
-                {
                     _primaryCartridgeUI?.UpdateState(lastOsState);
-                    if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                        primaryFrag.UpdateState(lastOsState);
-                }
                 return;
             }
 
             if (activeUI == _subProgram && _subUiFragment is not null)
             {
-                var activeComp = RetrieveCartridgeComponent(activeUI.Value);
-                AttachCartridgeUI(_subUiFragment, Loc.GetString(activeComp?.ProgramName ?? "default-program-name"));
                 if (osStateFromPda != null)
-                {
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                    if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                        primaryFrag.UpdateState(osStateFromPda);
-                }
-                if (pdaState?.CartridgeState != null)
+                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
                     _subCartridgeUI?.UpdateState(pdaState.CartridgeState);
-                else if (_lastCartridgeState != null)
+                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
                     _subCartridgeUI?.UpdateState(_lastCartridgeState);
                 return;
             }
@@ -172,14 +206,10 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 SendCartridgeUiReadyEvent(activeUI.Value);
 
                 if (osStateFromPda != null)
-                {
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                    if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                        primaryFrag.UpdateState(osStateFromPda);
-                }
-                if (pdaState?.CartridgeState != null)
+                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
                     _subCartridgeUI?.UpdateState(pdaState.CartridgeState);
-                else if (_lastCartridgeState != null)
+                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
                     _subCartridgeUI?.UpdateState(_lastCartridgeState);
             }
             return;
@@ -187,16 +217,10 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
 
         if (activeUI == _activeProgram && _activeUiFragment is not null)
         {
-            var existingComp = RetrieveCartridgeComponent(activeUI.Value);
-            AttachCartridgeUI(_activeUiFragment, Loc.GetString(existingComp?.ProgramName ?? "default-program-name"));
-            if (pdaState?.CartridgeState != null && _activeUiFragment is not IBuiStateReceiver)
-            {
+            if (pdaState?.CartridgeState != null)
                 _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
-            }
-            else if (_lastCartridgeState != null && _activeUiFragment is not IBuiStateReceiver)
-            {
+            else if (_lastCartridgeState != null)
                 _activeCartridgeUI?.UpdateState(_lastCartridgeState);
-            }
             return;
         }
 
@@ -222,20 +246,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
 
             _activeCartridgeUI = ui;
             _activeUiFragment = control;
-            if (_primaryUiFragment == null)
-            {
-                _primaryCartridgeUI = ui;
-                _primaryUiFragment = control;
-                _primaryProgram = activeUI;
-            }
-
-            if (osStateFromPda != null)
-            {
-                _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment primaryFrag)
-                    primaryFrag.UpdateState(osStateFromPda);
-            }
-            else if (pdaState?.CartridgeState != null)
+            if (pdaState?.CartridgeState != null)
             {
                 _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
             }
@@ -308,6 +319,15 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             _activeUiFragment?.Dispose();
             _primaryUiFragment?.Dispose();
             _subUiFragment?.Dispose();
+            _activeUiFragment = null;
+            _primaryUiFragment = null;
+            _subUiFragment = null;
+            _activeCartridgeUI = null;
+            _primaryCartridgeUI = null;
+            _subCartridgeUI = null;
+            _activeProgram = null;
+            _primaryProgram = null;
+            _subProgram = null;
         }
     }
 

@@ -29,6 +29,8 @@ using Content.Shared.DeviceLinking.Events;
 using Content.Shared.Lathe;
 using Content.Shared.Materials;
 using Content.Shared.PDA;
+using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Interaction;
 using Content.Shared.Power;
 using Content.Shared.Research.Components;
 using Content.Shared.Research.Prototypes;
@@ -77,6 +79,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
     [Dependency] private readonly UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
+    [Dependency] private SharedHandsSystem _hands = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
 
     public const string ComputerCommandPort = "ComputerCommandSender";
     public const string ComputerStatusSinkPort = "ComputerStatusReceiver";
@@ -235,10 +239,18 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         RefreshInstalledControlPrograms(compUid);
-        if (TryComp<CartridgeLoaderComponent>(compUid, out var compLoader) && compLoader.ActiveProgram is { } activeProg)
+        if (TryComp<CartridgeLoaderComponent>(compUid, out var compLoader))
         {
-            var readyEvt = new CartridgeUiReadyEvent((compUid, compLoader));
-            RaiseLocalEvent(activeProg, ref readyEvt);
+            if (TryComp<OxydComputerComponent>(compUid, out var comp) && comp.BootProgram is { } boot && Exists(boot))
+            {
+                var readyEvt = new CartridgeUiReadyEvent((compUid, compLoader));
+                RaiseLocalEvent(boot, ref readyEvt);
+            }
+            if (compLoader.ActiveProgram is { } activeProg && activeProg != (TryComp<OxydComputerComponent>(compUid, out var comp2) ? comp2.BootProgram : null) && Exists(activeProg))
+            {
+                var readyEvt = new CartridgeUiReadyEvent((compUid, compLoader));
+                RaiseLocalEvent(activeProg, ref readyEvt);
+            }
         }
         _pda.UpdatePdaUi(compUid);
         if (!_ui.TryOpenUi(compUid, PdaUiKey.Key, args.User))
@@ -1199,22 +1211,42 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
             case OsUiAction.EjectId:
                 if (TryComp<PdaComponent>(loaderUid, out var pdaId))
-                    _itemSlots.TryEjectToHands(loaderUid, pdaId.IdSlot, args.Actor);
+                    TryEjectOrDropItemSlot(loaderUid, pdaId.IdSlot, args.Actor);
                 break;
 
             case OsUiAction.EjectPen:
                 if (TryComp<PdaComponent>(loaderUid, out var pdaPen))
-                    _itemSlots.TryEjectToHands(loaderUid, pdaPen.PenSlot, args.Actor);
+                    TryEjectOrDropItemSlot(loaderUid, pdaPen.PenSlot, args.Actor);
                 break;
 
             case OsUiAction.EjectPai:
                 if (TryComp<PdaComponent>(loaderUid, out var pdaPai))
-                    _itemSlots.TryEjectToHands(loaderUid, pdaPai.PaiSlot, args.Actor);
+                    TryEjectOrDropItemSlot(loaderUid, pdaPai.PaiSlot, args.Actor);
                 break;
 
             case OsUiAction.EjectDisk:
                 if (TryComp<PdaComponent>(loaderUid, out var pdaDisk))
-                    _itemSlots.TryEjectToHands(loaderUid, pdaDisk.DiskSlot, args.Actor);
+                    TryEjectOrDropItemSlot(loaderUid, pdaDisk.DiskSlot, args.Actor);
+                break;
+
+            case OsUiAction.InsertId:
+                if (TryComp<PdaComponent>(loaderUid, out var insId))
+                    TryInsertOrDropItemSlot(loaderUid, insId.IdSlot, args.Actor);
+                break;
+
+            case OsUiAction.InsertPen:
+                if (TryComp<PdaComponent>(loaderUid, out var insPen))
+                    TryInsertOrDropItemSlot(loaderUid, insPen.PenSlot, args.Actor);
+                break;
+
+            case OsUiAction.InsertPai:
+                if (TryComp<PdaComponent>(loaderUid, out var insPai))
+                    TryInsertOrDropItemSlot(loaderUid, insPai.PaiSlot, args.Actor);
+                break;
+
+            case OsUiAction.InsertDisk:
+                if (TryComp<PdaComponent>(loaderUid, out var insDisk))
+                    TryInsertOrDropItemSlot(loaderUid, insDisk.DiskSlot, args.Actor);
                 break;
 
             case OsUiAction.PowerOff:
@@ -1227,6 +1259,37 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         UpdateOsUi(ent, loaderUid, status);
+    }
+
+
+    private void TryEjectOrDropItemSlot(EntityUid loaderUid, ItemSlot slot, EntityUid? user)
+    {
+        if (!slot.HasItem || slot.DisableEject)
+            return;
+
+        if (user != null && _interaction.InRangeUnobstructed(user.Value, loaderUid))
+        {
+            _itemSlots.TryEjectToHands(loaderUid, slot, user);
+        }
+        else
+        {
+            _itemSlots.TryEject(loaderUid, slot, null, out _);
+        }
+    }
+
+    private void TryInsertOrDropItemSlot(EntityUid loaderUid, ItemSlot slot, EntityUid? user)
+    {
+        if (slot.HasItem || user == null)
+            return;
+
+        if (_interaction.InRangeUnobstructed(user.Value, loaderUid))
+        {
+            _itemSlots.TryInsertFromHand(loaderUid, slot, user.Value);
+        }
+        else
+        {
+            _hands.TryDrop(user.Value);
+        }
     }
 
     public void UpdateOsUi(EntityUid loaderUid, string statusMessage = "")

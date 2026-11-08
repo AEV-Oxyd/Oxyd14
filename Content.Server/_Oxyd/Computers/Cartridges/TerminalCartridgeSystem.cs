@@ -89,6 +89,16 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
     {
         if (_activeRemoteScreens.TryGetValue(actor, out var target) && target == uid)
             DetachRemoteScreen(actor);
+
+        if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
+        {
+            foreach (var prog in _cartridgeLoader.GetAllPrograms(uid))
+            {
+                if (_terminalViewers.TryGetValue(prog, out var recorded) && recorded == actor)
+                    _terminalViewers.Remove(prog);
+            }
+        }
+
         _remoteScreen.DetachAllForHostDevice(actor, uid);
     }
 
@@ -1438,10 +1448,42 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             {
                 if (Transform(termUid).ParentUid is { } loaderUid && loaderUid.IsValid())
                 {
-                    UpdateUiState(termUid, loaderUid, termComp);
+                    if (HasAnyActiveUiViewers(loaderUid))
+                    {
+                        UpdateUiState(termUid, loaderUid, termComp);
+                    }
                 }
             }
         }
+    }
+
+    private bool HasAnyActiveUiViewers(EntityUid loaderUid)
+    {
+        if (TryComp<UserInterfaceComponent>(loaderUid, out var uiComp))
+        {
+            foreach (var actors in uiComp.Actors.Values)
+            {
+                if (actors.Count > 0)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsComputerUiOpenForActor(EntityUid loaderUid, EntityUid actor)
+    {
+        if (!Exists(actor) || TerminatingOrDeleted(actor))
+            return false;
+
+        if (TryComp<UserInterfaceComponent>(loaderUid, out var uiComp))
+        {
+            foreach (var actors in uiComp.Actors.Values)
+            {
+                if (actors.Contains(actor))
+                    return true;
+            }
+        }
+        return false;
     }
 
     private void HandleRemoteScreenAction(EntityUid uid, EntityUid loaderUid, TerminalCartridgeComponent comp, string action, string? arg, EntityUid? actor = null)
@@ -1577,20 +1619,30 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 chainTargets,
                 chainPvs);
 
+            chainTargets.Remove(loaderUid);
+
             remotePdaState = remoteScreen?.PdaState;
 
             EntityUid? viewerActor = null;
             if (_terminalViewers.TryGetValue(uid, out var recordedActor) && Exists(recordedActor))
-                viewerActor = recordedActor;
+            {
+                if (IsComputerUiOpenForActor(loaderUid, recordedActor))
+                    viewerActor = recordedActor;
+                else
+                    _terminalViewers.Remove(uid);
+            }
             else if (Transform(loaderUid).ParentUid is { } parentUid && HasComp<ActorComponent>(parentUid))
                 viewerActor = parentUid;
             else if (TryComp<UserInterfaceComponent>(loaderUid, out var loaderUi))
             {
+                var loaderNet = GetNetEntity(loaderUid);
                 foreach (var actorSet in loaderUi.Actors.Values)
                 {
                     foreach (var actor in actorSet)
                     {
-                        if (Exists(actor))
+                        if (Exists(actor) &&
+                            (!TryComp<ActiveRemoteScreenViewerComponent>(actor, out var remViewer) ||
+                             !remViewer.AuthorizedTargets.Contains(loaderNet)))
                         {
                             viewerActor = actor;
                             break;
@@ -1602,9 +1654,14 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             }
 
             if (viewerActor != null)
+            {
                 _terminalViewers[uid] = viewerActor.Value;
-
-            _remoteScreen.SyncViewerChain(uid, viewerActor, chainTargets, chainPvs);
+                _remoteScreen.SyncViewerChain(uid, viewerActor, chainTargets, chainPvs);
+            }
+            else
+            {
+                _remoteScreen.DetachViewer(uid);
+            }
         }
         else
         {

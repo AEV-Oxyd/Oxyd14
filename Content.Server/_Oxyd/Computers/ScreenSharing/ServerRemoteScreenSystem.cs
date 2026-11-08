@@ -47,6 +47,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     }
 
     private readonly Dictionary<EntityUid, TerminalViewerSession> _sessionsByTerminal = new();
+    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _closingUis = new();
+    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _openingUis = new();
 
     public override void Initialize()
     {
@@ -282,6 +284,19 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         if (viewerActor is not { } actor || !Exists(actor) || TerminatingOrDeleted(actor))
             return;
 
+        // Ensure host device is never treated as a remote target of itself
+        var hostDevice = Transform(terminalUid).ParentUid;
+        if (hostDevice.IsValid())
+        {
+            newTargets.Remove(hostDevice);
+
+            if (!IsDeviceOpenForActor(hostDevice, actor))
+            {
+                DetachViewer(terminalUid, actor);
+                return;
+            }
+        }
+
         if (!_sessionsByTerminal.TryGetValue(terminalUid, out var session))
         {
             session = new TerminalViewerSession { ViewerActor = actor };
@@ -346,9 +361,20 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             {
                 if (!_uiSystem.IsUiOpen(target, uiKey, actor))
                 {
-                    RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
-                    _uiSystem.OpenUi(target, uiKey, actor);
-                    RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
+                    var key = (actor, target);
+                    if (!_closingUis.Contains(key) && _openingUis.Add(key))
+                    {
+                        try
+                        {
+                            RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
+                            _uiSystem.OpenUi(target, uiKey, actor);
+                            RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
+                        }
+                        finally
+                        {
+                            _openingUis.Remove(key);
+                        }
+                    }
                 }
             }
         }
@@ -375,6 +401,22 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         RebuildActorAuthorizedTargets(actor);
     }
 
+    private bool IsDeviceOpenForActor(EntityUid device, EntityUid actor)
+    {
+        if (!Exists(actor) || TerminatingOrDeleted(actor))
+            return false;
+
+        if (TryComp<UserInterfaceComponent>(device, out var uiComp))
+        {
+            foreach (var actors in uiComp.Actors.Values)
+            {
+                if (actors.Contains(actor))
+                    return true;
+            }
+        }
+        return false;
+    }
+
     public void DetachAllForHostDevice(EntityUid actor, EntityUid hostDeviceUid)
     {
         var toDetach = new List<EntityUid>();
@@ -388,6 +430,16 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         {
             DetachViewer(termUid, actor);
         }
+    }
+
+    private bool IsTargetNeededByActor(EntityUid actor, EntityUid target)
+    {
+        foreach (var session in _sessionsByTerminal.Values)
+        {
+            if (session.ViewerActor == actor && session.ActiveTargets.Contains(target))
+                return true;
+        }
+        return false;
     }
 
     private bool IsPvsNeededByActor(EntityUid actor, EntityUid entity)
@@ -443,9 +495,6 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 
         EnsureDeviceProvisioned(targetUid);
 
-        chainTargets?.Add(targetUid);
-        chainPvsEntities?.Add(targetUid);
-
         var targetGuid = _guidSystem.GetGuid(targetUid);
         var deviceName = MetaData(targetUid).EntityName;
 
@@ -461,6 +510,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                 uiKey: cycleUiKey ?? PdaUiKey.Key,
                 isCycleReference: true);
         }
+
+        chainTargets?.Add(targetUid);
+        chainPvsEntities?.Add(targetUid);
 
         // Case 1: PDA / Cartridge host device
         if (TryComp<PdaComponent>(targetUid, out var remPda))

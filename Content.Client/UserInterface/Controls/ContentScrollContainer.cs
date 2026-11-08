@@ -49,8 +49,17 @@ public class ContentScrollContainer : ContentControl
         if (VScrollEnabled && ChildCount > 0)
         {
             var child = GetChild(0);
-            var maxScroll = Math.Max(0f, child.DesiredSize.Y - PixelHeight);
+            var maxScroll = Math.Max(0f, child.DesiredSize.Y - Height);
             _scrollOffsetY = Math.Clamp(_scrollOffsetY - args.Delta.Y * 30f, 0f, maxScroll);
+            InvalidateArrange();
+            args.Handle();
+        }
+        else if (HScrollEnabled && ChildCount > 0)
+        {
+            var child = GetChild(0);
+            var maxScrollX = Math.Max(0f, child.DesiredSize.X - Width);
+            var delta = args.Delta.X == 0f && !VScrollEnabled ? -args.Delta.Y : args.Delta.X;
+            _scrollOffsetX = Math.Clamp(_scrollOffsetX + delta * 30f, 0f, maxScrollX);
             InvalidateArrange();
             args.Handle();
         }

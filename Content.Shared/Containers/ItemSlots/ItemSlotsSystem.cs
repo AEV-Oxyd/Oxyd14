@@ -5,6 +5,7 @@ using Content.Shared.Destructible;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Popups;
 using Content.Shared.Whitelist;
+using Content.Shared.Interaction;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.GameStates;
@@ -26,6 +27,7 @@ public sealed partial class ItemSlotsSystem : EntitySystem
     [Dependency] private SharedAudioSystem _audioSystem = default!;
     [Dependency] private EntityWhitelistSystem _whitelistSystem = default!;
     [Dependency] private ISerializationManager _serializationManager = default!;
+    [Dependency] private SharedInteractionSystem _interactionSystem = default!;
 
     /// <summary>
     /// Spawn in starting items for any item slots that should have one.

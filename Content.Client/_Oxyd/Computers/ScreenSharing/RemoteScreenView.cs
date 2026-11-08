@@ -28,6 +28,30 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 /// </summary>
 public sealed partial class RemoteScreenView : LayoutContainer
 {
+    private static LayoutContainer? s_OffscreenStash;
+
+    /// <summary>
+    /// Dedicated offscreen container parented to WindowRoot at an unreachable negative coordinate.
+    /// Allows remote target windows to maintain active layout, measurement, and style resolution
+    /// while remaining completely invisible to the local player's screen and scissor box.
+    /// </summary>
+    public static LayoutContainer GetOrCreateOffscreenStash(IUserInterfaceManager uiManager)
+    {
+        if (s_OffscreenStash != null && !s_OffscreenStash.Disposed && s_OffscreenStash.Parent != null)
+            return s_OffscreenStash;
+
+        s_OffscreenStash = new LayoutContainer
+        {
+            Name = "RemoteOffscreenStash",
+            RectClipContent = true,
+            SetSize = new Vector2(2000, 2000)
+        };
+
+        uiManager.WindowRoot.AddChild(s_OffscreenStash);
+        LayoutContainer.SetPosition(s_OffscreenStash, new Vector2(-30000, -30000));
+        return s_OffscreenStash;
+    }
+
     [Dependency] private IEntityManager _entManager = default!;
     [Dependency] private IPlayerManager _playerManager = default!;
     [Dependency] private IUserInterfaceManager _uiManager = default!;
@@ -53,7 +77,19 @@ public sealed partial class RemoteScreenView : LayoutContainer
     private bool _isCycle;
 
     private Control? _lastHoveredRemoteControl;
-    private readonly Dictionary<BoundKeyFunction, Control> _remoteHeldControls = new();
+    private readonly Dictionary<BoundKeyFunction, (IInputRelayTarget relay, Control control)> _remoteHeldControls = new();
+
+    public bool IsPoppedOut => _activeTargetUi?.IsPoppedOut ?? false;
+
+    public void TogglePopOut()
+    {
+        _activeTargetUi?.TogglePopOut();
+    }
+
+    public void SetPoppedOut(bool poppedOut)
+    {
+        _activeTargetUi?.SetPoppedOut(poppedOut);
+    }
 
     private Control? GetCaptureTarget()
     {
@@ -121,14 +157,13 @@ public sealed partial class RemoteScreenView : LayoutContainer
     {
         _deviceGuid = state.DeviceGuid;
 
-        // Only use targetless cycle mode if we do not have a valid TargetEntity to capture.
-        // When TargetEntity is valid (including A -> A and A -> B -> A), RemoteBuiTarget + PipScreenSurface's
-        // double-buffered capture stack renders the live Hall-of-Mirrors cascade without stack overflow.
-        var isTargetlessCycle = state.TargetEntity == NetEntity.Invalid &&
-                                (state.IsCycleReference || PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid));
+        var isCycle = state.IsCycleReference ||
+                      PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid) ||
+                      (_hostBui != null && _entManager.TryGetEntity(state.TargetEntity, out var tgtUid) && tgtUid == _hostBui.Owner);
 
-        if (isTargetlessCycle)
+        if (isCycle)
         {
+            DisposeActiveTarget();
             _isCycle = true;
             _surface.Visible = false;
             _surface.DeviceGuid = null;
@@ -173,9 +208,15 @@ public sealed partial class RemoteScreenView : LayoutContainer
         DisposeActiveTarget();
         _activeTargetUi = targetUi;
         _activeTargetUi.SetHostBui(_hostBui);
+        _activeTargetUi.OnPopOutChanged += UpdatePopOutButton;
+        UpdatePopOutButton(_activeTargetUi.IsPoppedOut);
 
         _statusLabel.Visible = false;
         _surface.InvalidateCapture();
+    }
+
+    private void UpdatePopOutButton(bool isPoppedOut)
+    {
     }
 
     private void ClearHoveredRemoteControl()
@@ -195,9 +236,12 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         if (_activeTargetUi != null)
         {
+            _activeTargetUi.OnPopOutChanged -= UpdatePopOutButton;
             _activeTargetUi.Dispose();
             _activeTargetUi = null;
         }
+
+        UpdatePopOutButton(false);
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
@@ -401,6 +445,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
     protected override void KeyBindDown(GUIBoundKeyEventArgs args)
     {
         base.KeyBindDown(args);
+        if (args.Handled)
+            return;
 
         if (GetCaptureTarget() is not { } targetRoot || _isCycle)
             return;
@@ -425,44 +471,52 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     cur.GrabKeyboardFocus();
                 }
 
-                var relPos = curPixelPos / cur.UIScale;
-                var targetArgs = new GUIBoundKeyEventArgs(
-                    args.Function,
-                    args.State,
-                    new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
-                    args.CanFocus,
-                    relPos,
-                    curPixelPos);
+                if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
+                {
+                    var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
+                    slider.Value = slider.MinValue + ratio * (slider.MaxValue - slider.MinValue);
+                    break;
+                }
+
+                if (cur is TabContainer tabContainer && args.Function == EngineKeyFunctions.UIClick)
+                {
+                    if (curPixelPos.Y <= 32f * tabContainer.UIScale && tabContainer.ChildCount > 0)
+                    {
+                        var tabWidth = Math.Max(1f, (float)tabContainer.PixelWidth / tabContainer.ChildCount);
+                        var tabIdx = Math.Clamp((int)(curPixelPos.X / tabWidth), 0, tabContainer.ChildCount - 1);
+                        tabContainer.CurrentTab = tabIdx;
+                        break;
+                    }
+                }
+
+                if (cur is ScrollBar scrollBar && args.Function == EngineKeyFunctions.UIClick)
+                {
+                    var ratio = Math.Clamp(curPixelPos.Y / Math.Max(1f, scrollBar.PixelHeight), 0f, 1f);
+                    scrollBar.ValueTarget = scrollBar.MinValue + ratio * (scrollBar.MaxValue - scrollBar.MinValue);
+                    break;
+                }
 
                 if (cur is IInputRelayTarget relay)
                 {
+                    var relPos = curPixelPos / cur.UIScale;
+                    var targetArgs = new GUIBoundKeyEventArgs(
+                        args.Function,
+                        args.State,
+                        new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
+                        args.CanFocus,
+                        relPos,
+                        curPixelPos);
+
                     relay.RelayKeyBindDown(targetArgs);
-                    _remoteHeldControls[args.Function] = cur;
-                }
-                else
-                {
-                    // Fallback for engine controls
-                    if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
+                    _remoteHeldControls[args.Function] = (relay, cur);
+
+                    if (targetArgs.Handled)
                     {
-                        var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
-                        slider.Value = slider.MinValue + ratio * (slider.MaxValue - slider.MinValue);
-                    }
-                    else if (cur is TabContainer tabContainer && args.Function == EngineKeyFunctions.UIClick)
-                    {
-                        if (curPixelPos.Y <= 32f * tabContainer.UIScale && tabContainer.ChildCount > 0)
-                        {
-                            var tabWidth = Math.Max(1f, (float)tabContainer.PixelWidth / tabContainer.ChildCount);
-                            var tabIdx = Math.Clamp((int)(curPixelPos.X / tabWidth), 0, tabContainer.ChildCount - 1);
-                            tabContainer.CurrentTab = tabIdx;
-                        }
+                        args.Handle();
+                        return;
                     }
                 }
 
-                if (targetArgs.Handled)
-                {
-                    args.Handle();
-                    return;
-                }
                 if (cur.MouseFilter == MouseFilterMode.Stop)
                     break;
             }
@@ -480,43 +534,44 @@ public sealed partial class RemoteScreenView : LayoutContainer
     protected override void KeyBindUp(GUIBoundKeyEventArgs args)
     {
         base.KeyBindUp(args);
+        if (args.Handled)
+            return;
 
         if (GetCaptureTarget() is not { } targetRoot || _isCycle)
             return;
 
-        if (_remoteHeldControls.Remove(args.Function, out var heldControl))
+        if (_remoteHeldControls.Remove(args.Function, out var held))
         {
-            if (heldControl is IInputRelayTarget relay)
+            var (heldRelay, heldControl) = held;
+            var relPos = Vector2.Zero;
+            var curPixelPos = Vector2.Zero;
+            if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
             {
-                var relPos = Vector2.Zero;
-                var curPixelPos = Vector2.Zero;
-                if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+                var ctrl = heldControl;
+                var offset = Vector2.Zero;
+                while (ctrl != null && ctrl != targetRoot)
                 {
-                    var ctrl = heldControl;
-                    var offset = Vector2.Zero;
-                    while (ctrl != null && ctrl != targetRoot)
-                    {
-                        offset += ctrl.PixelPosition;
-                        ctrl = ctrl.Parent;
-                    }
-                    curPixelPos = targetPixelPos - offset;
-                    relPos = curPixelPos / heldControl.UIScale;
+                    offset += ctrl.PixelPosition;
+                    ctrl = ctrl.Parent;
                 }
+                curPixelPos = targetPixelPos - offset;
+                relPos = curPixelPos / heldControl.UIScale;
+            }
 
-                var targetArgs = new GUIBoundKeyEventArgs(
-                    args.Function,
-                    args.State,
-                    new ScreenCoordinates(heldControl.GlobalPixelPosition + curPixelPos, default),
-                    args.CanFocus,
-                    relPos,
-                    curPixelPos);
+            var targetArgs = new GUIBoundKeyEventArgs(
+                args.Function,
+                args.State,
+                new ScreenCoordinates(heldControl.GlobalPixelPosition + curPixelPos, default),
+                args.CanFocus,
+                relPos,
+                curPixelPos);
 
-                relay.RelayKeyBindUp(targetArgs);
-                if (targetArgs.Handled)
-                {
-                    args.Handle();
-                    return;
-                }
+            heldRelay.RelayKeyBindUp(targetArgs);
+
+            if (targetArgs.Handled)
+            {
+                args.Handle();
+                return;
             }
         }
         else if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
@@ -532,25 +587,26 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 {
                     if (cur.MouseFilter != MouseFilterMode.Ignore)
                     {
-                        var relPos = curPixelPos / cur.UIScale;
-                        var targetArgs = new GUIBoundKeyEventArgs(
-                            args.Function,
-                            args.State,
-                            new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
-                            args.CanFocus,
-                            relPos,
-                            curPixelPos);
-
                         if (cur is IInputRelayTarget relay)
                         {
+                            var relPos = curPixelPos / cur.UIScale;
+                            var targetArgs = new GUIBoundKeyEventArgs(
+                                args.Function,
+                                args.State,
+                                new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
+                                args.CanFocus,
+                                relPos,
+                                curPixelPos);
+
                             relay.RelayKeyBindUp(targetArgs);
+
+                            if (targetArgs.Handled)
+                            {
+                                args.Handle();
+                                return;
+                            }
                         }
 
-                        if (targetArgs.Handled)
-                        {
-                            args.Handle();
-                            return;
-                        }
                         if (cur.MouseFilter == MouseFilterMode.Stop)
                             break;
                     }
@@ -651,8 +707,30 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 {
                     relay.RelayMouseWheel(targetArgs);
                 }
+                else if (cur is ScrollContainer sc)
+                {
+                    if (sc.VScrollEnabled)
+                    {
+                        sc.VScrollTarget -= args.Delta.Y * sc.ScrollSpeedY;
+                        targetArgs.Handle();
+                    }
+                    else if (sc.HScrollEnabled)
+                    {
+                        var delta = args.Delta.X == 0f && sc.FallbackDeltaScroll ? -args.Delta.Y : args.Delta.X;
+                        sc.HScrollTarget += delta * sc.ScrollSpeedX;
+                        targetArgs.Handle();
+                    }
+                }
+                else if (cur is ScrollBar sb)
+                {
+                    sb.ValueTarget -= args.Delta.Y * 50f;
+                    targetArgs.Handle();
+                }
 
-                if (targetArgs.Handled || cur.MouseFilter == MouseFilterMode.Stop)
+                // Important: Only break if the wheel event was actually handled.
+                // Do NOT break on MouseFilterMode.Stop so the mouse wheel event can bubble up
+                // from child elements (buttons, panels, labels) to their parent scroll container.
+                if (targetArgs.Handled)
                     break;
             }
 
@@ -702,6 +780,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
     #endregion
 
+    [Obsolete("Types overriding Dispose(bool) are discouraged in Content.Client; preserved for layout container cleanup.")]
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -719,17 +798,73 @@ public sealed partial class RemoteScreenView : LayoutContainer
     {
         Control? RootControl { get; }
         Vector2 TargetSize { get; }
+        bool CanPopOut { get; }
+        bool IsPoppedOut { get; }
+        event Action<bool>? OnPopOutChanged;
+        void TogglePopOut();
+        void SetPoppedOut(bool poppedOut);
         void UpdateState(RemoteScreenState state);
         void FrameUpdate(FrameEventArgs args);
         void SetHostBui(BoundUserInterface? hostBui);
     }
 
     /// <summary>
+    /// Invisible overlay placed on top of a remote window's close button to intercept close clicks.
+    /// Redirects the close action into docking the window back offscreen without triggering bui.Close().
+    /// </summary>
+    private sealed class RemoteCloseButtonInterceptor : Control
+    {
+        private readonly Action _onIntercept;
+
+        public RemoteCloseButtonInterceptor(Action onIntercept)
+        {
+            _onIntercept = onIntercept;
+            MouseFilter = MouseFilterMode.Stop;
+            HorizontalExpand = true;
+            VerticalExpand = true;
+            ToolTip = "Dock back into terminal";
+        }
+
+        protected override void KeyBindDown(GUIBoundKeyEventArgs args)
+        {
+            base.KeyBindDown(args);
+            if (args.Function == EngineKeyFunctions.UIClick)
+            {
+                args.Handle();
+                UserInterfaceManager.ClickSound();
+                _onIntercept();
+            }
+        }
+    }
+
+    /// <summary>
     /// Embeds any BoundUserInterface device (e.g. APC, Air Alarm, Static Computer, Consoles, PDAs, etc.)
     /// directly using the target entity's real client BoundUserInterface instance.
+    /// Manages offscreen stashing to prevent duplicate desktop popups while keeping BUI communication active.
     /// </summary>
     public sealed class RemoteBuiTarget : IRemoteTargetUi
     {
+        private static readonly Dictionary<EntityUid, RemoteBuiTarget> s_ActiveTargetsByUid = new();
+
+        public static bool TryBringTargetToScreen(EntityUid uid)
+        {
+            if (s_ActiveTargetsByUid.TryGetValue(uid, out var target))
+            {
+                if (!target.IsPoppedOut)
+                {
+                    target.PullWindowOnScreen();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool TryGetForEntity(EntityUid uid, out RemoteBuiTarget target)
+        {
+            return s_ActiveTargetsByUid.TryGetValue(uid, out target!);
+        }
+
         private static int s_ApplyStateDepth;
 
         private readonly IEntityManager _entManager;
@@ -741,11 +876,20 @@ public sealed partial class RemoteScreenView : LayoutContainer
         private readonly string _deviceName;
 
         private EntityUid? _targetUid;
+        private BoundUserInterface? _currentBui;
         private RoutedBoundUserInterface? _routedBui;
         private BoundUserInterfaceState? _latestState;
 
+        private BaseWindow? _trackedWindow;
+        private BaseButton? _trackedCloseButton;
+        private RemoteCloseButtonInterceptor? _closeInterceptor;
+        private bool _isPoppedOut;
         public Control? RootControl => _routedBui?.RootControl;
         public Vector2 TargetSize { get; private set; } = new Vector2(640, 520);
+
+        public bool CanPopOut => _trackedWindow != null && !_trackedWindow.Disposed;
+        public bool IsPoppedOut => _isPoppedOut;
+        public event Action<bool>? OnPopOutChanged;
 
         public RemoteBuiTarget(
             NetEntity targetNetEntity,
@@ -784,8 +928,11 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void FrameUpdate(FrameEventArgs args)
         {
-            if (_routedBui == null || !_routedBui.IsOpened)
+            if (_currentBui == null || !_currentBui.IsOpened)
                 TryEnsureBui();
+
+            if (_trackedWindow == null && RootControl != null)
+                AttachWindow(RootControl);
 
             if (_routedBui?.RootControl is ApcMenu apcMenu)
                 apcMenu.SetAccessEnabled(true);
@@ -801,18 +948,20 @@ public sealed partial class RemoteScreenView : LayoutContainer
             }
 
             var uid = _targetUid.Value;
+            s_ActiveTargetsByUid[uid] = this;
+
             if (!_entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp))
                 return;
 
             uiComp.ClientOpenInterfaces.TryGetValue(UiKey, out var currentBui);
-            var routed = currentBui as RoutedBoundUserInterface;
 
-            if (_routedBui != routed)
+            if (_currentBui != currentBui)
             {
                 if (_routedBui != null)
                     _routedBui.OnRootChanged -= OnRootChanged;
 
-                _routedBui = routed;
+                _currentBui = currentBui;
+                _routedBui = currentBui as RoutedBoundUserInterface;
 
                 if (_routedBui != null)
                 {
@@ -820,6 +969,10 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     if (_routedBui.RootControl != null)
                         OnTargetRootAttached(_routedBui.RootControl);
                 }
+            }
+            else if (_trackedWindow == null && RootControl != null)
+            {
+                OnTargetRootAttached(RootControl);
             }
         }
 
@@ -834,10 +987,154 @@ public sealed partial class RemoteScreenView : LayoutContainer
             if (control.Disposed)
                 return;
 
+            AttachWindow(control);
+
             if (control is ApcMenu apcMenu)
                 apcMenu.SetAccessEnabled(true);
 
             ApplyLatestState();
+        }
+
+        private void AttachWindow(Control root)
+        {
+            var window = FindTargetWindow(root);
+            if (window == _trackedWindow && _trackedWindow != null)
+                return;
+
+            DetachWindow();
+
+            _trackedWindow = window;
+
+            if (_trackedWindow != null)
+            {
+                _trackedCloseButton = FindCloseButton(_trackedWindow);
+                if (_trackedCloseButton != null && _closeInterceptor == null)
+                {
+                    _closeInterceptor = new RemoteCloseButtonInterceptor(StashWindowOffscreen);
+                    _trackedCloseButton.AddChild(_closeInterceptor);
+                    LayoutContainer.SetAnchorAndMarginPreset(_closeInterceptor, LayoutPreset.Wide);
+                }
+
+                // If the target UI is ALREADY open on the user's screen:
+                // DO NOT move it off screen unless closed!
+                var isAlreadyOnScreen = _trackedWindow.IsOpen &&
+                                        _trackedWindow.Visible &&
+                                        _trackedWindow.Parent != null &&
+                                        _trackedWindow.Parent != s_OffscreenStash;
+
+                if (isAlreadyOnScreen)
+                {
+                    _isPoppedOut = true;
+                }
+                else if (!_isPoppedOut)
+                {
+                    StashWindowOffscreen();
+                }
+            }
+
+            OnPopOutChanged?.Invoke(_isPoppedOut);
+        }
+
+        private void DetachWindow()
+        {
+            if (_closeInterceptor != null)
+            {
+                _closeInterceptor.Parent?.RemoveChild(_closeInterceptor);
+                _closeInterceptor.Dispose();
+                _closeInterceptor = null;
+            }
+
+            _trackedCloseButton = null;
+            _trackedWindow = null;
+        }
+
+        private static BaseWindow? FindTargetWindow(Control? control)
+        {
+            if (control == null)
+                return null;
+
+            if (control is BaseWindow bw)
+                return bw;
+
+            for (var cur = control.Parent; cur != null; cur = cur.Parent)
+            {
+                if (cur is BaseWindow parentBw)
+                    return parentBw;
+            }
+
+            return null;
+        }
+
+        private static BaseButton? FindCloseButton(Control control)
+        {
+            if (control.Name == "CloseButton" && control is BaseButton btn)
+                return btn;
+
+            for (var i = 0; i < control.ChildCount; i++)
+            {
+                var found = FindCloseButton(control.GetChild(i));
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        public void StashWindowOffscreen()
+        {
+            _isPoppedOut = false;
+            if (_trackedWindow == null || _trackedWindow.Disposed)
+            {
+                OnPopOutChanged?.Invoke(_isPoppedOut);
+                return;
+            }
+
+            var stash = GetOrCreateOffscreenStash(_uiManager);
+            if (_trackedWindow.Parent != stash)
+            {
+                _trackedWindow.Parent?.RemoveChild(_trackedWindow);
+                stash.AddChild(_trackedWindow);
+                LayoutContainer.SetPosition(_trackedWindow, Vector2.Zero);
+            }
+
+            OnPopOutChanged?.Invoke(_isPoppedOut);
+        }
+
+        public void PullWindowOnScreen()
+        {
+            _isPoppedOut = true;
+            if (_trackedWindow == null || _trackedWindow.Disposed)
+            {
+                OnPopOutChanged?.Invoke(_isPoppedOut);
+                return;
+            }
+
+            if (_trackedWindow.Parent != _uiManager.WindowRoot)
+            {
+                _trackedWindow.Parent?.RemoveChild(_trackedWindow);
+                _uiManager.WindowRoot.AddChild(_trackedWindow);
+            }
+
+            _trackedWindow.Visible = true;
+            _trackedWindow.OpenCentered();
+
+            OnPopOutChanged?.Invoke(_isPoppedOut);
+        }
+
+        public void TogglePopOut()
+        {
+            if (_isPoppedOut)
+                StashWindowOffscreen();
+            else
+                PullWindowOnScreen();
+        }
+
+        public void SetPoppedOut(bool poppedOut)
+        {
+            if (poppedOut)
+                PullWindowOnScreen();
+            else
+                StashWindowOffscreen();
         }
 
         private void ApplyLatestState()
@@ -874,9 +1171,27 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void Dispose()
         {
+            if (_targetUid.HasValue && s_ActiveTargetsByUid.TryGetValue(_targetUid.Value, out var existing) && existing == this)
+            {
+                s_ActiveTargetsByUid.Remove(_targetUid.Value);
+            }
+
+            DetachWindow();
+
+            var stash = s_OffscreenStash;
+            if (stash != null && _trackedWindow != null && _trackedWindow.Parent == stash)
+            {
+                stash.RemoveChild(_trackedWindow);
+            }
+
             if (_routedBui != null)
             {
                 _routedBui.OnRootChanged -= OnRootChanged;
+            }
+
+            if (_currentBui != null)
+            {
+                _currentBui = null;
                 _routedBui = null;
             }
         }
