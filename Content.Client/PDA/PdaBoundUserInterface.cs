@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Client._Oxyd.Computers.Cartridges;
 using Content.Client.CartridgeLoader;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Containers.ItemSlots;
@@ -58,26 +59,6 @@ namespace Content.Client.PDA
             _menu.EjectDiskButton.OnPressed += _ =>
             {
                 SendPredictedMessage(new ItemSlotButtonPressedEvent(PdaComponent.PdaDiskSlotId));
-            };
-
-            _menu.ActivateMusicButton.OnPressed += _ =>
-            {
-                SendMessage(new PdaShowMusicMessage());
-            };
-
-            _menu.AccessRingtoneButton.OnPressed += _ =>
-            {
-                SendMessage(new PdaShowRingtoneMessage());
-            };
-
-            _menu.ShowUplinkButton.OnPressed += _ =>
-            {
-                SendMessage(new PdaShowUplinkMessage());
-            };
-
-            _menu.LockUplinkButton.OnPressed += _ =>
-            {
-                SendMessage(new PdaLockUplinkMessage());
             };
 
             _menu.HomeButton.OnPressed += _ => SendMessage(new PdaSwitchViewMessage(PdaMenu.HomeView));
@@ -157,14 +138,42 @@ namespace Content.Client.PDA
                     _menu.ProgramView.AddChild(cartridgeUIFragment);
                 }
 
-                if (_userRequestedProgramView || isNewAttachment)
+                if (cartridgeUIFragment is OsUiFragment osFrag)
                 {
+                    switch (_menu.CurrentView)
+                    {
+                        case PdaMenu.HomeView:
+                            osFrag.SetView(OsFragmentView.Home);
+                            _menu.ToHomeScreen();
+                            break;
+                        case PdaMenu.ProgramListView:
+                            osFrag.SetView(OsFragmentView.Programs);
+                            _menu.ToProgramList();
+                            break;
+                        case PdaMenu.SettingsView:
+                            osFrag.SetView(OsFragmentView.Settings);
+                            _menu.ToSettings();
+                            break;
+                        default:
+                            if (_userRequestedProgramView || isNewAttachment)
+                                _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                            else
+                                _menu.UpdateTabs();
+                            break;
+                    }
                     _userRequestedProgramView = false;
-                    _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
                 }
                 else
                 {
-                    _menu.UpdateTabs();
+                    if (_userRequestedProgramView || isNewAttachment)
+                    {
+                        _userRequestedProgramView = false;
+                        _menu.ToProgramView(title ?? Loc.GetString("comp-pda-io-program-fallback-title"));
+                    }
+                    else
+                    {
+                        _menu.UpdateTabs();
+                    }
                 }
             }
         }
@@ -194,6 +203,9 @@ namespace Content.Client.PDA
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
+
+            if (disposing)
+                _menu?.Dispose();
         }
 
         private PdaBorderColorComponent? GetBorderColorComponent()

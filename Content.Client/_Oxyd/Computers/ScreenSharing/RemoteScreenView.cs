@@ -13,6 +13,7 @@ using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Input;
+using Robust.Shared.Map;
 using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Computers.ScreenSharing;
@@ -51,7 +52,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
     private string? _deviceGuid;
     private bool _isCycle;
 
-    private Control? _lastFocusedRemoteControl;
+    private Control? _lastHoveredRemoteControl;
+    private readonly Dictionary<BoundKeyFunction, Control> _remoteHeldControls = new();
 
     private Control? GetCaptureTarget()
     {
@@ -92,7 +94,9 @@ public sealed partial class RemoteScreenView : LayoutContainer
         HorizontalExpand = true;
         VerticalExpand = true;
         RectClipContent = true;
-        MouseFilter = MouseFilterMode.Stop;
+        MouseFilter = MouseFilterMode.Pass;
+        CanKeyboardFocus = true;
+        KeyboardFocusOnClick = true;
 
         _statusLabel = new Label
         {
@@ -117,16 +121,19 @@ public sealed partial class RemoteScreenView : LayoutContainer
     {
         _deviceGuid = state.DeviceGuid;
 
-        var isCycle = state.IsCycleReference ||
-                      PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid);
+        // Only use targetless cycle mode if we do not have a valid TargetEntity to capture.
+        // When TargetEntity is valid (including A -> A and A -> B -> A), RemoteBuiTarget + PipScreenSurface's
+        // double-buffered capture stack renders the live Hall-of-Mirrors cascade without stack overflow.
+        var isTargetlessCycle = state.TargetEntity == NetEntity.Invalid &&
+                                (state.IsCycleReference || PipSurfaceRegistry.IsDeviceInAncestorChain(this, state.DeviceGuid));
 
-        if (isCycle)
+        if (isTargetlessCycle)
         {
             _isCycle = true;
             _surface.Visible = false;
             _surface.DeviceGuid = null;
             _statusLabel.Visible = false;
-            ClearRemoteControlFocus();
+            ClearHoveredRemoteControl();
 
             if (!string.IsNullOrEmpty(_deviceGuid))
             {
@@ -171,20 +178,20 @@ public sealed partial class RemoteScreenView : LayoutContainer
         _surface.InvalidateCapture();
     }
 
-    private void ClearRemoteControlFocus()
+    private void ClearHoveredRemoteControl()
     {
-        if (_lastFocusedRemoteControl != null)
+        if (_lastHoveredRemoteControl is IInputRelayTarget relay)
         {
-            if (_uiManager.ControlFocused == _lastFocusedRemoteControl)
-                _uiManager.ControlFocused = null;
-
-            _lastFocusedRemoteControl = null;
+            relay.RelayMouseExited();
         }
+
+        _lastHoveredRemoteControl = null;
+        _remoteHeldControls.Clear();
     }
 
     private void DisposeActiveTarget()
     {
-        ClearRemoteControlFocus();
+        ClearHoveredRemoteControl();
 
         if (_activeTargetUi != null)
         {
@@ -204,65 +211,12 @@ public sealed partial class RemoteScreenView : LayoutContainer
         }
 
         _activeTargetUi?.FrameUpdate(args);
-        UpdateHoveredRemoteControlFocus();
-    }
-
-    private void UpdateHoveredRemoteControlFocus()
-    {
-        if (!VisibleInTree || _isCycle || GetCaptureTarget() is not { } targetRoot)
-        {
-            ClearRemoteControlFocus();
-            return;
-        }
-
-        var mousePosScaled = _uiManager.MousePositionScaled.Position;
-        var localPixelPos = (mousePosScaled * UIScale) - GlobalPixelPosition;
-
-        if (!TryMapToTarget(localPixelPos, out var targetPixelPos))
-        {
-            ClearRemoteControlFocus();
-            return;
-        }
-
-        var hit = FindControlAtPos(targetRoot, targetPixelPos);
-        if (hit == null)
-        {
-            ClearRemoteControlFocus();
-            return;
-        }
-
-        Control? cur = hit.Value.control;
-        BaseButton? hitButton = null;
-        while (cur != null)
-        {
-            if (cur is BaseButton btn && !btn.Disabled)
-            {
-                hitButton = btn;
-                break;
-            }
-
-            if (cur == targetRoot)
-                break;
-
-            cur = cur.Parent;
-        }
-
-        if (hitButton != null)
-        {
-            hitButton.Mode = BaseButton.ActionMode.Press;
-            _uiManager.ControlFocused = hitButton;
-            _lastFocusedRemoteControl = hitButton;
-        }
-        else
-        {
-            ClearRemoteControlFocus();
-        }
     }
 
     protected override void MouseExited()
     {
         base.MouseExited();
-        ClearRemoteControlFocus();
+        ClearHoveredRemoteControl();
     }
 
     protected override void RenderChildOverride(ref ControlRenderArguments args, int childIndex, Vector2i position)
@@ -349,24 +303,45 @@ public sealed partial class RemoteScreenView : LayoutContainer
             return;
         }
 
+        var isDynamicCycle = false;
         if (GetCaptureTarget() is { } captureTarget && !captureTarget.Disposed && captureTarget.Visible)
         {
-            var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
-            if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
-                hostPixelSize = captureTarget.PixelSize;
+            if (_surface.CanCapture(captureTarget, _deviceGuid))
+            {
+                var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
+                if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
+                    hostPixelSize = captureTarget.PixelSize;
 
-            if (hostPixelSize.X > 0 && hostPixelSize.Y > 0)
-                _surface.CaptureControl(renderHandle, captureTarget, hostPixelSize);
+                if (hostPixelSize.X > 0 && hostPixelSize.Y > 0)
+                    _surface.CaptureControl(renderHandle, captureTarget, hostPixelSize);
+            }
+            else
+            {
+                // Cycle boundary reached in the active capture stack (e.g., A -> B -> A or A -> A):
+                // Do not recurse further; sample the previous bounce's texture from our ping-pong read buffer!
+                isDynamicCycle = true;
+            }
         }
 
         var screenTex = _surface.ReadTexture;
+        if (screenTex == null && !string.IsNullOrEmpty(_deviceGuid))
+        {
+            var fallbackSurface = PipSurfaceRegistry.ResolveSurface(this, _deviceGuid);
+            fallbackSurface?.RequestCaptureFrame(4);
+            screenTex = fallbackSurface?.ReadTexture;
+        }
+
         var fittedRect = GetFittedScreenRect();
         if (screenTex != null)
         {
             handle.DrawTextureRect(screenTex, fittedRect);
         }
+        else if (isDynamicCycle)
+        {
+            handle.DrawRect(fittedRect, Color.FromHex("#05121E"));
+        }
 
-        DrawCrtOverlays(handle, fittedRect, isCycle: false);
+        DrawCrtOverlays(handle, fittedRect, isCycle: isDynamicCycle);
     }
 
     private void DrawCrtOverlays(DrawingHandleScreen handle, UIBox2 screenRect, bool isCycle)
@@ -450,25 +425,234 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     cur.GrabKeyboardFocus();
                 }
 
-                if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
-                {
-                    var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
-                    slider.Value = slider.MinValue + ratio * (slider.MaxValue - slider.MinValue);
-                    break;
-                }
+                var relPos = curPixelPos / cur.UIScale;
+                var targetArgs = new GUIBoundKeyEventArgs(
+                    args.Function,
+                    args.State,
+                    new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
+                    args.CanFocus,
+                    relPos,
+                    curPixelPos);
 
-                if (cur is TabContainer tabContainer && args.Function == EngineKeyFunctions.UIClick)
+                if (cur is IInputRelayTarget relay)
                 {
-                    if (curPixelPos.Y <= 32f * tabContainer.UIScale && tabContainer.ChildCount > 0)
+                    relay.RelayKeyBindDown(targetArgs);
+                    _remoteHeldControls[args.Function] = cur;
+                }
+                else
+                {
+                    // Fallback for engine controls
+                    if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
                     {
-                        var tabWidth = Math.Max(1f, (float)tabContainer.PixelWidth / tabContainer.ChildCount);
-                        var tabIdx = Math.Clamp((int)(curPixelPos.X / tabWidth), 0, tabContainer.ChildCount - 1);
-                        tabContainer.CurrentTab = tabIdx;
-                        break;
+                        var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
+                        slider.Value = slider.MinValue + ratio * (slider.MaxValue - slider.MinValue);
+                    }
+                    else if (cur is TabContainer tabContainer && args.Function == EngineKeyFunctions.UIClick)
+                    {
+                        if (curPixelPos.Y <= 32f * tabContainer.UIScale && tabContainer.ChildCount > 0)
+                        {
+                            var tabWidth = Math.Max(1f, (float)tabContainer.PixelWidth / tabContainer.ChildCount);
+                            var tabIdx = Math.Clamp((int)(curPixelPos.X / tabWidth), 0, tabContainer.ChildCount - 1);
+                            tabContainer.CurrentTab = tabIdx;
+                        }
                     }
                 }
 
+                if (targetArgs.Handled)
+                {
+                    args.Handle();
+                    return;
+                }
                 if (cur.MouseFilter == MouseFilterMode.Stop)
+                    break;
+            }
+
+            if (cur == targetRoot)
+                break;
+
+            curPixelPos += cur.PixelPosition;
+            cur = cur.Parent;
+        }
+
+        _surface.InvalidateCapture(2);
+    }
+
+    protected override void KeyBindUp(GUIBoundKeyEventArgs args)
+    {
+        base.KeyBindUp(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+            return;
+
+        if (_remoteHeldControls.Remove(args.Function, out var heldControl))
+        {
+            if (heldControl is IInputRelayTarget relay)
+            {
+                var relPos = Vector2.Zero;
+                var curPixelPos = Vector2.Zero;
+                if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+                {
+                    var ctrl = heldControl;
+                    var offset = Vector2.Zero;
+                    while (ctrl != null && ctrl != targetRoot)
+                    {
+                        offset += ctrl.PixelPosition;
+                        ctrl = ctrl.Parent;
+                    }
+                    curPixelPos = targetPixelPos - offset;
+                    relPos = curPixelPos / heldControl.UIScale;
+                }
+
+                var targetArgs = new GUIBoundKeyEventArgs(
+                    args.Function,
+                    args.State,
+                    new ScreenCoordinates(heldControl.GlobalPixelPosition + curPixelPos, default),
+                    args.CanFocus,
+                    relPos,
+                    curPixelPos);
+
+                relay.RelayKeyBindUp(targetArgs);
+                if (targetArgs.Handled)
+                {
+                    args.Handle();
+                    return;
+                }
+            }
+        }
+        else if (TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+        {
+            var hit = FindControlAtPos(targetRoot, targetPixelPos);
+            if (hit != null)
+            {
+                var (leafControl, leafPixelPos) = hit.Value;
+                var curPixelPos = leafPixelPos;
+                Control? cur = leafControl;
+
+                while (cur != null)
+                {
+                    if (cur.MouseFilter != MouseFilterMode.Ignore)
+                    {
+                        var relPos = curPixelPos / cur.UIScale;
+                        var targetArgs = new GUIBoundKeyEventArgs(
+                            args.Function,
+                            args.State,
+                            new ScreenCoordinates(cur.GlobalPixelPosition + curPixelPos, default),
+                            args.CanFocus,
+                            relPos,
+                            curPixelPos);
+
+                        if (cur is IInputRelayTarget relay)
+                        {
+                            relay.RelayKeyBindUp(targetArgs);
+                        }
+
+                        if (targetArgs.Handled)
+                        {
+                            args.Handle();
+                            return;
+                        }
+                        if (cur.MouseFilter == MouseFilterMode.Stop)
+                            break;
+                    }
+
+                    if (cur == targetRoot)
+                        break;
+
+                    curPixelPos += cur.PixelPosition;
+                    cur = cur.Parent;
+                }
+            }
+        }
+
+        _surface.InvalidateCapture(2);
+    }
+
+    protected override void MouseMove(GUIMouseMoveEventArgs args)
+    {
+        base.MouseMove(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+        {
+            ClearHoveredRemoteControl();
+            return;
+        }
+
+        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+        {
+            ClearHoveredRemoteControl();
+            return;
+        }
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        var newHovered = hit?.control;
+
+        if (_lastHoveredRemoteControl != newHovered)
+        {
+            if (_lastHoveredRemoteControl is IInputRelayTarget oldRelay)
+            {
+                oldRelay.RelayMouseExited();
+            }
+
+            _lastHoveredRemoteControl = newHovered;
+
+            if (_lastHoveredRemoteControl is IInputRelayTarget newRelay)
+            {
+                newRelay.RelayMouseEntered();
+            }
+
+            _surface.InvalidateCapture(2);
+        }
+
+        if (newHovered is IInputRelayTarget relay && hit != null)
+        {
+            var targetArgs = new GUIMouseMoveEventArgs(
+                args.Relative,
+                newHovered,
+                args.GlobalPosition,
+                args.GlobalPixelPosition,
+                hit.Value.relPixelPos / newHovered.UIScale,
+                hit.Value.relPixelPos);
+
+            relay.RelayMouseMove(targetArgs);
+        }
+    }
+
+    protected override void MouseWheel(GUIMouseWheelEventArgs args)
+    {
+        base.MouseWheel(args);
+
+        if (GetCaptureTarget() is not { } targetRoot || _isCycle)
+            return;
+
+        if (!TryMapToTarget(args.RelativePixelPosition, out var targetPixelPos))
+            return;
+
+        var hit = FindControlAtPos(targetRoot, targetPixelPos);
+        if (hit == null)
+            return;
+
+        var (leafControl, leafPixelPos) = hit.Value;
+        var curPixelPos = leafPixelPos;
+        Control? cur = leafControl;
+
+        while (cur != null)
+        {
+            if (cur.MouseFilter != MouseFilterMode.Ignore)
+            {
+                var targetArgs = new GUIMouseWheelEventArgs(
+                    args.Delta,
+                    cur,
+                    args.GlobalPosition,
+                    args.GlobalPixelPosition,
+                    curPixelPos / cur.UIScale,
+                    curPixelPos);
+
+                if (cur is IInputRelayTarget relay)
+                {
+                    relay.RelayMouseWheel(targetArgs);
+                }
+
+                if (targetArgs.Handled || cur.MouseFilter == MouseFilterMode.Stop)
                     break;
             }
 
@@ -483,21 +667,37 @@ public sealed partial class RemoteScreenView : LayoutContainer
         args.Handle();
     }
 
-    protected override void KeyBindUp(GUIBoundKeyEventArgs args)
+    protected override void TextEntered(GUITextEnteredEventArgs args)
     {
-        base.KeyBindUp(args);
+        base.TextEntered(args);
 
-        if (GetCaptureTarget() is not { } || _isCycle)
-            return;
-
-        _surface.InvalidateCapture(2);
-        args.Handle();
+        if (_uiManager.KeyboardFocused is IInputRelayTarget relay)
+        {
+            relay.RelayTextEntered(args);
+            _surface.InvalidateCapture(2);
+        }
     }
 
-    protected override void MouseMove(GUIMouseMoveEventArgs args)
+    protected override void TextEditing(GUITextEditingEventArgs args)
     {
-        base.MouseMove(args);
-        UpdateHoveredRemoteControlFocus();
+        base.TextEditing(args);
+
+        if (_uiManager.KeyboardFocused is IInputRelayTarget relay)
+        {
+            relay.RelayTextEditing(args);
+            _surface.InvalidateCapture(2);
+        }
+    }
+
+    protected override void KeyHeld(GUIKeyEventArgs args)
+    {
+        base.KeyHeld(args);
+
+        if (_uiManager.KeyboardFocused is IInputRelayTarget relay)
+        {
+            relay.RelayKeyHeld(args);
+            _surface.InvalidateCapture(2);
+        }
     }
 
     #endregion
@@ -530,6 +730,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
     /// </summary>
     public sealed class RemoteBuiTarget : IRemoteTargetUi
     {
+        private static int s_ApplyStateDepth;
+
         private readonly IEntityManager _entManager;
         private readonly IPlayerManager _playerManager;
         private readonly IUserInterfaceManager _uiManager;
@@ -576,7 +778,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 _latestState = state.BuiState;
 
             TryEnsureBui();
-            ApplyLatestState();
+            if (state.BuiState != null)
+                ApplyLatestState();
         }
 
         public void FrameUpdate(FrameEventArgs args)
@@ -618,10 +821,6 @@ public sealed partial class RemoteScreenView : LayoutContainer
                         OnTargetRootAttached(_routedBui.RootControl);
                 }
             }
-            else if (_routedBui != null && _routedBui.RootControl != null)
-            {
-                OnTargetRootAttached(_routedBui.RootControl);
-            }
         }
 
         private void OnRootChanged(Control? root)
@@ -643,22 +842,33 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         private void ApplyLatestState()
         {
-            if (_targetUid is { } uid && _latestState != null)
-            {
-                var uiSys = _entManager.System<UserInterfaceSystem>();
-                uiSys.SetUiState(uid, UiKey, _latestState);
-            }
+            if (s_ApplyStateDepth > 0 || _latestState == null)
+                return;
 
-            if (_routedBui?.RootControl is ApcMenu apcMenu)
+            s_ApplyStateDepth++;
+            try
             {
-                if (_latestState is ApcBoundInterfaceState apcState)
-                    apcMenu.UpdateState(apcState);
-                apcMenu.SetAccessEnabled(true);
+                if (_targetUid is { } uid)
+                {
+                    var uiSys = _entManager.System<UserInterfaceSystem>();
+                    uiSys.SetUiState(uid, UiKey, _latestState);
+                }
+
+                if (_routedBui?.RootControl is ApcMenu apcMenu)
+                {
+                    if (_latestState is ApcBoundInterfaceState apcState)
+                        apcMenu.UpdateState(apcState);
+                    apcMenu.SetAccessEnabled(true);
+                }
+                else if (_routedBui?.RootControl is PdaMenu pdaMenu)
+                {
+                    if (_latestState is PdaUpdateState pdaState)
+                        pdaMenu.UpdateState(pdaState);
+                }
             }
-            else if (_routedBui?.RootControl is PdaMenu pdaMenu)
+            finally
             {
-                if (_latestState is PdaUpdateState pdaState)
-                    pdaMenu.UpdateState(pdaState);
+                s_ApplyStateDepth--;
             }
         }
 

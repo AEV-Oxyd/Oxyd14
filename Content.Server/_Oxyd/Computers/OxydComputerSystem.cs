@@ -33,6 +33,15 @@ using Content.Shared.Power;
 using Content.Shared.Research.Components;
 using Content.Shared.Research.Prototypes;
 using Content.Shared.Research.Systems;
+using Content.Server.Access.Systems;
+using Content.Shared.Access.Systems;
+using Content.Server.Instruments;
+using Content.Server.PDA.Ringer;
+using Content.Shared.Access.Components;
+using Content.Shared.Instruments;
+using Content.Shared.PDA.Ringer;
+using Content.Shared.Store.Components;
+using Content.Shared.Store;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Prototypes;
@@ -54,7 +63,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private readonly LatheSystem _lathe = default!;
     [Dependency] private readonly NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private readonly NetworkRouterSystem _router = default!;
+    [Dependency] private readonly AccessReaderSystem _accessReader = default!;
+    [Dependency] private readonly IdCardSystem _idCard = default!;
+    [Dependency] private readonly InstrumentSystem _instrument = default!;
     [Dependency] private readonly PdaSystem _pda = default!;
+    [Dependency] private readonly RingerSystem _ringer = default!;
     [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
     [Dependency] private readonly ServerRemoteScreenSystem _remoteScreen = default!;
     [Dependency] private readonly SharedContainerSystem _container = default!;
@@ -218,8 +231,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         RefreshInstalledControlPrograms(compUid);
+        if (TryComp<CartridgeLoaderComponent>(compUid, out var compLoader) && compLoader.ActiveProgram is { } activeProg)
+        {
+            var readyEvt = new CartridgeUiReadyEvent((compUid, compLoader));
+            RaiseLocalEvent(activeProg, ref readyEvt);
+        }
         _pda.UpdatePdaUi(compUid);
-        _ui.TryOpenUi(compUid, PdaUiKey.Key, args.User);
+        if (!_ui.TryOpenUi(compUid, PdaUiKey.Key, args.User))
+            _ui.TryOpenUi(compUid, ComputerUiKey.Key, args.User);
         args.Cancel();
     }
 
@@ -1034,8 +1053,36 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     {
                         if (TryComp<PdaComponent>(loaderUid, out var pda))
                             pda.OpenPrograms.Remove(closeProg.Value);
+                        _cartridgeLoader.DeactivateProgram((loaderUid, loader), closeProg.Value);
                         status = $"Closed background program '{Name(closeProg.Value)}'.";
                     }
+                }
+                break;
+
+            case OsUiAction.InstallProgram:
+                if (msg.TargetProgram is { } installNet && TryGetEntity(installNet, out var installProg))
+                {
+                    if (_cartridgeLoader.InstallCartridge((loaderUid, loader), installProg.Value))
+                    {
+                        status = $"Installed program '{Name(installProg.Value)}'.";
+                    }
+                    else if (MetaData(installProg.Value).EntityPrototype is { } proto &&
+                             _cartridgeLoader.InstallProgram((loaderUid, loader), proto.ID))
+                    {
+                        status = $"Installed program '{Name(installProg.Value)}'.";
+                    }
+                    else
+                    {
+                        status = $"Failed to install '{Name(installProg.Value)}'.";
+                    }
+                }
+                break;
+
+            case OsUiAction.UninstallProgram:
+                if (msg.TargetProgram is { } uninstallNet && TryGetEntity(uninstallNet, out var uninstallProg))
+                {
+                    _cartridgeLoader.UninstallProgram((loaderUid, loader), uninstallProg.Value);
+                    status = $"Uninstalled program '{Name(uninstallProg.Value)}'.";
                 }
                 break;
 
@@ -1063,12 +1110,57 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 if (!string.IsNullOrWhiteSpace(msg.Command))
                     ExecuteComputerCommand(loaderUid, msg.Command, out status, ent.Owner);
                 break;
+
+            case OsUiAction.ShowRingtone:
+                if (HasComp<RingerComponent>(loaderUid) && args.Actor is { } ringerActor)
+                    _ringer.TryToggleRingerUi(loaderUid, ringerActor);
+                break;
+
+            case OsUiAction.ShowMusic:
+                if (TryComp<InstrumentComponent>(loaderUid, out var instrument) && args.Actor is { } musicActor)
+                    _instrument.ToggleInstrumentUi(loaderUid, musicActor, instrument);
+                break;
+
+            case OsUiAction.ShowUplink:
+                if (args.Actor is { } uplinkActor && _pda.TryGetUnlockedStore(loaderUid, out var store))
+                {
+                    if (store != loaderUid && TryComp<RemoteStoreComponent>(loaderUid, out var remoteStore))
+                        remoteStore.Store = store;
+                    _ui.TryToggleUi(loaderUid, StoreUiKey.Key, uplinkActor);
+                }
+                break;
+
+            case OsUiAction.LockUplink:
+                if (TryComp<RingerUplinkComponent>(loaderUid, out var uplink))
+                {
+                    if (TryComp<RemoteStoreComponent>(loaderUid, out var remoteStore))
+                        remoteStore.Store = null;
+                    _ringer.LockUplink((loaderUid, uplink));
+                    if (TryComp<PdaComponent>(loaderUid, out var pdaComp1))
+                        _pda.UpdatePdaUi(loaderUid, pdaComp1);
+                }
+                break;
         }
 
         UpdateOsUi(ent, loaderUid, status);
     }
 
-    private void UpdateOsUi(Entity<OsCartridgeComponent> ent, EntityUid loaderUid, string statusMessage = "")
+    public void UpdateOsUi(EntityUid loaderUid, string statusMessage = "")
+    {
+        if (!TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
+            return;
+
+        EntityUid? targetProg = loader.ActiveProgram;
+        if (targetProg == null && TryComp<OxydComputerComponent>(loaderUid, out var comp) && comp.BootProgram is { } bootProg)
+            targetProg = bootProg;
+
+        if (targetProg != null && TryComp<OsCartridgeComponent>(targetProg.Value, out var osCart))
+        {
+            UpdateOsUi((targetProg.Value, osCart), loaderUid, statusMessage);
+        }
+    }
+
+    public void UpdateOsUi(Entity<OsCartridgeComponent> ent, EntityUid loaderUid, string statusMessage = "")
     {
         if (!TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
             return;
@@ -1101,12 +1193,48 @@ public sealed partial class OxydComputerSystem : EntitySystem
         var batteryPercent = statsComp?.BatteryChargePercent ?? 100f;
         var hasBattery = statsComp?.HasBattery ?? false;
 
+        var pdaOwnerInfo = default(PdaIdInfoText);
+        string? stationName = null;
+        string? sshPassword = null;
+        bool hasCaptainAccess = false;
+        bool canPlayMusic = false;
+        bool hasUplink = false;
+
+        if (pdaComp != null)
+        {
+            IdCardComponent? id = null;
+            if (_idCard.TryFindIdCard(loaderUid, out var idCard))
+                id = idCard;
+
+            pdaOwnerInfo = new PdaIdInfoText
+            {
+                ActualOwnerName = pdaComp.OwnerName,
+                IdOwner = id?.FullName,
+                JobTitle = id?.LocalizedJobTitle,
+                StationAlertLevel = pdaComp.StationAlertLevel,
+                StationAlertColor = pdaComp.StationAlertColor
+            };
+            stationName = pdaComp.StationName;
+            sshPassword = pdaComp.SshPassword;
+            if (pdaComp.ContainedId is { } idEnt)
+            {
+                var tags = _accessReader.FindAccessTags(idEnt);
+                hasCaptainAccess = tags.Any(t => t.Id == "Captain" || t.Id == "Command");
+            }
+            canPlayMusic = HasComp<InstrumentComponent>(loaderUid);
+            hasUplink = _pda.TryGetUnlockedStore(loaderUid, out _);
+        }
+
         var programs = new List<OsProgramEntry>();
         foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid))
         {
-            var progName = TryComp<CartridgeComponent>(prog, out var cart)
+            var cart = CompOrNull<CartridgeComponent>(prog);
+            var progName = cart != null
                 ? Loc.GetString(cart.ProgramName)
                 : Name(prog);
+            var desc = !string.IsNullOrWhiteSpace(MetaData(prog).EntityDescription) ? MetaData(prog).EntityDescription : null;
+            var icon = cart?.Icon;
+            var installStatus = cart?.InstallationStatus ?? InstallationStatus.Installed;
 
             var isRunning = loader.ActiveProgram == prog ||
                             oxydComp.BootProgram == prog ||
@@ -1116,6 +1244,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 Uid = GetNetEntity(prog),
                 Name = progName,
+                Description = desc,
+                Icon = icon,
+                InstallationStatus = installStatus,
                 IsRunning = isRunning,
                 IsBootProgram = oxydComp.BootProgram == prog
             });
@@ -1140,7 +1271,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
             programs,
             hardwareEntries,
             linkedPorts,
-            statusMessage);
+            statusMessage,
+            pdaOwnerInfo,
+            stationName,
+            sshPassword,
+            hasCaptainAccess,
+            canPlayMusic,
+            hasUplink);
 
         _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state, loader);
     }

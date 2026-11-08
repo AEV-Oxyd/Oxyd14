@@ -7,6 +7,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Computers;
 
@@ -169,6 +170,9 @@ public sealed class OsProgramEntry
 {
     public NetEntity Uid;
     public string Name = string.Empty;
+    public string? Description;
+    public SpriteSpecifier? Icon;
+    public InstallationStatus InstallationStatus = InstallationStatus.Installed;
     public bool IsRunning;
     public bool IsBootProgram;
 }
@@ -210,6 +214,12 @@ public sealed class OsUiState : BoundUserInterfaceState
     public List<OsHardwareEntry> Hardware;
     public List<OsDeviceLinkEntry> LinkedPorts;
     public string StatusMessage;
+    public PdaIdInfoText PdaOwnerInfo;
+    public string? StationName;
+    public string? SshPassword;
+    public bool HasCaptainAccess;
+    public bool CanPlayMusic;
+    public bool HasUplink;
 
     public OsUiState(
         string deviceGuid,
@@ -227,7 +237,13 @@ public sealed class OsUiState : BoundUserInterfaceState
         List<OsProgramEntry> programs,
         List<OsHardwareEntry> hardware,
         List<OsDeviceLinkEntry> linkedPorts,
-        string statusMessage = "")
+        string statusMessage = "",
+        PdaIdInfoText pdaOwnerInfo = default,
+        string? stationName = null,
+        string? sshPassword = null,
+        bool hasCaptainAccess = false,
+        bool canPlayMusic = false,
+        bool hasUplink = false)
     {
         DeviceGuid = deviceGuid;
         Template = template;
@@ -245,6 +261,12 @@ public sealed class OsUiState : BoundUserInterfaceState
         Hardware = hardware;
         LinkedPorts = linkedPorts;
         StatusMessage = statusMessage;
+        PdaOwnerInfo = pdaOwnerInfo;
+        StationName = stationName;
+        SshPassword = sshPassword;
+        HasCaptainAccess = hasCaptainAccess;
+        CanPlayMusic = canPlayMusic;
+        HasUplink = hasUplink;
     }
 }
 
@@ -253,10 +275,16 @@ public enum OsUiAction : byte
 {
     LaunchProgram,
     CloseProgram,
+    InstallProgram,
+    UninstallProgram,
     ToggleRemoteControl,
     ScanAndLinkDevices,
     RunCommand,
-    Refresh
+    Refresh,
+    ShowRingtone,
+    ShowMusic,
+    ShowUplink,
+    LockUplink
 }
 
 [Serializable, NetSerializable]

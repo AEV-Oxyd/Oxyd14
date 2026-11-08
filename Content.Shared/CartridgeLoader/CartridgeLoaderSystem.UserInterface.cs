@@ -83,6 +83,10 @@ public sealed partial class CartridgeLoaderSystem
 
         if (_userInterface.HasUi(loaderUid, loader.UiKey))
             _userInterface.SetUiState(loaderUid, loader.UiKey, state);
+        if (_userInterface.HasUi(loaderUid, Content.Shared.PDA.ComputerUiKey.Key))
+            _userInterface.SetUiState(loaderUid, Content.Shared.PDA.ComputerUiKey.Key, state);
+        if (_userInterface.HasUi(loaderUid, Content.Shared.PDA.PdaUiKey.Key))
+            _userInterface.SetUiState(loaderUid, Content.Shared.PDA.PdaUiKey.Key, state);
     }
 
 
@@ -99,14 +103,16 @@ public sealed partial class CartridgeLoaderSystem
         if (!Resolve(ent, ref ent.Comp))
             return;
 
-        if (!_userInterface.HasUi(ent.Owner, ent.Comp.UiKey))
-            return;
-
         if (HasComp<Content.Shared.PDA.PdaComponent>(ent.Owner))
             return;
 
         var programs = GetNetEntityList(GetAllPrograms(ent).ToList());
         var state = new CartridgeLoaderUiState(programs, GetNetEntity(ent.Comp.ActiveProgram));
-        _userInterface.SetUiState(ent.Owner, ent.Comp.UiKey, state);
+        if (_userInterface.HasUi(ent.Owner, ent.Comp.UiKey))
+            _userInterface.SetUiState(ent.Owner, ent.Comp.UiKey, state);
+        if (_userInterface.HasUi(ent.Owner, Content.Shared.PDA.ComputerUiKey.Key))
+            _userInterface.SetUiState(ent.Owner, Content.Shared.PDA.ComputerUiKey.Key, state);
+        if (_userInterface.HasUi(ent.Owner, Content.Shared.PDA.PdaUiKey.Key))
+            _userInterface.SetUiState(ent.Owner, Content.Shared.PDA.PdaUiKey.Key, state);
     }
 }

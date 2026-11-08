@@ -1,5 +1,6 @@
-﻿<ContainerButton HorizontalExpand="True" MinHeight="60" Margin="4"
+﻿<controls:ContentContainerButton HorizontalExpand="True" MinHeight="60" Margin="4"
                  xmlns:pda="clr-namespace:Content.Client.PDA"
+                 xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
                  xmlns="https://spacestation14.io">
     <PanelContainer Name="Panel"/>
     <BoxContainer Orientation="Horizontal" HorizontalExpand="True" VerticalExpand="True">
@@ -10,8 +11,8 @@
             <Label Name="ProgramName" VerticalExpand="True" />
             <BoxContainer HorizontalExpand="True" SetHeight="28" Margin="0 0 4 4">
                 <BoxContainer HorizontalExpand="True" />
-                <Button Name="InstallButton" Visible="False" SetWidth="90" HorizontalAlignment="Right" VerticalExpand="True"></Button>
+                <controls:ContentStandardButton Name="InstallButton" Visible="False" SetWidth="90" HorizontalAlignment="Right" VerticalExpand="True"></controls:ContentStandardButton>
             </BoxContainer>
         </BoxContainer>
     </BoxContainer>
-</ContainerButton>
+</controls:ContentContainerButton>

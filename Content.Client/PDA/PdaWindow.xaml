@@ -1,6 +1,7 @@
 <pda:PdaWindow  xmlns="https://spacestation14.io"
                 xmlns:pda="clr-namespace:Content.Client.PDA"
                 xmlns:pip="clr-namespace:Content.Client._Oxyd.Computers.ScreenSharing"
+                xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
                 MouseFilter="Stop">
     <PanelContainer Name="Background" Access="Public" StyleClasses="PdaBackgroundRect" />
     <!-- The negative markin fixes a gap between the window edges and the decorative panel -->
@@ -13,10 +14,10 @@
             <Label Name="OsTitleLabel" Access="Public" Text="NTOS 1.4™" VerticalAlignment="Center" Margin="2 0 0 0" FontColorOverride="#00D4FF" StyleClasses="LabelSubText"/>
             <Label Name="OsSubtitleLabel" Access="Public" Text=" | Portable Terminal" VerticalAlignment="Center" FontColorOverride="#5a7a8a" StyleClasses="LabelSubText"/>
             <Control HorizontalExpand="True"/>
-            <ContainerButton Name="CloseButton" SetWidth="22" SetHeight="22" VerticalAlignment="Center">
+            <controls:ContentContainerButton Name="CloseButton" SetWidth="22" SetHeight="22" VerticalAlignment="Center">
                 <PanelContainer Name="CloseButtonPanel" HorizontalExpand="True" VerticalExpand="True"/>
                 <Label Name="CloseButtonLabel" Text="✕" FontColorOverride="#cfcfd4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </ContainerButton>
+            </controls:ContentContainerButton>
         </BoxContainer>
         <!--Content / Physical Screen Inset-->
         <Control Name="ScreenInsetControl" Access="Public" Margin="18 0 18 2" RectClipContent="True" VerticalExpand="True" HorizontalExpand="True">

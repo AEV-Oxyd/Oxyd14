@@ -108,7 +108,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     }
 
     /// <summary>
-    /// Ensures that an APC, Air Alarm, Static Computer, or PDA has a network GUID, hardware stats,
+    /// Ensures that an APC, Air Alarm, Static Computer, or PDA has a network GUID, hardware stats,\n
     /// bandwidth metrics, and an embedded filesystem so it can be discovered, SSHed into, and screen-shared.
     /// </summary>
     public void EnsureDeviceProvisioned(EntityUid uid)
@@ -450,13 +450,15 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         var deviceName = MetaData(targetUid).EntityName;
 
         // Cycle detected (e.g., A -> A, A -> B -> A, or A -> B -> C -> A):
-        // Emit a lightweight PiP cycle reference so the client renders the ancestor surface via PipMirrorViewport!
+        // Emit a lightweight PiP cycle reference so the client renders the cycle via PipScreenSurface!
         if (!visitedGuids.Add(targetGuid))
         {
+            TryGetPrimaryUiKey(targetUid, out var cycleUiKey, out _);
             return new RemoteScreenState(
                 GetNetEntity(targetUid),
                 targetGuid,
                 deviceName,
+                uiKey: cycleUiKey ?? PdaUiKey.Key,
                 isCycleReference: true);
         }
 
@@ -538,13 +540,20 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                     lastState.DiskName,
                     lastState.HasCaptainAccess,
                     lastState.SshPassword,
-                    lastState.CurrentView);
+                    lastState.CurrentView,
+                    lastState.Template,
+                    lastState.BootState,
+                    lastState.BootDiagnosticMessage,
+                    lastState.DefaultScreenSize,
+                    lastState.BootProgram,
+                    lastState.UploadBps,
+                    lastState.DownloadBps,
+                    lastState.BatteryChargePercent,
+                    lastState.HasBattery);
 
                 InterfaceData? pdaData = null;
                 if (TryComp<UserInterfaceComponent>(targetUid, out var uiComp))
                     _uiSystem.TryGetInterfaceData((targetUid, uiComp), PdaUiKey.Key, out pdaData);
-
-                _uiSystem.TryGetUiState<BoundUserInterfaceState>(targetUid, PdaUiKey.Key, out var pdaBuiState);
 
                 return new RemoteScreenState(
                     GetNetEntity(targetUid),
@@ -552,7 +561,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                     deviceName,
                     uiKey: PdaUiKey.Key,
                     buiClientType: pdaData?.ClientType,
-                    buiState: pdaBuiState ?? pdaState,
+                    buiState: pdaState,
                     pdaState: pdaState,
                     viewingTargetGuid: viewingGuid);
             }

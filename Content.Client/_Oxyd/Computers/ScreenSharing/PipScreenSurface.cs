@@ -79,8 +79,8 @@ public static class PipSurfaceRegistry
 
     /// <summary>
     /// Resolves the best <see cref="PipScreenSurface"/> for <paramref name="deviceGuid"/> relative
-    /// to <paramref name="requester"/>: prefers the ancestor surface in the same UI hierarchy,
-    /// falling back to any visible registered surface for that GUID.
+    /// to <paramref name="requester"/>: prefers any surface that already has a valid captured texture,
+    /// then the ancestor surface in the same UI hierarchy, falling back to any visible registered surface.
     /// </summary>
     public static PipScreenSurface? ResolveSurface(Control requester, string? deviceGuid)
     {
@@ -88,12 +88,18 @@ public static class PipSurfaceRegistry
             return null;
 
         var ancestor = FindAncestorSurface(requester, deviceGuid);
-        if (ancestor != null && !ancestor.Disposed)
+        if (ancestor != null && !ancestor.Disposed && ancestor.ReadTexture != null)
             return ancestor;
 
         if (s_Surfaces.TryGetValue(deviceGuid, out var list))
         {
-            // Prefer top-level (non-nested) visible surfaces first if available
+            for (var i = 0; i < list.Count; i++)
+            {
+                var candidate = list[i];
+                if (!candidate.Disposed && candidate != requester && candidate.ReadTexture != null)
+                    return candidate;
+            }
+
             for (var i = 0; i < list.Count; i++)
             {
                 var candidate = list[i];
@@ -102,22 +108,34 @@ public static class PipSurfaceRegistry
             }
         }
 
+        if (ancestor != null && !ancestor.Disposed)
+            return ancestor;
+
         return null;
     }
 }
 
 /// <summary>
 /// Wraps a device's screen content and captures its rendered output into a ping-pong pair of
-/// offscreen <see cref="IRenderTexture"/>s whenever a <see cref="PipMirrorViewport"/> observes it.
+/// offscreen <see cref="IRenderTexture"/>s whenever a <see cref="RemoteScreenView"/> observes it.
 /// Enables real-time Picture-in-Picture (PiP) and infinite Hall-of-Mirrors (Droste) cascades
-/// without physical widget re-parenting.
+/// without physical widget re-parenting or recursive stack overflows.
 /// </summary>
 [Virtual]
 public partial class PipScreenSurface : BoxContainer
 {
     [Dependency] private IClyde _clyde = default!;
 
+    /// <summary>
+    /// Maximum nested offscreen capture depth per UI frame.
+    /// Depth 2 allows A -> B -> A mutual screen-sharing to capture both hops live and sample
+    /// the ping-pong <see cref="ReadTexture"/> at the cycle boundary to build an infinite Droste cascade.
+    /// </summary>
+    public const int MaxCaptureDepth = 2;
+
     private static readonly Queue<IRenderTexture> s_DeferredDisposeQueue = new();
+    private static readonly HashSet<Control> s_ActiveCaptureControls = new();
+    private static readonly HashSet<string> s_ActiveCaptureGuids = new(StringComparer.OrdinalIgnoreCase);
     private static int s_CaptureDepth;
     private static uint s_CurrentFrameId;
 
@@ -127,10 +145,14 @@ public partial class PipScreenSurface : BoxContainer
     private const float BackgroundCaptureIntervalSeconds = 0.05f;
 
     public static bool IsCapturingOffscreen => s_CaptureDepth > 0;
+    public static int CaptureDepth => s_CaptureDepth;
 
     public static void BeginUiFrame()
     {
         s_CurrentFrameId++;
+        s_CaptureDepth = 0;
+        s_ActiveCaptureControls.Clear();
+        s_ActiveCaptureGuids.Clear();
         FlushDeferredDisposals();
     }
 
@@ -162,10 +184,13 @@ public partial class PipScreenSurface : BoxContainer
     private IRenderTexture? _readTarget;
     private IRenderTexture? _writeTarget;
     private bool _hasValidReadFrame;
+    private bool _isCapturing;
     private int _observedFramesRemaining;
     private int _dirtyPassesRemaining = 3;
     private float _timeSinceLastCapture;
     private Vector2i _lastCapturedSize;
+
+    public bool IsCapturing => _isCapturing;
 
     public string? DeviceGuid
     {
@@ -190,7 +215,7 @@ public partial class PipScreenSurface : BoxContainer
 
     /// <summary>
     /// The most recently captured offscreen texture of this surface, or null if no frame has been captured yet.
-    /// Double-buffered so a nested <see cref="PipMirrorViewport"/> can safely sample <see cref="ReadTexture"/>
+    /// Double-buffered so a nested <see cref="RemoteScreenView"/> can safely sample <see cref="ReadTexture"/>
     /// while this surface renders its next frame into the write buffer.
     /// </summary>
     public Texture? ReadTexture => _hasValidReadFrame && !Disposed ? _readTarget?.Texture : null;
@@ -204,7 +229,26 @@ public partial class PipScreenSurface : BoxContainer
     }
 
     /// <summary>
-    /// Marks this surface as actively observed by a <see cref="PipMirrorViewport"/> for the next N frames.
+    /// Returns true if this surface can safely capture <paramref name="control"/> right now without
+    /// re-entering an already active capture target or exceeding <see cref="MaxCaptureDepth"/>.
+    /// </summary>
+    public bool CanCapture(Control control, string? targetGuid = null)
+    {
+        if (_isCapturing || s_CaptureDepth >= MaxCaptureDepth)
+            return false;
+
+        if (s_ActiveCaptureControls.Contains(control))
+            return false;
+
+        var guid = targetGuid ?? _deviceGuid;
+        if (!string.IsNullOrEmpty(guid) && s_ActiveCaptureGuids.Contains(guid))
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Marks this surface as actively observed by a <see cref="RemoteScreenView"/> for the next N frames.
     /// </summary>
     public void RequestCaptureFrame(int frames = 3)
     {
@@ -233,7 +277,7 @@ public partial class PipScreenSurface : BoxContainer
     {
         base.PostRenderChildren(ref args);
 
-        if (_observedFramesRemaining <= 0 || s_CaptureDepth > 0)
+        if (_observedFramesRemaining <= 0 || s_CaptureDepth > 0 || _isCapturing)
             return;
 
         _observedFramesRemaining--;
@@ -262,6 +306,9 @@ public partial class PipScreenSurface : BoxContainer
         if (targetSize.X <= 4 || targetSize.Y <= 4)
             return false;
 
+        if (!CanCapture(control, _deviceGuid))
+            return false;
+
         var clampedSize = Vector2i.ComponentMin(
             Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
             new Vector2i(1024, 1024));
@@ -270,19 +317,34 @@ public partial class PipScreenSurface : BoxContainer
         if (_writeTarget == null)
             return false;
 
+        var captureGuid = _deviceGuid;
+        var addedControl = s_ActiveCaptureControls.Add(control);
+        var addedGuid = !string.IsNullOrEmpty(captureGuid) && s_ActiveCaptureGuids.Add(captureGuid);
+        var prevModulate = renderHandle.DrawingHandleScreen.Modulate;
+        var prevTransform = renderHandle.DrawingHandleScreen.GetTransform();
+
+        _isCapturing = true;
         s_CaptureDepth++;
         try
         {
             renderHandle.RenderInRenderTarget(_writeTarget, () =>
             {
                 renderHandle.SetScissor(null);
+                renderHandle.DrawingHandleScreen.Modulate = Color.White;
                 renderHandle.DrawingHandleScreen.SetTransform(Matrix3x2.Identity);
                 UserInterfaceManager.RenderControl(renderHandle, control, Vector2i.Zero);
             }, Color.FromHex("#070B12"));
         }
         finally
         {
+            renderHandle.DrawingHandleScreen.Modulate = prevModulate;
+            renderHandle.DrawingHandleScreen.SetTransform(prevTransform);
             s_CaptureDepth--;
+            _isCapturing = false;
+            if (addedGuid && !string.IsNullOrEmpty(captureGuid))
+                s_ActiveCaptureGuids.Remove(captureGuid);
+            if (addedControl)
+                s_ActiveCaptureControls.Remove(control);
         }
 
         (_readTarget, _writeTarget) = (_writeTarget, _readTarget);

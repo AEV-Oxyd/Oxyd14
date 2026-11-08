@@ -366,6 +366,8 @@ namespace Content.Server.PDA
             pda.LastState = state;
             if (_ui.HasUi(uid, PdaUiKey.Key))
                 _ui.SetUiState(uid, PdaUiKey.Key, state);
+            if (_ui.HasUi(uid, ComputerUiKey.Key))
+                _ui.SetUiState(uid, ComputerUiKey.Key, state);
             Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteDeviceUpdated(uid);
         }
 
@@ -414,10 +416,26 @@ namespace Content.Server.PDA
 
         private void OnPdaOpen(Entity<PdaComponent> ent, ref BoundUIOpenedEvent args)
         {
-            if (!PdaUiKey.Key.Equals(args.UiKey))
+            if (!PdaUiKey.Key.Equals(args.UiKey) && !ComputerUiKey.Key.Equals(args.UiKey))
                 return;
 
             EnsurePdaInitialized(ent.Owner);
+
+            if (TryComp<CartridgeLoaderComponent>(ent.Owner, out var loader))
+            {
+                var activeProg = loader.ActiveProgram;
+                if (activeProg == null && TryComp<OxydComputerComponent>(ent.Owner, out var comp) && comp.BootProgram is { } bootProg)
+                {
+                    _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProg);
+                    activeProg = bootProg;
+                }
+
+                if (activeProg is { } prog)
+                {
+                    var readyEvt = new CartridgeUiReadyEvent((ent.Owner, loader));
+                    RaiseLocalEvent(prog, ref readyEvt);
+                }
+            }
 
             _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered ON (User: {args.Actor})");
             if (!Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenOpened(args.Actor, ent.Owner))
@@ -426,7 +444,7 @@ namespace Content.Server.PDA
 
         private void OnPdaClose(Entity<PdaComponent> ent, ref BoundUIClosedEvent args)
         {
-            if (!PdaUiKey.Key.Equals(args.UiKey))
+            if (!PdaUiKey.Key.Equals(args.UiKey) && !ComputerUiKey.Key.Equals(args.UiKey))
                 return;
 
             _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered OFF / standby (User: {args.Actor})");
@@ -595,7 +613,7 @@ namespace Content.Server.PDA
         /// <summary>
         /// Returns the currently unlocked store, if there is one.
         /// </summary>
-        private bool TryGetUnlockedStore(EntityUid uid, [NotNullWhen(true)] out EntityUid? store)
+        public bool TryGetUnlockedStore(EntityUid uid, [NotNullWhen(true)] out EntityUid? store)
         {
             store = null;
             if (!TryComp<RingerUplinkComponent>(uid, out var uplink) || !uplink.Unlocked)
