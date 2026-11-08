@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Ported from CEV-Eris modular_pda.dmi (Eris contributors)",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "pda-c"
+    },
+    {
+      "name": "pda-sup"
+    },
+    {
+      "name": "pda-ce"
+    },
+    {
+      "name": "pda-cmo"
+    },
+    {
+      "name": "pda-e"
+    },
+    {
+      "name": "pda-h"
+    },
+    {
+      "name": "pda-hop"
+    },
+    {
+      "name": "pda-hos"
+    },
+    {
+      "name": "pda-m"
+    },
+    {
+      "name": "pda-rd"
+    },
+    {
+      "name": "pda-robot"
+    },
+    {
+      "name": "pda-s"
+    },
+    {
+      "name": "pda-syn"
+    },
+    {
+      "name": "pda-nt"
+    },
+    {
+      "name": "pda-exp"
+    },
+    {
+      "name": "pda"
+    },
+    {
+      "name": "__MASK__"
+    },
+    {
+      "name": "template"
+    },
+    {
+      "name": "game"
+    },
+    {
+      "name": "command"
+    },
+    {
+      "name": "generic"
+    },
+    {
+      "name": "word"
+    },
+    {
+      "name": "uplink"
+    },
+    {
+      "name": "menu"
+    },
+    {
+      "name": "alert-green"
+    },
+    {
+      "name": "alert-red"
+    },
+    {
+      "name": "supply"
+    },
+    {
+      "name": "request"
+    },
+    {
+      "name": "warrant"
+    },
+    {
+      "name": "bsod"
+    },
+    {
+      "name": "cameras"
+    },
+    {
+      "name": "standby"
+    },
+    {
+      "name": "pda-neo"
+    },
+    {
+      "name": "pda-club"
+    },
+    {
+      "name": "uplink_blue"
+    },
+    {
+      "name": "uplink_green"
+    },
+    {
+      "name": "pda-clown"
+    },
+    {
+      "name": "inhand-left"
+    },
+    {
+      "name": "inhand-right"
+    },
+    {
+      "name": "light_overlay"
+    },
+    {
+      "name": "id_overlay"
+    }
+  ]
+}

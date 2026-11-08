@@ -1,0 +1,11 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-processor-window-title'}"
+               MinSize="560 440"
+               SetSize="600 500">
+    <!-- Eris NanoUI dark skin: flat #272727 body, content built in code-behind. -->
+    <PanelContainer Name="Body" VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Name="Content" Orientation="Vertical" Margin="8" SeparationOverride="6"
+                      VerticalExpand="True" HorizontalExpand="True"/>
+    </PanelContainer>
+</controls:FancyWindow>

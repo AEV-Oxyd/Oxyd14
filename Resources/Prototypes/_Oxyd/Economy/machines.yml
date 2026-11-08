@@ -1,0 +1,245 @@
+# Eris economy machines — ATM / cash register / EFTPOS / tip jar
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAtm
+  name: ATM
+  description: NanoTrasen banking terminal. Insert your ID credentials and Credit stacks.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: transfer
+  - type: OxydAtm
+  - type: ActivatableUI
+    key: enum.OxydAtmUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAtmUiKey.Key:
+        type: OxydAtmBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 50
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: BaseItem
+  id: OxydCashRegister
+  name: cash register
+  description: Club till. Open the drawer, drop Credits, then bank the till.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/briefcase.rsi
+    state: briefcase_black
+  - type: Item
+    size: Normal
+  - type: OxydCashRegister
+    departmentId: Service
+
+- type: entity
+  parent: BaseItem
+  id: OxydEftpos
+  name: EFTPOS
+  description: Portable charge terminal. Activate to set amount, swipe Credits or ID to pay.
+  components:
+  - type: Sprite
+    sprite: Objects/Devices/station_map.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: OxydEftpos
+    departmentId: Service
+
+- type: entity
+  parent: BaseItem
+  id: OxydTipJar
+  name: tip jar
+  description: Drop Credits for good service. Empty with an empty hand.
+  components:
+  - type: Sprite
+    sprite: Objects/Consumable/Drinks/glass.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: OxydTipJar
+
+- type: entity
+  parent: BaseItem
+  id: OxydEwallet
+  name: charge card
+  description: A prepaid charge card.
+  components:
+  - type: Sprite
+    sprite: Objects/Economy/cash.rsi
+    state: cash_100
+  - type: Item
+    size: Tiny
+  - type: OxydEwallet
+    worth: 500
+
+# Example Club vendor that charges buyers and credits Service.
+- type: entity
+  parent: VendingMachineCoffee
+  id: OxydVendingClubSnacks
+  name: Club SnackMate
+  description: Overpriced snacks for the dance floor. Sales go to the Club/Service account.
+  suffix: Paid / Service earnings
+  components:
+  - type: OxydVendorEarnings
+    departmentId: Service
+    defaultPrice: 25
+    requirePayment: true
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAccountsDb
+  name: accounts uplink terminal
+  description: HoP banking console. List, create, suspend, and adjust Oxyd money accounts.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: allocate
+  - type: OxydAccountsDb
+  - type: ActivatableUI
+    key: enum.OxydAccountsDbUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: ActivatableUIRequiresAccess
+  - type: AccessReader
+    access: [["HeadOfPersonnel"], ["Captain"]]
+  - type: UserInterface
+    interfaces:
+      enum.OxydAccountsDbUiKey.Key:
+        type: OxydAccountsDbBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+# Debug / map spawn — no AccessReader so anyone can open (Toolshed economy:place accountsdb)
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydAccountsDbOpen
+  name: accounts uplink terminal
+  suffix: Open access
+  description: HoP banking console (open access for QA).
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: allocate
+  - type: OxydAccountsDb
+  - type: ActivatableUI
+    key: enum.OxydAccountsDbUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydAccountsDbUiKey.Key:
+        type: OxydAccountsDbBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 100
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydArtistBench
+  name: artist's bench
+  description: Insert wood, steel, glass, plasteel, plastic and a bit of your soul to create a beautiful work of art.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/autolathe.rsi
+    layers:
+    - state: icon
+    - state: inserting
+      map: ["enum.MaterialStorageVisualLayers.Inserting"]
+  - type: OxydArtistBench
+  - type: MaterialStorage
+    whitelist:
+      tags:
+      - Sheet
+      - RawMaterial
+      - Ingot
+    materialWhiteList:
+    - Wood
+    - Steel
+    - Glass
+    - Plasteel
+    - Plastic
+  - type: ItemSlots
+    slots:
+      oddity_slot:
+        name: Inspiration oddity
+        whitelist:
+          components:
+          - Oddity
+        insertOnInteract: true
+  - type: ContainerContainer
+    containers:
+      oddity_slot: !type:ContainerSlot
+  - type: ActivatableUI
+    key: enum.OxydArtistBenchUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydArtistBenchUiKey.Key:
+        type: OxydArtistBenchBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 150
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeBeaconSending
+  name: sending trade beacon
+  description: Asters export pad. Place offer goods nearby and export.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/station_teleporter.rsi
+    layers:
+    - state: base
+    - state: powered
+      shader: unshaded
+  - type: OxydTradeBeaconSending
+  - type: ActivatableUI
+    key: enum.OxydTradeBeaconUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeBeaconUiKey.Key:
+        type: OxydTradeBeaconBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 200
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable
+
+- type: entity
+  parent: [ BaseMachinePowered ]
+  id: OxydTradeBeaconReceiving
+  name: receiving trade beacon
+  description: Asters import pad. Fulfill queued trade orders here.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/computers.rsi
+    layers:
+    - state: bounty
+  - type: OxydTradeBeaconReceiving
+  - type: ActivatableUI
+    key: enum.OxydTradeBeaconUiKey.Key
+  - type: ActivatableUIRequiresPower
+  - type: UserInterface
+    interfaces:
+      enum.OxydTradeBeaconUiKey.Key:
+        type: OxydTradeBeaconBoundUserInterface
+  - type: ApcPowerReceiver
+    powerLoad: 200
+  - type: Appearance
+  - type: InteractionOutline
+  - type: Clickable

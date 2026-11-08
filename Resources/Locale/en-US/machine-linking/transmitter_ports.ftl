@@ -78,3 +78,9 @@ signal-port-description-power-discharging = This port is invoked with HIGH when 
 
 signal-port-name-item-detected = Detected
 signal-port-description-item-detected = This port is invoked whenever the transmitter detects an item.
+
+signal-port-name-oxyd-rd-console = R&D console
+signal-port-description-oxyd-rd-console = Research console output port for linked analyzers and fabrication devices.
+
+signal-port-name-oxyd-op-computer = Operating computer
+signal-port-description-oxyd-op-computer = Operating computer output port for linked operating tables.

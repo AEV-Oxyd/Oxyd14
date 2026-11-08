@@ -1,0 +1,51 @@
+# Eris MedicalSideEffects.dm: chem-triggered side effects on organic mobs.
+- type: oxydSideEffect
+  id: Headache
+  triggers:
+    Cryoxadone: 10
+    Bicaridine: 15
+    Tricordrazine: 15
+    OxydStimCherryDrops: 35
+  cures: [ OxydMedAlkysine, OxydMedTramadol, OxydMedParacetamol, OxydMedOxycodone ]
+  cureMessage: oxyd-sideeffect-headache-cure
+  painMessages:
+  - oxyd-sideeffect-headache-1
+  - oxyd-sideeffect-headache-2
+  - oxyd-sideeffect-headache-3
+
+- type: oxydSideEffect
+  id: BadStomach
+  triggers:
+    Kelotane: 30
+    Dermaline: 15
+  cures: [ Dylovene ]
+  cureMessage: oxyd-sideeffect-stomach-cure
+  painMessages:
+  - oxyd-sideeffect-stomach-1
+  - oxyd-sideeffect-stomach-2
+  - oxyd-sideeffect-stomach-3
+
+- type: oxydSideEffect
+  id: Cramps
+  triggers:
+    Dylovene: 30
+    OxydMedTramadol: 15
+  cures: [ Inaprovaline ]
+  cureMessage: oxyd-sideeffect-cramps-cure
+  painMessages:
+  - oxyd-sideeffect-cramps-1
+  - oxyd-sideeffect-cramps-2
+  - oxyd-sideeffect-cramps-3
+  severeEmote: oxyd-sideeffect-cramps-emote
+
+- type: oxydSideEffect
+  id: Itch
+  triggers:
+    SpaceDrugs: 10
+  cures: [ Inaprovaline ]
+  cureMessage: oxyd-sideeffect-itch-cure
+  painMessages:
+  - oxyd-sideeffect-itch-1
+  - oxyd-sideeffect-itch-2
+  - oxyd-sideeffect-itch-3
+  severeEmote: oxyd-sideeffect-itch-emote

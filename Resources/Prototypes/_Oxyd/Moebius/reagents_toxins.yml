@@ -1,0 +1,454 @@
+# Eris toxins (code/modules/reagents/reagents/toxins.dm + roach blattedin). Native chems cover
+# toxin, amatoxin, carpotoxin, plasma, chlorine, fertilizer trio, plantbgone, pacid, lexorin,
+# mutagen, mold, chloralhydrate, slimejelly (Slime), sagent/N2O (NitrousOxide), oil,
+# stoxin/soporific (ChloralHydrate per the divergence map). These are the Eris-unique entries.
+# "Poison" damage type is Eris toxin; "Cellular" covers organ/genetic damage.
+# Roach/spider venoms are harvested in Eris (no chem recipe); their stat buffs map to Stim.
+
+- type: reagent
+  id: OxydToxPlasticide
+  name: oxyd-reagent-plasticide
+  desc: oxyd-reagent-plasticide-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: bitter
+  color: "#CF3600"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 4
+
+- type: reagent
+  id: OxydToxCyanide
+  name: oxyd-reagent-cyanide
+  desc: oxyd-reagent-cyanide-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#CF3600"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.015
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 1.5
+            Asphyxiation: 1
+            Cellular: 0.5
+      - !type:ModifyStatusEffect
+        effectProto: StatusEffectSeeingRainbow
+        time: 10
+        probability: 0.2
+      - !type:Vomit
+        probability: 0.1
+
+- type: reagent
+  id: OxydToxPotassiumChloride
+  name: oxyd-reagent-potassium-chloride
+  desc: oxyd-reagent-potassium-chloride-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-nondescript
+  flavor: bitter
+  color: "#FFFFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydToxPotassiumChloride
+          min: 30
+        damage:
+          types:
+            Asphyxiation: 2
+      - !type:ModifyKnockdown
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydToxPotassiumChloride
+          min: 30
+        drop: true
+        time: 5
+
+- type: reagent
+  id: OxydToxPotassiumChlorophoride
+  name: oxyd-reagent-potassium-chlorophoride
+  desc: oxyd-reagent-potassium-chlorophoride-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-nondescript
+  flavor: bitter
+  color: "#FFFFFF"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Asphyxiation: 1.5
+      - !type:ModifyKnockdown
+        drop: true
+        time: 5
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydToxPotassiumChlorophoride
+          min: 20
+        damage:
+          types:
+            Poison: 1
+
+- type: reagent
+  id: OxydToxZombiePowder
+  name: oxyd-reagent-zombie-powder
+  desc: oxyd-reagent-zombie-powder-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-nondescript
+  flavor: bitter
+  color: "#669900"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.3
+            Asphyxiation: 0.5
+      - !type:GenericStatusEffect
+        key: StatusEffectStunned
+        component: Stunned
+        time: 5
+      - !type:GenericStatusEffect
+        key: StatusEffectMuted
+        component: MutedStatusEffect
+        time: 10
+
+- type: reagent
+  id: OxydToxPararein
+  name: oxyd-reagent-pararein
+  desc: oxyd-reagent-pararein-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#a37d9c"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 1.5
+      - !type:Stim
+        stimId: pararein
+        skill: Vig
+        amount: -1
+      - !type:Stim
+        stimId: pararein
+        skill: Tgh
+        amount: -1
+      - !type:Stim
+        stimId: pararein
+        skill: Cog
+        amount: 3
+      - !type:ChemSanity
+        amount: -1
+      - !type:Nsa
+        value: 1
+
+- type: reagent
+  id: OxydToxAranecolmin
+  name: oxyd-reagent-aranecolmin
+  desc: oxyd-reagent-aranecolmin-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#acc107"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.03
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Analgesic
+        effectProto: OxydAnalgesicAranecolmin
+        strength: 15
+      - !type:Nsa
+        value: 0.5
+
+- type: reagent
+  id: OxydToxDiplopterum
+  name: oxyd-reagent-diplopterum
+  desc: oxyd-reagent-diplopterum-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#c9bed2"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Stim
+        stimId: diplopterum
+        skill: Mec
+        amount: 1
+      - !type:Nsa
+        value: 0.5
+      - !type:Addictive
+        reagent: OxydToxDiplopterum
+        threshold: 15
+        addictionChance: 0.1
+
+- type: reagent
+  id: OxydToxSeligitillin
+  name: oxyd-reagent-seligitillin
+  desc: oxyd-reagent-seligitillin-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#6d33b4"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:ModifyBleed
+        amount: -0.25
+      - !type:HealOrganDamage
+        amount: 0.25
+      - !type:Nsa
+        value: 0.5
+      - !type:Addictive
+        reagent: OxydToxSeligitillin
+        threshold: 10
+        addictionChance: 0.1
+
+- type: reagent
+  id: OxydToxStarkellin
+  name: oxyd-reagent-starkellin
+  desc: oxyd-reagent-starkellin-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#736bbe"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Stim
+        stimId: starkellin
+        skill: Tgh
+        amount: 1
+      - !type:Nsa
+        value: 0.5
+      - !type:Addictive
+        reagent: OxydToxStarkellin
+        threshold: 10
+        addictionChance: 0.15
+
+- type: reagent
+  id: OxydToxGewaltine
+  name: oxyd-reagent-gewaltine
+  desc: oxyd-reagent-gewaltine-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#9452ba"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Stim
+        stimId: gewaltine
+        skill: Rob
+        amount: 1
+      - !type:Stim
+        stimId: gewaltine
+        skill: Tgh
+        amount: -1
+      - !type:Nsa
+        value: 0.5
+      - !type:Addictive
+        reagent: OxydToxGewaltine
+        threshold: 10
+        addictionChance: 0.2
+
+- type: reagent
+  id: OxydToxFuhrerole
+  name: oxyd-reagent-fuhrerole
+  desc: oxyd-reagent-fuhrerole-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#a6b85b"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Stim
+        stimId: fuhrerole
+        skill: Vig
+        amount: 3
+      - !type:Nsa
+        value: 0.5
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydToxFuhrerole
+          min: 8
+        damage:
+          types:
+            Cellular: 0.5
+      - !type:Addictive
+        reagent: OxydToxFuhrerole
+        threshold: 5
+        addictionChance: 0.3
+
+- type: reagent
+  id: OxydToxKaiseraurum
+  name: oxyd-reagent-kaiseraurum
+  desc: oxyd-reagent-kaiseraurum-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: bitter
+  color: "#030f08"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.75
+      - !type:Stim
+        stimId: kaiseraurum
+        skill: Vig
+        amount: 3
+      - !type:Stim
+        stimId: kaiseraurum
+        skill: Tgh
+        amount: 1
+      - !type:Stim
+        stimId: kaiseraurum
+        skill: Rob
+        amount: 1
+      - !type:Nsa
+        value: 5
+      - !type:HealthChange
+        conditions:
+        - !type:ReagentCondition
+          reagent: OxydToxKaiseraurum
+          min: 6
+        damage:
+          types:
+            Poison: 2
+            Cellular: 0.5
+      - !type:Addictive
+        reagent: OxydToxKaiseraurum
+        threshold: 8
+        addictionChance: 0.5
+
+- type: reagent
+  id: OxydToxBiomatter
+  name: oxyd-reagent-biomatter
+  desc: oxyd-reagent-biomatter-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: bitter
+  color: "#527f4f"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.2
+            Cellular: 0.2
+    Digestion:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.2
+      - !type:Vomit
+        probability: 0.05
+
+- type: reagent
+  id: OxydToxTar
+  name: oxyd-reagent-tar
+  desc: oxyd-reagent-tar-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: bitter
+  color: "#140b30"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 3
+
+- type: reagent
+  id: OxydToxXenomicrobes
+  name: oxyd-reagent-xenomicrobes
+  desc: oxyd-reagent-xenomicrobes-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-translucent
+  flavor: bitter
+  color: "#535E66"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.02
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 0.5
+
+- type: reagent
+  id: OxydToxBlattedin
+  name: oxyd-reagent-blattedin
+  desc: oxyd-reagent-blattedin-desc
+  group: Toxins
+  physicalDesc: reagent-physical-desc-opaque
+  flavor: bitter
+  color: "#0F4800"
+  metabolisms:
+    Bloodstream:
+      metabolismRate: 0.01
+      effects:
+      - !type:HealthChange
+        damage:
+          types:
+            Poison: 4

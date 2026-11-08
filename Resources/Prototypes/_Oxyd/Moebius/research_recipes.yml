@@ -1,0 +1,419 @@
+# Eris /datum/design/research subset -> Oxyd lathe recipes.
+# Result entities are existing fork protos (cells, boards, robot parts) or Oxyd items.
+# Machine routing mirrors Eris build_type: PROTOLATHE / IMPRINTER / MECHFAB.
+- type: latheRecipe
+  id: OxydRdAdvanced
+  name: oxyd-recipe-item-computer-part-portabledrive-advanced
+  result: OxydResearchDataDisk
+  completetime: 6
+  materials:
+    Steel: 100
+    Glass: 80
+  categories:
+  - Research
+- type: latheRecipe
+  id: OxydRdAirManagement
+  name: oxyd-recipe-circuit-air-management
+  result: AtmosMonitoringComputerCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdAtmosalerts
+  name: oxyd-recipe-circuit-atmosalerts
+  result: AlertsComputerCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdAutolathe
+  name: oxyd-recipe-circuit-autolathe
+  result: AutolatheMachineCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdBasic
+  name: oxyd-recipe-item-computer-part-portabledrive-basic
+  result: OxydResearchDataDisk
+  completetime: 6
+  materials:
+    Steel: 100
+    Glass: 80
+  categories:
+  - Research
+- type: latheRecipe
+  id: OxydRdBasicSensor
+  name: oxyd-recipe-item-part-basic-sensor
+  result: ProximitySensor
+  completetime: 6
+  materials:
+    Steel: 60
+    Glass: 60
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdBiogenerator
+  name: oxyd-recipe-circuit-biogenerator
+  result: BiogeneratorMachineCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdCircuitImprinter
+  name: oxyd-recipe-circuit-circuit-imprinter
+  result: OxydCircuitImprinterBoard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdDestructiveAnalyzer
+  name: oxyd-recipe-circuit-destructive-analyzer
+  result: OxydDestructiveAnalyzerBoard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdExoskeleton
+  name: oxyd-recipe-item-mechfab-robot-exoskeleton
+  result: CyborgEndoskeleton
+  completetime: 6
+  materials:
+    Steel: 1500
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdGps
+  name: oxyd-recipe-item-gps
+  result: HandheldGPSBasic
+  completetime: 6
+  materials:
+    Steel: 120
+    Glass: 40
+  categories:
+  - Tools
+- type: latheRecipe
+  id: OxydRdHead
+  name: oxyd-recipe-item-mechfab-robot-head
+  result: LightHeadBorg
+  completetime: 6
+  materials:
+    Steel: 300
+    Glass: 150
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdHigh
+  name: oxyd-recipe-item-powercell-large-high
+  result: PowerCellHighPrinted
+  completetime: 6
+  materials:
+    Steel: 400
+    Glass: 200
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdHyper
+  name: oxyd-recipe-item-powercell-large-hyper
+  result: PowerCellHighPrinted
+  completetime: 6
+  materials:
+    Steel: 400
+    Glass: 200
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdLArm
+  name: oxyd-recipe-item-mechfab-robot-l-arm
+  result: LeftArmBorg
+  completetime: 6
+  materials:
+    Steel: 250
+    Glass: 100
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdLLeg
+  name: oxyd-recipe-item-mechfab-robot-l-leg
+  result: LeftLegBorg
+  completetime: 6
+  materials:
+    Steel: 250
+    Glass: 100
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdMechRecharger
+  name: oxyd-recipe-circuit-mech-recharger
+  result: BorgChargerCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdMechfab
+  name: oxyd-recipe-circuit-mechfab
+  result: OxydMechfabBoard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdMesons
+  name: oxyd-recipe-item-mesons
+  result: ClothingEyesGlassesMeson
+  completetime: 6
+  materials:
+    Steel: 100
+    Glass: 120
+  categories:
+  - Tools
+- type: latheRecipe
+  id: OxydRdMicroMani
+  name: oxyd-recipe-item-part-micro-mani
+  result: MicroManipulatorStockPart
+  completetime: 6
+  materials:
+    Steel: 80
+    Glass: 40
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdMmi
+  name: oxyd-recipe-item-mmi
+  result: MMI
+  completetime: 6
+  materials:
+    Steel: 500
+    Glass: 300
+  categories:
+  - Tools
+- type: latheRecipe
+  id: OxydRdNormal
+  name: oxyd-recipe-item-computer-part-portabledrive-normal
+  result: OxydResearchDataDisk
+  completetime: 6
+  materials:
+    Steel: 100
+    Glass: 80
+  categories:
+  - Research
+- type: latheRecipe
+  id: OxydRdNuclear
+  name: oxyd-recipe-item-powercell-large-nuclear
+  result: PowerCellSmallNuclear
+  completetime: 6
+  materials:
+    Steel: 300
+    Glass: 150
+    Uranium: 200
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdPosibrain
+  name: oxyd-recipe-item-mechfab-posibrain
+  result: PositronicBrain
+  completetime: 6
+  materials:
+    Steel: 400
+    Glass: 400
+    Gold: 200
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdPowermonitor
+  name: oxyd-recipe-circuit-powermonitor
+  result: PowerComputerCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdProtolathe
+  name: oxyd-recipe-circuit-protolathe
+  result: OxydProtolatheBoard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdRArm
+  name: oxyd-recipe-item-mechfab-robot-r-arm
+  result: RightArmBorg
+  completetime: 6
+  materials:
+    Steel: 250
+    Glass: 100
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRLeg
+  name: oxyd-recipe-item-mechfab-robot-r-leg
+  result: RightLegBorg
+  completetime: 6
+  materials:
+    Steel: 250
+    Glass: 100
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRdconsole
+  name: oxyd-recipe-circuit-rdconsole
+  result: OxydRdConsoleCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdRechargeStation
+  name: oxyd-recipe-circuit-recharge-station
+  result: BorgChargerCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdScienceTool
+  name: oxyd-recipe-item-science-tool
+  result: OxydScienceTool
+  completetime: 6
+  materials:
+    Steel: 150
+    Glass: 100
+  categories:
+  - Tools
+- type: latheRecipe
+  id: OxydRdSuper
+  name: oxyd-recipe-item-powercell-large-super
+  result: PowerCellHighPrinted
+  completetime: 6
+  materials:
+    Steel: 400
+    Glass: 200
+  categories:
+  - Parts
+- type: latheRecipe
+  id: OxydRdTeleconsole
+  name: oxyd-recipe-circuit-teleconsole
+  result: StationTeleporterMachineCircuitboard
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdTorso
+  name: oxyd-recipe-item-mechfab-robot-torso
+  result: TorsoBorg
+  completetime: 6
+  materials:
+    Steel: 750
+    Glass: 250
+  categories:
+  - Robotics
+# Eris mechs2 designs -> stock Ripley APLU construction chain (harness +
+# limbs assemble via PartAssembly + the Ripley construction graph).
+- type: latheRecipe
+  id: OxydRdRipleyHarness
+  name: oxyd-recipe-item-mechfab-ripley-harness
+  result: RipleyHarness
+  completetime: 10
+  materials:
+    Steel: 1500
+    Glass: 1200
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyLArm
+  name: oxyd-recipe-item-mechfab-ripley-l-arm
+  result: RipleyLArm
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyRArm
+  name: oxyd-recipe-item-mechfab-ripley-r-arm
+  result: RipleyRArm
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyLLeg
+  name: oxyd-recipe-item-mechfab-ripley-l-leg
+  result: RipleyLLeg
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+- type: latheRecipe
+  id: OxydRdRipleyRLeg
+  name: oxyd-recipe-item-mechfab-ripley-r-leg
+  result: RipleyRLeg
+  completetime: 8
+  materials:
+    Steel: 1000
+    Glass: 750
+  categories:
+  - Robotics
+# Eris exosuit circuit designs -> stock mech control modules (imprinter side).
+- type: latheRecipe
+  id: OxydRdRipleyCentral
+  name: oxyd-recipe-circuit-ripley-central
+  result: RipleyCentralElectronics
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+    Gold: 100
+  categories:
+  - Circuitry
+- type: latheRecipe
+  id: OxydRdRipleyPeripherals
+  name: oxyd-recipe-circuit-ripley-peripherals
+  result: RipleyPeripheralsElectronics
+  completetime: 6
+  materials:
+    Steel: 200
+    Glass: 200
+    Gold: 50
+  categories:
+  - Circuitry

@@ -1,0 +1,51 @@
+{
+ "version": 1,
+ "license": "CC-BY-SA-3.0",
+ "copyright": "CEV Eris",
+ "size": {
+  "x": 32,
+  "y": 32
+ },
+ "states": [
+  {
+   "name": "console",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "console_off",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "console_broken",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "pulsar_tank",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  },
+  {
+   "name": "pulsar_tank_burst",
+   "delays": [
+    [
+     0.2
+    ]
+   ]
+  }
+ ]
+}

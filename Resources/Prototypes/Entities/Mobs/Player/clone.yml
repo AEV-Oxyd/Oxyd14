@@ -16,6 +16,7 @@
 - type: cloningSettings
   id: TraitsPhysical
   components:
+  - AtheistMutation
   - BlackAndWhiteOverlay
   - Narcolepsy
   - ImpairedMobility

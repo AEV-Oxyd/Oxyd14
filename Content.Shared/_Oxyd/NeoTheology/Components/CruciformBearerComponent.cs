@@ -1,0 +1,33 @@
+using Robust.Shared.GameStates;
+
+namespace Content.Shared._Oxyd.NeoTheology.Components;
+
+/// <summary>
+/// Relationship component installed on the current body of a real cruciform.
+/// The server verifies that <see cref="Cruciform"/> is an actual contained implant
+/// before accepting any authority-bearing operation.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class CruciformBearerComponent : Component
+{
+    [ViewVariables, AutoNetworkedField]
+    public EntityUid? Cruciform;
+
+    [ViewVariables, AutoNetworkedField]
+    public uint UiRevision;
+
+    /// <summary>
+    /// Server-only personal cooldown deadlines, keyed by stable litany key. Mutated in
+    /// <c>ApplyCooldown</c> without Dirty — deliberately not networked.
+    /// </summary>
+    [NonSerialized, ViewVariables]
+    public Dictionary<string, TimeSpan> PersonalCooldowns = new();
+
+    /// <summary>Server-only request ID for the one pending cast/choice.</summary>
+    [ViewVariables]
+    public string? PendingRequestId;
+
+    /// <summary>View range currently added by the aura upgrade, so removal subtracts the same amount.</summary>
+    [ViewVariables]
+    public float AppliedViewRange;
+}

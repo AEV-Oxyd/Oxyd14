@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV-Eris icons/obj/stack/material.dmi states sheet-biomatter, sheet-biomatter_2, sheet-biomatter_3",
+  "size": {"x": 32, "y": 32},
+  "states": [
+    {"name": "biomatter"},
+    {"name": "biomatter_2"},
+    {"name": "biomatter_3"}
+  ]
+}

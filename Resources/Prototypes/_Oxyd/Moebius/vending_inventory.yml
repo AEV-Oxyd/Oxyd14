@@ -1,0 +1,34 @@
+# Eris Moebius medical vending inventory (Eris source: machinery/vending.dm
+# medical "MiniPharma Plus"), stocked with the ported Eris medical set.
+- type: vendingMachineInventory
+  id: OxydMoebiusMedVendInventory
+  startingInventory:
+    OxydErisMedkit: 3
+    OxydErisMedkitAdvanced: 2
+    OxydErisSurgeryKit: 1
+    OxydErisHealthScanner: 4
+    OxydErisAutopsyScanner: 2
+    OxydErisMassSpectrometer: 2
+    OxydErisBruisePack: 3
+    OxydErisOintment: 3
+    OxydErisTraumaKit: 3
+    OxydErisBurnKit: 3
+    OxydErisSplint: 4
+    OxydErisNanopaste: 2
+    OxydSurgicalTray: 2
+    OxydErisOrganFreezer: 1
+    OxydErisStasisBag: 2
+    OxydErisBodyBag: 2
+    OxydErisAutoinjectorInaprovaline: 4
+    OxydErisAutoinjectorAntitoxin: 4
+    OxydErisAutoinjectorTricordrazine: 4
+    OxydErisAutoinjectorTramadol: 3
+    OxydErisAutoinjectorBicaridine: 3
+    OxydErisAutoinjectorKelotane: 3
+    OxydErisAutoinjectorDexalin: 3
+    OxydErisAutoinjectorSpaceacillin: 3
+    OxydErisHypospray: 1
+  contrabandInventory:
+    OxydErisAutoinjectorOxycodone: 2
+    OxydErisAutoinjectorHyperzine: 2
+    OxydErisAutoinjectorPolystem: 1

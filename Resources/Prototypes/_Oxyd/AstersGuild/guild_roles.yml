@@ -1,0 +1,28 @@
+# Asters Guild department + role trackers (Eris DEPARTMENT_GUILD).
+
+- type: playTimeTracker
+  id: JobOxydGuildMerchant
+
+- type: playTimeTracker
+  id: JobOxydGuildTechnician
+
+- type: playTimeTracker
+  id: JobOxydGuildMiner
+
+- type: department
+  id: AstersGuild
+  name: department-AstersGuild
+  description: department-AstersGuild-description
+  color: "#C8A032"
+  weight: 30
+  roles:
+  - OxydGuildMerchant
+  - OxydGuildTechnician
+  - OxydGuildMiner
+
+- type: jobWeight
+  id: AstersGuild
+  weights:
+    OxydGuildMerchant: 5
+    OxydGuildTechnician: 20
+    OxydGuildMiner: 15

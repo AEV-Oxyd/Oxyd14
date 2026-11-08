@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "size": {
+    "x": 32,
+    "y": 48
+  },
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV-Eris contributors; static state extracted from icons/obj/eotp.dmi at 5f7847f26. https://github.com/discordia-space/CEV-Eris",
+  "states": [
+    {
+      "name": "Eye_of_the_Protector"
+    }
+  ]
+}

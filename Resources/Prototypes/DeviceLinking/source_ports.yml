@@ -180,3 +180,15 @@
   name: signal-port-name-item-detected
   description: signal-port-description-item-detected
   defaultLinks: [ Toggle, Trigger, Timer ]
+
+- type: sourcePort
+  id: OxydRdConsole
+  name: signal-port-name-oxyd-rd-console
+  description: signal-port-description-oxyd-rd-console
+  defaultLinks: [ OxydRdDevice ]
+
+- type: sourcePort
+  id: OxydOpComputer
+  name: signal-port-name-oxyd-op-computer
+  description: signal-port-description-oxyd-op-computer
+  defaultLinks: [ OxydOpTable ]

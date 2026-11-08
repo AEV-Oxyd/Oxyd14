@@ -1,0 +1,18 @@
+# Technomancer access levels (Eris code/game/jobs/access_datum.dm).
+# Eris keeps three department-internal permissions with no clean SS14 mapping:
+# the shared Technomancer League corporate access, the engineering equipment
+# rooms (engine_equip/tech_storage/construction), and the Exultant's own
+# head-of-department channel (access_ce). Everything else maps onto stock
+# Engineering/Atmospherics/External/Maintenance/Command/ChiefEngineer.
+
+- type: accessLevel
+  id: OxydTechnomancer
+  name: oxyd-access-technomancer
+
+- type: accessLevel
+  id: OxydTechnomancerEquipment
+  name: oxyd-access-technomancer-equipment
+
+- type: accessLevel
+  id: OxydTechnomancerExultant
+  name: oxyd-access-technomancer-exultant

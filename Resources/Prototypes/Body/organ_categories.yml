@@ -1,32 +1,42 @@
 - type: organCategory
   id: Torso
+  external: true
 
 - type: organCategory
   id: Head
+  external: true
 
 - type: organCategory
   id: ArmLeft
+  external: true
 
 - type: organCategory
   id: ArmRight
+  external: true
 
 - type: organCategory
   id: HandRight
+  external: true
 
 - type: organCategory
   id: HandLeft
+  external: true
 
 - type: organCategory
   id: LegLeft
+  external: true
 
 - type: organCategory
   id: LegRight
+  external: true
 
 - type: organCategory
   id: FootLeft
+  external: true
 
 - type: organCategory
   id: FootRight
+  external: true
 
 - type: organCategory
   id: Brain
