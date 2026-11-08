@@ -65,6 +65,9 @@ namespace Content.Shared.PDA
         public BoundUserInterfaceState? ActiveCartridgeState;
 
         [ViewVariables]
+        public Content.Shared._Oxyd.Computers.OsUiState? OsUiState;
+
+        [ViewVariables]
         public PdaUpdateState? LastState;
     }
 }

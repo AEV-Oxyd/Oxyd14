@@ -32,6 +32,9 @@ public sealed partial class OxydComputerComponent : Component
     public ComputerUiTemplate Template = ComputerUiTemplate.Desktop;
 
     [DataField, AutoNetworkedField]
+    public List<EntityUid> OpenPrograms = new();
+
+    [DataField, AutoNetworkedField]
     public Vector2 DefaultScreenSize = new(680f, 520f);
 
     [DataField, AutoNetworkedField]
@@ -221,6 +224,15 @@ public sealed class OsUiState : BoundUserInterfaceState
     public bool CanPlayMusic;
     public bool HasUplink;
 
+    public bool FlashlightEnabled;
+    public bool HasFlashlight;
+    public bool HasPen;
+    public bool HasPai;
+    public bool HasDisk;
+    public string? DiskName;
+    public bool HasId;
+    public NetEntity? ActiveProgram;
+
     public OsUiState(
         string deviceGuid,
         ComputerUiTemplate template,
@@ -243,7 +255,15 @@ public sealed class OsUiState : BoundUserInterfaceState
         string? sshPassword = null,
         bool hasCaptainAccess = false,
         bool canPlayMusic = false,
-        bool hasUplink = false)
+        bool hasUplink = false,
+        bool flashlightEnabled = false,
+        bool hasFlashlight = false,
+        bool hasPen = false,
+        bool hasPai = false,
+        bool hasDisk = false,
+        string? diskName = null,
+        bool hasId = false,
+        NetEntity? activeProgram = null)
     {
         DeviceGuid = deviceGuid;
         Template = template;
@@ -267,6 +287,14 @@ public sealed class OsUiState : BoundUserInterfaceState
         HasCaptainAccess = hasCaptainAccess;
         CanPlayMusic = canPlayMusic;
         HasUplink = hasUplink;
+        FlashlightEnabled = flashlightEnabled;
+        HasFlashlight = hasFlashlight;
+        HasPen = hasPen;
+        HasPai = hasPai;
+        HasDisk = hasDisk;
+        DiskName = diskName;
+        HasId = hasId;
+        ActiveProgram = activeProgram;
     }
 }
 
@@ -284,7 +312,13 @@ public enum OsUiAction : byte
     ShowRingtone,
     ShowMusic,
     ShowUplink,
-    LockUplink
+    LockUplink,
+    ToggleFlashlight,
+    EjectId,
+    EjectPen,
+    EjectPai,
+    EjectDisk,
+    PowerOff
 }
 
 [Serializable, NetSerializable]

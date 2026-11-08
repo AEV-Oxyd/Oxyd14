@@ -1,11 +1,14 @@
 using System.Linq;
 using System.Numerics;
 using Content.Client.Message;
+using Content.Client.UserInterface.StateRouting;
 using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.Fragments;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared.AlertLevel;
+using Content.Client.PDA;
 using Content.Shared.CartridgeLoader;
+using Content.Shared.PDA;
 using Content.Shared.GameTicking;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
@@ -33,7 +36,9 @@ public enum OsFragmentView
     Home,
     Programs,
     Settings,
-    Shell
+    Hardware,
+    Shell,
+    ProgramContent
 }
 // ============================================================================
 // 1. OS Cartridge UI (System Settings, App Launcher, Hardware & DeviceLink)
@@ -59,7 +64,61 @@ public sealed partial class OsUi : UIFragment
     public void SetView(OsFragmentView view) => _fragment?.SetView(view);
 }
 
-public sealed class OsUiFragment : BoxContainer
+public sealed class PdaCloseTabButton : ContentContainerButton
+{
+    private readonly PanelContainer _panel = new();
+    private readonly Label _label = new()
+    {
+        Text = "\u2715",
+        FontColorOverride = Color.FromHex("#8a8a8a"),
+        HorizontalAlignment = HAlignment.Center,
+        VerticalAlignment = VAlignment.Center,
+        Margin = new Thickness(0, 0, 0, 2)
+    };
+    private readonly StyleBoxFlat _styleBox = new()
+    {
+        BackgroundColor = Color.FromHex("#202023"),
+        BorderColor = Color.FromHex("#5a5a5a"),
+        BorderThickness = new Thickness(0, 0, 0, 2)
+    };
+
+    private bool _isCurrent;
+
+    public bool IsCurrent
+    {
+        get => _isCurrent;
+        set
+        {
+            _isCurrent = value;
+            _styleBox.BackgroundColor = Color.FromHex(value ? "#2b2b30" : "#202023");
+            _styleBox.BorderThickness = value ? new Thickness(0, 0, 2, 0) : new Thickness(0, 0, 0, 2);
+            _label.FontColorOverride = Color.FromHex(value ? "#cfcfd4" : "#8a8a8a");
+        }
+    }
+
+    public PdaCloseTabButton()
+    {
+        SetWidth = 20;
+        MinHeight = 32;
+        _panel.PanelOverride = _styleBox;
+        AddChild(_panel);
+        AddChild(_label);
+
+        OnMouseEntered += _ =>
+        {
+            _label.FontColorOverride = Color.FromHex("#ff5555");
+            _styleBox.BackgroundColor = Color.FromHex("#3a2023");
+        };
+
+        OnMouseExited += _ =>
+        {
+            _label.FontColorOverride = Color.FromHex(_isCurrent ? "#cfcfd4" : "#8a8a8a");
+            _styleBox.BackgroundColor = Color.FromHex(_isCurrent ? "#2b2b30" : "#202023");
+        };
+    }
+}
+
+public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 {
     [Dependency] private readonly IClipboardManager _clipboard = default!;
     [Dependency] private readonly IGameTiming _gameTiming = default!;
@@ -85,38 +144,61 @@ public sealed class OsUiFragment : BoxContainer
     private readonly Action<OsUiMessageEvent> _send;
 
     private OsFragmentView _activeView = OsFragmentView.Home;
-    private readonly Button _navHomeBtn;
-    private readonly Button _navProgramsBtn;
-    private readonly Button _navSettingsBtn;
-    private readonly Button _navShellBtn;
+    private OsUiState? _lastState;
+    private bool _showHardware;
+    private Control? _activeProgramControl;
+    private string? _activeProgramTitle;
+    private NetEntity? _activeProgramUid;
+    private readonly BoxContainer _runningTabsContainer = new() { Orientation = LayoutOrientation.Horizontal };
+    private readonly BoxContainer _programContainer = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Visible = false };
 
-    private readonly BoxContainer _homeView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true };
+    private readonly PdaNavigationButton _navHomeBtn = new() { SetWidth = 32, CurrentTabBorderThickness = new Thickness(0, 0, 2, 0), IsCurrent = true };
+    private readonly PdaNavigationButton _navProgramsBtn = new() { MinWidth = 75 };
+    private readonly PdaNavigationButton _navSettingsBtn = new() { MinWidth = 75 };
+    private readonly PdaNavigationButton _navShellBtn = new() { MinWidth = 75, CurrentTabBorderThickness = new Thickness(2, 0, 0, 0) };
+    private readonly PdaNavigationButton _navHardwareBtn = new() { MinWidth = 75, LabelText = "Hardware", CurrentTabBorderThickness = new Thickness(2, 0, 0, 0) };
+    private readonly PdaCloseTabButton _closeHardwareBtn = new() { ToolTip = "Close Hardware tab" };
+    private readonly PdaCloseTabButton _closeShellBtn = new() { ToolTip = "Close Terminal tab" };
+    private readonly BoxContainer _hardwareTabBox = new() { Orientation = LayoutOrientation.Horizontal, Visible = false, Margin = new Thickness(0) };
+    private readonly BoxContainer _shellTabBox = new() { Orientation = LayoutOrientation.Horizontal, Visible = false, Margin = new Thickness(0) };
+
+    private readonly PdaNavigationButton _hwFlashlightBtn = new() { SetWidth = 32, ActiveFgColor = "#EAEFBB", ToolTip = "Toggle Flashlight" };
+    private readonly PdaNavigationButton _hwPenBtn = new() { SetWidth = 32, ToolTip = "Eject Pen" };
+    private readonly PdaNavigationButton _hwIdBtn = new() { SetWidth = 32, ToolTip = "Eject ID Card" };
+    private readonly PdaNavigationButton _hwPaiBtn = new() { SetWidth = 32, ToolTip = "Eject pAI" };
+    private readonly PdaNavigationButton _hwDiskBtn = new() { SetWidth = 32, ToolTip = "Eject Disk" };
+    private readonly PdaNavigationButton _hwPowerBtn = new() { SetWidth = 32, ToolTip = "Power Off / Close" };
+
+    private readonly BoxContainer _homeView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8) };
     private readonly BoxContainer _programsView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true };
     private readonly BoxContainer _settingsView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true };
-    private readonly BoxContainer _shellView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true };
+    private readonly BoxContainer _shellView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8) };
+    private readonly BoxContainer _hardwareView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8), Visible = false };
 
-    private readonly Label _homeHeaderLabel = new();
-    private readonly Label _homeMetricsLabel = new() { FontColorOverride = Color.FromHex("#8a8a90") };
-    private readonly ContainerButton _homeDateBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeDateLabel = new();
-    private readonly ContainerButton _homeTimeBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeTimeLabel = new();
-    private readonly ContainerButton _homeOwnerBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeOwnerLabel = new();
-    private readonly ContainerButton _homeIdBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeIdLabel = new();
-    private readonly ContainerButton _homeStationBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeStationLabel = new();
-    private readonly ContainerButton _homeAlertBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeAlertLabel = new();
-    private readonly ContainerButton _homeAlertInstructBtn = new() { HorizontalExpand = true };
-    private readonly Label _homeAlertInstructLabel = new();
+    private readonly Label _homeHeaderLabel = new() { Visible = false };
+    private readonly Label _homeMetricsLabel = new() { FontColorOverride = Color.FromHex("#8a8a90"), Visible = false };
+    private readonly ContainerButton _homeOwnerBtn = new();
+    private readonly RichTextLabel _homeOwnerLabel = new();
+    private readonly ContainerButton _homeIdBtn = new();
+    private readonly RichTextLabel _homeIdLabel = new();
+    private readonly ContainerButton _homeStationBtn = new();
+    private readonly RichTextLabel _homeStationLabel = new();
+    private readonly ContainerButton _homeAlertBtn = new();
+    private readonly RichTextLabel _homeAlertLabel = new();
+    private readonly ContainerButton _homeDateBtn = new();
+    private readonly RichTextLabel _homeDateLabel = new();
+    private readonly ContainerButton _homeTimeBtn = new();
+    private readonly RichTextLabel _homeTimeLabel = new();
+    private readonly ContainerButton _homeAlertInstructBtn = new();
+    private readonly RichTextLabel _homeAlertInstructLabel = new();
 
-    private readonly BoxContainer _programsBox = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
+    private readonly GridContainer _programsGrid = new() { Columns = 2, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
     private readonly BoxContainer _settingsBox = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
 
     private readonly Label _shellHeaderLabel = new();
     private readonly Label _shellMetricsLabel = new();
+    private readonly Label _hardwareHeaderLabel = new();
+    private readonly Label _hardwareMetricsLabel = new();
     private readonly Button _remoteToggleBtn = new();
     private readonly Button _scanLinksBtn = new() { Text = "Scan & Link Device Ports" };
     private readonly LineEdit _cmdInput = new() { PlaceHolder = "Run computer / DeviceLink command (devlink scan, power, etc)...", HorizontalExpand = true };
@@ -143,38 +225,97 @@ public sealed class OsUiFragment : BoxContainer
         Orientation = LayoutOrientation.Vertical;
         HorizontalExpand = true;
         VerticalExpand = true;
-        Margin = new Thickness(6);
+        Margin = new Thickness(0);
 
         var navBar = new BoxContainer
         {
             Orientation = LayoutOrientation.Horizontal,
             HorizontalExpand = true,
-            Margin = new Thickness(0, 0, 0, 6)
+            MinHeight = 32,
+            Margin = new Thickness(1, 1, 3, 0)
         };
 
-        _navHomeBtn = new Button { Text = "🏠 Home", HorizontalExpand = true, SetHeight = 28 };
-        _navProgramsBtn = new Button { Text = "📱 Programs", HorizontalExpand = true, SetHeight = 28 };
-        _navSettingsBtn = new Button { Text = "⚙ Settings", HorizontalExpand = true, SetHeight = 28 };
-        _navShellBtn = new Button { Text = "💻 Terminal", HorizontalExpand = true, SetHeight = 28 };
+        _navHomeBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/home.png"));
+        _navProgramsBtn.LabelText = Loc.GetString("comp-pda-io-program-list-button");
+        _navSettingsBtn.LabelText = Loc.GetString("comp-pda-io-settings-button");
+        _navShellBtn.LabelText = "Terminal";
+        _navShellBtn.Visible = false;
+
+        _hwFlashlightBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/light.png"));
+        _hwPenBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/pencil.png"));
+        _hwIdBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/eject.png"));
+        _hwPaiBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/pai.png"));
+        _hwDiskBtn.IconTexture = new SpriteSpecifier.Rsi(new("/Textures/Oxyd/erisported/_Manual/discs.rsi"), "blue");
+        _hwPowerBtn.IconTexture = new SpriteSpecifier.Texture(new("/Textures/Interface/Nano/cross.svg.png"));
+        _hwPowerBtn.IconScale = new Vector2(0.5f, 0.5f);
 
         _navHomeBtn.OnPressed += _ => SetView(OsFragmentView.Home);
         _navProgramsBtn.OnPressed += _ => SetView(OsFragmentView.Programs);
         _navSettingsBtn.OnPressed += _ => SetView(OsFragmentView.Settings);
+
+        _hardwareTabBox.AddChild(_navHardwareBtn);
+        _hardwareTabBox.AddChild(_closeHardwareBtn);
+        _navHardwareBtn.OnPressed += _ => SetView(OsFragmentView.Hardware);
+        _closeHardwareBtn.OnPressed += _ => { _hardwareTabBox.Visible = false; SetView(OsFragmentView.Settings); };
+
+        _shellTabBox.AddChild(_navShellBtn);
+        _shellTabBox.AddChild(_closeShellBtn);
         _navShellBtn.OnPressed += _ => SetView(OsFragmentView.Shell);
+        _closeShellBtn.OnPressed += _ => { _shellTabBox.Visible = false; SetView(OsFragmentView.Home); };
+
+        _hwFlashlightBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleFlashlight));
+        _hwPenBtn.OnPressed += _ =>
+        {
+            if (_lastState?.HasPen == true)
+                _send(new OsUiMessageEvent(OsUiAction.EjectPen));
+        };
+        _hwIdBtn.OnPressed += _ =>
+        {
+            if (_lastState?.HasId == true)
+                _send(new OsUiMessageEvent(OsUiAction.EjectId));
+        };
+        _hwPaiBtn.OnPressed += _ =>
+        {
+            if (_lastState?.HasPai == true)
+                _send(new OsUiMessageEvent(OsUiAction.EjectPai));
+        };
+        _hwDiskBtn.OnPressed += _ =>
+        {
+            if (_lastState?.HasDisk == true)
+                _send(new OsUiMessageEvent(OsUiAction.EjectDisk));
+        };
+        _hwPowerBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.PowerOff));
+
+        var baselineFiller = new ContentPanelContainer
+        {
+            HorizontalExpand = true,
+            MinHeight = 32,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#202023"),
+                BorderColor = Color.FromHex("#5a5a5a"),
+                BorderThickness = new Thickness(0, 0, 0, 2)
+            }
+        };
 
         navBar.AddChild(_navHomeBtn);
         navBar.AddChild(_navProgramsBtn);
         navBar.AddChild(_navSettingsBtn);
-        navBar.AddChild(_navShellBtn);
+        navBar.AddChild(_hardwareTabBox);
+        navBar.AddChild(_shellTabBox);
+        navBar.AddChild(_runningTabsContainer);
+        navBar.AddChild(baselineFiller);
+        navBar.AddChild(_hwFlashlightBtn);
+        navBar.AddChild(_hwPenBtn);
+        navBar.AddChild(_hwIdBtn);
+        navBar.AddChild(_hwPaiBtn);
+        navBar.AddChild(_hwDiskBtn);
+        navBar.AddChild(_hwPowerBtn);
         AddChild(navBar);
 
         AddChild(_statusLabel);
 
         // Setup Home View
-        _homeDateBtn.AddChild(_homeDateLabel);
-        _homeDateBtn.OnPressed += _ => _clipboard.SetText(_cachedDate);
-        _homeTimeBtn.AddChild(_homeTimeLabel);
-        _homeTimeBtn.OnPressed += _ => _clipboard.SetText(_cachedShift);
         _homeOwnerBtn.AddChild(_homeOwnerLabel);
         _homeOwnerBtn.OnPressed += _ => _clipboard.SetText(_cachedOwner);
         _homeIdBtn.AddChild(_homeIdLabel);
@@ -183,38 +324,39 @@ public sealed class OsUiFragment : BoxContainer
         _homeStationBtn.OnPressed += _ => _clipboard.SetText(_cachedStation);
         _homeAlertBtn.AddChild(_homeAlertLabel);
         _homeAlertBtn.OnPressed += _ => _clipboard.SetText(_cachedAlert);
+        _homeDateBtn.AddChild(_homeDateLabel);
+        _homeDateBtn.OnPressed += _ => _clipboard.SetText(_cachedDate);
+        _homeTimeBtn.AddChild(_homeTimeLabel);
+        _homeTimeBtn.OnPressed += _ => _clipboard.SetText(_cachedShift);
         _homeAlertInstructBtn.AddChild(_homeAlertInstructLabel);
         _homeAlertInstructBtn.OnPressed += _ => _clipboard.SetText(_cachedAlertInstructions);
 
         _homeView.AddChild(_homeHeaderLabel);
         _homeView.AddChild(_homeMetricsLabel);
-        _homeView.AddChild(new Label { Text = "----------------------------------------", FontColorOverride = Color.FromHex("#404048"), Margin = new Thickness(0, 4) });
-        _homeView.AddChild(_homeDateBtn);
-        _homeView.AddChild(_homeTimeBtn);
         _homeView.AddChild(_homeOwnerBtn);
         _homeView.AddChild(_homeIdBtn);
         _homeView.AddChild(_homeStationBtn);
         _homeView.AddChild(_homeAlertBtn);
+        _homeView.AddChild(_homeDateBtn);
+        _homeView.AddChild(_homeTimeBtn);
         _homeView.AddChild(_homeAlertInstructBtn);
 
         // Setup Programs View
-        var progScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        progScroll.AddChild(_programsBox);
+        var progScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true, HScrollEnabled = true };
+        progScroll.AddChild(_programsGrid);
         _programsView.AddChild(progScroll);
 
         // Setup Settings View
-        var settingsScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var settingsScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true, HScrollEnabled = true };
         settingsScroll.AddChild(_settingsBox);
         _settingsView.AddChild(settingsScroll);
 
         // Setup Shell View
         var shellTopBar = new BoxContainer { Orientation = LayoutOrientation.Horizontal, HorizontalExpand = true };
         _shellHeaderLabel.HorizontalExpand = true;
+        _shellHeaderLabel.FontColorOverride = Color.LightGreen;
+        _shellHeaderLabel.Text = "=== System Terminal ===";
         shellTopBar.AddChild(_shellHeaderLabel);
-        _remoteToggleBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleRemoteControl));
-        shellTopBar.AddChild(_remoteToggleBtn);
-        _scanLinksBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ScanAndLinkDevices));
-        shellTopBar.AddChild(_scanLinksBtn);
         _shellView.AddChild(shellTopBar);
         _shellView.AddChild(_shellMetricsLabel);
 
@@ -226,22 +368,48 @@ public sealed class OsUiFragment : BoxContainer
         cmdRow.AddChild(runBtn);
         _shellView.AddChild(cmdRow);
 
-        var shellScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        var shellContent = new BoxContainer { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
-        shellContent.AddChild(new Label { Text = "=== Hardware Modules ===", FontColorOverride = Color.Cyan });
-        shellContent.AddChild(_hardwareBox);
-        shellContent.AddChild(new Label { Text = "=== Linked Device Ports ===", FontColorOverride = Color.Cyan, Margin = new Thickness(0, 6, 0, 0) });
-        shellContent.AddChild(_linksBox);
-        shellScroll.AddChild(shellContent);
-        _shellView.AddChild(shellScroll);
+        _remoteToggleBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleRemoteControl));
+        _scanLinksBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ScanAndLinkDevices));
+
+        // Setup Hardware View
+        var hwTopBar = new BoxContainer { Orientation = LayoutOrientation.Horizontal, HorizontalExpand = true };
+        _hardwareHeaderLabel.HorizontalExpand = true;
+        _hardwareHeaderLabel.FontColorOverride = Color.Cyan;
+        _hardwareHeaderLabel.Text = "=== Hardware Configuration ===";
+        hwTopBar.AddChild(_hardwareHeaderLabel);
+        hwTopBar.AddChild(_remoteToggleBtn);
+        hwTopBar.AddChild(_scanLinksBtn);
+        _hardwareView.AddChild(hwTopBar);
+        _hardwareView.AddChild(_hardwareMetricsLabel);
+
+        var hwScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var hwContent = new BoxContainer { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
+        hwContent.AddChild(new Label { Text = "=== Hardware Modules ===", FontColorOverride = Color.Cyan });
+        hwContent.AddChild(_hardwareBox);
+        hwContent.AddChild(new Label { Text = "=== Linked Device Ports ===", FontColorOverride = Color.Cyan, Margin = new Thickness(0, 6, 0, 0) });
+        hwContent.AddChild(_linksBox);
+        hwScroll.AddChild(hwContent);
+        _hardwareView.AddChild(hwScroll);
 
         AddChild(_homeView);
         AddChild(_programsView);
         AddChild(_settingsView);
+        AddChild(_hardwareView);
         AddChild(_shellView);
+        AddChild(_programContainer);
 
         SetView(OsFragmentView.Home);
         UpdateClock(force: true);
+    }
+
+    public BuiStateReceiveResult ReceiveBuiState(BoundUserInterfaceState state)
+    {
+        if (state is OsUiState osState)
+        {
+            UpdateState(osState);
+            return BuiStateReceiveResult.Consumed;
+        }
+        return BuiStateReceiveResult.Ignored;
     }
 
     public void SetView(OsFragmentView view)
@@ -250,15 +418,118 @@ public sealed class OsUiFragment : BoxContainer
         _homeView.Visible = view == OsFragmentView.Home;
         _programsView.Visible = view == OsFragmentView.Programs;
         _settingsView.Visible = view == OsFragmentView.Settings;
+        _hardwareView.Visible = view == OsFragmentView.Hardware;
         _shellView.Visible = view == OsFragmentView.Shell;
+        _programContainer.Visible = view == OsFragmentView.ProgramContent;
 
-        _navHomeBtn.ModulateSelfOverride = view == OsFragmentView.Home ? Color.Cyan : Color.White;
-        _navProgramsBtn.ModulateSelfOverride = view == OsFragmentView.Programs ? Color.Cyan : Color.White;
-        _navSettingsBtn.ModulateSelfOverride = view == OsFragmentView.Settings ? Color.Cyan : Color.White;
-        _navShellBtn.ModulateSelfOverride = view == OsFragmentView.Shell ? Color.Cyan : Color.White;
+        _navHomeBtn.IsCurrent = view == OsFragmentView.Home;
+        _navProgramsBtn.IsCurrent = view == OsFragmentView.Programs;
+        _navSettingsBtn.IsCurrent = view == OsFragmentView.Settings;
+        _navHardwareBtn.IsCurrent = view == OsFragmentView.Hardware;
+        _closeHardwareBtn.IsCurrent = view == OsFragmentView.Hardware;
+        _navShellBtn.IsCurrent = view == OsFragmentView.Shell;
+        _closeShellBtn.IsCurrent = view == OsFragmentView.Shell;
+
+        UpdateRunningTabs();
 
         if (view == OsFragmentView.Home)
             UpdateClock(force: true);
+    }
+
+    public void AttachProgram(Control programControl, string? title, NetEntity? programUid = null)
+    {
+        if (_activeProgramControl != null && _activeProgramControl != programControl)
+        {
+            _programContainer.RemoveChild(_activeProgramControl);
+        }
+
+        _activeProgramControl = programControl;
+        _activeProgramTitle = title;
+        if (programUid != null)
+            _activeProgramUid = programUid;
+
+        if (programControl.Parent != _programContainer)
+        {
+            programControl.Parent?.RemoveChild(programControl);
+            _programContainer.AddChild(programControl);
+        }
+
+        SetView(OsFragmentView.ProgramContent);
+    }
+
+    public void DetachProgram(Control programControl)
+    {
+        if (_programContainer.Children.Contains(programControl))
+        {
+            _programContainer.RemoveChild(programControl);
+        }
+
+        if (_activeProgramControl == programControl)
+        {
+            _activeProgramControl = null;
+            _activeProgramTitle = null;
+            if (_activeView == OsFragmentView.ProgramContent)
+            {
+                SetView(OsFragmentView.Programs);
+            }
+        }
+        UpdateRunningTabs();
+    }
+
+    private void UpdateRunningTabs()
+    {
+        _runningTabsContainer.RemoveAllChildren();
+        if (_lastState == null)
+            return;
+
+        var running = _lastState.Programs.Where(p => p.IsRunning && !p.IsBootProgram).ToList();
+        foreach (var prog in running)
+        {
+            var targetUid = prog.Uid;
+            var progTitle = Loc.TryGetString(prog.Name, out var locName) ? locName : prog.Name;
+
+            var tabBox = new BoxContainer
+            {
+                Orientation = LayoutOrientation.Horizontal,
+                Margin = new Thickness(0)
+            };
+
+            var isCur = _activeView == OsFragmentView.ProgramContent && _activeProgramUid == targetUid;
+            var tabBtn = new PdaNavigationButton
+            {
+                LabelText = progTitle,
+                MinWidth = 60,
+                CurrentTabBorderThickness = new Thickness(2, 0, 0, 0),
+                IsCurrent = isCur,
+                ToolTip = $"Switch to {progTitle}"
+            };
+
+            tabBtn.OnPressed += _ =>
+            {
+                if (_activeProgramUid == targetUid && _activeProgramControl != null)
+                {
+                    SetView(OsFragmentView.ProgramContent);
+                }
+                else
+                {
+                    _send(new OsUiMessageEvent(OsUiAction.LaunchProgram, targetProgram: targetUid));
+                }
+            };
+
+            var closeBtn = new PdaCloseTabButton
+            {
+                IsCurrent = isCur,
+                ToolTip = $"Close {progTitle}"
+            };
+            closeBtn.OnPressed += _ =>
+            {
+                _send(new OsUiMessageEvent(OsUiAction.CloseProgram, targetProgram: targetUid));
+            };
+
+            tabBox.AddChild(tabBtn);
+            tabBox.AddChild(closeBtn);
+            _runningTabsContainer.AddChild(tabBox);
+        }
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
@@ -271,7 +542,7 @@ public sealed class OsUiFragment : BoxContainer
     private void UpdateClock(bool force = false)
     {
         _cachedDate = $"2753-{_loreMonth:D2}-{_loreDay:D2}";
-        _homeDateLabel.Text = $"Station Date: {_cachedDate}";
+        _homeDateLabel.SetMarkup($"Station Date: [color=white]{_cachedDate}[/color]");
 
         var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
         var totalSec = (int)stationTime.TotalSeconds;
@@ -280,25 +551,66 @@ public sealed class OsUiFragment : BoxContainer
         _lastClockSeconds = totalSec;
         _cachedShift = stationTime.ToString("hh\\:mm\\:ss");
         var currentLoreTime = _loreBaseTime.Add(stationTime);
-        _homeTimeLabel.Text = $"Station Time: {(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2} (Shift: {_cachedShift})";
+        _homeTimeLabel.SetMarkup($"Station Time: [color=white]{(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2}[/color] (Shift: {_cachedShift})");
     }
 
     public void UpdateState(OsUiState state)
     {
+        _lastState = state;
+
+        if (state.ActiveProgram != null)
+        {
+            _activeProgramUid = state.ActiveProgram;
+        }
+
         var batText = state.HasBattery ? $" | BAT: {state.BatteryPercent:F0}%" : "";
         var metricsText = $"CPU: {state.CpuLoadPercent}% | RAM: {state.RamUsedMB}/{state.RamTotalMB} MB | DISK: {state.DiskUsedKB}/{state.DiskTotalKB} KB | NET: {state.DownloadBps}/{state.UploadBps} B/s{batText}";
 
+        if (state.Template != ComputerUiTemplate.Pda)
+        {
+            _homeHeaderLabel.Visible = true;
+            _homeHeaderLabel.Text = $"NTOS Workstation | GUID: {state.DeviceGuid} | Mode: {state.Template}";
+            _homeMetricsLabel.Visible = true;
+            _homeMetricsLabel.Text = metricsText;
+        }
+        else
+        {
+            _homeHeaderLabel.Visible = false;
+            _homeMetricsLabel.Visible = false;
+        }
         _homeHeaderLabel.Text = $"NTOS Workstation | GUID: {state.DeviceGuid} | Mode: {state.Template}";
         _homeMetricsLabel.Text = metricsText;
         _shellHeaderLabel.Text = $"NTOS System Shell | GUID: {state.DeviceGuid} | Mode: {state.Template}";
         _shellMetricsLabel.Text = metricsText;
+        _hardwareHeaderLabel.Text = $"NTOS Hardware Configuration | GUID: {state.DeviceGuid} | Mode: {state.Template}";
+        _hardwareMetricsLabel.Text = metricsText;
         _remoteToggleBtn.Text = state.AllowRemoteControl ? "Remote: ALLOWED" : "Remote: BLOCKED";
         _statusLabel.Text = state.StatusMessage;
+
+        _hwFlashlightBtn.Visible = state.HasFlashlight || state.Template == ComputerUiTemplate.Pda;
+        _hwFlashlightBtn.IsActive = state.FlashlightEnabled;
+
+        _hwPenBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasPen;
+        _hwPenBtn.IsActive = state.HasPen;
+
+        _hwIdBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasId;
+        _hwIdBtn.IsActive = state.HasId;
+        _hwIdBtn.ToolTip = state.HasId ? "Eject Inserted ID" : "No ID Inserted";
+
+        _hwPaiBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasPai;
+        _hwPaiBtn.IsActive = state.HasPai;
+
+        _hwDiskBtn.Visible = state.Template != ComputerUiTemplate.Embedded;
+        _hwDiskBtn.IsActive = state.HasDisk;
+        _hwDiskBtn.ToolTip = state.HasDisk ? $"Eject {state.DiskName ?? "Disk"}" : "No Disk Inserted";
+
+        _hwPowerBtn.Visible = true;
 
         if (state.PdaOwnerInfo.ActualOwnerName != null)
         {
             _cachedOwner = state.PdaOwnerInfo.ActualOwnerName;
-            _homeOwnerLabel.Text = $"Device Owner: {_cachedOwner}";
+            _homeOwnerLabel.SetMarkup(Loc.GetString("comp-pda-ui-owner",
+                ("actualOwnerName", FormattedMessage.RemoveMarkupPermissive(_cachedOwner))));
             _homeOwnerBtn.Visible = true;
         }
         else
@@ -309,30 +621,42 @@ public sealed class OsUiFragment : BoxContainer
 
         if (state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null)
         {
-            var idName = state.PdaOwnerInfo.IdOwner ?? "Unknown";
-            var idJob = state.PdaOwnerInfo.JobTitle ?? "Unassigned";
+            var idName = state.PdaOwnerInfo.IdOwner ?? Loc.GetString("comp-pda-ui-unknown");
+            var idJob = state.PdaOwnerInfo.JobTitle ?? Loc.GetString("comp-pda-ui-unassigned");
             _cachedId = $"{idName}, {idJob}";
-            _homeIdLabel.Text = $"ID Card: {_cachedId}";
+            _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui",
+                ("owner", FormattedMessage.RemoveMarkupPermissive(idName)),
+                ("jobTitle", FormattedMessage.RemoveMarkupPermissive(idJob))));
             _homeIdBtn.Visible = true;
         }
         else
         {
-            _cachedId = "None Inserted";
-            _homeIdLabel.Text = "ID Card: [No ID Inserted]";
+            _cachedId = Loc.GetString("comp-pda-ui-blank");
+            _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui-blank"));
             _homeIdBtn.Visible = true;
         }
 
-        _cachedStation = state.StationName ?? "Unknown";
-        _homeStationLabel.Text = $"Station: {_cachedStation}";
+        _cachedStation = state.StationName ?? Loc.GetString("comp-pda-ui-unknown");
+        _homeStationLabel.SetMarkup(Loc.GetString("comp-pda-ui-station",
+            ("station", _cachedStation)));
+
+        UpdateClock();
 
         if (state.PdaOwnerInfo.StationAlertLevel != null)
         {
             var (alertLvl, _, alertInstructions) = _alert.AlertLevelData(state.PdaOwnerInfo.StationAlertLevel);
             _cachedAlert = alertLvl;
             _cachedAlertInstructions = alertInstructions;
-            _homeAlertLabel.Text = $"Alert Level: {alertLvl}";
-            _homeAlertLabel.FontColorOverride = state.PdaOwnerInfo.StationAlertColor;
-            _homeAlertInstructLabel.Text = $"Instructions: {alertInstructions}";
+            var alertColor = state.PdaOwnerInfo.StationAlertColor;
+            _homeAlertLabel.SetMarkup(Loc.GetString(
+                "comp-pda-ui-station-alert-level",
+                ("color", alertColor),
+                ("level", alertLvl)
+            ));
+            _homeAlertInstructLabel.SetMarkup(Loc.GetString(
+                "comp-pda-ui-station-alert-level-instructions",
+                ("instructions", alertInstructions))
+            );
             _homeAlertBtn.Visible = true;
             _homeAlertInstructBtn.Visible = true;
         }
@@ -342,128 +666,269 @@ public sealed class OsUiFragment : BoxContainer
             _homeAlertInstructBtn.Visible = false;
         }
 
-        _programsBox.RemoveAllChildren();
-        foreach (var prog in state.Programs)
+        _programsGrid.RemoveAllChildren();
+        if (state.Programs.Count == 0)
         {
-            var panel = new PanelContainer
+            _programsGrid.AddChild(new Label
             {
-                HorizontalExpand = true,
-                Margin = new Thickness(0, 2),
-                PanelOverride = new StyleBoxFlat
+                Text = Loc.GetString("comp-pda-io-no-programs-available"),
+                HorizontalAlignment = HAlignment.Center,
+                VerticalAlignment = VAlignment.Center,
+                VerticalExpand = true
+            });
+        }
+        else
+        {
+            for (var i = 0; i < state.Programs.Count; i++)
+            {
+                var prog = state.Programs[i];
+                var targetUid = prog.Uid;
+                var item = new ContainerButton
                 {
-                    BackgroundColor = Color.FromHex("#25252a"),
-                    BorderColor = Color.FromHex("#3a3a40"),
-                    BorderThickness = new Thickness(1)
+                    HorizontalExpand = true,
+                    MinHeight = 60,
+                    Margin = new Thickness(4)
+                };
+
+                var panel = new PanelContainer
+                {
+                    PanelOverride = new StyleBoxFlat
+                    {
+                        BackgroundColor = Color.FromHex("#25252a")
+                    }
+                };
+                item.AddChild(panel);
+
+                var rootBox = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    VerticalExpand = true
+                };
+
+                var iconCol = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Vertical,
+                    VerticalExpand = true,
+                    MinWidth = 60
+                };
+                var iconRect = new AnimatedTextureRect
+                {
+                    HorizontalAlignment = HAlignment.Center,
+                    VerticalAlignment = VAlignment.Center,
+                    VerticalExpand = true
+                };
+                if (prog.Icon != null)
+                    iconRect.SetFromSpriteSpecifier(prog.Icon);
+                iconCol.AddChild(iconRect);
+                rootBox.AddChild(iconCol);
+
+                var infoCol = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Vertical,
+                    VerticalExpand = true,
+                    HorizontalExpand = true
+                };
+                var progTitle = Loc.TryGetString(prog.Name, out var locName) ? locName : prog.Name;
+                var badge = prog.IsBootProgram ? " [OS]" : prog.IsRunning ? " [RUNNING]" : "";
+                infoCol.AddChild(new Label
+                {
+                    Text = $"{progTitle}{badge}",
+                    VerticalExpand = true,
+                    FontColorOverride = prog.IsRunning ? Color.FromHex("#00D4FF") : Color.White
+                });
+
+                var btnRow = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    SetHeight = 28,
+                    Margin = new Thickness(0, 0, 4, 4)
+                };
+                btnRow.AddChild(new ContentControl { HorizontalExpand = true });
+
+                if (prog.InstallationStatus == InstallationStatus.Cartridge)
+                {
+                    var installBtn = new Button
+                    {
+                        Text = Loc.GetString("cartridge-bound-user-interface-install-button"),
+                        SetWidth = 90,
+                        HorizontalAlignment = HAlignment.Right,
+                        VerticalExpand = true
+                    };
+                    installBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.InstallProgram, targetUid));
+                    btnRow.AddChild(installBtn);
                 }
-            };
-            var row = new BoxContainer { Orientation = LayoutOrientation.Horizontal, HorizontalExpand = true };
+                else if (prog.InstallationStatus == InstallationStatus.Installed && !prog.IsBootProgram)
+                {
+                    var uninstallBtn = new Button
+                    {
+                        Text = "Uninstall",
+                        SetWidth = 90,
+                        HorizontalAlignment = HAlignment.Right,
+                        VerticalExpand = true
+                    };
+                    uninstallBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.UninstallProgram, targetUid));
+                    btnRow.AddChild(uninstallBtn);
+                }
+                infoCol.AddChild(btnRow);
+                rootBox.AddChild(infoCol);
 
-            if (prog.Icon != null)
-            {
-                var iconRect = new AnimatedTextureRect { SetSize = new Vector2(32, 32), VerticalAlignment = VAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
-                iconRect.SetFromSpriteSpecifier(prog.Icon);
-                row.AddChild(iconRect);
+                item.AddChild(rootBox);
+                item.OnPressed += _ =>
+                {
+                    if (_activeProgramUid == targetUid && _activeProgramControl != null)
+                    {
+                        SetView(OsFragmentView.ProgramContent);
+                    }
+                    else
+                    {
+                        _send(new OsUiMessageEvent(OsUiAction.LaunchProgram, targetUid));
+                    }
+                };
+                _programsGrid.AddChild(item);
             }
 
-            var infoCol = new BoxContainer { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalAlignment = VAlignment.Center };
-            var badge = prog.IsBootProgram ? " [OS / BOOT]" : prog.IsRunning ? " [RUNNING]" : "";
-            infoCol.AddChild(new Label { Text = $"{prog.Name}{badge}", FontColorOverride = Color.FromHex("#00D4FF") });
-            if (!string.IsNullOrWhiteSpace(prog.Description))
+            if (state.Programs.Count % 2 != 0)
             {
-                infoCol.AddChild(new Label { Text = prog.Description, FontColorOverride = Color.FromHex("#8a8a90") });
+                _programsGrid.AddChild(new ContentControl { HorizontalExpand = true });
             }
-            row.AddChild(infoCol);
-
-            var btnCol = new BoxContainer { Orientation = LayoutOrientation.Horizontal, VerticalAlignment = VAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
-            var targetUid = prog.Uid;
-
-            var openBtn = new Button { Text = prog.IsRunning ? "Switch" : "Open", SetWidth = 70, Margin = new Thickness(2, 0) };
-            openBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.LaunchProgram, targetUid));
-            btnCol.AddChild(openBtn);
-
-            if (prog.IsRunning && !prog.IsBootProgram)
-            {
-                var closeBtn = new Button { Text = "Stop", SetWidth = 60, Margin = new Thickness(2, 0) };
-                closeBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.CloseProgram, targetUid));
-                btnCol.AddChild(closeBtn);
-            }
-
-            if (prog.InstallationStatus == InstallationStatus.Cartridge)
-            {
-                var installBtn = new Button { Text = "Install", SetWidth = 70, Margin = new Thickness(2, 0) };
-                installBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.InstallProgram, targetUid));
-                btnCol.AddChild(installBtn);
-            }
-            else if (prog.InstallationStatus == InstallationStatus.Installed && !prog.IsBootProgram)
-            {
-                var uninstallBtn = new Button { Text = "Uninstall", SetWidth = 80, Margin = new Thickness(2, 0) };
-                uninstallBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.UninstallProgram, targetUid));
-                btnCol.AddChild(uninstallBtn);
-            }
-
-            row.AddChild(btnCol);
-            panel.AddChild(row);
-            _programsBox.AddChild(panel);
         }
 
         _settingsBox.RemoveAllChildren();
-        var ringtoneBtn = new Button { Text = "Change Ringtone", HorizontalExpand = true, Margin = new Thickness(0, 2) };
+        var ringtoneBtn = new PdaSettingsButton
+        {
+            Text = Loc.GetString("comp-pda-ui-ringtone-button"),
+            Description = Loc.GetString("comp-pda-ui-ringtone-button-description")
+        };
         ringtoneBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ShowRingtone));
         _settingsBox.AddChild(ringtoneBtn);
 
         if (state.CanPlayMusic)
         {
-            var musicBtn = new Button { Text = "Synthesizer Music", HorizontalExpand = true, Margin = new Thickness(0, 2) };
+            var musicBtn = new PdaSettingsButton
+            {
+                Text = Loc.GetString("pda-bound-user-interface-music-button"),
+                Description = Loc.GetString("pda-bound-user-interface-music-button-description")
+            };
             musicBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ShowMusic));
             _settingsBox.AddChild(musicBtn);
         }
 
         if (state.HasUplink)
         {
-            var uplinkBtn = new Button { Text = "Syndicate Uplink", HorizontalExpand = true, Margin = new Thickness(0, 2), ModulateSelfOverride = Color.Red };
+            var uplinkBtn = new PdaSettingsButton
+            {
+                Text = Loc.GetString("pda-bound-user-interface-show-uplink-title"),
+                Description = Loc.GetString("pda-bound-user-interface-show-uplink-description"),
+                ForegroundColor = Color.Red
+            };
             uplinkBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ShowUplink));
             _settingsBox.AddChild(uplinkBtn);
 
-            var lockUplinkBtn = new Button { Text = "Lock Syndicate Uplink", HorizontalExpand = true, Margin = new Thickness(0, 2) };
+            var lockUplinkBtn = new PdaSettingsButton
+            {
+                Text = Loc.GetString("pda-bound-user-interface-lock-uplink-title"),
+                Description = Loc.GetString("pda-bound-user-interface-lock-uplink-description")
+            };
             lockUplinkBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.LockUplink));
             _settingsBox.AddChild(lockUplinkBtn);
         }
 
-        var sshBtn = new Button { HorizontalExpand = true, Margin = new Thickness(0, 2) };
+        var sshBtn = new PdaSettingsButton();
         if (state.HasCaptainAccess && !string.IsNullOrEmpty(state.SshPassword))
         {
-            sshBtn.Text = $"SSH Password: {state.SshPassword} (Click to copy)";
+            sshBtn.Text = $"SSH Password: {state.SshPassword}";
+            sshBtn.Description = "Click to copy SSH administrative password to clipboard.";
             sshBtn.OnPressed += _ => _clipboard.SetText(state.SshPassword);
         }
         else
         {
-            sshBtn.Text = "SSH Password: [RESTRICTED - Captain Clearance Required]";
+            sshBtn.Text = "SSH Password: [RESTRICTED]";
+            sshBtn.Description = "Captain Clearance Required: Insert an authorized ID card to view SSH credentials.";
             sshBtn.Disabled = true;
         }
         _settingsBox.AddChild(sshBtn);
 
-        var remoteBtn = new Button
+        var remoteBtn = new PdaSettingsButton
         {
             Text = state.AllowRemoteControl ? "Remote Control: ALLOWED" : "Remote Control: BLOCKED",
-            HorizontalExpand = true,
-            Margin = new Thickness(0, 2),
-            ModulateSelfOverride = state.AllowRemoteControl ? Color.Green : Color.Goldenrod
+            Description = state.AllowRemoteControl
+                ? "Remote desktop connections are permitted. Click to block."
+                : "Remote desktop connections are blocked. Click to allow.",
+            ForegroundColor = state.AllowRemoteControl ? Color.Green : Color.Goldenrod
         };
         remoteBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleRemoteControl));
         _settingsBox.AddChild(remoteBtn);
 
-        _settingsBox.AddChild(new Label { Text = "=== Hardware Modules ===", FontColorOverride = Color.Cyan, Margin = new Thickness(0, 6, 0, 2) });
-        if (state.Hardware.Count == 0)
+        if (state.HasFlashlight || state.Template == ComputerUiTemplate.Pda)
         {
-            _settingsBox.AddChild(new Label { Text = "Integrated Motherboard", Margin = new Thickness(4, 0) });
-        }
-        else
-        {
-            foreach (var hw in state.Hardware)
+            var flBtn = new PdaSettingsButton
             {
-                _settingsBox.AddChild(new Label { Text = $"• [{hw.SlotName}] {hw.PartName} ({hw.Size}) - {hw.Details}", Margin = new Thickness(4, 1) });
-            }
+                Text = state.FlashlightEnabled ? "Toggle Flashlight [Status: ON]" : "Toggle Flashlight [Status: OFF]",
+                Description = "Toggle the built-in illumination flashlight.",
+                ForegroundColor = state.FlashlightEnabled ? Color.Yellow : Color.White
+            };
+            flBtn.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.ToggleFlashlight));
+            _settingsBox.AddChild(flBtn);
         }
+        if (state.Template == ComputerUiTemplate.Pda || state.HasId)
+        {
+            var ejectId = new PdaSettingsButton
+            {
+                Text = state.HasId ? "Eject ID Card" : "Eject ID Card [No ID]",
+                Description = state.HasId ? "Eject the currently inserted identity card." : "No ID card currently inserted in the reader slot.",
+                Disabled = !state.HasId
+            };
+            ejectId.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectId));
+            _settingsBox.AddChild(ejectId);
+        }
+        if (state.Template == ComputerUiTemplate.Pda || state.HasPen)
+        {
+            var ejectPen = new PdaSettingsButton
+            {
+                Text = state.HasPen ? "Eject Pen" : "Eject Pen [No Pen]",
+                Description = "Eject the pen or stylus from the accessory slot.",
+                Disabled = !state.HasPen
+            };
+            ejectPen.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectPen));
+            _settingsBox.AddChild(ejectPen);
+        }
+        if (state.Template == ComputerUiTemplate.Pda || state.HasPai)
+        {
+            var ejectPai = new PdaSettingsButton
+            {
+                Text = state.HasPai ? "Eject Personal AI (pAI)" : "Eject Personal AI [Empty]",
+                Description = "Eject the personal AI card from the device.",
+                Disabled = !state.HasPai
+            };
+            ejectPai.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectPai));
+            _settingsBox.AddChild(ejectPai);
+        }
+        if (state.Template != ComputerUiTemplate.Embedded)
+        {
+            var diskTxt = state.HasDisk ? $"Eject Disk ({state.DiskName ?? "Inserted"})" : "Eject Disk [No Disk]";
+            var ejectDisk = new PdaSettingsButton
+            {
+                Text = diskTxt,
+                Description = "Eject the inserted data disk.",
+                Disabled = !state.HasDisk
+            };
+            ejectDisk.OnPressed += _ => _send(new OsUiMessageEvent(OsUiAction.EjectDisk));
+            _settingsBox.AddChild(ejectDisk);
+        }
+
+        var hwSettingsBtn = new PdaSettingsButton
+        {
+            Text = "Hardware",
+            Description = "Inspect motherboard slots, components, and hardware modules."
+        };
+        hwSettingsBtn.OnPressed += _ =>
+        {
+            _hardwareTabBox.Visible = true;
+            SetView(OsFragmentView.Hardware);
+        };
+        _settingsBox.AddChild(hwSettingsBtn);
 
         _hardwareBox.RemoveAllChildren();
         if (state.Hardware.Count == 0)
@@ -490,12 +955,29 @@ public sealed class OsUiFragment : BoxContainer
                 _linksBox.AddChild(new Label { Text = $"{link.SourcePort} -> {link.TargetEntityName} ({link.SinkPort})" });
             }
         }
+
+        UpdateRunningTabs();
     }
 
     private void ExecuteInput()
     {
         if (!string.IsNullOrWhiteSpace(_cmdInput.Text))
         {
+            var text = _cmdInput.Text.Trim();
+            if (string.Equals(text, "hardware", StringComparison.OrdinalIgnoreCase))
+            {
+                _hardwareTabBox.Visible = true;
+                SetView(OsFragmentView.Hardware);
+                _cmdInput.Clear();
+                return;
+            }
+            if (string.Equals(text, "terminal", StringComparison.OrdinalIgnoreCase))
+            {
+                _shellTabBox.Visible = true;
+                SetView(OsFragmentView.Shell);
+                _cmdInput.Clear();
+                return;
+            }
             _send(new OsUiMessageEvent(OsUiAction.RunCommand, command: _cmdInput.Text));
             _cmdInput.Clear();
         }

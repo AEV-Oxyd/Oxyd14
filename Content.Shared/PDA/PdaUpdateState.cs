@@ -29,6 +29,7 @@ namespace Content.Shared.PDA
         public bool IsNetworkSaturated;
         public List<NetEntity> OpenPrograms;
         public BoundUserInterfaceState? CartridgeState;
+        public Content.Shared._Oxyd.Computers.OsUiState? OsState;
         public bool HasCaptainAccess;
         public string? SshPassword;
         public int CurrentView;
@@ -46,6 +47,8 @@ namespace Content.Shared.PDA
         {
             if (CartridgeState != null)
                 yield return CartridgeState;
+            if (OsState != null)
+                yield return OsState;
         }
 
         public PdaUpdateState(
@@ -81,7 +84,8 @@ namespace Content.Shared.PDA
             int uploadBps = 0,
             int downloadBps = 0,
             float batteryChargePercent = 100f,
-            bool hasBattery = false)
+            bool hasBattery = false,
+            Content.Shared._Oxyd.Computers.OsUiState? osState = null)
             : base(programs, activeUI)
         {
             FlashlightEnabled = flashlightEnabled;
@@ -115,6 +119,7 @@ namespace Content.Shared.PDA
             DownloadBps = downloadBps;
             BatteryChargePercent = batteryChargePercent;
             HasBattery = hasBattery;
+            OsState = osState;
         }
     }
 

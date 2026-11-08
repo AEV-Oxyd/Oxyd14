@@ -37,6 +37,8 @@ public sealed partial class CartridgeLoaderSystem
 
     /// <summary>
     /// Relays ui messages meant for cartridges to the currently active cartridge.
+    /// In multi-window/OS setups, if the message is targeted at a specific program or the OS shell,
+    /// it routes directly to the intended program or system boot program.
     /// </summary>
     private void OnUiMessage(Entity<CartridgeLoaderComponent> ent, ref CartridgeUiMessage args)
     {
@@ -44,6 +46,26 @@ public sealed partial class CartridgeLoaderSystem
         cartridgeEvent.User = args.Actor;
         cartridgeEvent.LoaderUid = GetNetEntity(ent);
         cartridgeEvent.Actor = args.Actor;
+
+        // Route OS UI events directly to the system boot program (the OS cartridge)
+        if (cartridgeEvent is OsUiMessageEvent)
+        {
+            if (TryComp<OxydComputerComponent>(ent.Owner, out var oxydComp) &&
+                oxydComp.BootProgram is { } bootProg &&
+                Exists(bootProg) &&
+                HasComp<OsCartridgeComponent>(bootProg))
+            {
+                RaiseLocalEvent(bootProg, cartridgeEvent);
+                return;
+            }
+
+            var osProgram = GetAllPrograms(ent.Owner).FirstOrDefault(p => HasComp<OsCartridgeComponent>(p));
+            if (osProgram.IsValid() && Exists(osProgram))
+            {
+                RaiseLocalEvent(osProgram, cartridgeEvent);
+                return;
+            }
+        }
 
         if (ent.Comp.ActiveProgram is { } foreground)
             RaiseLocalEvent(foreground, cartridgeEvent);
@@ -76,7 +98,17 @@ public sealed partial class CartridgeLoaderSystem
 
         if (TryComp<Content.Shared.PDA.PdaComponent>(loaderUid, out var pda))
         {
-            pda.ActiveCartridgeState = state;
+            if (state is Content.Shared._Oxyd.Computers.OsUiState osState)
+            {
+                pda.OsUiState = osState;
+                if (loader.ActiveProgram == null || (TryComp<OxydComputerComponent>(loaderUid, out var comp) && loader.ActiveProgram == comp.BootProgram))
+                    pda.ActiveCartridgeState = osState;
+            }
+            else
+            {
+                pda.ActiveCartridgeState = state;
+            }
+
             _pdaSystem.UpdatePdaUi(loaderUid, pda);
             return;
         }

@@ -361,7 +361,8 @@ namespace Content.Server.PDA
                 uploadBps: bwComp?.CurrentBytesSent ?? 0,
                 downloadBps: bwComp?.CurrentBytesReceived ?? 0,
                 batteryChargePercent: statsComp?.BatteryChargePercent ?? 100f,
-                hasBattery: statsComp?.HasBattery ?? false);
+                hasBattery: statsComp?.HasBattery ?? false,
+                osState: pda.OsUiState);
 
             pda.LastState = state;
             if (_ui.HasUi(uid, PdaUiKey.Key))
@@ -411,6 +412,17 @@ namespace Content.Server.PDA
             {
                 EnsureDefaultPrograms(uid, loader);
                 EnsureProgramFiles(uid, loader, fs);
+
+                var oxydComp = EnsureComp<OxydComputerComponent>(uid);
+                if (oxydComp.BootProgram == null || !Exists(oxydComp.BootProgram.Value))
+                {
+                    var allProgs = _cartridgeLoader.GetAllPrograms(uid).ToList();
+                    var osProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
+                    oxydComp.BootProgram = osProg.IsValid() ? osProg : (allProgs.Count > 0 ? allProgs[0] : null);
+                    Dirty(uid, oxydComp);
+                }
+                if (loader.ActiveProgram == null && oxydComp.BootProgram is { } boot)
+                    _cartridgeLoader.ActivateProgram((uid, loader), boot);
             }
         }
 
@@ -423,12 +435,18 @@ namespace Content.Server.PDA
 
             if (TryComp<CartridgeLoaderComponent>(ent.Owner, out var loader))
             {
-                var activeProg = loader.ActiveProgram;
-                if (activeProg == null && TryComp<OxydComputerComponent>(ent.Owner, out var comp) && comp.BootProgram is { } bootProg)
+                var oxydComp = EnsureComp<OxydComputerComponent>(ent.Owner);
+                if (oxydComp.BootProgram == null || !Exists(oxydComp.BootProgram.Value))
                 {
-                    _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProg);
-                    activeProg = bootProg;
+                    var allProgs = _cartridgeLoader.GetAllPrograms(ent.Owner).ToList();
+                    var osProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
+                    oxydComp.BootProgram = osProg.IsValid() ? osProg : (allProgs.Count > 0 ? allProgs[0] : null);
+                    Dirty(ent.Owner, oxydComp);
                 }
+                if (loader.ActiveProgram == null && oxydComp.BootProgram is { } bootProg)
+                    _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProg);
+
+                var activeProg = loader.ActiveProgram;
 
                 if (activeProg is { } prog)
                 {

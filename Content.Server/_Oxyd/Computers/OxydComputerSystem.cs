@@ -34,6 +34,7 @@ using Content.Shared.Research.Components;
 using Content.Shared.Research.Prototypes;
 using Content.Shared.Research.Systems;
 using Content.Server.Access.Systems;
+using Content.Shared.Light.EntitySystems;
 using Content.Shared.Access.Systems;
 using Content.Server.Instruments;
 using Content.Server.PDA.Ringer;
@@ -75,6 +76,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private readonly SharedResearchSystem _research = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private readonly UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
 
     public const string ComputerCommandPort = "ComputerCommandSender";
     public const string ComputerStatusSinkPort = "ComputerStatusReceiver";
@@ -102,7 +104,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         // OS Cartridge UI
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeUiReadyEvent>(OnOsUiReady);
+        SubscribeLocalEvent<OsCartridgeComponent, CartridgeActivatedEvent>(OnOsActivated);
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeMessageEvent>(OnOsUiMessage);
+        SubscribeLocalEvent<OsCartridgeComponent, OsUiMessageEvent>(OnOsUiMessageDirect);
 
         // Lathe Control Cartridge UI
         SubscribeLocalEvent<LatheControlCartridgeComponent, CartridgeUiReadyEvent>(OnLatheControlUiReady);
@@ -1022,6 +1026,17 @@ public sealed partial class OxydComputerSystem : EntitySystem
         UpdateOsUi(ent, args.Loader);
     }
 
+    private void OnOsActivated(Entity<OsCartridgeComponent> ent, ref CartridgeActivatedEvent args)
+    {
+        UpdateOsUi(ent, args.Loader);
+    }
+
+    private void OnOsUiMessageDirect(Entity<OsCartridgeComponent> ent, ref OsUiMessageEvent args)
+    {
+        var msg = (CartridgeMessageEvent) args;
+        OnOsUiMessage(ent, ref msg);
+    }
+
     private void OnOsUiMessage(Entity<OsCartridgeComponent> ent, ref CartridgeMessageEvent args)
     {
         if (args is not OsUiMessageEvent msg)
@@ -1037,7 +1052,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
             case OsUiAction.LaunchProgram:
                 if (msg.TargetProgram is { } targetNet && TryGetEntity(targetNet, out var targetProg))
                 {
+                    if (TryComp<OxydComputerComponent>(loaderUid, out var comp) && !comp.OpenPrograms.Contains(targetProg.Value))
+                        comp.OpenPrograms.Add(targetProg.Value);
+                    if (TryComp<PdaComponent>(loaderUid, out var pda) && !pda.OpenPrograms.Contains(targetProg.Value))
+                        pda.OpenPrograms.Add(targetProg.Value);
                     _cartridgeLoader.ActivateProgram((loaderUid, loader), targetProg.Value);
+                    UpdateOsUi(loaderUid);
                     return;
                 }
                 break;
@@ -1051,9 +1071,41 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     }
                     else
                     {
+                        if (TryComp<OxydComputerComponent>(loaderUid, out var comp1))
+                            comp1.OpenPrograms.Remove(closeProg.Value);
                         if (TryComp<PdaComponent>(loaderUid, out var pda))
                             pda.OpenPrograms.Remove(closeProg.Value);
-                        _cartridgeLoader.DeactivateProgram((loaderUid, loader), closeProg.Value);
+
+                        if (loader.ActiveProgram == closeProg.Value)
+                        {
+                            var openProgs = (comp?.OpenPrograms ?? new List<EntityUid>())
+                                .Concat(TryComp<PdaComponent>(loaderUid, out var pdaComp) ? pdaComp.OpenPrograms : Enumerable.Empty<EntityUid>())
+                                .Distinct()
+                                .Where(p => Exists(p) && p != closeProg.Value)
+                                .ToList();
+
+                            if (openProgs.Count > 0)
+                            {
+                                var nextProg = openProgs.Last();
+                                _cartridgeLoader.ActivateProgram((loaderUid, loader), nextProg);
+                            }
+                            else if (comp?.BootProgram is { } bootProg && Exists(bootProg))
+                            {
+                                _cartridgeLoader.ActivateProgram((loaderUid, loader), bootProg);
+                            }
+                            else
+                            {
+                                _cartridgeLoader.DeactivateProgram((loaderUid, loader), closeProg.Value);
+                            }
+                        }
+                        else
+                        {
+                            var deactEvt = new CartridgeDeactivatedEvent((loaderUid, loader));
+                            RaiseLocalEvent(closeProg.Value, ref deactEvt);
+                            var loaderDeactEvt = new CartridgeLoaderProgramDeactivatedEvent(closeProg.Value);
+                            RaiseLocalEvent(loaderUid, ref loaderDeactEvt);
+                        }
+
                         status = $"Closed background program '{Name(closeProg.Value)}'.";
                     }
                 }
@@ -1140,6 +1192,38 @@ public sealed partial class OxydComputerSystem : EntitySystem
                         _pda.UpdatePdaUi(loaderUid, pdaComp1);
                 }
                 break;
+
+            case OsUiAction.ToggleFlashlight:
+                _unpoweredFlashlight.TryToggleLight(loaderUid, user: args.Actor);
+                break;
+
+            case OsUiAction.EjectId:
+                if (TryComp<PdaComponent>(loaderUid, out var pdaId))
+                    _itemSlots.TryEjectToHands(loaderUid, pdaId.IdSlot, args.Actor);
+                break;
+
+            case OsUiAction.EjectPen:
+                if (TryComp<PdaComponent>(loaderUid, out var pdaPen))
+                    _itemSlots.TryEjectToHands(loaderUid, pdaPen.PenSlot, args.Actor);
+                break;
+
+            case OsUiAction.EjectPai:
+                if (TryComp<PdaComponent>(loaderUid, out var pdaPai))
+                    _itemSlots.TryEjectToHands(loaderUid, pdaPai.PaiSlot, args.Actor);
+                break;
+
+            case OsUiAction.EjectDisk:
+                if (TryComp<PdaComponent>(loaderUid, out var pdaDisk))
+                    _itemSlots.TryEjectToHands(loaderUid, pdaDisk.DiskSlot, args.Actor);
+                break;
+
+            case OsUiAction.PowerOff:
+                if (args.Actor is { } actor)
+                {
+                    _ui.CloseUi(loaderUid, PdaUiKey.Key, actor);
+                    _ui.CloseUi(loaderUid, ComputerUiKey.Key, actor);
+                }
+                break;
         }
 
         UpdateOsUi(ent, loaderUid, status);
@@ -1150,13 +1234,19 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
             return;
 
-        EntityUid? targetProg = loader.ActiveProgram;
-        if (targetProg == null && TryComp<OxydComputerComponent>(loaderUid, out var comp) && comp.BootProgram is { } bootProg)
-            targetProg = bootProg;
-
-        if (targetProg != null && TryComp<OsCartridgeComponent>(targetProg.Value, out var osCart))
+        EntityUid? osProg = null;
+        if (TryComp<OxydComputerComponent>(loaderUid, out var comp) && comp.BootProgram is { } bootProg && HasComp<OsCartridgeComponent>(bootProg))
         {
-            UpdateOsUi((targetProg.Value, osCart), loaderUid, statusMessage);
+            osProg = bootProg;
+        }
+        else
+        {
+            osProg = _cartridgeLoader.GetAllPrograms(loaderUid).FirstOrDefault(p => HasComp<OsCartridgeComponent>(p));
+        }
+
+        if (osProg != null && TryComp<OsCartridgeComponent>(osProg.Value, out var osCart))
+        {
+            UpdateOsUi((osProg.Value, osCart), loaderUid, statusMessage);
         }
     }
 
@@ -1277,9 +1367,27 @@ public sealed partial class OxydComputerSystem : EntitySystem
             sshPassword,
             hasCaptainAccess,
             canPlayMusic,
-            hasUplink);
+            hasUplink,
+            flashlightEnabled: pdaComp?.FlashlightOn ?? false,
+            hasFlashlight: pdaComp != null,
+            hasPen: pdaComp?.PenSlot.HasItem ?? false,
+            hasPai: pdaComp?.PaiSlot.HasItem ?? false,
+            hasDisk: pdaComp?.DiskSlot.HasItem ?? false,
+            diskName: pdaComp?.DiskSlot.Item is { } diskEnt ? MetaData(diskEnt).EntityName : null,
+            hasId: pdaComp?.IdSlot.HasItem ?? false,
+            activeProgram: loader.ActiveProgram != null ? GetNetEntity(loader.ActiveProgram) : null);
 
-        _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state, loader);
+        if (pdaComp != null)
+        {
+            pdaComp.OsUiState = state;
+            if (loader.ActiveProgram == ent.Owner)
+                pdaComp.ActiveCartridgeState = state;
+            _pda.UpdatePdaUi(loaderUid, pdaComp);
+        }
+        else
+        {
+            _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state, loader);
+        }
     }
 
     private List<OsHardwareEntry> BuildHardwareSummary(EntityUid computerUid)

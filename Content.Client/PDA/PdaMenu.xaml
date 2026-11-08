@@ -5,41 +5,10 @@
                 MinSize="640 500"
                 SetSize="640 520">
     <ui:OxTag tag="PdaDigitalScreen"/>
-    <!-- This: (Margin="1 1 3 0") is necessary so the navigation bar doesn't sticks into the black content border. -->
-    <controls:ContentBoxContainer Name="NavigationBar" HorizontalExpand="True" MinHeight="32" Margin="1 1 3 0">
-        <pda:PdaNavigationButton Name="HomeButton" Access="Public" SetWidth="32" CurrentTabBorderThickness="0 0 2 0" IsCurrent="True"/>
-        <pda:PdaNavigationButton Name="ProgramListButton" Access="Public" MinWidth="75" LabelText="{Loc 'comp-pda-io-program-list-button'}"/>
-        <pda:PdaNavigationButton Name="SettingsButton" Access="Public" MinWidth="75" LabelText="{Loc 'comp-pda-io-settings-button'}"/>
-
-        <!-- Browser-Style Open Program Tabs Area -->
-        <controls:ContentBoxContainer Name="TabsAreaContainer" Orientation="Vertical" HorizontalExpand="True" VerticalAlignment="Stretch">
-            <controls:ContentBoxContainer Name="TabsScrollHeader" Orientation="Horizontal" HorizontalExpand="True" Visible="False" SetHeight="6" Margin="0 1 0 1">
-                <controls:ContentHScrollBar Name="TabsScrollBar" HorizontalExpand="True" SetHeight="6"/>
-            </controls:ContentBoxContainer>
-            <controls:ContentScrollContainer Name="ProgramTabsScroll" HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="True" VScrollEnabled="False" HScrollBarHidden="True">
-                <controls:ContentBoxContainer Name="ProgramTabsContainer" Orientation="Horizontal" HorizontalExpand="True"/>
-            </controls:ContentScrollContainer>
-        </controls:ContentBoxContainer>
-
-        <pda:PdaNavigationButton Name="ProgramTitle" Access="Public" BorderThickness="0 0 0 2" CurrentTabBorderThickness="2 0 0 2"
-                                 ActiveBgColor="#202023" Visible="False"/>
-
-        <pda:PdaNavigationButton Name="ProgramCloseButton" Access="Public" IconScale="0.5 0.5" BorderThickness="0 0 2 2"
-                                 Visible="False" IsActive="False" SetWidth="32"/>
-
-        <pda:PdaNavigationButton Name="FlashLightToggleButton" Access="Public" ToggleMode="True" ActiveFgColor="#EAEFBB" SetWidth="32"/>
-        <pda:PdaNavigationButton Name="EjectPenButton" Access="Public" SetWidth="32"/>
-        <pda:PdaNavigationButton Name="EjectIdButton" Access="Public" SetWidth="32"/>
-        <pda:PdaNavigationButton Name="EjectPaiButton" Access="Public" SetWidth="32"/>
-        <pda:PdaNavigationButton Name="EjectDiskButton" Access="Public" SetWidth="32"/>
-        <pda:PdaNavigationButton Name="PowerButton" Access="Public" SetWidth="32" LabelText="⏻"/>
-    </controls:ContentBoxContainer>
-    <controls:ContentBoxContainer Name="ViewContainer" HorizontalExpand="True" VerticalExpand="True" Access="Public">
-        <controls:ContentBoxContainer Orientation="Vertical"
-                      VerticalExpand="True"
-                      HorizontalExpand="True"
-                      Name="ProgramView"
-                      Access="Public">
-        </controls:ContentBoxContainer>
+    <controls:ContentBoxContainer Orientation="Vertical"
+                                  VerticalExpand="True"
+                                  HorizontalExpand="True"
+                                  Name="ProgramView"
+                                  Access="Public">
     </controls:ContentBoxContainer>
 </pda:PdaWindow>
