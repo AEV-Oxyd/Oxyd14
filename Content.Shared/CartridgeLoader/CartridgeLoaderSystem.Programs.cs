@@ -1,4 +1,6 @@
 using System.Linq;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared.PDA;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared.CartridgeLoader;
@@ -42,7 +44,7 @@ public sealed partial class CartridgeLoaderSystem
     public IReadOnlyList<EntityUid> GetRemovablePrograms(EntityUid uid)
     {
         if (_container.TryGetContainer(uid, CartridgeLoaderComponent.RemovableContainerId, out var container))
-            return container.ContainedEntities;
+            return container.ContainedEntities.Where(e => !EntityManager.IsQueuedForDeletion(e)).ToList();
 
         return [];
     }
@@ -50,22 +52,14 @@ public sealed partial class CartridgeLoaderSystem
     public IReadOnlyList<EntityUid> GetPreinstalledPrograms(EntityUid uid)
     {
         if (_container.TryGetContainer(uid, CartridgeLoaderComponent.UnremovableContainerId, out var container))
-            return container.ContainedEntities;
+            return container.ContainedEntities.Where(e => !EntityManager.IsQueuedForDeletion(e)).ToList();
 
         return [];
     }
 
     public int UsedDiskSpace(EntityUid uid)
     {
-        var ret = 0;
-
-        if (_container.TryGetContainer(uid, CartridgeLoaderComponent.RemovableContainerId, out var removable))
-            ret += removable.Count;
-
-        if (_container.TryGetContainer(uid, CartridgeLoaderComponent.UnremovableContainerId, out var unremovable))
-            ret += unremovable.Count;
-
-        return ret;
+        return GetRemovablePrograms(uid).Count + GetPreinstalledPrograms(uid).Count;
     }
 
     private bool HasProgram(EntityUid uid, EntityUid program)
@@ -78,13 +72,27 @@ public sealed partial class CartridgeLoaderSystem
         if (!HasProgram(ent, program))
             return;
 
-        if (ent.Comp.ActiveProgram is { } active)
-            DeactivateProgram(ent, active);
+        var prevActive = ent.Comp.ActiveProgram;
+        if (prevActive == program)
+            return;
+
+        ent.Comp.ActiveProgram = program;
+        Dirty(ent);
+
+        if (prevActive is { } active)
+        {
+            var deactEvt = new CartridgeDeactivatedEvent(ent);
+            RaiseLocalEvent(active, ref deactEvt);
+            var loaderDeactEvt = new CartridgeLoaderProgramDeactivatedEvent(active);
+            RaiseLocalEvent(ent, ref loaderDeactEvt);
+        }
 
         var evt = new CartridgeActivatedEvent(ent);
         RaiseLocalEvent(program, ref evt);
-        ent.Comp.ActiveProgram = program;
-        Dirty(ent);
+
+        var loaderEvt = new CartridgeLoaderProgramActivatedEvent(program);
+        RaiseLocalEvent(ent, ref loaderEvt);
+
         UpdateUiState(ent.AsNullable());
     }
 
@@ -93,10 +101,30 @@ public sealed partial class CartridgeLoaderSystem
         if (!HasProgram(ent, program) || ent.Comp.ActiveProgram != program)
             return;
 
+        // If this computer has a mandatory BootProgram (such as the OS or single-purpose lock program),
+        // do not allow closing the BootProgram itself while the computer is running; if closing another app,
+        // return to the BootProgram.
+        if (TryComp<OxydComputerComponent>(ent.Owner, out var computer) &&
+            computer.BootState == ComputerBootState.Running &&
+            computer.BootProgram is { } bootProg &&
+            Exists(bootProg) &&
+            HasProgram(ent, bootProg))
+        {
+            if (program == bootProg)
+                return;
+
+            ActivateProgram(ent, bootProg);
+            return;
+        }
+
         var evt = new CartridgeDeactivatedEvent(ent);
         RaiseLocalEvent(program, ref evt);
         ent.Comp.ActiveProgram = null;
         Dirty(ent);
+
+        var loaderEvt = new CartridgeLoaderProgramDeactivatedEvent(program);
+        RaiseLocalEvent(ent, ref loaderEvt);
+
         UpdateUiState(ent.AsNullable());
     }
 
@@ -135,6 +163,15 @@ public sealed partial class CartridgeLoaderSystem
         if (!GetDiskPrograms(ent).Contains(program))
             return false;
 
+        if (TryComp<OxydComputerComponent>(ent.Owner, out var computer) && computer.BootProgram == program)
+            return false;
+
+        if (ent.Comp.ActiveProgram == program)
+            DeactivateProgram(ent, program);
+
+        var ev = new CartridgeLoaderProgramUninstalledEvent(program);
+        RaiseLocalEvent(ent, ref ev);
+
         QueueDel(program);
 
         return true;
@@ -169,3 +206,12 @@ public sealed partial class CartridgeLoaderSystem
         Dirty(ent);
     }
 }
+
+[ByRefEvent]
+public readonly record struct CartridgeLoaderProgramActivatedEvent(EntityUid Program);
+
+[ByRefEvent]
+public readonly record struct CartridgeLoaderProgramDeactivatedEvent(EntityUid Program);
+
+[ByRefEvent]
+public readonly record struct CartridgeLoaderProgramUninstalledEvent(EntityUid Program);

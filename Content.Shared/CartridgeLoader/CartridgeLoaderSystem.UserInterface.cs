@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Shared._Oxyd.Computers;
 
 namespace Content.Shared.CartridgeLoader;
 
@@ -20,7 +21,7 @@ public sealed partial class CartridgeLoaderSystem
                 InstallCartridge(ent, cartridge);
                 break;
             case CartridgeUiMessageAction.Uninstall:
-                UninstallProgram(ent, cartridge);
+                // Do not allow uninstalling installed programs via UI message from app hub
                 break;
             case CartridgeUiMessageAction.UIReady:
                 if (ent.Comp.ActiveProgram is { } foreground)
@@ -63,6 +64,23 @@ public sealed partial class CartridgeLoaderSystem
         if (!Resolve(loaderUid, ref loader))
             return;
 
+        // Store the program's UI state directly on the Program entity's ProgramStateComponent
+        // so that each program entity owns its own networked state for PVS and BUI load reduction.
+        if (loader.ActiveProgram is { } activeProg && Exists(activeProg))
+        {
+            var progState = EnsureComp<ProgramStateComponent>(activeProg);
+            progState.State = state;
+            progState.LoaderEntity = GetNetEntity(loaderUid);
+            Dirty(activeProg, progState);
+        }
+
+        if (TryComp<Content.Shared.PDA.PdaComponent>(loaderUid, out var pda))
+        {
+            pda.ActiveCartridgeState = state;
+            _pdaSystem.UpdatePdaUi(loaderUid, pda);
+            return;
+        }
+
         if (_userInterface.HasUi(loaderUid, loader.UiKey))
             _userInterface.SetUiState(loaderUid, loader.UiKey, state);
     }
@@ -82,6 +100,9 @@ public sealed partial class CartridgeLoaderSystem
             return;
 
         if (!_userInterface.HasUi(ent.Owner, ent.Comp.UiKey))
+            return;
+
+        if (HasComp<Content.Shared.PDA.PdaComponent>(ent.Owner))
             return;
 
         var programs = GetNetEntityList(GetAllPrograms(ent).ToList());

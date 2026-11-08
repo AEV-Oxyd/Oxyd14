@@ -1,15 +1,19 @@
+using Content.Server._Oxyd.Computers;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
 using Content.Server.Power.Pow3r;
+using Content.Shared._Oxyd.Computers;
 using Content.Shared.Access.Systems;
 using Content.Shared.Administration.Logs;
 using Content.Shared.APC;
 using Content.Shared.Database;
+using Content.Shared.DeviceLinking.Events;
 using Content.Shared.Emag.Systems;
 using Content.Shared.Emp;
 using Content.Shared.Popups;
 using Content.Shared.Power;
 using Content.Shared.Rounding;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
@@ -28,10 +32,12 @@ public sealed partial class ApcSystem : EntitySystem
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
     [Dependency] private IGameTiming _gameTiming = default!;
     [Dependency] private EmagSystem _emag = default!;
+    [Dependency] private OxydComputerSystem _oxydComputer = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
+    [Dependency] private SharedRemoteScreenSystem _remoteScreen = default!;
 
     /// <inheritdoc />
     public override void Initialize()
@@ -39,6 +45,22 @@ public sealed partial class ApcSystem : EntitySystem
         base.Initialize();
 
         UpdatesAfter.Add(typeof(PowerNetSystem));
+        SubscribeLocalEvent<ApcComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
+    }
+
+    private void OnComputerDeviceLinkSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
+    {
+        var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (cmd is "apc_toggle_breaker" or "toggle_breaker" or "toggle" or "breaker")
+        {
+            ApcToggleBreaker(ent.Owner, ent.Comp);
+        }
+        else if (cmd is "apc_set_breaker" or "set_breaker")
+        {
+            var wantEnabled = args.Data.Argument is "1" or "true" or "on";
+            if (ent.Comp.MainBreakerEnabled != wantEnabled)
+                ApcToggleBreaker(ent.Owner, ent.Comp);
+        }
     }
 
     /// <inheritdoc />
@@ -125,7 +147,7 @@ public sealed partial class ApcSystem : EntitySystem
             return;
         }
 
-        if (_accessReader.IsAllowed(args.Actor, ent))
+        if (_accessReader.IsAllowed(args.Actor, ent) || _remoteScreen.IsRemoteScreenAuthorized(args.Actor, ent.Owner))
         {
             ApcToggleBreaker(ent, ent.Comp, user: args.Actor);
         }
@@ -261,6 +283,7 @@ public sealed partial class ApcSystem : EntitySystem
             apc.TripFlag);
 
         _ui.SetUiState((uid, ui), ApcUiKey.Key, state);
+        _oxydComputer.NotifyComputerFromMachine(uid, "apc_state_changed");
     }
     #endregion Public API
 

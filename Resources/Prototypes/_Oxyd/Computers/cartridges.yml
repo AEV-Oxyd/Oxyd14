@@ -1,0 +1,188 @@
+- type: entity
+  parent: BasePDACartridge
+  id: OxydOsCartridge
+  name: NTOS system cartridge
+  description: Core operating system kernel handling system settings, hardware diagnostics, local device port links, and launching applications.
+  components:
+  - type: Sprite
+    state: cart-nav
+  - type: UIFragment
+    ui: !type:OsUi
+  - type: Cartridge
+    programName: NTOS System
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: crew_manifest
+  - type: OsCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydFileBrowserCartridge
+  name: file browser cartridge
+  description: A system program for inspecting local files, viewing memory resources, and managing directories.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:FileBrowserUi
+  - type: Cartridge
+    programName: file-browser-program-name
+    icon:
+      sprite: Objects/Misc/books.rsi
+      state: book_icon
+  - type: FileBrowserCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydTerminalCartridge
+  name: terminal cartridge
+  description: An interactive command-line terminal with SSH client for network administration and remote shell access.
+  components:
+  - type: Sprite
+    state: cart-b
+  - type: UIFragment
+    ui: !type:TerminalUi
+  - type: Cartridge
+    programName: terminal-program-name
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server
+  - type: TerminalCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydDownloaderCartridge
+  name: central downloader cartridge
+  description: Connects to station central servers to browse and download software packages, blueprints, and records.
+  components:
+  - type: Sprite
+    state: cart-g
+  - type: UIFragment
+    ui: !type:DownloaderUi
+  - type: Cartridge
+    programName: downloader-program-name
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server-on
+  - type: DownloaderCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydRouterCartridge
+  name: router admin cartridge
+  description: Routing control program for inspecting active network connections, packet logs, connected devices, and GUID blacklists.
+  components:
+  - type: Sprite
+    state: cart-b
+  - type: UIFragment
+    ui: !type:RouterUi
+  - type: Cartridge
+    programName: Router Admin
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server-on
+  - type: RouterCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydPacketSnifferCartridge
+  name: packet sniffer cartridge
+  description: Captures routed network packets, deciphers unencrypted payloads, and allows modifying and re-emitting packets.
+  components:
+  - type: Sprite
+    state: cart-r
+  - type: UIFragment
+    ui: !type:PacketSnifferUi
+  - type: Cartridge
+    programName: Packet Sniffer
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server
+  - type: PacketSnifferCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydLatheControlCartridge
+  name: lathe controller cartridge
+  description: Interfaces with an autolathe via DeviceLink ports to read design disks, monitor materials, and dispatch print/cancel commands.
+  components:
+  - type: Sprite
+    state: cart-y
+  - type: UIFragment
+    ui: !type:LatheControlUi
+  - type: Cartridge
+    programName: Lathe Control
+    icon:
+      sprite: Structures/Machines/autolathe.rsi
+      state: icon
+  - type: LatheControlCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydApcControlCartridge
+  name: APC controller cartridge
+  description: Interfaces with an Area Power Controller via terminal commands and DeviceLink ports.
+  components:
+  - type: Sprite
+    state: cart-g
+  - type: UIFragment
+    ui: !type:ApcControlUi
+  - type: Cartridge
+    programName: APC Control
+    icon:
+      sprite: Structures/Power/apc.rsi
+      state: apc0
+  - type: ApcControlCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
+  id: OxydAtmosControlCartridge
+  name: air alarm controller cartridge
+  description: Interfaces with an atmospheric alarm via terminal commands and DeviceLink ports.
+  components:
+  - type: Sprite
+    state: cart-b
+  - type: UIFragment
+    ui: !type:AtmosControlUi
+  - type: Cartridge
+    programName: Atmos Control
+    icon:
+      sprite: Structures/Wallmounts/air_monitors.rsi
+      state: alarmp
+  - type: AtmosControlCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge

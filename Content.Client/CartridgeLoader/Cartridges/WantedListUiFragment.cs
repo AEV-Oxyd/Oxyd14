@@ -1,5 +1,7 @@
 using System.Linq;
 using Content.Client.UserInterface.Controls;
+using Content.Client.UserInterface.StateRouting;
+using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Shared.CriminalRecords.Systems;
 using Content.Shared.Security;
 using Content.Shared.StatusIcon;
@@ -17,8 +19,11 @@ using Robust.Shared.Utility;
 namespace Content.Client.CartridgeLoader.Cartridges;
 
 [GenerateTypedNameReferences]
-public sealed partial class WantedListUiFragment : BoxContainer
+public sealed partial class WantedListUiFragment : BoxContainer, IBuiStateReceiver
 {
+    private readonly BuiStateHandlers _handlers = new();
+    public BuiStateReceiveResult ReceiveBuiState(BoundUserInterfaceState s) => _handlers.Receive(s);
+
     [Dependency] private IEntitySystemManager _entitySystem = default!;
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     private readonly SpriteSystem _spriteSystem;
@@ -31,6 +36,8 @@ public sealed partial class WantedListUiFragment : BoxContainer
         RobustXamlLoader.Load(this);
         IoCManager.InjectDependencies(this);
         _spriteSystem = _entitySystem.GetEntitySystem<SpriteSystem>();
+
+        _handlers.On<WantedListUiState>(s => UpdateState(s.Records));
 
         SearchBar.OnTextChanged += OnSearchBarTextChanged;
     }

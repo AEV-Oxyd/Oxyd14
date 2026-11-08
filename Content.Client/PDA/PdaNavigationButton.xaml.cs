@@ -25,8 +25,8 @@ public sealed partial class PdaNavigationButton : ContainerButton
     };
 
     public string InactiveBgColor { get; set; } = "#202023";
-    public string ActiveBgColor { get; set; } = "#25252a";
-    public string InactiveFgColor { get; set; } = "#5a5a5a";
+    public string ActiveBgColor { get; set; } = "#2b2b30";
+    public string InactiveFgColor { get; set; } = "#8a8a8a";
     public string ActiveFgColor { get; set; } = "#FFFFFF";
 
     public SpriteSpecifier? IconTexture

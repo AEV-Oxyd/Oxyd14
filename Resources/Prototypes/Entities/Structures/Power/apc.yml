@@ -71,16 +71,25 @@
     voltage: Apc
   - type: Apc
     voltage: Apc
+  - type: DeviceGuid
+  - type: EmbeddedComputerHost
+    defaultPrograms:
+    - OxydApcControlCartridge
+    - OxydOsCartridge
+    - OxydTerminalCartridge
   - type: ExtensionCableProvider
   - type: UserInterface
     interfaces:
       enum.ApcUiKey.Key:
         type: ApcBoundUserInterface
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: ActivatableUI
     inHandsOnly: false
     key: enum.ApcUiKey.Key
+    singleUser: false
   - type: Construction
     graph: APC
     node: apc

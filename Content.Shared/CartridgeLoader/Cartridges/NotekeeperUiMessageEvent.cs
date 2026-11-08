@@ -6,12 +6,14 @@ namespace Content.Shared.CartridgeLoader.Cartridges;
 public sealed class NotekeeperUiMessageEvent : CartridgeMessageEvent
 {
     public readonly NotekeeperUiAction Action;
-    public readonly string Note;
+    public readonly string Path;
+    public readonly string Content;
 
-    public NotekeeperUiMessageEvent(NotekeeperUiAction action, string note)
+    public NotekeeperUiMessageEvent(NotekeeperUiAction action, string path = "", string content = "")
     {
         Action = action;
-        Note = note;
+        Path = path;
+        Content = content;
     }
 }
 
@@ -19,5 +21,10 @@ public sealed class NotekeeperUiMessageEvent : CartridgeMessageEvent
 public enum NotekeeperUiAction
 {
     Add,
-    Remove
+    Remove,
+    OpenFile,
+    SaveFile,
+    CreateFile,
+    DeleteFile,
+    LiveDraftUpdate
 }

@@ -1,0 +1,134 @@
+- type: entity
+  id: BaseDataServer
+  parent: [ BaseMachinePowered, ConstructibleMachine, StructureHealthMachineStrong ]
+  name: data server
+  description: A high-capacity network server capable of hosting station databases and network files.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/server.rsi
+    snapCardinals: true
+    layers:
+    - state: server-off
+    - state: server-on
+      visible: false
+      map: [ "enum.PowerDeviceVisualLayers.Powered" ]
+    - state: variant-crew
+    - state: server_o
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: DeviceNetwork
+    deviceNetId: Wired
+    autoConnect: true
+  - type: DeviceGuid
+  - type: NetworkBandwidth
+    maxBps: 250000
+    maxUploadBps: 250000
+    bufferQueueLimit: 150
+  - type: ComputerStats
+    cpuFrequencyMhz: 1200
+    ramMb: 4096
+    storageBytes: 104857600
+    networkBandwidthBps: 250000
+    networkUploadBandwidthBps: 250000
+  - type: FileSystem
+    maxStorageBytes: 104857600
+  - type: DataServer
+    serverProtocols:
+      - ManifestService
+      - StationRecordsService
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: ExtensionCableReceiver
+  - type: Appearance
+
+- type: entity
+  id: StationManifestServer
+  parent: BaseDataServer
+  name: crew manifest server
+  description: Physical mainframe maintaining the station crew roster and department allocations.
+  components:
+  - type: DataServer
+    serverProtocols:
+      - ManifestService
+
+- type: entity
+  id: StationRecordsServer
+  parent: BaseDataServer
+  name: station records server
+  description: Secure database server hosting personnel employment and security records.
+  components:
+  - type: DataServer
+    serverProtocols:
+      - StationRecordsService
+
+- type: entity
+  id: HardwareDebuggingTerminal
+  parent: BaseItem
+  name: hardware debugging terminal
+  description: Diagnostic handheld terminal used by Chief Engineers to inspect and debug embedded machinery file systems.
+  components:
+  - type: Sprite
+    sprite: Objects/Devices/network_configurator.rsi
+    state: icon
+  - type: HardwareDebugger
+
+- type: entity
+  id: StationNetworkRouter
+  parent: BaseDataServer
+  name: station network router
+  description: High-throughput core network routing appliance for directing, caching, and logging station packet traffic.
+  components:
+  - type: DeviceNetworkRouter
+  - type: NetworkRouter
+  - type: DeviceGuid
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 760, 560
+    allowRemoteControl: true
+    requiresPower: true
+    defaultPrograms:
+    - OxydOsCartridge
+    - OxydRouterCartridge
+    - OxydPacketSnifferCartridge
+    - OxydTerminalCartridge
+  - type: Pda
+  - type: ItemSlots
+  - type: ContainerContainer
+    containers:
+      PDA-id: !type:ContainerSlot {}
+      PDA-pen: !type:ContainerSlot {}
+      PDA-pai: !type:ContainerSlot {}
+      PDA-disk: !type:ContainerSlot {}
+      Cartridge-Slot: !type:ContainerSlot {}
+      preinstalled-program-container: !type:Container
+      removable-program-container: !type:Container
+      computer_board_slots: !type:Container
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: OxydOsCartridge
+        - id: OxydRouterCartridge
+        - id: OxydPacketSnifferCartridge
+        - id: OxydTerminalCartridge
+  - type: ActivatableUI
+    key: enum.PdaUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.PdaUiKey.Key:
+        type: PdaBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: WiresPanel
+  - type: Wires
+    layoutId: OxydComputerMotherboard
+  - type: ModularComputer
+    maxHardDriveSlots: 2
+    maxRamSlots: 2
+    maxBatterySize: Small
+  - type: NetworkBandwidth
+    maxBps: 10000000
+    maxUploadBps: 10000000
+    bufferQueueLimit: 500

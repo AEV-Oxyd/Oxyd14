@@ -1,0 +1,21 @@
+<BoxContainer xmlns="https://spacestation14.io"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:fancy="clr-namespace:Content.Client.UserInterface.Controls.FancyTree"
+              Orientation="Vertical"
+              HorizontalExpand="True"
+              VerticalExpand="True"
+              MinSize="300 200">
+    <BoxContainer Orientation="Horizontal" SeparationOverride="4" Margin="2">
+        <Label Text="Path: "/>
+        <Label Name="CurrentPathLabel" Text="/" HorizontalExpand="True"/>
+        <Button Name="UpButton" Text="▲ Up"/>
+    </BoxContainer>
+    <PanelContainer StyleClasses="ErisStyleDigital" HorizontalExpand="True" VerticalExpand="True" Margin="2">
+        <fancy:FancyTree Name="FileTree" HorizontalExpand="True" VerticalExpand="True"/>
+    </PanelContainer>
+    <BoxContainer Orientation="Horizontal" SeparationOverride="6" Margin="2">
+        <Label Name="SelectedNameLabel" Text="No selection" HorizontalExpand="True"/>
+        <Button Name="SelectFolderButton" Text="Select Folder" StyleClasses="ErisHoloButton"/>
+        <Button Name="SelectFileButton" Text="Open File" StyleClasses="ErisHoloButton"/>
+    </BoxContainer>
+</BoxContainer>

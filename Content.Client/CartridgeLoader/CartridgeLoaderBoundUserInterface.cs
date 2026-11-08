@@ -1,14 +1,16 @@
 using Content.Client.UserInterface.Fragments;
+using Content.Client.UserInterface.StateRouting;
 using Content.Shared.CartridgeLoader;
 using Robust.Client.UserInterface;
+using Robust.Shared.Serialization.Manager;
 
 namespace Content.Client.CartridgeLoader;
 
 
-public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
+public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterface
 {
     [ViewVariables]
-    private EntityUid? _activeProgram;
+    protected EntityUid? _activeProgram;
 
     [ViewVariables]
     private UIFragment? _activeCartridgeUI;
@@ -33,34 +35,67 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
             return;
         }
 
+        var pdaState = state as Content.Shared.PDA.PdaUpdateState;
+
         // TODO move this to a component state and ensure the net ids.
         var programs = GetCartridgeComponents(_entManager.GetEntityList(loaderUiState.Programs));
         UpdateAvailablePrograms(programs);
 
         var activeUI = _entManager.GetEntity(loaderUiState.ActiveUI);
 
+        if (activeUI == null)
+        {
+            if (_activeUiFragment is not null)
+            {
+                DetachCartridgeUI(_activeUiFragment);
+                _activeUiFragment.Dispose();
+                _activeUiFragment = null;
+                _activeCartridgeUI = null;
+                _activeProgram = null;
+            }
+            return;
+        }
+
+        // If the active program has not changed and the fragment is already created, do not recreate or re-attach!
+        if (activeUI == _activeProgram && _activeUiFragment is not null)
+        {
+            var existingComp = RetrieveCartridgeComponent(activeUI.Value);
+            AttachCartridgeUI(_activeUiFragment, Loc.GetString(existingComp?.ProgramName ?? "default-program-name"));
+            if (pdaState?.CartridgeState != null && _activeUiFragment is not IBuiStateReceiver)
+            {
+                _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
+            }
+            return;
+        }
+
+        var prevFragment = _activeUiFragment;
         _activeProgram = activeUI;
+
+        if (prevFragment is not null)
+        {
+            DetachCartridgeUI(prevFragment);
+            prevFragment.Dispose();
+            _activeUiFragment = null;
+            _activeCartridgeUI = null;
+        }
 
         var ui = RetrieveCartridgeUI(activeUI);
         var comp = RetrieveCartridgeComponent(activeUI);
         var control = ui?.GetUIFragmentRoot();
 
-        //Prevent the same UI fragment from getting disposed and attached multiple times
-        if (_activeUiFragment?.GetType() == control?.GetType())
-            return;
-
-        if (_activeUiFragment is not null)
-            DetachCartridgeUI(_activeUiFragment);
-
-        if (control is not null && _activeProgram.HasValue)
+        if (control is not null)
         {
             AttachCartridgeUI(control, Loc.GetString(comp?.ProgramName ?? "default-program-name"));
-            SendCartridgeUiReadyEvent(_activeProgram.Value);
-        }
+            SendCartridgeUiReadyEvent(activeUI.Value);
 
-        _activeCartridgeUI = ui;
-        _activeUiFragment?.Dispose();
-        _activeUiFragment = control;
+            _activeCartridgeUI = ui;
+            _activeUiFragment = control;
+
+            if (pdaState?.CartridgeState != null)
+            {
+                _activeCartridgeUI?.UpdateState(pdaState.CartridgeState);
+            }
+        }
     }
 
     protected void ActivateCartridge(EntityUid cartridgeUid)
@@ -138,7 +173,11 @@ public abstract class CartridgeLoaderBoundUserInterface : BoundUserInterface
     private UIFragment? RetrieveCartridgeUI(EntityUid? cartridgeUid)
     {
         var component = EntMan.GetComponentOrNull<UIFragmentComponent>(cartridgeUid);
-        component?.Ui?.Setup(this, cartridgeUid);
-        return component?.Ui;
+        if (component?.Ui == null)
+            return null;
+
+        var ui = IoCManager.Resolve<ISerializationManager>().CreateCopy(component.Ui, notNullableOverride: true);
+        ui.Setup(this, cartridgeUid);
+        return ui;
     }
 }

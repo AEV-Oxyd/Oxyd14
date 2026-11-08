@@ -1,235 +1,289 @@
 - type: wireLayout
-  id: Airlock
+  id: Standard
   wires:
-  - !type:PowerWireAction
-  - !type:PowerWireAction
-    pulseTimeout: 15
-  - !type:LogWireAction
-  - !type:DoorBoltWireAction
-  - !type:DoorBoltLightWireAction
-  - !type:DoorTimingWireAction
-  - !type:DoorSafetyWireAction
-  - !type:AiInteractWireAction
+    - !type:CutWireAction
 
-- type: wireLayout
-  parent: Airlock
-  id: AirlockSecurity
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockService
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockCargo
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockEngineering
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockMedical
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockScience
-
-- type: wireLayout
-  parent: HighSec
-  id: AirlockCommand
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockArmory
-
-- type: wireLayout
-  parent: Airlock
-  id: AirlockExternal
-
-- type: wireLayout
-  id: HighSec
-  wires:
-  - !type:PowerWireAction
-    pulseTimeout: 10
-  - !type:DoorBoltWireAction
-  - !type:DoorBoltLightWireAction
-  - !type:DoorTimingWireAction
-  - !type:DoorSafetyWireAction
-  - !type:AiInteractWireAction
-  dummyWires: 4
-
-- type: wireLayout
-  id: Vending
-  wires:
-  - !type:AiInteractWireAction
-  - !type:PowerWireAction
-  - !type:AccessWireAction
-  - !type:LogWireAction
-  - !type:VendingMachineContrabandWireAction
-  - !type:VendingMachineEjectItemWireAction
-  - !type:SpeechWireAction
+# Please add custom wire layout prototypes in alphabetical order!
 
 - type: wireLayout
   id: AirAlarm
   wires:
-  - !type:AiInteractWireAction
-  - !type:PowerWireAction
-  - !type:AccessWireAction
-  - !type:LogWireAction
-  - !type:AirAlarmPanicWire
-  - !type:AtmosMonitorDeviceNetWire
+    - !type:AirAlarmPanicWire
+    - !type:DeviceNetWireAction
+    - !type:PowerWireAction
+  dummyWires: 2
 
 - type: wireLayout
-  id: Intercom
+  id: Airlock
   wires:
-  - !type:PowerWireAction
-  - !type:SpeechWireAction
-  - !type:ListenWireAction
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+    - !type:AirlockBoltWireAction
+    - !type:AirlockBoltLightWireAction
+    - !type:AirlockSafetyWireAction
+    - !type:AirlockTimingWireAction
+    - !type:AirlockAIdummyWireAction
+  dummyWires: 4
 
 - type: wireLayout
-  id: FireAlarm
+  id: Alerts
   wires:
-  - !type:AiInteractWireAction
-  - !type:PowerWireAction
-  - !type:AtmosMonitorDeviceNetWire
-    alarmOnPulse: true
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: Apc
+  wires:
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+  dummyWires: 4
 
 - type: wireLayout
   id: Arcade
   wires:
-  - !type:PowerWireAction
-  - !type:SpeechWireAction
-  - !type:ArcadeOverflowWireAction
-  - !type:ArcadePlayerInvincibleWireAction
-  - !type:ArcadeEnemyInvincibleWireAction
-  - !type:AiInteractWireAction
+    - !type:PowerWireAction
+    - !type:ArcadeInvincibleWireAction
+    - !type:ArcadeOverflowWireAction
+  dummyWires: 4
 
 - type: wireLayout
-  id: SurveillanceCamera
-  dummyWires: 2
+  id: Autolathe
   wires:
-  - !type:PowerWireAction
-  - !type:AiVisionWireAction
-  - !type:CameraMapVisibilityWireAction
+    - !type:PowerWireAction
+    - !type:EmagWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: BoozeDispenser
+  wires:
+    - !type:PowerWireAction
+    - !type:EmagWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: CargoTelepad
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: ChemDispenser
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: ChemMaster
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: CloningPod
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
 
 - type: wireLayout
   id: CryoPod
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:CryoPodEjectLockWireAction
 
 - type: wireLayout
-  id: ParticleAccelerator
-  dummyWires: 1
+  id: DawInstrument
   wires:
-  - !type:ParticleAcceleratorKeyboardWireAction
-  - !type:ParticleAcceleratorLimiterWireAction
-  - !type:ParticleAcceleratorPowerWireAction
-  - !type:ParticleAcceleratorStrengthWireAction
-
-- type: wireLayout
-  id: Docking
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:PowerWireAction
-    pulseTimeout: 15
-  - !type:LogWireAction
-  - !type:DoorBoltWireAction
-  - !type:DoorBoltLightWireAction
-  - !type:DoorTimingWireAction
-  - !type:DoorSafetyWireAction
 
 - type: wireLayout
-  id: Defusable
-  dummyWires: 3
+  id: Disposal
   wires:
-    - !type:ActivateWireAction
-    - !type:BoltWireAction
-    - !type:DelayWireAction
-    - !type:ProceedWireAction
-    - !type:BoomWireAction
-    - !type:BoomWireAction
-    - !type:BoomWireAction
+    - !type:PowerWireAction
+  dummyWires: 2
 
 - type: wireLayout
-  id: TrainingDefusable
-  dummyWires: 0
+  id: Electroplater
   wires:
-  - !type:ActivateWireAction
-  - !type:BoltWireAction
-  - !type:DelayWireAction
-  - !type:ProceedWireAction
-  - !type:BoomWireAction
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: FatExtractor
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: Firelock
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: Generator
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: HydroponicsTray
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
 
 - type: wireLayout
   id: Jukebox
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:AiInteractWireAction
 
 - type: wireLayout
-  id: AnomalyGenerator
+  id: MedicalScanner
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:AiInteractWireAction
 
 - type: wireLayout
-  id: Computer
-  dummyWires: 3
+  id: MiniGravityGenerator
   wires:
-  - !type:PowerWireAction
+    - !type:PowerWireAction
+  dummyWires: 5
 
 - type: wireLayout
-  id: ComputerAi
+  id: Morgue
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:AiInteractWireAction
 
 - type: wireLayout
-  id: Holopad
+  id: OpTable
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:AiInteractWireAction
-  - !type:AiVisionWireAction
 
 - type: wireLayout
-  id: BarSign
-  dummyWires: 2
+  id: OxydComputerMotherboard
   wires:
-  - !type:PowerWireAction
-  - !type:AiInteractWireAction
-  - !type:AccessWireAction
+    - !type:ComputerPowerWireAction
+    - !type:ComputerRemoteWireAction
+    - !type:ComputerNetworkWireAction
+    - !type:ComputerStorageWireAction
+    - !type:ComputerDeviceLinkWireAction
+  dummyWires: 1
 
 - type: wireLayout
-  id: WeaponEnergyTurret
+  id: ParticleAccelerator
+  wires:
+    - !type:PowerWireAction
+    - !type:PaPowerWireAction
+    - !type:PaKeyboardWireAction
+    - !type:PaLimiterWireAction
+    - !type:PaStrengthWireAction
+  dummyWires: 1
+
+- type: wireLayout
+  id: Protolathe
+  wires:
+    - !type:PowerWireAction
+    - !type:EmagWireAction
   dummyWires: 4
-  wires:
-  - !type:PowerWireAction
-  - !type:PowerWireAction
-    pulseTimeout: 15
-  - !type:AiInteractWireAction
-  - !type:AccessWireAction
 
 - type: wireLayout
-  id: TurretControls
+  id: ReagentGrinder
+  wires:
+    - !type:PowerWireAction
   dummyWires: 2
-  wires:
-  - !type:PowerWireAction
-  - !type:PowerWireAction
-    pulseTimeout: 15
-  - !type:AiInteractWireAction
-  - !type:AccessWireAction
 
 - type: wireLayout
-  id: APC
-  dummyWires: 3
+  id: ResearchAndDevelopment
   wires:
-  - !type:AccessWireAction
-  - !type:AiInteractWireAction
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: ReverseEngineering
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: SecTech
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: SmartFridge
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: SodaDispenser
+  wires:
+    - !type:PowerWireAction
+    - !type:EmagWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: HighVoltage
+  wires:
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: Substation
+  wires:
+    - !type:PowerWireAction
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: SuitStorage
+  wires:
+    - !type:PowerWireAction
+    - !type:EmagWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: SurveillanceCamera
+  wires:
+    - !type:PowerWireAction
+    - !type:CameraWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: SurveillanceCameraRouter
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: SurveillanceCameraMonitor
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: Telecom
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 4
+
+- type: wireLayout
+  id: ThermoMachine
+  wires:
+    - !type:PowerWireAction
+  dummyWires: 2
+
+- type: wireLayout
+  id: Vending
+  wires:
+    - !type:PowerWireAction
+    - !type:VendingContrabandWireAction
+    - !type:VendingEjectWireAction
+  dummyWires: 2

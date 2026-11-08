@@ -1,10 +1,35 @@
 <cartridges:NotekeeperUiFragment xmlns:cartridges="clr-namespace:Content.Client.CartridgeLoader.Cartridges"
                                  xmlns="https://spacestation14.io" Margin="1 0 2 0">
-    <PanelContainer StyleClasses="BackgroundDark"></PanelContainer>
-    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
-        <ScrollContainer HorizontalExpand="True" VerticalExpand="True" HScrollEnabled="True">
-            <BoxContainer Orientation="Vertical" Name="MessageContainer" HorizontalExpand="True" VerticalExpand="True"/>
-        </ScrollContainer>
-        <LineEdit Name="Input" HorizontalExpand="True" SetHeight="32"/>
+    <PanelContainer StyleClasses="BackgroundDark"/>
+    <BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True" Margin="4">
+
+        <!-- Top File Toolbar -->
+        <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="0 0 0 4">
+            <OptionButton Name="FileSelector" HorizontalExpand="True" MinHeight="26" Margin="0 0 4 0"/>
+            <Button Name="NewFileButton" Text="+ New" MinWidth="52" MinHeight="26" Margin="0 0 2 0" StyleClasses="ErisHoloButton"/>
+            <Button Name="SaveButton" Text="Save" MinWidth="48" MinHeight="26" Margin="0 0 2 0" StyleClasses="ErisHoloButton"/>
+            <Button Name="DeleteFileButton" Text="Del" MinWidth="38" MinHeight="26" StyleClasses="ErisHoloButton"/>
+        </BoxContainer>
+
+        <!-- New File Creation Bar (Toggled) -->
+        <BoxContainer Name="NewFileContainer" Orientation="Horizontal" HorizontalExpand="True" Visible="False" Margin="0 0 0 4">
+            <Label Text="Name: " VerticalAlignment="Center" StyleClasses="LabelSubText"/>
+            <LineEdit Name="NewFileNameInput" HorizontalExpand="True" PlaceHolder="file_name" MinHeight="24"/>
+            <Label Text=".txt " VerticalAlignment="Center" StyleClasses="LabelSubText"/>
+            <Button Name="ConfirmCreateButton" Text="Create" MinWidth="50" MinHeight="24" Margin="2 0 0 0" StyleClasses="ErisHoloButton"/>
+            <Button Name="CancelCreateButton" Text="X" MinWidth="26" MinHeight="24" Margin="2 0 0 0" StyleClasses="ErisHoloButton"/>
+        </BoxContainer>
+
+        <!-- File Path & Save Status Bar -->
+        <BoxContainer Orientation="Horizontal" HorizontalExpand="True" Margin="0 0 0 3">
+            <Label Name="PathLabel" Text="/notes/shift_notes.txt" StyleClasses="LabelSubText" FontColorOverride="#00D4FF" HorizontalExpand="True" ClipText="True"/>
+            <Label Name="StatusIndicator" Text="[Saved]" StyleClasses="LabelSubText" FontColorOverride="#00FF88"/>
+        </BoxContainer>
+
+        <!-- Multi-Line Document Text Editor -->
+        <PanelContainer StyleClasses="PanelInsetDark" HorizontalExpand="True" VerticalExpand="True" Margin="0 2 0 2">
+            <TextEdit Name="DocumentEditor" HorizontalExpand="True" VerticalExpand="True" Margin="4"/>
+        </PanelContainer>
+
     </BoxContainer>
 </cartridges:NotekeeperUiFragment>
