@@ -363,7 +363,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
                     hostPixelSize = captureTarget.PixelSize;
 
-                if (hostPixelSize.X > 0 && hostPixelSize.Y > 0)
+                if (hostPixelSize.X > 0 && hostPixelSize.Y > 0 && _surface.NeedsCapture(hostPixelSize))
                     _surface.CaptureControl(renderHandle, captureTarget, hostPixelSize);
             }
             else
@@ -1081,147 +1081,147 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     return parentBw;
             }
 
-            return null;
+        return null;
+    }
+
+    private static BaseButton? FindCloseButton(Control control)
+    {
+        if (control.Name == "CloseButton" && control is BaseButton btn)
+            return btn;
+
+        for (var i = 0; i < control.ChildCount; i++)
+        {
+            var found = FindCloseButton(control.GetChild(i));
+            if (found != null)
+                return found;
         }
 
-        private static BaseButton? FindCloseButton(Control control)
+        return null;
+    }
+
+    public void StashWindowOffscreen()
+    {
+        _wasAlreadyOpenOnScreen = false;
+        _userExplicitlyPoppedOut = false;
+        _isPoppedOut = false;
+        if (_trackedWindow == null || _trackedWindow.Disposed)
         {
-            if (control.Name == "CloseButton" && control is BaseButton btn)
-                return btn;
-
-            for (var i = 0; i < control.ChildCount; i++)
-            {
-                var found = FindCloseButton(control.GetChild(i));
-                if (found != null)
-                    return found;
-            }
-
-            return null;
-        }
-
-        public void StashWindowOffscreen()
-        {
-            _wasAlreadyOpenOnScreen = false;
-            _userExplicitlyPoppedOut = false;
-            _isPoppedOut = false;
-            if (_trackedWindow == null || _trackedWindow.Disposed)
-            {
-                OnPopOutChanged?.Invoke(_isPoppedOut);
-                return;
-            }
-
-            var stash = GetOrCreateOffscreenStash(_uiManager);
-            if (_trackedWindow.Parent != stash)
-            {
-                _trackedWindow.Parent?.RemoveChild(_trackedWindow);
-                stash.AddChild(_trackedWindow);
-                LayoutContainer.SetPosition(_trackedWindow, Vector2.Zero);
-            }
-
             OnPopOutChanged?.Invoke(_isPoppedOut);
+            return;
         }
 
-        public void PullWindowOnScreen()
+        var stash = GetOrCreateOffscreenStash(_uiManager);
+        if (_trackedWindow.Parent != stash)
         {
-            _userExplicitlyPoppedOut = true;
-            _isPoppedOut = true;
-            if (_trackedWindow == null || _trackedWindow.Disposed)
-            {
-                OnPopOutChanged?.Invoke(_isPoppedOut);
-                return;
-            }
+            _trackedWindow.Parent?.RemoveChild(_trackedWindow);
+            stash.AddChild(_trackedWindow);
+            LayoutContainer.SetPosition(_trackedWindow, Vector2.Zero);
+        }
 
-            if (_trackedWindow.Parent != _uiManager.WindowRoot)
-            {
-                _trackedWindow.Parent?.RemoveChild(_trackedWindow);
-                _uiManager.WindowRoot.AddChild(_trackedWindow);
-            }
+        OnPopOutChanged?.Invoke(_isPoppedOut);
+    }
 
-            _trackedWindow.Visible = true;
-            _trackedWindow.OpenCentered();
-
+    public void PullWindowOnScreen()
+    {
+        _userExplicitlyPoppedOut = true;
+        _isPoppedOut = true;
+        if (_trackedWindow == null || _trackedWindow.Disposed)
+        {
             OnPopOutChanged?.Invoke(_isPoppedOut);
+            return;
         }
 
-        public void TogglePopOut()
+        if (_trackedWindow.Parent != _uiManager.WindowRoot)
         {
-            if (_isPoppedOut)
-                StashWindowOffscreen();
-            else
-                PullWindowOnScreen();
+            _trackedWindow.Parent?.RemoveChild(_trackedWindow);
+            _uiManager.WindowRoot.AddChild(_trackedWindow);
         }
 
-        public void SetPoppedOut(bool poppedOut)
+        _trackedWindow.Visible = true;
+        _trackedWindow.OpenCentered();
+
+        OnPopOutChanged?.Invoke(_isPoppedOut);
+    }
+
+    public void TogglePopOut()
+    {
+        if (_isPoppedOut)
+            StashWindowOffscreen();
+        else
+            PullWindowOnScreen();
+    }
+
+    public void SetPoppedOut(bool poppedOut)
+    {
+        if (poppedOut)
+            PullWindowOnScreen();
+        else
+            StashWindowOffscreen();
+    }
+
+    private void ApplyLatestState()
+    {
+        if (s_ApplyStateDepth > 0 || _latestState == null)
+            return;
+
+        s_ApplyStateDepth++;
+        try
         {
-            if (poppedOut)
-                PullWindowOnScreen();
-            else
-                StashWindowOffscreen();
+            if (_targetUid is { } uid)
+            {
+                var uiSys = _entManager.System<UserInterfaceSystem>();
+                uiSys.SetUiState(uid, UiKey, _latestState);
+            }
+
+            if (_routedBui?.RootControl is ApcMenu apcMenu)
+            {
+                if (_latestState is ApcBoundInterfaceState apcState)
+                    apcMenu.UpdateState(apcState);
+                apcMenu.SetAccessEnabled(true);
+            }
+            else if (_routedBui?.RootControl is PdaMenu pdaMenu)
+            {
+                if (_latestState is PdaUpdateState pdaState)
+                    pdaMenu.UpdateState(pdaState);
+            }
         }
-
-        private void ApplyLatestState()
+        finally
         {
-            if (s_ApplyStateDepth > 0 || _latestState == null)
-                return;
-
-            s_ApplyStateDepth++;
-            try
-            {
-                if (_targetUid is { } uid)
-                {
-                    var uiSys = _entManager.System<UserInterfaceSystem>();
-                    uiSys.SetUiState(uid, UiKey, _latestState);
-                }
-
-                if (_routedBui?.RootControl is ApcMenu apcMenu)
-                {
-                    if (_latestState is ApcBoundInterfaceState apcState)
-                        apcMenu.UpdateState(apcState);
-                    apcMenu.SetAccessEnabled(true);
-                }
-                else if (_routedBui?.RootControl is PdaMenu pdaMenu)
-                {
-                    if (_latestState is PdaUpdateState pdaState)
-                        pdaMenu.UpdateState(pdaState);
-                }
-            }
-            finally
-            {
-                s_ApplyStateDepth--;
-            }
-        }
-
-        public void Dispose()
-        {
-            if (_targetUid.HasValue && s_ActiveTargetsByUid.TryGetValue(_targetUid.Value, out var existing) && existing == this)
-            {
-                s_ActiveTargetsByUid.Remove(_targetUid.Value);
-            }
-
-            var window = _trackedWindow;
-            DetachWindow();
-
-            var stash = s_OffscreenStash;
-            if (stash != null && window != null && window.Parent == stash)
-            {
-                stash.RemoveChild(window);
-            }
-
-            if (window != null && window.IsOpen)
-            {
-                window.Close();
-            }
-
-            if (_routedBui != null)
-            {
-                _routedBui.OnRootChanged -= OnRootChanged;
-            }
-
-            if (_currentBui != null)
-            {
-                _currentBui = null;
-                _routedBui = null;
-            }
+            s_ApplyStateDepth--;
         }
     }
+
+    public void Dispose()
+    {
+        if (_targetUid.HasValue && s_ActiveTargetsByUid.TryGetValue(_targetUid.Value, out var existing) && existing == this)
+        {
+            s_ActiveTargetsByUid.Remove(_targetUid.Value);
+        }
+
+        var window = _trackedWindow;
+        DetachWindow();
+
+        var stash = s_OffscreenStash;
+        if (stash != null && window != null && window.Parent == stash)
+        {
+            stash.RemoveChild(window);
+        }
+
+        if (window != null && window.IsOpen)
+        {
+            window.Close();
+        }
+
+        if (_routedBui != null)
+        {
+            _routedBui.OnRootChanged -= OnRootChanged;
+        }
+
+        if (_currentBui != null)
+        {
+            _currentBui = null;
+            _routedBui = null;
+        }
+    }
+}
 }

@@ -161,7 +161,39 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
             CommandLineInput.PlaceHolder = "Enter command (e.g. 'help', 'ssh [guid]', 'ls', 'ping [guid]')...";
         }
 
-        if (!_lastRenderedLines.SequenceEqual(state.Lines))
+        var commonPrefix = 0;
+        var minCount = Math.Min(_lastRenderedLines.Count, state.Lines.Count);
+        while (commonPrefix < minCount && _lastRenderedLines[commonPrefix] == state.Lines[commonPrefix])
+        {
+            commonPrefix++;
+        }
+
+        if (commonPrefix == _lastRenderedLines.Count && state.Lines.Count == _lastRenderedLines.Count)
+        {
+            // Lines are identical, no output update needed
+        }
+        else if (commonPrefix == _lastRenderedLines.Count && state.Lines.Count > _lastRenderedLines.Count)
+        {
+            // Append only new incoming lines
+            TerminalOutput.ScrollFollowing = AutoScrollCheckBox.Pressed;
+
+            for (var i = commonPrefix; i < state.Lines.Count; i++)
+            {
+                var line = state.Lines[i];
+                var msg = new FormattedMessage();
+                msg.PushColor(GetColorForLine(line));
+                msg.AddText(line);
+                msg.Pop();
+                TerminalOutput.AddMessage(msg);
+                _lastRenderedLines.Add(line);
+            }
+
+            if (AutoScrollCheckBox.Pressed)
+            {
+                TerminalOutput.ScrollToBottom();
+            }
+        }
+        else
         {
             _lastRenderedLines.Clear();
             _lastRenderedLines.AddRange(state.Lines);
@@ -183,6 +215,28 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
                 TerminalOutput.ScrollToBottom();
             }
         }
+    }
+
+    public void Reset()
+    {
+        _lastRenderedLines.Clear();
+        TerminalOutput.Clear();
+    }
+
+    [Obsolete("Types overriding Dispose(bool) are discouraged in Content.Client; preserved for layout container cleanup.")]
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_remoteScreenView != null)
+            {
+                TerminalScreenSlot.RemoveAllChildren();
+                _remoteScreenView.Dispose();
+                _remoteScreenView = null;
+            }
+        }
+
+        base.Dispose(disposing);
     }
 
     private Color GetColorForLine(string line)

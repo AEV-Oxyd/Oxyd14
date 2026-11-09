@@ -36,6 +36,17 @@ public sealed partial class TerminalUi : UIFragment
         _fragment?.UpdateState(termState);
     }
 
+    public override void Detach()
+    {
+        _fragment?.Dispose();
+        _fragment = null;
+    }
+
+    public override void Reset()
+    {
+        _fragment?.Reset();
+    }
+
     private void SendMessage(TerminalUiMessageEvent message, BoundUserInterface userInterface)
     {
         var cartridgeMsg = new CartridgeUiMessage(message);

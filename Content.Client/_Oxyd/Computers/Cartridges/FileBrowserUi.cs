@@ -54,6 +54,12 @@ public sealed partial class FileBrowserUi : UIFragment
         _fragment?.UpdateState(fbState);
     }
 
+    public override void Detach()
+    {
+        _fragment?.Dispose();
+        _fragment = null;
+    }
+
     private void SendMessage(FileBrowserUiMessageEvent message, BoundUserInterface userInterface)
     {
         var cartridgeMsg = new CartridgeUiMessage(message);

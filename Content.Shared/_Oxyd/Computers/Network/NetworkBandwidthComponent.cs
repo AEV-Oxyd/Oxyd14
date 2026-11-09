@@ -50,7 +50,7 @@ public sealed partial class NetworkBandwidthComponent : Component
     /// <summary>
     /// Stored data packets retained by this router or network device.
     /// </summary>
-    [DataField, AutoNetworkedField]
+    [DataField]
     public List<NetworkDataPacket> StoredPackets = new();
 
     /// <summary>

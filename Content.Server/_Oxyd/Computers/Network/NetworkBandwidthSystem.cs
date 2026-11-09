@@ -36,6 +36,10 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             var drainRate = Math.Max(10, comp.MaxBps / 1024);
             comp.CurrentQueuedPackets = Math.Max(0, comp.CurrentQueuedPackets - drainRate);
 
+            // Clamp backlog so DDoS spikes cannot persist saturation for 20+ minutes
+            var maxQueue = comp.BufferQueueLimit * 2;
+            comp.CurrentQueuedPackets = Math.Min(comp.CurrentQueuedPackets, maxQueue);
+
             var wasSaturated = comp.IsSaturated;
             // Node remains saturated as long as backlog exceeds buffer queue limit
             comp.IsSaturated = comp.CurrentQueuedPackets > comp.BufferQueueLimit;
@@ -114,7 +118,8 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         if (comp.CurrentBytesReceived > comp.MaxBps)
         {
             var overflowPackets = 1 + (approxSize / 512);
-            comp.CurrentQueuedPackets += overflowPackets;
+            var maxQueue = comp.BufferQueueLimit * 2;
+            comp.CurrentQueuedPackets = Math.Clamp(comp.CurrentQueuedPackets + overflowPackets, 0, maxQueue);
 
             if (comp.CurrentQueuedPackets > comp.BufferQueueLimit)
             {
@@ -218,15 +223,45 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             return;
 
         comp.CurrentBytesSent += byteCount;
-        comp.CurrentBytesReceived += byteCount;
         var limit = comp.MaxUploadBps > 0 ? Math.Min(comp.MaxBps, comp.MaxUploadBps) : comp.MaxBps;
-        if (comp.CurrentBytesSent > limit || comp.CurrentBytesReceived > comp.MaxBps)
+        if (comp.CurrentBytesSent > limit)
         {
-            comp.CurrentQueuedPackets += 1 + (byteCount / 512);
+            var overflowPackets = 1 + (byteCount / 512);
+            var maxQueue = comp.BufferQueueLimit * 2;
+            comp.CurrentQueuedPackets = Math.Clamp(comp.CurrentQueuedPackets + overflowPackets, 0, maxQueue);
             if (comp.CurrentQueuedPackets > comp.BufferQueueLimit && !comp.IsSaturated)
             {
                 comp.IsSaturated = true;
                 Dirty(uid, comp);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Accounts for continuous screen sharing or video streaming bandwidth between a streamed target device and a viewer host.
+    /// </summary>
+    public void RecordScreenSharingBandwidth(EntityUid targetUid, EntityUid? viewerTerminalUid = null, int byteCount = 2048)
+    {
+        RecordDataTransmitted(targetUid, byteCount);
+
+        if (viewerTerminalUid != null && Exists(viewerTerminalUid.Value))
+        {
+            var hostUid = Transform(viewerTerminalUid.Value).ParentUid;
+            var recvUid = hostUid.IsValid() ? hostUid : viewerTerminalUid.Value;
+            if (TryComp<NetworkBandwidthComponent>(recvUid, out var bw))
+            {
+                bw.CurrentBytesReceived += byteCount;
+                if (bw.CurrentBytesReceived > bw.MaxBps)
+                {
+                    var overflow = 1 + (byteCount / 512);
+                    var maxQueue = bw.BufferQueueLimit * 2;
+                    bw.CurrentQueuedPackets = Math.Clamp(bw.CurrentQueuedPackets + overflow, 0, maxQueue);
+                    if (bw.CurrentQueuedPackets > bw.BufferQueueLimit && !bw.IsSaturated)
+                    {
+                        bw.IsSaturated = true;
+                        Dirty(recvUid, bw);
+                    }
+                }
             }
         }
     }

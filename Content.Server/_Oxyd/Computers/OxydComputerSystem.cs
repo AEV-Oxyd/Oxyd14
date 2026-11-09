@@ -105,10 +105,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
         SubscribeLocalEvent<OxydComputerComponent, ExecuteComputerCommandEvent>(OnExecuteComputerCommand);
         SubscribeLocalEvent<OxydComputerComponent, SignalReceivedEvent>(OnComputerSignalReceived);
         SubscribeLocalEvent<OxydComputerComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerPayloadSignalReceived);
+        SubscribeLocalEvent<OxydComputerComponent, BoundUIClosedEvent>(OnComputerBoundUiClosed);
 
         SubscribeLocalEvent<EmbeddedComputerHostComponent, ComponentInit>(OnEmbeddedHostInit);
         SubscribeLocalEvent<EmbeddedComputerHostComponent, MapInitEvent>(OnEmbeddedHostMapInit);
         SubscribeLocalEvent<EmbeddedComputerHostComponent, EmbeddedComputerHostActivatedEvent>(OnEmbeddedHostActivated);
+        SubscribeLocalEvent<EmbeddedComputerHostComponent, BoundUIClosedEvent>(OnEmbeddedHostBoundUiClosed);
 
         // OS Cartridge UI
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeUiReadyEvent>(OnOsUiReady);
@@ -236,12 +238,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (_ui.IsUiOpen(compUid, PdaUiKey.Key, args.User))
         {
             _ui.CloseUi(compUid, PdaUiKey.Key, args.User);
+            CleanUpSessionOverrides(compUid, args.User);
             return;
         }
 
         if (_ui.IsUiOpen(compUid, ComputerUiKey.Key, args.User))
         {
             _ui.CloseUi(compUid, ComputerUiKey.Key, args.User);
+            CleanUpSessionOverrides(compUid, args.User);
             return;
         }
 
@@ -281,6 +285,39 @@ public sealed partial class OxydComputerSystem : EntitySystem
         _pda.UpdatePdaUi(compUid);
         if (!_ui.TryOpenUi(compUid, PdaUiKey.Key, args.User))
             _ui.TryOpenUi(compUid, ComputerUiKey.Key, args.User);
+    }
+
+    private void OnComputerBoundUiClosed(Entity<OxydComputerComponent> ent, ref BoundUIClosedEvent args)
+    {
+        if (!PdaUiKey.Key.Equals(args.UiKey) && !ComputerUiKey.Key.Equals(args.UiKey))
+            return;
+
+        CleanUpSessionOverrides(ent.Owner, args.Actor);
+    }
+
+    private void OnEmbeddedHostBoundUiClosed(Entity<EmbeddedComputerHostComponent> ent, ref BoundUIClosedEvent args)
+    {
+        if (!PdaUiKey.Key.Equals(args.UiKey) && !ComputerUiKey.Key.Equals(args.UiKey))
+            return;
+
+        if (ent.Comp.ComputerEntity is { } compUid && Exists(compUid))
+        {
+            CleanUpSessionOverrides(compUid, args.Actor);
+        }
+    }
+
+    private void CleanUpSessionOverrides(EntityUid compUid, EntityUid? actorUid)
+    {
+        if (actorUid is not { } actor || !TryComp<ActorComponent>(actor, out var actorComp))
+            return;
+
+        var session = actorComp.PlayerSession;
+        _pvsOverride.RemoveSessionOverride(compUid, session);
+        foreach (var prog in _cartridgeLoader.GetAllPrograms(compUid))
+        {
+            if (Exists(prog))
+                _pvsOverride.RemoveSessionOverride(prog, session);
+        }
     }
 
     private void OnEmbeddedHostInit(Entity<EmbeddedComputerHostComponent> ent, ref ComponentInit args)
@@ -434,6 +471,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
         {
             if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
             {
+                if (!_ui.IsUiOpen(computerUid, PdaUiKey.Key) && !_ui.IsUiOpen(computerUid, ComputerUiKey.Key))
+                    continue;
+
                 if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
                     loader.ActiveProgram == cartUid)
                 {
@@ -447,6 +487,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
         {
             if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
             {
+                if (!_ui.IsUiOpen(computerUid, PdaUiKey.Key) && !_ui.IsUiOpen(computerUid, ComputerUiKey.Key))
+                    continue;
+
                 if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
                     loader.ActiveProgram == cartUid)
                 {
@@ -460,6 +503,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
         {
             if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
             {
+                if (!_ui.IsUiOpen(computerUid, PdaUiKey.Key) && !_ui.IsUiOpen(computerUid, ComputerUiKey.Key))
+                    continue;
+
                 if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
                     loader.ActiveProgram == cartUid)
                 {
@@ -563,11 +609,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
             var totalStorageBytes = 0;
             var hddCount = 0;
+            var countedDrives = new HashSet<EntityUid>();
             foreach (var dev in storageDevices)
             {
                 if (hddCount >= modular.MaxHardDriveSlots)
                     break;
-                if (dev.Comp.Size <= modular.MaxHardDriveSize)
+                if (countedDrives.Add(dev.Owner) && dev.Comp.Size <= modular.MaxHardDriveSize)
                 {
                     totalStorageBytes += dev.Comp.CapacityBytes;
                     hddCount++;
@@ -577,7 +624,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 if (hddCount >= modular.MaxHardDriveSlots)
                     break;
-                if (hdd.Comp.Size <= modular.MaxHardDriveSize)
+                if (countedDrives.Add(hdd.Owner) && hdd.Comp.Size <= modular.MaxHardDriveSize)
                 {
                     totalStorageBytes += hdd.Comp.CapacityBytes;
                     hddCount++;
@@ -680,8 +727,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 }
             }
 
+            var loadedStorageEntities = new HashSet<EntityUid>();
             foreach (var dev in storageDevices)
             {
+                if (!loadedStorageEntities.Add(dev.Owner))
+                    continue;
+
                 foreach (var proto in dev.Comp.PreloadedPrograms)
                 {
                     if (comp.Template == ComputerUiTemplate.Embedded && string.Equals(proto.Id, "OxydOsCartridge", StringComparison.OrdinalIgnoreCase))
@@ -696,6 +747,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
             foreach (var hdd in hardDrives)
             {
+                if (!loadedStorageEntities.Add(hdd.Owner))
+                    continue;
+
                 foreach (var proto in hdd.Comp.PreloadedPrograms)
                 {
                     if (comp.Template == ComputerUiTemplate.Embedded && string.Equals(proto.Id, "OxydOsCartridge", StringComparison.OrdinalIgnoreCase))
@@ -784,14 +838,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!TryComp<ContainerManagerComponent>(uid, out var containerMgr))
             return;
 
+        var seenStorage = new HashSet<EntityUid>();
         foreach (var container in containerMgr.Containers.Values)
         {
             foreach (var contained in container.ContainedEntities.ToList())
             {
                 if (TryComp<ComputerStorageDeviceComponent>(contained, out var storage))
+                {
                     storageDevices.Add((contained, storage));
+                    seenStorage.Add(contained);
+                }
                 if (TryComp<ComputerHardDriveComponent>(contained, out var hdd))
-                    hardDrives.Add((contained, hdd));
+                {
+                    if (!seenStorage.Contains(contained))
+                    {
+                        hardDrives.Add((contained, hdd));
+                        seenStorage.Add(contained);
+                    }
+                }
                 if (TryComp<ComputerRamComponent>(contained, out var ram))
                     ramModules.Add(ram);
                 if (TryComp<ComputerCpuComponent>(contained, out var cpu))
@@ -851,11 +915,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     _deviceLink.InvokePort(ent.Owner, portName, ref payload);
                     if (TryComp<DeviceLinkSourceComponent>(ent.Owner, out var srcComp))
                     {
+                        var sentSinks = new HashSet<EntityUid>();
                         foreach (var (sinkUid, links) in srcComp.LinkedPorts)
                         {
                             foreach (var (srcP, sinkP) in links)
                             {
-                                if (srcP == portName)
+                                if (srcP == portName && sentSinks.Add(sinkUid))
                                 {
                                     var signalEv = new SignalReceivedEvent<ComputerDeviceLinkPayload>(sinkP, payload, ent.Owner);
                                     RaiseLocalEvent(sinkUid, ref signalEv);
@@ -868,7 +933,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 }
                 else if (sub is "send" && parts.Length >= 3)
                 {
-                    var hasCustomPort = parts.Length >= 4 && parts[2] == ComputerCommandPort;
+                    var hasCustomPort = parts.Length >= 4 && parts[2] != ComputerCommandPort;
 
                     var targetPort = hasCustomPort ? parts[2] : ComputerCommandPort;
                     var action = hasCustomPort ? parts[3] : parts[2];
@@ -876,7 +941,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
                         ? (parts.Length > 4 ? string.Join(" ", parts[4..]) : string.Empty)
                         : (parts.Length > 3 ? string.Join(" ", parts[3..]) : string.Empty);
 
-                    SendDeviceLinkCommand(ent.Owner, action, arg);
+                    SendDeviceLinkCommand(ent.Owner, action, arg, port: targetPort);
                     args.Output = $"Sent DeviceLink command '{action}' ({arg}) via port '{targetPort}'.";
                     args.Success = true;
                 }
@@ -1165,7 +1230,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
     }
 
-    public void SendDeviceLinkCommand(EntityUid computerUid, string command, string argument, Dictionary<string, string>? data = null)
+    public void SendDeviceLinkCommand(EntityUid computerUid, string command, string argument, Dictionary<string, string>? data = null, string port = ComputerCommandPort)
     {
         if (TryComp<OxydComputerComponent>(computerUid, out var comp) && comp.DeviceLinkWireCut)
             return;
@@ -1175,15 +1240,16 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         // Invoke standard DeviceLinkSystem port and also deliver typed SignalReceivedEvent<ComputerDeviceLinkPayload>
         // to all linked sinks so machines without DeviceNetworkComponent receive the full payload struct.
-        _deviceLink.InvokePort(computerUid, ComputerCommandPort, ref payload);
+        _deviceLink.InvokePort(computerUid, port, ref payload);
 
         if (TryComp<DeviceLinkSourceComponent>(computerUid, out var sourceComp))
         {
+            var sentSinks = new HashSet<EntityUid>();
             foreach (var (sinkUid, links) in sourceComp.LinkedPorts)
             {
                 foreach (var (sourcePort, sinkPort) in links)
                 {
-                    if (sourcePort == ComputerCommandPort)
+                    if (sourcePort == port && sentSinks.Add(sinkUid))
                     {
                         var signalEv = new SignalReceivedEvent<ComputerDeviceLinkPayload>(sinkPort, payload, computerUid);
                         RaiseLocalEvent(sinkUid, ref signalEv);
@@ -1195,27 +1261,31 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     public void NotifyComputerFromMachine(EntityUid machineUid, string statusEvent = "state_changed")
     {
-        if (TryComp<EmbeddedComputerHostComponent>(machineUid, out var host) && host.ComputerEntity is { } compUid && Exists(compUid))
-        {
-            var payload = new ComputerDeviceLinkPayload(statusEvent, Name(machineUid));
-            var ev = new SignalReceivedEvent<ComputerDeviceLinkPayload>(ComputerStatusSinkPort, payload, machineUid);
-            RaiseLocalEvent(compUid, ref ev);
-        }
+        var sentSinks = new HashSet<EntityUid>();
+        var payload = new ComputerDeviceLinkPayload(statusEvent, Name(machineUid));
 
         if (TryComp<DeviceLinkSourceComponent>(machineUid, out var sourceComp))
         {
-            var payload = new ComputerDeviceLinkPayload(statusEvent, Name(machineUid));
             foreach (var (sinkUid, links) in sourceComp.LinkedPorts)
             {
                 foreach (var (sourcePort, sinkPort) in links)
                 {
-                    if (sourcePort == MachineStatusSourcePort)
+                    if (sourcePort == MachineStatusSourcePort && sentSinks.Add(sinkUid))
                     {
                         var signalEv = new SignalReceivedEvent<ComputerDeviceLinkPayload>(sinkPort, payload, machineUid);
                         RaiseLocalEvent(sinkUid, ref signalEv);
                     }
                 }
             }
+        }
+
+        if (TryComp<EmbeddedComputerHostComponent>(machineUid, out var host) &&
+            host.ComputerEntity is { } compUid &&
+            Exists(compUid) &&
+            sentSinks.Add(compUid))
+        {
+            var ev = new SignalReceivedEvent<ComputerDeviceLinkPayload>(ComputerStatusSinkPort, payload, machineUid);
+            RaiseLocalEvent(compUid, ref ev);
         }
     }
 
@@ -1294,8 +1364,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
             new List<ComputerNetworkCardComponent>(),
             new List<ComputerBatteryModuleComponent>());
 
+        var loadedStorageDesigns = new HashSet<EntityUid>();
         foreach (var dev in storageDevices)
         {
+            if (!loadedStorageDesigns.Add(dev.Owner))
+                continue;
             foreach (var d in dev.Comp.StoredDesigns)
             {
                 designs.Add(d);
@@ -1304,6 +1377,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         foreach (var hdd in hardDrives)
         {
+            if (!loadedStorageDesigns.Add(hdd.Owner))
+                continue;
             foreach (var d in hdd.Comp.StoredDesigns)
             {
                 designs.Add(d);

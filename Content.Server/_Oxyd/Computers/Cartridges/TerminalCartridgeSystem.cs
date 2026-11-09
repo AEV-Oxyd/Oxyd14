@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.ScreenSharing;
@@ -532,8 +533,12 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 var targetDir = parts.Length > 1 ? parts[1].Trim() : "/";
                 if (targetDir == "~" || targetDir == "")
                     targetDir = "/notes/";
-                else if (targetDir == "..")
-                    targetDir = "/";
+                else if (targetDir == ".." || targetDir == "../")
+                {
+                    var current = comp.CurrentDirectory?.TrimEnd('/') ?? "";
+                    var lastSlash = current.LastIndexOf('/');
+                    targetDir = lastSlash > 0 ? current.Substring(0, lastSlash + 1) : "/";
+                }
                 else if (!targetDir.StartsWith('/'))
                     targetDir = (comp.CurrentDirectory ?? "/") + targetDir;
                 if (!targetDir.EndsWith('/'))
@@ -788,6 +793,13 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     return;
                 }
                 var catTarget = parts[1];
+                if (!catTarget.StartsWith('/'))
+                {
+                    var curDir = comp.CurrentDirectory ?? "/";
+                    if (!curDir.EndsWith('/'))
+                        curDir += "/";
+                    catTarget = curDir + catTarget;
+                }
                 if (catTarget.StartsWith("/disk/"))
                 {
                     var diskRel = catTarget.Substring("/disk".Length);
@@ -834,9 +846,17 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: rm <file>");
                     return;
                 }
+                var rmTarget = parts[1];
+                if (!rmTarget.StartsWith('/'))
+                {
+                    var curDir = comp.CurrentDirectory ?? "/";
+                    if (!curDir.EndsWith('/'))
+                        curDir += "/";
+                    rmTarget = curDir + rmTarget;
+                }
                 if (TryComp<FileSystemComponent>(loaderUid, out var rmFs))
                 {
-                    if (_fileSystem.TryDeleteFile(loaderUid, parts[1], rmFs))
+                    if (_fileSystem.TryDeleteFile(loaderUid, rmTarget, rmFs))
                         comp.History.Add($"Removed '{parts[1]}'");
                     else
                         comp.History.Add($"rm: cannot remove '{parts[1]}': Permission denied or not found");
@@ -1017,11 +1037,45 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
         var targetArg = string.Join(" ", parts[1..]).Trim();
         EntityUid? matchedUid = null;
 
-        if (int.TryParse(targetArg, out var pidIdx) && pidIdx >= 1 && pidIdx <= openList.Count)
+        // 1. Support hex hash strings prefixed with 0x (like 0x3F1A)
+        if (targetArg.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            var hexStr = targetArg[2..];
+            if (int.TryParse(hexStr, NumberStyles.HexNumber, null, out var hexVal))
+            {
+                foreach (var p in openList)
+                {
+                    if ((p.GetHashCode() & 0xFFFF) == hexVal)
+                    {
+                        matchedUid = p;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 2. Support sequential integer indices (1-based from 'ps')
+        if (matchedUid == null && int.TryParse(targetArg, out var pidIdx) && pidIdx >= 1 && pidIdx <= openList.Count)
         {
             matchedUid = openList[pidIdx - 1];
         }
-        else
+
+        // 3. Support raw hex hash strings without 0x prefix (like 3F1A)
+        if (matchedUid == null && targetArg.Length <= 8 &&
+            int.TryParse(targetArg, NumberStyles.HexNumber, null, out var rawHexVal))
+        {
+            foreach (var p in openList)
+            {
+                if ((p.GetHashCode() & 0xFFFF) == rawHexVal)
+                {
+                    matchedUid = p;
+                    break;
+                }
+            }
+        }
+
+        // 4. Support matching by name or prototype ID
+        if (matchedUid == null)
         {
             foreach (var pUid in openList)
             {
@@ -1259,8 +1313,12 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 var rTargetDir = parts.Length > 1 ? parts[1].Trim() : "/";
                 if (rTargetDir == "~" || rTargetDir == "")
                     rTargetDir = "/notes/";
-                else if (rTargetDir == "..")
-                    rTargetDir = "/";
+                else if (rTargetDir == ".." || rTargetDir == "../")
+                {
+                    var current = comp.CurrentDirectory?.TrimEnd('/') ?? "";
+                    var lastSlash = current.LastIndexOf('/');
+                    rTargetDir = lastSlash > 0 ? current.Substring(0, lastSlash + 1) : "/";
+                }
                 else if (!rTargetDir.StartsWith('/'))
                     rTargetDir = (comp.CurrentDirectory ?? "/") + rTargetDir;
                 if (!rTargetDir.EndsWith('/'))
@@ -1310,8 +1368,16 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: cat <file>");
                     return;
                 }
+                var remCatTarget = parts[1];
+                if (!remCatTarget.StartsWith('/'))
+                {
+                    var curDir = comp.CurrentDirectory ?? "/";
+                    if (!curDir.EndsWith('/'))
+                        curDir += "/";
+                    remCatTarget = curDir + remCatTarget;
+                }
                 if (TryComp<FileSystemComponent>(targetUid, out var catFs) &&
-                    _fileSystem.TryGetFile<VirtualFile>(targetUid, parts[1], out var rFile, catFs))
+                    _fileSystem.TryGetFile<VirtualFile>(targetUid, remCatTarget, out var rFile, catFs))
                 {
                     if (rFile is TextVirtualFile tf)
                         comp.History.Add(tf.TextContent);
@@ -1332,9 +1398,17 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: rm <file>");
                     return;
                 }
+                var remRmTarget = parts[1];
+                if (!remRmTarget.StartsWith('/'))
+                {
+                    var curDir = comp.CurrentDirectory ?? "/";
+                    if (!curDir.EndsWith('/'))
+                        curDir += "/";
+                    remRmTarget = curDir + remRmTarget;
+                }
                 if (TryComp<FileSystemComponent>(targetUid, out var remDelFs))
                 {
-                    if (_fileSystem.TryDeleteFile(targetUid, parts[1], remDelFs))
+                    if (_fileSystem.TryDeleteFile(targetUid, remRmTarget, remDelFs))
                         comp.History.Add($"Remote file '{parts[1]}' removed.");
                     else
                         comp.History.Add($"rm: cannot remove '{parts[1]}': Permission denied or not found");
@@ -1348,21 +1422,89 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: fetch <remote_file>");
                     return;
                 }
+                var fetchTarget = parts[1];
+                if (!fetchTarget.StartsWith('/'))
+                {
+                    var curDir = comp.CurrentDirectory ?? "/";
+                    if (!curDir.EndsWith('/'))
+                        curDir += "/";
+                    fetchTarget = curDir + fetchTarget;
+                }
                 if (TryComp<FileSystemComponent>(targetUid, out var srcFs) &&
-                    _fileSystem.TryGetFile<VirtualFile>(targetUid, parts[1], out var dlFile, srcFs))
+                    (_fileSystem.TryGetFile<VirtualFile>(targetUid, fetchTarget, out var dlFile, srcFs) ||
+                     _fileSystem.TryGetFile<VirtualFile>(targetUid, parts[1], out dlFile, srcFs)))
                 {
                     if (TryComp<FileSystemComponent>(loaderUid, out var destFs))
                     {
-                        var content = dlFile is TextVirtualFile tf ? tf.TextContent : "DATA";
-                        var localCopy = new TextVirtualFile
+                        VirtualFile localCopy;
+                        if (dlFile is TextVirtualFile tf)
                         {
-                            Name = dlFile.Name,
-                            Extension = dlFile.Extension,
-                            Directory = "/notes/",
-                            Size = dlFile.Size,
-                            TextContent = content,
-                            IsReadOnly = false
-                        };
+                            localCopy = new TextVirtualFile
+                            {
+                                Name = tf.Name,
+                                Extension = tf.Extension,
+                                Directory = "/notes/",
+                                Size = tf.Size,
+                                TextContent = tf.TextContent,
+                                IsReadOnly = false
+                            };
+                        }
+                        else if (dlFile is RecipeBlueprintFile rbFile)
+                        {
+                            localCopy = new RecipeBlueprintFile
+                            {
+                                Name = rbFile.Name,
+                                Extension = rbFile.Extension,
+                                Directory = "/notes/",
+                                Size = rbFile.Size,
+                                Recipe = rbFile.Recipe,
+                                Recipes = new(rbFile.Recipes),
+                                RemainingUses = rbFile.RemainingUses,
+                                DrmLocked = rbFile.DrmLocked,
+                                IsReadOnly = false
+                            };
+                        }
+                        else if (dlFile is ProgramVirtualFile pFile)
+                        {
+                            localCopy = new ProgramVirtualFile
+                            {
+                                Name = pFile.Name,
+                                Extension = pFile.Extension,
+                                Directory = "/notes/",
+                                Size = pFile.Size,
+                                ProgramId = pFile.ProgramId,
+                                Title = pFile.Title,
+                                CpuUsagePercent = pFile.CpuUsagePercent,
+                                RamUsageMb = pFile.RamUsageMb,
+                                IsReadOnly = false
+                            };
+                        }
+                        else if (dlFile is DatabaseVirtualFile dbFile)
+                        {
+                            localCopy = new DatabaseVirtualFile
+                            {
+                                Name = dbFile.Name,
+                                Extension = dbFile.Extension,
+                                Directory = "/notes/",
+                                Size = dbFile.Size,
+                                TableName = dbFile.TableName,
+                                Data = new(dbFile.Data),
+                                IsReadOnly = false
+                            };
+                        }
+                        else
+                        {
+                            localCopy = new TextVirtualFile
+                            {
+                                Name = dlFile.Name,
+                                Extension = dlFile.Extension,
+                                Directory = "/notes/",
+                                Size = dlFile.Size,
+                                TextContent = "DATA",
+                                IsReadOnly = false
+                            };
+                        }
+
                         if (_fileSystem.TryWriteFile(loaderUid, localCopy, destFs))
                         {
                             comp.History.Add($"Initiating encrypted transfer for '{dlFile.Name}.{dlFile.Extension}' ({dlFile.Size} B)...");
@@ -1396,8 +1538,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add("Usage: upload <local_file> [remote_dest_dir]");
                     return;
                 }
-                var localSrc = parts[1];
-                var remoteDestDir = parts.Length >= 3 ? parts[2] : null;
+                var localSrc = SanitizePath(parts[1]);
+                var remoteDestDir = parts.Length >= 3 ? SanitizePath(parts[2]) : null;
 
                 VirtualFile? uploadSrcFile = null;
                 if (TryComp<FileSystemComponent>(loaderUid, out var lFs))
@@ -1406,7 +1548,11 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     {
                         if (!localSrc.StartsWith('/'))
                         {
-                            _fileSystem.TryGetFile(loaderUid, $"/notes/{localSrc}", out uploadSrcFile, lFs);
+                            var cur = comp.CurrentDirectory ?? "/notes/";
+                            if (!cur.EndsWith('/')) cur += "/";
+                            _fileSystem.TryGetFile(loaderUid, $"{cur}{localSrc}", out uploadSrcFile, lFs);
+                            if (uploadSrcFile == null)
+                                _fileSystem.TryGetFile(loaderUid, $"/notes/{localSrc}", out uploadSrcFile, lFs);
                             if (uploadSrcFile == null)
                                 _fileSystem.TryGetFile(loaderUid, $"/sys/{localSrc}", out uploadSrcFile, lFs);
                             if (uploadSrcFile == null)
@@ -1424,7 +1570,7 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
                 if (uploadSrcFile == null)
                 {
-                    comp.History.Add($"upload: '{localSrc}': Local file not found");
+                    comp.History.Add($"upload: '{parts[1]}': Local file not found");
                     return;
                 }
 
@@ -1476,6 +1622,21 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                         Size = pvfCopy.Size,
                         ProgramId = pvfCopy.ProgramId,
                         Title = pvfCopy.Title,
+                        CpuUsagePercent = pvfCopy.CpuUsagePercent,
+                        RamUsageMb = pvfCopy.RamUsageMb,
+                        IsReadOnly = false
+                    };
+                }
+                else if (uploadSrcFile is DatabaseVirtualFile dbCopy)
+                {
+                    remoteCopy = new DatabaseVirtualFile
+                    {
+                        Name = dbCopy.Name,
+                        Extension = dbCopy.Extension,
+                        Directory = targetDir,
+                        Size = dbCopy.Size,
+                        TableName = dbCopy.TableName,
+                        Data = new(dbCopy.Data),
                         IsReadOnly = false
                     };
                 }
@@ -1695,9 +1856,30 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                     comp.History.Add(remCmdOut);
                     break;
                 }
-                comp.History.Add($"remote: command '{cmd}' executed.");
+                comp.History.Add($"remote: command '{cmd}' not found.");
                 break;
         }
+    }
+
+    private static string SanitizePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return "/";
+
+        var isAbsolute = path.StartsWith('/');
+        var segments = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var cleanSegments = new List<string>();
+
+        foreach (var seg in segments)
+        {
+            var cleaned = seg.Replace("..", "").Trim();
+            if (cleaned == "." || string.IsNullOrEmpty(cleaned))
+                continue;
+            cleanSegments.Add(cleaned);
+        }
+
+        var result = string.Join('/', cleanSegments);
+        return isAbsolute ? "/" + result : result;
     }
 
     public void OnRemoteDeviceUpdated(EntityUid remoteUid)

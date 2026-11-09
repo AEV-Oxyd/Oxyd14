@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using Content.Server._Oxyd.Computers.Cartridges;
 using Content.Server.Access.Systems;
 using Content.Server.Chat.Managers;
 using Content.Server.Instruments;
@@ -51,6 +52,7 @@ namespace Content.Server.PDA
         [Dependency] private IGameTiming _timing = default!;
         [Dependency] private SharedFileSystemSystem _fileSystem = default!;
         [Dependency] private Content.Shared.Access.Systems.AccessReaderSystem _accessReader = default!;
+        [Dependency] private TerminalCartridgeSystem _terminalCartridge = default!;
 
         public override void Initialize()
         {
@@ -212,7 +214,10 @@ namespace Content.Server.PDA
             var query = AllEntityQuery<PdaComponent>();
             while (query.MoveNext(out var ent, out var comp))
             {
-                UpdatePdaUi(ent, comp);
+                if (_ui.IsUiOpen(ent, PdaUiKey.Key) || _ui.IsUiOpen(ent, ComputerUiKey.Key))
+                {
+                    UpdatePdaUi(ent, comp);
+                }
             }
         }
 
@@ -258,7 +263,7 @@ namespace Content.Server.PDA
             // TODO: Update the level and name of the station with each call to UpdatePdaUi is only needed for latejoin players.
             // TODO: If someone can implement changing the level and name of the station when changing the PDA grid, this can be removed.
 
-            // TODO don't make this depend on cartridge loader!?!
+            // TODO don't make this depend on cartridge loader?!?
             if (!TryComp(uid, out CartridgeLoaderComponent? loader))
                 return;
 
@@ -369,7 +374,7 @@ namespace Content.Server.PDA
                 _ui.SetUiState(uid, PdaUiKey.Key, state);
             if (_ui.HasUi(uid, ComputerUiKey.Key))
                 _ui.SetUiState(uid, ComputerUiKey.Key, state);
-            Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteDeviceUpdated(uid);
+            _terminalCartridge.OnRemoteDeviceUpdated(uid);
         }
 
         public void EnsurePdaInitialized(EntityUid uid)
@@ -490,7 +495,7 @@ namespace Content.Server.PDA
 
             var devName = GetDeviceDisplayName(ent.Owner);
             _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"{devName} display powered ON (User: {args.Actor})");
-            if (!Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenOpened(args.Actor, ent.Owner))
+            if (!_terminalCartridge.OnRemoteScreenOpened(args.Actor, ent.Owner))
                 UpdatePdaUi(ent.Owner, ent.Comp);
         }
 
@@ -501,7 +506,7 @@ namespace Content.Server.PDA
 
             if (args.Actor is { } actor)
             {
-                Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenClosed(actor, ent.Owner);
+                _terminalCartridge.OnRemoteScreenClosed(actor, ent.Owner);
             }
 
             var devName = GetDeviceDisplayName(ent.Owner);

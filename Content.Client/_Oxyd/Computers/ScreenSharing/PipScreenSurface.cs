@@ -139,6 +139,21 @@ public partial class PipScreenSurface : BoxContainer
     private static int s_CaptureDepth;
     private static uint s_CurrentFrameId;
 
+    private static IRenderHandle? s_CaptureRenderHandle;
+    private static Control? s_CaptureControl;
+    private static readonly Action s_CaptureAction = OnCaptureRender;
+
+    private static void OnCaptureRender()
+    {
+        if (s_CaptureRenderHandle == null || s_CaptureControl == null)
+            return;
+
+        s_CaptureRenderHandle.SetScissor(null);
+        s_CaptureRenderHandle.DrawingHandleScreen.Modulate = Color.White;
+        s_CaptureRenderHandle.DrawingHandleScreen.SetTransform(Matrix3x2.Identity);
+        s_CaptureControl.UserInterfaceManager.RenderControl(s_CaptureRenderHandle, s_CaptureControl, Vector2i.Zero);
+    }
+
     /// <summary>
     /// Minimum interval between steady-state background captures once the initial cascade bounces are seeded.
     /// </summary>
@@ -191,6 +206,26 @@ public partial class PipScreenSurface : BoxContainer
     private Vector2i _lastCapturedSize;
 
     public bool IsCapturing => _isCapturing;
+    public bool HasValidReadFrame => _hasValidReadFrame;
+    public Vector2i LastCapturedSize => _lastCapturedSize;
+    public int DirtyPassesRemaining => _dirtyPassesRemaining;
+
+    /// <summary>
+    /// Returns true if an offscreen capture is needed (no valid frame captured, size changed, or dirty passes remaining).
+    /// </summary>
+    public bool NeedsCapture(Vector2i targetSize)
+    {
+        if (!_hasValidReadFrame)
+            return true;
+
+        if (_lastCapturedSize != targetSize)
+            return true;
+
+        if (_dirtyPassesRemaining > 0)
+            return true;
+
+        return false;
+    }
 
     public string? DeviceGuid
     {
@@ -323,20 +358,22 @@ public partial class PipScreenSurface : BoxContainer
         var prevModulate = renderHandle.DrawingHandleScreen.Modulate;
         var prevTransform = renderHandle.DrawingHandleScreen.GetTransform();
 
+        var prevHandle = s_CaptureRenderHandle;
+        var prevControl = s_CaptureControl;
+        s_CaptureRenderHandle = renderHandle;
+        s_CaptureControl = control;
+
         _isCapturing = true;
         s_CaptureDepth++;
         try
         {
-            renderHandle.RenderInRenderTarget(_writeTarget, () =>
-            {
-                renderHandle.SetScissor(null);
-                renderHandle.DrawingHandleScreen.Modulate = Color.White;
-                renderHandle.DrawingHandleScreen.SetTransform(Matrix3x2.Identity);
-                UserInterfaceManager.RenderControl(renderHandle, control, Vector2i.Zero);
-            }, Color.FromHex("#070B12"));
+            renderHandle.RenderInRenderTarget(_writeTarget, s_CaptureAction, Color.FromHex("#070B12"));
         }
         finally
         {
+            s_CaptureRenderHandle = prevHandle;
+            s_CaptureControl = prevControl;
+
             renderHandle.DrawingHandleScreen.Modulate = prevModulate;
             renderHandle.DrawingHandleScreen.SetTransform(prevTransform);
             s_CaptureDepth--;
@@ -349,6 +386,10 @@ public partial class PipScreenSurface : BoxContainer
 
         (_readTarget, _writeTarget) = (_writeTarget, _readTarget);
         _hasValidReadFrame = true;
+        _timeSinceLastCapture = 0f;
+        _lastCapturedSize = clampedSize;
+        if (_dirtyPassesRemaining > 0)
+            _dirtyPassesRemaining--;
 
         if (_writeTarget != null && _writeTarget.Size != clampedSize)
         {

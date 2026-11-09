@@ -53,13 +53,21 @@ public sealed partial class ApcSystem : EntitySystem
         var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
         if (cmd is "apc_toggle_breaker" or "toggle_breaker" or "toggle" or "breaker")
         {
-            ApcToggleBreaker(ent.Owner, ent.Comp);
+            if (args.Trigger == null || !_accessReader.IsAllowed(args.Trigger.Value, ent.Owner))
+                return;
+
+            ApcToggleBreaker(ent.Owner, ent.Comp, user: args.Trigger.Value);
         }
         else if (cmd is "apc_set_breaker" or "set_breaker")
         {
             var wantEnabled = args.Data.Argument is "1" or "true" or "on";
             if (ent.Comp.MainBreakerEnabled != wantEnabled)
-                ApcToggleBreaker(ent.Owner, ent.Comp);
+            {
+                if (args.Trigger == null || !_accessReader.IsAllowed(args.Trigger.Value, ent.Owner))
+                    return;
+
+                ApcToggleBreaker(ent.Owner, ent.Comp, user: args.Trigger.Value);
+            }
         }
     }
 
@@ -140,6 +148,7 @@ public sealed partial class ApcSystem : EntitySystem
     {
         var attemptEv = new ApcToggleMainBreakerAttemptEvent();
         RaiseLocalEvent(ent, ref attemptEv);
+
         if (attemptEv.Cancelled)
         {
             _popup.PopupCursor(Loc.GetString("apc-component-on-toggle-cancel"),

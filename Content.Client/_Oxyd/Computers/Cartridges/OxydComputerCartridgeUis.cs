@@ -61,6 +61,17 @@ public sealed partial class OsUi : UIFragment
             _fragment?.UpdateState(osState);
     }
 
+    public override void Detach()
+    {
+        _fragment?.Detach();
+        _fragment = null;
+    }
+
+    public override void Reset()
+    {
+        _fragment?.Reset();
+    }
+
     public void SetView(OsFragmentView view) => _fragment?.SetView(view);
 }
 
@@ -472,6 +483,25 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         UpdateRunningTabs();
     }
 
+    public void Detach()
+    {
+        _activeProgramControl = null;
+        _activeProgramTitle = null;
+        _activeProgramUid = null;
+        _runningTabsContainer.RemoveAllChildren();
+        _programContainer.RemoveAllChildren();
+        _programsGrid.RemoveAllChildren();
+        _settingsBox.RemoveAllChildren();
+        _hardwareBox.RemoveAllChildren();
+        _linksBox.RemoveAllChildren();
+    }
+
+    public void Reset()
+    {
+        SetView(OsFragmentView.Home);
+        _lastClockSeconds = int.MinValue;
+    }
+
     private void UpdateRunningTabs()
     {
         _runningTabsContainer.RemoveAllChildren();
@@ -537,14 +567,15 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 
     private void UpdateClock(bool force = false)
     {
-        _cachedDate = $"2753-{_loreMonth:D2}-{_loreDay:D2}";
-        _homeDateLabel.SetMarkup($"Station Date: [color=white]{_cachedDate}[/color]");
-
         var stationTime = _gameTiming.CurTime.Subtract(_gameTicker.RoundStartTimeSpan);
         var totalSec = (int)stationTime.TotalSeconds;
         if (!force && totalSec == _lastClockSeconds)
             return;
         _lastClockSeconds = totalSec;
+
+        _cachedDate = $"2753-{_loreMonth:D2}-{_loreDay:D2}";
+        _homeDateLabel.SetMarkup($"Station Date: [color=white]{_cachedDate}[/color]");
+
         _cachedShift = stationTime.ToString("hh\\:mm\\:ss");
         var currentLoreTime = _loreBaseTime.Add(stationTime);
         _homeTimeLabel.SetMarkup($"Station Time: [color=white]{(int)currentLoreTime.Hours:D2}:{currentLoreTime.Minutes:D2}:{currentLoreTime.Seconds:D2}[/color] (Shift: {_cachedShift})");
@@ -1018,6 +1049,17 @@ public sealed partial class EmbeddedOsUi : UIFragment
             _fragment?.UpdateState(osState);
     }
 
+    public override void Detach()
+    {
+        _fragment?.Detach();
+        _fragment = null;
+    }
+
+    public override void Reset()
+    {
+        _fragment?.Reset();
+    }
+
     public void SetView(EmbeddedOsView view) => _fragment?.SetView(view);
 }
 
@@ -1032,6 +1074,7 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
     private Control? _activeProgramControl;
     private string? _activeProgramTitle;
     private NetEntity? _activeProgramUid;
+    private NetEntity? _quickLaunchSubsystemUid;
 
     private readonly BoxContainer _runningTabsContainer = new() { Orientation = LayoutOrientation.Horizontal };
     private readonly BoxContainer _programContainer = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Visible = false };
@@ -1162,6 +1205,11 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
             Margin = new Thickness(0, 4)
         };
         _quickLaunchTermBtn.OnPressed += _ => LaunchTerminal();
+        _quickLaunchSubsystemBtn.OnPressed += _ =>
+        {
+            if (_quickLaunchSubsystemUid != null)
+                _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: _quickLaunchSubsystemUid));
+        };
         quickActionsBox.AddChild(_quickLaunchTermBtn);
         quickActionsBox.AddChild(_quickLaunchSubsystemBtn);
         _dashView.AddChild(quickActionsBox);
@@ -1274,6 +1322,23 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
             }
         }
         UpdateRunningTabs();
+    }
+
+    public void Detach()
+    {
+        _activeProgramControl = null;
+        _activeProgramTitle = null;
+        _activeProgramUid = null;
+        _runningTabsContainer.RemoveAllChildren();
+        _programContainer.RemoveAllChildren();
+        _programsGrid.RemoveAllChildren();
+        _hardwareBox.RemoveAllChildren();
+        _linksBox.RemoveAllChildren();
+    }
+
+    public void Reset()
+    {
+        SetView(EmbeddedOsView.Dashboard);
     }
 
     private void UpdateRunningTabs()
@@ -1392,15 +1457,13 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
 
         if (subsystemProg != null)
         {
+            _quickLaunchSubsystemUid = subsystemProg.Uid;
             _quickLaunchSubsystemBtn.Visible = true;
             _quickLaunchSubsystemBtn.Text = $"Open Subsystem Controller ({subsystemProg.Name})";
-            _quickLaunchSubsystemBtn.OnPressed += _ =>
-            {
-                _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: subsystemProg.Uid));
-            };
         }
         else
         {
+            _quickLaunchSubsystemUid = null;
             _quickLaunchSubsystemBtn.Visible = false;
         }
 
@@ -1543,6 +1606,12 @@ public sealed partial class RouterUi : UIFragment
         if (state is RouterUiState routerState)
             _fragment?.UpdateState(routerState);
     }
+
+    public override void Detach()
+    {
+        _fragment?.Detach();
+        _fragment = null;
+    }
 }
 
 public sealed class RouterUiFragment : BoxContainer
@@ -1607,6 +1676,14 @@ public sealed class RouterUiFragment : BoxContainer
 
         scroll.AddChild(body);
         AddChild(scroll);
+    }
+
+    public void Detach()
+    {
+        _connectionsBox.RemoveAllChildren();
+        _blacklistBox.RemoveAllChildren();
+        _packetsBox.RemoveAllChildren();
+        _devicesBox.RemoveAllChildren();
     }
 
     public void UpdateState(RouterUiState state)
@@ -1702,6 +1779,12 @@ public sealed partial class PacketSnifferUi : UIFragment
         if (state is PacketSnifferUiState snifferState)
             _fragment?.UpdateState(snifferState);
     }
+
+    public override void Detach()
+    {
+        _fragment?.Detach();
+        _fragment = null;
+    }
 }
 
 public sealed class PacketSnifferUiFragment : BoxContainer
@@ -1741,6 +1824,11 @@ public sealed class PacketSnifferUiFragment : BoxContainer
         var scroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(0, 6, 0, 0) };
         scroll.AddChild(_packetList);
         AddChild(scroll);
+    }
+
+    public void Detach()
+    {
+        _packetList.RemoveAllChildren();
     }
 
     public void UpdateState(PacketSnifferUiState state)
@@ -1798,6 +1886,12 @@ public sealed partial class LatheControlUi : UIFragment
         if (state is LatheControlUiState latheState)
             _fragment?.UpdateState(latheState);
     }
+
+    public override void Detach()
+    {
+        _fragment?.Detach();
+        _fragment = null;
+    }
 }
 
 public sealed class LatheControlUiFragment : BoxContainer
@@ -1843,6 +1937,11 @@ public sealed class LatheControlUiFragment : BoxContainer
         var scroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(0, 6, 0, 0) };
         scroll.AddChild(_designsBox);
         AddChild(scroll);
+    }
+
+    public void Detach()
+    {
+        _designsBox.RemoveAllChildren();
     }
 
     public void UpdateState(LatheControlUiState state)
@@ -1898,6 +1997,11 @@ public sealed partial class ApcControlUi : UIFragment
     {
         if (state is ApcControlUiState apcState)
             _fragment?.UpdateState(apcState);
+    }
+
+    public override void Detach()
+    {
+        _fragment = null;
     }
 }
 
@@ -1960,6 +2064,11 @@ public sealed partial class AtmosControlUi : UIFragment
     {
         if (state is AtmosControlUiState atmosState)
             _fragment?.UpdateState(atmosState);
+    }
+
+    public override void Detach()
+    {
+        _fragment = null;
     }
 }
 

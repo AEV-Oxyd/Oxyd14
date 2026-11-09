@@ -131,6 +131,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 if (_subUiFragment is not null)
                 {
                     DetachCartridgeUI(_subUiFragment);
+                    _subCartridgeUI?.Detach();
                     _subUiFragment.Dispose();
                     _subUiFragment = null;
                     _subCartridgeUI = null;
@@ -139,6 +140,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 if (_activeUiFragment is not null)
                 {
                     DetachCartridgeUI(_activeUiFragment);
+                    _activeCartridgeUI?.Detach();
                     _activeUiFragment.Dispose();
                     _activeUiFragment = null;
                     _activeCartridgeUI = null;
@@ -158,6 +160,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 if (_subUiFragment is not null)
                 {
                     DetachCartridgeUI(_subUiFragment);
+                    _subCartridgeUI?.Detach();
                     _subUiFragment.Dispose();
                     _subUiFragment = null;
                     _subCartridgeUI = null;
@@ -195,6 +198,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             if (_subUiFragment is not null)
             {
                 DetachCartridgeUI(_subUiFragment);
+                _subCartridgeUI?.Detach();
                 _subUiFragment.Dispose();
                 _subUiFragment = null;
                 _subCartridgeUI = null;
@@ -245,6 +249,7 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         if (prevFragment is not null)
         {
             DetachCartridgeUI(prevFragment);
+            _activeCartridgeUI?.Detach();
             prevFragment.Dispose();
             _activeUiFragment = null;
             _activeCartridgeUI = null;
@@ -331,6 +336,9 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
 
         if (disposing)
         {
+            _activeCartridgeUI?.Detach();
+            _primaryCartridgeUI?.Detach();
+            _subCartridgeUI?.Detach();
             _activeUiFragment?.Dispose();
             _primaryUiFragment?.Dispose();
             _subUiFragment?.Dispose();

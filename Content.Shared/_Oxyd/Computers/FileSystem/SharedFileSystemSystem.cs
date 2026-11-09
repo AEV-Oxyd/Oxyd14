@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
 
 namespace Content.Shared._Oxyd.Computers.FileSystem;
 
@@ -7,20 +8,34 @@ public class SharedFileSystemSystem : EntitySystem
 {
     [Dependency] private Robust.Shared.Timing.IGameTiming _timing = default!;
 
+    private const string DefaultLogHeader = "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------";
+    private const int MaxLogEntries = 148;
+
+    private readonly Dictionary<EntityUid, (string Header, Queue<string> Entries)> _logBuffers = new();
+
     public override void Initialize()
     {
         base.Initialize();
         SubscribeLocalEvent<FileSystemComponent, AfterAutoHandleStateEvent>(OnAfterState);
+        SubscribeLocalEvent<FileSystemComponent, ComponentShutdown>(OnShutdown);
+    }
+
+    private void OnShutdown(EntityUid uid, FileSystemComponent comp, ref ComponentShutdown args)
+    {
+        _logBuffers.Remove(uid);
     }
 
     private void OnAfterState(EntityUid uid, FileSystemComponent comp, ref AfterAutoHandleStateEvent args)
     {
-        RecalculateStorageUsage(comp);
+        comp.UsedStorageBytes = comp.NetworkedHeaders.Sum(h => h.Size);
     }
 
     public void RecalculateStorageUsage(FileSystemComponent comp)
     {
-        comp.UsedStorageBytes = comp.Files.Values.Sum(f => f.Size);
+        if (comp.Files.Count > 0)
+            comp.UsedStorageBytes = comp.Files.Values.Sum(f => f.Size);
+        else
+            comp.UsedStorageBytes = comp.NetworkedHeaders.Sum(h => h.Size);
     }
 
     public bool TryGetFile<T>(EntityUid uid, string fullPath, [NotNullWhen(true)] out T? file, FileSystemComponent? comp = null) where T : VirtualFile
@@ -186,19 +201,56 @@ public class SharedFileSystemSystem : EntitySystem
                 Extension = "log",
                 Directory = "/sys/",
                 Size = 128,
-                TextContent = $"=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------",
+                TextContent = DefaultLogHeader,
                 IsReadOnly = false
             };
+            _logBuffers[uid] = (DefaultLogHeader, new Queue<string>(MaxLogEntries));
         }
 
-        var lines = logFile.TextContent.Split('\n').ToList();
-        lines.Add(logEntry);
-        while (lines.Count > 150)
+        if (!_logBuffers.TryGetValue(uid, out var buffer))
         {
-            lines.RemoveAt(1);
+            var text = logFile.TextContent;
+            var firstNl = text.IndexOf('\n');
+            var secondNl = firstNl >= 0 ? text.IndexOf('\n', firstNl + 1) : -1;
+            string header;
+            var queue = new Queue<string>(MaxLogEntries);
+
+            if (secondNl >= 0)
+            {
+                header = text.Substring(0, secondNl);
+                var body = text.Substring(secondNl + 1);
+                var existingLines = body.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in existingLines)
+                {
+                    if (queue.Count >= MaxLogEntries)
+                        queue.Dequeue();
+                    queue.Enqueue(line);
+                }
+            }
+            else
+            {
+                header = DefaultLogHeader;
+            }
+
+            buffer = (header, queue);
+            _logBuffers[uid] = buffer;
         }
 
-        logFile.TextContent = string.Join("\n", lines);
+        while (buffer.Entries.Count >= MaxLogEntries)
+        {
+            buffer.Entries.Dequeue();
+        }
+        buffer.Entries.Enqueue(logEntry);
+
+        var sb = new StringBuilder(buffer.Header.Length + buffer.Entries.Count * 96);
+        sb.Append(buffer.Header);
+        foreach (var entry in buffer.Entries)
+        {
+            sb.Append('\n');
+            sb.Append(entry);
+        }
+
+        logFile.TextContent = sb.ToString();
         logFile.Size = Math.Max(64, logFile.TextContent.Length);
         TryWriteFile(uid, logFile, comp);
     }

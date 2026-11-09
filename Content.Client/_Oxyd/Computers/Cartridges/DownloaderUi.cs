@@ -39,6 +39,12 @@ public sealed partial class DownloaderUi : UIFragment
         _fragment?.UpdateState(dlState);
     }
 
+    public override void Detach()
+    {
+        _fragment?.Dispose();
+        _fragment = null;
+    }
+
     private void SendMessage(DownloaderUiMessageEvent message, BoundUserInterface userInterface)
     {
         var cartridgeMsg = new CartridgeUiMessage(message);
