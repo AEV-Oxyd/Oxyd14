@@ -54,31 +54,33 @@ namespace Content.Server._Oxyd.Computers;
 
 public sealed partial class OxydComputerSystem : EntitySystem
 {
-    [Dependency] private readonly AirAlarmSystem _airAlarm = default!;
-    [Dependency] private readonly ApcSystem _apc = default!;
-    [Dependency] private readonly AtmosphereSystem _atmosphere = default!;
-    [Dependency] private readonly CartridgeLoaderSystem _cartridgeLoader = default!;
-    [Dependency] private readonly DeviceLinkSystem _deviceLink = default!;
-    [Dependency] private readonly SharedFileSystemSystem _fileSystem = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-    [Dependency] private readonly ItemSlotsSystem _itemSlots = default!;
-    [Dependency] private readonly LatheSystem _lathe = default!;
-    [Dependency] private readonly NetworkBandwidthSystem _bandwidth = default!;
-    [Dependency] private readonly NetworkRouterSystem _router = default!;
-    [Dependency] private readonly AccessReaderSystem _accessReader = default!;
-    [Dependency] private readonly IdCardSystem _idCard = default!;
-    [Dependency] private readonly InstrumentSystem _instrument = default!;
-    [Dependency] private readonly PdaSystem _pda = default!;
-    [Dependency] private readonly RingerSystem _ringer = default!;
-    [Dependency] private readonly PvsOverrideSystem _pvsOverride = default!;
-    [Dependency] private readonly ServerRemoteScreenSystem _remoteScreen = default!;
-    [Dependency] private readonly SharedContainerSystem _container = default!;
-    [Dependency] private readonly SharedMaterialStorageSystem _materialStorage = default!;
-    [Dependency] private readonly SharedResearchSystem _research = default!;
-    [Dependency] private readonly SharedTransformSystem _transform = default!;
-    [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
-    [Dependency] private readonly UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
+    [Dependency] private AirAlarmSystem _airAlarm = default!;
+    [Dependency] private ApcSystem _apc = default!;
+    [Dependency] private AtmosphereSystem _atmosphere = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
+    [Dependency] private SharedFileSystemSystem _fileSystem = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private IPrototypeManager _prototypeManager = default!;
+    [Dependency] private ItemSlotsSystem _itemSlots = default!;
+    [Dependency] private LatheSystem _lathe = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
+    [Dependency] private NetworkRouterSystem _router = default!;
+
+    [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
+    [Dependency] private AccessReaderSystem _accessReader = default!;
+    [Dependency] private IdCardSystem _idCard = default!;
+    [Dependency] private InstrumentSystem _instrument = default!;
+    [Dependency] private PdaSystem _pda = default!;
+    [Dependency] private RingerSystem _ringer = default!;
+    [Dependency] private PvsOverrideSystem _pvsOverride = default!;
+    [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
+    [Dependency] private SharedContainerSystem _container = default!;
+    [Dependency] private SharedMaterialStorageSystem _materialStorage = default!;
+    [Dependency] private SharedResearchSystem _research = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private SharedInteractionSystem _interaction = default!;
 
@@ -108,6 +110,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         // OS Cartridge UI
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeUiReadyEvent>(OnOsUiReady);
+
+        // Embedded OS Cartridge UI
+        SubscribeLocalEvent<EmbeddedOsCartridgeComponent, CartridgeUiReadyEvent>(OnEmbeddedOsUiReady);
+        SubscribeLocalEvent<EmbeddedOsCartridgeComponent, CartridgeMessageEvent>(OnEmbeddedOsUiMessage);
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeActivatedEvent>(OnOsActivated);
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeMessageEvent>(OnOsUiMessage);
         SubscribeLocalEvent<OsCartridgeComponent, OsUiMessageEvent>(OnOsUiMessageDirect);
@@ -285,8 +291,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 foreach (var progProto in ent.Comp.DefaultPrograms)
                 {
-                    if (_prototypeManager.HasIndex<EntityPrototype>(progProto))
+                    if (_prototypeManager.HasIndex<EntityPrototype>(progProto) &&
+                        !_cartridgeLoader.GetAllPrograms(compUid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, progProto.Id)))
+                    {
                         _cartridgeLoader.InstallProgram((compUid, loader), progProto, deinstallable: false);
+                    }
                 }
             }
 
@@ -381,10 +390,29 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RecalculateHardwareAndBoot((uid, comp));
     }
 
-    public void OnRemoteControlCut(EntityUid uid, OxydComputerComponent comp)
+    public void OnRemoteAccessRevoked(EntityUid uid)
     {
         var guid = _router.EnsureDeviceGuid(uid);
         _router.TerminateAllSessionsForGuid(guid);
+        _remoteScreen.TerminateRemoteSessionsForDevice(uid);
+
+        if (TryComp<OxydComputerComponent>(uid, out var comp) && comp.HostMachine is { } host && Exists(host))
+        {
+            var hostGuid = _router.EnsureDeviceGuid(host);
+            _router.TerminateAllSessionsForGuid(hostGuid);
+            _remoteScreen.TerminateRemoteSessionsForDevice(host);
+        }
+        else if (TryComp<EmbeddedComputerHostComponent>(uid, out var hostComp) && hostComp.ComputerEntity is { } compUid && Exists(compUid))
+        {
+            var compGuid = _router.EnsureDeviceGuid(compUid);
+            _router.TerminateAllSessionsForGuid(compGuid);
+            _remoteScreen.TerminateRemoteSessionsForDevice(compUid);
+        }
+    }
+
+    public void OnRemoteControlCut(EntityUid uid, OxydComputerComponent comp)
+    {
+        OnRemoteAccessRevoked(uid);
         RefreshComputerBootState(uid, comp);
     }
 
@@ -539,23 +567,47 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 foreach (var proto in dev.Comp.PreloadedPrograms)
                 {
-                    if (_prototypeManager.HasIndex<EntityPrototype>(proto))
+                    if (_prototypeManager.HasIndex<EntityPrototype>(proto) &&
+                        !_cartridgeLoader.GetAllPrograms(uid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, proto.Id)))
+                    {
                         _cartridgeLoader.InstallProgram((uid, loader), proto, deinstallable: false);
+                    }
                 }
             }
             foreach (var hdd in hardDrives)
             {
                 foreach (var proto in hdd.Comp.PreloadedPrograms)
                 {
-                    if (_prototypeManager.HasIndex<EntityPrototype>(proto))
+                    if (_prototypeManager.HasIndex<EntityPrototype>(proto) &&
+                        !_cartridgeLoader.GetAllPrograms(uid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, proto.Id)))
+                    {
                         _cartridgeLoader.InstallProgram((uid, loader), proto, deinstallable: false);
+                    }
                 }
             }
 
             var allProgs = _cartridgeLoader.GetAllPrograms(uid).ToList();
-            EntityUid? firstProgram = allProgs.Count > 0 ? allProgs[0] : null;
+            EntityUid? defaultProgram = null;
 
-            if (firstProgram == null || !Exists(firstProgram.Value))
+            if (comp.Template == ComputerUiTemplate.Embedded)
+            {
+                defaultProgram = allProgs.FirstOrDefault(p =>
+                    HasComp<ApcControlCartridgeComponent>(p) ||
+                    HasComp<AtmosControlCartridgeComponent>(p) ||
+                    HasComp<LatheControlCartridgeComponent>(p));
+
+                if (defaultProgram == null)
+                    defaultProgram = allProgs.FirstOrDefault(p => HasComp<EmbeddedOsCartridgeComponent>(p));
+            }
+            else
+            {
+                defaultProgram = allProgs.FirstOrDefault(p => HasComp<OsCartridgeComponent>(p));
+            }
+
+            if (defaultProgram == null && allProgs.Count > 0)
+                defaultProgram = allProgs[0];
+
+            if (defaultProgram == null || !Exists(defaultProgram.Value))
             {
                 if (comp.RequireHardDriveToBoot && HasComp<ModularComputerComponent>(uid))
                 {
@@ -565,10 +617,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
             else
             {
-                comp.BootProgram = firstProgram;
+                comp.BootProgram = defaultProgram;
                 if (loader.ActiveProgram == null || !Exists(loader.ActiveProgram.Value))
                 {
-                    _cartridgeLoader.ActivateProgram((uid, loader), firstProgram.Value);
+                    _cartridgeLoader.ActivateProgram((uid, loader), defaultProgram.Value);
                 }
             }
         }
@@ -653,6 +705,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         switch (cmd)
         {
             case "devlink":
+            case "port":
             {
                 if (ent.Comp.DeviceLinkWireCut)
                 {
@@ -662,26 +715,104 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 }
 
                 var sub = parts.Length > 1 ? parts[1].ToLowerInvariant() : "list";
-                if (sub == "scan" || sub == "autolink")
+                if (sub is "scan" or "autolink")
                 {
                     AutoDiscoverAndLinkPorts(ent);
                     args.Output = "Scanned and linked local device ports.";
                     args.Success = true;
                 }
-                else if (sub == "send" && parts.Length >= 3)
+                else if (sub is "trigger")
                 {
-                    var action = parts[2];
-                    var arg = parts.Length > 3 ? string.Join(" ", parts[3..]) : string.Empty;
-                    SendDeviceLinkCommand(ent.Owner, action, arg);
-                    args.Output = $"Sent DeviceLink command '{action}' ({arg}).";
+                    var portName = parts.Length > 2 ? parts[2] : ComputerCommandPort;
+                    var payload = new ComputerDeviceLinkPayload("trigger", portName);
+                    _deviceLink.InvokePort(ent.Owner, portName, ref payload);
+                    if (TryComp<DeviceLinkSourceComponent>(ent.Owner, out var srcComp))
+                    {
+                        foreach (var (sinkUid, links) in srcComp.LinkedPorts)
+                        {
+                            foreach (var (srcP, sinkP) in links)
+                            {
+                                if (srcP == portName)
+                                {
+                                    var signalEv = new SignalReceivedEvent<ComputerDeviceLinkPayload>(sinkP, payload, ent.Owner);
+                                    RaiseLocalEvent(sinkUid, ref signalEv);
+                                }
+                            }
+                        }
+                    }
+                    args.Output = $"Triggered DeviceLink source port '{portName}'.";
                     args.Success = true;
+                }
+                else if (sub is "send" && parts.Length >= 3)
+                {
+                    var hasCustomPort = parts.Length >= 4 && parts[2] == ComputerCommandPort;
+
+                    var targetPort = hasCustomPort ? parts[2] : ComputerCommandPort;
+                    var action = hasCustomPort ? parts[3] : parts[2];
+                    var arg = hasCustomPort
+                        ? (parts.Length > 4 ? string.Join(" ", parts[4..]) : string.Empty)
+                        : (parts.Length > 3 ? string.Join(" ", parts[3..]) : string.Empty);
+
+                    SendDeviceLinkCommand(ent.Owner, action, arg);
+                    args.Output = $"Sent DeviceLink command '{action}' ({arg}) via port '{targetPort}'.";
+                    args.Success = true;
+                }
+                else if (sub is "link" && parts.Length >= 3)
+                {
+                    var targetIdent = parts[2].ToUpperInvariant();
+                    EntityUid? targetEnt = null;
+                    if (_guidSystem.TryGetEntityByGuid(targetIdent, out var optTarget) && optTarget.HasValue)
+                    {
+                        targetEnt = optTarget.Value;
+                    }
+                    else if (NetEntity.TryParse(parts[2], out var netEnt) && TryGetEntity(netEnt, out var directEnt))
+                    {
+                        targetEnt = directEnt;
+                    }
+
+                    if (targetEnt == null || !Exists(targetEnt.Value))
+                    {
+                        args.Output = $"port: Device '{parts[2]}' not found on network.";
+                        args.Handled = true;
+                        return;
+                    }
+
+                    var srcPort = parts.Length > 3 ? parts[3] : ComputerCommandPort;
+                    var sinkPort = parts.Length > 4 ? parts[4] : MachineCommandSinkPort;
+
+                    _deviceLink.EnsureSourcePort(ent.Owner, srcPort);
+                    _deviceLink.EnsureSinkPort(targetEnt.Value, sinkPort);
+                    _deviceLink.SaveLinks(null, ent.Owner, targetEnt.Value, new List<DeviceLink> { new(srcPort, sinkPort) });
+
+                    args.Output = $"Linked local port '{srcPort}' -> '{Name(targetEnt.Value)}' ({sinkPort}).";
+                    args.Success = true;
+                }
+                else if (sub is "unlink" && parts.Length >= 3)
+                {
+                    var targetIdent = parts[2].ToUpperInvariant();
+                    EntityUid? targetEnt = null;
+                    if (_guidSystem.TryGetEntityByGuid(targetIdent, out var optTarget) && optTarget.HasValue)
+                        targetEnt = optTarget.Value;
+                    else if (NetEntity.TryParse(parts[2], out var netEnt) && TryGetEntity(netEnt, out var directEnt))
+                        targetEnt = directEnt;
+
+                    if (targetEnt != null && Exists(targetEnt.Value))
+                    {
+                        _deviceLink.SaveLinks(null, ent.Owner, targetEnt.Value, new List<DeviceLink>());
+                        args.Output = $"Unlinked device '{Name(targetEnt.Value)}' [{targetIdent}].";
+                        args.Success = true;
+                    }
+                    else
+                    {
+                        args.Output = $"unlink: Device '{parts[2]}' not found.";
+                    }
                 }
                 else
                 {
                     var links = GetLinkedPortsSummary(ent.Owner);
                     args.Output = links.Count == 0
-                        ? "No active DeviceLink connections."
-                        : string.Join("\n", links.ConvertAll(l => $"{l.SourcePort} -> {l.TargetEntityName} ({l.SinkPort})"));
+                        ? "No active DeviceLink connections. Use 'port scan' or 'port link <guid>'."
+                        : string.Join("\n", links.ConvertAll(l => $"[{l.SourcePort}] -> {l.TargetEntityName} ({l.SinkPort})"));
                     args.Success = true;
                 }
 
@@ -701,9 +832,26 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 var sub = parts.Length > 1 ? parts[1].ToLowerInvariant() : "status";
                 if (sub == "link")
                 {
-                    AutoDiscoverAndLinkPorts(ent);
-                    args.Output = "Linked computer to Autolathe ports.";
-                    args.Success = true;
+                    if (parts.Length >= 3)
+                    {
+                        var targetGuid = parts[2].ToUpperInvariant();
+                        if (_guidSystem.TryGetEntityByGuid(targetGuid, out var optTarget) && optTarget.HasValue && HasComp<LatheComponent>(optTarget.Value))
+                        {
+                            LinkComputerAndMachine(ent.Owner, optTarget.Value);
+                            args.Output = $"Linked computer to Lathe [{targetGuid}] ({Name(optTarget.Value)}).";
+                            args.Success = true;
+                        }
+                        else
+                        {
+                            args.Output = $"lathe link: Target Lathe '{parts[2]}' not found.";
+                        }
+                    }
+                    else
+                    {
+                        AutoDiscoverAndLinkPorts(ent);
+                        args.Output = "Linked computer to Autolathe ports.";
+                        args.Success = true;
+                    }
                 }
                 else if (sub == "sync_disk")
                 {
@@ -728,7 +876,18 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 else
                 {
                     SendDeviceLinkCommand(ent.Owner, "lathe_status", string.Empty);
-                    args.Output = "Requested Lathe telemetry over DeviceLink.";
+                    var latheUid = FindLinkedTarget<LatheComponent>(ent.Owner);
+                    if (latheUid != null && TryComp<LatheComponent>(latheUid.Value, out var latheComp))
+                    {
+                        var current = latheComp.CurrentRecipe != null && _prototypeManager.TryIndex(latheComp.CurrentRecipe.Value, out var curProto)
+                            ? _lathe.GetRecipeName(curProto)
+                            : "Idle";
+                        args.Output = $"[Lathe Status: {Name(latheUid.Value)}] Currently Producing: {current} | Queue Count: {latheComp.Queue.Count}";
+                    }
+                    else
+                    {
+                        args.Output = "Requested Lathe telemetry over DeviceLink (No Lathe currently linked).";
+                    }
                     args.Success = true;
                 }
 
@@ -748,8 +907,37 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 var sub = parts.Length > 1 ? parts[1].ToLowerInvariant() : "status";
                 if (sub == "link")
                 {
-                    AutoDiscoverAndLinkPorts(ent);
-                    args.Output = "Linked computer to APC ports.";
+                    if (parts.Length >= 3)
+                    {
+                        var targetGuid = parts[2].ToUpperInvariant();
+                        if (_guidSystem.TryGetEntityByGuid(targetGuid, out var optTarget) && optTarget.HasValue && HasComp<ApcComponent>(optTarget.Value))
+                        {
+                            LinkComputerAndMachine(ent.Owner, optTarget.Value);
+                            args.Output = $"Linked computer to APC [{targetGuid}] ({Name(optTarget.Value)}).";
+                            args.Success = true;
+                        }
+                        else
+                        {
+                            args.Output = $"apc link: Target APC '{parts[2]}' not found.";
+                        }
+                    }
+                    else
+                    {
+                        AutoDiscoverAndLinkPorts(ent);
+                        args.Output = "Linked computer to APC ports.";
+                        args.Success = true;
+                    }
+                }
+                else if (sub == "on")
+                {
+                    SendDeviceLinkCommand(ent.Owner, "apc_set_breaker", "on");
+                    args.Output = "Turned on APC main breaker via DeviceLink.";
+                    args.Success = true;
+                }
+                else if (sub == "off")
+                {
+                    SendDeviceLinkCommand(ent.Owner, "apc_set_breaker", "off");
+                    args.Output = "Turned off APC main breaker via DeviceLink.";
                     args.Success = true;
                 }
                 else if (sub == "toggle")
@@ -761,7 +949,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 else
                 {
                     SendDeviceLinkCommand(ent.Owner, "apc_status", string.Empty);
-                    args.Output = "Requested APC telemetry over DeviceLink.";
+                    var apcUid = FindLinkedTarget<ApcComponent>(ent.Owner);
+                    if (apcUid != null && TryComp<ApcComponent>(apcUid.Value, out var apcComp))
+                    {
+                        var chargePct = 0f;
+                        var loadWatts = 0;
+                        if (TryComp<PowerNetworkBatteryComponent>(apcUid.Value, out var netBat))
+                        {
+                            var bat = netBat.NetworkBattery;
+                            if (bat.Capacity > 0)
+                                chargePct = Math.Clamp(bat.CurrentStorage / bat.Capacity * 100f, 0f, 100f);
+                            loadWatts = (int) MathF.Ceiling(bat.CurrentSupply);
+                        }
+                        args.Output = $"[APC Status: {Name(apcUid.Value)}] Main Breaker: {(apcComp.MainBreakerEnabled ? "ON" : "OFF")} | Battery: {chargePct:F1}% | Load: {loadWatts}W | External Power: {apcComp.LastExternalState}";
+                    }
+                    else
+                    {
+                        args.Output = "Requested APC telemetry over DeviceLink (No APC currently linked).";
+                    }
                     args.Success = true;
                 }
 
@@ -781,9 +986,26 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 var sub = parts.Length > 1 ? parts[1].ToLowerInvariant() : "status";
                 if (sub == "link")
                 {
-                    AutoDiscoverAndLinkPorts(ent);
-                    args.Output = "Linked computer to Air Alarm ports.";
-                    args.Success = true;
+                    if (parts.Length >= 3)
+                    {
+                        var targetGuid = parts[2].ToUpperInvariant();
+                        if (_guidSystem.TryGetEntityByGuid(targetGuid, out var optTarget) && optTarget.HasValue && HasComp<AirAlarmComponent>(optTarget.Value))
+                        {
+                            LinkComputerAndMachine(ent.Owner, optTarget.Value);
+                            args.Output = $"Linked computer to Air Alarm [{targetGuid}] ({Name(optTarget.Value)}).";
+                            args.Success = true;
+                        }
+                        else
+                        {
+                            args.Output = $"atmos link: Target Air Alarm '{parts[2]}' not found.";
+                        }
+                    }
+                    else
+                    {
+                        AutoDiscoverAndLinkPorts(ent);
+                        args.Output = "Linked computer to Air Alarm ports.";
+                        args.Success = true;
+                    }
                 }
                 else if (sub == "mode" && parts.Length >= 3)
                 {
@@ -795,7 +1017,22 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 else
                 {
                     SendDeviceLinkCommand(ent.Owner, "atmos_status", string.Empty);
-                    args.Output = "Requested Air Alarm telemetry over DeviceLink.";
+                    var alarmUid = FindLinkedTarget<AirAlarmComponent>(ent.Owner);
+                    if (alarmUid != null && TryComp<AirAlarmComponent>(alarmUid.Value, out var alarmComp))
+                    {
+                        var pressure = 0f;
+                        var temp = 0f;
+                        if (_atmosphere.GetContainingMixture(alarmUid.Value, false, false) is { } mix)
+                        {
+                            pressure = mix.Pressure;
+                            temp = mix.Temperature;
+                        }
+                        args.Output = $"[Air Alarm Status: {Name(alarmUid.Value)}] Mode: {alarmComp.CurrentMode} | Danger: {alarmComp.State} | Pressure: {pressure:F1} kPa | Temperature: {temp:F1} K";
+                    }
+                    else
+                    {
+                        args.Output = "Requested Air Alarm telemetry over DeviceLink (No Air Alarm currently linked).";
+                    }
                     args.Success = true;
                 }
 
@@ -882,6 +1119,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 UpdateApcControlUi((prog, apcCart), computerUid);
             if (TryComp<AtmosControlCartridgeComponent>(prog, out var atmosCart))
                 UpdateAtmosControlUi((prog, atmosCart), computerUid);
+            if (TryComp<EmbeddedOsCartridgeComponent>(prog, out var embCart))
+                UpdateEmbeddedOsUi((prog, embCart), computerUid);
             if (TryComp<OsCartridgeComponent>(prog, out var osCart))
                 UpdateOsUi((prog, osCart), computerUid);
         }
@@ -1161,6 +1400,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     {
                         oxydComp.AllowRemoteControl = !oxydComp.AllowRemoteControl;
                         Dirty(loaderUid, oxydComp);
+                        if (!oxydComp.AllowRemoteControl)
+                            OnRemoteAccessRevoked(loaderUid);
                         status = oxydComp.AllowRemoteControl ? "Remote control enabled." : "Remote control disabled.";
                     }
                 }
@@ -1453,6 +1694,246 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
     }
 
+    // =========================================================================
+    // Embedded OS Cartridge Handlers
+    // =========================================================================
+
+    private void OnEmbeddedOsUiReady(Entity<EmbeddedOsCartridgeComponent> ent, ref CartridgeUiReadyEvent args)
+    {
+        UpdateEmbeddedOsUi(ent, args.Loader);
+    }
+
+    private void OnEmbeddedOsUiMessage(Entity<EmbeddedOsCartridgeComponent> ent, ref CartridgeMessageEvent args)
+    {
+        if (args is not EmbeddedOsUiMessageEvent msg)
+            return;
+
+        var loaderUid = GetEntity(args.LoaderUid);
+        if (!TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
+            return;
+
+        var status = string.Empty;
+
+        switch (msg.Action)
+        {
+            case EmbeddedOsUiAction.LaunchProgram:
+                if (msg.TargetProgram is { } targetNet && TryGetEntity(targetNet, out var targetProg))
+                {
+                    _cartridgeLoader.ActivateProgram((loaderUid, loader), targetProg.Value);
+                    if (TryComp<PdaComponent>(loaderUid, out var pda))
+                    {
+                        if (!pda.OpenPrograms.Contains(targetProg.Value))
+                            pda.OpenPrograms.Add(targetProg.Value);
+                        _pda.UpdatePdaUi(loaderUid, pda);
+                    }
+                    status = $"Launched program '{Name(targetProg.Value)}'.";
+                }
+                break;
+
+            case EmbeddedOsUiAction.CloseProgram:
+                if (msg.TargetProgram is { } closeNet && TryGetEntity(closeNet, out var closeProg))
+                {
+                    if (TryComp<PdaComponent>(loaderUid, out var pdaClose))
+                    {
+                        pdaClose.OpenPrograms.Remove(closeProg.Value);
+                        _pda.UpdatePdaUi(loaderUid, pdaClose);
+                    }
+
+                    if (loader.ActiveProgram == closeProg.Value)
+                    {
+                        var comp = CompOrNull<OxydComputerComponent>(loaderUid);
+                        var openProgs = TryComp<PdaComponent>(loaderUid, out var p) ? p.OpenPrograms : new();
+                        if (openProgs.Count > 0)
+                        {
+                            var nextProg = openProgs.Last();
+                            _cartridgeLoader.ActivateProgram((loaderUid, loader), nextProg);
+                        }
+                        else if (comp?.BootProgram is { } bootProg && Exists(bootProg))
+                        {
+                            _cartridgeLoader.ActivateProgram((loaderUid, loader), bootProg);
+                        }
+                        else
+                        {
+                            _cartridgeLoader.DeactivateProgram((loaderUid, loader), closeProg.Value);
+                        }
+                    }
+                    else
+                    {
+                        var deactEvt = new CartridgeDeactivatedEvent((loaderUid, loader));
+                        RaiseLocalEvent(closeProg.Value, ref deactEvt);
+                        var loaderDeactEvt = new CartridgeLoaderProgramDeactivatedEvent(closeProg.Value);
+                        RaiseLocalEvent(loaderUid, ref loaderDeactEvt);
+                    }
+
+                    status = $"Closed program '{Name(closeProg.Value)}'.";
+                }
+                break;
+
+            case EmbeddedOsUiAction.ToggleRemoteControl:
+                if (TryComp<OxydComputerComponent>(loaderUid, out var oxydComp))
+                {
+                    if (oxydComp.RemoteControlWireCut)
+                    {
+                        status = "Error: Remote control wire is cut on motherboard.";
+                    }
+                    else
+                    {
+                        oxydComp.AllowRemoteControl = !oxydComp.AllowRemoteControl;
+                        Dirty(loaderUid, oxydComp);
+                        if (!oxydComp.AllowRemoteControl)
+                            OnRemoteAccessRevoked(loaderUid);
+                        status = oxydComp.AllowRemoteControl ? "Remote control enabled." : "Remote control disabled.";
+                    }
+                }
+                break;
+
+            case EmbeddedOsUiAction.ScanAndLinkDevices:
+                ExecuteComputerCommand(loaderUid, "port scan", out status, ent.Owner);
+                break;
+
+            case EmbeddedOsUiAction.RunCommand:
+                if (!string.IsNullOrWhiteSpace(msg.Command))
+                    ExecuteComputerCommand(loaderUid, msg.Command, out status, ent.Owner);
+                break;
+
+            case EmbeddedOsUiAction.Refresh:
+                status = "System telemetry updated.";
+                break;
+        }
+
+        UpdateEmbeddedOsUi(ent, loaderUid, status);
+    }
+
+    public void UpdateEmbeddedOsUi(EntityUid loaderUid, string statusMessage = "")
+    {
+        if (!TryComp<CartridgeLoaderComponent>(loaderUid, out _))
+            return;
+
+        EntityUid? embProg = null;
+        if (TryComp<OxydComputerComponent>(loaderUid, out var comp) && comp.BootProgram is { } bootProg && HasComp<EmbeddedOsCartridgeComponent>(bootProg))
+        {
+            embProg = bootProg;
+        }
+        else
+        {
+            embProg = _cartridgeLoader.GetAllPrograms(loaderUid).FirstOrDefault(p => HasComp<EmbeddedOsCartridgeComponent>(p));
+        }
+
+        if (embProg != null && TryComp<EmbeddedOsCartridgeComponent>(embProg.Value, out var embCart))
+        {
+            UpdateEmbeddedOsUi((embProg.Value, embCart), loaderUid, statusMessage);
+        }
+    }
+
+    public void UpdateEmbeddedOsUi(Entity<EmbeddedOsCartridgeComponent> ent, EntityUid loaderUid, string statusMessage = "")
+    {
+        if (!TryComp<CartridgeLoaderComponent>(loaderUid, out var loader))
+            return;
+
+        var oxydComp = EnsureComp<OxydComputerComponent>(loaderUid);
+        var guid = _router.EnsureDeviceGuid(loaderUid);
+
+        var statsComp = CompOrNull<ComputerStatsComponent>(loaderUid);
+        var fsComp = CompOrNull<FileSystemComponent>(loaderUid);
+        var bwComp = CompOrNull<NetworkBandwidthComponent>(loaderUid);
+        var pdaComp = CompOrNull<PdaComponent>(loaderUid);
+
+        var openCount = pdaComp != null && pdaComp.OpenPrograms.Count > 0 ? pdaComp.OpenPrograms.Count : 1;
+        ComputerMetricsHelper.CalculateMetrics(
+            openCount,
+            statsComp,
+            fsComp,
+            bwComp,
+            out var cpuLoad,
+            out var ramUsed,
+            out var ramTotal,
+            out var diskUsedBytes,
+            out var diskTotalBytes,
+            out _,
+            out _,
+            curTime: _timing.CurTime.TotalSeconds);
+
+        var uploadBps = bwComp?.MaxUploadBps ?? 250000;
+        var downloadBps = bwComp?.MaxBps ?? 250000;
+        var batteryPercent = statsComp?.BatteryChargePercent ?? 100f;
+        var hasBattery = statsComp?.HasBattery ?? false;
+
+        var machineName = MetaData(loaderUid).EntityName;
+        var machineType = "Embedded System";
+        if (oxydComp.HostMachine is { } host && Exists(host))
+        {
+            machineName = MetaData(host).EntityName;
+            if (HasComp<ApcComponent>(host))
+                machineType = "Area Power Controller";
+            else if (HasComp<AirAlarmComponent>(host))
+                machineType = "Atmospheric Alarm Controller";
+            else if (HasComp<LatheComponent>(host))
+                machineType = "Manufacturing Lathe";
+        }
+
+        var programs = new List<OsProgramEntry>();
+        foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid))
+        {
+            var cart = CompOrNull<CartridgeComponent>(prog);
+            var progName = cart != null
+                ? Loc.GetString(cart.ProgramName)
+                : Name(prog);
+            var desc = !string.IsNullOrWhiteSpace(MetaData(prog).EntityDescription) ? MetaData(prog).EntityDescription : null;
+            var icon = cart?.Icon;
+            var installStatus = cart?.InstallationStatus ?? InstallationStatus.Installed;
+
+            var isRunning = loader.ActiveProgram == prog ||
+                            oxydComp.BootProgram == prog ||
+                            (pdaComp != null && pdaComp.OpenPrograms.Contains(prog));
+
+            programs.Add(new OsProgramEntry
+            {
+                Uid = GetNetEntity(prog),
+                Name = progName,
+                Description = desc,
+                Icon = icon,
+                InstallationStatus = installStatus,
+                IsRunning = isRunning,
+                IsBootProgram = oxydComp.BootProgram == prog
+            });
+        }
+
+        var hardwareEntries = BuildHardwareSummary(loaderUid);
+        var linkedPorts = GetLinkedPortsSummary(loaderUid);
+
+        var state = new EmbeddedOsUiState(
+            guid,
+            machineName,
+            machineType,
+            oxydComp.Template,
+            oxydComp.AllowRemoteControl && !oxydComp.RemoteControlWireCut,
+            (int) cpuLoad,
+            ramUsed,
+            ramTotal,
+            diskUsedBytes / 1024,
+            diskTotalBytes / 1024,
+            uploadBps,
+            downloadBps,
+            batteryPercent,
+            hasBattery,
+            programs,
+            hardwareEntries,
+            linkedPorts,
+            statusMessage,
+            loader.ActiveProgram != null ? GetNetEntity(loader.ActiveProgram) : null);
+
+        if (pdaComp != null)
+        {
+            if (loader.ActiveProgram == ent.Owner || loader.ActiveProgram == null)
+                pdaComp.ActiveCartridgeState = state;
+            _pda.UpdatePdaUi(loaderUid, pdaComp);
+        }
+        else
+        {
+            _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state, loader);
+        }
+    }
+
     private List<OsHardwareEntry> BuildHardwareSummary(EntityUid computerUid)
     {
         var list = new List<OsHardwareEntry>();
@@ -1561,7 +2042,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
         switch (msg.Action)
         {
             case LatheControlUiAction.LinkLathe:
-                ExecuteComputerCommand(loaderUid, "lathe link", out status, ent.Owner);
+                var latheCmd = string.IsNullOrEmpty(msg.TargetGuid) ? "lathe link" : $"lathe link {msg.TargetGuid}";
+                ExecuteComputerCommand(loaderUid, latheCmd, out status, ent.Owner);
                 break;
 
             case LatheControlUiAction.SyncDiskDesigns:
@@ -1691,10 +2173,17 @@ public sealed partial class OxydComputerSystem : EntitySystem
         switch (msg.Action)
         {
             case ApcControlUiAction.LinkApc:
-                ExecuteComputerCommand(loaderUid, "apc link", out status, ent.Owner);
+                var apcCmd = string.IsNullOrEmpty(msg.TargetGuid) ? "apc link" : $"apc link {msg.TargetGuid}";
+                ExecuteComputerCommand(loaderUid, apcCmd, out status, ent.Owner);
                 break;
             case ApcControlUiAction.ToggleMainBreaker:
                 ExecuteComputerCommand(loaderUid, "apc toggle", out status, ent.Owner);
+                break;
+            case ApcControlUiAction.SetBreakerOn:
+                ExecuteComputerCommand(loaderUid, "apc on", out status, ent.Owner);
+                break;
+            case ApcControlUiAction.SetBreakerOff:
+                ExecuteComputerCommand(loaderUid, "apc off", out status, ent.Owner);
                 break;
             case ApcControlUiAction.Refresh:
                 ExecuteComputerCommand(loaderUid, "apc status", out status, ent.Owner);
@@ -1766,7 +2255,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
         switch (msg.Action)
         {
             case AtmosControlUiAction.LinkAlarm:
-                ExecuteComputerCommand(loaderUid, "atmos link", out status, ent.Owner);
+                var atmosCmd = string.IsNullOrEmpty(msg.TargetGuid) ? "atmos link" : $"atmos link {msg.TargetGuid}";
+                ExecuteComputerCommand(loaderUid, atmosCmd, out status, ent.Owner);
                 break;
             case AtmosControlUiAction.SetModeFiltering:
                 ExecuteComputerCommand(loaderUid, "atmos mode Filtering", out status, ent.Owner);

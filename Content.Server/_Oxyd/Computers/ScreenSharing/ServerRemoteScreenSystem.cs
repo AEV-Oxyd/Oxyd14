@@ -1,5 +1,6 @@
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
+using Content.Server._Oxyd.Computers.Cartridges;
 using Content.Server.Atmos.Monitor.Components;
 using Content.Server.PDA;
 using Content.Server.Power.Components;
@@ -10,6 +11,8 @@ using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.APC;
+using Content.Shared.Lathe;
+using Content.Shared._Oxyd.Computers;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Server.Construction.Components;
@@ -63,23 +66,13 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     /// </summary>
     public void EnsureAllDevicesProvisioned()
     {
-        var apcQuery = AllEntityQuery<ApcComponent, MetaDataComponent>();
-        while (apcQuery.MoveNext(out var uid, out _, out var meta))
+        var hostQuery = AllEntityQuery<EmbeddedComputerHostComponent, MetaDataComponent>();
+        while (hostQuery.MoveNext(out _, out var host, out var meta))
         {
-            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            if (host.ComputerEntity is { } compUid && Exists(compUid))
             {
-                var guid = EnsureComp<DeviceGuidComponent>(uid);
-                _guidSystem.EnsureGuid(uid, guid);
-            }
-        }
-
-        var alarmQuery = AllEntityQuery<AirAlarmComponent, MetaDataComponent>();
-        while (alarmQuery.MoveNext(out var uid, out _, out var meta))
-        {
-            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
-            {
-                var guid = EnsureComp<DeviceGuidComponent>(uid);
-                _guidSystem.EnsureGuid(uid, guid);
+                var guid = EnsureComp<DeviceGuidComponent>(compUid);
+                _guidSystem.EnsureGuid(compUid, guid);
             }
         }
 
@@ -117,6 +110,12 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     {
         if (TerminatingOrDeleted(uid))
             return;
+
+        if (TryComp<EmbeddedComputerHostComponent>(uid, out var host) && host.ComputerEntity is { } comp && Exists(comp))
+        {
+            EnsureDeviceProvisioned(comp);
+            return;
+        }
 
         EnsureComp<DeviceGuidComponent>(uid);
 
@@ -201,6 +200,21 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     /// </summary>
     public string GetDeviceCategory(EntityUid uid)
     {
+        if (TryComp<OxydComputerComponent>(uid, out var oxydComp))
+        {
+            if (oxydComp.HostMachine is { } host && Exists(host))
+            {
+                if (HasComp<ApcComponent>(host))
+                    return "APC";
+                if (HasComp<AirAlarmComponent>(host))
+                    return "AIR-ALARM";
+                if (HasComp<LatheComponent>(host))
+                    return "LATHE";
+            }
+            if (oxydComp.Template == ComputerUiTemplate.Embedded)
+                return "EMBEDDED";
+        }
+
         if (HasComp<ApcComponent>(uid))
             return "APC";
         if (HasComp<AirAlarmComponent>(uid))
@@ -225,6 +239,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     {
         if (TerminatingOrDeleted(uid))
             return false;
+
+        if (TryComp<EmbeddedComputerHostComponent>(uid, out var host) && host.ComputerEntity is { } compUid && Exists(compUid))
+            return CanShareScreen(compUid);
 
         if (HasComp<PdaComponent>(uid) || HasComp<CartridgeLoaderComponent>(uid))
             return true;
@@ -398,6 +415,17 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             }
         }
 
+        foreach (var target in session.ActiveTargets)
+        {
+            if (!IsTargetNeededByActor(actor, target) && !TerminatingOrDeleted(target))
+            {
+                if (TryGetPrimaryUiKey(target, out var uiKey, out _) && uiKey != null)
+                {
+                    _uiSystem.CloseUi(target, uiKey, actor);
+                }
+            }
+        }
+
         RebuildActorAuthorizedTargets(actor);
     }
 
@@ -415,6 +443,63 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// Forcibly terminates all remote screen sessions viewing <paramref name="targetUid"/> or its host/computer,
+    /// and closes the target's BoundUserInterface for any viewing players.
+    /// </summary>
+    public void TerminateRemoteSessionsForDevice(EntityUid targetUid)
+    {
+        var targetGuid = _guidSystem.GetGuid(targetUid);
+
+        var targetsToCheck = new HashSet<EntityUid> { targetUid };
+        if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostComp) && hostComp.ComputerEntity is { } comp && Exists(comp))
+            targetsToCheck.Add(comp);
+        if (TryComp<OxydComputerComponent>(targetUid, out var oxydComp) && oxydComp.HostMachine is { } host && Exists(host))
+            targetsToCheck.Add(host);
+
+        var terminalsToDetach = new List<EntityUid>();
+        foreach (var (termUid, session) in _sessionsByTerminal)
+        {
+            if (session.ActiveTargets.Overlaps(targetsToCheck))
+                terminalsToDetach.Add(termUid);
+        }
+
+        foreach (var termUid in terminalsToDetach)
+        {
+            if (TryComp<TerminalCartridgeComponent>(termUid, out var termComp))
+            {
+                termComp.IsScreenAttached = false;
+                termComp.History.Add($"[SYSTEM] Remote screen session to [{targetGuid}] terminated: access revoked.");
+                Dirty(termUid, termComp);
+                if (Transform(termUid).ParentUid is { } loaderUid && loaderUid.IsValid())
+                {
+                    Get<TerminalCartridgeSystem>().UpdateUiState(termUid, loaderUid, termComp);
+                }
+            }
+            DetachViewer(termUid);
+        }
+
+        foreach (var ent in targetsToCheck)
+        {
+            CloseActiveUisForDevice(ent);
+        }
+    }
+
+    private void CloseActiveUisForDevice(EntityUid ent)
+    {
+        if (TryGetPrimaryUiKey(ent, out var uiKey, out _) && uiKey != null &&
+            TryComp<UserInterfaceComponent>(ent, out var uiComp))
+        {
+            foreach (var actors in uiComp.Actors.Values)
+            {
+                foreach (var actor in actors.ToList())
+                {
+                    _uiSystem.CloseUi(ent, uiKey, actor);
+                }
+            }
+        }
     }
 
     public void DetachAllForHostDevice(EntityUid actor, EntityUid hostDeviceUid)
@@ -492,6 +577,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     {
         if (!Exists(targetUid) || TerminatingOrDeleted(targetUid))
             return null;
+
+        if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostComp) && hostComp.ComputerEntity is { } compUid && Exists(compUid))
+            targetUid = compUid;
 
         EnsureDeviceProvisioned(targetUid);
 

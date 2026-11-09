@@ -316,7 +316,7 @@
     allowRemoteControl: true
     requiresPower: false
     defaultPrograms:
-    - OxydOsCartridge
+    - OxydEmbeddedOsCartridge
     - OxydTerminalCartridge
     - OxydFileBrowserCartridge
   - type: Pda
@@ -333,6 +333,13 @@
       computer_board_slots: !type:Container
   - type: CartridgeLoader
     uiKey: enum.PdaUiKey.Key
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: OxydEmbeddedOsCartridge
+        - id: OxydTerminalCartridge
+        - id: OxydFileBrowserCartridge
   - type: ActivatableUI
     key: enum.PdaUiKey.Key
     singleUser: false
@@ -354,6 +361,30 @@
   - type: FileSystem
     maxStorageBytes: 65536
     files:
+      "/bin/os.bin": !type:ProgramVirtualFile
+        name: os
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: true
+        programId: OxydEmbeddedOsCartridge
+        title: "Embedded OS"
+      "/bin/terminal.bin": !type:ProgramVirtualFile
+        name: terminal
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: OxydTerminalCartridge
+        title: "Terminal"
+      "/bin/file_browser.bin": !type:ProgramVirtualFile
+        name: file_browser
+        extension: bin
+        directory: /bin/
+        size: 2048
+        isReadOnly: false
+        programId: OxydFileBrowserCartridge
+        title: "File Browser"
       "/firmware/control.bin": !type:TextVirtualFile
         name: control
         extension: bin

@@ -11,14 +11,14 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Network;
 
-public sealed class NetworkRouterSystem : EntitySystem
+public sealed partial class NetworkRouterSystem : EntitySystem
 {
-    [Dependency] private readonly CartridgeLoaderSystem _cartridgeLoader = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly NetworkBandwidthSystem _bandwidth = default!;
-    [Dependency] private readonly ServerRemoteScreenSystem _remoteScreen = default!;
-    [Dependency] private readonly SharedDeviceGuidSystem _guidSystem = default!;
-    [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
+    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
+    [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
+    [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
 
     private EntityQuery<DeviceGuidComponent> _guidQuery;
     private EntityQuery<OxydComputerComponent> _computerQuery;

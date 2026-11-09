@@ -16,24 +16,12 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
         base.Initialize();
 
         SubscribeLocalEvent<UserInterfaceComponent, ActivateInWorldEvent>(OnActivateInWorld, before: new[] { typeof(SharedInteractionSystem) });
-        SubscribeLocalEvent<UserInterfaceComponent, UseInHandEvent>(OnUseInHand, before: new[] { typeof(SharedInteractionSystem) });
         SubscribeLocalEvent<UserInterfaceComponent, GetVerbsEvent<ActivationVerb>>(OnGetActivationVerbs, before: new[] { typeof(SharedInteractionSystem) });
     }
 
     private void OnActivateInWorld(EntityUid uid, UserInterfaceComponent comp, ActivateInWorldEvent args)
     {
-        if (args.Handled)
-            return;
-
-        if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(uid))
-        {
-            args.Handled = true;
-        }
-    }
-
-    private void OnUseInHand(EntityUid uid, UserInterfaceComponent comp, UseInHandEvent args)
-    {
-        if (args.Handled)
+        if (args.Handled || HasComp<Content.Shared.PDA.PdaComponent>(uid))
             return;
 
         if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(uid))

@@ -981,6 +981,540 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 }
 
 // ============================================================================
+// 1b. Embedded OS Cartridge UI (Industrial Machine Subsystem Shell)
+// ============================================================================
+
+public enum EmbeddedOsView
+{
+    Dashboard,
+    Programs,
+    Hardware,
+    ProgramContent
+}
+
+public sealed partial class EmbeddedOsUi : UIFragment
+{
+    private EmbeddedOsUiFragment? _fragment;
+
+    public override Control GetUIFragmentRoot() => _fragment!;
+
+    public override void Setup(BoundUserInterface userInterface, EntityUid? fragmentOwner)
+    {
+        _fragment = new EmbeddedOsUiFragment(msg => userInterface.SendMessage(new CartridgeUiMessage(msg)));
+    }
+
+    public override void UpdateState(BoundUserInterfaceState state)
+    {
+        if (state is EmbeddedOsUiState osState)
+            _fragment?.UpdateState(osState);
+    }
+
+    public void SetView(EmbeddedOsView view) => _fragment?.SetView(view);
+}
+
+public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiver
+{
+    [Dependency] private IClipboardManager _clipboard = default!;
+
+    private readonly Action<EmbeddedOsUiMessageEvent> _send;
+    private EmbeddedOsView _activeView = EmbeddedOsView.Dashboard;
+    private EmbeddedOsUiState? _lastState;
+
+    private Control? _activeProgramControl;
+    private string? _activeProgramTitle;
+    private NetEntity? _activeProgramUid;
+
+    private readonly BoxContainer _runningTabsContainer = new() { Orientation = LayoutOrientation.Horizontal };
+    private readonly BoxContainer _programContainer = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Visible = false };
+
+    private readonly PdaNavigationButton _navDashBtn = new() { MinWidth = 85, LabelText = "Dashboard", IsCurrent = true };
+    private readonly PdaNavigationButton _navProgramsBtn = new() { MinWidth = 85, LabelText = "Programs" };
+    private readonly PdaNavigationButton _navHardwareBtn = new() { MinWidth = 85, LabelText = "Hardware & Ports" };
+    private readonly Button _navQuickTerminalBtn = new() { Text = ">_ Terminal", MinWidth = 90 };
+    private readonly Button _navRefreshBtn = new() { Text = "Refresh", MinWidth = 65 };
+
+    private readonly BoxContainer _dashView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8) };
+    private readonly BoxContainer _programsView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8) };
+    private readonly BoxContainer _hardwareView = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(8) };
+
+    private readonly Label _headerMachineName = new() { FontColorOverride = Color.FromHex("#38d2f5") };
+    private readonly Label _headerGuidLabel = new() { FontColorOverride = Color.FromHex("#a0a0a5") };
+    private readonly Label _headerStatusLabel = new() { Text = "STATUS: ONLINE [STANDALONE]", FontColorOverride = Color.LimeGreen };
+
+    private readonly Label _metricsLabel = new() { FontColorOverride = Color.FromHex("#cfcfd4") };
+    private readonly Label _bandwidthLabel = new() { FontColorOverride = Color.FromHex("#8a8a90") };
+    private readonly Label _batteryLabel = new() { FontColorOverride = Color.FromHex("#8a8a90"), Visible = false };
+
+    private readonly Button _remoteToggleBtn = new();
+    private readonly Button _quickLaunchSubsystemBtn = new() { Visible = false, MinHeight = 36 };
+    private readonly Button _quickLaunchTermBtn = new() { Text = "Open Local Terminal Shell", MinHeight = 36 };
+
+    private readonly GridContainer _programsGrid = new() { Columns = 1, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
+
+    private readonly BoxContainer _hardwareBox = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
+    private readonly BoxContainer _linksBox = new() { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
+    private readonly Button _scanLinksBtn = new() { Text = "Scan & Link Device Ports" };
+    private readonly LineEdit _cmdInput = new() { PlaceHolder = "Run computer / DeviceLink command (devlink, port, apc, atmos, lathe)...", HorizontalExpand = true };
+    private readonly Label _statusLabel = new() { Modulate = Color.LimeGreen, HorizontalAlignment = HAlignment.Center };
+
+    public EmbeddedOsUiFragment(Action<EmbeddedOsUiMessageEvent> send)
+    {
+        IoCManager.InjectDependencies(this);
+        _send = send;
+        Orientation = LayoutOrientation.Vertical;
+        HorizontalExpand = true;
+        VerticalExpand = true;
+        Margin = new Thickness(0);
+
+        var navBar = new BoxContainer
+        {
+            Orientation = LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            MinHeight = 32,
+            Margin = new Thickness(1, 1, 3, 0)
+        };
+
+        _navDashBtn.OnPressed += _ => SetView(EmbeddedOsView.Dashboard);
+        _navProgramsBtn.OnPressed += _ => SetView(EmbeddedOsView.Programs);
+        _navHardwareBtn.OnPressed += _ => SetView(EmbeddedOsView.Hardware);
+        _navQuickTerminalBtn.OnPressed += _ => LaunchTerminal();
+        _navRefreshBtn.OnPressed += _ => _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.Refresh));
+
+        var baselineFiller = new ContentPanelContainer
+        {
+            HorizontalExpand = true,
+            MinHeight = 32,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#202023"),
+                BorderColor = Color.FromHex("#5a5a5a"),
+                BorderThickness = new Thickness(0, 0, 0, 2)
+            }
+        };
+
+        navBar.AddChild(_navDashBtn);
+        navBar.AddChild(_navProgramsBtn);
+        navBar.AddChild(_navHardwareBtn);
+        navBar.AddChild(_navQuickTerminalBtn);
+        navBar.AddChild(_navRefreshBtn);
+        navBar.AddChild(_runningTabsContainer);
+        navBar.AddChild(baselineFiller);
+        AddChild(navBar);
+
+        AddChild(_statusLabel);
+
+        // Setup Dashboard View
+        var dashHeaderPanel = new PanelContainer
+        {
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#1b1b1f"),
+                BorderColor = Color.FromHex("#3a3a42"),
+                BorderThickness = new Thickness(1)
+            },
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var dashHeaderBox = new BoxContainer
+        {
+            Orientation = LayoutOrientation.Vertical,
+            Margin = new Thickness(8)
+        };
+        dashHeaderBox.AddChild(_headerMachineName);
+        dashHeaderBox.AddChild(_headerGuidLabel);
+        dashHeaderBox.AddChild(_headerStatusLabel);
+        dashHeaderPanel.AddChild(dashHeaderBox);
+        _dashView.AddChild(dashHeaderPanel);
+
+        var metricsPanel = new PanelContainer
+        {
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#222228"),
+                BorderColor = Color.FromHex("#3a3a42"),
+                BorderThickness = new Thickness(1)
+            },
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var metricsBox = new BoxContainer
+        {
+            Orientation = LayoutOrientation.Vertical,
+            Margin = new Thickness(8)
+        };
+        metricsBox.AddChild(new Label { Text = "=== System Resource Telemetry ===", FontColorOverride = Color.FromHex("#38d2f5") });
+        metricsBox.AddChild(_metricsLabel);
+        metricsBox.AddChild(_bandwidthLabel);
+        metricsBox.AddChild(_batteryLabel);
+        metricsPanel.AddChild(metricsBox);
+        _dashView.AddChild(metricsPanel);
+
+        var quickActionsBox = new BoxContainer
+        {
+            Orientation = LayoutOrientation.Vertical,
+            Margin = new Thickness(0, 4)
+        };
+        _quickLaunchTermBtn.OnPressed += _ => LaunchTerminal();
+        quickActionsBox.AddChild(_quickLaunchTermBtn);
+        quickActionsBox.AddChild(_quickLaunchSubsystemBtn);
+        _dashView.AddChild(quickActionsBox);
+
+        // Setup Programs View
+        var progScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true, HScrollEnabled = true };
+        progScroll.AddChild(_programsGrid);
+        _programsView.AddChild(progScroll);
+
+        // Setup Hardware View
+        var hwTopBar = new BoxContainer { Orientation = LayoutOrientation.Horizontal, HorizontalExpand = true };
+        var hwHeader = new Label
+        {
+            Text = "=== Controller Hardware & Ports ===",
+            FontColorOverride = Color.Cyan,
+            HorizontalExpand = true
+        };
+        hwTopBar.AddChild(hwHeader);
+        _remoteToggleBtn.OnPressed += _ => _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.ToggleRemoteControl));
+        _scanLinksBtn.OnPressed += _ => _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.ScanAndLinkDevices));
+        hwTopBar.AddChild(_remoteToggleBtn);
+        hwTopBar.AddChild(_scanLinksBtn);
+        _hardwareView.AddChild(hwTopBar);
+
+        var cmdRow = new BoxContainer { Orientation = LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 6) };
+        var runBtn = new Button { Text = "Execute" };
+        runBtn.OnPressed += _ => ExecuteInput();
+        _cmdInput.OnTextEntered += _ => ExecuteInput();
+        cmdRow.AddChild(_cmdInput);
+        cmdRow.AddChild(runBtn);
+        _hardwareView.AddChild(cmdRow);
+
+        var hwScroll = new ScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var hwContent = new BoxContainer { Orientation = LayoutOrientation.Vertical, HorizontalExpand = true };
+        hwContent.AddChild(new Label { Text = "=== Hardware Modules ===", FontColorOverride = Color.Cyan });
+        hwContent.AddChild(_hardwareBox);
+        hwContent.AddChild(new Label { Text = "=== Linked Device Ports ===", FontColorOverride = Color.Cyan, Margin = new Thickness(0, 6, 0, 0) });
+        hwContent.AddChild(_linksBox);
+        hwScroll.AddChild(hwContent);
+        _hardwareView.AddChild(hwScroll);
+
+        AddChild(_dashView);
+        AddChild(_programsView);
+        AddChild(_hardwareView);
+        AddChild(_programContainer);
+
+        SetView(EmbeddedOsView.Dashboard);
+    }
+
+    public BuiStateReceiveResult ReceiveBuiState(BoundUserInterfaceState state)
+    {
+        if (state is EmbeddedOsUiState osState)
+        {
+            UpdateState(osState);
+            return BuiStateReceiveResult.Consumed;
+        }
+        return BuiStateReceiveResult.Ignored;
+    }
+
+    public void SetView(EmbeddedOsView view)
+    {
+        _activeView = view;
+        _dashView.Visible = view == EmbeddedOsView.Dashboard;
+        _programsView.Visible = view == EmbeddedOsView.Programs;
+        _hardwareView.Visible = view == EmbeddedOsView.Hardware;
+        _programContainer.Visible = view == EmbeddedOsView.ProgramContent;
+
+        _navDashBtn.IsCurrent = view == EmbeddedOsView.Dashboard;
+        _navProgramsBtn.IsCurrent = view == EmbeddedOsView.Programs;
+        _navHardwareBtn.IsCurrent = view == EmbeddedOsView.Hardware;
+
+        UpdateRunningTabs();
+    }
+
+    public void AttachProgram(Control programControl, string? title, NetEntity? programUid = null)
+    {
+        if (_activeProgramControl != null && _activeProgramControl != programControl)
+        {
+            _programContainer.RemoveChild(_activeProgramControl);
+        }
+
+        _activeProgramControl = programControl;
+        _activeProgramTitle = title;
+        if (programUid != null)
+            _activeProgramUid = programUid;
+
+        if (programControl.Parent != _programContainer)
+        {
+            programControl.Parent?.RemoveChild(programControl);
+            _programContainer.AddChild(programControl);
+        }
+
+        SetView(EmbeddedOsView.ProgramContent);
+    }
+
+    public void DetachProgram(Control programControl)
+    {
+        if (_programContainer.Children.Contains(programControl))
+        {
+            _programContainer.RemoveChild(programControl);
+        }
+
+        if (_activeProgramControl == programControl)
+        {
+            _activeProgramControl = null;
+            _activeProgramTitle = null;
+            if (_activeView == EmbeddedOsView.ProgramContent)
+            {
+                SetView(EmbeddedOsView.Dashboard);
+            }
+        }
+        UpdateRunningTabs();
+    }
+
+    private void UpdateRunningTabs()
+    {
+        _runningTabsContainer.RemoveAllChildren();
+        if (_lastState == null)
+            return;
+
+        foreach (var prog in _lastState.Programs)
+        {
+            if (!prog.IsRunning)
+                continue;
+
+            var targetUid = prog.Uid;
+            var isCur = _activeView == EmbeddedOsView.ProgramContent && _activeProgramUid == targetUid;
+            var progTitle = prog.Name;
+
+            var tabBox = new BoxContainer
+            {
+                Orientation = LayoutOrientation.Horizontal,
+                Margin = new Thickness(0)
+            };
+
+            var tabBtn = new PdaNavigationButton
+            {
+                MinWidth = 75,
+                LabelText = progTitle,
+                IsCurrent = isCur,
+                ToolTip = $"Switch to {progTitle}"
+            };
+
+            tabBtn.OnPressed += _ =>
+            {
+                if (_activeProgramUid == targetUid && _activeProgramControl != null)
+                {
+                    SetView(EmbeddedOsView.ProgramContent);
+                }
+                else
+                {
+                    _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: targetUid));
+                }
+            };
+
+            var closeBtn = new PdaCloseTabButton
+            {
+                IsCurrent = isCur,
+                ToolTip = $"Close {progTitle}"
+            };
+            closeBtn.OnPressed += _ =>
+            {
+                _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.CloseProgram, targetProgram: targetUid));
+            };
+
+            tabBox.AddChild(tabBtn);
+            tabBox.AddChild(closeBtn);
+            _runningTabsContainer.AddChild(tabBox);
+        }
+    }
+
+    private void LaunchTerminal()
+    {
+        if (_lastState == null)
+        {
+            _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.RunCommand, command: "term"));
+            return;
+        }
+
+        var termProg = _lastState.Programs.FirstOrDefault(p =>
+            p.Name.Contains("Terminal", StringComparison.OrdinalIgnoreCase) ||
+            (p.Description?.Contains("Terminal", StringComparison.OrdinalIgnoreCase) == true));
+
+        if (termProg != null)
+        {
+            _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: termProg.Uid));
+        }
+        else
+        {
+            _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.RunCommand, command: "term"));
+        }
+    }
+
+    public void UpdateState(EmbeddedOsUiState state)
+    {
+        _lastState = state;
+        _headerMachineName.Text = $"{state.MachineType.ToUpperInvariant()} - {state.MachineName}";
+        _headerGuidLabel.Text = $"Host GUID: {state.DeviceGuid} | Subsystem Architecture: NT-OS Embedded v2.4";
+        _headerStatusLabel.Text = state.AllowRemoteControl
+            ? "STATUS: ONLINE [REMOTE ACCESS PERMITTED]"
+            : "STATUS: ONLINE [REMOTE ACCESS RESTRICTED]";
+        _headerStatusLabel.FontColorOverride = state.AllowRemoteControl ? Color.LimeGreen : Color.Goldenrod;
+
+        _statusLabel.Text = state.StatusMessage;
+
+        _metricsLabel.Text = $"Processor: {state.CpuLoadPercent}% Load | Memory: {state.RamUsedMB} / {state.RamTotalMB} MB | Storage: {state.DiskUsedKB} / {state.DiskTotalKB} KB";
+        _bandwidthLabel.Text = $"Network Interface: v {state.DownloadBps / 1000} KB/s | ^ {state.UploadBps / 1000} KB/s";
+
+        if (state.HasBattery)
+        {
+            _batteryLabel.Visible = true;
+            _batteryLabel.Text = $"Backup Battery Cell: {state.BatteryPercent:F1}% Charge";
+            _batteryLabel.FontColorOverride = state.BatteryPercent < 20f ? Color.Red : Color.FromHex("#8a8a90");
+        }
+        else
+        {
+            _batteryLabel.Visible = false;
+        }
+
+        _remoteToggleBtn.Text = state.AllowRemoteControl ? "Remote: ALLOWED" : "Remote: BLOCKED";
+        _remoteToggleBtn.Modulate = state.AllowRemoteControl ? Color.LightGreen : Color.Goldenrod;
+
+        var subsystemProg = state.Programs.FirstOrDefault(p =>
+            p.Name.Contains("APC", StringComparison.OrdinalIgnoreCase) ||
+            p.Name.Contains("Atmospheric", StringComparison.OrdinalIgnoreCase) ||
+            p.Name.Contains("Lathe", StringComparison.OrdinalIgnoreCase) ||
+            p.Name.Contains("Autolathe", StringComparison.OrdinalIgnoreCase));
+
+        if (subsystemProg != null)
+        {
+            _quickLaunchSubsystemBtn.Visible = true;
+            _quickLaunchSubsystemBtn.Text = $"Open Subsystem Controller ({subsystemProg.Name})";
+            _quickLaunchSubsystemBtn.OnPressed += _ =>
+            {
+                _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: subsystemProg.Uid));
+            };
+        }
+        else
+        {
+            _quickLaunchSubsystemBtn.Visible = false;
+        }
+
+        _programsGrid.RemoveAllChildren();
+        if (state.Programs.Count == 0)
+        {
+            _programsGrid.AddChild(new Label
+            {
+                Text = "No cartridge programs installed on embedded storage.",
+                HorizontalAlignment = HAlignment.Center
+            });
+        }
+        else
+        {
+            foreach (var prog in state.Programs)
+            {
+                var targetProgUid = prog.Uid;
+                var card = new PanelContainer
+                {
+                    PanelOverride = new StyleBoxFlat
+                    {
+                        BackgroundColor = Color.FromHex("#222228"),
+                        BorderColor = Color.FromHex("#3a3a44"),
+                        BorderThickness = new Thickness(1)
+                    },
+                    Margin = new Thickness(2, 4)
+                };
+
+                var row = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    Margin = new Thickness(8)
+                };
+
+                var textCol = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Vertical,
+                    HorizontalExpand = true
+                };
+                textCol.AddChild(new Label { Text = prog.Name, FontColorOverride = Color.White });
+                textCol.AddChild(new Label { Text = prog.Description, FontColorOverride = Color.FromHex("#8a8a90") });
+                row.AddChild(textCol);
+
+                var launchBtn = new Button
+                {
+                    Text = prog.IsRunning ? "Switch" : "Launch",
+                    MinWidth = 80
+                };
+                launchBtn.OnPressed += _ =>
+                {
+                    _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.LaunchProgram, targetProgram: targetProgUid));
+                };
+                row.AddChild(launchBtn);
+
+                card.AddChild(row);
+                _programsGrid.AddChild(card);
+            }
+        }
+
+        _hardwareBox.RemoveAllChildren();
+        if (state.Hardware.Count == 0)
+        {
+            _hardwareBox.AddChild(new Label { Text = "Integrated Industrial Controller Board" });
+        }
+        else
+        {
+            foreach (var hw in state.Hardware)
+            {
+                _hardwareBox.AddChild(new Label { Text = $"[{hw.SlotName}] {hw.PartName} ({hw.Size}) - {hw.Details}" });
+            }
+        }
+
+        _linksBox.RemoveAllChildren();
+        if (state.LinkedPorts.Count == 0)
+        {
+            _linksBox.AddChild(new Label { Text = "No local DeviceLink ports connected. Use 'Scan & Link Device Ports'." });
+        }
+        else
+        {
+            foreach (var link in state.LinkedPorts)
+            {
+                var linkRow = new BoxContainer
+                {
+                    Orientation = LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    Margin = new Thickness(0, 2)
+                };
+                var linkLbl = new Label
+                {
+                    Text = $"{link.SourcePort} -> {link.TargetEntityName} ({link.SinkPort})",
+                    HorizontalExpand = true
+                };
+                var trigBtn = new Button
+                {
+                    Text = "Trigger",
+                    MinWidth = 70
+                };
+                var portName = link.SourcePort;
+                trigBtn.OnPressed += _ =>
+                {
+                    _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.RunCommand, command: $"port trigger {portName}"));
+                };
+                linkRow.AddChild(linkLbl);
+                linkRow.AddChild(trigBtn);
+                _linksBox.AddChild(linkRow);
+            }
+        }
+
+        UpdateRunningTabs();
+    }
+
+    private void ExecuteInput()
+    {
+        if (!string.IsNullOrWhiteSpace(_cmdInput.Text))
+        {
+            _send(new EmbeddedOsUiMessageEvent(EmbeddedOsUiAction.RunCommand, command: _cmdInput.Text.Trim()));
+            _cmdInput.Clear();
+        }
+    }
+}
+
+// ============================================================================
 // 2. Router Management UI (Connections, Blacklist, Packet Logs, DNS)
 // ============================================================================
 

@@ -62,6 +62,8 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         var osStateFromPda = pdaState?.OsState ?? (pdaState?.CartridgeState as Content.Shared._Oxyd.Computers.OsUiState);
         if (osStateFromPda != null)
             _primaryCartridgeUI?.UpdateState(osStateFromPda);
+        else if (pdaState?.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embStateFromPda)
+            _primaryCartridgeUI?.UpdateState(embStateFromPda);
 
         // TODO move this to a component state and ensure the net ids.
         var programs = GetCartridgeComponents(_entManager.GetEntityList(loaderUiState.Programs));
@@ -74,7 +76,8 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             if (pdaState?.BootProgram is { } bootNet)
             {
                 var bootEnt = _entManager.GetEntity(bootNet);
-                if (bootEnt.IsValid() && _entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(bootEnt))
+                if (bootEnt.IsValid() && (_entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(bootEnt) ||
+                                          _entManager.HasComponent<Content.Shared._Oxyd.Computers.EmbeddedOsCartridgeComponent>(bootEnt)))
                     osProg = bootEnt;
             }
 
@@ -83,7 +86,8 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 foreach (var netProg in loaderUiState.Programs)
                 {
                     var p = _entManager.GetEntity(netProg);
-                    if (p.IsValid() && _entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p))
+                    if (p.IsValid() && (_entManager.HasComponent<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p) ||
+                                        _entManager.HasComponent<Content.Shared._Oxyd.Computers.EmbeddedOsCartridgeComponent>(p)))
                     {
                         osProg = p;
                         break;
@@ -145,7 +149,8 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         }
 
         // Sub-program running under the OS: maintain the OS as the primary shell
-        if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment)
+        if (_primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.OsUiFragment ||
+            _primaryUiFragment is Content.Client._Oxyd.Computers.Cartridges.EmbeddedOsUiFragment)
         {
             if (activeUI == _primaryProgram)
             {
@@ -163,8 +168,12 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 _activeUiFragment = _primaryUiFragment;
                 if (osStateFromPda != null)
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
+                else if (pdaState?.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embState)
+                    _primaryCartridgeUI?.UpdateState(embState);
                 else if (_lastCartridgeState is Content.Shared._Oxyd.Computers.OsUiState lastOsState)
                     _primaryCartridgeUI?.UpdateState(lastOsState);
+                else if (_lastCartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState lastEmbState)
+                    _primaryCartridgeUI?.UpdateState(lastEmbState);
                 return;
             }
 
@@ -172,9 +181,12 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             {
                 if (osStateFromPda != null)
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
+                else if (pdaState?.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embState)
+                    _primaryCartridgeUI?.UpdateState(embState);
+
+                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.EmbeddedOsUiState)
                     _subCartridgeUI?.UpdateState(pdaState.CartridgeState);
-                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
+                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState && _lastCartridgeState is not Content.Shared._Oxyd.Computers.EmbeddedOsUiState)
                     _subCartridgeUI?.UpdateState(_lastCartridgeState);
                 return;
             }
@@ -207,9 +219,12 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
 
                 if (osStateFromPda != null)
                     _primaryCartridgeUI?.UpdateState(osStateFromPda);
-                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
+                else if (pdaState?.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embState)
+                    _primaryCartridgeUI?.UpdateState(embState);
+
+                if (pdaState?.CartridgeState != null && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.OsUiState && pdaState.CartridgeState is not Content.Shared._Oxyd.Computers.EmbeddedOsUiState)
                     _subCartridgeUI?.UpdateState(pdaState.CartridgeState);
-                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState)
+                else if (_lastCartridgeState != null && _lastCartridgeState is not Content.Shared._Oxyd.Computers.OsUiState && _lastCartridgeState is not Content.Shared._Oxyd.Computers.EmbeddedOsUiState)
                     _subCartridgeUI?.UpdateState(_lastCartridgeState);
             }
             return;

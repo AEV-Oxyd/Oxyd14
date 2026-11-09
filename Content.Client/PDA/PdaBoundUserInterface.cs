@@ -23,6 +23,7 @@ namespace Content.Client.PDA
 
         private PdaUpdateState? _lastState;
         private OsUiFragment? _osFragment;
+        private EmbeddedOsUiFragment? _embeddedOsFragment;
 
         public PdaBoundUserInterface(EntityUid owner, Enum uiKey) : base(owner, uiKey)
         {
@@ -39,12 +40,18 @@ namespace Content.Client.PDA
             }
             else
             {
-                if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(Owner))
-                    return;
-
                 _menu.Parent?.RemoveChild(_menu);
-                _menu.Visible = true;
-                _menu.OpenCenteredLeft();
+                if (RemoteScreenView.RemoteBuiTarget.TryGetForEntity(Owner, out var target) && !target.IsPoppedOut)
+                {
+                    var stash = RemoteScreenView.GetOrCreateOffscreenStash(IoCManager.Resolve<IUserInterfaceManager>());
+                    stash.AddChild(_menu);
+                    Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(_menu, System.Numerics.Vector2.Zero);
+                }
+                else
+                {
+                    _menu.Visible = true;
+                    _menu.OpenCenteredLeft();
+                }
             }
         }
 
@@ -68,6 +75,14 @@ namespace Content.Client.PDA
             {
                 _menu.UpdateState(_lastState);
             }
+
+            if (RemoteScreenView.RemoteBuiTarget.TryGetForEntity(Owner, out var remoteTarget) && !remoteTarget.IsPoppedOut)
+            {
+                var stash = RemoteScreenView.GetOrCreateOffscreenStash(IoCManager.Resolve<IUserInterfaceManager>());
+                _menu.Parent?.RemoveChild(_menu);
+                stash.AddChild(_menu);
+                Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(_menu, System.Numerics.Vector2.Zero);
+            }
         }
 
         protected override void UpdateState(BoundUserInterfaceState state)
@@ -80,6 +95,11 @@ namespace Content.Client.PDA
 
             if (_menu != null && state is PdaUpdateState updateState)
             {
+                if (updateState.Template == ComputerUiTemplate.Embedded)
+                {
+                    _menu.StripDetailElements(true);
+                }
+
                 if (!_menu.IsEmbedded)
                     _menu.ScreenSurface.DeviceGuid = updateState.DeviceGuid;
                 _menu.UpdateState(updateState);
@@ -91,6 +111,10 @@ namespace Content.Client.PDA
                 else if (updateState.CartridgeState is Content.Shared._Oxyd.Computers.OsUiState osState && _osFragment != null)
                 {
                     _osFragment.UpdateState(osState);
+                }
+                else if (updateState.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embState && _embeddedOsFragment != null)
+                {
+                    _embeddedOsFragment.UpdateState(embState);
                 }
             }
 
@@ -108,6 +132,7 @@ namespace Content.Client.PDA
             if (cartridgeUIFragment is OsUiFragment osFrag)
             {
                 _osFragment = osFrag;
+                _embeddedOsFragment = null;
                 if (!_menu.ProgramView.Children.Contains(osFrag))
                 {
                     osFrag.Parent?.RemoveChild(osFrag);
@@ -119,6 +144,20 @@ namespace Content.Client.PDA
                     osFrag.UpdateState(_lastState.OsState);
                 else if (_lastState?.CartridgeState is Content.Shared._Oxyd.Computers.OsUiState osState)
                     osFrag.UpdateState(osState);
+            }
+            else if (cartridgeUIFragment is EmbeddedOsUiFragment embFrag)
+            {
+                _embeddedOsFragment = embFrag;
+                _osFragment = null;
+                if (!_menu.ProgramView.Children.Contains(embFrag))
+                {
+                    embFrag.Parent?.RemoveChild(embFrag);
+                    _menu.ProgramView.RemoveAllChildren();
+                    _menu.ProgramView.AddChild(embFrag);
+                }
+
+                if (_lastState?.CartridgeState is Content.Shared._Oxyd.Computers.EmbeddedOsUiState embState)
+                    embFrag.UpdateState(embState);
             }
             else if (_osFragment != null)
             {
@@ -149,6 +188,11 @@ namespace Content.Client.PDA
                 cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                 _osFragment = null;
             }
+            else if (cartridgeUIFragment is EmbeddedOsUiFragment)
+            {
+                cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
+                _embeddedOsFragment = null;
+            }
             else if (_osFragment != null)
             {
                 _osFragment.DetachProgram(cartridgeUIFragment);
@@ -172,6 +216,7 @@ namespace Content.Client.PDA
                 _menu?.Dispose();
                 _menu = null;
                 _osFragment = null;
+                _embeddedOsFragment = null;
             }
         }
 

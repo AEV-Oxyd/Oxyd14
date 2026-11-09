@@ -21,6 +21,27 @@
 
 - type: entity
   parent: BasePDACartridge
+  id: OxydEmbeddedOsCartridge
+  name: embedded system controller cartridge
+  description: Core embedded controller operating system for monitoring machinery, APCs, life support, and industrial device links.
+  components:
+  - type: Sprite
+    state: cart-b
+  - type: UIFragment
+    ui: !type:EmbeddedOsUi
+  - type: Cartridge
+    programName: Embedded Controller OS
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server-on
+  - type: EmbeddedOsCartridge
+  - type: Tag
+    tags:
+    - Oxyd
+    - Cartridge
+
+- type: entity
+  parent: BasePDACartridge
   id: OxydFileBrowserCartridge
   name: file browser cartridge
   description: A system program for inspecting local files, viewing memory resources, and managing directories.

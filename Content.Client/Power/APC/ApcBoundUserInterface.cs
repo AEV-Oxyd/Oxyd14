@@ -33,6 +33,14 @@ namespace Content.Client.Power.APC
                 hasAccess = accessReader.IsAllowed((EntityUid)PlayerManager.LocalEntity, Owner);
             }
             _menu?.SetAccessEnabled(hasAccess);
+
+            if (_menu != null && Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView.RemoteBuiTarget.TryGetForEntity(Owner, out var remoteTarget) && !remoteTarget.IsPoppedOut)
+            {
+                var stash = Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView.GetOrCreateOffscreenStash(Robust.Shared.IoC.IoCManager.Resolve<Robust.Client.UserInterface.IUserInterfaceManager>());
+                _menu.Parent?.RemoveChild(_menu);
+                stash.AddChild(_menu);
+                Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(_menu, System.Numerics.Vector2.Zero);
+            }
         }
 
         protected override void UpdateState(BoundUserInterfaceState state)

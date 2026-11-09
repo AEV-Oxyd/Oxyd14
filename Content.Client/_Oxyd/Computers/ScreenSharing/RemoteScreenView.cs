@@ -884,6 +884,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         private BaseButton? _trackedCloseButton;
         private RemoteCloseButtonInterceptor? _closeInterceptor;
         private bool _isPoppedOut;
+        private bool _userExplicitlyPoppedOut;
         public Control? RootControl => _routedBui?.RootControl;
         public Vector2 TargetSize { get; private set; } = new Vector2(640, 520);
 
@@ -1015,18 +1016,11 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     LayoutContainer.SetAnchorAndMarginPreset(_closeInterceptor, LayoutPreset.Wide);
                 }
 
-                // If the target UI is ALREADY open on the user's screen:
-                // DO NOT move it off screen unless closed!
-                var isAlreadyOnScreen = _trackedWindow.IsOpen &&
-                                        _trackedWindow.Visible &&
-                                        _trackedWindow.Parent != null &&
-                                        _trackedWindow.Parent != s_OffscreenStash;
-
-                if (isAlreadyOnScreen)
+                if (_userExplicitlyPoppedOut)
                 {
-                    _isPoppedOut = true;
+                    PullWindowOnScreen();
                 }
-                else if (!_isPoppedOut)
+                else
                 {
                     StashWindowOffscreen();
                 }
@@ -1082,6 +1076,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void StashWindowOffscreen()
         {
+            _userExplicitlyPoppedOut = false;
             _isPoppedOut = false;
             if (_trackedWindow == null || _trackedWindow.Disposed)
             {
@@ -1102,6 +1097,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void PullWindowOnScreen()
         {
+            _userExplicitlyPoppedOut = true;
             _isPoppedOut = true;
             if (_trackedWindow == null || _trackedWindow.Disposed)
             {
@@ -1176,12 +1172,18 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 s_ActiveTargetsByUid.Remove(_targetUid.Value);
             }
 
+            var window = _trackedWindow;
             DetachWindow();
 
             var stash = s_OffscreenStash;
-            if (stash != null && _trackedWindow != null && _trackedWindow.Parent == stash)
+            if (stash != null && window != null && window.Parent == stash)
             {
-                stash.RemoveChild(_trackedWindow);
+                stash.RemoveChild(window);
+            }
+
+            if (window != null && window.IsOpen)
+            {
+                window.Close();
             }
 
             if (_routedBui != null)

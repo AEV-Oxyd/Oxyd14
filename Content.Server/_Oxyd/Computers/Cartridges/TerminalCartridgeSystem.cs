@@ -462,8 +462,10 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  ping <guid>           - Test network connectivity to target device");
                 comp.History.Add("  ifconfig / ip         - Display local network configuration");
                 comp.History.Add("  packets / tcpdump     - Inspect local packet buffers and router traffic log");
-                comp.History.Add("  devlink [scan|list]   - Scan or list local DeviceLink port connections");
-                comp.History.Add("  lathe / apc / atmos   - Control linked local machinery via DeviceLink");
+                comp.History.Add("  devlink / port [list|scan|trigger|send|link|unlink] - Manage DeviceLink ports");
+                comp.History.Add("  apc [status|on|off|toggle|link]   - Control linked APC power via DeviceLink");
+                comp.History.Add("  atmos [status|mode|link]          - Control linked Air Alarm via DeviceLink");
+                comp.History.Add("  lathe [status|print|cancel|link]  - Control linked Autolathe via DeviceLink");
                 comp.History.Add("  ls [dir]              - List files in local directory");
                 comp.History.Add("  cd [dir]              - Change current working directory");
                 comp.History.Add("  pwd                   - Print current working directory");
@@ -566,7 +568,10 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 }
                 var targetUid = optTarget.Value;
 
-                if (TryComp<OxydComputerComponent>(targetUid, out var targetOxyd) &&
+                var checkEnt = targetUid;
+                if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostComp) && hostComp.ComputerEntity is { } compEnt && Exists(compEnt))
+                    checkEnt = compEnt;
+                if (TryComp<OxydComputerComponent>(checkEnt, out var targetOxyd) &&
                     (!targetOxyd.AllowRemoteControl || targetOxyd.RemoteControlWireCut || targetOxyd.NetworkWireCut || targetOxyd.PowerWireCut))
                 {
                     comp.History.Add($"ssh: Connection to {guid}:22 refused (remote control disabled or hardware offline).");
@@ -995,7 +1000,10 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  cat <file>                - Print remote file (e.g. /sys/system.log)");
                 comp.History.Add("  run / exec <program>      - Execute / launch program on remote host");
                 comp.History.Add("  screen [open|close|info]  - View and use remote machine's screen/GUI");
-                comp.History.Add("  devlink / lathe / apc     - Control remote linked machinery via DeviceLink");
+                comp.History.Add("  devlink / port [list|scan|trigger|send|link|unlink] - Manage remote DeviceLink ports");
+                comp.History.Add("  apc [status|on|off|toggle|link]   - Control remote APC power via DeviceLink");
+                comp.History.Add("  atmos [status|mode|link]          - Control remote Air Alarm via DeviceLink");
+                comp.History.Add("  lathe [status|print|cancel|link]  - Control remote Autolathe via DeviceLink");
                 comp.History.Add("  switch / local            - Switch to local shell context for dirs/files");
                 comp.History.Add("  upload / put <file> [dir] - Upload local file to remote host");
                 comp.History.Add("  fetch / scp <file>        - Download file from remote host to local /notes/");
@@ -1362,6 +1370,16 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 if (!_remoteScreen.CanShareScreen(targetUid))
                 {
                     comp.History.Add($"screen: Remote device [{targetGuid}] has no graphical screen/display interface.");
+                    break;
+                }
+
+                var screenCheckEnt = targetUid;
+                if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostScreenComp) && hostScreenComp.ComputerEntity is { } screenCompEnt && Exists(screenCompEnt))
+                    screenCheckEnt = screenCompEnt;
+                if (TryComp<OxydComputerComponent>(screenCheckEnt, out var targetScreenOxyd) &&
+                    (!targetScreenOxyd.AllowRemoteControl || targetScreenOxyd.RemoteControlWireCut))
+                {
+                    comp.History.Add($"screen: Remote control is disabled on [{targetGuid}].");
                     break;
                 }
 

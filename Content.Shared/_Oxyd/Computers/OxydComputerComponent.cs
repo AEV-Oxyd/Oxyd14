@@ -160,11 +160,20 @@ public partial record struct ComputerDeviceLinkPayload(
     Dictionary<string, string>? Data = null) : ISignalNetworkPayload;
 
 /// <summary>
-/// Default OS program component. Always runs as the primary system shell unless another boot
-/// program locks the device. Handles system settings, launching apps, device link management, and hardware inspection.
+/// Default OS program component. Always runs as the primary system shell for PDAs and workstations.
+/// Handles system settings, launching apps, device link management, and hardware inspection.
 /// </summary>
 [RegisterComponent]
 public sealed partial class OsCartridgeComponent : Component
+{
+}
+
+/// <summary>
+/// Dedicated operating system shell for embedded machine controllers (APCs, Air Alarms, Lathes, Subsystems).
+/// Focuses purely on machine diagnostics, local terminal access, hardware monitoring, and launching subsystem controllers.
+/// </summary>
+[RegisterComponent]
+public sealed partial class EmbeddedOsCartridgeComponent : Component
 {
 }
 
@@ -340,6 +349,98 @@ public sealed class OsUiMessageEvent : CartridgeMessageEvent
     }
 }
 
+[Serializable, NetSerializable]
+public sealed class EmbeddedOsUiState : BoundUserInterfaceState
+{
+    public string DeviceGuid;
+    public string MachineName;
+    public string MachineType;
+    public ComputerUiTemplate Template;
+    public bool AllowRemoteControl;
+    public int CpuLoadPercent;
+    public int RamUsedMB;
+    public int RamTotalMB;
+    public int DiskUsedKB;
+    public int DiskTotalKB;
+    public int UploadBps;
+    public int DownloadBps;
+    public float BatteryPercent;
+    public bool HasBattery;
+    public List<OsProgramEntry> Programs;
+    public List<OsHardwareEntry> Hardware;
+    public List<OsDeviceLinkEntry> LinkedPorts;
+    public string StatusMessage;
+    public NetEntity? ActiveProgram;
+
+    public EmbeddedOsUiState(
+        string deviceGuid,
+        string machineName,
+        string machineType,
+        ComputerUiTemplate template,
+        bool allowRemoteControl,
+        int cpuLoadPercent,
+        int ramUsedMB,
+        int ramTotalMB,
+        int diskUsedKB,
+        int diskTotalKB,
+        int uploadBps,
+        int downloadBps,
+        float batteryPercent,
+        bool hasBattery,
+        List<OsProgramEntry> programs,
+        List<OsHardwareEntry> hardware,
+        List<OsDeviceLinkEntry> linkedPorts,
+        string statusMessage = "",
+        NetEntity? activeProgram = null)
+    {
+        DeviceGuid = deviceGuid;
+        MachineName = machineName;
+        MachineType = machineType;
+        Template = template;
+        AllowRemoteControl = allowRemoteControl;
+        CpuLoadPercent = cpuLoadPercent;
+        RamUsedMB = ramUsedMB;
+        RamTotalMB = ramTotalMB;
+        DiskUsedKB = diskUsedKB;
+        DiskTotalKB = diskTotalKB;
+        UploadBps = uploadBps;
+        DownloadBps = downloadBps;
+        BatteryPercent = batteryPercent;
+        HasBattery = hasBattery;
+        Programs = programs;
+        Hardware = hardware;
+        LinkedPorts = linkedPorts;
+        StatusMessage = statusMessage;
+        ActiveProgram = activeProgram;
+    }
+}
+
+[Serializable, NetSerializable]
+public enum EmbeddedOsUiAction : byte
+{
+    LaunchProgram,
+    CloseProgram,
+    ToggleRemoteControl,
+    ScanAndLinkDevices,
+    RunCommand,
+    Refresh
+}
+
+[Serializable, NetSerializable]
+public sealed class EmbeddedOsUiMessageEvent : CartridgeMessageEvent
+{
+    public EmbeddedOsUiAction Action;
+    public NetEntity? TargetProgram;
+    public string Command = string.Empty;
+
+    public EmbeddedOsUiMessageEvent(EmbeddedOsUiAction action, NetEntity? targetProgram = null, string command = "")
+    {
+        Action = action;
+        TargetProgram = targetProgram;
+        Command = command;
+    }
+}
+
 /// <summary>
 /// Router management program component. Allows inspecting active connections, connected devices,
 /// packet logs, DNS records, closing connections, and blacklisting GUIDs.
@@ -499,6 +600,9 @@ public sealed partial class LatheControlCartridgeComponent : Component
 {
     [DataField]
     public EntityUid? LinkedLathe;
+
+    [DataField]
+    public string? LinkedLatheGuid;
 }
 
 [Serializable, NetSerializable]
@@ -556,12 +660,14 @@ public sealed class LatheControlUiMessageEvent : CartridgeMessageEvent
     public LatheControlUiAction Action;
     public string DesignId;
     public int Amount;
+    public string TargetGuid;
 
-    public LatheControlUiMessageEvent(LatheControlUiAction action, string designId = "", int amount = 1)
+    public LatheControlUiMessageEvent(LatheControlUiAction action, string designId = "", int amount = 1, string targetGuid = "")
     {
         Action = action;
         DesignId = designId;
         Amount = amount;
+        TargetGuid = targetGuid;
     }
 }
 
@@ -574,6 +680,9 @@ public sealed partial class ApcControlCartridgeComponent : Component
 {
     [DataField]
     public EntityUid? LinkedApc;
+
+    [DataField]
+    public string? LinkedApcGuid;
 }
 
 [Serializable, NetSerializable]
@@ -611,6 +720,8 @@ public enum ApcControlUiAction : byte
 {
     LinkApc,
     ToggleMainBreaker,
+    SetBreakerOn,
+    SetBreakerOff,
     Refresh
 }
 
@@ -618,10 +729,12 @@ public enum ApcControlUiAction : byte
 public sealed class ApcControlUiMessageEvent : CartridgeMessageEvent
 {
     public ApcControlUiAction Action;
+    public string TargetGuid;
 
-    public ApcControlUiMessageEvent(ApcControlUiAction action)
+    public ApcControlUiMessageEvent(ApcControlUiAction action, string targetGuid = "")
     {
         Action = action;
+        TargetGuid = targetGuid;
     }
 }
 
@@ -634,6 +747,9 @@ public sealed partial class AtmosControlCartridgeComponent : Component
 {
     [DataField]
     public EntityUid? LinkedAirAlarm;
+
+    [DataField]
+    public string? LinkedAlarmGuid;
 }
 
 [Serializable, NetSerializable]
@@ -681,9 +797,11 @@ public enum AtmosControlUiAction : byte
 public sealed class AtmosControlUiMessageEvent : CartridgeMessageEvent
 {
     public AtmosControlUiAction Action;
+    public string TargetGuid;
 
-    public AtmosControlUiMessageEvent(AtmosControlUiAction action)
+    public AtmosControlUiMessageEvent(AtmosControlUiAction action, string targetGuid = "")
     {
         Action = action;
+        TargetGuid = targetGuid;
     }
 }
