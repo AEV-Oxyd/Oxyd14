@@ -72,6 +72,11 @@
   - type: Apc
     voltage: Apc
   - type: EmbeddedComputerHost
+    borderColor: "#e5821e"
+    accentHColor: "#ffa726"
+    accentVColor: "#8a5200"
+    title: "AREA POWER CONTROLLER"
+    subtitle: " | Subsystem Terminal"
     defaultPrograms:
     - OxydApcControlCartridge
     - OxydEmbeddedOsCartridge

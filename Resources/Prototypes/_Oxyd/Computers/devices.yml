@@ -385,13 +385,6 @@
         isReadOnly: false
         programId: OxydFileBrowserCartridge
         title: "File Browser"
-      "/firmware/control.bin": !type:TextVirtualFile
-        name: control
-        extension: bin
-        directory: /firmware/
-        size: 64
-        isReadOnly: true
-        textContent: "FIRMWARE-REVISION-1.09"
       "/config/parameters.cfg": !type:TextVirtualFile
         name: parameters
         extension: cfg
@@ -399,10 +392,6 @@
         size: 48
         isReadOnly: true
         textContent: "VOLTAGE=240;CYCLE=60HZ;INTERLOCK=TRUE"
-  - type: ModularComputer
-    maxHardDriveSlots: 2
-    maxRamSlots: 2
-    maxBatterySize: Small
   - type: ComputerStats
     cpuFrequencyMhz: 50
     ramMb: 32

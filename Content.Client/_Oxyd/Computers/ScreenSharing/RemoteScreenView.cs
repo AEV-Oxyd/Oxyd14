@@ -272,9 +272,16 @@ public sealed partial class RemoteScreenView : LayoutContainer
         base.RenderChildOverride(ref args, childIndex, position);
     }
 
+    private Vector2i GetTargetPixelSize()
+    {
+        if (GetCaptureTarget() is { } cap && !cap.Disposed && cap.PixelWidth > 0 && cap.PixelHeight > 0)
+            return cap.PixelSize;
+        return (Vector2i)(TargetResolution * UIScale);
+    }
+
     private UIBox2 GetFittedScreenRect()
     {
-        var targetPixelSize = (Vector2i)(TargetResolution * UIScale);
+        var targetPixelSize = GetTargetPixelSize();
         if (targetPixelSize.X <= 0 || targetPixelSize.Y <= 0 || PixelWidth <= 0 || PixelHeight <= 0)
             return new UIBox2(Vector2.Zero, PixelSize);
 
@@ -299,7 +306,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         if (!destRect.Contains(localPixelPos) || destRect.Width <= 0 || destRect.Height <= 0)
             return false;
 
-        var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
+        var hostPixelSize = GetTargetPixelSize();
         if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
             return false;
 
@@ -307,8 +314,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
         var normY = (localPixelPos.Y - destRect.Top) / destRect.Height;
 
         targetPixelPos = new Vector2(
-            Math.Clamp(normX * hostPixelSize.X, 0, hostPixelSize.X - 1),
-            Math.Clamp(normY * hostPixelSize.Y, 0, hostPixelSize.Y - 1)
+            Math.Clamp(normX * hostPixelSize.X, 0, Math.Max(0, hostPixelSize.X - 1)),
+            Math.Clamp(normY * hostPixelSize.Y, 0, Math.Max(0, hostPixelSize.Y - 1))
         );
         return true;
     }
@@ -885,8 +892,20 @@ public sealed partial class RemoteScreenView : LayoutContainer
         private RemoteCloseButtonInterceptor? _closeInterceptor;
         private bool _isPoppedOut;
         private bool _userExplicitlyPoppedOut;
+        private bool _wasAlreadyOpenOnScreen;
         public Control? RootControl => _routedBui?.RootControl;
-        public Vector2 TargetSize { get; private set; } = new Vector2(640, 520);
+        private Vector2 _targetSize = new Vector2(640, 520);
+        public Vector2 TargetSize
+        {
+            get
+            {
+                if (_trackedWindow != null && !_trackedWindow.Disposed && _trackedWindow.PixelWidth > 0 && _trackedWindow.PixelHeight > 0)
+                    return _trackedWindow.Size;
+                if (RootControl != null && !RootControl.Disposed && RootControl.PixelWidth > 0 && RootControl.PixelHeight > 0)
+                    return RootControl.Size;
+                return _targetSize;
+            }
+        }
 
         public bool CanPopOut => _trackedWindow != null && !_trackedWindow.Disposed;
         public bool IsPoppedOut => _isPoppedOut;
@@ -919,6 +938,12 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void UpdateState(RemoteScreenState state)
         {
+            if (state.WasAlreadyOpen)
+            {
+                _wasAlreadyOpenOnScreen = true;
+                _isPoppedOut = true;
+            }
+
             if (state.BuiState != null)
                 _latestState = state.BuiState;
 
@@ -1016,7 +1041,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     LayoutContainer.SetAnchorAndMarginPreset(_closeInterceptor, LayoutPreset.Wide);
                 }
 
-                if (_userExplicitlyPoppedOut)
+                if (_wasAlreadyOpenOnScreen || _userExplicitlyPoppedOut)
                 {
                     PullWindowOnScreen();
                 }
@@ -1076,6 +1101,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void StashWindowOffscreen()
         {
+            _wasAlreadyOpenOnScreen = false;
             _userExplicitlyPoppedOut = false;
             _isPoppedOut = false;
             if (_trackedWindow == null || _trackedWindow.Disposed)

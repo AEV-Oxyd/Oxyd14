@@ -583,17 +583,17 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         _remoteToggleBtn.Text = state.AllowRemoteControl ? "Remote: ALLOWED" : "Remote: BLOCKED";
         _statusLabel.Text = state.StatusMessage;
 
-        _hwFlashlightBtn.Visible = state.HasFlashlight || state.Template == ComputerUiTemplate.Pda;
+        _hwFlashlightBtn.Visible = state.Template == ComputerUiTemplate.Pda && state.HasFlashlight;
         _hwFlashlightBtn.IsActive = state.FlashlightEnabled;
 
-        _hwPenBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasPen;
+        _hwPenBtn.Visible = state.Template == ComputerUiTemplate.Pda && state.HasPen;
         _hwPenBtn.IsActive = state.HasPen;
 
-        _hwIdBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasId;
+        _hwIdBtn.Visible = state.Template == ComputerUiTemplate.Pda && state.HasId;
         _hwIdBtn.IsActive = state.HasId;
         _hwIdBtn.ToolTip = state.HasId ? "Eject Inserted ID" : "Insert ID Card";
 
-        _hwPaiBtn.Visible = state.Template == ComputerUiTemplate.Pda || state.HasPai;
+        _hwPaiBtn.Visible = state.Template == ComputerUiTemplate.Pda && state.HasPai;
         _hwPaiBtn.IsActive = state.HasPai;
 
         _hwDiskBtn.Visible = state.Template != ComputerUiTemplate.Embedded;
@@ -602,7 +602,7 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 
         _hwPowerBtn.Visible = true;
 
-        if (state.PdaOwnerInfo.ActualOwnerName != null)
+        if (state.Template == ComputerUiTemplate.Pda && state.PdaOwnerInfo.ActualOwnerName != null)
         {
             _cachedOwner = state.PdaOwnerInfo.ActualOwnerName;
             _homeOwnerLabel.SetMarkup(Loc.GetString("comp-pda-ui-owner",
@@ -615,26 +615,35 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
             _homeOwnerBtn.Visible = false;
         }
 
-        if (state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null)
+        if (state.Template == ComputerUiTemplate.Pda)
         {
-            var idName = state.PdaOwnerInfo.IdOwner ?? Loc.GetString("comp-pda-ui-unknown");
-            var idJob = state.PdaOwnerInfo.JobTitle ?? Loc.GetString("comp-pda-ui-unassigned");
-            _cachedId = $"{idName}, {idJob}";
-            _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui",
-                ("owner", FormattedMessage.RemoveMarkupPermissive(idName)),
-                ("jobTitle", FormattedMessage.RemoveMarkupPermissive(idJob))));
-            _homeIdBtn.Visible = true;
+            if (state.PdaOwnerInfo.IdOwner != null || state.PdaOwnerInfo.JobTitle != null)
+            {
+                var idName = state.PdaOwnerInfo.IdOwner ?? Loc.GetString("comp-pda-ui-unknown");
+                var idJob = state.PdaOwnerInfo.JobTitle ?? Loc.GetString("comp-pda-ui-unassigned");
+                _cachedId = $"{idName}, {idJob}";
+                _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui",
+                    ("owner", FormattedMessage.RemoveMarkupPermissive(idName)),
+                    ("jobTitle", FormattedMessage.RemoveMarkupPermissive(idJob))));
+                _homeIdBtn.Visible = true;
+            }
+            else
+            {
+                _cachedId = Loc.GetString("comp-pda-ui-blank");
+                _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui-blank"));
+                _homeIdBtn.Visible = true;
+            }
+
+            _cachedStation = state.StationName ?? Loc.GetString("comp-pda-ui-unknown");
+            _homeStationLabel.SetMarkup(Loc.GetString("comp-pda-ui-station",
+                ("station", _cachedStation)));
+            _homeStationBtn.Visible = true;
         }
         else
         {
-            _cachedId = Loc.GetString("comp-pda-ui-blank");
-            _homeIdLabel.SetMarkup(Loc.GetString("comp-pda-ui-blank"));
-            _homeIdBtn.Visible = true;
+            _homeIdBtn.Visible = false;
+            _homeStationBtn.Visible = false;
         }
-
-        _cachedStation = state.StationName ?? Loc.GetString("comp-pda-ui-unknown");
-        _homeStationLabel.SetMarkup(Loc.GetString("comp-pda-ui-station",
-            ("station", _cachedStation)));
 
         UpdateClock();
 
@@ -1899,7 +1908,7 @@ public sealed class ApcControlUiFragment : BoxContainer
     private readonly Label _breakerLabel = new();
     private readonly Label _chargeLabel = new();
     private readonly Label _statusLabel = new() { Modulate = Color.LimeGreen };
-    private readonly Button _toggleBreakerBtn = new() { Text = "Toggle Main Breaker (via Console Command)" };
+    private readonly Button _toggleBreakerBtn = new() { Text = "Toggle Main Breaker" };
 
     public ApcControlUiFragment(Action<ApcControlUiMessageEvent> send)
     {
@@ -1913,11 +1922,6 @@ public sealed class ApcControlUiFragment : BoxContainer
         var linkBtn = new Button { Text = "Link APC" };
         linkBtn.OnPressed += _ => _send(new ApcControlUiMessageEvent(ApcControlUiAction.LinkApc));
         row.AddChild(linkBtn);
-
-        var refreshBtn = new Button { Text = "Refresh" };
-        refreshBtn.OnPressed += _ => _send(new ApcControlUiMessageEvent(ApcControlUiAction.Refresh));
-        row.AddChild(refreshBtn);
-
         AddChild(row);
         AddChild(_apcNameLabel);
         AddChild(_breakerLabel);
@@ -1979,10 +1983,6 @@ public sealed class AtmosControlUiFragment : BoxContainer
         var linkBtn = new Button { Text = "Link Air Alarm" };
         linkBtn.OnPressed += _ => _send(new AtmosControlUiMessageEvent(AtmosControlUiAction.LinkAlarm));
         topRow.AddChild(linkBtn);
-
-        var refreshBtn = new Button { Text = "Refresh" };
-        refreshBtn.OnPressed += _ => _send(new AtmosControlUiMessageEvent(AtmosControlUiAction.Refresh));
-        topRow.AddChild(refreshBtn);
         AddChild(topRow);
 
         AddChild(_alarmNameLabel);

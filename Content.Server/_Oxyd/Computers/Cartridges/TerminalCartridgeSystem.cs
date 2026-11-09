@@ -57,7 +57,41 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
 
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeUiReadyEvent>(OnUiReady);
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeActivatedEvent>(OnCartridgeActivated);
+        SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeDeactivatedEvent>(OnTerminalDeactivated);
         SubscribeLocalEvent<TerminalCartridgeComponent, CartridgeMessageEvent>(OnUiMessage);
+    }
+
+    private void OnTerminalDeactivated(EntityUid uid, TerminalCartridgeComponent comp, ref CartridgeDeactivatedEvent args)
+    {
+        ResetTerminalConnection(uid, comp, args.Loader.Owner);
+    }
+
+    public void ResetTerminalConnection(EntityUid termUid, TerminalCartridgeComponent comp, EntityUid? loaderUid = null)
+    {
+        var remoteGuid = comp.ConnectedRemoteGuid;
+
+        comp.ConnectedRemoteGuid = null;
+        comp.ConnectedRemoteUser = null;
+        comp.AwaitingPassword = false;
+        comp.PendingSshGuid = string.Empty;
+        comp.PendingSshUser = "admin";
+        comp.SshLocalMode = false;
+        comp.CurrentDirectory = "/";
+        comp.IsScreenAttached = false;
+
+        _remoteScreen.DetachViewer(termUid);
+
+        if (loaderUid.HasValue && loaderUid.Value.IsValid())
+        {
+            var localGuid = _guidSystem.GetGuid(loaderUid.Value);
+            if (remoteGuid != null)
+            {
+                _router.UnregisterActiveConnection(loaderUid.Value, $"SCREEN-{localGuid}-{remoteGuid}");
+                _router.UnregisterActiveConnection(loaderUid.Value, $"SSH-{localGuid}-{remoteGuid}");
+            }
+        }
+
+        Dirty(termUid, comp);
     }
 
     private void OnCartridgeActivated(EntityUid uid, TerminalCartridgeComponent comp, ref CartridgeActivatedEvent args)
@@ -471,6 +505,9 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  pwd                   - Print current working directory");
                 comp.History.Add("  cat <file>            - Print content of local file (e.g. /sys/system.log)");
                 comp.History.Add("  run / exec <program>  - Execute / launch program");
+                comp.History.Add("  ps / tasks            - List running processes / programs");
+                comp.History.Add("  kill / stop <pid|name>- Terminate a running process");
+                comp.History.Add("  top / stat            - Display system CPU, RAM, and bandwidth metrics");
                 if (comp.ConnectedRemoteGuid != null)
                 {
                     comp.History.Add("  switch / remote       - Return to remote SSH session");
@@ -871,6 +908,22 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 }
                 break;
 
+            case "ps":
+            case "tasks":
+            case "procs":
+                HandleProcessList(loaderUid, comp, localGuid);
+                break;
+
+            case "kill":
+            case "stop":
+                HandleProcessKill(loaderUid, comp, parts);
+                break;
+
+            case "top":
+            case "stat":
+                HandleSystemTelemetry(loaderUid, comp, localGuid);
+                break;
+
             default:
                 if (_oxydComputer.ExecuteComputerCommand(loaderUid, input, out var cmdOutput) && !string.IsNullOrEmpty(cmdOutput))
                 {
@@ -880,6 +933,187 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add($"command not found: {cmd}. Type 'help' for commands.");
                 break;
         }
+    }
+
+    private void HandleProcessList(EntityUid hostUid, TerminalCartridgeComponent comp, string guid)
+    {
+        if (!TryComp<CartridgeLoaderComponent>(hostUid, out var cLoader))
+        {
+            comp.History.Add($"ps: Device [{guid}] does not support process management.");
+            return;
+        }
+
+        var oxydComp = CompOrNull<OxydComputerComponent>(hostUid);
+        var pdaComp = CompOrNull<PdaComponent>(hostUid);
+        var bootProg = oxydComp?.BootProgram;
+
+        var openList = (oxydComp?.OpenPrograms ?? new List<EntityUid>())
+            .Concat(pdaComp?.OpenPrograms ?? new List<EntityUid>())
+            .Distinct()
+            .Where(p => Exists(p))
+            .ToList();
+
+        if (bootProg.HasValue && Exists(bootProg.Value) && !openList.Contains(bootProg.Value))
+            openList.Insert(0, bootProg.Value);
+
+        if (cLoader.ActiveProgram.HasValue && Exists(cLoader.ActiveProgram.Value) && !openList.Contains(cLoader.ActiveProgram.Value))
+            openList.Add(cLoader.ActiveProgram.Value);
+
+        comp.History.Add($"--- Active Processes on [{guid}] ---");
+        comp.History.Add($" PID   STATUS       PROGRAM");
+        comp.History.Add($"-----  -----------  ------------------------------");
+
+        var idx = 1;
+        foreach (var pUid in openList)
+        {
+            var pName = MetaData(pUid).EntityName;
+            if (TryComp<CartridgeComponent>(pUid, out var cart))
+                pName = Loc.TryGetString(cart.ProgramName, out var locN) ? locN : cart.ProgramName;
+
+            var status = "BACKGROUND";
+            if (pUid == cLoader.ActiveProgram)
+                status = "ACTIVE/FG";
+            else if (pUid == bootProg)
+                status = "SYSTEM/BOOT";
+
+            comp.History.Add($"{idx,5}  {status,-11}  {pName}");
+            idx++;
+        }
+
+        if (openList.Count == 0)
+            comp.History.Add("No running processes.");
+    }
+
+    private void HandleProcessKill(EntityUid hostUid, TerminalCartridgeComponent comp, string[] parts)
+    {
+        if (parts.Length < 2)
+        {
+            comp.History.Add("Usage: kill <pid|name>");
+            return;
+        }
+
+        if (!TryComp<CartridgeLoaderComponent>(hostUid, out var cLoader))
+        {
+            comp.History.Add("kill: Device does not support process management.");
+            return;
+        }
+
+        var oxydComp = CompOrNull<OxydComputerComponent>(hostUid);
+        var pdaComp = CompOrNull<PdaComponent>(hostUid);
+        var bootProg = oxydComp?.BootProgram;
+
+        var openList = (oxydComp?.OpenPrograms ?? new List<EntityUid>())
+            .Concat(pdaComp?.OpenPrograms ?? new List<EntityUid>())
+            .Distinct()
+            .Where(p => Exists(p))
+            .ToList();
+
+        if (bootProg.HasValue && Exists(bootProg.Value) && !openList.Contains(bootProg.Value))
+            openList.Insert(0, bootProg.Value);
+
+        if (cLoader.ActiveProgram.HasValue && Exists(cLoader.ActiveProgram.Value) && !openList.Contains(cLoader.ActiveProgram.Value))
+            openList.Add(cLoader.ActiveProgram.Value);
+
+        var targetArg = string.Join(" ", parts[1..]).Trim();
+        EntityUid? matchedUid = null;
+
+        if (int.TryParse(targetArg, out var pidIdx) && pidIdx >= 1 && pidIdx <= openList.Count)
+        {
+            matchedUid = openList[pidIdx - 1];
+        }
+        else
+        {
+            foreach (var pUid in openList)
+            {
+                var pName = MetaData(pUid).EntityName;
+                var protoId = MetaData(pUid).EntityPrototype?.ID ?? "";
+                if (string.Equals(pName, targetArg, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(protoId, targetArg, StringComparison.OrdinalIgnoreCase) ||
+                    pName.Contains(targetArg, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedUid = pUid;
+                    break;
+                }
+            }
+        }
+
+        if (matchedUid == null)
+        {
+            comp.History.Add($"kill: No matching process found for '{targetArg}'. Use 'ps' to view active processes.");
+            return;
+        }
+
+        var matched = matchedUid.Value;
+        var termName = MetaData(matched).EntityName;
+        if (TryComp<CartridgeComponent>(matched, out var mCart))
+            termName = Loc.TryGetString(mCart.ProgramName, out var locN) ? locN : mCart.ProgramName;
+
+        if (matched == bootProg)
+        {
+            comp.History.Add($"kill: Cannot terminate system boot process '{termName}'.");
+            return;
+        }
+
+        if (oxydComp != null)
+        {
+            oxydComp.OpenPrograms.Remove(matched);
+            Dirty(hostUid, oxydComp);
+        }
+        if (pdaComp != null)
+        {
+            pdaComp.OpenPrograms.Remove(matched);
+            _pdaSystem.UpdatePdaUi(hostUid, pdaComp);
+        }
+
+        if (cLoader.ActiveProgram == matched)
+        {
+            var remaining = openList.Where(p => p != matched).ToList();
+            if (remaining.Count > 0)
+                _cartridgeLoader.ActivateProgram((hostUid, cLoader), remaining.Last());
+            else if (bootProg.HasValue && Exists(bootProg.Value))
+                _cartridgeLoader.ActivateProgram((hostUid, cLoader), bootProg.Value);
+            else
+                _cartridgeLoader.DeactivateProgram((hostUid, cLoader), matched);
+        }
+        else
+        {
+            var deactEvt = new CartridgeDeactivatedEvent((hostUid, cLoader));
+            RaiseLocalEvent(matched, ref deactEvt);
+        }
+
+        comp.History.Add($"[SYSTEM] Terminated process '{termName}'.");
+    }
+
+    private void HandleSystemTelemetry(EntityUid hostUid, TerminalCartridgeComponent comp, string guid)
+    {
+        var statsComp = CompOrNull<ComputerStatsComponent>(hostUid);
+        var fsComp = CompOrNull<FileSystemComponent>(hostUid);
+        var bwComp = CompOrNull<NetworkBandwidthComponent>(hostUid);
+        var pdaComp = CompOrNull<PdaComponent>(hostUid);
+
+        var openCount = pdaComp != null && pdaComp.OpenPrograms.Count > 0 ? pdaComp.OpenPrograms.Count : 1;
+        ComputerMetricsHelper.CalculateMetrics(
+            openCount,
+            statsComp,
+            fsComp,
+            bwComp,
+            out var cpuLoad,
+            out var ramUsed,
+            out var ramTotal,
+            out var diskUsedBytes,
+            out var diskTotalBytes,
+            out _,
+            out _,
+            curTime: _timing.CurTime.TotalSeconds);
+
+        var batText = statsComp?.HasBattery == true ? $"{statsComp.BatteryChargePercent:F0}%" : "Line Power (AC)";
+
+        comp.History.Add($"--- System Resource Telemetry [{guid}] ---");
+        comp.History.Add($"  CPU Usage:   {cpuLoad:F0}% ({statsComp?.CpuFrequencyMhz ?? 100} MHz)");
+        comp.History.Add($"  Memory:      {ramUsed} MB / {ramTotal} MB");
+        comp.History.Add($"  Storage:     {diskUsedBytes / 1024} KB / {diskTotalBytes / 1024} KB");
+        comp.History.Add($"  Bandwidth:   DL {bwComp?.MaxBps ?? 100000} B/s | UL {bwComp?.MaxUploadBps ?? 100000} B/s");
+        comp.History.Add($"  Power:       {batText}");
     }
 
     private void AppendDeviceScan(EntityUid sourceUid, TerminalCartridgeComponent comp, string? filterArg)
@@ -999,6 +1233,8 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 comp.History.Add("  pwd                       - Print current working directory");
                 comp.History.Add("  cat <file>                - Print remote file (e.g. /sys/system.log)");
                 comp.History.Add("  run / exec <program>      - Execute / launch program on remote host");
+                comp.History.Add("  ps / tasks                - List running processes on remote host");
+                comp.History.Add("  kill / stop <pid|name>    - Terminate running process on remote host");
                 comp.History.Add("  screen [open|close|info]  - View and use remote machine's screen/GUI");
                 comp.History.Add("  devlink / port [list|scan|trigger|send|link|unlink] - Manage remote DeviceLink ports");
                 comp.History.Add("  apc [status|on|off|toggle|link]   - Control remote APC power via DeviceLink");
@@ -1427,12 +1663,20 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                 }
                 break;
 
+            case "ps":
+            case "tasks":
+            case "procs":
+                HandleProcessList(targetUid, comp, targetGuid);
+                break;
+
+            case "kill":
+            case "stop":
+                HandleProcessKill(targetUid, comp, parts);
+                break;
+
             case "top":
             case "stat":
-                TryComp<ComputerStatsComponent>(targetUid, out var rStats);
-                TryComp<NetworkBandwidthComponent>(targetUid, out var rBw);
-                comp.History.Add($"Host: {targetGuid} | CPU: {rStats?.CpuFrequencyMhz ?? 100}MHz | RAM: {rStats?.RamMb ?? 64}QB");
-                comp.History.Add($"Net Bandwidth: DL {rBw?.MaxBps ?? 100000} B/s | UL {rBw?.MaxUploadBps ?? 100000} B/s | Saturated: {rBw?.IsSaturated ?? false}");
+                HandleSystemTelemetry(targetUid, comp, targetGuid);
                 break;
 
             case "reboot":
@@ -1627,20 +1871,6 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
             _guidSystem.TryGetEntityByGuid(comp.ConnectedRemoteGuid, out var optTarget) &&
             optTarget.HasValue)
         {
-            var visitedGuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { localGuid };
-            var chainTargets = new HashSet<EntityUid>();
-            var chainPvs = new HashSet<EntityUid>();
-
-            remoteScreen = _remoteScreen.BuildRemoteScreenState(
-                optTarget.Value,
-                visitedGuids,
-                chainTargets,
-                chainPvs);
-
-            chainTargets.Remove(loaderUid);
-
-            remotePdaState = remoteScreen?.PdaState;
-
             EntityUid? viewerActor = null;
             if (_terminalViewers.TryGetValue(uid, out var recordedActor) && Exists(recordedActor))
             {
@@ -1670,6 +1900,21 @@ public sealed partial class TerminalCartridgeSystem : EntitySystem
                         break;
                 }
             }
+
+            var visitedGuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { localGuid };
+            var chainTargets = new HashSet<EntityUid>();
+            var chainPvs = new HashSet<EntityUid>();
+
+            remoteScreen = _remoteScreen.BuildRemoteScreenState(
+                optTarget.Value,
+                visitedGuids,
+                chainTargets,
+                chainPvs,
+                viewerActor: viewerActor);
+
+            chainTargets.Remove(loaderUid);
+
+            remotePdaState = remoteScreen?.PdaState;
 
             if (viewerActor != null)
             {

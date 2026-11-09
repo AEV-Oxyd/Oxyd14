@@ -3,3 +3,4 @@ file-browser-program-name = File Browser
 terminal-program-name = Terminal (SSH)
 downloader-program-name = Central Downloader
 pda-slot-component-slot-name-disk = Data Disk Slot
+oxyd-open-terminal-verb = Open Terminal

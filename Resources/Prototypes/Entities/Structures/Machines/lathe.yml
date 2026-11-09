@@ -113,6 +113,11 @@
   - type: Machine
     board: AutolatheMachineCircuitboard
   - type: EmbeddedComputerHost
+    borderColor: "#5c6b73"
+    accentHColor: "#90a4ae"
+    accentVColor: "#37474f"
+    title: "FABRICATION TERMINAL"
+    subtitle: " | Autolathe Subsystem"
     defaultPrograms:
     - OxydLatheControlCartridge
     - OxydEmbeddedOsCartridge

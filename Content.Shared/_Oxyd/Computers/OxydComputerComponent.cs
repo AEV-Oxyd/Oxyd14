@@ -112,6 +112,21 @@ public sealed partial class EmbeddedComputerHostComponent : Component
 
     [DataField]
     public List<EntProtoId> DefaultPrograms = new();
+
+    [DataField, AutoNetworkedField]
+    public string? BorderColor;
+
+    [DataField, AutoNetworkedField]
+    public string? AccentHColor;
+
+    [DataField, AutoNetworkedField]
+    public string? AccentVColor;
+
+    [DataField, AutoNetworkedField]
+    public string? Title;
+
+    [DataField, AutoNetworkedField]
+    public string? Subtitle;
 }
 
 /// <summary>
@@ -683,6 +698,9 @@ public sealed partial class ApcControlCartridgeComponent : Component
 
     [DataField]
     public string? LinkedApcGuid;
+
+    [DataField]
+    public string LastStatusMessage = "";
 }
 
 [Serializable, NetSerializable]
@@ -750,6 +768,9 @@ public sealed partial class AtmosControlCartridgeComponent : Component
 
     [DataField]
     public string? LinkedAlarmGuid;
+
+    [DataField]
+    public string LastStatusMessage = "";
 }
 
 [Serializable, NetSerializable]

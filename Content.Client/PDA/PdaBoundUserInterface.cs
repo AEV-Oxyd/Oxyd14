@@ -3,6 +3,7 @@ using Content.Client._Oxyd.Computers.Cartridges;
 using Content.Client._Oxyd.Computers.ScreenSharing;
 using Content.Client.CartridgeLoader;
 using Content.Client.UserInterface.Controls;
+using Content.Shared._Oxyd.Computers;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.PDA;
@@ -40,10 +41,10 @@ namespace Content.Client.PDA
             }
             else
             {
-                _menu.Parent?.RemoveChild(_menu);
                 if (RemoteScreenView.RemoteBuiTarget.TryGetForEntity(Owner, out var target) && !target.IsPoppedOut)
                 {
                     var stash = RemoteScreenView.GetOrCreateOffscreenStash(IoCManager.Resolve<IUserInterfaceManager>());
+                    _menu.Parent?.RemoveChild(_menu);
                     stash.AddChild(_menu);
                     Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(_menu, System.Numerics.Vector2.Zero);
                 }
@@ -63,13 +64,7 @@ namespace Content.Client.PDA
             _menu = this.CreateWindowCenteredLeft<PdaMenu>();
             SetStateScopeRoot(_menu);
 
-            var borderColorComponent = GetBorderColorComponent();
-            if (borderColorComponent != null)
-            {
-                _menu.BorderColor = borderColorComponent.BorderColor;
-                _menu.AccentHColor = borderColorComponent.AccentHColor;
-                _menu.AccentVColor = borderColorComponent.AccentVColor;
-            }
+            ApplyThematicStyle(_lastState);
 
             if (_lastState != null)
             {
@@ -85,6 +80,72 @@ namespace Content.Client.PDA
             }
         }
 
+        private void ApplyThematicStyle(PdaUpdateState? state)
+        {
+            if (_menu == null)
+                return;
+
+            EntityUid? hostUid = null;
+            if (EntMan.TryGetComponent<OxydComputerComponent>(Owner, out var oxydComp) && oxydComp.HostMachine != null)
+                hostUid = oxydComp.HostMachine;
+            else if (EntMan.TryGetComponent<TransformComponent>(Owner, out var xform) && xform.ParentUid.IsValid())
+                hostUid = xform.ParentUid;
+
+            EmbeddedComputerHostComponent? hostComp = null;
+            if (hostUid != null)
+                EntMan.TryGetComponent(hostUid.Value, out hostComp);
+
+            var borderColorComp = GetBorderColorComponent();
+
+            var borderColor = hostComp?.BorderColor ?? borderColorComp?.BorderColor;
+            var accentH = hostComp?.AccentHColor ?? borderColorComp?.AccentHColor;
+            var accentV = hostComp?.AccentVColor ?? borderColorComp?.AccentVColor;
+            var title = hostComp?.Title;
+            var subtitle = hostComp?.Subtitle;
+
+            if (state?.Template == ComputerUiTemplate.Embedded)
+            {
+                var hostName = hostUid != null && EntMan.TryGetComponent<MetaDataComponent>(hostUid.Value, out var meta)
+                    ? meta.EntityName
+                    : null;
+
+                if (string.IsNullOrEmpty(title))
+                {
+                    title = !string.IsNullOrEmpty(hostName) ? hostName.ToUpperInvariant() : "EMBEDDED CONTROLLER";
+                }
+
+                if (string.IsNullOrEmpty(subtitle))
+                {
+                    subtitle = " | Subsystem Terminal";
+                }
+
+                borderColor ??= "#00D4FF";
+            }
+            else
+            {
+                title ??= "NTOS 1.4™";
+                subtitle ??= " | Portable Terminal";
+            }
+
+            if (!string.IsNullOrEmpty(borderColor))
+            {
+                _menu.BorderColor = borderColor;
+                _menu.OsTitleLabel.FontColorOverride = Color.FromHex(borderColor, Color.FromHex("#00D4FF"));
+            }
+
+            if (!string.IsNullOrEmpty(accentH))
+                _menu.AccentHColor = accentH;
+
+            if (!string.IsNullOrEmpty(accentV))
+                _menu.AccentVColor = accentV;
+
+            if (!string.IsNullOrEmpty(title))
+                _menu.OsTitleLabel.Text = title;
+
+            if (!string.IsNullOrEmpty(subtitle))
+                _menu.OsSubtitleLabel.Text = subtitle;
+        }
+
         protected override void UpdateState(BoundUserInterfaceState state)
         {
             if (state is PdaUpdateState pdaState)
@@ -95,10 +156,7 @@ namespace Content.Client.PDA
 
             if (_menu != null && state is PdaUpdateState updateState)
             {
-                if (updateState.Template == ComputerUiTemplate.Embedded)
-                {
-                    _menu.StripDetailElements(true);
-                }
+                ApplyThematicStyle(updateState);
 
                 if (!_menu.IsEmbedded)
                     _menu.ScreenSurface.DeviceGuid = updateState.DeviceGuid;
@@ -222,6 +280,25 @@ namespace Content.Client.PDA
 
         private PdaBorderColorComponent? GetBorderColorComponent()
         {
+            if (EntMan.TryGetComponent<OxydComputerComponent>(Owner, out var comp) && comp.HostMachine is { } hostUid)
+            {
+                if (EntMan.TryGetComponent<PdaBorderColorComponent>(hostUid, out var hostBorder))
+                    return hostBorder;
+            }
+
+            if (EntMan.TryGetComponent<TransformComponent>(Owner, out var xform) && xform.ParentUid.IsValid())
+            {
+                var cur = xform.ParentUid;
+                while (cur.IsValid())
+                {
+                    if (EntMan.TryGetComponent<PdaBorderColorComponent>(cur, out var parentBorder))
+                        return parentBorder;
+                    if (!EntMan.EntityExists(cur))
+                        break;
+                    cur = EntMan.GetComponent<TransformComponent>(cur).ParentUid;
+                }
+            }
+
             return EntMan.GetComponentOrNull<PdaBorderColorComponent>(Owner);
         }
     }

@@ -48,6 +48,11 @@
   - type: AtmosDevice
   - type: AirAlarm
   - type: EmbeddedComputerHost
+    borderColor: "#00a8e8"
+    accentHColor: "#33b5e5"
+    accentVColor: "#005577"
+    title: "AIR ALARM"
+    subtitle: " | Atmospheric Monitor"
     defaultPrograms:
     - OxydAtmosControlCartridge
     - OxydEmbeddedOsCartridge

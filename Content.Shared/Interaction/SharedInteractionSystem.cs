@@ -211,6 +211,19 @@ namespace Content.Shared.Interaction
             if (target.Comp.ParentUid == user.Owner)
                 return true;
 
+            if (target.Comp.ParentUid.IsValid())
+            {
+                var curParent = target.Comp.ParentUid;
+                while (curParent.IsValid())
+                {
+                    if (HasComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(curParent))
+                        return UiRangeCheck(user, curParent, range);
+                    if (!Exists(curParent))
+                        break;
+                    curParent = Transform(curParent).ParentUid;
+                }
+            }
+
             return InRangeAndAccessible(user, target, range) || _ignoreUiRangeQuery.HasComp(user) || _remoteScreen.IsRemoteScreenAuthorized(user.Owner, target.Owner);
         }
 
@@ -1326,6 +1339,19 @@ namespace Content.Shared.Interaction
             // If either has handled it and neither has said we can't access it then we can access it.
             if (ev.Handled)
                 return ev.Accessible;
+
+            if (target.Comp != null && target.Comp.ParentUid.IsValid())
+            {
+                var curParent = target.Comp.ParentUid;
+                while (curParent.IsValid())
+                {
+                    if (HasComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(curParent))
+                        return IsAccessible(user, curParent);
+                    if (!Exists(curParent))
+                        break;
+                    curParent = Transform(curParent).ParentUid;
+                }
+            }
 
             return CanAccess(user, target);
         }

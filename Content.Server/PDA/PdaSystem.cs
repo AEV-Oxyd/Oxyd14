@@ -410,15 +410,30 @@ namespace Content.Server.PDA
 
             if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
             {
-                EnsureDefaultPrograms(uid, loader);
+                if (!TryComp<OxydComputerComponent>(uid, out var comp) || comp.Template != ComputerUiTemplate.Embedded)
+                {
+                    EnsureDefaultPrograms(uid, loader);
+                }
                 EnsureProgramFiles(uid, loader, fs);
 
                 var oxydComp = EnsureComp<OxydComputerComponent>(uid);
                 if (oxydComp.BootProgram == null || !Exists(oxydComp.BootProgram.Value))
                 {
                     var allProgs = _cartridgeLoader.GetAllPrograms(uid).ToList();
-                    var osProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
-                    oxydComp.BootProgram = osProg.IsValid() ? osProg : (allProgs.Count > 0 ? allProgs[0] : null);
+                    EntityUid? bootProg = null;
+                    if (oxydComp.Template == ComputerUiTemplate.Embedded)
+                    {
+                        bootProg = allProgs.FirstOrDefault(p =>
+                            HasComp<Content.Shared._Oxyd.Computers.ApcControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.AtmosControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.LatheControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.EmbeddedOsCartridgeComponent>(p));
+                    }
+                    else
+                    {
+                        bootProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
+                    }
+                    oxydComp.BootProgram = (bootProg is { } bp && bp.IsValid()) ? bootProg : (allProgs.Count > 0 ? allProgs[0] : null);
                     Dirty(uid, oxydComp);
                 }
                 if (loader.ActiveProgram == null && oxydComp.BootProgram is { } boot)
@@ -439,14 +454,26 @@ namespace Content.Server.PDA
                 if (oxydComp.BootProgram == null || !Exists(oxydComp.BootProgram.Value))
                 {
                     var allProgs = _cartridgeLoader.GetAllPrograms(ent.Owner).ToList();
-                    var osProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
-                    oxydComp.BootProgram = osProg.IsValid() ? osProg : (allProgs.Count > 0 ? allProgs[0] : null);
+                    EntityUid? bootProg = null;
+                    if (oxydComp.Template == ComputerUiTemplate.Embedded)
+                    {
+                        bootProg = allProgs.FirstOrDefault(p =>
+                            HasComp<Content.Shared._Oxyd.Computers.ApcControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.AtmosControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.LatheControlCartridgeComponent>(p) ||
+                            HasComp<Content.Shared._Oxyd.Computers.EmbeddedOsCartridgeComponent>(p));
+                    }
+                    else
+                    {
+                        bootProg = allProgs.FirstOrDefault(p => HasComp<Content.Shared._Oxyd.Computers.OsCartridgeComponent>(p));
+                    }
+                    oxydComp.BootProgram = (bootProg is { } bp && bp.IsValid()) ? bootProg : (allProgs.Count > 0 ? allProgs[0] : null);
                     Dirty(ent.Owner, oxydComp);
                 }
-                if (loader.ActiveProgram == null && oxydComp.BootProgram is { } bootProg)
-                    _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProg);
+                if (loader.ActiveProgram == null && oxydComp.BootProgram is { } bootProgToActivate)
+                    _cartridgeLoader.ActivateProgram((ent.Owner, loader), bootProgToActivate);
 
-                // OS is always ready and in charge
+                // OS / Boot program is always ready and in charge
                 if (oxydComp.BootProgram is { } boot && Exists(boot))
                 {
                     var readyEvt = new CartridgeUiReadyEvent((ent.Owner, loader));
@@ -461,7 +488,8 @@ namespace Content.Server.PDA
                 }
             }
 
-            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered ON (User: {args.Actor})");
+            var devName = GetDeviceDisplayName(ent.Owner);
+            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"{devName} display powered ON (User: {args.Actor})");
             if (!Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenOpened(args.Actor, ent.Owner))
                 UpdatePdaUi(ent.Owner, ent.Comp);
         }
@@ -476,11 +504,29 @@ namespace Content.Server.PDA
                 Get<Content.Server._Oxyd.Computers.Cartridges.TerminalCartridgeSystem>().OnRemoteScreenClosed(actor, ent.Owner);
             }
 
-            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"PDA display powered OFF / standby (User: {args.Actor})");
+            var devName = GetDeviceDisplayName(ent.Owner);
+            _fileSystem.LogSystemActivity(ent.Owner, "POWER", $"{devName} display powered OFF / standby (User: {args.Actor})");
+        }
+
+        private string GetDeviceDisplayName(EntityUid uid)
+        {
+            if (TryComp<OxydComputerComponent>(uid, out var comp))
+            {
+                if (comp.HostMachine is { } host && Exists(host))
+                    return MetaData(host).EntityName;
+                if (comp.Template == ComputerUiTemplate.Embedded)
+                    return "Embedded controller";
+                if (comp.Template == ComputerUiTemplate.Desktop)
+                    return "Computer";
+            }
+            return MetaData(uid).EntityName;
         }
 
         private void EnsureDefaultPrograms(EntityUid uid, CartridgeLoaderComponent loader)
         {
+            if (TryComp<OxydComputerComponent>(uid, out var comp) && comp.Template == ComputerUiTemplate.Embedded)
+                return;
+
             var existingProtos = _cartridgeLoader.GetAllPrograms(uid)
                 .Select(p => MetaData(p).EntityPrototype?.ID)
                 .Where(id => id != null)

@@ -90,6 +90,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
     public const string MachineStatusSourcePort = "MachineStatusSender";
 
     private bool _spawningDefaultHardware;
+    private readonly HashSet<EntityUid> _recalculatingHardware = new();
+    private float _telemetryTimer;
 
     public override void Initialize()
     {
@@ -106,7 +108,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         SubscribeLocalEvent<EmbeddedComputerHostComponent, ComponentInit>(OnEmbeddedHostInit);
         SubscribeLocalEvent<EmbeddedComputerHostComponent, MapInitEvent>(OnEmbeddedHostMapInit);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, UserOpenActivatableUIAttemptEvent>(OnEmbeddedHostOpenUiAttempt);
+        SubscribeLocalEvent<EmbeddedComputerHostComponent, EmbeddedComputerHostActivatedEvent>(OnEmbeddedHostActivated);
 
         // OS Cartridge UI
         SubscribeLocalEvent<OsCartridgeComponent, CartridgeUiReadyEvent>(OnOsUiReady);
@@ -226,22 +228,36 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
     }
 
-    private void OnEmbeddedHostOpenUiAttempt(Entity<EmbeddedComputerHostComponent> ent, ref UserOpenActivatableUIAttemptEvent args)
+    private void OnEmbeddedHostActivated(Entity<EmbeddedComputerHostComponent> ent, ref EmbeddedComputerHostActivatedEvent args)
     {
-        if (args.Silent || args.Cancelled)
-            return;
-
         if (ent.Comp.ComputerEntity is not { } compUid || !Exists(compUid))
             return;
+
+        if (_ui.IsUiOpen(compUid, PdaUiKey.Key, args.User))
+        {
+            _ui.CloseUi(compUid, PdaUiKey.Key, args.User);
+            return;
+        }
+
+        if (_ui.IsUiOpen(compUid, ComputerUiKey.Key, args.User))
+        {
+            _ui.CloseUi(compUid, ComputerUiKey.Key, args.User);
+            return;
+        }
 
         if (TryComp<ActorComponent>(args.User, out var actor))
         {
             _pvsOverride.AddSessionOverride(compUid, actor.PlayerSession);
-            foreach (var prog in _cartridgeLoader.GetAllPrograms(compUid))
+            foreach (var prog in _cartridgeLoader.GetAllPrograms(compUid).ToList())
             {
                 if (Exists(prog))
                     _pvsOverride.AddSessionOverride(prog, actor.PlayerSession);
             }
+        }
+
+        if (TryComp<OxydComputerComponent>(compUid, out var initialComp) && (initialComp.BootProgram == null || !Exists(initialComp.BootProgram.Value)))
+        {
+            RecalculateHardwareAndBoot((compUid, initialComp));
         }
 
         RefreshInstalledControlPrograms(compUid);
@@ -249,6 +265,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
         {
             if (TryComp<OxydComputerComponent>(compUid, out var comp) && comp.BootProgram is { } boot && Exists(boot))
             {
+                if (compLoader.ActiveProgram != boot)
+                {
+                    _cartridgeLoader.ActivateProgram((compUid, compLoader), boot);
+                }
                 var readyEvt = new CartridgeUiReadyEvent((compUid, compLoader));
                 RaiseLocalEvent(boot, ref readyEvt);
             }
@@ -261,7 +281,6 @@ public sealed partial class OxydComputerSystem : EntitySystem
         _pda.UpdatePdaUi(compUid);
         if (!_ui.TryOpenUi(compUid, PdaUiKey.Key, args.User))
             _ui.TryOpenUi(compUid, ComputerUiKey.Key, args.User);
-        args.Cancel();
     }
 
     private void OnEmbeddedHostInit(Entity<EmbeddedComputerHostComponent> ent, ref ComponentInit args)
@@ -291,6 +310,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 foreach (var progProto in ent.Comp.DefaultPrograms)
                 {
+                    if (string.Equals(progProto.Id, "OxydOsCartridge", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (_prototypeManager.HasIndex<EntityPrototype>(progProto) &&
                         !_cartridgeLoader.GetAllPrograms(compUid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, progProto.Id)))
                     {
@@ -363,6 +385,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (_spawningDefaultHardware || TerminatingOrDeleted(ent.Owner))
             return;
 
+        if (args.Container.ID is CartridgeLoaderComponent.RemovableContainerId or
+            CartridgeLoaderComponent.UnremovableContainerId or
+            CartridgeLoaderComponent.CartridgeSlotId or
+            "PDA-id" or "PDA-pen" or "PDA-pai" or "PDA-disk")
+        {
+            return;
+        }
+
         RecalculateHardwareAndBoot(ent);
     }
 
@@ -370,6 +400,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
     {
         if (_spawningDefaultHardware || TerminatingOrDeleted(ent.Owner))
             return;
+
+        if (args.Container.ID is CartridgeLoaderComponent.RemovableContainerId or
+            CartridgeLoaderComponent.UnremovableContainerId or
+            CartridgeLoaderComponent.CartridgeSlotId or
+            "PDA-id" or "PDA-pen" or "PDA-pai" or "PDA-disk")
+        {
+            return;
+        }
 
         RecalculateHardwareAndBoot(ent);
     }
@@ -380,6 +418,55 @@ public sealed partial class OxydComputerSystem : EntitySystem
             return;
 
         RecalculateHardwareAndBoot(ent);
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+
+        _telemetryTimer += frameTime;
+        if (_telemetryTimer < 1.0f)
+            return;
+        _telemetryTimer = 0f;
+
+        var apcQuery = EntityQueryEnumerator<ApcControlCartridgeComponent>();
+        while (apcQuery.MoveNext(out var cartUid, out var apcCart))
+        {
+            if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
+            {
+                if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
+                    loader.ActiveProgram == cartUid)
+                {
+                    UpdateApcControlUi((cartUid, apcCart), computerUid);
+                }
+            }
+        }
+
+        var atmosQuery = EntityQueryEnumerator<AtmosControlCartridgeComponent>();
+        while (atmosQuery.MoveNext(out var cartUid, out var atmosCart))
+        {
+            if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
+            {
+                if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
+                    loader.ActiveProgram == cartUid)
+                {
+                    UpdateAtmosControlUi((cartUid, atmosCart), computerUid);
+                }
+            }
+        }
+
+        var embQuery = EntityQueryEnumerator<EmbeddedOsCartridgeComponent>();
+        while (embQuery.MoveNext(out var cartUid, out var embCart))
+        {
+            if (Transform(cartUid).ParentUid is { } computerUid && Exists(computerUid))
+            {
+                if (TryComp<CartridgeLoaderComponent>(computerUid, out var loader) &&
+                    loader.ActiveProgram == cartUid)
+                {
+                    UpdateEmbeddedOsUi((cartUid, embCart), computerUid);
+                }
+            }
+        }
     }
 
     public void RefreshComputerBootState(EntityUid uid, OxydComputerComponent? comp = null)
@@ -417,6 +504,25 @@ public sealed partial class OxydComputerSystem : EntitySystem
     }
 
     public void RecalculateHardwareAndBoot(Entity<OxydComputerComponent> ent)
+    {
+        var uid = ent.Owner;
+        if (TerminatingOrDeleted(uid))
+            return;
+
+        if (!_recalculatingHardware.Add(uid))
+            return;
+
+        try
+        {
+            RecalculateHardwareAndBootInternal(ent);
+        }
+        finally
+        {
+            _recalculatingHardware.Remove(uid);
+        }
+    }
+
+    private void RecalculateHardwareAndBootInternal(Entity<OxydComputerComponent> ent)
     {
         var uid = ent.Owner;
         if (TerminatingOrDeleted(uid))
@@ -563,10 +669,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
         // Load programs from HardDrive entities into CartridgeLoader
         if (TryComp<CartridgeLoaderComponent>(uid, out var loader))
         {
+            if (comp.Template == ComputerUiTemplate.Embedded)
+            {
+                foreach (var prog in _cartridgeLoader.GetAllPrograms(uid).ToList())
+                {
+                    if (HasComp<OsCartridgeComponent>(prog))
+                    {
+                        _cartridgeLoader.UninstallProgram((uid, loader), prog);
+                    }
+                }
+            }
+
             foreach (var dev in storageDevices)
             {
                 foreach (var proto in dev.Comp.PreloadedPrograms)
                 {
+                    if (comp.Template == ComputerUiTemplate.Embedded && string.Equals(proto.Id, "OxydOsCartridge", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (_prototypeManager.HasIndex<EntityPrototype>(proto) &&
                         !_cartridgeLoader.GetAllPrograms(uid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, proto.Id)))
                     {
@@ -578,6 +698,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 foreach (var proto in hdd.Comp.PreloadedPrograms)
                 {
+                    if (comp.Template == ComputerUiTemplate.Embedded && string.Equals(proto.Id, "OxydOsCartridge", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (_prototypeManager.HasIndex<EntityPrototype>(proto) &&
                         !_cartridgeLoader.GetAllPrograms(uid).Any(p => string.Equals(MetaData(p).EntityPrototype?.ID, proto.Id)))
                     {
@@ -663,7 +786,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         foreach (var container in containerMgr.Containers.Values)
         {
-            foreach (var contained in container.ContainedEntities)
+            foreach (var contained in container.ContainedEntities.ToList())
             {
                 if (TryComp<ComputerStorageDeviceComponent>(contained, out var storage))
                     storageDevices.Add((contained, storage));
@@ -1111,7 +1234,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!TryComp<CartridgeLoaderComponent>(computerUid, out _))
             return;
 
-        foreach (var prog in _cartridgeLoader.GetAllPrograms(computerUid))
+        foreach (var prog in _cartridgeLoader.GetAllPrograms(computerUid).ToList())
         {
             if (TryComp<LatheControlCartridgeComponent>(prog, out var latheCart))
                 UpdateLatheControlUi((prog, latheCart), computerUid);
@@ -1620,7 +1743,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         var programs = new List<OsProgramEntry>();
-        foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid))
+        foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid).ToList())
         {
             var cart = CompOrNull<CartridgeComponent>(prog);
             var progName = cart != null
@@ -1872,7 +1995,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         var programs = new List<OsProgramEntry>();
-        foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid))
+        foreach (var prog in _cartridgeLoader.GetAllPrograms(loaderUid).ToList())
         {
             var cart = CompOrNull<CartridgeComponent>(prog);
             var progName = cart != null
@@ -1942,7 +2065,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         foreach (var (slotId, container) in containerMgr.Containers)
         {
-            foreach (var item in container.ContainedEntities)
+            foreach (var item in container.ContainedEntities.ToList())
             {
                 if (TryComp<ComputerCpuComponent>(item, out var cpu))
                 {
@@ -2195,6 +2318,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     public void UpdateApcControlUi(Entity<ApcControlCartridgeComponent> ent, EntityUid loaderUid, string statusMessage = "")
     {
+        if (!string.IsNullOrEmpty(statusMessage))
+            ent.Comp.LastStatusMessage = statusMessage;
+        var displayStatus = !string.IsNullOrEmpty(statusMessage) ? statusMessage : ent.Comp.LastStatusMessage;
+
         var apcUid = FindLinkedTarget<ApcComponent>(loaderUid);
         if (apcUid == null || !TryComp<ApcComponent>(apcUid.Value, out var apcComp))
         {
@@ -2229,7 +2356,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             chargePct,
             loadWatts,
             apcComp.LastExternalState.ToString(),
-            statusMessage);
+            displayStatus);
 
         _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
     }
@@ -2280,6 +2407,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     public void UpdateAtmosControlUi(Entity<AtmosControlCartridgeComponent> ent, EntityUid loaderUid, string statusMessage = "")
     {
+        if (!string.IsNullOrEmpty(statusMessage))
+            ent.Comp.LastStatusMessage = statusMessage;
+        var displayStatus = !string.IsNullOrEmpty(statusMessage) ? statusMessage : ent.Comp.LastStatusMessage;
+
         var alarmUid = FindLinkedTarget<AirAlarmComponent>(loaderUid);
         if (alarmUid == null || !TryComp<AirAlarmComponent>(alarmUid.Value, out var alarmComp))
         {
@@ -2312,7 +2443,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             temp,
             alarmComp.CurrentMode.ToString(),
             alarmComp.State.ToString(),
-            statusMessage);
+            displayStatus);
 
         _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
     }

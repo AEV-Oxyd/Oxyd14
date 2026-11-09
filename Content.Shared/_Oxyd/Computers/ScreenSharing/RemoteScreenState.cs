@@ -46,6 +46,7 @@ public sealed class RemoteScreenState : BoundUserInterfaceState
     /// If this remote device is itself viewing another device's screen, the target GUID being viewed.
     /// </summary>
     public string? ViewingTargetGuid { get; }
+    public bool WasAlreadyOpen { get; set; }
 
     public RemoteScreenState(
         NetEntity targetEntity,
@@ -56,7 +57,8 @@ public sealed class RemoteScreenState : BoundUserInterfaceState
         BoundUserInterfaceState? buiState = null,
         PdaUpdateState? pdaState = null,
         bool isCycleReference = false,
-        string? viewingTargetGuid = null)
+        string? viewingTargetGuid = null,
+        bool wasAlreadyOpen = false)
     {
         TargetEntity = targetEntity;
         DeviceGuid = deviceGuid;
@@ -67,5 +69,6 @@ public sealed class RemoteScreenState : BoundUserInterfaceState
         PdaState = pdaState;
         IsCycleReference = isCycleReference;
         ViewingTargetGuid = viewingTargetGuid;
+        WasAlreadyOpen = wasAlreadyOpen;
     }
 }

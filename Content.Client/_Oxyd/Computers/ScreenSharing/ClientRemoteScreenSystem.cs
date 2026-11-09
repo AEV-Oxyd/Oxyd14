@@ -21,10 +21,17 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
 
     private void OnActivateInWorld(EntityUid uid, UserInterfaceComponent comp, ActivateInWorldEvent args)
     {
-        if (args.Handled || HasComp<Content.Shared.PDA.PdaComponent>(uid))
+        if (args.Handled)
             return;
 
-        if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(uid))
+        var targetUid = uid;
+        if (TryComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(uid, out var host) &&
+            host.ComputerEntity is { } compUid && Exists(compUid))
+        {
+            targetUid = compUid;
+        }
+
+        if (RemoteScreenView.RemoteBuiTarget.TryBringTargetToScreen(targetUid))
         {
             args.Handled = true;
         }
@@ -35,7 +42,14 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
         if (!args.CanInteract || !args.CanAccess)
             return;
 
-        if (RemoteScreenView.RemoteBuiTarget.TryGetForEntity(uid, out var target) && !target.IsPoppedOut)
+        var targetUid = uid;
+        if (TryComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(uid, out var host) &&
+            host.ComputerEntity is { } compUid && Exists(compUid))
+        {
+            targetUid = compUid;
+        }
+
+        if (RemoteScreenView.RemoteBuiTarget.TryGetForEntity(targetUid, out var target) && !target.IsPoppedOut)
         {
             var verb = new ActivationVerb
             {
