@@ -466,7 +466,7 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 
     public void DetachProgram(Control programControl)
     {
-        if (_programContainer.Children.Contains(programControl))
+        if (!Disposed && !_programContainer.Disposed && _programContainer.Children.Contains(programControl))
         {
             _programContainer.RemoveChild(programControl);
         }
@@ -475,12 +475,13 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         {
             _activeProgramControl = null;
             _activeProgramTitle = null;
-            if (_activeView == OsFragmentView.ProgramContent)
+            if (!Disposed && _activeView == OsFragmentView.ProgramContent)
             {
                 SetView(OsFragmentView.Programs);
             }
         }
-        UpdateRunningTabs();
+        if (!Disposed)
+            UpdateRunningTabs();
     }
 
     public void Detach()
@@ -488,12 +489,15 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
         _activeProgramControl = null;
         _activeProgramTitle = null;
         _activeProgramUid = null;
-        _runningTabsContainer.RemoveAllChildren();
-        _programContainer.RemoveAllChildren();
-        _programsGrid.RemoveAllChildren();
-        _settingsBox.RemoveAllChildren();
-        _hardwareBox.RemoveAllChildren();
-        _linksBox.RemoveAllChildren();
+        if (Disposed)
+            return;
+
+        if (!_runningTabsContainer.Disposed) _runningTabsContainer.RemoveAllChildren();
+        if (!_programContainer.Disposed) _programContainer.RemoveAllChildren();
+        if (!_programsGrid.Disposed) _programsGrid.RemoveAllChildren();
+        if (!_settingsBox.Disposed) _settingsBox.RemoveAllChildren();
+        if (!_hardwareBox.Disposed) _hardwareBox.RemoveAllChildren();
+        if (!_linksBox.Disposed) _linksBox.RemoveAllChildren();
     }
 
     public void Reset()
@@ -504,6 +508,9 @@ public sealed class OsUiFragment : BoxContainer, IBuiStateReceiver
 
     private void UpdateRunningTabs()
     {
+        if (Disposed || _runningTabsContainer.Disposed)
+            return;
+
         _runningTabsContainer.RemoveAllChildren();
         if (_lastState == null)
             return;
@@ -1307,7 +1314,7 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
 
     public void DetachProgram(Control programControl)
     {
-        if (_programContainer.Children.Contains(programControl))
+        if (!Disposed && !_programContainer.Disposed && _programContainer.Children.Contains(programControl))
         {
             _programContainer.RemoveChild(programControl);
         }
@@ -1316,12 +1323,13 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
         {
             _activeProgramControl = null;
             _activeProgramTitle = null;
-            if (_activeView == EmbeddedOsView.ProgramContent)
+            if (!Disposed && _activeView == EmbeddedOsView.ProgramContent)
             {
                 SetView(EmbeddedOsView.Dashboard);
             }
         }
-        UpdateRunningTabs();
+        if (!Disposed)
+            UpdateRunningTabs();
     }
 
     public void Detach()
@@ -1329,11 +1337,14 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
         _activeProgramControl = null;
         _activeProgramTitle = null;
         _activeProgramUid = null;
-        _runningTabsContainer.RemoveAllChildren();
-        _programContainer.RemoveAllChildren();
-        _programsGrid.RemoveAllChildren();
-        _hardwareBox.RemoveAllChildren();
-        _linksBox.RemoveAllChildren();
+        if (Disposed)
+            return;
+
+        if (!_runningTabsContainer.Disposed) _runningTabsContainer.RemoveAllChildren();
+        if (!_programContainer.Disposed) _programContainer.RemoveAllChildren();
+        if (!_programsGrid.Disposed) _programsGrid.RemoveAllChildren();
+        if (!_hardwareBox.Disposed) _hardwareBox.RemoveAllChildren();
+        if (!_linksBox.Disposed) _linksBox.RemoveAllChildren();
     }
 
     public void Reset()
@@ -1343,6 +1354,9 @@ public sealed partial class EmbeddedOsUiFragment : BoxContainer, IBuiStateReceiv
 
     private void UpdateRunningTabs()
     {
+        if (Disposed || _runningTabsContainer.Disposed)
+            return;
+
         _runningTabsContainer.RemoveAllChildren();
         if (_lastState == null)
             return;
@@ -1680,10 +1694,13 @@ public sealed class RouterUiFragment : BoxContainer
 
     public void Detach()
     {
-        _connectionsBox.RemoveAllChildren();
-        _blacklistBox.RemoveAllChildren();
-        _packetsBox.RemoveAllChildren();
-        _devicesBox.RemoveAllChildren();
+        if (Disposed)
+            return;
+
+        if (!_connectionsBox.Disposed) _connectionsBox.RemoveAllChildren();
+        if (!_blacklistBox.Disposed) _blacklistBox.RemoveAllChildren();
+        if (!_packetsBox.Disposed) _packetsBox.RemoveAllChildren();
+        if (!_devicesBox.Disposed) _devicesBox.RemoveAllChildren();
     }
 
     public void UpdateState(RouterUiState state)
@@ -1828,7 +1845,10 @@ public sealed class PacketSnifferUiFragment : BoxContainer
 
     public void Detach()
     {
-        _packetList.RemoveAllChildren();
+        if (Disposed)
+            return;
+
+        if (!_packetList.Disposed) _packetList.RemoveAllChildren();
     }
 
     public void UpdateState(PacketSnifferUiState state)
@@ -1941,7 +1961,10 @@ public sealed class LatheControlUiFragment : BoxContainer
 
     public void Detach()
     {
-        _designsBox.RemoveAllChildren();
+        if (Disposed)
+            return;
+
+        if (!_designsBox.Disposed) _designsBox.RemoveAllChildren();
     }
 
     public void UpdateState(LatheControlUiState state)

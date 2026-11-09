@@ -56,7 +56,6 @@ public sealed partial class FileBrowserUi : UIFragment
 
     public override void Detach()
     {
-        _fragment?.Dispose();
         _fragment = null;
     }
 

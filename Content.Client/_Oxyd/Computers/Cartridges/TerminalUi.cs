@@ -38,7 +38,7 @@ public sealed partial class TerminalUi : UIFragment
 
     public override void Detach()
     {
-        _fragment?.Dispose();
+        _fragment?.Detach();
         _fragment = null;
     }
 

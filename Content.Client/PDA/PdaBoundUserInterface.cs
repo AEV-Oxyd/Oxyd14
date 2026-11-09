@@ -194,7 +194,8 @@ namespace Content.Client.PDA
                 if (!_menu.ProgramView.Children.Contains(osFrag))
                 {
                     osFrag.Parent?.RemoveChild(osFrag);
-                    _menu.ProgramView.RemoveAllChildren();
+                    if (!_menu.ProgramView.Disposed)
+                        _menu.ProgramView.RemoveAllChildren();
                     _menu.ProgramView.AddChild(osFrag);
                 }
 
@@ -210,7 +211,8 @@ namespace Content.Client.PDA
                 if (!_menu.ProgramView.Children.Contains(embFrag))
                 {
                     embFrag.Parent?.RemoveChild(embFrag);
-                    _menu.ProgramView.RemoveAllChildren();
+                    if (!_menu.ProgramView.Disposed)
+                        _menu.ProgramView.RemoveAllChildren();
                     _menu.ProgramView.AddChild(embFrag);
                 }
 
@@ -222,15 +224,29 @@ namespace Content.Client.PDA
                 if (!_menu.ProgramView.Children.Contains(_osFragment))
                 {
                     _osFragment.Parent?.RemoveChild(_osFragment);
-                    _menu.ProgramView.RemoveAllChildren();
+                    if (!_menu.ProgramView.Disposed)
+                        _menu.ProgramView.RemoveAllChildren();
                     _menu.ProgramView.AddChild(_osFragment);
                 }
                 var activeNetUid = _activeProgram.HasValue ? EntMan.GetNetEntity(_activeProgram.Value) : (Robust.Shared.GameObjects.NetEntity?)null;
                 _osFragment.AttachProgram(cartridgeUIFragment, title, activeNetUid);
             }
+            else if (_embeddedOsFragment != null)
+            {
+                if (!_menu.ProgramView.Children.Contains(_embeddedOsFragment))
+                {
+                    _embeddedOsFragment.Parent?.RemoveChild(_embeddedOsFragment);
+                    if (!_menu.ProgramView.Disposed)
+                        _menu.ProgramView.RemoveAllChildren();
+                    _menu.ProgramView.AddChild(_embeddedOsFragment);
+                }
+                var activeNetUid = _activeProgram.HasValue ? EntMan.GetNetEntity(_activeProgram.Value) : (Robust.Shared.GameObjects.NetEntity?)null;
+                _embeddedOsFragment.AttachProgram(cartridgeUIFragment, title, activeNetUid);
+            }
             else
             {
-                _menu.ProgramView.RemoveAllChildren();
+                if (!_menu.ProgramView.Disposed)
+                    _menu.ProgramView.RemoveAllChildren();
                 cartridgeUIFragment.Parent?.RemoveChild(cartridgeUIFragment);
                 _menu.ProgramView.AddChild(cartridgeUIFragment);
             }
@@ -238,7 +254,7 @@ namespace Content.Client.PDA
 
         protected override void DetachCartridgeUI(Control cartridgeUIFragment)
         {
-            if (_menu is null)
+            if (_menu is null || _menu.Disposed)
                 return;
 
             if (cartridgeUIFragment is OsUiFragment)
@@ -255,9 +271,14 @@ namespace Content.Client.PDA
             {
                 _osFragment.DetachProgram(cartridgeUIFragment);
             }
+            else if (_embeddedOsFragment != null)
+            {
+                _embeddedOsFragment.DetachProgram(cartridgeUIFragment);
+            }
             else
             {
-                _menu.ProgramView.RemoveAllChildren();
+                if (!_menu.ProgramView.Disposed)
+                    _menu.ProgramView.RemoveAllChildren();
             }
         }
 
@@ -267,14 +288,18 @@ namespace Content.Client.PDA
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                _osFragment = null;
+                _embeddedOsFragment = null;
+            }
+
             base.Dispose(disposing);
 
             if (disposing)
             {
                 _menu?.Dispose();
                 _menu = null;
-                _osFragment = null;
-                _embeddedOsFragment = null;
             }
         }
 

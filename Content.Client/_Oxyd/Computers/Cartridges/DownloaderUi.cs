@@ -41,7 +41,6 @@ public sealed partial class DownloaderUi : UIFragment
 
     public override void Detach()
     {
-        _fragment?.Dispose();
         _fragment = null;
     }
 

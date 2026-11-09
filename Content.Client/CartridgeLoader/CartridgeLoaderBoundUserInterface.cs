@@ -132,7 +132,6 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 {
                     DetachCartridgeUI(_subUiFragment);
                     _subCartridgeUI?.Detach();
-                    _subUiFragment.Dispose();
                     _subUiFragment = null;
                     _subCartridgeUI = null;
                     _subProgram = null;
@@ -141,7 +140,6 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 {
                     DetachCartridgeUI(_activeUiFragment);
                     _activeCartridgeUI?.Detach();
-                    _activeUiFragment.Dispose();
                     _activeUiFragment = null;
                     _activeCartridgeUI = null;
                     _activeProgram = null;
@@ -161,7 +159,6 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
                 {
                     DetachCartridgeUI(_subUiFragment);
                     _subCartridgeUI?.Detach();
-                    _subUiFragment.Dispose();
                     _subUiFragment = null;
                     _subCartridgeUI = null;
                     _subProgram = null;
@@ -199,7 +196,6 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             {
                 DetachCartridgeUI(_subUiFragment);
                 _subCartridgeUI?.Detach();
-                _subUiFragment.Dispose();
                 _subUiFragment = null;
                 _subCartridgeUI = null;
                 _subProgram = null;
@@ -250,7 +246,6 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
         {
             DetachCartridgeUI(prevFragment);
             _activeCartridgeUI?.Detach();
-            prevFragment.Dispose();
             _activeUiFragment = null;
             _activeCartridgeUI = null;
         }
@@ -332,16 +327,19 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-
         if (disposing)
         {
+            if (_activeUiFragment is not null)
+                DetachCartridgeUI(_activeUiFragment);
+            if (_primaryUiFragment is not null)
+                DetachCartridgeUI(_primaryUiFragment);
+            if (_subUiFragment is not null)
+                DetachCartridgeUI(_subUiFragment);
+
             _activeCartridgeUI?.Detach();
             _primaryCartridgeUI?.Detach();
             _subCartridgeUI?.Detach();
-            _activeUiFragment?.Dispose();
-            _primaryUiFragment?.Dispose();
-            _subUiFragment?.Dispose();
+
             _activeUiFragment = null;
             _primaryUiFragment = null;
             _subUiFragment = null;
@@ -352,6 +350,8 @@ public abstract class CartridgeLoaderBoundUserInterface : RoutedBoundUserInterfa
             _primaryProgram = null;
             _subProgram = null;
         }
+
+        base.Dispose(disposing);
     }
 
     protected CartridgeComponent? RetrieveCartridgeComponent(EntityUid? cartridgeUid)

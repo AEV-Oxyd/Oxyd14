@@ -223,17 +223,22 @@ public sealed partial class TerminalUiFragment : BoxContainer, IBuiStateReceiver
         TerminalOutput.Clear();
     }
 
-    [Obsolete("Types overriding Dispose(bool) are discouraged in Content.Client; preserved for layout container cleanup.")]
+    public void Detach()
+    {
+        if (_remoteScreenView != null)
+        {
+            if (!TerminalScreenSlot.Disposed)
+                TerminalScreenSlot.RemoveAllChildren();
+            _remoteScreenView.Dispose();
+            _remoteScreenView = null;
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            if (_remoteScreenView != null)
-            {
-                TerminalScreenSlot.RemoveAllChildren();
-                _remoteScreenView.Dispose();
-                _remoteScreenView = null;
-            }
+            Detach();
         }
 
         base.Dispose(disposing);
