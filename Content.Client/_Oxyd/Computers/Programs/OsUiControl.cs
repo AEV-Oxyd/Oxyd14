@@ -215,8 +215,11 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 
         _headerLabel.Text = $"{state.HostTitle} | {state.OwnerName ?? "Guest"} {(state.OwnerJob != null ? $"({state.OwnerJob})" : "")}";
         var hw = state.Hardware;
+        var netStr = hw.HasNetworkCard
+            ? $"{hw.BandwidthBps / 1024}KB/s{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
+            : "NONE";
         _statusBarLabel.Text =
-            $"GUID: {hw.DeviceGuid} | CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}/{hw.StorageTotalBytes / 1024}KB | NIC: {(hw.HasNetworkCard ? $"{hw.BandwidthBps / 1024}KB/s" : "NONE")}";
+            $"GUID: {hw.DeviceGuid} | CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}/{hw.StorageTotalBytes / 1024}KB | NIC: {netStr}";
 
         _homeView.Visible = state.CurrentView == 0;
         _programsView.Visible = state.CurrentView == 1;
@@ -338,19 +341,53 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 
     public void AttachChildProgram(EntityUid programUid, ProgramUiControl control)
     {
+        if (Disposed || _childViewport.Disposed || control.Disposed)
+            return;
+
+        if (_mountedChildren.TryGetValue(programUid, out var existing) && existing != control)
+        {
+            if (!existing.Disposed && existing.Parent == _childViewport)
+                _childViewport.RemoveChild(existing);
+        }
+
         _mountedChildren[programUid] = control;
-        control.Parent?.RemoveChild(control);
-        control.HorizontalExpand = true;
-        control.VerticalExpand = true;
-        _childViewport.AddChild(control);
+        if (control.Parent != _childViewport)
+        {
+            control.Parent?.RemoveChild(control);
+            control.HorizontalExpand = true;
+            control.VerticalExpand = true;
+            _childViewport.AddChild(control);
+        }
         SyncVisibleChildProgram();
     }
 
     public void DetachChildProgram(EntityUid programUid, ProgramUiControl control)
     {
         _mountedChildren.Remove(programUid);
-        if (control.Parent == _childViewport)
+        if (!control.Disposed && !_childViewport.Disposed && control.Parent == _childViewport)
             _childViewport.RemoveChild(control);
+    }
+
+    public void DetachAllChildPrograms()
+    {
+        if (!_childViewport.Disposed)
+        {
+            foreach (var ctrl in _mountedChildren.Values)
+            {
+                if (!ctrl.Disposed && ctrl.Parent == _childViewport)
+                    _childViewport.RemoveChild(ctrl);
+            }
+        }
+        _mountedChildren.Clear();
+    }
+
+    [Obsolete("Controls should only be removed from UI tree instead of being disposed")]
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            DetachAllChildPrograms();
+
+        base.Dispose(disposing);
     }
 
     private void SyncVisibleChildProgram()
@@ -484,8 +521,11 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _activeChildNet = state.ActiveChildProgram;
         var hw = state.Hardware;
 
+        var nicText = hw.HasNetworkCard
+            ? (!string.IsNullOrEmpty(hw.NetworkLabel) ? $"UP ({hw.NetworkLabel})" : "UP")
+            : "NONE";
         _headerLabel.Text = $"{state.HostName} | [{state.DeviceGuid}]";
-        _statusLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}KB | NIC: {(hw.HasNetworkCard ? "UP" : "NONE")} | DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
+        _statusLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}KB | NIC: {nicText} | DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
 
         _childViewport.Visible = state.CurrentView == 0;
         _appsView.Visible = state.CurrentView == 1;
@@ -550,19 +590,53 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 
     public void AttachChildProgram(EntityUid programUid, ProgramUiControl control)
     {
+        if (Disposed || _childViewport.Disposed || control.Disposed)
+            return;
+
+        if (_mountedChildren.TryGetValue(programUid, out var existing) && existing != control)
+        {
+            if (!existing.Disposed && existing.Parent == _childViewport)
+                _childViewport.RemoveChild(existing);
+        }
+
         _mountedChildren[programUid] = control;
-        control.Parent?.RemoveChild(control);
-        control.HorizontalExpand = true;
-        control.VerticalExpand = true;
-        _childViewport.AddChild(control);
+        if (control.Parent != _childViewport)
+        {
+            control.Parent?.RemoveChild(control);
+            control.HorizontalExpand = true;
+            control.VerticalExpand = true;
+            _childViewport.AddChild(control);
+        }
         SyncVisibleChildProgram();
     }
 
     public void DetachChildProgram(EntityUid programUid, ProgramUiControl control)
     {
         _mountedChildren.Remove(programUid);
-        if (control.Parent == _childViewport)
+        if (!control.Disposed && !_childViewport.Disposed && control.Parent == _childViewport)
             _childViewport.RemoveChild(control);
+    }
+
+    public void DetachAllChildPrograms()
+    {
+        if (!_childViewport.Disposed)
+        {
+            foreach (var ctrl in _mountedChildren.Values)
+            {
+                if (!ctrl.Disposed && ctrl.Parent == _childViewport)
+                    _childViewport.RemoveChild(ctrl);
+            }
+        }
+        _mountedChildren.Clear();
+    }
+
+    [Obsolete("Controls should only be removed from UI tree instead of being disposed")]
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            DetachAllChildPrograms();
+
+        base.Dispose(disposing);
     }
 
     private void SyncVisibleChildProgram()

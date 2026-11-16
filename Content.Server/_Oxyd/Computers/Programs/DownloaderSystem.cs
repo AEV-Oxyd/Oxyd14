@@ -62,9 +62,11 @@ public sealed partial class DownloaderSystem : EntitySystem
         var query = EntityQueryEnumerator<ActiveNetworkTransferComponent, DownloaderProgramComponent>();
         while (query.MoveNext(out var progUid, out var xfer, out var dlComp))
         {
+            var isDebugServer = _dataServer.IsDebugFallbackServer(xfer.ServerCompUid);
+            var blacklisted = _router.IsGuidBlacklisted(xfer.ComputerUid, _router.EnsureDeviceGuid(xfer.ComputerUid));
             if (!_router.HasActiveNetworkCard(xfer.ComputerUid) ||
-                !_router.IsNetworkConnected(xfer.ComputerUid) ||
-                !_router.IsRouterOperational(xfer.ServerCompUid))
+                blacklisted ||
+                (!isDebugServer && (!_router.IsNetworkConnected(xfer.ComputerUid) || !_router.IsRouterOperational(xfer.ServerCompUid))))
             {
                 dlComp.StatusMessage = "Transfer aborted: Network connection lost.";
                 RemCompDeferred<ActiveNetworkTransferComponent>(progUid);
@@ -208,8 +210,8 @@ public sealed partial class DownloaderSystem : EntitySystem
     public void UpdateUi(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp)
     {
         var hasNic = _router.HasActiveNetworkCard(compUid);
-        var routerOnline = hasNic && _router.IsNetworkConnected(compUid);
         var serverOnline = _dataServer.TryGetFirstOnlineRepositoryServer(compUid, out var srvUid, out var srvCompUid, out var srvDriveUid, out var srvFs, out var err);
+        var routerOnline = hasNic && (_router.IsNetworkConnected(compUid) || (serverOnline && _dataServer.IsDebugFallbackServer(srvCompUid)));
 
         var stats = CompOrNull<ComputerStatsComponent>(compUid);
         var downBps = stats?.NetworkBandwidthBps ?? 0;

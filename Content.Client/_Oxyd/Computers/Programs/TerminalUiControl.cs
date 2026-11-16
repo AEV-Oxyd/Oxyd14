@@ -148,7 +148,11 @@ public sealed class TerminalUiControl : ProgramUiControl
         if (raw is not TerminalUiState state)
             return;
 
-        var nicStatus = state.HasNetworkCard ? (state.IsRouterOnline ? "ONLINE" : "NO ROUTER") : "NO NIC";
+        var nicStatus = state.HasNetworkCard
+            ? (state.IsRouterOnline
+                ? (string.IsNullOrEmpty(state.NetworkLabel) ? "ONLINE" : $"ONLINE ({state.NetworkLabel})")
+                : "NO ROUTER")
+            : "NO NIC";
         var sshStr = state.SshHost != null ? $" | SSH: {state.SshHost}" : "";
         _headerLabel.Text = $"GUID: {state.DeviceGuid} | NET: {nicStatus}{sshStr}";
 

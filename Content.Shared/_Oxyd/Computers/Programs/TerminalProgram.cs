@@ -55,6 +55,7 @@ public sealed class TerminalUiState : BoundUserInterfaceState
     public bool HasNetworkCard { get; }
     public bool IsRouterOnline { get; }
     public RemoteScreenState? RemoteScreen { get; }
+    public string? NetworkLabel { get; }
 
     public TerminalUiState(
         List<string> lines,
@@ -66,7 +67,8 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         bool isScreenAttached,
         bool hasNetworkCard,
         bool isRouterOnline,
-        RemoteScreenState? remoteScreen = null)
+        RemoteScreenState? remoteScreen = null,
+        string? networkLabel = null)
     {
         Lines = lines;
         Prompt = prompt;
@@ -78,6 +80,7 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         HasNetworkCard = hasNetworkCard;
         IsRouterOnline = isRouterOnline;
         RemoteScreen = remoteScreen;
+        NetworkLabel = networkLabel;
     }
 }
 

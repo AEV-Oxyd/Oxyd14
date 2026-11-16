@@ -1,17 +1,32 @@
 using System.Linq;
 using Content.Server._Oxyd.Computers.Programs;
 using Content.Server._Oxyd.Computers.ScreenSharing;
+using Content.Server._Oxyd.Computers.Servers;
+using Content.Server.Power.EntitySystems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.Servers;
+using Content.Shared.GameTicking;
 using Content.Shared.Power;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Map;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Network;
+
+/// <summary>
+/// Marker component identifying entities spawned solely as the #if DEBUG global network fallback.
+/// </summary>
+[RegisterComponent]
+public sealed partial class DebugFallbackNetworkEntityComponent : Component
+{
+    [DataField]
+    public bool IsServer;
+}
 
 public sealed partial class NetworkRouterSystem : EntitySystem
 {
@@ -20,12 +35,27 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
+#if DEBUG
+    [Dependency] private PowerReceiverSystem _power = default!;
+    [Dependency] private MetaDataSystem _meta = default!;
+#endif
 
     private EntityQuery<OxydComputerComponent> _computerQuery;
     private EntityQuery<ComputerStatsComponent> _statsQuery;
     private EntityQuery<EmbeddedComputerHostComponent> _hostQuery;
     private EntityQuery<ProgramComponent> _programQuery;
     private EntityQuery<NetworkRouterComponent> _routerQuery;
+    private EntityQuery<DebugFallbackNetworkEntityComponent> _debugFallbackQuery;
+
+#if DEBUG
+    private static readonly EntProtoId DebugRouterPrototype = "StationNetworkRouter";
+
+    public const string DebugServerDisplayName = "DEV DEBUG SERVER";
+
+    private EntityUid _debugRouter;
+    private bool _ensuringDebugRouter;
+    private bool _flushingEntities;
+#endif
 
     public override void Initialize()
     {
@@ -36,9 +66,15 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         _hostQuery = GetEntityQuery<EmbeddedComputerHostComponent>();
         _programQuery = GetEntityQuery<ProgramComponent>();
         _routerQuery = GetEntityQuery<NetworkRouterComponent>();
+        _debugFallbackQuery = GetEntityQuery<DebugFallbackNetworkEntityComponent>();
 
         SubscribeLocalEvent<NetworkRouterComponent, MapInitEvent>(OnRouterMapInit);
         SubscribeLocalEvent<NetworkRouterComponent, PowerChangedEvent>(OnRouterPowerChanged);
+#if DEBUG
+        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundRestartCleanup);
+        EntityManager.BeforeEntityFlush += OnBeforeEntityFlush;
+        EntityManager.AfterEntityFlush += OnAfterEntityFlush;
+#endif
 
         SubscribeLocalEvent<RouterProgramComponent, ProgramStartupEvent>(OnRouterProgramStartup);
         SubscribeLocalEvent<RouterProgramComponent, ProgramActivatedEvent>(OnRouterProgramActivated);
@@ -55,6 +91,27 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         });
     }
 
+#if DEBUG
+    public override void Shutdown()
+    {
+        base.Shutdown();
+        EntityManager.BeforeEntityFlush -= OnBeforeEntityFlush;
+        EntityManager.AfterEntityFlush -= OnAfterEntityFlush;
+    }
+
+    private void OnBeforeEntityFlush()
+    {
+        _flushingEntities = true;
+        _debugRouter = EntityUid.Invalid;
+        _ensuringDebugRouter = false;
+    }
+
+    private void OnAfterEntityFlush()
+    {
+        _flushingEntities = false;
+    }
+#endif
+
     private void OnRouterMapInit(Entity<NetworkRouterComponent> ent, ref MapInitEvent args)
     {
         _guid.GetGuid(ent.Owner);
@@ -63,7 +120,143 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     private void OnRouterPowerChanged(Entity<NetworkRouterComponent> ent, ref PowerChangedEvent args)
     {
+#if DEBUG
+        if (_flushingEntities)
+            return;
+#endif
+        if (TerminatingOrDeleted(ent.Owner))
+            return;
+
         RefreshAllRouterProgramUis();
+    }
+
+#if DEBUG
+    private void OnRoundRestartCleanup(RoundRestartCleanupEvent ev)
+    {
+        _debugRouter = EntityUid.Invalid;
+        _ensuringDebugRouter = false;
+    }
+
+    /// <summary>
+    /// Returns true if any non-debug DataServer entity exists and has an operational network interface.
+    /// </summary>
+    public bool HasOperationalRealCentralServer()
+    {
+        var query = EntityQueryEnumerator<DataServerComponent>();
+        while (query.MoveNext(out var sUid, out _))
+        {
+            if (_debugFallbackQuery.HasComp(sUid) || TerminatingOrDeleted(sUid))
+                continue;
+
+            var sComp = UnwrapComputerEntity(sUid);
+            if (IsRouterOperational(sUid) && HasActiveNetworkCard(sComp))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool TryEnsureDebugGlobalRouter(out Entity<NetworkRouterComponent> router)
+    {
+        router = default;
+        if (_ensuringDebugRouter || _flushingEntities)
+            return false;
+
+        _ensuringDebugRouter = true;
+        try
+        {
+            if (!Exists(_debugRouter) || TerminatingOrDeleted(_debugRouter))
+            {
+                _debugRouter = Spawn(DebugRouterPrototype, MapCoordinates.Nullspace);
+                _meta.SetEntityName(_debugRouter, DebugServerDisplayName);
+                _power.SetNeedsPower(_debugRouter, false);
+                var marker = EnsureComp<DebugFallbackNetworkEntityComponent>(_debugRouter);
+                marker.IsServer = false;
+            }
+
+            var compSys = EntityManager.System<OxydComputerSystem>();
+            if (TryComp<EmbeddedComputerHostComponent>(_debugRouter, out var host) &&
+                compSys.EnsureComputerBoundToHost((_debugRouter, host), out var routerCompUid) &&
+                _computerQuery.TryComp(routerCompUid, out var comp))
+            {
+                _meta.SetEntityName(routerCompUid, DebugServerDisplayName);
+                var compMarker = EnsureComp<DebugFallbackNetworkEntityComponent>(routerCompUid);
+                compMarker.IsServer = false;
+                comp.IsPowered = true;
+                Dirty(routerCompUid, comp);
+                compSys.RecalculateHardwareStats(routerCompUid, comp);
+                if (!comp.IsBooted)
+                    compSys.RefreshComputerBootState(routerCompUid, comp);
+            }
+
+            EntityManager.System<DataServerSystem>().EnsureDebugRepositoryServer();
+
+            if (!_routerQuery.TryComp(_debugRouter, out var rComp))
+                return false;
+
+            router = (_debugRouter, rComp);
+            RefreshDnsDirectory(router);
+            return true;
+        }
+        finally
+        {
+            _ensuringDebugRouter = false;
+        }
+    }
+#endif
+
+#if DEBUG
+    private void EnsureDebugServerIfNeeded(EntityUid context)
+    {
+        if (_flushingEntities ||
+            _ensuringDebugRouter ||
+            LifeStage(context) != EntityLifeStage.MapInitialized ||
+            TerminatingOrDeleted(context) ||
+            HasOperationalRealCentralServer())
+        {
+            return;
+        }
+
+        _ensuringDebugRouter = true;
+        try
+        {
+            EntityManager.System<DataServerSystem>().EnsureDebugRepositoryServer();
+        }
+        finally
+        {
+            _ensuringDebugRouter = false;
+        }
+    }
+#endif
+
+    public bool IsUsingDebugFallbackRouter(Entity<NetworkRouterComponent> router)
+    {
+#if DEBUG
+        return router.Owner == _debugRouter || _debugFallbackQuery.HasComp(router.Owner);
+#else
+        return false;
+#endif
+    }
+
+    /// <summary>
+    /// Returns a clear network/server banner label when a device connects through the
+    /// #if DEBUG global fallback network (when no central server is found).
+    /// </summary>
+    public string? GetConnectedNetworkLabel(EntityUid origin)
+    {
+#if DEBUG
+        var compUid = UnwrapComputerEntity(origin);
+        if (!HasActiveNetworkCard(compUid))
+            return null;
+
+        var router = FindNearestRouter(compUid);
+        if (router == null)
+            return null;
+
+        if (IsUsingDebugFallbackRouter(router.Value) || !HasOperationalRealCentralServer())
+            return DebugServerDisplayName;
+#endif
+        return null;
     }
 
     private void OnRouterProgramStartup(Entity<RouterProgramComponent> ent, ref ProgramStartupEvent args)
@@ -229,6 +422,9 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     public void RefreshDnsDirectory(Entity<NetworkRouterComponent> router)
     {
+#if DEBUG
+        EnsureDebugServerIfNeeded(router.Owner);
+#endif
         var serverQuery = EntityQueryEnumerator<DataServerComponent>();
         while (serverQuery.MoveNext(out var sUid, out var sComp))
         {
@@ -238,6 +434,8 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
             var guid = EnsureDeviceGuid(targetComp);
             router.Comp.DnsRecords[MetaData(sUid).EntityName] = guid;
+            if (_debugFallbackQuery.HasComp(sUid))
+                router.Comp.DnsRecords["DEV_DEBUG_SERVER"] = guid;
             foreach (var proto in sComp.ServerProtocols)
                 router.Comp.DnsRecords[proto] = guid;
         }
@@ -316,6 +514,9 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         var query = EntityQueryEnumerator<NetworkRouterComponent>();
         while (query.MoveNext(out var rUid, out var rComp))
         {
+            if (_debugFallbackQuery.HasComp(rUid))
+                continue;
+
             if (!IsRouterOperational(rUid))
                 continue;
 
@@ -330,6 +531,19 @@ public sealed partial class NetworkRouterSystem : EntitySystem
                 best = (rUid, rComp);
             }
         }
+
+#if DEBUG
+        if (best == null &&
+            !_flushingEntities &&
+            !_ensuringDebugRouter &&
+            LifeStage(origin) == EntityLifeStage.MapInitialized &&
+            !TerminatingOrDeleted(origin) &&
+            !HasOperationalRealCentralServer() &&
+            TryEnsureDebugGlobalRouter(out var debugRouter))
+        {
+            return debugRouter;
+        }
+#endif
 
         return best;
     }
@@ -421,10 +635,17 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     public void RefreshRouterDevices(Entity<NetworkRouterComponent> router)
     {
+#if DEBUG
+        EnsureDebugServerIfNeeded(router.Owner);
+#endif
+
         router.Comp.ConnectedDevices.Clear();
         var compQuery = EntityQueryEnumerator<OxydComputerComponent>();
         while (compQuery.MoveNext(out var uid, out _))
         {
+            if (_debugFallbackQuery.TryComp(uid, out var marker) && !marker.IsServer)
+                continue;
+
             if (!HasActiveNetworkCard(uid))
                 continue;
 
@@ -456,7 +677,9 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         if (!HasActiveNetworkCard(sComp) || !HasActiveNetworkCard(tComp))
             return false;
 
-        var router = FindNearestRouter(sComp) ?? FindNearestRouter(tComp);
+        var router = _debugFallbackQuery.HasComp(sComp)
+            ? FindNearestRouter(tComp) ?? FindNearestRouter(sComp)
+            : FindNearestRouter(sComp) ?? FindNearestRouter(tComp);
         if (router == null)
             return false;
 
@@ -698,11 +921,15 @@ public sealed partial class NetworkRouterSystem : EntitySystem
                 packets.AddRange(bw.StoredPackets);
         }
 
+        var statusMsg = router != null && IsUsingDebugFallbackRouter(router.Value)
+            ? $"{sProg.StatusMessage} [Global Net: {MetaData(router.Value.Owner).EntityName}]"
+            : sProg.StatusMessage;
+
         var state = new PacketSnifferUiState(
             router != null ? EnsureDeviceGuid(router.Value.Owner) : EnsureDeviceGuid(compUid),
             hasNic,
             packets,
-            sProg.StatusMessage);
+            statusMsg);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);

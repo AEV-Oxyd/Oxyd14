@@ -377,6 +377,7 @@ public sealed partial class OsProgramSystem : EntitySystem
             comp.AllowDeviceLink && !comp.DeviceLinkWireCut,
             _router.EnsureDeviceGuid(compUid),
             hostName,
-            comp.IsBooted ? "SYSTEM ONLINE" : comp.BootError);
+            comp.IsBooted ? "SYSTEM ONLINE" : comp.BootError,
+            _router.GetConnectedNetworkLabel(compUid));
     }
 }

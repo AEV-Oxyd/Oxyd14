@@ -2,6 +2,7 @@ using Content.Shared._Oxyd.Computers.Programs;
 using Robust.Client.GameObjects;
 using Robust.Client.UserInterface;
 using Robust.Shared.GameObjects;
+using Robust.Shared.IoC;
 
 namespace Content.Client._Oxyd.Computers.UI;
 
@@ -42,7 +43,18 @@ public abstract class ProgramBoundUserInterface<TControl> : ProgramBoundUserInte
 
     protected override void Open()
     {
+        var wasOpened = IsOpened;
         base.Open();
+
+        if (wasOpened && Control != null && !Control.Disposed)
+        {
+            if (_pendingState != null)
+            {
+                Control.UpdateProgramState(_pendingState);
+                _pendingState = null;
+            }
+            return;
+        }
 
         if (EntMan.TryGetComponent<ProgramComponent>(Owner, out var progComp))
         {
@@ -50,11 +62,22 @@ public abstract class ProgramBoundUserInterface<TControl> : ProgramBoundUserInte
             IsBootProgram = progComp.IsBootProgram;
         }
 
-        Control = new TControl
+        if (Control != null)
         {
-            ProgramUid = Owner,
-            ComputerUid = ComputerUid
-        };
+            if (ComputerUid.IsValid())
+                EntMan.System<ClientComputerUiSystem>().UnregisterProgramUi(ComputerUid, Owner, Control);
+
+            if (!Control.Disposed)
+            {
+                Control.Parent?.RemoveChild(Control);
+                Control.Dispose();
+            }
+            Control = null;
+        }
+
+        Control = IoCManager.Resolve<IDynamicTypeFactory>().CreateInstance<TControl>();
+        Control.ProgramUid = Owner;
+        Control.ComputerUid = ComputerUid;
         Control.BindSendMessage(SendMessage);
 
         if (ComputerUid.IsValid())
@@ -82,8 +105,14 @@ public abstract class ProgramBoundUserInterface<TControl> : ProgramBoundUserInte
         if (ComputerUid.IsValid())
             EntMan.System<ClientComputerUiSystem>().UnregisterProgramUi(ComputerUid, Owner, Control);
 
-        Control.Parent?.RemoveChild(Control);
-        Control.Dispose();
+        if (Control is IOsProgramUiHost osHost && !Control.Disposed)
+            osHost.DetachAllChildPrograms();
+
+        if (!Control.Disposed)
+        {
+            Control.Parent?.RemoveChild(Control);
+            Control.Dispose();
+        }
         Control = null;
     }
 }

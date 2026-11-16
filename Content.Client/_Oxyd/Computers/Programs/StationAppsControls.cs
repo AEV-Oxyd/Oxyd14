@@ -34,14 +34,16 @@ public sealed class NotekeeperUiControl : ProgramUiControl
 
         var newRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         _newNameInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "New file name..." };
-        var createBtn = new ContentStandardButton { Text = "Create .txt", MinWidth = 85 };
-        createBtn.OnPressed += _ =>
+        void SubmitCreate()
         {
             if (string.IsNullOrWhiteSpace(_newNameInput.Text))
                 return;
             SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.CreateFile, _newNameInput.Text, ""));
             _newNameInput.Text = string.Empty;
-        };
+        }
+        _newNameInput.OnTextEntered += _ => SubmitCreate();
+        var createBtn = new ContentStandardButton { Text = "Create .txt", MinWidth = 85 };
+        createBtn.OnPressed += _ => SubmitCreate();
         var delBtn = new ContentStandardButton { Text = "Delete", MinWidth = 60, Margin = new Thickness(2, 0) };
         delBtn.OnPressed += _ => SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.DeleteFile, _currentPath));
         newRow.AddChild(_newNameInput);
@@ -59,13 +61,15 @@ public sealed class NotekeeperUiControl : ProgramUiControl
 
         var editRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4, 0, 0) };
         _editorLine = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Set/edit file text or append line..." };
-        var saveBtn = new ContentStandardButton { Text = "Save", MinWidth = 60, Margin = new Thickness(2, 0) };
-        saveBtn.OnPressed += _ =>
+        void SubmitSave()
         {
             var nextText = string.IsNullOrEmpty(_currentText) ? _editorLine.Text : $"{_currentText}\n{_editorLine.Text}";
             _editorLine.Text = string.Empty;
             SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.SaveFile, _currentPath, nextText));
-        };
+        }
+        _editorLine.OnTextEntered += _ => SubmitSave();
+        var saveBtn = new ContentStandardButton { Text = "Save", MinWidth = 60, Margin = new Thickness(2, 0) };
+        saveBtn.OnPressed += _ => SubmitSave();
         var replaceBtn = new ContentStandardButton { Text = "Overwrite", MinWidth = 80 };
         replaceBtn.OnPressed += _ =>
         {

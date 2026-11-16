@@ -35,6 +35,7 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     public ComputerDisplayWindow()
     {
+        MouseFilter = MouseFilterMode.Stop;
         MinSize = new Vector2(560, 440);
         SetSize = new Vector2(640, 500);
 
@@ -170,7 +171,26 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     protected override DragMode GetDragModeFor(Vector2 relativeMousePos)
     {
-        return relativeMousePos.Y < 32 ? DragMode.Move : DragMode.None;
+        const int resizeMargin = 6;
+        var mode = DragMode.None;
+
+        if (Resizable)
+        {
+            if (relativeMousePos.Y < 3)
+                mode |= DragMode.Top;
+            else if (relativeMousePos.Y > Size.Y - resizeMargin)
+                mode |= DragMode.Bottom;
+
+            if (relativeMousePos.X < resizeMargin)
+                mode |= DragMode.Left;
+            else if (relativeMousePos.X > Size.X - resizeMargin)
+                mode |= DragMode.Right;
+        }
+
+        if (mode == DragMode.None && relativeMousePos.Y < 42)
+            mode = DragMode.Move;
+
+        return mode;
     }
 
     public void UpdateDisplayState(ComputerDisplayUiState state)
@@ -207,10 +227,14 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     public void MountBootProgram(ProgramUiControl control)
     {
-        if (control.Parent == _bootProgramViewport)
+        if (Disposed || control.Disposed || _bootProgramViewport.Disposed)
+            return;
+
+        if (control.Parent == _bootProgramViewport && _bootProgramViewport.ChildCount == 1)
             return;
 
         control.Parent?.RemoveChild(control);
+        // Detach without disposing any previous child control since ProgramBoundUserInterface owns its lifetime.
         _bootProgramViewport.RemoveAllChildren();
         control.HorizontalExpand = true;
         control.VerticalExpand = true;
@@ -220,9 +244,27 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     public void UnmountBootProgram(ProgramUiControl control)
     {
+        if (_bootProgramViewport.Disposed)
+            return;
+
         if (control.Parent == _bootProgramViewport)
             _bootProgramViewport.RemoveChild(control);
         ScreenSurface.InvalidateCapture();
+    }
+
+    public void UnmountAllBootPrograms()
+    {
+        if (!_bootProgramViewport.Disposed)
+            _bootProgramViewport.RemoveAllChildren();
+    }
+
+    [Obsolete("Controls should only be removed from UI tree instead of being disposed")]
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            UnmountAllBootPrograms();
+
+        base.Dispose(disposing);
     }
 }
 
@@ -236,7 +278,23 @@ public sealed class ComputerBoundUserInterface : BoundUserInterface
 
     protected override void Open()
     {
+        var wasOpened = IsOpened;
         base.Open();
+
+        if (wasOpened && _window != null && !_window.Disposed)
+        {
+            EntMan.System<ClientComputerUiSystem>().RegisterDisplayHost(Owner, _window);
+            return;
+        }
+
+        if (_window != null)
+        {
+            EntMan.System<ClientComputerUiSystem>().UnregisterDisplayHost(Owner, _window);
+            _window.UnmountAllBootPrograms();
+            if (!_window.Disposed)
+                _window.Dispose();
+            _window = null;
+        }
 
         _window = this.CreateWindow<ComputerDisplayWindow>();
         _window.OnRetryBootPressed += () => SendMessage(new ComputerRetryBootMessage());
@@ -252,8 +310,13 @@ public sealed class ComputerBoundUserInterface : BoundUserInterface
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
         if (disposing && _window != null)
+        {
             EntMan.System<ClientComputerUiSystem>().UnregisterDisplayHost(Owner, _window);
+            _window.UnmountAllBootPrograms();
+            _window = null;
+        }
+
+        base.Dispose(disposing);
     }
 }

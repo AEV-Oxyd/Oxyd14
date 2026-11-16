@@ -72,6 +72,7 @@ public sealed class OsHardwareSummaryDto
     public string DeviceGuid { get; }
     public string HostName { get; }
     public string StatusMessage { get; }
+    public string? NetworkLabel { get; }
 
     public OsHardwareSummaryDto(
         int cpuMhz,
@@ -92,7 +93,8 @@ public sealed class OsHardwareSummaryDto
         bool allowDeviceLink,
         string deviceGuid,
         string hostName,
-        string statusMessage)
+        string statusMessage,
+        string? networkLabel = null)
     {
         CpuMhz = cpuMhz;
         CpuLoadPercent = cpuLoadPercent;
@@ -113,6 +115,7 @@ public sealed class OsHardwareSummaryDto
         DeviceGuid = deviceGuid;
         HostName = hostName;
         StatusMessage = statusMessage;
+        NetworkLabel = networkLabel;
     }
 }
 

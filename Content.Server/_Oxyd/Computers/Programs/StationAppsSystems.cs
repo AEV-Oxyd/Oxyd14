@@ -466,7 +466,7 @@ public sealed partial class StationAppsSystem : EntitySystem
                         Size = size
                     }, fs);
                     online = true;
-                    statusMsg = $"Synced live from [{_router.EnsureDeviceGuid(srvCompUid)}] -> HDD.";
+                    statusMsg = $"Synced live from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> HDD.";
                 }
             }
             else
@@ -589,7 +589,7 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Size = size
                 }, fs);
                 online = true;
-                statusMsg = "Synced security records -> /records/wanted_list.db";
+                statusMsg = $"Synced from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> /records/wanted_list.db";
             }
         }
         else
@@ -689,9 +689,11 @@ public sealed partial class StationAppsSystem : EntitySystem
 
             if (driveUid != null && fs != null)
             {
+                var netLabel = _router.GetConnectedNetworkLabel(compUid);
+                var srvSource = !string.IsNullOrEmpty(netLabel) ? netLabel : "NEWS-SRV";
                 var bytes = Math.Max(128, data.Count * 128);
                 _bandwidth.RecordDataTransmitted(compUid, bytes, isUpload: false);
-                _bandwidth.StorePacket(compUid, "NEWS-SRV", _router.EnsureDeviceGuid(compUid), "TCP/NEWS", $"News sync ({data.Count} articles)", bytes);
+                _bandwidth.StorePacket(compUid, srvSource, _router.EnsureDeviceGuid(compUid), "TCP/NEWS", $"News sync ({data.Count} articles)", bytes);
                 _fileSystem.TryWriteFile(driveUid.Value, new DatabaseVirtualFile
                 {
                     Name = "articles",
@@ -701,7 +703,9 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Data = data,
                     Size = bytes
                 }, fs);
-                status = $"Synced {liveArticles.Count} articles to /news/articles.db.";
+                status = string.IsNullOrEmpty(netLabel)
+                    ? $"Synced {liveArticles.Count} articles to /news/articles.db."
+                    : $"Synced {liveArticles.Count} articles ({netLabel}) to /news/articles.db.";
             }
         }
         else

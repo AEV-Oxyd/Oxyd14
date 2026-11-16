@@ -313,14 +313,16 @@ public sealed partial class TerminalSystem : EntitySystem
                 var stats = CompOrNull<ComputerStatsComponent>(compUid);
                 var nicOn = _router.HasActiveNetworkCard(compUid);
                 var rOnline = nicOn && _router.IsNetworkConnected(compUid);
-                comp.History.Add($"eth0: GUID={localGuid} NIC={(nicOn ? "UP" : "MISSING/CUT")} ROUTER={(rOnline ? "ONLINE" : "OFFLINE")}");
+                var netLabel = rOnline ? _router.GetConnectedNetworkLabel(compUid) : null;
+                var rText = rOnline ? (string.IsNullOrEmpty(netLabel) ? "ONLINE" : $"ONLINE ({netLabel})") : "OFFLINE";
+                comp.History.Add($"eth0: GUID={localGuid} NIC={(nicOn ? "UP" : "MISSING/CUT")} ROUTER={rText}");
                 comp.History.Add($"      DL={stats?.NetworkBandwidthBps ?? 0} B/s  UL={stats?.NetworkUploadBandwidthBps ?? 0} B/s");
                 break;
 
             case "ping" when parts.Length > 1:
                 if (!RequireNetwork(compUid, comp))
                     break;
-                HandlePingCommand(compUid, comp, parts[1]);
+                HandlePingCommand(compUid, comp, string.Join(" ", parts.Skip(1)));
                 break;
 
             case "scan":
@@ -660,7 +662,11 @@ public sealed partial class TerminalSystem : EntitySystem
         }
 
         _router.RefreshRouterDevices(router.Value);
-        comp.History.Add($"Router [{_guid.GetGuid(router.Value.Owner)}] Active Network Hosts ({router.Value.Comp.ConnectedDevices.Count}):");
+        var netLabel = _router.GetConnectedNetworkLabel(localCompUid);
+        var headerPrefix = string.IsNullOrEmpty(netLabel)
+            ? $"Router [{_guid.GetGuid(router.Value.Owner)}]"
+            : $"Global Debug Router [{_guid.GetGuid(router.Value.Owner)}] ({netLabel})";
+        comp.History.Add($"{headerPrefix} Active Network Hosts ({router.Value.Comp.ConnectedDevices.Count}):");
         foreach (var dGuid in router.Value.Comp.ConnectedDevices)
         {
             if (_router.TryFindDeviceByGuid(dGuid, out var dUid))
@@ -861,6 +867,7 @@ public sealed partial class TerminalSystem : EntitySystem
 
             var hasNic = _router.HasActiveNetworkCard(compUid);
             var routerOnline = hasNic && _router.IsNetworkConnected(compUid);
+            var networkLabel = routerOnline ? _router.GetConnectedNetworkLabel(compUid) : null;
 
             var state = new TerminalUiState(
                 new List<string>(comp.History),
@@ -872,7 +879,8 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.IsScreenAttached,
                 hasNic,
                 routerOnline,
-                remoteScreen);
+                remoteScreen,
+                networkLabel);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);
