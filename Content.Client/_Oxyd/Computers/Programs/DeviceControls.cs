@@ -13,9 +13,9 @@ namespace Content.Client._Oxyd.Computers.Programs;
 
 public sealed class ApcControlUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
-    private readonly Label _telemetryLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _telemetryLabel;
+    private readonly ContentLabel _statusLabel;
 
     public ApcControlUiControl()
     {
@@ -23,14 +23,14 @@ public sealed class ApcControlUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        _headerLabel = new Label { Text = "AREA POWER CONTROLLER", FontColorOverride = Color.FromHex("#FFA726") };
-        _telemetryLabel = new Label { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
-        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
+        _headerLabel = new ContentLabel { Text = "AREA POWER CONTROLLER", FontColorOverride = Color.FromHex("#FFA726") };
+        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _statusLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
 
         var btnRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 6) };
         void AddBtn(string text, ApcControlAction action)
         {
-            var b = new ContentStandardButton { Text = text, Margin = new Thickness(2, 0) };
+            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0) };
             b.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(action));
             btnRow.AddChild(b);
         }
@@ -69,9 +69,9 @@ public sealed class ApcControlUiControl : ProgramUiControl
 
 public sealed class AtmosControlUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
-    private readonly Label _telemetryLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _telemetryLabel;
+    private readonly ContentLabel _statusLabel;
 
     public AtmosControlUiControl()
     {
@@ -79,14 +79,14 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        _headerLabel = new Label { Text = "AIR ALARM CONTROLLER", FontColorOverride = Color.FromHex("#33B5E5") };
-        _telemetryLabel = new Label { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
-        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
+        _headerLabel = new ContentLabel { Text = "AIR ALARM CONTROLLER", FontColorOverride = Color.FromHex("#33B5E5") };
+        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _statusLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
 
         var modeRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
         void AddBtn(ContentBoxContainer parent, string text, AtmosControlAction action)
         {
-            var b = new ContentStandardButton { Text = text, Margin = new Thickness(2, 0) };
+            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0) };
             b.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(action));
             parent.AddChild(b);
         }
@@ -131,9 +131,9 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
 public sealed class LatheControlUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
-    private readonly Label _materialsLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _materialsLabel;
+    private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _recipesContainer;
 
     public LatheControlUiControl()
@@ -142,14 +142,14 @@ public sealed class LatheControlUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        _headerLabel = new Label { Text = "AUTOLATHE CONTROLLER", FontColorOverride = Color.FromHex("#90A4AE") };
-        _materialsLabel = new Label { Text = "Materials: ---", Margin = new Thickness(0, 4) };
-        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 2, 0, 4) };
+        _headerLabel = new ContentLabel { Text = "AUTOLATHE CONTROLLER", FontColorOverride = Color.FromHex("#90A4AE") };
+        _materialsLabel = new ContentLabel { Text = "Materials: ---", Margin = new Thickness(0, 4) };
+        _statusLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 2, 0, 4) };
 
         var actRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
-        var refBtn = new ContentStandardButton { Text = "Refresh", Margin = new Thickness(2, 0) };
+        var refBtn = new ContentButton { Text = "Refresh", Margin = new Thickness(2, 0) };
         refBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.Refresh));
-        var cancelBtn = new ContentStandardButton { Text = "Cancel Queue", Margin = new Thickness(2, 0) };
+        var cancelBtn = new ContentButton { Text = "Cancel Queue", Margin = new Thickness(2, 0) };
         cancelBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.CancelAll));
         actRow.AddChild(refBtn);
         actRow.AddChild(cancelBtn);
@@ -183,17 +183,17 @@ public sealed class LatheControlUiControl : ProgramUiControl
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
             var tag = string.IsNullOrEmpty(bp.FilePath) ? "[Static]" : $"[{bp.FilePath}{(bp.RemainingUses != null ? $" ({bp.RemainingUses}x)" : "")}{(bp.IsEncrypted ? " ENC" : "")}]";
-            row.AddChild(new Label { Text = $"{bp.RecipeName} {tag}", HorizontalExpand = true });
+            row.AddChild(new ContentLabel { Text = $"{bp.RecipeName} {tag}", HorizontalExpand = true });
 
             if (bp.IsEncrypted)
             {
-                var decBtn = new ContentStandardButton { Text = "Decrypt", MinWidth = 65 };
+                var decBtn = new ContentButton { Text = "Decrypt", MinWidth = 65 };
                 decBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.DecryptBlueprint, bp.RecipeId, bp.FilePath));
                 row.AddChild(decBtn);
             }
             else
             {
-                var printBtn = new ContentStandardButton { Text = "Print", MinWidth = 55 };
+                var printBtn = new ContentButton { Text = "Print", MinWidth = 55 };
                 printBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.PrintRecipe, bp.RecipeId, bp.FilePath, 1));
                 row.AddChild(printBtn);
             }

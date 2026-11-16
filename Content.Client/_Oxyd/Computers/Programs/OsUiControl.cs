@@ -18,8 +18,8 @@ namespace Content.Client._Oxyd.Computers.Programs;
 public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 {
     private readonly IEntityManager _entMan;
-    private readonly Label _headerLabel;
-    private readonly Label _statusBarLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusBarLabel;
     private readonly ContentBoxContainer _tabStrip;
     private readonly ContentBoxContainer _homeView;
     private readonly ContentBoxContainer _programsView;
@@ -27,7 +27,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly ContentBoxContainer _childViewport;
     private readonly ContentBoxContainer _programListContainer;
     private readonly ContentBoxContainer _portsContainer;
-    private readonly Label _hwDetailsLabel;
+    private readonly ContentLabel _hwDetailsLabel;
 
     private readonly Dictionary<EntityUid, ProgramUiControl> _mountedChildren = new();
     private OsUiState? _lastState;
@@ -55,7 +55,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             Margin = new Thickness(0, 0, 0, 4)
         };
 
-        _headerLabel = new Label
+        _headerLabel = new ContentLabel
         {
             Text = "NTOS 1.4",
             HorizontalExpand = true,
@@ -78,7 +78,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         root.AddChild(_tabStrip);
 
         // Status / Metrics strip
-        _statusBarLabel = new Label
+        _statusBarLabel = new ContentLabel
         {
             Text = "Initializing NTOS...",
             FontColorOverride = Color.FromHex("#88CCCC"),
@@ -122,7 +122,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             VerticalExpand = true,
             Visible = false
         };
-        _hwDetailsLabel = new Label { FontColorOverride = Color.FromHex("#E0F7FA"), Margin = new Thickness(0, 0, 0, 6) };
+        _hwDetailsLabel = new ContentLabel { FontColorOverride = Color.FromHex("#E0F7FA"), Margin = new Thickness(0, 0, 0, 6) };
         _hardwareView.AddChild(_hwDetailsLabel);
         var portScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
         _portsContainer = new ContentBoxContainer
@@ -147,9 +147,9 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         AddChild(root);
     }
 
-    private ContentStandardButton MakeNavBtn(string text, int viewIdx)
+    private ContentButton MakeNavBtn(string text, int viewIdx)
     {
-        var btn = new ContentStandardButton
+        var btn = new ContentButton
         {
             Text = text,
             Margin = new Thickness(2, 0),
@@ -170,7 +170,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 
         void AddHwBtn(string label, string action)
         {
-            var btn = new ContentStandardButton
+            var btn = new ContentButton
             {
                 Text = label,
                 Margin = new Thickness(2, 0)
@@ -187,7 +187,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         AddHwBtn("Eject Pen", "eject_pen");
         AddHwBtn("Eject Disk", "eject_disk");
 
-        _homeView.AddChild(new Label
+        _homeView.AddChild(new ContentLabel
         {
             Text = "HOST DEVICE CONTROLS (via DeviceLink):",
             FontColorOverride = Color.FromHex("#00D4FF"),
@@ -195,7 +195,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         });
         _homeView.AddChild(actionsRow);
 
-        var openAppsBtn = new ContentStandardButton
+        var openAppsBtn = new ContentButton
         {
             Text = "Open Installed Programs (.nte)",
             HorizontalAlignment = HAlignment.Left,
@@ -240,7 +240,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             if (prog.IsBootProgram || prog.RunningEntity is not { } rEnt)
                 continue;
 
-            var tabBtn = new ContentStandardButton
+            var tabBtn = new ContentButton
             {
                 Text = prog.Name + (prog.RunningEntity == state.ActiveChildProgram && state.CurrentView == 3 ? " *" : ""),
                 Margin = new Thickness(2, 0)
@@ -248,7 +248,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             tabBtn.OnPressed += _ => SendProgramMessage(new OsSwitchProgramMessage(rEnt));
             _tabStrip.AddChild(tabBtn);
 
-            var closeBtn = new ContentStandardButton
+            var closeBtn = new ContentButton
             {
                 Text = "x",
                 Margin = new Thickness(0, 0, 4, 0),
@@ -271,7 +271,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
                 Margin = new Thickness(0, 2)
             };
 
-            var info = new Label
+            var info = new ContentLabel
             {
                 Text = $"{exec.Name}  [{exec.FilePath}]  ({exec.RamUsageMb} MB)",
                 HorizontalExpand = true,
@@ -281,21 +281,21 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 
             if (exec.IsBootProgram)
             {
-                row.AddChild(new Label { Text = "[BOOT OS]", FontColorOverride = Color.FromHex("#00D4FF") });
+                row.AddChild(new ContentLabel { Text = "[BOOT OS]", FontColorOverride = Color.FromHex("#00D4FF") });
             }
             else if (exec.IsRunning && exec.RunningEntity is { } runEnt)
             {
-                var focusBtn = new ContentStandardButton { Text = "Focus", Margin = new Thickness(2, 0), MinWidth = 60 };
+                var focusBtn = new ContentButton { Text = "Focus", Margin = new Thickness(2, 0), MinWidth = 60 };
                 focusBtn.OnPressed += _ => SendProgramMessage(new OsSwitchProgramMessage(runEnt));
                 row.AddChild(focusBtn);
 
-                var stopBtn = new ContentStandardButton { Text = "Stop", Margin = new Thickness(2, 0), MinWidth = 55 };
+                var stopBtn = new ContentButton { Text = "Stop", Margin = new Thickness(2, 0), MinWidth = 55 };
                 stopBtn.OnPressed += _ => SendProgramMessage(new OsCloseProgramMessage(runEnt));
                 row.AddChild(stopBtn);
             }
             else
             {
-                var runBtn = new ContentStandardButton { Text = "Run .nte", Margin = new Thickness(2, 0), MinWidth = 75 };
+                var runBtn = new ContentButton { Text = "Run .nte", Margin = new Thickness(2, 0), MinWidth = 75 };
                 runBtn.OnPressed += _ => SendProgramMessage(new OsLaunchProgramMessage(exec.FilePath));
                 row.AddChild(runBtn);
             }
@@ -324,14 +324,14 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             var dir = port.IsSource ? "OUT" : "IN ";
             var links = port.LinkedTargets.Count > 0 ? string.Join(", ", port.LinkedTargets) : "(none)";
 
-            row.AddChild(new Label
+            row.AddChild(new ContentLabel
             {
                 Text = $"[{scope} {dir}] {port.PortId} ({port.PortName}) -> {links}",
                 HorizontalExpand = true,
                 FontColorOverride = Color.FromHex("#CCCCCC")
             });
 
-            var trigBtn = new ContentStandardButton { Text = "Pulse", MinWidth = 55 };
+            var trigBtn = new ContentButton { Text = "Pulse", MinWidth = 55 };
             trigBtn.OnPressed += _ => SendProgramMessage(new OsInvokeDevicePortMessage(port.PortId, port.IsHostPort, "status"));
             row.AddChild(trigBtn);
 
@@ -408,8 +408,8 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 {
     private readonly IEntityManager _entMan;
-    private readonly Label _headerLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _tabRow;
     private readonly ContentBoxContainer _childViewport;
     private readonly ContentBoxContainer _appsView;
@@ -440,7 +440,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             Margin = new Thickness(0, 0, 0, 4)
         };
 
-        _headerLabel = new Label
+        _headerLabel = new ContentLabel
         {
             Text = "EMBEDDED CONTROLLER OS",
             HorizontalExpand = true,
@@ -448,11 +448,11 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         topRow.AddChild(_headerLabel);
 
-        var appViewBtn = new ContentStandardButton { Text = "Controller", Margin = new Thickness(2, 0), MinWidth = 75 };
+        var appViewBtn = new ContentButton { Text = "Controller", Margin = new Thickness(2, 0), MinWidth = 75 };
         appViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(0));
-        var listViewBtn = new ContentStandardButton { Text = "Programs (.nte)", Margin = new Thickness(2, 0), MinWidth = 100 };
+        var listViewBtn = new ContentButton { Text = "Programs (.nte)", Margin = new Thickness(2, 0), MinWidth = 100 };
         listViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(1));
-        var linkViewBtn = new ContentStandardButton { Text = "DeviceLinks", Margin = new Thickness(2, 0), MinWidth = 85 };
+        var linkViewBtn = new ContentButton { Text = "DeviceLinks", Margin = new Thickness(2, 0), MinWidth = 85 };
         linkViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(2));
 
         topRow.AddChild(appViewBtn);
@@ -468,7 +468,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         root.AddChild(_tabRow);
 
-        _statusLabel = new Label
+        _statusLabel = new ContentLabel
         {
             Text = "Initializing...",
             FontColorOverride = Color.FromHex("#88AAAA"),
@@ -537,11 +537,11 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             if (rp.IsBootProgram || rp.RunningEntity is not { } ent)
                 continue;
 
-            var btn = new ContentStandardButton { Text = rp.Name, Margin = new Thickness(2, 0) };
+            var btn = new ContentButton { Text = rp.Name, Margin = new Thickness(2, 0) };
             btn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
             _tabRow.AddChild(btn);
 
-            var closeBtn = new ContentStandardButton { Text = "x", Margin = new Thickness(0, 0, 4, 0), MinWidth = 22 };
+            var closeBtn = new ContentButton { Text = "x", Margin = new Thickness(0, 0, 4, 0), MinWidth = 22 };
             closeBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsCloseProgramMessage(ent));
             _tabRow.AddChild(closeBtn);
         }
@@ -550,19 +550,19 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         foreach (var exec in state.InstalledExecutables)
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-            row.AddChild(new Label { Text = $"{exec.Name} ({exec.FilePath})", HorizontalExpand = true });
+            row.AddChild(new ContentLabel { Text = $"{exec.Name} ({exec.FilePath})", HorizontalExpand = true });
 
             if (!exec.IsBootProgram)
             {
                 if (exec.IsRunning && exec.RunningEntity is { } runEnt)
                 {
-                    var sw = new ContentStandardButton { Text = "Open", MinWidth = 60 };
+                    var sw = new ContentButton { Text = "Open", MinWidth = 60 };
                     sw.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(runEnt));
                     row.AddChild(sw);
                 }
                 else
                 {
-                    var run = new ContentStandardButton { Text = "Run .nte", MinWidth = 75 };
+                    var run = new ContentButton { Text = "Run .nte", MinWidth = 75 };
                     run.OnPressed += _ => SendProgramMessage(new EmbeddedOsLaunchProgramMessage(exec.FilePath));
                     row.AddChild(run);
                 }
@@ -574,12 +574,12 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         foreach (var port in state.MirroredPorts)
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-            row.AddChild(new Label
+            row.AddChild(new ContentLabel
             {
                 Text = $"[{(port.IsHostPort ? "HOST" : "COMP")} {(port.IsSource ? "OUT" : "IN ")}] {port.PortId} -> {(port.LinkedTargets.Count > 0 ? string.Join(", ", port.LinkedTargets) : "(none)")}",
                 HorizontalExpand = true
             });
-            var pulse = new ContentStandardButton { Text = "Status", MinWidth = 60 };
+            var pulse = new ContentButton { Text = "Status", MinWidth = 60 };
             pulse.OnPressed += _ => SendProgramMessage(new EmbeddedOsInvokePortMessage(port.PortId, port.IsHostPort, "status"));
             row.AddChild(pulse);
             _portsContainer.AddChild(row);

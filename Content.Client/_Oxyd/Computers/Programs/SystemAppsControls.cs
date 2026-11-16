@@ -15,14 +15,14 @@ namespace Content.Client._Oxyd.Computers.Programs;
 
 public sealed class FileBrowserUiControl : ProgramUiControl
 {
-    private readonly Label _pathLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _pathLabel;
+    private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _fileListContainer;
     private readonly ContentBoxContainer _browserPanel;
     private readonly ContentBoxContainer _previewPanel;
-    private readonly Label _previewTitle;
-    private readonly Label _previewBody;
-    private readonly ContentStandardButton _ejectDiskBtn;
+    private readonly ContentLabel _previewTitle;
+    private readonly ContentLabel _previewBody;
+    private readonly ContentButton _ejectDiskBtn;
 
     public FileBrowserUiControl()
     {
@@ -40,7 +40,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         var dirBar = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         void AddDirBtn(string label, string dir)
         {
-            var b = new ContentStandardButton { Text = label, Margin = new Thickness(2, 0), MinWidth = 52 };
+            var b = new ContentButton { Text = label, Margin = new Thickness(2, 0), MinWidth = 52 };
             b.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.ChangeDirectory, dir));
             dirBar.AddChild(b);
         }
@@ -56,17 +56,17 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         root.AddChild(dirBar);
 
         var ctrlBar = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
-        _pathLabel = new Label { Text = "/", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
-        var newBtn = new ContentStandardButton { Text = "+ Note", Margin = new Thickness(2, 0), MinWidth = 65 };
+        _pathLabel = new ContentLabel { Text = "/", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
+        var newBtn = new ContentButton { Text = "+ Note", Margin = new Thickness(2, 0), MinWidth = 65 };
         newBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.CreateFile));
-        _ejectDiskBtn = new ContentStandardButton { Text = "Eject Disk", Margin = new Thickness(2, 0), MinWidth = 80, Visible = false };
+        _ejectDiskBtn = new ContentButton { Text = "Eject Disk", Margin = new Thickness(2, 0), MinWidth = 80, Visible = false };
         _ejectDiskBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.EjectDisk));
         ctrlBar.AddChild(_pathLabel);
         ctrlBar.AddChild(newBtn);
         ctrlBar.AddChild(_ejectDiskBtn);
         root.AddChild(ctrlBar);
 
-        _statusLabel = new Label { Text = "Ready", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 0, 0, 4) };
+        _statusLabel = new ContentLabel { Text = "Ready", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 0, 0, 4) };
         root.AddChild(_statusLabel);
 
         _browserPanel = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true };
@@ -78,14 +78,14 @@ public sealed class FileBrowserUiControl : ProgramUiControl
 
         _previewPanel = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Visible = false };
         var pHead = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-        _previewTitle = new Label { Text = "File", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066") };
-        var backBtn = new ContentStandardButton { Text = "Back", MinWidth = 55 };
+        _previewTitle = new ContentLabel { Text = "File", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066") };
+        var backBtn = new ContentButton { Text = "Back", MinWidth = 55 };
         backBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.CloseView));
         pHead.AddChild(_previewTitle);
         pHead.AddChild(backBtn);
         _previewPanel.AddChild(pHead);
         var pScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _previewBody = new Label { FontColorOverride = Color.FromHex("#E0F7FA") };
+        _previewBody = new ContentLabel { FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
         pScroll.AddChild(_previewBody);
         _previewPanel.AddChild(pScroll);
         root.AddChild(_previewPanel);
@@ -124,7 +124,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
 
         if (visible.Count == 0)
         {
-            _fileListContainer.AddChild(new Label
+            _fileListContainer.AddChild(new ContentLabel
             {
                 Text = state.CurrentDirectory == "/disk/" && !state.HasDisk ? "(No disk inserted)" : "(Directory empty)",
                 FontColorOverride = Color.Gray
@@ -138,26 +138,26 @@ public sealed class FileBrowserUiControl : ProgramUiControl
             var fullPath = $"{dir}{file.Name}.{file.Extension}";
 
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-            row.AddChild(new Label
+            row.AddChild(new ContentLabel
             {
                 Text = $"{file.Name}.{file.Extension} ({file.Size}B){(file.IsReadOnly ? " [RO]" : "")}",
                 HorizontalExpand = true
             });
 
-            var viewBtn = new ContentStandardButton { Text = "View", MinWidth = 48, Margin = new Thickness(1, 0) };
+            var viewBtn = new ContentButton { Text = "View", MinWidth = 48, Margin = new Thickness(1, 0) };
             viewBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.ViewFile, fullPath));
             row.AddChild(viewBtn);
 
             if (file.Extension.Equals("nte", StringComparison.OrdinalIgnoreCase) && !file.IsOnDisk)
             {
-                var runBtn = new ContentStandardButton { Text = "Run", MinWidth = 44, Margin = new Thickness(1, 0) };
+                var runBtn = new ContentButton { Text = "Run", MinWidth = 44, Margin = new Thickness(1, 0) };
                 runBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.RunProgram, fullPath));
                 row.AddChild(runBtn);
             }
 
             if (state.HasDisk)
             {
-                var cpBtn = new ContentStandardButton { Text = file.IsOnDisk ? "->HDD" : "->Disk", MinWidth = 54, Margin = new Thickness(1, 0) };
+                var cpBtn = new ContentButton { Text = file.IsOnDisk ? "->HDD" : "->Disk", MinWidth = 54, Margin = new Thickness(1, 0) };
                 cpBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(
                     file.IsOnDisk ? FileBrowserAction.CopyToInternal : FileBrowserAction.CopyToDisk, fullPath));
                 row.AddChild(cpBtn);
@@ -165,7 +165,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
 
             if (!file.IsReadOnly)
             {
-                var delBtn = new ContentStandardButton { Text = "Del", MinWidth = 42, Margin = new Thickness(1, 0) };
+                var delBtn = new ContentButton { Text = "Del", MinWidth = 42, Margin = new Thickness(1, 0) };
                 delBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(FileBrowserAction.DeleteFile, fullPath));
                 row.AddChild(delBtn);
             }
@@ -181,8 +181,8 @@ public sealed class FileBrowserUiControl : ProgramUiControl
 
 public sealed class DownloaderUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _listContainer;
 
     public DownloaderUiControl()
@@ -198,15 +198,15 @@ public sealed class DownloaderUiControl : ProgramUiControl
             Margin = new Thickness(4)
         };
 
-        _headerLabel = new Label { Text = "NTOS Package & File Transfer", FontColorOverride = Color.FromHex("#00D4FF") };
-        _statusLabel = new Label { Text = "Ready", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
+        _headerLabel = new ContentLabel { Text = "NTOS Package & File Transfer", FontColorOverride = Color.FromHex("#00D4FF") };
+        _statusLabel = new ContentLabel { Text = "Ready", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
         root.AddChild(_headerLabel);
         root.AddChild(_statusLabel);
 
         var catRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         void AddCat(string c)
         {
-            var btn = new ContentStandardButton { Text = c, Margin = new Thickness(2, 0), MinWidth = 65 };
+            var btn = new ContentButton { Text = c, Margin = new Thickness(2, 0), MinWidth = 65 };
             btn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.SelectCategory, c));
             catRow.AddChild(btn);
         }
@@ -215,7 +215,7 @@ public sealed class DownloaderUiControl : ProgramUiControl
         AddCat("Blueprints");
         AddCat("Databases");
         AddCat("Documents");
-        var refreshBtn = new ContentStandardButton { Text = "Refresh", Margin = new Thickness(4, 0), MinWidth = 65 };
+        var refreshBtn = new ContentButton { Text = "Refresh", Margin = new Thickness(4, 0), MinWidth = 65 };
         refreshBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.Refresh));
         catRow.AddChild(refreshBtn);
         root.AddChild(catRow);
@@ -237,20 +237,20 @@ public sealed class DownloaderUiControl : ProgramUiControl
         _statusLabel.Text = state.StatusMessage;
 
         _listContainer.RemoveAllChildren();
-        _listContainer.AddChild(new Label { Text = "--- REMOTE SERVER REPOSITORY ---", FontColorOverride = Color.FromHex("#00D4FF") });
+        _listContainer.AddChild(new ContentLabel { Text = "--- REMOTE SERVER REPOSITORY ---", FontColorOverride = Color.FromHex("#00D4FF") });
 
         if (!state.IsServerOnline)
         {
-            _listContainer.AddChild(new Label { Text = "(Cannot reach online data server — check NIC & router)", FontColorOverride = Color.FromHex("#FF6666") });
+            _listContainer.AddChild(new ContentLabel { Text = "(Cannot reach online data server — check NIC & router)", FontColorOverride = Color.FromHex("#FF6666") });
         }
         else
         {
             foreach (var item in state.Items)
             {
                 var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-                row.AddChild(new Label { Text = $"{item.Name} [{item.Category}] ({item.Size}B)", HorizontalExpand = true });
+                row.AddChild(new ContentLabel { Text = $"{item.Name} [{item.Category}] ({item.Size}B)", HorizontalExpand = true });
 
-                var dlBtn = new ContentStandardButton
+                var dlBtn = new ContentButton
                 {
                     Text = item.IsDownloaded ? "Re-Download" : "Download",
                     MinWidth = 90
@@ -263,13 +263,13 @@ public sealed class DownloaderUiControl : ProgramUiControl
 
         if (state.LocalUploadables.Count > 0)
         {
-            _listContainer.AddChild(new Label { Text = "--- UPLOAD LOCAL FILES TO SERVER ---", FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 8, 0, 2) });
+            _listContainer.AddChild(new ContentLabel { Text = "--- UPLOAD LOCAL FILES TO SERVER ---", FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 8, 0, 2) });
             foreach (var local in state.LocalUploadables)
             {
                 var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-                row.AddChild(new Label { Text = $"{local.Path} ({local.Size}B)", HorizontalExpand = true });
+                row.AddChild(new ContentLabel { Text = $"{local.Path} ({local.Size}B)", HorizontalExpand = true });
 
-                var upBtn = new ContentStandardButton { Text = "Upload", MinWidth = 75 };
+                var upBtn = new ContentButton { Text = "Upload", MinWidth = 75 };
                 upBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.UploadFile, local.Path));
                 row.AddChild(upBtn);
                 _listContainer.AddChild(row);
@@ -284,8 +284,8 @@ public sealed class DownloaderUiControl : ProgramUiControl
 
 public sealed class RouterUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _contentList;
     private readonly ContentLineEdit _guidInput;
     private readonly ContentLineEdit _dnsNameInput;
@@ -304,19 +304,19 @@ public sealed class RouterUiControl : ProgramUiControl
             Margin = new Thickness(4)
         };
 
-        _headerLabel = new Label { Text = "Network Router", FontColorOverride = Color.FromHex("#00D4FF") };
-        _statusLabel = new Label { Text = "Ready", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
+        _headerLabel = new ContentLabel { Text = "Network Router", FontColorOverride = Color.FromHex("#00D4FF") };
+        _statusLabel = new ContentLabel { Text = "Ready", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
         root.AddChild(_headerLabel);
         root.AddChild(_statusLabel);
 
         // Quick Blacklist & DNS Controls
         var ctrlRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         _guidInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Target GUID..." };
-        var blkBtn = new ContentStandardButton { Text = "Blacklist", Margin = new Thickness(2, 0) };
+        var blkBtn = new ContentButton { Text = "Blacklist", Margin = new Thickness(2, 0) };
         blkBtn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(RouterUiAction.BlacklistGuid, _guidInput.Text));
-        var unblkBtn = new ContentStandardButton { Text = "Unblock", Margin = new Thickness(2, 0) };
+        var unblkBtn = new ContentButton { Text = "Unblock", Margin = new Thickness(2, 0) };
         unblkBtn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(RouterUiAction.UnblacklistGuid, _guidInput.Text));
-        var refBtn = new ContentStandardButton { Text = "Refresh", Margin = new Thickness(2, 0) };
+        var refBtn = new ContentButton { Text = "Refresh", Margin = new Thickness(2, 0) };
         refBtn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(RouterUiAction.Refresh));
         ctrlRow.AddChild(_guidInput);
         ctrlRow.AddChild(blkBtn);
@@ -327,7 +327,7 @@ public sealed class RouterUiControl : ProgramUiControl
         var dnsRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         _dnsNameInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "DNS Hostname..." };
         _dnsGuidInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Target GUID..." };
-        var setDnsBtn = new ContentStandardButton { Text = "Add DNS", Margin = new Thickness(2, 0) };
+        var setDnsBtn = new ContentButton { Text = "Add DNS", Margin = new Thickness(2, 0) };
         setDnsBtn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(RouterUiAction.SetDns, _dnsNameInput.Text, _dnsGuidInput.Text));
         dnsRow.AddChild(_dnsNameInput);
         dnsRow.AddChild(_dnsGuidInput);
@@ -351,31 +351,31 @@ public sealed class RouterUiControl : ProgramUiControl
         _statusLabel.Text = state.StatusMessage;
         _contentList.RemoveAllChildren();
 
-        _contentList.AddChild(new Label { Text = $"CONNECTED DEVICES ({state.ConnectedDevices.Count}):", FontColorOverride = Color.FromHex("#00D4FF") });
+        _contentList.AddChild(new ContentLabel { Text = $"CONNECTED DEVICES ({state.ConnectedDevices.Count}):", FontColorOverride = Color.FromHex("#00D4FF") });
         foreach (var dev in state.ConnectedDevices)
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-            row.AddChild(new Label { Text = $"{dev.Guid} - {dev.Name} ({(dev.IsBlacklisted ? "BLOCKED" : dev.IsOnline ? "UP" : "DOWN")})", HorizontalExpand = true });
-            var btn = new ContentStandardButton { Text = dev.IsBlacklisted ? "Unblock" : "Block", MinWidth = 65 };
+            row.AddChild(new ContentLabel { Text = $"{dev.Guid} - {dev.Name} ({(dev.IsBlacklisted ? "BLOCKED" : dev.IsOnline ? "UP" : "DOWN")})", HorizontalExpand = true });
+            var btn = new ContentButton { Text = dev.IsBlacklisted ? "Unblock" : "Block", MinWidth = 65 };
             btn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(dev.IsBlacklisted ? RouterUiAction.UnblacklistGuid : RouterUiAction.BlacklistGuid, dev.Guid));
             row.AddChild(btn);
             _contentList.AddChild(row);
         }
 
-        _contentList.AddChild(new Label { Text = $"ACTIVE SESSIONS ({state.Connections.Count}):", FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 6, 0, 0) });
+        _contentList.AddChild(new ContentLabel { Text = $"ACTIVE SESSIONS ({state.Connections.Count}):", FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 6, 0, 0) });
         foreach (var conn in state.Connections)
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-            row.AddChild(new Label { Text = $"[{conn.ConnectionType}] {conn.SourceGuid} -> {conn.TargetGuid}", HorizontalExpand = true });
-            var killBtn = new ContentStandardButton { Text = "Drop", MinWidth = 50 };
+            row.AddChild(new ContentLabel { Text = $"[{conn.ConnectionType}] {conn.SourceGuid} -> {conn.TargetGuid}", HorizontalExpand = true });
+            var killBtn = new ContentButton { Text = "Drop", MinWidth = 50 };
             killBtn.OnPressed += _ => SendProgramMessage(new RouterActionMessage(RouterUiAction.KillConnection, conn.ConnectionId));
             row.AddChild(killBtn);
             _contentList.AddChild(row);
         }
 
-        _contentList.AddChild(new Label { Text = $"DNS RECORDS ({state.DnsRecords.Count}):", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 6, 0, 0) });
+        _contentList.AddChild(new ContentLabel { Text = $"DNS RECORDS ({state.DnsRecords.Count}):", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 6, 0, 0) });
         foreach (var (k, v) in state.DnsRecords)
-            _contentList.AddChild(new Label { Text = $"  {k} -> {v}" });
+            _contentList.AddChild(new ContentLabel { Text = $"  {k} -> {v}" });
     }
 }
 
@@ -385,7 +385,7 @@ public sealed class RouterUiControl : ProgramUiControl
 
 public sealed class PacketSnifferUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
+    private readonly ContentLabel _headerLabel;
     private readonly ContentBoxContainer _packetsContainer;
     private readonly ContentLineEdit _targetInput;
     private readonly ContentLineEdit _payloadInput;
@@ -403,15 +403,15 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             Margin = new Thickness(4)
         };
 
-        _headerLabel = new Label { Text = "Packet Sniffer", FontColorOverride = Color.FromHex("#00D4FF") };
+        _headerLabel = new ContentLabel { Text = "Packet Sniffer", FontColorOverride = Color.FromHex("#00D4FF") };
         root.AddChild(_headerLabel);
 
         var btnBar = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2, 0, 4) };
-        var refBtn = new ContentStandardButton { Text = "Refresh", Margin = new Thickness(2, 0) };
+        var refBtn = new ContentButton { Text = "Refresh", Margin = new Thickness(2, 0) };
         refBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.Refresh));
-        var saveBtn = new ContentStandardButton { Text = "Save to HDD", Margin = new Thickness(2, 0) };
+        var saveBtn = new ContentButton { Text = "Save to HDD", Margin = new Thickness(2, 0) };
         saveBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.SaveLogsToFile));
-        var clrBtn = new ContentStandardButton { Text = "Clear", Margin = new Thickness(2, 0) };
+        var clrBtn = new ContentButton { Text = "Clear", Margin = new Thickness(2, 0) };
         clrBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.ClearLogs));
         btnBar.AddChild(refBtn);
         btnBar.AddChild(saveBtn);
@@ -421,7 +421,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
         _targetInput = new ContentLineEdit { MinWidth = 100, PlaceHolder = "Target GUID" };
         _payloadInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Raw packet payload..." };
-        var emitBtn = new ContentStandardButton { Text = "Emit", MinWidth = 55 };
+        var emitBtn = new ContentButton { Text = "Emit", MinWidth = 55 };
         emitBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.EmitPacket, targetGuid: _targetInput.Text, payload: _payloadInput.Text));
         emitRow.AddChild(_targetInput);
         emitRow.AddChild(_payloadInput);
@@ -445,7 +445,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         _packetsContainer.RemoveAllChildren();
         foreach (var p in state.Packets.TakeLast(40).Reverse())
         {
-            _packetsContainer.AddChild(new Label
+            _packetsContainer.AddChild(new ContentLabel
             {
                 Text = $"[{p.Timestamp:mm\\:ss}] {p.SourceAddress}->{p.TargetAddress} [{p.Protocol}] {p.ByteSize}B: {p.PayloadSummary}",
                 FontColorOverride = p.Dropped ? Color.FromHex("#FF5555") : Color.FromHex("#E0F7FA")

@@ -23,6 +23,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
 
     private readonly Dictionary<EntityUid, HashSet<EntityUid>> _viewerTrackedPvs = new();
+    private readonly Dictionary<(EntityUid Actor, EntityUid Target), bool> _alreadyOpenOnAttach = new();
 
     public override void Initialize()
     {
@@ -109,6 +110,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             .Select(p => GetNetEntity(p))
             .ToList();
 
+        _alreadyOpenOnAttach.TryGetValue((actor, targetComputerUid), out var wasAlreadyOpen);
+
         state = new RemoteScreenState(
             GetNetEntity(targetComputerUid),
             targetComp.HostMachine is { } hm && Exists(hm) ? GetNetEntity(hm) : null,
@@ -121,7 +124,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             targetComp.IsBooted,
             progNetIds,
             targetComp.DefaultScreenSize,
-            depth);
+            depth,
+            wasAlreadyOpen: wasAlreadyOpen);
 
         return true;
     }
@@ -175,6 +179,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         }
 
         var key = compSys.GetPrimaryUiKey(targetComputerUid, targetComp);
+        _alreadyOpenOnAttach[(actor, targetComputerUid)] = _ui.IsUiOpen(targetComputerUid, key, actor);
         _ui.OpenUi(targetComputerUid, key, actor);
         compSys.UpdateComputerDisplayUi(targetComputerUid, targetComp);
 
@@ -254,6 +259,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         ActiveRemoteScreenViewerComponent rem,
         EntityUid targetCompUid)
     {
+        _alreadyOpenOnAttach.Remove((actorUid, targetCompUid));
         var compSys = EntityManager.System<OxydComputerSystem>();
         var targetNet = GetNetEntity(targetCompUid);
         rem.AuthorizedTargets.Remove(targetNet);
@@ -292,6 +298,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 
     private void RevokeAllForActor(EntityUid actorUid, ICommonSession session)
     {
+        foreach (var k in _alreadyOpenOnAttach.Keys.Where(k => k.Actor == actorUid).ToList())
+            _alreadyOpenOnAttach.Remove(k);
+
         if (TryComp<ActiveRemoteScreenViewerComponent>(actorUid, out var rem))
         {
             var compSys = EntityManager.System<OxydComputerSystem>();

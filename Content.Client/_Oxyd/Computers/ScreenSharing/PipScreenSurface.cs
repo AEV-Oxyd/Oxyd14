@@ -113,6 +113,22 @@ public static class PipSurfaceRegistry
 
         return null;
     }
+
+    /// <summary>
+    /// Invalidates all registered <see cref="PipScreenSurface"/> instances observing <paramref name="deviceGuid"/>.
+    /// </summary>
+    public static void InvalidateDevice(string? deviceGuid, int cascadeBounces = 3)
+    {
+        if (string.IsNullOrWhiteSpace(deviceGuid) || !s_Surfaces.TryGetValue(deviceGuid, out var list))
+            return;
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            var surface = list[i];
+            if (!surface.Disposed)
+                surface.InvalidateCapture(cascadeBounces);
+        }
+    }
 }
 
 /// <summary>

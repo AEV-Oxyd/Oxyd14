@@ -1,3 +1,4 @@
+using Content.Client._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Programs;
 using Robust.Client.GameObjects;
 using Robust.Client.UserInterface;
@@ -25,7 +26,20 @@ public abstract class ProgramBoundUserInterface : BoundUserInterface
     protected override void UpdateState(BoundUserInterfaceState state)
     {
         base.UpdateState(state);
-        Control?.UpdateProgramState(state);
+        if (Control == null)
+            return;
+
+        Control.UpdateProgramState(state);
+
+        for (var cur = Control.Parent; cur != null; cur = cur.Parent)
+        {
+            if (cur is PipScreenSurface surface)
+            {
+                surface.InvalidateCapture();
+                PipSurfaceRegistry.InvalidateDevice(surface.DeviceGuid);
+                break;
+            }
+        }
     }
 }
 

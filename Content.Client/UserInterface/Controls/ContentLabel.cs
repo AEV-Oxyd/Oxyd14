@@ -65,16 +65,35 @@ public class ContentLabel : ContentControl
 
     private Vector2 MeasureString(Font font, string text)
     {
-        var width = 0f;
+        var maxWidth = 0f;
+        var currentWidth = 0f;
+        var lines = 1;
+
         foreach (var rune in text.EnumerateRunes())
         {
+            if (rune.Value == '\r')
+                continue;
+
+            if (rune.Value == '\n')
+            {
+                maxWidth = MathF.Max(maxWidth, currentWidth);
+                currentWidth = 0f;
+                lines++;
+                continue;
+            }
+
             if (font.TryGetCharMetrics(rune, UIScale, out var metrics))
             {
-                width += metrics.Advance;
+                currentWidth += metrics.Advance;
             }
         }
 
-        return new Vector2(width, font.GetHeight(UIScale));
+        maxWidth = MathF.Max(maxWidth, currentWidth);
+        var height = lines <= 1
+            ? font.GetHeight(UIScale)
+            : (lines - 1) * font.GetLineHeight(UIScale) + font.GetHeight(UIScale);
+
+        return new Vector2(maxWidth, height);
     }
 
     protected override Vector2 MeasureOverride(Vector2 availableSize)
@@ -84,11 +103,12 @@ public class ContentLabel : ContentControl
 
         var font = GetFont();
         var dim = MeasureString(font, Text);
-        return new Vector2(dim.X / UIScale, dim.Y / UIScale);
+        return new Vector2(ClipText ? 0f : dim.X / UIScale, dim.Y / UIScale);
     }
 
     protected override void Draw(DrawingHandleScreen handle)
     {
+        RectClipContent = ClipText;
         base.Draw(handle);
 
         if (string.IsNullOrEmpty(Text))

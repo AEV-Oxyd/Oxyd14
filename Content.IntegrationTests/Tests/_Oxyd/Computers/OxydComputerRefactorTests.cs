@@ -643,151 +643,157 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(15);
     }
 
-    [Test]
-    public async Task TestRealAppUiSingleInstanceAndInteractiveControls()
+    private static void CollectDescendants<T>(Robust.Client.UserInterface.Control root, System.Collections.Generic.List<T> results)
+        where T : Robust.Client.UserInterface.Control
     {
-        static void CollectDescendants<T>(Robust.Client.UserInterface.Control root, System.Collections.Generic.List<T> results)
-            where T : Robust.Client.UserInterface.Control
-        {
-            if (root is T match)
-                results.Add(match);
-            foreach (var child in root.Children)
-                CollectDescendants(child, results);
-        }
+        if (root is T match)
+            results.Add(match);
+        foreach (var child in root.Children)
+            CollectDescendants(child, results);
+    }
 
-        static bool HasAncestor(Robust.Client.UserInterface.Control child, Robust.Client.UserInterface.Control ancestor)
+    private static bool HasAncestor(Robust.Client.UserInterface.Control child, Robust.Client.UserInterface.Control ancestor)
+    {
+        for (var cur = child; cur != null; cur = cur.Parent)
         {
-            for (var cur = child; cur != null; cur = cur.Parent)
-            {
-                if (cur == ancestor)
-                    return true;
-            }
-            return false;
+            if (cur == ancestor)
+                return true;
         }
+        return false;
+    }
 
-        async Task ClickViaHitTest(Robust.Client.UserInterface.Controls.BaseButton btn)
+    private async Task ClickAtScreenCoords(ScreenCoordinates screenCoords)
+    {
+        var uiType = UiMan.GetType();
+        var mFocusDown = uiType.GetMethod("HandleCanFocusDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        var mFocusUp = uiType.GetMethod("HandleCanFocusUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+        var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+
+        await Client.WaitPost(() =>
         {
-            Robust.Shared.Map.ScreenCoordinates screenCoords = default;
-            await Client.WaitAssertion(() =>
+            mFocusDown.Invoke(UiMan, new object?[] { screenCoords, null });
+            mKeyDown.Invoke(UiMan, new object[]
             {
-                Assert.That(btn.VisibleInTree, Is.True, $"Button {btn.GetType().Name} is not VisibleInTree");
-                Assert.That(btn.Size.X, Is.GreaterThan(1f));
-                Assert.That(btn.Size.Y, Is.GreaterThan(1f));
-                var center = btn.GlobalPixelPosition + btn.PixelSize / 2;
-                screenCoords = new ScreenCoordinates(center, btn.Window?.Id ?? default);
-                var hit = UiMan.MouseGetControl(screenCoords);
-                Assert.That(hit, Is.Not.Null);
-                Assert.That(HasAncestor(hit!, btn) || HasAncestor(btn, hit!), Is.True,
-                    $"Mouse click hit {hit!.GetType().Name} instead of target button {btn.GetType().Name}");
+                new Robust.Shared.Input.BoundKeyEventArgs(
+                    EngineKeyFunctions.UIClick,
+                    BoundKeyState.Down,
+                    screenCoords,
+                    true,
+                    false)
             });
+        });
+        await RunTicks(1);
+        await Client.WaitPost(() =>
+        {
+            mKeyUp.Invoke(UiMan, new object[]
+            {
+                new Robust.Shared.Input.BoundKeyEventArgs(
+                    EngineKeyFunctions.UIClick,
+                    BoundKeyState.Up,
+                    screenCoords,
+                    true,
+                    false)
+            });
+            mFocusUp.Invoke(UiMan, null);
+        });
+        await RunTicks(6);
+    }
+
+    private async Task ClickViaHitTest(Robust.Client.UserInterface.Control btn)
+    {
+        ScreenCoordinates screenCoords = default;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(btn.VisibleInTree, Is.True, $"Button {btn.GetType().Name} is not VisibleInTree");
+            Assert.That(btn.Size.X, Is.GreaterThan(1f));
+            Assert.That(btn.Size.Y, Is.GreaterThan(1f));
+            var center = btn.GlobalPixelPosition + btn.PixelSize / 2;
+            screenCoords = new ScreenCoordinates(center, btn.Window?.Id ?? default);
+            var hit = UiMan.MouseGetControl(screenCoords);
+            Assert.That(hit, Is.Not.Null);
+            Assert.That(HasAncestor(hit!, btn) || HasAncestor(btn, hit!), Is.True,
+                $"Mouse click hit {hit!.GetType().Name} instead of target button {btn.GetType().Name}");
+        });
+
+        await ClickAtScreenCoords(screenCoords);
+    }
+
+    private async Task TypeIntoLineEdit(Content.Client.UserInterface.Controls.ContentLineEdit edit, string text, bool submit = false)
+    {
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(edit.VisibleInTree, Is.True, "Target ContentLineEdit must be VisibleInTree");
+            Assert.That(edit.RectClipContent, Is.True, "ContentLineEdit must clip horizontal overflow");
+            Assert.That(edit.ActiveFont, Is.Not.TypeOf<Robust.Client.Graphics.DummyFont>(),
+                "ContentLineEdit must resolve a renderable stylesheet font instead of DummyFont");
+            Assert.That(edit.ActiveFont.GetHeight(edit.UIScale), Is.GreaterThan(0),
+                "ContentLineEdit resolved font must have positive glyph height");
+            Assert.That(edit.PixelSize.X, Is.GreaterThan(10));
+            Assert.That(edit.PixelSize.Y, Is.GreaterThan(10));
+        });
+
+        await Client.WaitPost(() =>
+        {
+            var center = edit.GlobalPixelPosition + edit.PixelSize / 2;
+            var sc = new ScreenCoordinates(center, edit.Window?.Id ?? default);
+            var hit = UiMan.MouseGetControl(sc);
+            Assert.That(hit, Is.Not.Null, "MouseGetControl returned null over ContentLineEdit");
+            Assert.That(hit == edit || HasAncestor(hit!, edit), Is.True,
+                $"Mouse click hit {hit!.GetType().Name} instead of ContentLineEdit");
 
             var uiType = UiMan.GetType();
             var mFocusDown = uiType.GetMethod("HandleCanFocusDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
             var mFocusUp = uiType.GetMethod("HandleCanFocusUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
             var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
             var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mText = uiType.GetMethod("TextEntered", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
 
-            await Client.WaitPost(() =>
+            mFocusDown.Invoke(UiMan, new object?[] { sc, null });
+            mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, sc, true, false) });
+            mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, sc, true, false) });
+            mFocusUp.Invoke(UiMan, null);
+            Assert.That(edit.HasKeyboardFocus(), Is.True, "ContentLineEdit did not gain keyboard focus on click");
+            foreach (var ch in text)
+                mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(ch.ToString()) });
+            if (text.Length > 1)
             {
-                mFocusDown.Invoke(UiMan, new object?[] { screenCoords, null });
-                mKeyDown.Invoke(UiMan, new object[]
-                {
-                    new Robust.Shared.Input.BoundKeyEventArgs(
-                        EngineKeyFunctions.UIClick,
-                        BoundKeyState.Down,
-                        screenCoords,
-                        true,
-                        false)
-                });
-            });
-            await RunTicks(1);
-            await Client.WaitPost(() =>
-            {
-                mKeyUp.Invoke(UiMan, new object[]
-                {
-                    new Robust.Shared.Input.BoundKeyEventArgs(
-                        EngineKeyFunctions.UIClick,
-                        BoundKeyState.Up,
-                        screenCoords,
-                        true,
-                        false)
-                });
-                mFocusUp.Invoke(UiMan, null);
-            });
-            await RunTicks(6);
-        }
-
-        async Task TypeIntoLineEdit(Content.Client.UserInterface.Controls.ContentLineEdit edit, string text, bool submit = false)
-        {
-            await Client.WaitAssertion(() =>
-            {
-                Assert.That(edit.VisibleInTree, Is.True, "Target ContentLineEdit must be VisibleInTree");
-                Assert.That(edit.RectClipContent, Is.True, "ContentLineEdit must clip horizontal overflow");
-                Assert.That(edit.ActiveFont, Is.Not.TypeOf<Robust.Client.Graphics.DummyFont>(),
-                    "ContentLineEdit must resolve a renderable stylesheet font instead of DummyFont");
-                Assert.That(edit.ActiveFont.GetHeight(edit.UIScale), Is.GreaterThan(0),
-                    "ContentLineEdit resolved font must have positive glyph height");
-                Assert.That(edit.PixelSize.X, Is.GreaterThan(10));
-                Assert.That(edit.PixelSize.Y, Is.GreaterThan(10));
-            });
-
-            await Client.WaitPost(() =>
-            {
-                var center = edit.GlobalPixelPosition + edit.PixelSize / 2;
-                var sc = new ScreenCoordinates(center, edit.Window?.Id ?? default);
-                var hit = UiMan.MouseGetControl(sc);
-                Assert.That(hit, Is.Not.Null, "MouseGetControl returned null over ContentLineEdit");
-                Assert.That(hit == edit || HasAncestor(hit!, edit), Is.True,
-                    $"Mouse click hit {hit!.GetType().Name} instead of ContentLineEdit");
-
-                var uiType = UiMan.GetType();
-                var mFocusDown = uiType.GetMethod("HandleCanFocusDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-                var mFocusUp = uiType.GetMethod("HandleCanFocusUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-                var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
-                var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
-                var mText = uiType.GetMethod("TextEntered", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-
-                mFocusDown.Invoke(UiMan, new object?[] { sc, null });
-                mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, sc, true, false) });
-                mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, sc, true, false) });
-                mFocusUp.Invoke(UiMan, null);
-                Assert.That(edit.HasKeyboardFocus(), Is.True, "ContentLineEdit did not gain keyboard focus on click");
-                foreach (var ch in text)
-                    mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(ch.ToString()) });
-                if (text.Length > 1)
-                {
-                    mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Down, sc, false, false) });
-                    mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Up, sc, false, false) });
-                    mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(text[^1].ToString()) });
-                }
-                Assert.That(edit.Text, Does.EndWith(text), "ContentLineEdit did not accept entered text");
-                if (submit)
-                {
-                    mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Down, sc, false, false) });
-                    mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Up, sc, false, false) });
-                }
-            });
-            await RunTicks(6);
-        }
-
-        Robust.Client.UserInterface.Controls.Button? FindRowRunButton(OsUiControl osCtrl, string appTitle)
-        {
-            var rows = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentBoxContainer>();
-            CollectDescendants(osCtrl, rows);
-            foreach (var row in rows)
-            {
-                if (!row.VisibleInTree)
-                    continue;
-                if (!row.Children.OfType<Robust.Client.UserInterface.Controls.Label>()
-                    .Any(l => l.Text != null && l.Text.Contains(appTitle, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-                var btn = row.Children.OfType<Robust.Client.UserInterface.Controls.Button>()
-                    .FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Run", StringComparison.OrdinalIgnoreCase));
-                if (btn != null)
-                    return btn;
+                mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Down, sc, false, false) });
+                mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Up, sc, false, false) });
+                mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(text[^1].ToString()) });
             }
-            return null;
+            Assert.That(edit.Text, Does.EndWith(text), "ContentLineEdit did not accept entered text");
+            if (submit)
+            {
+                mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Down, sc, false, false) });
+                mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Up, sc, false, false) });
+            }
+        });
+        await RunTicks(6);
+    }
+
+    private static Content.Client.UserInterface.Controls.ContentButton? FindRowRunButton(OsUiControl osCtrl, string appTitle)
+    {
+        var rows = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentBoxContainer>();
+        CollectDescendants(osCtrl, rows);
+        foreach (var row in rows)
+        {
+            if (!row.VisibleInTree)
+                continue;
+            if (!row.Children.OfType<Content.Client.UserInterface.Controls.ContentLabel>()
+                .Any(l => l.Text != null && l.Text.Contains(appTitle, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            var btn = row.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>()
+                .FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Run", StringComparison.OrdinalIgnoreCase));
+            if (btn != null)
+                return btn;
         }
+        return null;
+    }
+
+    [Test]
+    public async Task TestRealAppUiSingleInstanceAndInteractiveControls()
+    {
 
         // Held PDA (`PlaceInHands` + `UseInHand`) -> click Apps -> launch Notekeeper
         var pdaNet = await PlaceInHands("DetectivePDA");
@@ -804,7 +810,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         ComputerDisplayWindow? win = null;
         OsUiControl? osCtrl = null;
-        Robust.Client.UserInterface.Controls.Button? appsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? appsBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
@@ -814,7 +820,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             CollectDescendants(win, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
             osCtrl = osList[0];
-            var btns = new System.Collections.Generic.List<Robust.Client.UserInterface.Controls.Button>();
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(osCtrl, btns);
             appsBtn = btns.FirstOrDefault(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
             Assert.That(appsBtn, Is.Not.Null);
@@ -822,7 +828,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await ClickViaHitTest(appsBtn!);
 
-        Robust.Client.UserInterface.Controls.Button? noteRunBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? noteRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             noteRunBtn = FindRowRunButton(osCtrl!, "Notekeeper");
@@ -834,8 +840,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         NotekeeperUiControl? noteCtrl = null;
         Content.Client.UserInterface.Controls.ContentLineEdit? newNameInput = null;
         Content.Client.UserInterface.Controls.ContentLineEdit? editorLine = null;
-        Robust.Client.UserInterface.Controls.Button? createBtn = null;
-        Robust.Client.UserInterface.Controls.Button? saveBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? createBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? saveBtn = null;
         await Client.WaitAssertion(() =>
         {
             var noteList = new System.Collections.Generic.List<NotekeeperUiControl>();
@@ -849,7 +855,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             newNameInput = inputs[0];
             editorLine = inputs[1];
 
-            var noteBtns = new System.Collections.Generic.List<Robust.Client.UserInterface.Controls.Button>();
+            var noteBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(noteCtrl, noteBtns);
             createBtn = noteBtns.First(b => b.Text != null && b.Text.Contains("Create", StringComparison.OrdinalIgnoreCase));
             saveBtn = noteBtns.First(b => b.Text == "Save");
@@ -903,14 +909,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await Client.WaitAssertion(() =>
         {
-            var labels = new System.Collections.Generic.List<Robust.Client.UserInterface.Controls.Label>();
+            var labels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLabel>();
             CollectDescendants(noteCtrl!, labels);
             Assert.That(labels.Any(l => l.Text != null && l.Text.Contains("SINGLE_UI_WORKS")), Is.True);
         });
 
         // Switch to Apps tab, launch Terminal, verify ONLY 1 TerminalUiControl, type `ls` and submit
         await ClickViaHitTest(appsBtn!);
-        Robust.Client.UserInterface.Controls.Button? termRunBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             termRunBtn = FindRowRunButton(osCtrl!, "Terminal");
@@ -970,7 +976,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Activate();
         await RunTicks(12);
 
-        Robust.Client.UserInterface.Controls.Button? breakerBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? breakerBtn = null;
         await Client.WaitAssertion(() =>
         {
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
@@ -978,7 +984,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var apcCtrls = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.Programs.ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
             Assert.That(apcCtrls.Count, Is.EqualTo(1));
-            var apcBtns = new System.Collections.Generic.List<Robust.Client.UserInterface.Controls.Button>();
+            var apcBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(apcCtrls[0], apcBtns);
             breakerBtn = apcBtns.FirstOrDefault(b => b.VisibleInTree && !b.Disabled && b.Text != null &&
                 (b.Text.Contains("Breaker", StringComparison.OrdinalIgnoreCase) || b.Text.Contains("Toggle", StringComparison.OrdinalIgnoreCase)));
@@ -992,6 +998,267 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var afterBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
             Assert.That(afterBreaker, Is.EqualTo(!initialBreaker));
         });
+    }
+
+    private async Task ClickThroughRemoteScreenView(
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView remoteView,
+        Robust.Client.UserInterface.Control remoteTargetRoot,
+        Robust.Client.UserInterface.Control remoteTargetCtrl)
+    {
+        ScreenCoordinates clickCoords = default;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(remoteView.VisibleInTree, Is.True);
+            Assert.That(remoteView.PixelSize.X, Is.GreaterThan(20));
+            Assert.That(remoteView.PixelSize.Y, Is.GreaterThan(20));
+            Assert.That(remoteTargetRoot.Disposed, Is.False);
+            Assert.That(remoteTargetRoot.PixelSize.X, Is.GreaterThan(20));
+            Assert.That(remoteTargetRoot.PixelSize.Y, Is.GreaterThan(20));
+            Assert.That(remoteTargetCtrl.VisibleInTree, Is.True);
+            Assert.That(remoteTargetCtrl.PixelSize.X, Is.GreaterThan(2));
+            Assert.That(remoteTargetCtrl.PixelSize.Y, Is.GreaterThan(2));
+
+            var hostPixelSize = remoteTargetRoot.PixelSize;
+            var scale = MathF.Min(
+                (float) remoteView.PixelWidth / hostPixelSize.X,
+                (float) remoteView.PixelHeight / hostPixelSize.Y);
+            var fittedW = MathF.Round(hostPixelSize.X * scale);
+            var fittedH = MathF.Round(hostPixelSize.Y * scale);
+            var offsetX = MathF.Round((remoteView.PixelWidth - fittedW) / 2f);
+            var offsetY = MathF.Round((remoteView.PixelHeight - fittedH) / 2f);
+
+            var targetCenterInRoot = (remoteTargetCtrl.GlobalPixelPosition + remoteTargetCtrl.PixelSize / 2)
+                - remoteTargetRoot.GlobalPixelPosition;
+            var normX = (float) targetCenterInRoot.X / hostPixelSize.X;
+            var normY = (float) targetCenterInRoot.Y / hostPixelSize.Y;
+
+            var localInView = new Robust.Shared.Maths.Vector2i(
+                (int) MathF.Round(offsetX + normX * fittedW),
+                (int) MathF.Round(offsetY + normY * fittedH));
+            clickCoords = new ScreenCoordinates(remoteView.GlobalPixelPosition + localInView, remoteView.Window?.Id ?? default);
+
+            var hit = UiMan.MouseGetControl(clickCoords);
+            Assert.That(hit, Is.Not.Null, "MouseGetControl returned null over RemoteScreenView");
+            Assert.That(HasAncestor(hit!, remoteView), Is.True,
+                $"Expected click on RemoteScreenView, hit {hit!.GetType().Name}");
+        });
+
+        await ClickAtScreenCoords(clickCoords);
+    }
+
+    [Test]
+    public async Task TestRemoteScreenClickingAndControlRelay()
+    {
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+
+        var pdaNet = await PlaceInHands("DetectivePDA");
+        var pdaUid = ToServer(pdaNet);
+
+        EntityUid apcUid = default;
+        EntityUid wsUid = default;
+        EntityUid wsCompUid = default;
+        string apcGuid = string.Empty;
+        string wsGuid = string.Empty;
+        bool initialBreaker = false;
+
+        EntityUid apcCompUid = default;
+        EntityUid pdaCompUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
+            wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
+            Assert.That(routerSys.IsNetworkConnected(pdaCompUid), Is.True);
+            Assert.That(routerSys.IsNetworkConnected(apcCompUid), Is.True);
+            Assert.That(routerSys.IsNetworkConnected(wsCompUid), Is.True);
+        });
+
+        // Open held PDA and launch Terminal
+        await UseInHand();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            pdaWin = openWins[0];
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaWin, btns);
+            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+        });
+        await ClickViaHitTest(pdaAppsBtn!);
+
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(pdaWin!, osList);
+            Assert.That(osList.Count, Is.EqualTo(1));
+            termRunBtn = FindRowRunButton(osList[0], "Terminal");
+            Assert.That(termRunBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(termRunBtn!);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? termInput = null;
+        TerminalUiControl? termCtrl = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(pdaWin!, termList);
+            Assert.That(termList.Count, Is.EqualTo(1));
+            termCtrl = termList[0];
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(termCtrl, inputs);
+            Assert.That(inputs.Count, Is.EqualTo(1));
+            termInput = inputs[0];
+        });
+
+        // 1) SSH + `screen open` on remote APC -> verify stashed offscreen + IInputRelay click toggles physical breaker
+        await TypeIntoLineEdit(termInput!, $"ssh {apcGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(15);
+
+        await Server.WaitAssertion(() =>
+        {
+            var pdaComp = SEntMan.GetComponent<OxydComputerComponent>(pdaCompUid);
+            var termProgUid = pdaComp.ActiveProgram!.Value;
+            var termComp = SEntMan.GetComponent<Content.Shared._Oxyd.Computers.Programs.TerminalProgramComponent>(termProgUid);
+            Assert.That(termComp.IsScreenAttached, Is.True,
+                $"Expected Terminal IsScreenAttached == true, history:\n{string.Join("\n", termComp.History)}");
+            Assert.That(SEntMan.TryGetComponent<ActiveRemoteScreenViewerComponent>(SPlayer, out var viewer), Is.True,
+                "Expected SPlayer to have ActiveRemoteScreenViewerComponent");
+            Assert.That(viewer!.AuthorizedTargets, Contains.Item(SEntMan.GetNetEntity(apcCompUid)));
+            Assert.That(Server.System<SharedUserInterfaceSystem>().IsUiOpen(apcCompUid, ComputerUiKey.Key, SPlayer), Is.True,
+                "Expected apcCompUid ComputerUiKey to remain open for SPlayer on Server");
+        });
+
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView? remoteView = null;
+        ComputerDisplayWindow? stashedApcWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? remoteBreakerBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var cApcComp = CEntMan.GetEntity(FromServer(apcCompUid));
+            Assert.That(CEntMan.TryGetComponent<Robust.Shared.GameObjects.UserInterfaceComponent>(cApcComp, out var apcUiComp), Is.True,
+                $"Client missing UserInterfaceComponent on remote apcCompUid ({cApcComp})");
+            Assert.That(apcUiComp!.ClientOpenInterfaces.TryGetValue(ComputerUiKey.Key, out var openApcBui), Is.True,
+                "ClientOpenInterfaces missing ComputerUiKey on remote apcCompUid");
+            Assert.That(openApcBui, Is.AssignableTo<Content.Client.UserInterface.StateRouting.RoutedBoundUserInterface>());
+
+            var directWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(directWins.Count, Is.EqualTo(1), "Remote screen should be stashed offscreen rather than popped out on WindowRoot");
+
+            var stash = UiMan.WindowRoot.Children.FirstOrDefault(c => c.Name == "RemoteOffscreenStash");
+            Assert.That(stash, Is.Not.Null);
+            stashedApcWin = stash!.Children.OfType<ComputerDisplayWindow>().FirstOrDefault(w => !w.Disposed);
+            Assert.That(stashedApcWin, Is.Not.Null, "Remote APC ComputerDisplayWindow should be stashed in RemoteOffscreenStash");
+            Assert.That(stashedApcWin!.ScreenInsetControl, Is.TypeOf<Content.Client.UserInterface.Controls.ContentPanelContainer>());
+
+            var views = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView>();
+            CollectDescendants(termCtrl!, views);
+            Assert.That(views.Count, Is.EqualTo(1));
+            remoteView = views[0];
+
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(stashedApcWin.ScreenInsetControl, btns);
+            remoteBreakerBtn = btns.FirstOrDefault(b => b.VisibleInTree && !b.Disabled && b.Text != null &&
+                (b.Text.Contains("Breaker", StringComparison.OrdinalIgnoreCase) || b.Text.Contains("Toggle", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(remoteBreakerBtn, Is.Not.Null, "Remote APC screen must expose a ContentButton for Toggle Breaker");
+            Assert.That(remoteBreakerBtn, Is.AssignableTo<Content.Client.UserInterface.Controls.IInputRelayTarget>());
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, stashedApcWin!.ScreenInsetControl, remoteBreakerBtn!);
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterBreaker, Is.EqualTo(!initialBreaker), "Clicking Toggle Breaker inside RemoteScreenView must relay click and toggle server APC state.");
+        });
+
+        // 2) Detach remote APC stream via UI "Detach Screen" button, exit SSH, then stream OxydWorkstationComputer -> click `Apps` + `Run` Notekeeper via RemoteScreenView
+        Content.Client.UserInterface.Controls.ContentButton? detachBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termCtrl!, termBtns);
+            detachBtn = termBtns.FirstOrDefault(b => b.VisibleInTree && b.Text == "Detach Screen");
+            Assert.That(detachBtn, Is.Not.Null, "Terminal remote screen panel must expose visible 'Detach Screen' ContentButton");
+        });
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+
+        await TypeIntoLineEdit(termInput!, "exit", submit: true);
+        await TypeIntoLineEdit(termInput!, $"ssh {wsGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(18);
+
+        ComputerDisplayWindow? stashedWsWin = null;
+        OsUiControl? wsOsCtrl = null;
+        Content.Client.UserInterface.Controls.ContentButton? remoteWsAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var stash = UiMan.WindowRoot.Children.FirstOrDefault(c => c.Name == "RemoteOffscreenStash");
+            Assert.That(stash, Is.Not.Null);
+            stashedWsWin = stash!.Children.OfType<ComputerDisplayWindow>().FirstOrDefault(w => !w.Disposed);
+            Assert.That(stashedWsWin, Is.Not.Null);
+
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(stashedWsWin!.ScreenInsetControl, osList);
+            Assert.That(osList.Count, Is.EqualTo(1));
+            wsOsCtrl = osList[0];
+
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(wsOsCtrl, btns);
+            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            Assert.That(remoteWsAppsBtn, Is.Not.Null);
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, stashedWsWin!.ScreenInsetControl, remoteWsAppsBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? remoteNoteRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            remoteNoteRunBtn = FindRowRunButton(wsOsCtrl!, "Notekeeper");
+            Assert.That(remoteNoteRunBtn, Is.Not.Null, "Clicking Apps inside RemoteScreenView must reveal Notekeeper Run ContentButton");
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, stashedWsWin.ScreenInsetControl, remoteNoteRunBtn!);
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid);
+            Assert.That(comp.ActiveProgram, Is.Not.Null);
+            var prog = SEntMan.GetComponent<Content.Shared._Oxyd.Computers.Programs.ProgramComponent>(comp.ActiveProgram!.Value);
+            Assert.That(prog.Prototype?.Id, Is.EqualTo("NotekeeperProgram"),
+                "Clicking Run Notekeeper inside RemoteScreenView must launch Notekeeper on remote server computer.");
+        });
+
+        await Client.WaitPost(() => pdaWin!.Close());
+        await RunTicks(8);
     }
 
 #if DEBUG
@@ -1074,21 +1341,21 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(TryGetBui(ProgramUiKey.Key, out var bootBui, FromServer(bootUid)), Is.True);
             var bootCtrl = ((ProgramBoundUserInterface) bootBui!).Control;
             Assert.That(bootCtrl, Is.Not.Null);
-            Assert.That(GetControlFromChildren<Robust.Client.UserInterface.Controls.Label>(
+            Assert.That(GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
                 l => l.Text != null && l.Text.Contains("DEV DEBUG SERVER"), bootCtrl!), Is.Not.Null,
                 "Boot OS status bar must show DEV DEBUG SERVER on debug global network.");
 
             Assert.That(TryGetBui(ProgramUiKey.Key, out var dlBui, FromServer(downloaderUid)), Is.True);
             var dlCtrl = ((ProgramBoundUserInterface) dlBui!).Control;
             Assert.That(dlCtrl, Is.Not.Null);
-            Assert.That(GetControlFromChildren<Robust.Client.UserInterface.Controls.Label>(
+            Assert.That(GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
                 l => l.Text != null && l.Text.Contains("Server: DEV DEBUG SERVER") && l.Text.Contains("ONLINE"), dlCtrl!), Is.Not.Null,
                 "Downloader UI must show DEV DEBUG SERVER | ONLINE.");
 
             Assert.That(TryGetBui(ProgramUiKey.Key, out var termBui, FromServer(terminalUid)), Is.True);
             var termCtrl = ((ProgramBoundUserInterface) termBui!).Control;
             Assert.That(termCtrl, Is.Not.Null);
-            Assert.That(GetControlFromChildren<Robust.Client.UserInterface.Controls.Label>(
+            Assert.That(GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
                 l => l.Text != null && l.Text.Contains("NET: ONLINE (DEV DEBUG SERVER)"), termCtrl!), Is.Not.Null,
                 "Terminal UI header must show NET: ONLINE (DEV DEBUG SERVER).");
         });

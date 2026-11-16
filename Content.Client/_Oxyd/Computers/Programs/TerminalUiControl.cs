@@ -14,15 +14,15 @@ namespace Content.Client._Oxyd.Computers.Programs;
 /// </summary>
 public sealed class TerminalUiControl : ProgramUiControl
 {
-    private readonly Label _headerLabel;
+    private readonly ContentLabel _headerLabel;
     private readonly ContentBoxContainer _shellPanel;
     private readonly ContentScrollContainer _historyScroll;
     private readonly ContentBoxContainer _historyLines;
-    private readonly Label _promptLabel;
+    private readonly ContentLabel _promptLabel;
     private readonly ContentLineEdit _commandInput;
 
     private readonly ContentBoxContainer _remoteScreenPanel;
-    private readonly Label _remoteHeaderLabel;
+    private readonly ContentLabel _remoteHeaderLabel;
     private readonly RemoteScreenView _remoteScreenView;
 
     public TerminalUiControl()
@@ -38,7 +38,7 @@ public sealed class TerminalUiControl : ProgramUiControl
             Margin = new Thickness(4)
         };
 
-        _headerLabel = new Label
+        _headerLabel = new ContentLabel
         {
             Text = "NTOS Terminal",
             FontColorOverride = Color.FromHex("#00D4FF"),
@@ -62,7 +62,7 @@ public sealed class TerminalUiControl : ProgramUiControl
             Margin = new Thickness(0, 0, 0, 4)
         };
 
-        _remoteHeaderLabel = new Label
+        _remoteHeaderLabel = new ContentLabel
         {
             Text = "REMOTE DISPLAY STREAM",
             HorizontalExpand = true,
@@ -70,7 +70,7 @@ public sealed class TerminalUiControl : ProgramUiControl
         };
         screenBar.AddChild(_remoteHeaderLabel);
 
-        var detachBtn = new ContentStandardButton
+        var detachBtn = new ContentButton
         {
             Text = "Detach Screen",
             MinWidth = 110
@@ -115,7 +115,7 @@ public sealed class TerminalUiControl : ProgramUiControl
             Margin = new Thickness(0, 4, 0, 0)
         };
 
-        _promptLabel = new Label
+        _promptLabel = new ContentLabel
         {
             Text = "$ ",
             FontColorOverride = Color.FromHex("#00FF88"),
@@ -172,7 +172,7 @@ public sealed class TerminalUiControl : ProgramUiControl
             _historyLines.RemoveAllChildren();
             foreach (var line in state.Lines)
             {
-                _historyLines.AddChild(new Label
+                _historyLines.AddChild(new ContentLabel
                 {
                     Text = line,
                     FontColorOverride = Color.FromHex("#D6F5F5")

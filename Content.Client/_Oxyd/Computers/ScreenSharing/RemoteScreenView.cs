@@ -1028,12 +1028,6 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
             if (_trackedWindow != null)
             {
-                if (_trackedWindow.IsOpen && _trackedWindow.Parent == _uiManager.WindowRoot && _trackedWindow.Visible)
-                {
-                    _wasAlreadyOpenOnScreen = true;
-                    _isPoppedOut = true;
-                }
-
                 _trackedCloseButton = FindCloseButton(_trackedWindow);
                 if (_trackedCloseButton != null && _closeInterceptor == null)
                 {
