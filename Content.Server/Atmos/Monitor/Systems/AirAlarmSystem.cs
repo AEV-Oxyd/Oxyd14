@@ -1,6 +1,7 @@
-using Content.Server._Oxyd.Computers;
 using Content.Server.Atmos.Monitor.Components;
 using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Packets;
+using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceNetwork.Systems;
 using Content.Server.Popups;
@@ -24,6 +25,7 @@ using Content.Shared.DeviceNetwork;
 using Content.Shared.DeviceNetwork.Events;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.UserInterface;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server.Atmos.Monitor.Systems;
 
@@ -38,11 +40,13 @@ public sealed partial class AirAlarmSystem : EntitySystem
     [Dependency] private DeviceNetworkSystem _deviceNet = default!;
     [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private DeviceListSystem _deviceList = default!;
-    [Dependency] private OxydComputerSystem _oxydComputer = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
 
     [Dependency] private EntityQuery<DeviceNetworkComponent> _deviceNetworkQuery = default!;
+
+    private static readonly ProtoId<SourcePortPrototype> PortAirAlarmStatusSource = "AirAlarmStatusSource";
+    private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
 
     #region Device Network API
 
@@ -174,6 +178,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
         SubscribeLocalEvent<AirAlarmComponent, ComponentShutdown>(OnShutdown);
         SubscribeLocalEvent<AirAlarmComponent, AfterActivatableUIOpenEvent>(OnActivate);
         SubscribeLocalEvent<AirAlarmComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
+        SubscribeLocalEvent<AirAlarmComponent, SignalReceivedEvent<ComputerPacket>>(OnComputerPacketSignal);
 
         Subs.BuiEvents<AirAlarmComponent>(SharedAirAlarmInterfaceKey.Key, subs =>
         {
@@ -187,12 +192,29 @@ public sealed partial class AirAlarmSystem : EntitySystem
         });
     }
 
+    private void OnComputerPacketSignal(Entity<AirAlarmComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
+    {
+        EntityUid? actor = args.Data.ProtectedReferences.TryGetValue("Actor", out var actUid) ? actUid : args.Trigger;
+        HandleAirAlarmDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor);
+    }
+
     private void OnComputerDeviceLinkSignal(Entity<AirAlarmComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
-        var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+        HandleAirAlarmDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger);
+    }
+
+    private void HandleAirAlarmDeviceLinkCommand(Entity<AirAlarmComponent> ent, string? rawCmd, string rawArg, EntityUid? actor)
+    {
+        var cmd = rawCmd?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (cmd is "status" or "status_request")
+        {
+            EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+            return;
+        }
+
         if (cmd is "atmos_set_mode" or "set_mode" or "mode")
         {
-            var modeStr = args.Data.Argument.Trim().ToLowerInvariant();
+            var modeStr = rawArg.Trim().ToLowerInvariant();
             var mode = modeStr switch
             {
                 "filtering" => AirAlarmMode.Filtering,
@@ -203,12 +225,49 @@ public sealed partial class AirAlarmSystem : EntitySystem
                 _ => ent.Comp.CurrentMode
             };
 
-            var addr = DeviceAddress.Invalid;
-            if (TryComp<DeviceNetworkComponent>(ent.Owner, out var netConn))
-                addr = netConn.Address;
-
+            var addr = TryComp<DeviceNetworkComponent>(ent.Owner, out var netConn) ? netConn.Address : DeviceAddress.Invalid;
             SetMode(ent.Owner, addr, mode, false, ent.Comp);
+            EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
         }
+        else if (cmd == "set_auto_mode")
+        {
+            var wantAuto = rawArg.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+            ent.Comp.AutoMode = wantAuto;
+            UpdateUI(ent.Owner, ent.Comp);
+            EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+        }
+        else if (cmd == "resync_devices")
+        {
+            SyncAllSensors(ent.Owner);
+            EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+        }
+    }
+
+    private void EmitAirAlarmStatusPacket(EntityUid uid, AirAlarmComponent alarm)
+    {
+        var pressure = CalculatePressureAverage(alarm);
+        var temperature = CalculateTemperatureAverage(alarm);
+        if (!_atmosAlarmable.TryGetHighestAlert(uid, out var highestAlarm))
+            highestAlarm = AtmosAlarmType.Normal;
+
+        var o2 = CalculateGasMolarConcentrationAverage(alarm, Gas.Oxygen, out _);
+        var n2 = CalculateGasMolarConcentrationAverage(alarm, Gas.Nitrogen, out _);
+        var co2 = CalculateGasMolarConcentrationAverage(alarm, Gas.CarbonDioxide, out _);
+        var plasma = CalculateGasMolarConcentrationAverage(alarm, Gas.Plasma, out _);
+
+        var pkt = new ComputerPacket("AirAlarmStatus");
+        pkt.Set("AlarmLevel", highestAlarm.Value.ToString());
+        pkt.Set("Mode", alarm.CurrentMode.ToString());
+        pkt.Set("AutoMode", alarm.AutoMode.ToString());
+        pkt.Set("Pressure", pressure.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+        pkt.Set("TemperatureC", (temperature - 273.15f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+        pkt.Set("Vents", alarm.VentData.Count);
+        pkt.Set("Scrubbers", alarm.ScrubberData.Count);
+        pkt.Set("Sensors", alarm.SensorData.Count);
+        pkt.Set("GasSummary", $"O2: {o2:0.0} mol | N2: {n2:0.0} mol | CO2: {co2:0.0} mol | Plasma: {plasma:0.0} mol");
+
+        _deviceLink.InvokePort(uid, PortAirAlarmStatusSource, ref pkt);
+        _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
     }
 
     private void OnDeviceListUpdate(EntityUid uid, AirAlarmComponent component, ref DeviceListUpdateEvent args)
@@ -682,7 +741,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
             SharedAirAlarmInterfaceKey.Key,
             new AirAlarmUIState((devNet.Address, devNet.Prefix), deviceCount, pressure, temperature, dataToSend, alarm.CurrentMode, highestAlarm.Value, alarm.AutoMode, alarm.PanicWireCut));
 
-        _oxydComputer.NotifyComputerFromMachine(uid, "atmos_state_changed");
+        EmitAirAlarmStatusPacket(uid, alarm);
     }
 
     private const float Delay = 8f;

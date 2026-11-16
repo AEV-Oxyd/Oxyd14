@@ -90,40 +90,6 @@ public sealed class PdaSheetlet : Sheetlet<NanotrasenStylesheet>
                 .Class("PdaBorderRect")
                 .Prop(PanelContainer.StylePropertyPanel, pdaRailingBox),
 
-            //PDA - Settings Buttons
-            E<PdaSettingsButton>()
-                .Pseudo(ContainerButton.StylePseudoClassNormal)
-                .Prop(PdaSettingsButton.StylePropertyBgColor, Color.FromHex("#0A121C"))
-                .Prop(PdaSettingsButton.StylePropertyFgColor, Color.FromHex("#00D4FF")),
-
-            E<PdaSettingsButton>()
-                .Pseudo(ContainerButton.StylePseudoClassHover)
-                .Prop(PdaSettingsButton.StylePropertyBgColor, Color.FromHex("#00D4FF25"))
-                .Prop(PdaSettingsButton.StylePropertyFgColor, Color.White),
-
-            E<PdaSettingsButton>()
-                .Pseudo(ContainerButton.StylePseudoClassPressed)
-                .Prop(PdaSettingsButton.StylePropertyBgColor, Color.FromHex("#00D4FF50"))
-                .Prop(PdaSettingsButton.StylePropertyFgColor, Color.FromHex("#E0F7FA")),
-
-            E<PdaSettingsButton>()
-                .Pseudo(ContainerButton.StylePseudoClassDisabled)
-                .Prop(PdaSettingsButton.StylePropertyBgColor, Color.FromHex("#0A121C"))
-                .Prop(PdaSettingsButton.StylePropertyFgColor, Color.FromHex("#455A64")),
-
-            //PDA - Program Items
-            E<PdaProgramItem>()
-                .Pseudo(ContainerButton.StylePseudoClassNormal)
-                .Prop(PdaProgramItem.StylePropertyBgColor, Color.FromHex("#0A121C")),
-
-            E<PdaProgramItem>()
-                .Pseudo(ContainerButton.StylePseudoClassHover)
-                .Prop(PdaProgramItem.StylePropertyBgColor, Color.FromHex("#00D4FF25")),
-
-            E<PdaProgramItem>()
-                .Pseudo(ContainerButton.StylePseudoClassPressed)
-                .Prop(PdaProgramItem.StylePropertyBgColor, Color.FromHex("#00D4FF50")),
-
             //PDA - Bezel Resource Bar
             E<PanelContainer>()
                 .Class("PdaBezelFooter")

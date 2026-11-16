@@ -1,11 +1,13 @@
-using Content.Server._Oxyd.Computers.Cartridges;
+using System.Linq;
+using Content.Server._Oxyd.Computers.Programs;
 using Content.Server._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers;
-using Content.Shared._Oxyd.Computers.Cartridges;
+using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.Servers;
-using Content.Shared.CartridgeLoader;
-using Content.Shared.DeviceNetwork.Components;
+using Content.Shared.Power;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Timing;
 
@@ -13,72 +15,270 @@ namespace Content.Server._Oxyd.Computers.Network;
 
 public sealed partial class NetworkRouterSystem : EntitySystem
 {
-    [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
-    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private SharedDeviceGuidSystem _guid = default!;
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
-    [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
-    [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
-    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private SharedFileSystemSystem _fileSystem = default!;
+    [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private IGameTiming _timing = default!;
 
-    private EntityQuery<DeviceGuidComponent> _guidQuery;
     private EntityQuery<OxydComputerComponent> _computerQuery;
+    private EntityQuery<ComputerStatsComponent> _statsQuery;
+    private EntityQuery<EmbeddedComputerHostComponent> _hostQuery;
+    private EntityQuery<ProgramComponent> _programQuery;
+    private EntityQuery<NetworkRouterComponent> _routerQuery;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _guidQuery = GetEntityQuery<DeviceGuidComponent>();
         _computerQuery = GetEntityQuery<OxydComputerComponent>();
+        _statsQuery = GetEntityQuery<ComputerStatsComponent>();
+        _hostQuery = GetEntityQuery<EmbeddedComputerHostComponent>();
+        _programQuery = GetEntityQuery<ProgramComponent>();
+        _routerQuery = GetEntityQuery<NetworkRouterComponent>();
 
         SubscribeLocalEvent<NetworkRouterComponent, MapInitEvent>(OnRouterMapInit);
-        SubscribeLocalEvent<DataServerComponent, MapInitEvent>(OnDataServerMapInit);
+        SubscribeLocalEvent<NetworkRouterComponent, PowerChangedEvent>(OnRouterPowerChanged);
 
-        SubscribeLocalEvent<RouterCartridgeComponent, CartridgeUiReadyEvent>(OnRouterUiReady);
-        SubscribeLocalEvent<RouterCartridgeComponent, CartridgeMessageEvent>(OnRouterUiMessage);
+        SubscribeLocalEvent<RouterProgramComponent, ProgramStartupEvent>(OnRouterProgramStartup);
+        SubscribeLocalEvent<RouterProgramComponent, ProgramActivatedEvent>(OnRouterProgramActivated);
+        Subs.BuiEvents<RouterProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<RouterActionMessage>(OnRouterUiMessage);
+        });
 
-        SubscribeLocalEvent<PacketSnifferCartridgeComponent, CartridgeUiReadyEvent>(OnSnifferUiReady);
-        SubscribeLocalEvent<PacketSnifferCartridgeComponent, CartridgeMessageEvent>(OnSnifferUiMessage);
+        SubscribeLocalEvent<PacketSnifferProgramComponent, ProgramStartupEvent>(OnSnifferStartup);
+        SubscribeLocalEvent<PacketSnifferProgramComponent, ProgramActivatedEvent>(OnSnifferActivated);
+        Subs.BuiEvents<PacketSnifferProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<PacketSnifferActionMessage>(OnSnifferUiMessage);
+        });
     }
 
     private void OnRouterMapInit(Entity<NetworkRouterComponent> ent, ref MapInitEvent args)
     {
-        RefreshRouterDevices(ent);
+        _guid.GetGuid(ent.Owner);
+        RefreshDnsDirectory(ent);
     }
 
-    private void OnDataServerMapInit(Entity<DataServerComponent> ent, ref MapInitEvent args)
+    private void OnRouterPowerChanged(Entity<NetworkRouterComponent> ent, ref PowerChangedEvent args)
     {
-        var guid = EnsureDeviceGuid(ent.Owner);
-        var router = FindNearestRouter(ent.Owner);
+        RefreshAllRouterProgramUis();
+    }
+
+    private void OnRouterProgramStartup(Entity<RouterProgramComponent> ent, ref ProgramStartupEvent args)
+    {
+        UpdateRouterProgramUi(ent.Owner);
+    }
+
+    private void OnRouterProgramActivated(Entity<RouterProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdateRouterProgramUi(ent.Owner);
+    }
+
+    private void OnSnifferStartup(Entity<PacketSnifferProgramComponent> ent, ref ProgramStartupEvent args)
+    {
+        UpdatePacketSnifferUi(ent.Owner);
+    }
+
+    private void OnSnifferActivated(Entity<PacketSnifferProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdatePacketSnifferUi(ent.Owner);
+    }
+
+    private void OnRouterUiMessage(Entity<RouterProgramComponent> ent, ref RouterActionMessage msg)
+    {
+        var compUid = ResolveComputerFromProgram(ent.Owner);
+        var router = FindActiveRouter(compUid);
         if (router == null)
-            return;
-
-        RegisterDeviceOnRouter(router.Value, guid);
-
-        foreach (var proto in ent.Comp.ServerProtocols)
         {
-            router.Value.Comp.DnsRecords[proto] = guid;
-            if (proto.Contains("Manifest", StringComparison.OrdinalIgnoreCase))
-            {
-                router.Value.Comp.DnsRecords["Crew manifest server"] = guid;
-                router.Value.Comp.DnsRecords["crew_manifest"] = guid;
-            }
+            ent.Comp.StatusMessage = "ERROR: No active Network Router found.";
+            UpdateRouterProgramUi(ent.Owner);
+            return;
         }
 
-        router.Value.Comp.DnsRecords[Name(ent.Owner)] = guid;
-        Dirty(router.Value);
+        switch (msg.Action)
+        {
+            case RouterUiAction.Refresh:
+                RefreshDnsDirectory(router.Value);
+                RefreshRouterDevices(router.Value);
+                ent.Comp.StatusMessage = "Router state synchronized.";
+                break;
+
+            case RouterUiAction.KillConnection:
+                CloseConnectionById(router.Value, msg.TargetId);
+                ent.Comp.StatusMessage = $"Closed connection {msg.TargetId}.";
+                break;
+
+            case RouterUiAction.BlacklistGuid:
+                BlacklistGuid(router.Value, msg.TargetId);
+                ent.Comp.StatusMessage = $"Blacklisted GUID {msg.TargetId}.";
+                break;
+
+            case RouterUiAction.UnblacklistGuid:
+                UnblacklistGuid(router.Value, msg.TargetId);
+                ent.Comp.StatusMessage = $"Removed GUID {msg.TargetId} from blacklist.";
+                break;
+
+            case RouterUiAction.SetDns:
+                if (!string.IsNullOrWhiteSpace(msg.TargetId) && !string.IsNullOrWhiteSpace(msg.Value))
+                {
+                    router.Value.Comp.DnsRecords[msg.TargetId.Trim()] = msg.Value.Trim().ToUpperInvariant();
+                    Dirty(router.Value);
+                    ent.Comp.StatusMessage = $"DNS set: {msg.TargetId} -> {msg.Value}";
+                }
+                break;
+
+            case RouterUiAction.RemoveDns:
+                if (router.Value.Comp.DnsRecords.Remove(msg.TargetId.Trim()))
+                {
+                    Dirty(router.Value);
+                    ent.Comp.StatusMessage = $"DNS entry '{msg.TargetId}' removed.";
+                }
+                break;
+
+            case RouterUiAction.ClearPackets:
+                router.Value.Comp.RecordedPackets.Clear();
+                Dirty(router.Value);
+                ent.Comp.StatusMessage = "Cleared router packet buffer.";
+                break;
+        }
+
+        UpdateRouterProgramUi(ent.Owner);
+    }
+
+    private void OnSnifferUiMessage(Entity<PacketSnifferProgramComponent> ent, ref PacketSnifferActionMessage msg)
+    {
+        var compUid = ResolveComputerFromProgram(ent.Owner);
+        switch (msg.Action)
+        {
+            case PacketSnifferAction.Refresh:
+                ent.Comp.StatusMessage = "Packet capture refreshed.";
+                break;
+
+            case PacketSnifferAction.ClearLogs:
+                if (FindNearestRouter(compUid) is { } clrRouter)
+                {
+                    clrRouter.Comp.RecordedPackets.Clear();
+                    Dirty(clrRouter);
+                }
+                if (TryComp<NetworkBandwidthComponent>(compUid, out var localBw))
+                {
+                    localBw.StoredPackets.Clear();
+                    Dirty(compUid, localBw);
+                }
+                ent.Comp.StatusMessage = "Packet capture logs cleared.";
+                break;
+
+            case PacketSnifferAction.SaveLogsToFile:
+                if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
+                {
+                    var router = FindNearestRouter(compUid);
+                    var packets = router?.Comp.RecordedPackets ?? new List<NetworkDataPacket>();
+                    var lines = new List<string> { "=== PACKET CAPTURE DUMP ===" };
+                    foreach (var p in packets)
+                        lines.Add(GetPacketReadableSummary(p));
+
+                    var dumpFile = new TextVirtualFile
+                    {
+                        Name = "capture",
+                        Extension = "txt",
+                        Directory = "/logs/",
+                        TextContent = string.Join("\n", lines),
+                        Size = Math.Max(64, lines.Count * 64)
+                    };
+                    _fileSystem.TryWriteFile(driveUid.Value, dumpFile, fs);
+                    ent.Comp.StatusMessage = "Capture saved to /logs/capture.txt.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = "Cannot save capture: no hard drive installed.";
+                }
+                break;
+
+            case PacketSnifferAction.EmitPacket:
+                if (!HasActiveNetworkCard(compUid))
+                {
+                    ent.Comp.StatusMessage = "Cannot emit packet: no active network card installed.";
+                    break;
+                }
+
+                var srcGuid = string.IsNullOrWhiteSpace(msg.SourceGuid) ? EnsureDeviceGuid(compUid) : msg.SourceGuid.Trim().ToUpperInvariant();
+                var tgtGuid = string.IsNullOrWhiteSpace(msg.TargetGuid) ? "BROADCAST" : msg.TargetGuid.Trim().ToUpperInvariant();
+                var pkt = new NetworkDataPacket
+                {
+                    PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+                    SourceAddress = srcGuid,
+                    TargetAddress = tgtGuid,
+                    Protocol = string.IsNullOrWhiteSpace(msg.Protocol) ? "TCP/RAW" : msg.Protocol.Trim(),
+                    PayloadSummary = msg.Payload,
+                    RawPayload = msg.Payload,
+                    ByteSize = Math.Max(64, msg.Payload.Length * 2),
+                    Timestamp = _timing.CurTime
+                };
+
+                _bandwidth.RecordDataTransmitted(compUid, pkt.ByteSize, isUpload: true);
+                _bandwidth.StorePacket(compUid, pkt.SourceAddress, pkt.TargetAddress, pkt.Protocol, pkt.PayloadSummary, pkt.ByteSize, false, pkt.RawPayload);
+                _bandwidth.LogPacketToRouters(pkt, compUid);
+                ent.Comp.StatusMessage = $"Injected {pkt.Protocol} frame ({pkt.ByteSize} B) -> {tgtGuid}.";
+                break;
+        }
+
+        UpdatePacketSnifferUi(ent.Owner);
+    }
+
+    public void RefreshDnsDirectory(Entity<NetworkRouterComponent> router)
+    {
+        var serverQuery = EntityQueryEnumerator<DataServerComponent>();
+        while (serverQuery.MoveNext(out var sUid, out var sComp))
+        {
+            var targetComp = UnwrapComputerEntity(sUid);
+            if (!HasActiveNetworkCard(targetComp))
+                continue;
+
+            var guid = EnsureDeviceGuid(targetComp);
+            router.Comp.DnsRecords[MetaData(sUid).EntityName] = guid;
+            foreach (var proto in sComp.ServerProtocols)
+                router.Comp.DnsRecords[proto] = guid;
+        }
+        Dirty(router);
+    }
+
+    public EntityUid UnwrapComputerEntity(EntityUid uid)
+    {
+        if (_hostQuery.TryComp(uid, out var host) && host.ComputerEntity is { } cUid && Exists(cUid))
+            return cUid;
+        return uid;
+    }
+
+    public EntityUid ResolveComputerFromProgram(EntityUid uid)
+    {
+        if (_programQuery.TryComp(uid, out var prog) && prog.Computer is { } cUid && Exists(cUid))
+            return cUid;
+        return UnwrapComputerEntity(uid);
+    }
+
+    public bool HasActiveNetworkCard(EntityUid uid)
+    {
+        var compUid = UnwrapComputerEntity(uid);
+        if (_computerQuery.TryComp(compUid, out var comp))
+        {
+            if (comp.NetworkWireCut || (comp.RequirePowerToBoot && !comp.IsPowered))
+                return false;
+
+            return _statsQuery.TryComp(compUid, out var stats) && stats.HasNetworkCard && stats.NetworkBandwidthBps > 0;
+        }
+
+        if (TryComp<NetworkBandwidthComponent>(compUid, out var bw))
+            return bw.MaxBps > 0;
+
+        return false;
     }
 
     public string EnsureDeviceGuid(EntityUid uid)
     {
-        if (_guidQuery.TryGetComponent(uid, out var guidComp))
-        {
-            _guidSystem.EnsureGuid(uid, guidComp);
-            return guidComp.Guid;
-        }
-
-        var comp = EnsureComp<DeviceGuidComponent>(uid);
-        _guidSystem.EnsureGuid(uid, comp);
-        return comp.Guid;
+        var target = UnwrapComputerEntity(uid);
+        return _guid.GetGuid(target);
     }
 
     public bool TryFindDeviceByGuid(string guid, out EntityUid foundUid)
@@ -87,17 +287,17 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         if (string.IsNullOrWhiteSpace(guid))
             return false;
 
-        if (_guidSystem.TryGetEntityByGuid(guid, out var target) && target.HasValue)
+        var clean = guid.Trim().ToUpperInvariant();
+        if (_guid.TryGetEntityByGuid(clean, out var res) && res.HasValue)
         {
-            foundUid = target.Value;
+            foundUid = UnwrapComputerEntity(res.Value);
             return true;
         }
 
-        var netQuery = EntityQueryEnumerator<DeviceNetworkComponent>();
-        while (netQuery.MoveNext(out var uid, out var netComp))
+        var compQuery = EntityQueryEnumerator<OxydComputerComponent, DeviceGuidComponent>();
+        while (compQuery.MoveNext(out var uid, out _, out var gComp))
         {
-            var addr = netComp.Address;
-            if (string.Equals(addr.ToString(), guid, StringComparison.OrdinalIgnoreCase))
+            if (gComp.Guid.Equals(clean, StringComparison.OrdinalIgnoreCase))
             {
                 foundUid = uid;
                 return true;
@@ -110,89 +310,100 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     public Entity<NetworkRouterComponent>? FindNearestRouter(EntityUid origin)
     {
         var originXform = Transform(origin);
-        Entity<NetworkRouterComponent>? bestRouter = null;
+        Entity<NetworkRouterComponent>? best = null;
         var bestDist = float.MaxValue;
 
-        var query = EntityQueryEnumerator<NetworkRouterComponent, TransformComponent>();
-        while (query.MoveNext(out var routerUid, out var routerComp, out var routerXform))
+        var query = EntityQueryEnumerator<NetworkRouterComponent>();
+        while (query.MoveNext(out var rUid, out var rComp))
         {
-            if (_computerQuery.TryGetComponent(routerUid, out var oxydComp) &&
-                (oxydComp.NetworkWireCut || oxydComp.PowerWireCut))
+            if (!IsRouterOperational(rUid))
                 continue;
 
-            if (routerXform.MapID != originXform.MapID)
+            var rXform = Transform(rUid);
+            if (rXform.MapID != originXform.MapID)
                 continue;
 
-            var dist = (_transform.GetWorldPosition(routerXform) - _transform.GetWorldPosition(originXform)).LengthSquared();
+            var dist = (rXform.Coordinates.Position - originXform.Coordinates.Position).LengthSquared();
             if (dist < bestDist)
             {
                 bestDist = dist;
-                bestRouter = (routerUid, routerComp);
+                best = (rUid, rComp);
             }
         }
 
-        if (bestRouter == null)
+        return best;
+    }
+
+    private Entity<NetworkRouterComponent>? FindActiveRouter(EntityUid origin)
+    {
+        if (TryComp<OxydComputerComponent>(origin, out var oxyd) && oxyd.HostMachine is { } hm && TryComp<NetworkRouterComponent>(hm, out var hmRouter))
+            return (hm, hmRouter);
+
+        return FindNearestRouter(origin);
+    }
+
+    public bool IsRouterOperational(EntityUid routerHostOrComp)
+    {
+        if (TryComp<Content.Server.Power.Components.ApcPowerReceiverComponent>(routerHostOrComp, out var apc) && !apc.Powered)
+            return false;
+
+        var routerComp = UnwrapComputerEntity(routerHostOrComp);
+        if (_computerQuery.TryComp(routerComp, out var comp))
         {
-            var devRouterQuery = EntityQueryEnumerator<DeviceNetworkRouterComponent, TransformComponent>();
-            while (devRouterQuery.MoveNext(out var rUid, out _, out var rXform))
-            {
-                if (rXform.MapID != originXform.MapID)
-                    continue;
-                var added = EnsureComp<NetworkRouterComponent>(rUid);
-                bestRouter = (rUid, added);
-                break;
-            }
+            if (comp.NetworkWireCut || comp.PowerWireCut)
+                return false;
+
+            if (_statsQuery.TryComp(routerComp, out var stats) && !stats.HasNetworkCard)
+                return false;
         }
 
-        return bestRouter;
+        if (TryComp<NetworkBandwidthComponent>(routerComp, out var bw) && bw.IsSaturated)
+            return false;
+
+        return true;
     }
 
     public bool IsNetworkConnected(EntityUid uid)
     {
-        if (_computerQuery.TryGetComponent(uid, out var comp) && (comp.NetworkWireCut || comp.PowerWireCut))
+        var compUid = UnwrapComputerEntity(uid);
+        if (!HasActiveNetworkCard(compUid))
             return false;
 
-        var router = FindNearestRouter(uid);
+        var router = FindNearestRouter(compUid);
         if (router == null)
             return false;
 
-        var guid = EnsureDeviceGuid(uid);
-        return !router.Value.Comp.BlacklistedGuids.Contains(guid);
+        var guid = EnsureDeviceGuid(compUid);
+        if (router.Value.Comp.BlacklistedGuids.Contains(guid))
+            return false;
+
+        RegisterDeviceOnRouter(router.Value, guid);
+        return true;
     }
 
     public bool IsGuidBlacklisted(EntityUid contextUid, string guid)
     {
         var router = FindNearestRouter(contextUid);
-        if (router == null)
-            return false;
-
-        return router.Value.Comp.BlacklistedGuids.Contains(guid);
+        return router != null && router.Value.Comp.BlacklistedGuids.Contains(guid.Trim().ToUpperInvariant());
     }
 
     public string? ResolveDns(EntityUid origin, string serviceName)
     {
-        if (!IsNetworkConnected(origin))
+        if (!HasActiveNetworkCard(origin))
             return null;
 
         var router = FindNearestRouter(origin);
         if (router == null)
             return null;
 
-        RefreshRouterDevices(router.Value);
+        RefreshDnsDirectory(router.Value);
+        if (router.Value.Comp.DnsRecords.TryGetValue(serviceName, out var exact))
+            return exact;
 
-        if (router.Value.Comp.DnsRecords.TryGetValue(serviceName, out var targetGuid))
+        foreach (var (k, v) in router.Value.Comp.DnsRecords)
         {
-            if (!router.Value.Comp.BlacklistedGuids.Contains(targetGuid))
-                return targetGuid;
-        }
-
-        foreach (var (key, val) in router.Value.Comp.DnsRecords)
-        {
-            if (key.Equals(serviceName, StringComparison.OrdinalIgnoreCase) &&
-                !router.Value.Comp.BlacklistedGuids.Contains(val))
-            {
-                return val;
-            }
+            if (k.Equals(serviceName, StringComparison.OrdinalIgnoreCase))
+                return v;
         }
 
         return null;
@@ -200,94 +411,84 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     public void RegisterDeviceOnRouter(Entity<NetworkRouterComponent> router, string guid)
     {
-        if (string.IsNullOrEmpty(guid))
-            return;
-
-        if (router.Comp.ConnectedDevices.Add(guid))
+        var clean = guid.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(clean) && !router.Comp.ConnectedDevices.Contains(clean))
         {
-            AddRouterLog(router, $"Device connected: {guid}");
+            router.Comp.ConnectedDevices.Add(clean);
             Dirty(router);
         }
     }
 
     public void RefreshRouterDevices(Entity<NetworkRouterComponent> router)
     {
-        var routerMap = Transform(router.Owner).MapID;
-        var guidEnumerator = EntityQueryEnumerator<DeviceGuidComponent, TransformComponent>();
-        while (guidEnumerator.MoveNext(out var uid, out var guidComp, out var xform))
+        router.Comp.ConnectedDevices.Clear();
+        var compQuery = EntityQueryEnumerator<OxydComputerComponent>();
+        while (compQuery.MoveNext(out var uid, out _))
         {
-            if (xform.MapID != routerMap || string.IsNullOrEmpty(guidComp.Guid))
+            if (!HasActiveNetworkCard(uid))
                 continue;
 
-            router.Comp.ConnectedDevices.Add(guidComp.Guid);
-
-            if (TryComp<DataServerComponent>(uid, out var server))
-            {
-                router.Comp.DnsRecords[Name(uid)] = guidComp.Guid;
-                foreach (var proto in server.ServerProtocols)
-                {
-                    router.Comp.DnsRecords[proto] = guidComp.Guid;
-                    if (proto.Contains("Manifest", StringComparison.OrdinalIgnoreCase))
-                    {
-                        router.Comp.DnsRecords["Crew manifest server"] = guidComp.Guid;
-                        router.Comp.DnsRecords["crew_manifest"] = guidComp.Guid;
-                    }
-                }
-            }
+            var guid = EnsureDeviceGuid(uid);
+            if (!router.Comp.ConnectedDevices.Contains(guid))
+                router.Comp.ConnectedDevices.Add(guid);
         }
 
-        if (TryComp<NetworkBandwidthComponent>(router.Owner, out var bw))
+        var srvQuery = EntityQueryEnumerator<DataServerComponent>();
+        while (srvQuery.MoveNext(out var sUid, out _))
         {
-            foreach (var pkt in bw.StoredPackets)
-            {
-                if (!router.Comp.RecordedPackets.Contains(pkt))
-                {
-                    if (router.Comp.RecordedPackets.Count >= router.Comp.MaxRecordedPackets)
-                        router.Comp.RecordedPackets.RemoveAt(0);
-                    router.Comp.RecordedPackets.Add(pkt);
-                }
-            }
+            var sComp = UnwrapComputerEntity(sUid);
+            if (!HasActiveNetworkCard(sComp))
+                continue;
+
+            var guid = EnsureDeviceGuid(sComp);
+            if (!router.Comp.ConnectedDevices.Contains(guid))
+                router.Comp.ConnectedDevices.Add(guid);
         }
+
+        Dirty(router);
     }
 
     public bool RecordAndValidatePacket(EntityUid sender, EntityUid target, NetworkDataPacket packet)
     {
-        if (_computerQuery.TryGetComponent(sender, out var senderComp) && (senderComp.NetworkWireCut || senderComp.PowerWireCut))
+        var sComp = UnwrapComputerEntity(sender);
+        var tComp = UnwrapComputerEntity(target);
+
+        if (!HasActiveNetworkCard(sComp) || !HasActiveNetworkCard(tComp))
             return false;
 
-        if (_computerQuery.TryGetComponent(target, out var targetComp) && (targetComp.NetworkWireCut || targetComp.PowerWireCut))
-            return false;
-
-        var router = FindNearestRouter(sender) ?? FindNearestRouter(target);
+        var router = FindNearestRouter(sComp) ?? FindNearestRouter(tComp);
         if (router == null)
-            return true;
-
-        RegisterDeviceOnRouter(router.Value, packet.SourceAddress);
-        RegisterDeviceOnRouter(router.Value, packet.TargetAddress);
-
-        if (router.Value.Comp.BlacklistedGuids.Contains(packet.SourceAddress) ||
-            router.Value.Comp.BlacklistedGuids.Contains(packet.TargetAddress))
-        {
-            AddRouterLog(router.Value, $"BLOCKED packet #{packet.PacketId} ({packet.Protocol}) {packet.SourceAddress} -> {packet.TargetAddress} [BLACKLISTED]");
             return false;
-        }
 
-        if (router.Value.Comp.RecordedPackets.Count >= router.Value.Comp.MaxRecordedPackets)
-            router.Value.Comp.RecordedPackets.RemoveAt(0);
+        var sGuid = EnsureDeviceGuid(sComp);
+        var tGuid = EnsureDeviceGuid(tComp);
+        if (router.Value.Comp.BlacklistedGuids.Contains(sGuid) || router.Value.Comp.BlacklistedGuids.Contains(tGuid))
+            return false;
 
-        router.Value.Comp.RecordedPackets.Add(packet);
-        AddRouterLog(router.Value, $"PKT #{packet.PacketId} [{packet.Protocol}] {packet.SourceAddress} -> {packet.TargetAddress} ({packet.ByteSize}B, {(packet.IsEncrypted ? "ENC" : "PLAIN")})");
-        RefreshAllRouterAndSnifferUis(router.Value);
+        var transferBps = _bandwidth.GetEffectiveTransferRateBps(sComp, tComp);
+        if (transferBps <= 0)
+            return false;
+
+        RegisterDeviceOnRouter(router.Value, sGuid);
+        RegisterDeviceOnRouter(router.Value, tGuid);
+
+        _bandwidth.RecordDataTransmitted(sComp, packet.ByteSize, isUpload: true);
+        _bandwidth.RecordDataTransmitted(tComp, packet.ByteSize, isUpload: false);
+        _bandwidth.StorePacket(sComp, packet.SourceAddress, packet.TargetAddress, packet.Protocol, packet.PayloadSummary, packet.ByteSize, packet.IsEncrypted, packet.RawPayload);
+        _bandwidth.StorePacket(tComp, packet.SourceAddress, packet.TargetAddress, packet.Protocol, packet.PayloadSummary, packet.ByteSize, packet.IsEncrypted, packet.RawPayload);
+        _bandwidth.LogPacketToRouters(packet, sComp);
+
+        RefreshAllPacketSniffers();
         return true;
     }
 
     public string RegisterActiveConnection(EntityUid origin, string sourceGuid, string targetGuid, string connectionType, string description)
     {
-        var connId = $"{connectionType}-{sourceGuid}-{targetGuid}";
         var router = FindNearestRouter(origin);
         if (router == null)
-            return connId;
+            return string.Empty;
 
+        var connId = $"{connectionType}-{sourceGuid}-{targetGuid}";
         router.Value.Comp.ActiveConnections.RemoveAll(c => c.ConnectionId == connId);
         router.Value.Comp.ActiveConnections.Add(new ActiveNetworkConnectionRecord
         {
@@ -297,9 +498,7 @@ public sealed partial class NetworkRouterSystem : EntitySystem
             ConnectionType = connectionType,
             Description = description
         });
-
-        AddRouterLog(router.Value, $"OPEN [{connectionType}] {sourceGuid} -> {targetGuid} ({description})");
-        RefreshAllRouterAndSnifferUis(router.Value);
+        Dirty(router.Value);
         return connId;
     }
 
@@ -310,358 +509,209 @@ public sealed partial class NetworkRouterSystem : EntitySystem
             return;
 
         if (router.Value.Comp.ActiveConnections.RemoveAll(c => c.ConnectionId == connectionId) > 0)
-        {
-            AddRouterLog(router.Value, $"CLOSE {connectionId}");
-            RefreshAllRouterAndSnifferUis(router.Value);
-        }
+            Dirty(router.Value);
     }
 
     public void CloseConnectionById(Entity<NetworkRouterComponent> router, string connectionId)
     {
-        var conn = router.Comp.ActiveConnections.Find(c => c.ConnectionId == connectionId);
-        if (conn == null)
-            return;
+        var removed = router.Comp.ActiveConnections.Where(c => c.ConnectionId == connectionId).ToList();
+        if (router.Comp.ActiveConnections.RemoveAll(c => c.ConnectionId == connectionId) > 0)
+            Dirty(router);
 
-        router.Comp.ActiveConnections.Remove(conn);
-        AddRouterLog(router, $"TERMINATED connection {conn.ConnectionId} ({conn.SourceGuid} -> {conn.TargetGuid})");
-
-        TerminateUnderlyingConnection(conn.SourceGuid, conn.TargetGuid, conn.ConnectionType);
-        RefreshAllRouterAndSnifferUis(router);
+        foreach (var rec in removed)
+            TerminateSessionsForConnection(rec.SourceGuid, rec.TargetGuid);
     }
 
     public void BlacklistGuid(Entity<NetworkRouterComponent> router, string guid)
     {
-        if (string.IsNullOrWhiteSpace(guid))
-            return;
+        var clean = guid.Trim().ToUpperInvariant();
+        if (router.Comp.BlacklistedGuids.Add(clean))
+            Dirty(router);
 
-        guid = guid.Trim();
-        router.Comp.BlacklistedGuids.Add(guid);
-        AddRouterLog(router, $"BLACKLISTED GUID: {guid} - severing all active connections.");
-
-        var toClose = new List<ActiveNetworkConnectionRecord>();
-        foreach (var conn in router.Comp.ActiveConnections)
-        {
-            if (string.Equals(conn.SourceGuid, guid, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(conn.TargetGuid, guid, StringComparison.OrdinalIgnoreCase))
-            {
-                toClose.Add(conn);
-            }
-        }
-
-        foreach (var conn in toClose)
-        {
-            router.Comp.ActiveConnections.Remove(conn);
-            TerminateUnderlyingConnection(conn.SourceGuid, conn.TargetGuid, conn.ConnectionType);
-        }
-
-        TerminateAllSessionsForGuid(guid);
-
-        Dirty(router);
-        RefreshAllRouterAndSnifferUis(router);
+        TerminateAllSessionsForGuid(clean);
     }
 
     public void UnblacklistGuid(Entity<NetworkRouterComponent> router, string guid)
     {
-        if (router.Comp.BlacklistedGuids.Remove(guid.Trim()))
-        {
-            AddRouterLog(router, $"UNBLACKLISTED GUID: {guid}");
+        var clean = guid.Trim().ToUpperInvariant();
+        if (router.Comp.BlacklistedGuids.Remove(clean))
             Dirty(router);
-            RefreshAllRouterAndSnifferUis(router);
-        }
     }
 
     public void TerminateAllSessionsForGuid(string guid)
     {
-        var termQuery = EntityQueryEnumerator<TerminalCartridgeComponent, CartridgeComponent>();
-        while (termQuery.MoveNext(out var termUid, out var termComp, out var cart))
+        var screenSys = EntityManager.System<ServerRemoteScreenSystem>();
+        if (TryFindDeviceByGuid(guid, out var directTarget))
+            screenSys.DetachViewer(EntityUid.Invalid, targetComputerUid: directTarget);
+
+        var termQuery = EntityQueryEnumerator<TerminalProgramComponent, ProgramComponent>();
+        while (termQuery.MoveNext(out var progUid, out var term, out var prog))
         {
-            if (string.Equals(termComp.ConnectedRemoteGuid, guid, StringComparison.OrdinalIgnoreCase))
+            var localGuid = prog.Computer is { } c ? EnsureDeviceGuid(c) : string.Empty;
+            if (term.ConnectedRemoteGuid == guid || localGuid == guid)
             {
-                termComp.ConnectedRemoteGuid = null;
-                termComp.ConnectedRemoteUser = null;
-                termComp.IsScreenAttached = false;
-                termComp.History.Add($"[Connection to {guid} forcibly closed by router]");
-                Dirty(termUid, termComp);
-                _remoteScreen.DetachViewer(termUid);
-                if (cart.LoaderUid is { } lUid)
-                    Get<TerminalCartridgeSystem>().UpdateUiState(termUid, lUid, termComp);
-            }
-            else if (cart.LoaderUid is { } loaderUid)
-            {
-                var loaderGuid = EnsureDeviceGuid(loaderUid);
-                if (string.Equals(loaderGuid, guid, StringComparison.OrdinalIgnoreCase) && termComp.ConnectedRemoteGuid != null)
+                var prevRemote = term.ConnectedRemoteGuid;
+                EntityUid? prevTargetUid = prevRemote != null && TryFindDeviceByGuid(prevRemote, out var rt) ? rt : null;
+
+                term.ConnectedRemoteGuid = null;
+                term.IsScreenAttached = false;
+                term.History.Add($"[NETWORK] Session terminated by router firewall ({guid} blacklisted).");
+
+                if (prevTargetUid != null)
+                    screenSys.DetachViewer(progUid, targetComputerUid: prevTargetUid);
+
+                if (localGuid == guid)
                 {
-                    termComp.ConnectedRemoteGuid = null;
-                    termComp.ConnectedRemoteUser = null;
-                    termComp.IsScreenAttached = false;
-                    termComp.History.Add("[Connection forcibly closed: local GUID blacklisted]");
-                    Dirty(termUid, termComp);
-                    _remoteScreen.DetachViewer(termUid);
-                    Get<TerminalCartridgeSystem>().UpdateUiState(termUid, loaderUid, termComp);
+                    DetachComputerViewers(screenSys, progUid, prog.Computer, prevTargetUid);
                 }
+
+                if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                    EntityManager.System<TerminalSystem>().UpdateTerminalUi(progUid);
             }
         }
     }
 
-    private void TerminateUnderlyingConnection(string sourceGuid, string targetGuid, string connectionType)
+    private void TerminateSessionsForConnection(string srcGuid, string dstGuid)
     {
-        TerminateAllSessionsForGuid(sourceGuid);
-        TerminateAllSessionsForGuid(targetGuid);
-    }
-
-    private void AddRouterLog(Entity<NetworkRouterComponent> router, string entry)
-    {
-        if (router.Comp.ConnectionLogs.Count >= router.Comp.MaxConnectionLogs)
-            router.Comp.ConnectionLogs.RemoveAt(0);
-
-        router.Comp.ConnectionLogs.Add(entry);
-    }
-
-    private void OnRouterUiReady(Entity<RouterCartridgeComponent> ent, ref CartridgeUiReadyEvent args)
-    {
-        UpdateRouterUi(ent.Owner, args.Loader);
-    }
-
-    private void OnRouterUiMessage(Entity<RouterCartridgeComponent> ent, ref CartridgeMessageEvent args)
-    {
-        if (args is not RouterUiMessageEvent msg)
-            return;
-
-        var loaderUid = GetEntity(args.LoaderUid);
-        var router = EnsureRouterForLoader(loaderUid);
-        if (router == null)
-            return;
-
-        switch (msg.Action)
+        var screenSys = EntityManager.System<ServerRemoteScreenSystem>();
+        var termQuery = EntityQueryEnumerator<TerminalProgramComponent, ProgramComponent>();
+        while (termQuery.MoveNext(out var progUid, out var term, out var prog))
         {
-            case RouterUiAction.Refresh:
-                RefreshRouterDevices(router.Value);
-                break;
-            case RouterUiAction.CloseConnection:
-                CloseConnectionById(router.Value, msg.TargetId);
-                break;
-            case RouterUiAction.BlacklistGuid:
-                BlacklistGuid(router.Value, msg.TargetId);
-                break;
-            case RouterUiAction.UnblacklistGuid:
-                UnblacklistGuid(router.Value, msg.TargetId);
-                break;
-            case RouterUiAction.RegisterDns:
-                if (!string.IsNullOrWhiteSpace(msg.TargetId) && !string.IsNullOrWhiteSpace(msg.ExtraValue))
-                {
-                    router.Value.Comp.DnsRecords[msg.TargetId.Trim()] = msg.ExtraValue.Trim();
-                    AddRouterLog(router.Value, $"DNS: '{msg.TargetId.Trim()}' -> {msg.ExtraValue.Trim()}");
-                }
-                break;
-            case RouterUiAction.ClearLogs:
-                router.Value.Comp.ConnectionLogs.Clear();
-                router.Value.Comp.RecordedPackets.Clear();
-                break;
+            var localGuid = prog.Computer is { } c ? EnsureDeviceGuid(c) : string.Empty;
+            if ((localGuid == srcGuid && term.ConnectedRemoteGuid == dstGuid) ||
+                (localGuid == dstGuid && term.ConnectedRemoteGuid == srcGuid))
+            {
+                var prevRemote = term.ConnectedRemoteGuid;
+                EntityUid? prevTargetUid = prevRemote != null && TryFindDeviceByGuid(prevRemote, out var rt) ? rt : null;
+
+                term.ConnectedRemoteGuid = null;
+                term.IsScreenAttached = false;
+                term.History.Add("[NETWORK] Connection forcefully dropped by station router.");
+
+                DetachComputerViewers(screenSys, progUid, prog.Computer, prevTargetUid);
+
+                if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                    EntityManager.System<TerminalSystem>().UpdateTerminalUi(progUid);
+            }
+        }
+    }
+
+    private void DetachComputerViewers(ServerRemoteScreenSystem screenSys, EntityUid progUid, EntityUid? compUid, EntityUid? targetCompUid)
+    {
+        var actors = new HashSet<EntityUid>();
+        if (TryComp<UserInterfaceComponent>(progUid, out var pUi))
+        {
+            foreach (var actorSet in pUi.Actors.Values)
+            {
+                foreach (var act in actorSet)
+                    actors.Add(act);
+            }
         }
 
-        UpdateRouterUi(ent.Owner, loaderUid);
-    }
-
-    private Entity<NetworkRouterComponent>? EnsureRouterForLoader(EntityUid loaderUid)
-    {
-        if (TryComp<NetworkRouterComponent>(loaderUid, out var ownRouter))
-            return (loaderUid, ownRouter);
-
-        return FindNearestRouter(loaderUid);
-    }
-
-    public void UpdateRouterUi(EntityUid cartridgeUid, EntityUid loaderUid)
-    {
-        var router = EnsureRouterForLoader(loaderUid);
-        if (router == null)
-            return;
-
-        RefreshRouterDevices(router.Value);
-        var routerGuid = EnsureDeviceGuid(router.Value.Owner);
-
-        var activeConns = new List<RouterConnectionView>();
-        foreach (var c in router.Value.Comp.ActiveConnections)
+        if (compUid is { } cUid && TryComp<UserInterfaceComponent>(cUid, out var cUi))
         {
-            activeConns.Add(new RouterConnectionView
+            foreach (var actorSet in cUi.Actors.Values)
             {
-                ConnectionId = c.ConnectionId,
-                SourceGuid = c.SourceGuid,
-                TargetGuid = c.TargetGuid,
-                ConnectionType = c.ConnectionType,
-                Description = c.Description
-            });
+                foreach (var act in actorSet)
+                    actors.Add(act);
+            }
         }
 
-        var packetViews = new List<RouterPacketLogView>();
-        uint idx = 1;
-        foreach (var pkt in router.Value.Comp.RecordedPackets)
+        foreach (var act in actors)
+            screenSys.DetachViewer(progUid, act, targetCompUid);
+    }
+
+    public void RefreshAllRouterProgramUis()
+    {
+        var q = EntityQueryEnumerator<RouterProgramComponent>();
+        while (q.MoveNext(out var uid, out _))
+            UpdateRouterProgramUi(uid);
+    }
+
+    public void RefreshAllPacketSniffers()
+    {
+        var q = EntityQueryEnumerator<PacketSnifferProgramComponent>();
+        while (q.MoveNext(out var uid, out _))
+            UpdatePacketSnifferUi(uid);
+    }
+
+    public void UpdateRouterProgramUi(EntityUid progUid)
+    {
+        if (!TryComp<RouterProgramComponent>(progUid, out var rProg))
+            return;
+
+        var compUid = ResolveComputerFromProgram(progUid);
+        var router = FindActiveRouter(compUid);
+        var bw = router != null ? CompOrNull<NetworkBandwidthComponent>(UnwrapComputerEntity(router.Value.Owner)) : null;
+
+        var devices = new List<RouterConnectedDeviceDto>();
+        if (router != null)
         {
-            packetViews.Add(new RouterPacketLogView
+            RefreshRouterDevices(router.Value);
+            foreach (var guid in router.Value.Comp.ConnectedDevices)
             {
-                PacketId = idx++,
-                SenderGuid = pkt.SourceAddress,
-                TargetGuid = pkt.TargetAddress,
-                PacketType = pkt.Protocol,
-                IsEncrypted = pkt.IsEncrypted,
-                DecipheredSummary = GetPacketReadableSummary(pkt)
-            });
+                if (!TryFindDeviceByGuid(guid, out var dUid))
+                    continue;
+
+                var dStats = CompOrNull<ComputerStatsComponent>(dUid);
+                devices.Add(new RouterConnectedDeviceDto(
+                    MetaData(dUid).EntityName,
+                    guid,
+                    dStats?.NetworkBandwidthBps ?? 0,
+                    dStats?.NetworkUploadBandwidthBps ?? 0,
+                    HasActiveNetworkCard(dUid),
+                    router.Value.Comp.BlacklistedGuids.Contains(guid)));
+            }
         }
 
         var state = new RouterUiState(
-            routerGuid,
-            activeConns,
-            new List<string>(router.Value.Comp.ConnectedDevices),
-            new List<string>(router.Value.Comp.BlacklistedGuids),
-            packetViews,
-            new List<string>(router.Value.Comp.ConnectionLogs),
-            new Dictionary<string, string>(router.Value.Comp.DnsRecords));
+            router != null ? EnsureDeviceGuid(router.Value.Owner) : "NO-ROUTER",
+            router != null && IsRouterOperational(router.Value.Owner),
+            bw?.MaxBps ?? 0,
+            bw?.MaxUploadBps ?? 0,
+            devices,
+            router?.Comp.ActiveConnections ?? new(),
+            router?.Comp.RecordedPackets ?? new(),
+            router?.Comp.BlacklistedGuids.ToList() ?? new(),
+            router?.Comp.DnsRecords ?? new(),
+            rProg.StatusMessage);
 
-        _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            _ui.SetUiState(progUid, ProgramUiKey.Key, state);
     }
 
-    private void OnSnifferUiReady(Entity<PacketSnifferCartridgeComponent> ent, ref CartridgeUiReadyEvent args)
+    public void UpdatePacketSnifferUi(EntityUid progUid)
     {
-        UpdateSnifferUi(ent, args.Loader, "Packet capture ready.");
-    }
-
-    private void OnSnifferUiMessage(Entity<PacketSnifferCartridgeComponent> ent, ref CartridgeMessageEvent args)
-    {
-        if (args is not PacketSnifferUiMessageEvent msg)
+        if (!TryComp<PacketSnifferProgramComponent>(progUid, out var sProg))
             return;
 
-        var loaderUid = GetEntity(args.LoaderUid);
-        var router = EnsureRouterForLoader(loaderUid);
-        var status = string.Empty;
+        var compUid = ResolveComputerFromProgram(progUid);
+        var hasNic = HasActiveNetworkCard(compUid);
+        var router = hasNic ? FindNearestRouter(compUid) : null;
+        var packets = new List<NetworkDataPacket>();
 
-        switch (msg.Action)
+        if (hasNic)
         {
-            case PacketSnifferUiAction.ToggleCapture:
-                ent.Comp.IsCapturing = !ent.Comp.IsCapturing;
-                status = ent.Comp.IsCapturing ? "Capture enabled." : "Capture paused.";
-                break;
-
-            case PacketSnifferUiAction.Refresh:
-                status = "Refreshed captured packets.";
-                break;
-
-            case PacketSnifferUiAction.Clear:
-                if (router != null)
-                    router.Value.Comp.RecordedPackets.Clear();
-                status = "Cleared packet buffer.";
-                break;
-
-            case PacketSnifferUiAction.ReemitPacket:
-                if (router == null)
-                {
-                    status = "Error: No router reachable.";
-                    break;
-                }
-
-                RefreshRouterDevices(router.Value);
-                var pktIndex = (int) msg.PacketId - 1;
-                if (pktIndex < 0 || pktIndex >= router.Value.Comp.RecordedPackets.Count)
-                {
-                    status = $"Packet #{msg.PacketId} not found.";
-                    break;
-                }
-
-                var original = router.Value.Comp.RecordedPackets[pktIndex];
-                var targetGuid = string.IsNullOrWhiteSpace(msg.TargetGuid) ? original.TargetAddress : msg.TargetGuid.Trim();
-                if (!TryFindDeviceByGuid(targetGuid, out var targetUid))
-                {
-                    status = $"Target GUID '{targetGuid}' not found on network.";
-                    break;
-                }
-
-                var newRaw = original.RawPayload;
-                var newSummary = original.PayloadSummary;
-                if (!original.IsEncrypted && !string.IsNullOrEmpty(msg.ModifiedPayload))
-                {
-                    newRaw = msg.ModifiedPayload;
-                    newSummary = $"[RE-EMITTED] {msg.ModifiedPayload}";
-                }
-
-                var reemitted = new NetworkDataPacket
-                {
-                    PacketId = Guid.NewGuid().ToString("N")[..8],
-                    SourceAddress = EnsureDeviceGuid(loaderUid),
-                    TargetAddress = targetGuid,
-                    Protocol = original.Protocol,
-                    PayloadSummary = newSummary,
-                    RawPayload = newRaw,
-                    IsEncrypted = original.IsEncrypted,
-                    ByteSize = Math.Max(64, newRaw.Length),
-                    Timestamp = _timing.CurTime
-                };
-
-                _bandwidth.RecordDataTransmitted(loaderUid, reemitted.ByteSize);
-                RecordAndValidatePacket(loaderUid, targetUid, reemitted);
-
-                status = original.IsEncrypted
-                    ? $"Re-emitted encrypted packet #{msg.PacketId} to {targetGuid} (payload unmodified)."
-                    : $"Re-emitted packet #{msg.PacketId} to {targetGuid} with payload: '{newRaw}'.";
-                break;
+            if (router != null)
+                packets.AddRange(router.Value.Comp.RecordedPackets);
+            else if (TryComp<NetworkBandwidthComponent>(compUid, out var bw))
+                packets.AddRange(bw.StoredPackets);
         }
 
-        UpdateSnifferUi(ent, loaderUid, status);
-    }
+        var state = new PacketSnifferUiState(
+            router != null ? EnsureDeviceGuid(router.Value.Owner) : EnsureDeviceGuid(compUid),
+            hasNic,
+            packets,
+            sProg.StatusMessage);
 
-    private void UpdateSnifferUi(Entity<PacketSnifferCartridgeComponent> ent, EntityUid loaderUid, string status)
-    {
-        var router = EnsureRouterForLoader(loaderUid);
-        var views = new List<CapturedPacketView>();
-
-        if (router != null && ent.Comp.IsCapturing)
-        {
-            RefreshRouterDevices(router.Value);
-            uint idx = 1;
-            foreach (var pkt in router.Value.Comp.RecordedPackets)
-            {
-                views.Add(new CapturedPacketView
-                {
-                    PacketId = idx++,
-                    SenderGuid = pkt.SourceAddress,
-                    TargetGuid = pkt.TargetAddress,
-                    PacketType = pkt.Protocol,
-                    IsEncrypted = pkt.IsEncrypted,
-                    PayloadPreview = GetPacketReadableSummary(pkt),
-                    Parameters = new Dictionary<string, string>(pkt.Parameters)
-                });
-            }
-        }
-
-        var state = new PacketSnifferUiState(ent.Comp.IsCapturing, views, status);
-        _cartridgeLoader.UpdateCartridgeUiState(loaderUid, state);
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            _ui.SetUiState(progUid, ProgramUiKey.Key, state);
     }
 
     public static string GetPacketReadableSummary(NetworkDataPacket pkt)
     {
-        if (pkt.IsEncrypted)
-        {
-            var hash = Math.Abs((pkt.RawPayload ?? pkt.Protocol).GetHashCode());
-            return $"[ENCRYPTED AES-256: 0x{hash:X8}{(hash ^ 0x5A5A5A5A):X8}]";
-        }
-
-        if (!string.IsNullOrEmpty(pkt.PayloadSummary))
-            return pkt.PayloadSummary;
-
-        return !string.IsNullOrEmpty(pkt.RawPayload) ? pkt.RawPayload : pkt.Protocol;
-    }
-
-    private void RefreshAllRouterAndSnifferUis(Entity<NetworkRouterComponent> router)
-    {
-        var routerCarts = EntityQueryEnumerator<RouterCartridgeComponent, CartridgeComponent>();
-        while (routerCarts.MoveNext(out var uid, out _, out var cart))
-        {
-            if (cart.LoaderUid is { } loaderUid)
-                UpdateRouterUi(uid, loaderUid);
-        }
-
-        var snifferCarts = EntityQueryEnumerator<PacketSnifferCartridgeComponent, CartridgeComponent>();
-        while (snifferCarts.MoveNext(out var uid, out var sniffer, out var cart))
-        {
-            if (cart.LoaderUid is { } loaderUid)
-                UpdateSnifferUi((uid, sniffer), loaderUid, string.Empty);
-        }
+        var timeStr = pkt.Timestamp.ToString(@"mm\:ss");
+        var flag = pkt.Dropped ? " [DROPPED]" : pkt.IsEncrypted ? " [ENC]" : "";
+        return $"[{timeStr}] {pkt.SourceAddress} -> {pkt.TargetAddress} [{pkt.Protocol}] {pkt.ByteSize}B{flag}: {pkt.PayloadSummary}";
     }
 }

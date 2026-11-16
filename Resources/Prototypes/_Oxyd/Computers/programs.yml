@@ -1,0 +1,377 @@
+# ==============================================================================
+# NTOS Program Entities (.nte Runtime Process Entities)
+# Each running program is a real EntityUid inside program_container with its own
+# UserInterfaceComponent delivering direct BoundUserInterface states.
+# ==============================================================================
+
+- type: entity
+  abstract: true
+  id: BaseOxydProgram
+  name: computer program
+  components:
+  - type: Program
+  - type: Tag
+    tags:
+    - Oxyd
+    - Program
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydOsProgram
+  name: NTOS system
+  description: Core operating system kernel handling system settings, hardware diagnostics, DeviceLink ports, and launching child programs.
+  components:
+  - type: Program
+    title: "NTOS System"
+    ramUsageMb: 32
+    cpuUsagePercent: 5.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+  - type: OsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: OsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydEmbeddedOsProgram
+  name: embedded system controller
+  description: Core embedded controller operating system for machinery, APCs, life support, and industrial DeviceLink supervision.
+  components:
+  - type: Program
+    title: "Embedded Controller OS"
+    ramUsageMb: 16
+    cpuUsagePercent: 3.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+  - type: EmbeddedOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: EmbeddedOsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydApcControlProgram
+  name: APC controller program
+  description: Interfaces with an Area Power Controller via DeviceLink ports.
+  components:
+  - type: Program
+    title: "APC Control"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: storage
+  - type: ApcControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: ApcControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydLatheControlProgram
+  name: lathe controller program
+  description: Interfaces with an autolathe via DeviceLink ports and reads HDD/disk .lathe blueprints.
+  components:
+  - type: Program
+    title: "Lathe Control"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: wiredmachine
+  - type: LatheControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: LatheControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydAtmosControlProgram
+  name: air alarm controller program
+  description: Interfaces with an atmospheric alarm via DeviceLink ports.
+  components:
+  - type: Program
+    title: "Atmos Control"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda-atmos
+  - type: AtmosControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AtmosControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydFileBrowserProgram
+  name: file browser program
+  description: Inspects local hard drive files, optical data disks, and runs .nte executables.
+  components:
+  - type: Program
+    title: "File Browser"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: station_records
+  - type: FileBrowserProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: FileBrowserProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydTerminalProgram
+  name: terminal program
+  description: Interactive NTOS command shell with SSH, file transfers, DeviceLink commands, and remote display streaming.
+  components:
+  - type: Program
+    title: "Terminal"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: comms_console
+  - type: TerminalProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: TerminalProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydDownloaderProgram
+  name: central downloader program
+  description: Downloads and uploads .nte programs, .lathe blueprints, and databases via station data servers.
+  components:
+  - type: Program
+    title: "Downloader"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server
+  - type: DownloaderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: DownloaderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydRouterProgram
+  name: router admin program
+  description: Manages connected network devices, active sessions, DNS records, and GUID firewalls.
+  components:
+  - type: Program
+    title: "Router Admin"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: RouterProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: RouterProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydPacketSnifferProgram
+  name: packet sniffer program
+  description: Captures and inspects routed network frames, dumps captures to HDD, and injects raw packets.
+  components:
+  - type: Program
+    title: "Packet Sniffer"
+    ramUsageMb: 8
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: mass_scanner
+  - type: PacketSnifferProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: PacketSnifferProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NotekeeperProgram
+  name: notekeeper
+  description: Creates, edits, and stores boot-resistant .txt notes on the local hard drive.
+  components:
+  - type: Program
+    title: "Notekeeper"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.0
+    icon:
+      sprite: Objects/Misc/books.rsi
+      state: book_icon
+  - type: NotekeeperProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NotekeeperProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NanoTaskProgram
+  name: task manager
+  description: Manages checklists persisted to /tasks/tasks.tsk on the local hard drive.
+  components:
+  - type: Program
+    title: "Tasks"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: NanoTaskProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NanoTaskProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CrewManifestProgram
+  name: crew manifest
+  description: Syncs station personnel roster over the network into /records/crew_manifest.db.
+  components:
+  - type: Program
+    title: "Crew Manifest"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: crew_manifest
+  - type: CrewManifestProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CrewManifestProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NewsReaderProgram
+  name: news reader
+  description: Fetches and caches station news feeds into /news/articles.db.
+  components:
+  - type: Program
+    title: "News Reader"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: NewsReaderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NewsReaderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: WantedListProgram
+  name: wanted list
+  description: Fetches and caches station criminal security records into /records/wanted_list.db.
+  components:
+  - type: Program
+    title: "Wanted List"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: WantedListProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: WantedListProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NetProbeProgram
+  name: netprobe scanner
+  description: Probes DeviceNetwork transceivers in the field and logs discoveries to /logs/netprobe.db.
+  components:
+  - type: Program
+    title: "NetProbe"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-y
+  - type: NetProbeProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetProbeProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: LogProbeProgram
+  name: logprobe auditor
+  description: Pulls access reader logs and saves audit snapshots to /logs/logprobe.db.
+  components:
+  - type: Program
+    title: "LogProbe"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-log
+  - type: LogProbeProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: LogProbeProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: MedTekProgram
+  name: medtek diagnostics
+  description: Activates biometric health scanning capability on portable terminals.
+  components:
+  - type: Program
+    title: "MedTek"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-med
+  - type: MedTekProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: MedTekProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: AstroNavProgram
+  name: astronav telemetry
+  description: Activates GPS transponder tracking on portable terminals.
+  components:
+  - type: Program
+    title: "AstroNav"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-nav
+  - type: AstroNavProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AstroNavProgramBui

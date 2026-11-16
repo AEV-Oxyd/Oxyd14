@@ -225,10 +225,10 @@
 
 - type: entity
   parent: BaseThiefStealObjective
-  id: WantedListCartridgeStealObjective
+  id: WantedListDiskStealObjective
   components:
   - type: StealCondition
-    stealGroup: WantedListCartridge
+    stealGroup: WantedListDisk
   - type: Objective
     difficulty: 1
 

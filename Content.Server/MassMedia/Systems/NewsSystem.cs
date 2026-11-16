@@ -1,6 +1,4 @@
 using Content.Server.Administration.Logs;
-using Content.Server.CartridgeLoader.Cartridges;
-using Content.Server.CartridgeLoader;
 using Content.Server.Chat.Managers;
 using Content.Server.Discord;
 using Content.Server.GameTicking;
@@ -10,8 +8,6 @@ using Content.Server.Station.Systems;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.CCVar;
-using Content.Shared.CartridgeLoader.Cartridges;
-using Content.Shared.CartridgeLoader;
 using Content.Shared.Database;
 using Content.Shared.GameTicking;
 using Content.Shared.IdentityManagement;
@@ -22,7 +18,6 @@ using Robust.Server.GameObjects;
 using Robust.Server;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Configuration;
-using Robust.Shared.Maths;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using System.Diagnostics.CodeAnalysis;
@@ -37,7 +32,6 @@ public sealed partial class NewsSystem : SharedNewsSystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private IAdminLogManager _adminLogger = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
-    [Dependency] private CartridgeLoaderSystem _cartridgeLoaderSystem = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private ServerStationSystem _station = default!;
@@ -86,12 +80,6 @@ public sealed partial class NewsSystem : SharedNewsSystem
             subs.Event<NewsWriterSaveDraftMessage>(OnNewsWriterDraftUpdatedMessage);
             subs.Event<NewsWriterRequestDraftMessage>(OnRequestArticleDraftMessage);
         });
-
-        // News reader
-        SubscribeLocalEvent<NewsReaderCartridgeComponent, NewsArticlePublishedEvent>(OnArticlePublished);
-        SubscribeLocalEvent<NewsReaderCartridgeComponent, NewsArticleDeletedEvent>(OnArticleDeleted);
-        SubscribeLocalEvent<NewsReaderCartridgeComponent, CartridgeMessageEvent>(OnReaderUiMessage);
-        SubscribeLocalEvent<NewsReaderCartridgeComponent, CartridgeUiReadyEvent>(OnReaderUiReady);
     }
 
     public override void Update(float frameTime)
@@ -146,11 +134,7 @@ public sealed partial class NewsSystem : SharedNewsSystem
         }
 
         var args = new NewsArticleDeletedEvent();
-        var query = EntityQueryEnumerator<NewsReaderCartridgeComponent>();
-        while (query.MoveNext(out var readerUid, out _))
-        {
-            RaiseLocalEvent(readerUid, ref args);
-        }
+        RaiseLocalEvent(ref args);
 
         UpdateWriterDevices();
     }
@@ -230,12 +214,7 @@ public sealed partial class NewsSystem : SharedNewsSystem
         }
 
         var args = new NewsArticlePublishedEvent(article.Value);
-        var query = EntityQueryEnumerator<NewsReaderCartridgeComponent>();
-
-        while (query.MoveNext(out var readerUid, out _))
-        {
-            RaiseLocalEvent(readerUid, ref args);
-        }
+        RaiseLocalEvent(ref args);
 
         if (_webhookSendDuringRound)
             AddNewsSendWebhook(article.Value);
@@ -252,63 +231,19 @@ public sealed partial class NewsSystem : SharedNewsSystem
 
     #endregion
 
-    #region Reader Event Handlers
+    public bool TryGetNewsArticles(EntityUid uid, [NotNullWhen(true)] out List<NewsArticle>? articles, EntityUid? loaderUid = null) =>
+        TryGetArticles(uid, out articles, loaderUid);
 
-    private void OnArticlePublished(Entity<NewsReaderCartridgeComponent> ent, ref NewsArticlePublishedEvent args)
+    private bool TryGetArticles(EntityUid uid, [NotNullWhen(true)] out List<NewsArticle>? articles, EntityUid? loaderUid = null)
     {
-        if (Comp<CartridgeComponent>(ent).LoaderUid is not { } loaderUid)
-            return;
+        EntityUid? station = null;
+        if (loaderUid != null)
+            station = _station.GetOwningStation(loaderUid.Value);
+        station ??= _station.GetOwningStation(uid);
+        if (station == null && _station.GetStationsSet().Count > 0)
+            station = _station.GetStationsSet().First();
 
-        UpdateReaderUi(ent, loaderUid);
-
-        if (!ent.Comp.NotificationOn)
-            return;
-
-        _cartridgeLoaderSystem.SendNotification(
-            loaderUid,
-            Loc.GetString("news-pda-notification-header"),
-            args.Article.Title);
-    }
-
-    private void OnArticleDeleted(Entity<NewsReaderCartridgeComponent> ent, ref NewsArticleDeletedEvent args)
-    {
-        if (Comp<CartridgeComponent>(ent).LoaderUid is not { } loaderUid)
-            return;
-
-        UpdateReaderUi(ent, loaderUid);
-    }
-
-    private void OnReaderUiMessage(Entity<NewsReaderCartridgeComponent> ent, ref CartridgeMessageEvent args)
-    {
-        if (args is not NewsReaderUiMessageEvent message)
-            return;
-
-        switch (message.Action)
-        {
-            case NewsReaderUiAction.Next:
-                NewsReaderLeafArticle(ent, 1);
-                break;
-            case NewsReaderUiAction.Prev:
-                NewsReaderLeafArticle(ent, -1);
-                break;
-            case NewsReaderUiAction.NotificationSwitch:
-                ent.Comp.NotificationOn = !ent.Comp.NotificationOn;
-                break;
-        }
-
-        UpdateReaderUi(ent, GetEntity(args.LoaderUid));
-    }
-
-    private void OnReaderUiReady(Entity<NewsReaderCartridgeComponent> ent, ref CartridgeUiReadyEvent args)
-    {
-        UpdateReaderUi(ent, args.Loader);
-    }
-    #endregion
-
-    private bool TryGetArticles(EntityUid uid, [NotNullWhen(true)] out List<NewsArticle>? articles)
-    {
-        if (_station.GetOwningStation(uid) is not { } station ||
-            !TryComp<StationNewsComponent>(station, out var stationNews))
+        if (station == null || !TryComp<StationNewsComponent>(station.Value, out var stationNews))
         {
             articles = null;
             return false;
@@ -328,42 +263,6 @@ public sealed partial class NewsSystem : SharedNewsSystem
 
         var state = new NewsWriterBoundUserInterfaceState(articles.ToArray(), ent.Comp.PublishEnabled, ent.Comp.NextPublish, ent.Comp.DraftTitle, ent.Comp.DraftContent);
         _ui.SetUiState(ent.Owner, NewsWriterUiKey.Key, state);
-    }
-
-    private void UpdateReaderUi(Entity<NewsReaderCartridgeComponent> ent, EntityUid loaderUid)
-    {
-        if (!TryGetArticles(ent, out var articles))
-            return;
-
-        NewsReaderLeafArticle(ent, 0);
-
-        if (articles.Count == 0)
-        {
-            _cartridgeLoaderSystem.UpdateCartridgeUiState(loaderUid, new NewsReaderEmptyBoundUserInterfaceState(ent.Comp.NotificationOn));
-            return;
-        }
-
-        var state = new NewsReaderBoundUserInterfaceState(
-            articles[ent.Comp.ArticleNumber],
-            ent.Comp.ArticleNumber + 1,
-            articles.Count,
-            ent.Comp.NotificationOn);
-
-        _cartridgeLoaderSystem.UpdateCartridgeUiState(loaderUid, state);
-    }
-
-    private void NewsReaderLeafArticle(Entity<NewsReaderCartridgeComponent> ent, int leafDir)
-    {
-        if (!TryGetArticles(ent, out var articles))
-            return;
-
-        ent.Comp.ArticleNumber += leafDir;
-
-        if (ent.Comp.ArticleNumber >= articles.Count)
-            ent.Comp.ArticleNumber = 0;
-
-        if (ent.Comp.ArticleNumber < 0)
-            ent.Comp.ArticleNumber = articles.Count - 1;
     }
 
     private void UpdateWriterDevices()

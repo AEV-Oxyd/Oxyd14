@@ -1,32 +1,36 @@
-using Content.Shared.Containers.ItemSlots;
 using Robust.Shared.GameStates;
 
 namespace Content.Shared._Oxyd.Computers.Hardware;
 
-[RegisterComponent, NetworkedComponent]
+/// <summary>
+/// Defines modular physical hardware slots and expansion capacities on a computer motherboard.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ModularComputerComponent : Component
 {
-    public const string CpuSlotId = "computer_cpu";
-    public const string RamSlotId = "computer_ram";
-    public const string StorageSlotId = "computer_drive";
-    public const string NetSlotId = "computer_nic";
-    public const string BatterySlotId = "computer_battery";
-    public const string SensorSlotId = "computer_sensor";
-    public const string IdSlotModuleId = "computer_id_module";
-    public const string DiskSlotModuleId = "computer_disk_module";
-    public const string ExtraDriveContainerId = "computer_extra_drives";
+    public const string ContainerHardware = "hardware_container";
+    public const string SlotCpu = "cpu_slot";
+    public const string SlotRam = "ram_slot";
+    public const string SlotRamSecondary = "ram_slot_2";
+    public const string SlotStorage = "storage_slot";
+    public const string SlotNetwork = "net_slot";
+    public const string SlotBattery = "battery_slot";
+    public const string SlotSensor = "sensor_slot";
+    public const string SlotIdModule = "id_slot_module";
+    public const string SlotDiskModule = "disk_slot_module";
 
-    [DataField] public ItemSlot CpuSlot = new();
-    [DataField] public ItemSlot RamSlot = new();
-    [DataField] public ItemSlot StorageSlot = new();
-    [DataField] public ItemSlot NetSlot = new();
-    [DataField] public ItemSlot? BatterySlot;
-    [DataField] public ItemSlot? SensorSlot;
-    [DataField] public ItemSlot? IdSlotModule;
-    [DataField] public ItemSlot? DiskSlotModule;
+    [DataField, AutoNetworkedField]
+    public int MaxHardDriveSlots = 1;
 
-    [DataField] public int MaxHardDriveSlots = 2;
-    [DataField] public int MaxRamSlots = 2;
-    [DataField] public HardwarePartSize MaxHardDriveSize = HardwarePartSize.Large;
-    [DataField] public HardwarePartSize MaxBatterySize = HardwarePartSize.Small;
+    [DataField, AutoNetworkedField]
+    public int MaxRamSlots = 2;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize MaxHardDriveSize = HardwarePartSize.Medium;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize MaxBatterySize = HardwarePartSize.Small;
+
+    [DataField, AutoNetworkedField]
+    public List<EntityUid> InstalledParts = new();
 }

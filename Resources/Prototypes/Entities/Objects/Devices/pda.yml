@@ -64,9 +64,7 @@
       PDA-pen: !type:ContainerSlot {}
       PDA-pai: !type:ContainerSlot {}
       PDA-disk: !type:ContainerSlot {}
-      Cartridge-Slot: !type:ContainerSlot {}
-      preinstalled-program-container: !type:Container
-      removable-program-container: !type:Container
+      computer_board: !type:ContainerSlot {}
   - type: ItemSlots
   - type: Clothing
     quickEquip: false
@@ -90,31 +88,25 @@
   - type: WirelessNetwork
     range: 500
   - type: DeviceGuid
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-    cartridgeSlot:
-      name: device-pda-slot-component-slot-name-cartridge
-      priority: 1
-      ejectSound: /Audio/Machines/id_swipe.ogg
-      insertSound: /Audio/Machines/id_insert.ogg
-      whitelist:
-        components:
-          - Cartridge
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-  - type: ActivatableUI
-    key: enum.PdaUiKey.Key
-    singleUser: true
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydPdaEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS 1.4™"
+    subtitle: " | Portable Terminal"
+  - type: DeviceLinkSink
+    ports:
+    - PdaFlashlightToggleSink
+    - PdaIdSlotEjectSink
+    - PdaPenSlotEjectSink
+    - MachineCommandReceiver
+  - type: DeviceLinkSource
+    ports:
+    - PdaFlashlightStatusSource
+    - PdaIdSlotStatusSource
+    - PdaPenSlotStatusSource
+    - MachineStatusSender
   - type: UserInterface
     interfaces:
-      enum.PdaUiKey.Key:
-        type: PdaBoundUserInterface
       enum.StoreUiKey.Key:
         type: StoreBoundUserInterface
       enum.RingerUiKey.Key:
@@ -164,31 +156,11 @@
   parent: BasePDA
   id: BaseSecurityPDA
   abstract: true
-  components:
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: WantedListCartridge
 
 - type: entity
   parent: BasePDA
   id: BaseMedicalPDA
   abstract: true
-  components:
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: MedTekCartridge
 
 - type: entity
   parent: BasePDA
@@ -426,14 +398,6 @@
         - Write
       ejectSound: null
       insertSound: null
-  - type: CartridgeLoader
-    cartridgeSlot:
-      priority: 1
-      ejectSound: null
-      insertSound: null
-      whitelist:
-        components:
-        - Cartridge
   - type: Appearance
     appearanceDataInit:
      enum.PdaVisuals.PdaType:
@@ -444,12 +408,6 @@
     accentHColor: "#333333"
   - type: Icon
     state: pda-mime
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NewsReaderCartridge
   - type: PermanentStatusEffects # for random sentience event
     statusEffects:
     - TraitStatusEffectMuted
@@ -501,15 +459,6 @@
     accentVColor: "#a23e3e"
   - type: Icon
     state: pda-qm
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: AstroNavCartridge
 
 - type: entity
   parent: BasePDA
@@ -547,15 +496,6 @@
     accentVColor: "#8900c9"
   - type: Icon
     state: pda-miner
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: AstroNavCartridge
 
 - type: entity
   parent: BasePDA
@@ -898,16 +838,6 @@
     accentHColor: "#447987"
   - type: Icon
     state: pda-hos
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: WantedListCartridge
-        - id: LogProbeCartridge
 
 - type: entity
   parent: BaseSecurityPDA
@@ -969,18 +899,6 @@
     borderColor: "#00842e"
   - type: Icon
     state: pda-centcom
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: MedTekCartridge
-        - id: WantedListCartridge
-        - id: LogProbeCartridge
-        - id: AstroNavCartridge
 
 - type: entity
   parent: CentcomPDA
@@ -995,20 +913,6 @@
     maxScanRange: null
     scanDelay: 0
     silent: true
-  - type: CartridgeLoader
-    notificationsEnabled: false
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: LogProbeCartridge
-        - id: WantedListCartridge
-        - id: MedTekCartridge
-        - id: AstroNavCartridge
   - type: Tag #  Ignore Chameleon tags
     tags:
     - DoorBumpOpener
@@ -1131,12 +1035,6 @@
     borderColor: "#891417"
   - type: Icon
     state: pda-syndi
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
 
 - type: entity
   parent: [ SyndiPDA, BaseSyndicateContraband ]
@@ -1169,13 +1067,6 @@
        pda-syndi-corpsman
   - type: Icon
     state: pda-syndi-corpsman
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: MedTekCartridge
 
 - type: entity
   parent: [ SyndiOperativePDA, BaseSyndicateContraband ]
@@ -1213,18 +1104,6 @@
     accentVColor: "#447987"
   - type: Icon
     state: pda-ert
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: MedTekCartridge
-        - id: WantedListCartridge
-        - id: LogProbeCartridge
-        - id: AstroNavCartridge
 
 - type: entity
   parent: ERTLeaderPDA
@@ -1405,16 +1284,6 @@
     borderColor: "#774705"
   - type: Icon
     state: pda-detective
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: WantedListCartridge
-        - id: LogProbeCartridge
 
 - type: entity
   parent: BaseMedicalPDA
@@ -1435,16 +1304,6 @@
     accentVColor: "#d7d7d0"
   - type: Icon
     state: pda-brigmedic
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: WantedListCartridge
-        - id: MedTekCartridge
 
 - type: entity
   parent: ClownPDA
@@ -1620,8 +1479,6 @@
     requireTag: WhitelistChameleonPDA
   - type: UserInterface
     interfaces:
-      enum.PdaUiKey.Key:
-        type: PdaBoundUserInterface
       enum.StoreUiKey.Key:
         type: StoreBoundUserInterface
       enum.RingerUiKey.Key:

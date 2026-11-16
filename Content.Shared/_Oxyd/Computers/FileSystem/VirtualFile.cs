@@ -28,6 +28,19 @@ public abstract partial class VirtualFile
     [DataField] public string? EncryptionKeyHash = null;
 
     public string FullPath => (Directory.EndsWith('/') ? Directory : Directory + "/") + Name + "." + Extension;
+
+    public abstract VirtualFile Clone();
+
+    protected void CopyBaseFields(VirtualFile target)
+    {
+        target.Name = Name;
+        target.Extension = Extension;
+        target.Directory = Directory;
+        target.Size = Size;
+        target.IsReadOnly = IsReadOnly;
+        target.IsEncrypted = IsEncrypted;
+        target.EncryptionKeyHash = EncryptionKeyHash;
+    }
 }
 
 [Serializable, NetSerializable]
@@ -38,6 +51,13 @@ public sealed partial class TextVirtualFile : VirtualFile
     public TextVirtualFile()
     {
         Extension = "txt";
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new TextVirtualFile { TextContent = TextContent };
+        CopyBaseFields(copy);
+        return copy;
     }
 }
 
@@ -52,6 +72,19 @@ public sealed partial class RecipeBlueprintFile : VirtualFile
     public RecipeBlueprintFile()
     {
         Extension = "lathe";
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new RecipeBlueprintFile
+        {
+            Recipe = Recipe,
+            Recipes = new List<ProtoId<LatheRecipePrototype>>(Recipes),
+            RemainingUses = RemainingUses,
+            DrmLocked = DrmLocked
+        };
+        CopyBaseFields(copy);
+        return copy;
     }
 
     public IEnumerable<ProtoId<LatheRecipePrototype>> GetAllRecipes()
@@ -103,6 +136,17 @@ public sealed partial class DatabaseVirtualFile : VirtualFile
     {
         Extension = "db";
     }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new DatabaseVirtualFile
+        {
+            TableName = TableName,
+            Data = new Dictionary<string, string>(Data)
+        };
+        CopyBaseFields(copy);
+        return copy;
+    }
 }
 
 [Serializable, NetSerializable]
@@ -115,8 +159,78 @@ public sealed partial class ProgramVirtualFile : VirtualFile
 
     public ProgramVirtualFile()
     {
-        Extension = "bin";
+        Extension = "nte";
         Directory = "/bin/";
         Size = 2048;
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new ProgramVirtualFile
+        {
+            ProgramId = ProgramId,
+            Title = Title,
+            CpuUsagePercent = CpuUsagePercent,
+            RamUsageMb = RamUsageMb
+        };
+        CopyBaseFields(copy);
+        return copy;
+    }
+}
+
+[DataDefinition, Serializable, NetSerializable]
+public sealed partial class TaskEntryData
+{
+    [DataField]
+    public int Id;
+
+    [DataField]
+    public string Description = string.Empty;
+
+    [DataField]
+    public string TaskIsFor = string.Empty;
+
+    [DataField]
+    public bool IsTaskDone;
+
+    [DataField]
+    public byte Priority = 1;
+}
+
+/// <summary>
+/// Boot-resistant persistent task checklist stored on hard drives under /tasks/*.tsk.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed partial class TaskListVirtualFile : VirtualFile
+{
+    [DataField]
+    public int NextId = 1;
+
+    [DataField]
+    public List<TaskEntryData> Tasks = new();
+
+    public TaskListVirtualFile()
+    {
+        Extension = "tsk";
+        Directory = "/tasks/";
+        Size = 512;
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new TaskListVirtualFile
+        {
+            NextId = NextId,
+            Tasks = Tasks.Select(t => new TaskEntryData
+            {
+                Id = t.Id,
+                Description = t.Description,
+                TaskIsFor = t.TaskIsFor,
+                IsTaskDone = t.IsTaskDone,
+                Priority = t.Priority
+            }).ToList()
+        };
+        CopyBaseFields(copy);
+        return copy;
     }
 }

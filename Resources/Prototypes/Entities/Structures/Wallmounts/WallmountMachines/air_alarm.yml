@@ -25,10 +25,16 @@
     - AirDanger
     - AirWarning
     - AirNormal
+    - AirAlarmStatusSource
+    - MachineStatusSender
     lastSignals:
       AirDanger: false
       AirWarning: false
       AirNormal: false
+  - type: DeviceLinkSink
+    ports:
+    - AirAlarmCommandSink
+    - MachineCommandReceiver
   - type: AtmosAlarmable
     syncWith:
     - AirAlarm
@@ -48,15 +54,12 @@
   - type: AtmosDevice
   - type: AirAlarm
   - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydAtmosEmbeddedController
     borderColor: "#00a8e8"
     accentHColor: "#33b5e5"
     accentVColor: "#005577"
     title: "AIR ALARM"
     subtitle: " | Atmospheric Monitor"
-    defaultPrograms:
-    - OxydAtmosControlCartridge
-    - OxydEmbeddedOsCartridge
-    - OxydTerminalCartridge
   - type: AtmosAlertsDevice
     group: AirAlarm
   - type: Clickable
@@ -66,8 +69,6 @@
     singleUser: false
   - type: UserInterface
     interfaces:
-      enum.SharedAirAlarmInterfaceKey.Key:
-        type: AirAlarmBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: ActivatableUIRequiresPower
@@ -83,6 +84,7 @@
   - type: ContainerContainer
     containers:
       board: !type:Container
+      computer_board: !type:ContainerSlot {}
   - type: Appearance
   - type: WiresVisuals
   - type: Sprite

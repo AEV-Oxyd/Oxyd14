@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared.DeviceNetwork;
 using Content.Shared.DeviceNetwork.Components;
@@ -10,9 +11,16 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
 {
     [Dependency] private IGameTiming _timing = default!;
 
+    private EntityQuery<NetworkBandwidthComponent> _bwQuery;
+    private EntityQuery<NetworkRouterComponent> _routerQuery;
+
     public override void Initialize()
     {
         base.Initialize();
+
+        _bwQuery = GetEntityQuery<NetworkBandwidthComponent>();
+        _routerQuery = GetEntityQuery<NetworkRouterComponent>();
+
         SubscribeLocalEvent<NetworkBandwidthComponent, BeforePacketSentEvent>(OnBeforePacketSent);
         SubscribeLocalEvent<NetworkBandwidthComponent, DeviceNetworkPacketEvent<INetworkPayload>>(OnPacketReceived);
     }
@@ -32,16 +40,12 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             comp.CurrentBytesReceived = 0;
             comp.CurrentBytesSent = 0;
 
-            // Drain queued packets based on maximum processing capacity
             var drainRate = Math.Max(10, comp.MaxBps / 1024);
             comp.CurrentQueuedPackets = Math.Max(0, comp.CurrentQueuedPackets - drainRate);
-
-            // Clamp backlog so DDoS spikes cannot persist saturation for 20+ minutes
             var maxQueue = comp.BufferQueueLimit * 2;
             comp.CurrentQueuedPackets = Math.Min(comp.CurrentQueuedPackets, maxQueue);
 
             var wasSaturated = comp.IsSaturated;
-            // Node remains saturated as long as backlog exceeds buffer queue limit
             comp.IsSaturated = comp.CurrentQueuedPackets > comp.BufferQueueLimit;
             if (wasSaturated != comp.IsSaturated)
                 Dirty(uid, comp);
@@ -50,219 +54,162 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
 
     private void OnBeforePacketSent(EntityUid uid, NetworkBandwidthComponent comp, ref BeforePacketSentEvent args)
     {
-        // When link bandwidth is exhausted or queued packets exceed buffer limit, packets are dropped
-        if (comp.IsSaturated)
-        {
+        if (comp.MaxUploadBps <= 0 || comp.IsSaturated)
             args.Cancelled = true;
-        }
     }
 
     private void OnPacketReceived(EntityUid uid, NetworkBandwidthComponent comp, ref DeviceNetworkPacketEvent<INetworkPayload> args)
     {
-        var approxSize = 128; // Standard packet header / routing metadata overhead
-        var protocol = "DATA";
+        if (comp.MaxBps <= 0)
+            return;
+
         var summary = args.Data.GetType().Name;
-        var rawPayload = summary;
-        var isEncrypted = false;
+        var byteSize = Math.Max(64, summary.Length * 4 + 32);
 
-        switch (args.Data)
+        comp.CurrentQueuedPackets++;
+        if (comp.CurrentQueuedPackets > comp.BufferQueueLimit)
+            comp.IsSaturated = true;
+
+        var dropped = comp.IsSaturated;
+        if (!dropped)
+            comp.CurrentBytesReceived += byteSize;
+
+        var localAddr = "LOCAL";
+        if (TryComp<DeviceNetworkComponent>(uid, out var netComp))
         {
-            case FileTransferPayload ft:
-                approxSize += ft.FileContent.Length + ft.FileName.Length + ft.Path.Length;
-                protocol = "TCP/FILE";
-                summary = $"Transfer {ft.FileName}.{ft.Extension} ({approxSize} B)";
-                rawPayload = ft.FileContent;
-                break;
-            case DdosFloodPayload df:
-                approxSize += df.FloodData.Length;
-                protocol = "UDP/FLOOD";
-                summary = $"DDoS Flood Packet ({df.FloodData.Length} B)";
-                rawPayload = df.FloodData;
-                break;
-            case FileDownloadRequestPayload dr:
-                approxSize += dr.TargetPath.Length + dr.AuthToken.Length;
-                protocol = "HTTP/REQ";
-                summary = $"Download request: {dr.TargetPath}";
-                rawPayload = dr.TargetPath;
-                break;
-            case FileDeleteRequestPayload del:
-                approxSize += del.TargetPath.Length + del.AuthToken.Length;
-                protocol = "HTTP/DEL";
-                summary = $"Delete request: {del.TargetPath}";
-                rawPayload = del.TargetPath;
-                break;
-            case PingPayload ping:
-                protocol = "ICMP/PING";
-                summary = $"Ping from {ping.SenderGuid}";
-                rawPayload = ping.SenderGuid;
-                break;
-            case PongPayload pong:
-                protocol = "ICMP/PONG";
-                summary = $"Pong to {pong.TargetGuid}";
-                rawPayload = pong.TargetGuid;
-                break;
-            case RemoteControlRequestPayload rc:
-                approxSize += rc.Command.Length + rc.AuthToken.Length;
-                protocol = "RPC/CMD";
-                summary = $"Remote command: {rc.Command}";
-                rawPayload = rc.Command;
-                break;
-            default:
-                approxSize += 128;
-                break;
+            var addrVal = netComp.Address;
+            localAddr = addrVal.ToString();
         }
+        var pkt = StorePacket(
+            uid,
+            args.SenderAddress.ToString(),
+            localAddr,
+            "DEVNET",
+            summary,
+            byteSize,
+            isEncrypted: false,
+            rawPayload: $"sender={args.SenderAddress};type={summary}",
+            dropped: dropped,
+            comp: comp);
 
-        comp.CurrentBytesReceived += approxSize;
-
-        // Bandwidth exhaustion occurs whenever traffic (normal file operations or DDoS floods) exceeds MaxBps
-        if (comp.CurrentBytesReceived > comp.MaxBps)
-        {
-            var overflowPackets = 1 + (approxSize / 512);
-            var maxQueue = comp.BufferQueueLimit * 2;
-            comp.CurrentQueuedPackets = Math.Clamp(comp.CurrentQueuedPackets + overflowPackets, 0, maxQueue);
-
-            if (comp.CurrentQueuedPackets > comp.BufferQueueLimit)
-            {
-                if (!comp.IsSaturated)
-                {
-                    comp.IsSaturated = true;
-                    Dirty(uid, comp);
-                }
-            }
-        }
-
-        var senderEntity = args.Sender;
-        var sourceStr = (senderEntity != null && TryComp<DeviceGuidComponent>(senderEntity, out var srcGuid))
-            ? srcGuid.Guid
-            : (args.SenderAddress != 0 ? $"NET:{args.SenderAddress}" : "SRC-UNKNOWN");
-
-        var targetStr = TryComp<DeviceGuidComponent>(uid, out var tgtGuid)
-            ? tgtGuid.Guid
-            : $"DEV:{uid}";
-
-        StorePacket(uid, sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated, comp, rawPayload, isEncrypted);
-        LogPacketToRouters(sourceStr, targetStr, protocol, summary, approxSize, comp.IsSaturated, rawPayload, isEncrypted);
+        LogPacketToRouters(pkt, senderUid: args.Sender);
     }
 
-    /// <summary>
-    /// Stores a data packet in the entity's network packet buffer.
-    /// </summary>
     public NetworkDataPacket StorePacket(
         EntityUid uid,
-        string source,
-        string target,
+        string sourceAddr,
+        string targetAddr,
         string protocol,
         string summary,
         int byteSize,
-        bool dropped = false,
-        NetworkBandwidthComponent? comp = null,
+        bool isEncrypted = false,
         string rawPayload = "",
-        bool isEncrypted = false)
+        bool dropped = false,
+        NetworkBandwidthComponent? comp = null)
     {
-        var packet = new NetworkDataPacket
+        var pkt = new NetworkDataPacket
         {
-            PacketId = Guid.NewGuid().ToString("N")[..8],
-            SourceAddress = source,
-            TargetAddress = target,
+            PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            SourceAddress = sourceAddr,
+            TargetAddress = targetAddr,
             Protocol = protocol,
             PayloadSummary = summary,
-            RawPayload = string.IsNullOrEmpty(rawPayload) ? summary : rawPayload,
+            RawPayload = rawPayload,
             IsEncrypted = isEncrypted,
             ByteSize = byteSize,
             Timestamp = _timing.CurTime,
             Dropped = dropped
         };
 
-        if (!Resolve(uid, ref comp, false))
-            return packet;
+        if (!_bwQuery.Resolve(uid, ref comp, false))
+            return pkt;
 
-        comp.StoredPackets.Add(packet);
-        if (comp.StoredPackets.Count > comp.MaxStoredPackets)
+        comp.StoredPackets.Add(pkt);
+        while (comp.StoredPackets.Count > comp.MaxStoredPackets)
         {
             comp.StoredPackets.RemoveAt(0);
         }
 
         Dirty(uid, comp);
-        return packet;
+        return pkt;
     }
 
-    /// <summary>
-    /// Broadcasts a data packet to all station routers and data servers for network monitoring, traffic routing, and auditing.
-    /// </summary>
-    public void LogPacketToRouters(
-        string source,
-        string target,
-        string protocol,
-        string summary,
-        int byteSize,
-        bool dropped = false,
-        string rawPayload = "",
-        bool isEncrypted = false)
+    public void LogPacketToRouters(NetworkDataPacket pkt, EntityUid? senderUid = null)
     {
-        var routerQuery = EntityQueryEnumerator<DeviceNetworkRouterComponent, NetworkBandwidthComponent>();
-        while (routerQuery.MoveNext(out var rUid, out _, out var rBw))
+        var routerQuery = EntityQueryEnumerator<NetworkRouterComponent>();
+        while (routerQuery.MoveNext(out var rUid, out var netRouter))
         {
-            var pkt = StorePacket(rUid, source, target, protocol, summary, byteSize, dropped, rBw, rawPayload, isEncrypted);
-            if (TryComp<NetworkRouterComponent>(rUid, out var netRouter))
+            if (TryComp<EmbeddedComputerHostComponent>(rUid, out var host) && host.ComputerEntity is { } hostComp)
             {
-                if (netRouter.RecordedPackets.Count >= netRouter.MaxRecordedPackets)
-                    netRouter.RecordedPackets.RemoveAt(0);
-                netRouter.RecordedPackets.Add(pkt);
-                netRouter.ConnectedDevices.Add(source);
-                netRouter.ConnectedDevices.Add(target);
+                if (!TryComp<OxydComputerComponent>(hostComp, out var oxyd) || !oxyd.IsPowered)
+                    continue;
             }
+
+            if (_bwQuery.TryComp(rUid, out var rBw))
+            {
+                rBw.StoredPackets.Add(pkt);
+                while (rBw.StoredPackets.Count > rBw.MaxStoredPackets)
+                {
+                    rBw.StoredPackets.RemoveAt(0);
+                }
+                Dirty(rUid, rBw);
+            }
+
+            netRouter.RecordedPackets.Add(pkt);
+            while (netRouter.RecordedPackets.Count > netRouter.MaxRecordedPackets)
+            {
+                netRouter.RecordedPackets.RemoveAt(0);
+            }
+
+            Dirty(rUid, netRouter);
         }
     }
 
-    /// <summary>
-    /// Explicitly records outgoing data transmission against the entity's network card (upload speed limit).
-    /// </summary>
-    public void RecordDataTransmitted(EntityUid uid, int byteCount, NetworkBandwidthComponent? comp = null)
+    public void RecordDataTransmitted(EntityUid uid, int byteCount, bool isUpload = false, NetworkBandwidthComponent? comp = null)
     {
-        if (!Resolve(uid, ref comp, false))
+        if (!_bwQuery.Resolve(uid, ref comp, false))
             return;
 
-        comp.CurrentBytesSent += byteCount;
-        var limit = comp.MaxUploadBps > 0 ? Math.Min(comp.MaxBps, comp.MaxUploadBps) : comp.MaxBps;
-        if (comp.CurrentBytesSent > limit)
+        if (isUpload)
+            comp.CurrentBytesSent += Math.Max(0, byteCount);
+        else
+            comp.CurrentBytesReceived += Math.Max(0, byteCount);
+
+        var limit = isUpload ? comp.MaxUploadBps : comp.MaxBps;
+        if (limit > 0 && (isUpload ? comp.CurrentBytesSent : comp.CurrentBytesReceived) > limit * 2)
         {
-            var overflowPackets = 1 + (byteCount / 512);
-            var maxQueue = comp.BufferQueueLimit * 2;
-            comp.CurrentQueuedPackets = Math.Clamp(comp.CurrentQueuedPackets + overflowPackets, 0, maxQueue);
-            if (comp.CurrentQueuedPackets > comp.BufferQueueLimit && !comp.IsSaturated)
-            {
+            comp.CurrentQueuedPackets++;
+            if (comp.CurrentQueuedPackets > comp.BufferQueueLimit)
                 comp.IsSaturated = true;
-                Dirty(uid, comp);
-            }
         }
+
+        Dirty(uid, comp);
     }
 
-    /// <summary>
-    /// Accounts for continuous screen sharing or video streaming bandwidth between a streamed target device and a viewer host.
-    /// </summary>
+    public int GetEffectiveTransferRateBps(EntityUid senderUid, EntityUid receiverUid)
+    {
+        var up = _bwQuery.TryComp(senderUid, out var sBw) && sBw.MaxUploadBps > 0 ? sBw.MaxUploadBps : 0;
+        var down = _bwQuery.TryComp(receiverUid, out var rBw) && rBw.MaxBps > 0 ? rBw.MaxBps : 0;
+
+        if (up <= 0 || down <= 0)
+            return 0;
+
+        var rate = Math.Min(up, down);
+        var routerQuery = EntityQueryEnumerator<NetworkRouterComponent>();
+        if (routerQuery.MoveNext(out var rUid, out _) && _bwQuery.TryComp(rUid, out var routerBw) && routerBw.MaxBps > 0)
+            rate = Math.Min(rate, routerBw.MaxBps);
+
+        return rate;
+    }
+
     public void RecordScreenSharingBandwidth(EntityUid targetUid, EntityUid? viewerTerminalUid = null, int byteCount = 2048)
     {
-        RecordDataTransmitted(targetUid, byteCount);
+        if (!_bwQuery.TryComp(targetUid, out var targetBw) || targetBw.IsSaturated)
+            return;
 
-        if (viewerTerminalUid != null && Exists(viewerTerminalUid.Value))
-        {
-            var hostUid = Transform(viewerTerminalUid.Value).ParentUid;
-            var recvUid = hostUid.IsValid() ? hostUid : viewerTerminalUid.Value;
-            if (TryComp<NetworkBandwidthComponent>(recvUid, out var bw))
-            {
-                bw.CurrentBytesReceived += byteCount;
-                if (bw.CurrentBytesReceived > bw.MaxBps)
-                {
-                    var overflow = 1 + (byteCount / 512);
-                    var maxQueue = bw.BufferQueueLimit * 2;
-                    bw.CurrentQueuedPackets = Math.Clamp(bw.CurrentQueuedPackets + overflow, 0, maxQueue);
-                    if (bw.CurrentQueuedPackets > bw.BufferQueueLimit && !bw.IsSaturated)
-                    {
-                        bw.IsSaturated = true;
-                        Dirty(recvUid, bw);
-                    }
-                }
-            }
-        }
+        RecordDataTransmitted(targetUid, byteCount, isUpload: true, targetBw);
+
+        if (viewerTerminalUid is { } term && _bwQuery.TryComp(term, out var viewerBw))
+            RecordDataTransmitted(term, byteCount, isUpload: false, viewerBw);
     }
 }

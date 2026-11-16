@@ -36,7 +36,7 @@
       - id: RubberStampGreytide
         weight: 0.1
       - id: LuxuryPen
-      - id: NanoTaskCartridge
+      - id: ProgramDiskNanoTask
 
 - type: entity
   parent: [ BaseStructureDynamic, BaseBagOpenClose, StructureHealthContainerWeak ]

@@ -2,37 +2,79 @@ using Robust.Shared.GameStates;
 
 namespace Content.Shared._Oxyd.Computers.Hardware;
 
+/// <summary>
+/// Cached effective hardware capabilities derived exclusively from the physical
+/// hardware item entities installed in the computer's slots/container.
+/// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ComputerStatsComponent : Component
 {
     [DataField, AutoNetworkedField]
-    public float CpuFrequencyMhz = 100f;
+    public bool HasCpu;
 
     [DataField, AutoNetworkedField]
-    public int RamMb = 64;
+    public int CpuFrequencyMhz;
 
     [DataField, AutoNetworkedField]
-    public int StorageBytes = 1048576; // 1 MB
+    public int MaxConcurrentPrograms;
 
     [DataField, AutoNetworkedField]
-    public int NetworkBandwidthBps = 10000; // 10 KB/s
+    public bool HasRam;
 
     [DataField, AutoNetworkedField]
-    public int NetworkUploadBandwidthBps = 10000; // 10 KB/s
+    public int RamMb;
 
     [DataField, AutoNetworkedField]
-    public float BatteryChargePercent = 100f;
+    public int UsedRamMb;
 
     [DataField, AutoNetworkedField]
-    public bool HasBattery = false;
+    public bool HasHardDrive;
 
     [DataField, AutoNetworkedField]
-    public int HardDriveCount = 1;
+    public EntityUid? PrimaryDriveUid;
 
-    /// <summary>
-    /// If true, this device represents single-purpose embedded machinery (e.g. APCs, single-purpose vendor interfaces)
-    /// and its raw file system and internals can only be inspected using a Chief Engineer Hardware Debugging Terminal.
-    /// </summary>
     [DataField, AutoNetworkedField]
-    public bool DirectHardwareAccessOnly = false;
+    public int StorageBytes;
+
+    [DataField, AutoNetworkedField]
+    public int UsedStorageBytes;
+
+    [DataField, AutoNetworkedField]
+    public bool HasNetworkCard;
+
+    [DataField, AutoNetworkedField]
+    public int NetworkBandwidthBps;
+
+    [DataField, AutoNetworkedField]
+    public int NetworkUploadBandwidthBps;
+
+    [DataField, AutoNetworkedField]
+    public bool HasBattery;
+
+    [DataField, AutoNetworkedField]
+    public float BatteryCharge;
+
+    [DataField, AutoNetworkedField]
+    public float BatteryMaxCharge;
+
+    [DataField, AutoNetworkedField]
+    public bool HasDataPort;
+
+    [DataField, AutoNetworkedField]
+    public bool HasSensorModule;
+
+    [DataField, AutoNetworkedField]
+    public bool HasIdSlotModule;
+
+    [DataField, AutoNetworkedField]
+    public bool HasDiskSlotModule;
+
+    [DataField, AutoNetworkedField]
+    public float CurrentCpuLoadPercent;
+
+    [DataField, AutoNetworkedField]
+    public bool IsBooted;
+
+    [DataField, AutoNetworkedField]
+    public string BootError = string.Empty;
 }

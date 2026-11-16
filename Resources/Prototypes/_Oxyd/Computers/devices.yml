@@ -1,6 +1,11 @@
 # ==============================================================================
 # Oxyd Modular Computing & Unified Electronics Framework
-# Standard .NET String Architecture - No UTF-8 conversions
+# All computers are separate encapsulated entities with real hardware modules,
+# DeviceLink host bridging, DataPorts, and .nte boot-first-executable drives.
+# ==============================================================================
+
+# ==============================================================================
+# Host Machine: Oxyd PDA & Tablet
 # ==============================================================================
 
 - type: entity
@@ -16,125 +21,11 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
-  - type: OxydComputer
-    template: Pda
-    defaultScreenSize: 580, 480
-    allowRemoteControl: true
-    requiresPower: false
-  - type: FileSystem
-    maxStorageBytes: 2097152
-    files:
-      "/sys/os.sys": !type:TextVirtualFile
-        name: os
-        extension: sys
-        directory: /sys/
-        size: 64
-        isReadOnly: true
-        textContent: "NTOS-PORTABLE-EDITION-4.2"
-      "/sys/system.log": !type:TextVirtualFile
-        name: system
-        extension: log
-        directory: /sys/
-        size: 128
-        isReadOnly: false
-        textContent: "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n[00:00:00] [SYSTEM] NTOS 1.4™ kernel initialized."
-      "/notes/shift_notes.txt": !type:TextVirtualFile
-        name: shift_notes
-        extension: txt
-        directory: /notes/
-        size: 32
-        isReadOnly: false
-        textContent: "Station operations in progress."
-      "/bin/os.bin": !type:ProgramVirtualFile
-        name: os
-        extension: bin
-        directory: /bin/
-        size: 4096
-        isReadOnly: true
-        programId: OxydOsCartridge
-        title: "NTOS System"
-      "/bin/file_browser.bin": !type:ProgramVirtualFile
-        name: file_browser
-        extension: bin
-        directory: /bin/
-        size: 4096
-        isReadOnly: false
-        programId: OxydFileBrowserCartridge
-        title: "File Browser"
-      "/bin/terminal.bin": !type:ProgramVirtualFile
-        name: terminal
-        extension: bin
-        directory: /bin/
-        size: 3072
-        isReadOnly: false
-        programId: OxydTerminalCartridge
-        title: "Terminal"
-      "/bin/downloader.bin": !type:ProgramVirtualFile
-        name: downloader
-        extension: bin
-        directory: /bin/
-        size: 5120
-        isReadOnly: false
-        programId: OxydDownloaderCartridge
-        title: "Downloader"
-      "/bin/crew_manifest.bin": !type:ProgramVirtualFile
-        name: crew_manifest
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: CrewManifestCartridge
-        title: "Crew Manifest"
-      "/bin/notekeeper.bin": !type:ProgramVirtualFile
-        name: notekeeper
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: NotekeeperCartridge
-        title: "Notekeeper"
-      "/bin/nanotask.bin": !type:ProgramVirtualFile
-        name: nanotask
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: NanoTaskCartridge
-        title: "Tasks"
-      "/bin/news_reader.bin": !type:ProgramVirtualFile
-        name: news_reader
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: NewsReaderCartridge
-        title: "News Reader"
-  - type: ModularComputer
-    maxHardDriveSlots: 1
-    maxBatterySize: Small
-  - type: ComputerStats
-    cpuFrequencyMhz: 400
-    ramMb: 512
-    storageBytes: 2097152
-    networkBandwidthBps: 128000
-    networkUploadBandwidthBps: 64000
-    directHardwareAccessOnly: false
-  - type: NetworkBandwidth
-    maxBps: 128000
-    maxUploadBps: 64000
-    bufferQueueLimit: 50
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: OxydOsCartridge
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
-        - id: NanoTaskCartridge
-        - id: NewsReaderCartridge
-        - id: OxydFileBrowserCartridge
-        - id: OxydTerminalCartridge
-        - id: OxydDownloaderCartridge
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydPdaEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS 1.4™"
+    subtitle: " | Portable Terminal"
 
 - type: entity
   parent: BaseOxydPDA
@@ -142,59 +33,25 @@
   name: Oxyd tablet
   description: A rugged tactical slate tablet with enhanced memory and expandable processing modules.
   components:
-  - type: Tag
-    tags:
-    - Oxyd
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
-  - type: OxydComputer
-    template: Pda
-    defaultScreenSize: 680, 520
-    allowRemoteControl: true
-    requiresPower: false
-  - type: FileSystem
-    maxStorageBytes: 8388608
-    files:
-      "/sys/os.sys": !type:TextVirtualFile
-        name: os
-        extension: sys
-        directory: /sys/
-        size: 64
-        isReadOnly: true
-        textContent: "NTOS-TABLET-ENTERPRISE-4.2"
-      "/sys/system.log": !type:TextVirtualFile
-        name: system
-        extension: log
-        directory: /sys/
-        size: 128
-        isReadOnly: false
-        textContent: "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n[00:00:00] [SYSTEM] NTOS 1.4™ kernel initialized."
-      "/records/local_manifest.db": !type:DatabaseVirtualFile
-        name: local_manifest
-        extension: db
-        directory: /records/
-        size: 128
-        tableName: crew_manifest
-        data: {}
-  - type: ComputerStats
-    cpuFrequencyMhz: 800
-    ramMb: 1024
-    storageBytes: 8388608
-    networkBandwidthBps: 500000
-    networkUploadBandwidthBps: 250000
-    directHardwareAccessOnly: false
-  - type: NetworkBandwidth
-    maxBps: 500000
-    maxUploadBps: 250000
-    bufferQueueLimit: 100
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydWorkstationEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS TABLET"
+    subtitle: " | Tactical Slate"
+
+# ==============================================================================
+# Host Machine: Oxyd Workstation Computer
+# ==============================================================================
 
 - type: entity
   abstract: true
   parent: BaseComputer
   id: BaseOxydComputer
   name: Oxyd workstation computer
-  description: A heavy-duty modular workstation with high-throughput bus slots and server-link capability.
+  description: A heavy-duty modular workstation with high-throughput hardware slots and server-link capability.
   components:
   - type: Tag
     tags:
@@ -203,105 +60,46 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
-  - type: OxydComputer
-    template: Desktop
-    defaultScreenSize: 780, 580
-    allowRemoteControl: true
-    requiresPower: true
-    defaultPrograms:
-    - OxydOsCartridge
-    - OxydTerminalCartridge
-    - OxydFileBrowserCartridge
-    - OxydDownloaderCartridge
-    - OxydPacketSnifferCartridge
-    - CrewManifestCartridge
-    - NotekeeperCartridge
-  - type: Pda
-  - type: ItemSlots
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydWorkstationEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS WORKSTATION"
+    subtitle: " | Modular Console"
   - type: ContainerContainer
     containers:
-      PDA-id: !type:ContainerSlot {}
-      PDA-pen: !type:ContainerSlot {}
-      PDA-pai: !type:ContainerSlot {}
-      PDA-disk: !type:ContainerSlot {}
-      Cartridge-Slot: !type:ContainerSlot {}
-      preinstalled-program-container: !type:Container
-      removable-program-container: !type:Container
-      computer_board_slots: !type:Container
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: OxydOsCartridge
-        - id: OxydTerminalCartridge
-        - id: OxydFileBrowserCartridge
-        - id: OxydDownloaderCartridge
-        - id: OxydPacketSnifferCartridge
-        - id: CrewManifestCartridge
-        - id: NotekeeperCartridge
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.PdaUiKey.Key
+    key: enum.ComputerUiKey.Key
     singleUser: false
   - type: UserInterface
     interfaces:
-      enum.PdaUiKey.Key:
-        type: PdaBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
-  - type: WiresPanel
-  - type: Wires
-    layoutId: OxydComputerMotherboard
-  - type: DeviceLinkSource
-    ports:
-    - ComputerCommandSender
-  - type: DeviceLinkSink
-    ports:
-    - ComputerStatusReceiver
-  - type: FileSystem
-    maxStorageBytes: 104857600
-    files:
-      "/sys/kernel.sys": !type:TextVirtualFile
-        name: kernel
-        extension: sys
-        directory: /sys/
-        size: 256
-        isReadOnly: true
-        textContent: "NTOS-WORKSTATION-64BIT-KERNEL"
-      "/logs/system.log": !type:TextVirtualFile
-        name: system
-        extension: log
-        directory: /logs/
-        size: 120
-        textContent: "Boot successful. Network connection established."
-  - type: ModularComputer
-    maxHardDriveSlots: 3
-    maxRamSlots: 2
-    maxBatterySize: Small
-  - type: ComputerStats
-    cpuFrequencyMhz: 3200
-    ramMb: 8192
-    storageBytes: 104857600
-    networkBandwidthBps: 10000000
-    networkUploadBandwidthBps: 5000000
-    directHardwareAccessOnly: false
-  - type: NetworkBandwidth
-    maxBps: 10000000
-    maxUploadBps: 5000000
-    bufferQueueLimit: 500
 
 - type: entity
   parent: BaseOxydComputer
   id: OxydWorkstationComputer
   name: Oxyd workstation computer
-  description: A modular desktop computer running NTOS with hardware expansion bays, network packet tools, and remote terminal support.
+  description: A modular desktop computer running NTOS with hardware expansion slots, network tools, and remote terminal support.
+
+# ==============================================================================
+# Encapsulated Computer Entities (Separate from Host Devices)
+# ==============================================================================
 
 - type: entity
+  abstract: true
   parent: BaseItem
   id: BaseOxydEmbeddedController
   name: embedded subsystem controller
-  description: An embedded machine controller. Internal registers and diagnostic files are locked behind hardware debugging tool access.
+  description: An encapsulated computer motherboard with modular CPU, RAM, HDD, NIC, and JTAG Data Port.
   components:
   - type: Tag
     tags:
@@ -310,175 +108,664 @@
   - type: PdaBorderColor
     borderColor: "#00D4FF"
   - type: DeviceGuid
+  - type: ComputerDataPort
+    enabled: true
+    portLabel: "JTAG-0"
   - type: OxydComputer
     template: Embedded
     defaultScreenSize: 640, 480
     allowRemoteControl: true
-    requiresPower: false
-    defaultPrograms:
-    - OxydEmbeddedOsCartridge
-    - OxydTerminalCartridge
-    - OxydFileBrowserCartridge
-  - type: Pda
-  - type: ItemSlots
+    allowDeviceLink: true
+    requirePowerToBoot: false
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveBasic
+    - ComputerPartNetworkCardBasic
+    - ComputerPartBatterySmall
   - type: ContainerContainer
     containers:
-      PDA-id: !type:ContainerSlot {}
-      PDA-pen: !type:ContainerSlot {}
-      PDA-pai: !type:ContainerSlot {}
-      PDA-disk: !type:ContainerSlot {}
-      Cartridge-Slot: !type:ContainerSlot {}
-      preinstalled-program-container: !type:Container
-      removable-program-container: !type:Container
-      computer_board_slots: !type:Container
-  - type: CartridgeLoader
-    uiKey: enum.PdaUiKey.Key
-  - type: EntityTableContainerFill
-    containers:
-      preinstalled-program-container: !type:AllSelector
-        children:
-        - id: OxydEmbeddedOsCartridge
-        - id: OxydTerminalCartridge
-        - id: OxydFileBrowserCartridge
-  - type: ActivatableUI
-    key: enum.PdaUiKey.Key
-    singleUser: false
+      hardware_container: !type:Container
+      program_container: !type:Container
+      cpu_slot: !type:ContainerSlot {}
+      ram_slot: !type:ContainerSlot {}
+      ram_slot_2: !type:ContainerSlot {}
+      storage_slot: !type:ContainerSlot {}
+      net_slot: !type:ContainerSlot {}
+      battery_slot: !type:ContainerSlot {}
+      sensor_slot: !type:ContainerSlot {}
+      id_slot_module: !type:ContainerSlot {}
+      disk_slot_module: !type:ContainerSlot {}
+  - type: ItemSlots
+    slots:
+      cpu_slot:
+        name: CPU
+        whitelist:
+          components: [ ComputerCpu ]
+      ram_slot:
+        name: RAM Slot 1
+        whitelist:
+          components: [ ComputerRam ]
+      ram_slot_2:
+        name: RAM Slot 2
+        whitelist:
+          components: [ ComputerRam ]
+      storage_slot:
+        name: Hard Drive
+        whitelist:
+          components: [ ComputerHardDrive ]
+      net_slot:
+        name: Network Card
+        whitelist:
+          components: [ ComputerNetworkCard ]
+      battery_slot:
+        name: Backup Battery
+        whitelist:
+          components: [ ComputerBatteryModule ]
+      sensor_slot:
+        name: Sensor Module
+        whitelist:
+          components: [ ComputerSensorModule ]
+      id_slot_module:
+        name: ID Module
+        whitelist:
+          components: [ ComputerIdCardSlotModule ]
+      disk_slot_module:
+        name: Disk Module
+        whitelist:
+          components: [ ComputerDiskSlotModule ]
+  - type: ModularComputer
+    maxHardDriveSlots: 1
+    maxRamSlots: 2
+    maxBatterySize: Small
+  - type: ComputerStats
+  - type: NetworkBandwidth
+  - type: DeviceLinkSource
+    ports:
+    - PowerTrigger
+    - InternetLink
+    - TerminalLink
+    - OutputTrigger1
+    - OutputTrigger2
+    - ComputerCommandSender
+  - type: DeviceLinkSink
+    ports:
+    - PowerTrigger
+    - InternetLink
+    - TerminalLink
+    - InputTrigger1
+    - InputTrigger2
+    - ComputerStatusReceiver
   - type: UserInterface
     interfaces:
+      enum.ComputerUiKey.Key:
+        type: ComputerBoundUserInterface
       enum.PdaUiKey.Key:
-        type: PdaBoundUserInterface
+        type: ComputerBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: WiresPanel
   - type: Wires
     layoutId: OxydComputerMotherboard
-  - type: DeviceLinkSource
-    ports:
-    - ComputerCommandSender
-  - type: DeviceLinkSink
-    ports:
-    - ComputerStatusReceiver
-  - type: FileSystem
-    maxStorageBytes: 65536
-    files:
-      "/bin/os.bin": !type:ProgramVirtualFile
-        name: os
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: true
-        programId: OxydEmbeddedOsCartridge
-        title: "Embedded OS"
-      "/bin/terminal.bin": !type:ProgramVirtualFile
-        name: terminal
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: OxydTerminalCartridge
-        title: "Terminal"
-      "/bin/file_browser.bin": !type:ProgramVirtualFile
-        name: file_browser
-        extension: bin
-        directory: /bin/
-        size: 2048
-        isReadOnly: false
-        programId: OxydFileBrowserCartridge
-        title: "File Browser"
-      "/config/parameters.cfg": !type:TextVirtualFile
-        name: parameters
-        extension: cfg
-        directory: /config/
-        size: 48
-        isReadOnly: true
-        textContent: "VOLTAGE=240;CYCLE=60HZ;INTERLOCK=TRUE"
-  - type: ComputerStats
-    cpuFrequencyMhz: 50
-    ramMb: 32
-    storageBytes: 65536
-    networkBandwidthBps: 10000
-    networkUploadBandwidthBps: 10000
-    directHardwareAccessOnly: true
-  - type: NetworkBandwidth
-    maxBps: 10000
-    maxUploadBps: 10000
-    bufferQueueLimit: 10
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydPdaEmbeddedController
+  name: PDA computer board
+  components:
+  - type: OxydComputer
+    template: Pda
+    defaultScreenSize: 580, 480
+    allowRemoteControl: true
+    requirePowerToBoot: false
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveBasic
+    - ComputerPartNetworkCardBasic
+    - ComputerPartBatterySmall
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydWorkstationEmbeddedController
+  name: workstation computer board
+  components:
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 780, 580
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveWorkstation
+    - ComputerPartNetworkCardHighSpeed
+    - ComputerPartBatterySmall
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydLatheEmbeddedController
+  name: autolathe controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 640, 480
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/lathe_control.nte"
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveLathe
+    - ComputerPartNetworkCardBasic
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydApcEmbeddedController
+  name: APC controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 640, 480
+    allowRemoteControl: true
+    requirePowerToBoot: false
+    embeddedDefaultAppPath: "/bin/apc_control.nte"
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveApc
+    - ComputerPartNetworkCardBasic
+    - ComputerPartBatterySmall
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydAtmosEmbeddedController
+  name: air alarm controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 640, 480
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/atmos_control.nte"
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveAtmos
+    - ComputerPartNetworkCardBasic
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydRouterEmbeddedController
+  name: network router controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 760, 560
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/router.nte"
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveRouter
+    - ComputerPartNetworkCardHighSpeed
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydServerEmbeddedController
+  name: data server controller board
+  components:
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 720, 540
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/terminal.nte"
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveServer
+    - ComputerPartNetworkCardHighSpeed
 
 # ==============================================================================
-# Standalone Computer Hardware Parts
+# Physical Hardware Item Modules
 # ==============================================================================
 
 - type: entity
   parent: BaseItem
   id: ComputerPartCpuBasic
-  name: modular CPU unit
-  description: A standalone microprocessor module for Oxyd computer motherboards.
+  name: standard CPU module (800 MHz)
+  description: A microprocessor module supporting up to 4 concurrent program entities.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: cpu
+    state: cpuboard
   - type: ComputerCpu
     frequencyMhz: 800
+    maxConcurrentPrograms: 4
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartCpuWorkstation
+  name: high-clock CPU module (3200 MHz)
+  description: An enterprise microprocessor capable of executing 12 concurrent program entities.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu_super
+  - type: ComputerCpu
+    frequencyMhz: 3200
+    maxConcurrentPrograms: 12
     size: Small
 
 - type: entity
   parent: BaseItem
   id: ComputerPartRamBasic
-  name: modular RAM stick (512 MB)
-  description: A volatile memory module required for computer boot and program execution.
+  name: RAM module (512 MB)
+  description: Volatile memory required for operating system boot and concurrent program processes.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: ram
+    state: generic
   - type: ComputerRam
     sizeMb: 512
     size: Small
 
 - type: entity
   parent: BaseItem
-  id: ComputerPartHardDriveBasic
-  name: modular hard drive (8 MB)
-  description: Non-volatile storage drive containing the bootable program list and filesystem.
+  id: ComputerPartRam1024
+  name: enterprise RAM module (2048 MB)
+  description: High-capacity volatile memory stick for multi-tasking workstations and servers.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: harddrive
-  - type: ComputerStorageDevice
-    capacityBytes: 8388608
-    size: Medium
-    preloadedPrograms:
-    - OxydOsCartridge
-    - OxydTerminalCartridge
-    - OxydFileBrowserCartridge
+    state: std_mod
+  - type: ComputerRam
+    sizeMb: 2048
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartHardDriveBasic
+  name: NTOS hard drive (8 MB)
+  description: Non-volatile storage drive holding the boot .nte OS, user files, and databases.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: harddisk
   - type: ComputerHardDrive
     capacityBytes: 8388608
     size: Medium
-    preloadedPrograms:
-    - OxydOsCartridge
-    - OxydTerminalCartridge
-    - OxydFileBrowserCartridge
   - type: FileSystem
     maxStorageBytes: 8388608
+    files:
+      "/bin/os.nte": !type:ProgramVirtualFile
+        name: os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        isReadOnly: false
+        programId: OxydOsProgram
+        title: "NTOS System"
+        ramUsageMb: 32
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydDownloaderProgram
+        title: "Downloader"
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/notekeeper.nte": !type:ProgramVirtualFile
+        name: notekeeper
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NotekeeperProgram
+        title: "Notekeeper"
+      "/bin/nanotask.nte": !type:ProgramVirtualFile
+        name: nanotask
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NanoTaskProgram
+        title: "Tasks"
+      "/bin/news_reader.nte": !type:ProgramVirtualFile
+        name: news_reader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NewsReaderProgram
+        title: "News Reader"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveWorkstation
+  name: workstation hard drive (64 MB)
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 67108864
+  - type: FileSystem
+    maxStorageBytes: 67108864
+    files:
+      "/bin/os.nte": !type:ProgramVirtualFile
+        name: os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydOsProgram
+        title: "NTOS System"
+        ramUsageMb: 32
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydDownloaderProgram
+        title: "Downloader"
+      "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
+        name: packet_sniffer
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydPacketSnifferProgram
+        title: "Packet Sniffer"
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/notekeeper.nte": !type:ProgramVirtualFile
+        name: notekeeper
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NotekeeperProgram
+        title: "Notekeeper"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveLathe
+  name: autolathe controller drive
+  components:
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Embedded Controller OS"
+        ramUsageMb: 16
+      "/bin/lathe_control.nte": !type:ProgramVirtualFile
+        name: lathe_control
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydLatheControlProgram
+        title: "Lathe Controller"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveApc
+  name: APC controller drive
+  components:
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Embedded Controller OS"
+        ramUsageMb: 16
+      "/bin/apc_control.nte": !type:ProgramVirtualFile
+        name: apc_control
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydApcControlProgram
+        title: "APC Controller"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveAtmos
+  name: air alarm controller drive
+  components:
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Embedded Controller OS"
+        ramUsageMb: 16
+      "/bin/atmos_control.nte": !type:ProgramVirtualFile
+        name: atmos_control
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydAtmosControlProgram
+        title: "Air Alarm Controller"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveRouter
+  name: station router drive
+  components:
+  - type: FileSystem
+    maxStorageBytes: 16777216
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Router OS"
+        ramUsageMb: 16
+      "/bin/router.nte": !type:ProgramVirtualFile
+        name: router
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydRouterProgram
+        title: "Router Admin"
+      "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
+        name: packet_sniffer
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydPacketSnifferProgram
+        title: "Packet Sniffer"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveServer
+  name: mainframe repository drive (128 MB)
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 134217728
+  - type: FileSystem
+    maxStorageBytes: 134217728
+    files:
+      "/bin/os.nte": !type:ProgramVirtualFile
+        name: os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydOsProgram
+        title: "NTOS Server OS"
+        ramUsageMb: 32
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/wanted_list.nte": !type:ProgramVirtualFile
+        name: wanted_list
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: WantedListProgram
+        title: "Wanted List"
+      "/bin/netprobe.nte": !type:ProgramVirtualFile
+        name: netprobe
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NetProbeProgram
+        title: "NetProbe"
+      "/bin/logprobe.nte": !type:ProgramVirtualFile
+        name: logprobe
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: LogProbeProgram
+        title: "LogProbe"
+      "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
+        name: packet_sniffer
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydPacketSnifferProgram
+        title: "Packet Sniffer"
+      "/blueprints/multitool.lathe": !type:RecipeBlueprintFile
+        name: multitool
+        extension: lathe
+        directory: /blueprints/
+        size: 4096
+        recipe: Multitool
+      "/blueprints/door_electronics.lathe": !type:RecipeBlueprintFile
+        name: door_electronics
+        extension: lathe
+        directory: /blueprints/
+        size: 4096
+        recipe: DoorElectronics
+      "/notes/station_sop.txt": !type:TextVirtualFile
+        name: station_sop
+        extension: txt
+        directory: /notes/
+        size: 512
+        textContent: "STANDARD OPERATING PROCEDURE: Maintain Router uptime and verify DeviceLink wiring."
 
 - type: entity
   parent: BaseItem
   id: ComputerPartNetworkCardBasic
-  name: modular network interface card
-  description: Provides wired and wireless packet routing capabilities with configurable download and upload speeds.
+  name: modular network interface card (500 KB/s)
+  description: Provides network routing, SSH remote connections, and Screen View transport.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: netcard
+    state: net_wired
   - type: ComputerNetworkCard
     bandwidthBps: 500000
     maxUploadBps: 250000
+    bufferQueueLimit: 60
     size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartNetworkCardHighSpeed
+  name: high-speed fiber NIC (5 MB/s)
+  description: High-throughput fiber transceiver card for servers, routers, and workstations.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: net_wired
+  - type: ComputerNetworkCard
+    bandwidthBps: 5000000
+    maxUploadBps: 5000000
+    bufferQueueLimit: 300
+    size: Medium
 
 - type: entity
   parent: BaseItem
   id: ComputerPartBatterySmall
   name: small computer battery module
-  description: A compact backup battery module for embedded controllers and portable computers.
+  description: Compact internal battery module for computers and controllers.
   components:
   - type: Sprite
     sprite: Objects/Power/power_cells.rsi
@@ -492,11 +779,10 @@
   parent: BaseItem
   id: ComputerPartSensorBasic
   name: computer diagnostic sensor module
-  description: Internal telemetry sensor module for monitoring local machine state.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: sensor
+    state: command
   - type: ComputerSensorModule
     size: Small
 
@@ -504,11 +790,10 @@
   parent: BaseItem
   id: ComputerPartIdSlotModule
   name: modular ID card slot
-  description: Peripheral slot module allowing a computer to read access credentials from an ID card.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: id_slot
+    state: id_mod
   - type: ComputerIdCardSlotModule
     size: Small
 
@@ -516,23 +801,24 @@
   parent: BaseItem
   id: ComputerPartDiskSlotModule
   name: modular data disk slot
-  description: Optical/magnetic disk drive module allowing a computer to read blueprint and data disks.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
-    state: disk_slot
+    state: flopdrive
   - type: ComputerDiskSlotModule
     size: Small
+
+# ==============================================================================
+# Blueprint & Software Disks
+# ==============================================================================
 
 - type: entity
   parent: BaseRecipeDisk
   id: OxydRecipeDisk
   name: lathe blueprint disk (Handcuffs)
-  description: A high-density optical data disk containing manufacturing specifications for an autolathe.
   components:
   - type: Tag
-    tags:
-    - Oxyd
+    tags: [ Oxyd, Disk ]
   - type: FileSystem
     maxStorageBytes: 131072
     files:
@@ -550,11 +836,9 @@
   parent: BaseRecipeDisk
   id: OxydRecipeDiskEncrypted
   name: encrypted blueprint disk (Security HUD)
-  description: A restricted corporate blueprint disk protected by DRM cipher. Requires decryption or hardware cracking before lathe manufacturing.
   components:
   - type: Tag
-    tags:
-    - Oxyd
+    tags: [ Oxyd, Disk ]
   - type: FileSystem
     maxStorageBytes: 131072
     files:
@@ -568,3 +852,113 @@
         drmLocked: true
         isEncrypted: true
         encryptionKeyHash: "DRM-CYPHER-SEC-01"
+
+- type: entity
+  abstract: true
+  parent: BaseRecipeDisk
+  id: BaseProgramDisk
+  name: optical software disk
+  description: Optical media carrying installable Nanotransen Executable (.nte) programs.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/_Manual/discs.rsi
+    state: data-blue
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskWantedList
+  name: WantedList software disk
+  description: Contains wanted_list.nte security records software.
+  components:
+  - type: StealTarget
+    stealGroup: [WantedListDisk]
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/wanted_list.nte": !type:ProgramVirtualFile
+        name: wanted_list
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: WantedListProgram
+        title: "Wanted List"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskMedTek
+  name: MedTek software disk
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/medtek.nte": !type:ProgramVirtualFile
+        name: medtek
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: MedTekProgram
+        title: "MedTek"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskAstroNav
+  name: AstroNav software disk
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/astronav.nte": !type:ProgramVirtualFile
+        name: astronav
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: AstroNavProgram
+        title: "AstroNav"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskLogProbe
+  name: LogProbe software disk
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/logprobe.nte": !type:ProgramVirtualFile
+        name: logprobe
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: LogProbeProgram
+        title: "LogProbe"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskNetProbe
+  name: NetProbe software disk
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/netprobe.nte": !type:ProgramVirtualFile
+        name: netprobe
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NetProbeProgram
+        title: "NetProbe"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskNanoTask
+  name: NanoTask software disk
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/nanotask.nte": !type:ProgramVirtualFile
+        name: nanotask
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NanoTaskProgram
+        title: "Tasks"

@@ -72,20 +72,26 @@
   - type: Apc
     voltage: Apc
   - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydApcEmbeddedController
     borderColor: "#e5821e"
     accentHColor: "#ffa726"
     accentVColor: "#8a5200"
     title: "AREA POWER CONTROLLER"
     subtitle: " | Subsystem Terminal"
-    defaultPrograms:
-    - OxydApcControlCartridge
-    - OxydEmbeddedOsCartridge
-    - OxydTerminalCartridge
+  - type: ContainerContainer
+    containers:
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSink
+    ports:
+    - ApcCommandSink
+    - MachineCommandReceiver
+  - type: DeviceLinkSource
+    ports:
+    - ApcStatusSource
+    - MachineStatusSender
   - type: ExtensionCableProvider
   - type: UserInterface
     interfaces:
-      enum.ApcUiKey.Key:
-        type: ApcBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: ActivatableUI

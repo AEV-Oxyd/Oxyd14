@@ -1,4 +1,4 @@
-﻿using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Payloads;
 using Content.Shared.DeviceNetwork;
@@ -143,11 +143,14 @@ public sealed partial class DeviceLinkSystem
 
         SetInvokeCounter(sink!, invokeCounter + 1);
 
-        //Just skip using device networking if the source or the sink doesn't support it
-        if (!_deviceNetworkQuery.HasComp(source) || !_deviceNetworkQuery.TryComp(sink, out var sinkNetwork))
+        // Just skip using device networking if the source or the sink doesn't support it,
+        // or if the typed payload is non-networked / custom (only LogicStatePayload has a net relay).
+        if (!_deviceNetworkQuery.HasComp(source) || !_deviceNetworkQuery.TryComp(sink, out var sinkNetwork) || data is not LogicStatePayload)
         {
             var eventArgs = new SignalReceivedEvent(sinkPort, source);
             RaiseLocalEvent(sink, ref eventArgs);
+            var eventWithData = new SignalReceivedEvent<T>(sinkPort, data, source);
+            RaiseLocalEvent(sink, ref eventWithData);
             return;
         }
 
@@ -162,6 +165,27 @@ public sealed partial class DeviceLinkSystem
         // then allow the devices to customize the device net they will use to communicate signals.
         var network = (int) DeviceNetIdDefaults.Wireless;
         _deviceNetwork.SendPacket(source.Owner, sinkNetwork.Address, ref payload, sinkNetwork.ReceiveFrequency, network);
+    }
+
+    [PublicAPI]
+    public void InvokeDirect<T>(
+        EntityUid source,
+        [ForbidLiteral] ProtoId<SourcePortPrototype> sourcePort,
+        T data) where T : ISignalNetworkPayload
+    {
+        InvokePort(source, sourcePort, ref data);
+    }
+
+    [PublicAPI]
+    public void InvokeDirect<T>(
+        EntityUid source,
+        EntityUid sink,
+        [ForbidLiteral] ProtoId<SinkPortPrototype> sinkPort,
+        T data) where T : ISignalNetworkPayload
+    {
+        if (!TryComp<DeviceLinkSourceComponent>(source, out var srcComp))
+            return;
+        InvokeDirect((source, srcComp), sink, sinkPort, ref data);
     }
 
     /// <summary>

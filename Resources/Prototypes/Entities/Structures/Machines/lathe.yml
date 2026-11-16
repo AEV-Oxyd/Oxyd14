@@ -110,18 +110,22 @@
       map: ["enum.MaterialStorageVisualLayers.Inserting"]
     - state: panel
       map: ["enum.WiresVisualLayers.MaintenancePanel"]
-  - type: Machine
-    board: AutolatheMachineCircuitboard
   - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydLatheEmbeddedController
     borderColor: "#5c6b73"
     accentHColor: "#90a4ae"
     accentVColor: "#37474f"
     title: "FABRICATION TERMINAL"
     subtitle: " | Autolathe Subsystem"
-    defaultPrograms:
-    - OxydLatheControlCartridge
-    - OxydEmbeddedOsCartridge
-    - OxydTerminalCartridge
+  - type: DeviceLinkSink
+    ports:
+    - AutolatheBlueprintSink
+    - AutolatheCommandSink
+    - MachineCommandReceiver
+  - type: DeviceLinkSource
+    ports:
+    - AutolatheStatusSource
+    - MachineStatusSender
   - type: ItemSlots
   - type: MaterialStorage
     whitelist: &StandardMaterialWhitelist
@@ -170,6 +174,7 @@
       machine_parts: !type:Container
       blueprint: !type:Container
       disk_slot: !type:ContainerSlot
+      computer_board: !type:ContainerSlot {}
   - type: EmptyOnMachineDeconstruct
     containers:
     - blueprint

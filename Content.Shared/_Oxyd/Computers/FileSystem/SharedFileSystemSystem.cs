@@ -1,11 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Content.Shared._Oxyd.Computers.Hardware;
+using Content.Shared._Oxyd.Computers.Programs;
+using Robust.Shared.Containers;
 
 namespace Content.Shared._Oxyd.Computers.FileSystem;
 
-public class SharedFileSystemSystem : EntitySystem
+public partial class SharedFileSystemSystem : EntitySystem
 {
+    [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private Robust.Shared.Timing.IGameTiming _timing = default!;
 
     private const string DefaultLogHeader = "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------";
@@ -36,6 +40,112 @@ public class SharedFileSystemSystem : EntitySystem
             comp.UsedStorageBytes = comp.Files.Values.Sum(f => f.Size);
         else
             comp.UsedStorageBytes = comp.NetworkedHeaders.Sum(h => h.Size);
+    }
+
+    public bool TryFindFileSystem(EntityUid entity, [NotNullWhen(true)] out EntityUid? driveUid, [NotNullWhen(true)] out FileSystemComponent? fsComp)
+    {
+        driveUid = null;
+        fsComp = null;
+
+        if (!Exists(entity))
+            return false;
+
+        // If passed a program entity, resolve via its parent computer first.
+        if (TryComp<ProgramComponent>(entity, out var prog) &&
+            prog.Computer is { } progComputer &&
+            Exists(progComputer))
+        {
+            return TryFindFileSystem(progComputer, out driveUid, out fsComp);
+        }
+
+        // If passed a host device, resolve its encapsulated computer entity first.
+        if (TryComp<EmbeddedComputerHostComponent>(entity, out var host) &&
+            host.ComputerEntity is { } hostedComputer &&
+            Exists(hostedComputer))
+        {
+            return TryFindFileSystem(hostedComputer, out driveUid, out fsComp);
+        }
+
+        // If passed a computer entity, only resolve its physically installed Hard Drive item entity.
+        if (TryComp<OxydComputerComponent>(entity, out var comp))
+        {
+            if (comp.StorageWireCut)
+                return false;
+
+            if (TryComp<Hardware.ComputerStatsComponent>(entity, out var stats) &&
+                stats.PrimaryDriveUid is { } cachedDrive &&
+                Exists(cachedDrive) &&
+                TryComp<FileSystemComponent>(cachedDrive, out fsComp))
+            {
+                driveUid = cachedDrive;
+                return true;
+            }
+
+            if (TryComp<ModularComputerComponent>(entity, out var mod) && mod.InstalledParts.Count > 0)
+            {
+                foreach (var part in mod.InstalledParts)
+                {
+                    if (HasComp<ComputerHardDriveComponent>(part) && TryComp<FileSystemComponent>(part, out fsComp))
+                    {
+                        driveUid = part;
+                        return true;
+                    }
+                }
+            }
+
+            if (_container.TryGetContainer(entity, ModularComputerComponent.ContainerHardware, out var hwContainer))
+            {
+                foreach (var part in hwContainer.ContainedEntities)
+                {
+                    if (HasComp<ComputerHardDriveComponent>(part) && TryComp<FileSystemComponent>(part, out fsComp))
+                    {
+                        driveUid = part;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Direct storage item (HDD, optical disk, standalone data drive).
+        if (TryComp<FileSystemComponent>(entity, out fsComp))
+        {
+            driveUid = entity;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the very first valid Nanotransen executable (.nte) file on the drive in filesystem order.
+    /// Computers always execute the first executable file on their hard drive at boot.
+    /// </summary>
+    public bool TryGetFirstExecutable(
+        EntityUid driveUid,
+        [NotNullWhen(true)] out string? fullPath,
+        [NotNullWhen(true)] out ProgramVirtualFile? execFile,
+        FileSystemComponent? fs = null)
+    {
+        fullPath = null;
+        execFile = null;
+
+        if (!Resolve(driveUid, ref fs, false))
+            return false;
+
+        foreach (var (path, file) in fs.Files)
+        {
+            if (file is ProgramVirtualFile progFile &&
+                progFile.Extension.Equals("nte", StringComparison.OrdinalIgnoreCase))
+            {
+                fullPath = path;
+                execFile = progFile;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public bool TryGetFile<T>(EntityUid uid, string fullPath, [NotNullWhen(true)] out T? file, FileSystemComponent? comp = null) where T : VirtualFile

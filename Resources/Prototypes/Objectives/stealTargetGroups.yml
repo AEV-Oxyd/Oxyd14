@@ -292,11 +292,11 @@
     state: icon
 
 - type: stealTargetGroup
-  id: WantedListCartridge
+  id: WantedListDisk
   name: steal-target-groups-wanted-list-cartridge
   sprite:
-    sprite: Objects/Devices/cartridge.rsi
-    state: cart-sec
+    sprite: Oxyd/erisported/_Manual/discs.rsi
+    state: data-blue
 
 - type: stealTargetGroup
   id: CaptainSword

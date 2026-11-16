@@ -1,0 +1,203 @@
+using Content.Client._Oxyd.Computers.UI;
+using Content.Client.UserInterface.Controls;
+using Content.Shared._Oxyd.Computers.Programs;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Maths;
+
+namespace Content.Client._Oxyd.Computers.Programs;
+
+// =============================================================================
+// APC Control UI (via DeviceLink)
+// =============================================================================
+
+public sealed class ApcControlUiControl : ProgramUiControl
+{
+    private readonly Label _headerLabel;
+    private readonly Label _telemetryLabel;
+    private readonly Label _statusLabel;
+
+    public ApcControlUiControl()
+    {
+        HorizontalExpand = true;
+        VerticalExpand = true;
+
+        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
+        _headerLabel = new Label { Text = "AREA POWER CONTROLLER", FontColorOverride = Color.FromHex("#FFA726") };
+        _telemetryLabel = new Label { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
+
+        var btnRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 6) };
+        void AddBtn(string text, ApcControlAction action)
+        {
+            var b = new ContentStandardButton { Text = text, Margin = new Thickness(2, 0) };
+            b.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(action));
+            btnRow.AddChild(b);
+        }
+
+        AddBtn("Toggle Breaker", ApcControlAction.ToggleBreaker);
+        AddBtn("Breaker ON", ApcControlAction.SetBreakerOn);
+        AddBtn("Breaker OFF", ApcControlAction.SetBreakerOff);
+        AddBtn("Refresh", ApcControlAction.Refresh);
+        AddBtn("Save Log (.txt)", ApcControlAction.SaveLog);
+
+        root.AddChild(_headerLabel);
+        root.AddChild(_telemetryLabel);
+        root.AddChild(btnRow);
+        root.AddChild(_statusLabel);
+        AddChild(root);
+    }
+
+    public override void UpdateProgramState(BoundUserInterfaceState raw)
+    {
+        if (raw is not ApcControlUiState state)
+            return;
+
+        _headerLabel.Text = $"APC: {state.AreaName} | DeviceLink: {(state.IsDeviceLinkEnabled ? "CONNECTED" : "SEVERED")}";
+        _telemetryLabel.Text =
+            $"Main Breaker: {(state.MainBreakerEnabled ? "CLOSED (POWER ON)" : "OPEN (OFF)")} {(state.BreakerTripped ? "[TRIPPED]" : "")}\n" +
+            $"Battery Charge: {state.ChargePercent:0.0}%\n" +
+            $"Current Load: {state.LoadWatts} W\n" +
+            $"External Supply: {state.ExternalPowerState}";
+        _statusLabel.Text = state.StatusMessage;
+    }
+}
+
+// =============================================================================
+// Air Alarm Control UI (via DeviceLink)
+// =============================================================================
+
+public sealed class AtmosControlUiControl : ProgramUiControl
+{
+    private readonly Label _headerLabel;
+    private readonly Label _telemetryLabel;
+    private readonly Label _statusLabel;
+
+    public AtmosControlUiControl()
+    {
+        HorizontalExpand = true;
+        VerticalExpand = true;
+
+        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
+        _headerLabel = new Label { Text = "AIR ALARM CONTROLLER", FontColorOverride = Color.FromHex("#33B5E5") };
+        _telemetryLabel = new Label { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
+
+        var modeRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
+        void AddBtn(ContentBoxContainer parent, string text, AtmosControlAction action)
+        {
+            var b = new ContentStandardButton { Text = text, Margin = new Thickness(2, 0) };
+            b.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(action));
+            parent.AddChild(b);
+        }
+
+        AddBtn(modeRow, "Filtering", AtmosControlAction.SetModeFiltering);
+        AddBtn(modeRow, "WideFilter", AtmosControlAction.SetModeWideFiltering);
+        AddBtn(modeRow, "Fill", AtmosControlAction.SetModeFill);
+        AddBtn(modeRow, "Panic", AtmosControlAction.SetModePanic);
+        AddBtn(modeRow, "Off", AtmosControlAction.SetModeNone);
+
+        var ctrlRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
+        AddBtn(ctrlRow, "Toggle Auto Mode", AtmosControlAction.ToggleAutoMode);
+        AddBtn(ctrlRow, "Resync Devices", AtmosControlAction.ResyncDevices);
+        AddBtn(ctrlRow, "Refresh", AtmosControlAction.Refresh);
+        AddBtn(ctrlRow, "Save Log (.txt)", AtmosControlAction.SaveLog);
+
+        root.AddChild(_headerLabel);
+        root.AddChild(_telemetryLabel);
+        root.AddChild(modeRow);
+        root.AddChild(ctrlRow);
+        root.AddChild(_statusLabel);
+        AddChild(root);
+    }
+
+    public override void UpdateProgramState(BoundUserInterfaceState raw)
+    {
+        if (raw is not AtmosControlUiState state)
+            return;
+
+        _headerLabel.Text = $"AIR ALARM | State: {state.AlarmLevel} | Mode: {state.CurrentMode} (Auto: {state.AutoMode}) | Link: {(state.IsDeviceLinkEnabled ? "OK" : "CUT")}";
+        _telemetryLabel.Text =
+            $"Pressure: {state.PressureKpa:0.0} kPa | Temperature: {state.TemperatureCelsius:0.0} C\n" +
+            $"Devices: {state.SensorCount} sensors, {state.VentCount} vents, {state.ScrubberCount} scrubbers\n" +
+            $"{state.GasSummary}";
+        _statusLabel.Text = state.StatusMessage;
+    }
+}
+
+// =============================================================================
+// Autolathe Control UI (via DeviceLink + HDD .lathe blueprints)
+// =============================================================================
+
+public sealed class LatheControlUiControl : ProgramUiControl
+{
+    private readonly Label _headerLabel;
+    private readonly Label _materialsLabel;
+    private readonly Label _statusLabel;
+    private readonly ContentBoxContainer _recipesContainer;
+
+    public LatheControlUiControl()
+    {
+        HorizontalExpand = true;
+        VerticalExpand = true;
+
+        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
+        _headerLabel = new Label { Text = "AUTOLATHE CONTROLLER", FontColorOverride = Color.FromHex("#90A4AE") };
+        _materialsLabel = new Label { Text = "Materials: ---", Margin = new Thickness(0, 4) };
+        _statusLabel = new Label { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 2, 0, 4) };
+
+        var actRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
+        var refBtn = new ContentStandardButton { Text = "Refresh", Margin = new Thickness(2, 0) };
+        refBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.Refresh));
+        var cancelBtn = new ContentStandardButton { Text = "Cancel Queue", Margin = new Thickness(2, 0) };
+        cancelBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.CancelAll));
+        actRow.AddChild(refBtn);
+        actRow.AddChild(cancelBtn);
+
+        root.AddChild(_headerLabel);
+        root.AddChild(_materialsLabel);
+        root.AddChild(actRow);
+        root.AddChild(_statusLabel);
+
+        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        _recipesContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
+        scroll.AddChild(_recipesContainer);
+        root.AddChild(scroll);
+
+        AddChild(root);
+    }
+
+    public override void UpdateProgramState(BoundUserInterfaceState raw)
+    {
+        if (raw is not LatheControlUiState state)
+            return;
+
+        _headerLabel.Text = $"AUTOLATHE | {state.LatheStatus} | Printing: {(string.IsNullOrEmpty(state.CurrentPrinting) ? "Idle" : state.CurrentPrinting)} | Queue: {state.QueueRecipes.Count} | Link: {(state.IsDeviceLinkEnabled ? "OK" : "CUT")}";
+        _materialsLabel.Text = state.Materials.Count > 0
+            ? "Materials: " + string.Join(" | ", System.Linq.Enumerable.Select(state.Materials, kv => $"{kv.Key}: {kv.Value}"))
+            : "Materials: Empty";
+        _statusLabel.Text = state.StatusMessage;
+
+        _recipesContainer.RemoveAllChildren();
+        foreach (var bp in state.AvailableRecipes)
+        {
+            var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
+            var tag = string.IsNullOrEmpty(bp.FilePath) ? "[Static]" : $"[{bp.FilePath}{(bp.RemainingUses != null ? $" ({bp.RemainingUses}x)" : "")}{(bp.IsEncrypted ? " ENC" : "")}]";
+            row.AddChild(new Label { Text = $"{bp.RecipeName} {tag}", HorizontalExpand = true });
+
+            if (bp.IsEncrypted)
+            {
+                var decBtn = new ContentStandardButton { Text = "Decrypt", MinWidth = 65 };
+                decBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.DecryptBlueprint, bp.RecipeId, bp.FilePath));
+                row.AddChild(decBtn);
+            }
+            else
+            {
+                var printBtn = new ContentStandardButton { Text = "Print", MinWidth = 55 };
+                printBtn.OnPressed += _ => SendProgramMessage(new LatheControlActionMessage(LatheControlAction.PrintRecipe, bp.RecipeId, bp.FilePath, 1));
+                row.AddChild(printBtn);
+            }
+            _recipesContainer.AddChild(row);
+        }
+    }
+}

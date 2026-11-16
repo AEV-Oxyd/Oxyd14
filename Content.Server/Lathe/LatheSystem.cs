@@ -9,11 +9,13 @@ using Content.Server.Popups;
 using Content.Server.Power.EntitySystems;
 using Content.Server.Radio.EntitySystems;
 using Content.Server.Stack;
-using Content.Server._Oxyd.Computers;
 using Content.Shared._Oxyd;
 using Content.Shared._Oxyd.Computers;
-using Content.Shared.DeviceLinking.Events;
 using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Packets;
+using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Events;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Atmos;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
@@ -60,7 +62,11 @@ namespace Content.Server.Lathe
         [Dependency] private TransformSystem _transform = default!;
         [Dependency] private RadioSystem _radio = default!;
         [Dependency] private ItemSlotsSystem itemslots = default!;
-        [Dependency] private OxydComputerSystem _oxydComputer = default!;
+        [Dependency] private DeviceLinkSystem _deviceLink = default!;
+        [Dependency] private SharedFileSystemSystem _fileSystem = default!;
+
+        private static readonly ProtoId<SourcePortPrototype> PortAutolatheStatusSource = "AutolatheStatusSource";
+        private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
         /// <summary>
         /// Per-tick cache
         /// </summary>
@@ -89,11 +95,171 @@ namespace Content.Server.Lathe
             SubscribeLocalEvent<EmagLatheRecipesComponent, LatheGetRecipesEvent>(GetEmagLatheRecipes);
             SubscribeLocalEvent<LatheHeatProducingComponent, LatheStartPrintingEvent>(OnHeatStartPrinting);
             SubscribeLocalEvent<LatheComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
+            SubscribeLocalEvent<LatheComponent, SignalReceivedEvent<ComputerPacket>>(OnComputerPacketSignal);
+        }
+
+        private void OnComputerPacketSignal(Entity<LatheComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
+        {
+            var port = args.Port;
+            var packet = args.Data;
+
+            if (port == "AutolatheBlueprintSink")
+            {
+                if (packet.ProtectedReferences.TryGetValue("DiskUid", out var diskUid) &&
+                    packet.Data.TryGetValue("FileName", out var fileNameObj) &&
+                    fileNameObj is string fileName)
+                {
+                    if (TryComp<FileSystemComponent>(diskUid, out var fs) &&
+                        fs.Files.TryGetValue(fileName, out var vfile) &&
+                        vfile is RecipeBlueprintFile rFile)
+                    {
+                        foreach (var recipeId in rFile.GetAllRecipes())
+                        {
+                            if (ProtoMan.TryIndex<LatheRecipePrototype>(recipeId, out _))
+                            {
+                                // Validated recipe blueprint reference
+                            }
+                        }
+                    }
+                }
+
+                var cmd = packet.PacketType.ToLowerInvariant();
+                if (cmd is "print" or "lathe_print" or "blueprint_print")
+                {
+                    HandleLathePrintPacket(ent, packet);
+                    UpdateUserInterfaceState(ent.Owner, ent.Comp);
+                }
+
+                EmitLatheStatus(ent);
+            }
+            else if (port == "AutolatheCommandSink" || port == "MachineCommandReceiver")
+            {
+                var cmd = packet.PacketType.ToLowerInvariant();
+                if (cmd is "status" or "status_request")
+                {
+                    EmitLatheStatus(ent);
+                    return;
+                }
+
+                if (cmd is "print" or "lathe_print")
+                {
+                    HandleLathePrintPacket(ent, packet);
+                }
+                else if (cmd is "cancel" or "lathe_cancel")
+                {
+                    while (ent.Comp.Queue.First is { } node)
+                    {
+                        RefundBatch(ent.Owner, ent.Comp, node.Value);
+                        ent.Comp.Queue.RemoveFirst();
+                    }
+                    if (ent.Comp.CurrentRecipe != null)
+                    {
+                        RefundCurrentRecipe(ent.Owner, ent.Comp);
+                        ent.Comp.CurrentRecipe = null;
+                        FinishProducing(ent.Owner, ent.Comp);
+                    }
+                }
+                else if (cmd is "eject_material" or "eject")
+                {
+                    var matId = packet.GetString("Material", string.Empty);
+                    var count = packet.GetInt("Count", 1);
+                    if (!string.IsNullOrEmpty(matId) && TryComp<MaterialStorageComponent>(ent.Owner, out var matStorage))
+                    {
+                        _materialStorage.EjectMaterial(ent.Owner, matId, count, null, matStorage);
+                    }
+                }
+                UpdateUserInterfaceState(ent.Owner, ent.Comp);
+                EmitLatheStatus(ent);
+            }
+        }
+
+        private void HandleLathePrintPacket(Entity<LatheComponent> ent, ComputerPacket packet)
+        {
+            var recipeName = packet.GetString("Recipe", string.Empty);
+            var amount = Math.Max(1, packet.GetInt("Amount", 1));
+
+            // Validate and decrement DRM uses if triggered via a .lathe file on DriveUid
+            if (packet.ProtectedReferences.TryGetValue("DriveUid", out var driveUid) &&
+                packet.Data.TryGetValue("FilePath", out var fpObj) &&
+                fpObj is string filePath &&
+                TryComp<FileSystemComponent>(driveUid, out var fs) &&
+                fs.Files.TryGetValue(filePath, out var vf) &&
+                vf is RecipeBlueprintFile bpFile)
+            {
+                if (bpFile.IsEncrypted)
+                    return;
+
+                if (bpFile.DrmLocked && bpFile.RemainingUses is <= 0)
+                    return;
+
+                if (!string.IsNullOrEmpty(recipeName) &&
+                    ProtoMan.TryIndex<LatheRecipePrototype>(recipeName, out var bpRecipe) &&
+                    TryAddToQueue(ent.Owner, bpRecipe, amount, ent.Comp))
+                {
+                    TryStartProducing(ent.Owner, ent.Comp);
+                    if (bpFile.DrmLocked && bpFile.RemainingUses != null)
+                    {
+                        bpFile.RemainingUses = Math.Max(0, bpFile.RemainingUses.Value - amount);
+                        _fileSystem.TryWriteFile(driveUid, bpFile, fs);
+                    }
+                }
+
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(recipeName) && ProtoMan.TryIndex<LatheRecipePrototype>(recipeName, out var recipe))
+            {
+                if (TryAddToQueue(ent.Owner, recipe, amount, ent.Comp))
+                    TryStartProducing(ent.Owner, ent.Comp);
+            }
+        }
+
+        public void EmitLatheStatus(Entity<LatheComponent> ent)
+        {
+            var status = "Standby";
+            if (ent.Comp.CurrentRecipe != null || HasComp<LatheProducingComponent>(ent.Owner))
+                status = "Printing";
+
+            var pkt = new ComputerPacket("AutolatheStatus");
+            pkt.Set("Status", status);
+            pkt.Set("Recipe", ent.Comp.CurrentRecipe?.Id ?? string.Empty);
+            pkt.Set("QueueCount", ent.Comp.Queue.Count);
+
+            var queueNames = new List<string>();
+            foreach (var batch in ent.Comp.Queue)
+                queueNames.Add(batch.Recipe.Id);
+            pkt.Set("QueueRaw", string.Join(",", queueNames));
+
+            var hostRecipes = GetAvailableRecipes(ent.Owner, ent.Comp, true);
+            pkt.Set("HostRecipesRaw", string.Join(",", hostRecipes.Select(r => r.Id)));
+
+            if (TryComp<MaterialStorageComponent>(ent.Owner, out var matComp))
+            {
+                var mats = new List<string>();
+                foreach (var (matId, amount) in matComp.Storage)
+                    mats.Add($"{matId}={amount}");
+                pkt.Set("MaterialsRaw", string.Join(";", mats));
+            }
+
+            if (ent.Comp.diskSlot?.Item is { } diskItem && Exists(diskItem))
+            {
+                pkt.SetReference("DiskUid", diskItem);
+                pkt.Set("DiskName", MetaData(diskItem).EntityName);
+            }
+
+            _deviceLink.InvokePort(ent.Owner, PortAutolatheStatusSource, ref pkt);
+            _deviceLink.InvokePort(ent.Owner, PortMachineStatusSender, ref pkt);
         }
         
         private void OnComputerDeviceLinkSignal(Entity<LatheComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
         {
             var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+            if (cmd is "status" or "status_request")
+            {
+                EmitLatheStatus(ent);
+                return;
+            }
+
             if (cmd is "lathe_print" or "print")
             {
                 var parts = (args.Data.Argument ?? string.Empty).Split(new[] { ' ', ':' }, StringSplitOptions.RemoveEmptyEntries);
@@ -582,7 +748,7 @@ namespace Content.Server.Lathe
             };
 
             _uiSys.SetUiState(uid, LatheUiKey.Key, state);
-            _oxydComputer.NotifyComputerFromMachine(uid, "lathe_state_changed");
+            EmitLatheStatus((uid, component));
         }
 
         private void OnLatheSelectBlueprintFileMessage(EntityUid uid, LatheComponent component, LatheSelectBlueprintFileMessage args)

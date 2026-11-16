@@ -1,74 +1,68 @@
-using Content.Shared.PDA;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers.ScreenSharing;
 
 /// <summary>
-/// Device-agnostic remote screen descriptor capable of representing PDAs/CartridgeLoaders,
-/// APCs, Atmospheric Alarms, Static Computers, or any BUI-backed electronic device,
-/// as well as cycle metadata for Picture-in-Picture (PiP) cascade rendering.
+/// Describes a live remote computer screen session attached inside an interactive Terminal view.
+/// With entity-based BUIs, the remote computer and its running program entities deliver their own
+/// BUI states directly to the authorized remote viewer client and render inside RemoteScreenView.
 /// </summary>
 [Serializable, NetSerializable]
-public sealed class RemoteScreenState : BoundUserInterfaceState
+public sealed class RemoteScreenState
 {
-    public NetEntity TargetEntity { get; }
+    public NetEntity TargetComputerNetEntity { get; }
+    public NetEntity? HostMachineNetEntity { get; }
+    public Enum PrimaryUiKey { get; }
     public string DeviceGuid { get; }
     public string DeviceName { get; }
-
-    /// <summary>
-    /// Primary BUI key for non-PDA devices (e.g. ApcUiKey.Key, SharedAirAlarmInterfaceKey.Key, Computer UI keys).
-    /// </summary>
-    public Enum? UiKey { get; }
-
-    /// <summary>
-    /// Client BUI type name from <see cref="InterfaceData.ClientType"/> for non-PDA devices.
-    /// </summary>
-    public string? BuiClientType { get; }
-
-    /// <summary>
-    /// Latest BUI state for non-PDA devices (APC, Air Alarm, Static Computer, etc.).
-    /// </summary>
+    public string DeviceCategory { get; }
+    public string ForegroundProgramTitle { get; }
+    public bool AllowRemoteControl { get; }
+    public bool IsBooted { get; }
+    public List<NetEntity> ProgramEntities { get; }
+    public Vector2i ScreenSize { get; }
+    public int Depth { get; }
+    public string? ViewingTargetGuid { get; }
+    public bool IsCycleReference { get; }
+    public bool WasAlreadyOpen { get; }
     public BoundUserInterfaceState? BuiState { get; }
 
-    /// <summary>
-    /// Full PDA state when the remote device is a PDA / CartridgeLoader.
-    /// </summary>
-    public PdaUpdateState? PdaState { get; }
-
-    /// <summary>
-    /// True when this node points to a device that is already an ancestor in the viewing chain
-    /// (e.g. A -> B -> A or A -> A), signaling the client to render via Picture-in-Picture (PiP) cascade
-    /// instead of physical widget parenting.
-    /// </summary>
-    public bool IsCycleReference { get; }
-
-    /// <summary>
-    /// If this remote device is itself viewing another device's screen, the target GUID being viewed.
-    /// </summary>
-    public string? ViewingTargetGuid { get; }
-    public bool WasAlreadyOpen { get; set; }
+    public NetEntity TargetEntity => TargetComputerNetEntity;
+    public Enum? UiKey => PrimaryUiKey;
 
     public RemoteScreenState(
-        NetEntity targetEntity,
+        NetEntity targetComputerNetEntity,
+        NetEntity? hostMachineNetEntity,
+        Enum primaryUiKey,
         string deviceGuid,
         string deviceName,
-        Enum? uiKey = null,
-        string? buiClientType = null,
-        BoundUserInterfaceState? buiState = null,
-        PdaUpdateState? pdaState = null,
-        bool isCycleReference = false,
+        string deviceCategory,
+        string foregroundProgramTitle,
+        bool allowRemoteControl,
+        bool isBooted,
+        List<NetEntity> programEntities,
+        Vector2i screenSize,
+        int depth = 0,
         string? viewingTargetGuid = null,
-        bool wasAlreadyOpen = false)
+        bool isCycleReference = false,
+        bool wasAlreadyOpen = false,
+        BoundUserInterfaceState? buiState = null)
     {
-        TargetEntity = targetEntity;
+        TargetComputerNetEntity = targetComputerNetEntity;
+        HostMachineNetEntity = hostMachineNetEntity;
+        PrimaryUiKey = primaryUiKey;
         DeviceGuid = deviceGuid;
         DeviceName = deviceName;
-        UiKey = uiKey;
-        BuiClientType = buiClientType;
-        BuiState = buiState;
-        PdaState = pdaState;
-        IsCycleReference = isCycleReference;
+        DeviceCategory = deviceCategory;
+        ForegroundProgramTitle = foregroundProgramTitle;
+        AllowRemoteControl = allowRemoteControl;
+        IsBooted = isBooted;
+        ProgramEntities = programEntities;
+        ScreenSize = screenSize;
+        Depth = depth;
         ViewingTargetGuid = viewingTargetGuid;
+        IsCycleReference = isCycleReference;
         WasAlreadyOpen = wasAlreadyOpen;
+        BuiState = buiState;
     }
 }

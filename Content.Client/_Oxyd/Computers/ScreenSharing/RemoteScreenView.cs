@@ -96,8 +96,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
         if (_activeTargetUi?.RootControl is not { } root || root.Disposed)
             return null;
 
-        if (root is PdaWindow pdaWin)
-            return pdaWin.ScreenInsetControl;
+        if (root is UI.ComputerDisplayWindow compWin)
+            return compWin.ScreenInsetControl;
 
         if (root is FancyWindow fancy)
             return fancy.ContentsContainer;
@@ -131,8 +131,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
         VerticalExpand = true;
         RectClipContent = true;
         MouseFilter = MouseFilterMode.Pass;
-        CanKeyboardFocus = true;
-        KeyboardFocusOnClick = true;
+        CanKeyboardFocus = false;
+        KeyboardFocusOnClick = false;
 
         _statusLabel = new Label
         {
@@ -188,7 +188,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         // Universal BoundUserInterface Device (APC, Air Alarm, Static Computer, Consoles, PDAs, etc.)
         if (state.TargetEntity != NetEntity.Invalid)
         {
-            var uiKey = state.UiKey ?? PdaUiKey.Key;
+            var uiKey = state.UiKey ?? Content.Shared._Oxyd.Computers.ComputerUiKey.Key;
             if (_activeTargetUi is not RemoteBuiTarget buiTarget || !buiTarget.Matches(state.TargetEntity, uiKey))
             {
                 SetTargetUi(new RemoteBuiTarget(state.TargetEntity, uiKey, state.DeviceName, _entManager, _playerManager, _uiManager));
@@ -473,11 +473,6 @@ public sealed partial class RemoteScreenView : LayoutContainer
         {
             if (cur.MouseFilter != MouseFilterMode.Ignore)
             {
-                if (cur.CanKeyboardFocus && cur.KeyboardFocusOnClick)
-                {
-                    cur.GrabKeyboardFocus();
-                }
-
                 if (cur is Slider slider && !slider.Disabled && args.Function == EngineKeyFunctions.UIClick)
                 {
                     var ratio = Math.Clamp(curPixelPos.X / Math.Max(1f, cur.PixelWidth), 0f, 1f);
@@ -1033,6 +1028,12 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
             if (_trackedWindow != null)
             {
+                if (_trackedWindow.IsOpen && _trackedWindow.Parent == _uiManager.WindowRoot && _trackedWindow.Visible)
+                {
+                    _wasAlreadyOpenOnScreen = true;
+                    _isPoppedOut = true;
+                }
+
                 _trackedCloseButton = FindCloseButton(_trackedWindow);
                 if (_trackedCloseButton != null && _closeInterceptor == null)
                 {
@@ -1179,10 +1180,9 @@ public sealed partial class RemoteScreenView : LayoutContainer
                     apcMenu.UpdateState(apcState);
                 apcMenu.SetAccessEnabled(true);
             }
-            else if (_routedBui?.RootControl is PdaMenu pdaMenu)
+            if (_routedBui?.RootControl is UI.ComputerDisplayWindow compWindow && _latestState is Content.Shared._Oxyd.Computers.ComputerDisplayUiState compState)
             {
-                if (_latestState is PdaUpdateState pdaState)
-                    pdaMenu.UpdateState(pdaState);
+                compWindow.UpdateDisplayState(compState);
             }
         }
         finally

@@ -1,933 +1,336 @@
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
-using Content.Server._Oxyd.Computers.Cartridges;
-using Content.Server.Atmos.Monitor.Components;
-using Content.Server.PDA;
-using Content.Server.Power.Components;
-using Content.Shared._Oxyd.Computers.Cartridges;
-using Content.Shared._Oxyd.Computers.FileSystem;
-using Content.Shared._Oxyd.Computers.Hardware;
-using Content.Shared._Oxyd.Computers.Network;
-using Content.Shared._Oxyd.Computers.ScreenSharing;
-using Content.Shared._Oxyd.Computers.Servers;
-using Content.Shared.APC;
-using Content.Shared.Lathe;
 using Content.Shared._Oxyd.Computers;
-using Content.Shared.CartridgeLoader;
-using Content.Shared.DeviceNetwork.Components;
-using Content.Server.Construction.Components;
+using Content.Shared._Oxyd.Computers.Hardware;
+using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared.PDA;
-using Content.Shared.Strip;
-using Content.Shared.UserInterface;
-using Robust.Server.GameObjects;
 using Robust.Server.GameStates;
-using Robust.Shared.Enums;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.ScreenSharing;
 
 /// <summary>
-/// Server-side orchestration for universal device screen-sharing and Picture-in-Picture (PiP)
-/// across PDAs, Static Computers, APCs, Atmospheric Alarms, and other BUI devices.
+/// Manages entity-based PVS overrides, ActiveRemoteScreenViewer authorization sets,
+/// and opening/closing live remote Computer + Program BUIs for SSH remote screen sessions.
 /// </summary>
 public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 {
-    [Dependency] private SharedDeviceGuidSystem _guidSystem = default!;
-    [Dependency] private SharedFileSystemSystem _fileSystem = default!;
-    [Dependency] private UserInterfaceSystem _uiSystem = default!;
     [Dependency] private PvsOverrideSystem _pvsOverride = default!;
-    [Dependency] private ISharedPlayerManager _playerManager = default!;
-    [Dependency] private PdaSystem _pdaSystem = default!;
-    [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
-    [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
 
-    [Dependency] private EntityQuery<DeviceGuidComponent> _guidQuery = default!;
-
-    private sealed class TerminalViewerSession
-    {
-        public readonly HashSet<EntityUid> ViewerActors = new();
-        public readonly HashSet<EntityUid> ActiveTargets = new();
-        public readonly HashSet<EntityUid> ActivePvsEntities = new();
-        public readonly HashSet<(EntityUid Actor, EntityUid Target)> AlreadyOpenTargets = new();
-    }
-
-    private readonly Dictionary<EntityUid, TerminalViewerSession> _sessionsByTerminal = new();
-    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _closingUis = new();
-    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _openingUis = new();
+    private readonly Dictionary<EntityUid, HashSet<EntityUid>> _viewerTrackedPvs = new();
 
     public override void Initialize()
     {
         base.Initialize();
-
-        _playerManager.PlayerStatusChanged += OnPlayerStatusChanged;
-
-        SubscribeLocalEvent<TerminalCartridgeComponent, ComponentShutdown>(OnTerminalShutdown);
-        SubscribeLocalEvent<TerminalCartridgeComponent, EntityTerminatingEvent>(OnTerminalTerminating);
-        SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, EntityTerminatingEvent>(OnViewerTerminating);
-        SubscribeLocalEvent<DeviceGuidComponent, EntityTerminatingEvent>(OnDeviceTerminating);
+        SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, ComponentShutdown>(OnViewerShutdown);
+        SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, PlayerDetachedEvent>(OnViewerDetached);
     }
 
-    public override void Shutdown()
+    private void OnViewerShutdown(Entity<ActiveRemoteScreenViewerComponent> ent, ref ComponentShutdown args)
     {
-        base.Shutdown();
-
-        _playerManager.PlayerStatusChanged -= OnPlayerStatusChanged;
+        var session = TryComp<ActorComponent>(ent.Owner, out var actor) ? actor.PlayerSession : null;
+        RevokeTrackedPvs(ent.Owner, session);
     }
 
-    private void OnPlayerStatusChanged(object? sender, SessionStatusEventArgs e)
+    private void OnViewerDetached(Entity<ActiveRemoteScreenViewerComponent> ent, ref PlayerDetachedEvent args)
     {
-        if (e.NewStatus != SessionStatus.Disconnected)
+        RevokeAllForActor(ent.Owner, args.Player);
+    }
+
+    private void RevokeTrackedPvs(EntityUid actorUid, ICommonSession? session)
+    {
+        if (!_viewerTrackedPvs.Remove(actorUid, out var tracked))
             return;
 
-        if (e.Session.AttachedEntity is { } actor)
+        if (session == null)
+            return;
+
+        foreach (var ent in tracked)
         {
-            DetachViewerFromAll(actor);
+            if (Exists(ent))
+                _pvsOverride.RemoveSessionOverride(ent, session);
+        }
+    }
+
+    public bool TryBuildRemoteScreenState(
+        EntityUid terminalProgUid,
+        EntityUid targetComputerUid,
+        EntityUid actor,
+        out RemoteScreenState? state,
+        out string error,
+        int depth = 0)
+    {
+        state = null;
+        error = string.Empty;
+
+        targetComputerUid = _router.UnwrapComputerEntity(targetComputerUid);
+        if (!TryComp<OxydComputerComponent>(targetComputerUid, out var targetComp))
+        {
+            error = "Target is not an NTOS computer entity.";
+            return false;
+        }
+
+        if (!targetComp.AllowRemoteControl || targetComp.RemoteControlWireCut || targetComp.PowerWireCut)
+        {
+            error = "Remote control disabled or motherboard wire severed on target.";
+            return false;
+        }
+
+        if (!_router.HasActiveNetworkCard(targetComputerUid))
+        {
+            error = "Target computer has no active network card installed.";
+            return false;
+        }
+
+        if (depth >= 4)
+        {
+            error = "Maximum screen-sharing recursion depth reached.";
+            return false;
+        }
+
+        var compSys = EntityManager.System<OxydComputerSystem>();
+        var guid = _router.EnsureDeviceGuid(targetComputerUid);
+        var category = GetDeviceCategory(targetComputerUid, targetComp);
+        var primaryKey = compSys.GetPrimaryUiKey(targetComputerUid, targetComp);
+        var fgName = MetaData(targetComputerUid).EntityName;
+
+        if (targetComp.ActiveProgram is { } active && Exists(active) && TryComp<ProgramComponent>(active, out var actProg))
+            fgName = actProg.Title;
+        else if (targetComp.BootProgram is { } boot && Exists(boot) && TryComp<ProgramComponent>(boot, out var bootProg))
+            fgName = bootProg.Title;
+
+        var progNetIds = targetComp.RunningPrograms
+            .Where(p => Exists(p))
+            .Select(p => GetNetEntity(p))
+            .ToList();
+
+        state = new RemoteScreenState(
+            GetNetEntity(targetComputerUid),
+            targetComp.HostMachine is { } hm && Exists(hm) ? GetNetEntity(hm) : null,
+            primaryKey,
+            guid,
+            MetaData(targetComputerUid).EntityName,
+            category,
+            fgName,
+            targetComp.AllowRemoteControl,
+            targetComp.IsBooted,
+            progNetIds,
+            targetComp.DefaultScreenSize,
+            depth);
+
+        return true;
+    }
+
+    public void AttachViewer(EntityUid terminalProgUid, EntityUid actor, EntityUid targetComputerUid)
+    {
+        targetComputerUid = _router.UnwrapComputerEntity(targetComputerUid);
+        if (!TryComp<OxydComputerComponent>(targetComputerUid, out var targetComp))
+            return;
+
+        if (!TryComp<ActorComponent>(actor, out var actorComp))
+            return;
+
+        var compSys = EntityManager.System<OxydComputerSystem>();
+        if (!targetComp.IsBooted && targetComp.AutoBootWhenPowered)
+            compSys.RefreshComputerBootState(targetComputerUid, targetComp);
+
+        var targets = new HashSet<NetEntity> { GetNetEntity(targetComputerUid) };
+        var pvsEntities = new HashSet<EntityUid> { targetComputerUid };
+
+        if (TryComp<ComputerStatsComponent>(targetComputerUid, out var stats) &&
+            stats.PrimaryDriveUid is { } driveUid &&
+            Exists(driveUid))
+        {
+            pvsEntities.Add(driveUid);
+        }
+
+        foreach (var progUid in targetComp.RunningPrograms)
+        {
+            if (!Exists(progUid))
+                continue;
+            targets.Add(GetNetEntity(progUid));
+            pvsEntities.Add(progUid);
+        }
+
+        var remViewer = EnsureComp<ActiveRemoteScreenViewerComponent>(actor);
+        foreach (var net in targets)
+            remViewer.AuthorizedTargets.Add(net);
+        Dirty(actor, remViewer);
+
+        if (!_viewerTrackedPvs.TryGetValue(actor, out var tracked))
+        {
+            tracked = new HashSet<EntityUid>();
+            _viewerTrackedPvs[actor] = tracked;
+        }
+
+        foreach (var pvsEnt in pvsEntities)
+        {
+            if (tracked.Add(pvsEnt))
+                _pvsOverride.AddSessionOverride(pvsEnt, actorComp.PlayerSession);
+        }
+
+        var key = compSys.GetPrimaryUiKey(targetComputerUid, targetComp);
+        _ui.OpenUi(targetComputerUid, key, actor);
+        compSys.UpdateComputerDisplayUi(targetComputerUid, targetComp);
+
+        foreach (var progUid in targetComp.RunningPrograms)
+        {
+            if (Exists(progUid))
+                _ui.OpenUi(progUid, ProgramUiKey.Key, actor);
+        }
+
+        _bandwidth.RecordScreenSharingBandwidth(targetComputerUid, _router.ResolveComputerFromProgram(terminalProgUid));
+    }
+
+    /// <summary>
+    /// Ensures any actor remotely viewing a computer is immediately authorized to interact with
+    /// newly launched child program entities on that computer.
+    /// </summary>
+    public void AuthorizeNewProgramForRemoteViewers(EntityUid compUid, EntityUid newProgUid)
+    {
+        var compNet = GetNetEntity(compUid);
+        var progNet = GetNetEntity(newProgUid);
+
+        var query = EntityQueryEnumerator<ActiveRemoteScreenViewerComponent, ActorComponent>();
+        while (query.MoveNext(out var actorUid, out var rem, out var actorComp))
+        {
+            if (!rem.AuthorizedTargets.Contains(compNet))
+                continue;
+
+            rem.AuthorizedTargets.Add(progNet);
+            Dirty(actorUid, rem);
+
+            if (!_viewerTrackedPvs.TryGetValue(actorUid, out var tracked))
+            {
+                tracked = new HashSet<EntityUid>();
+                _viewerTrackedPvs[actorUid] = tracked;
+            }
+            if (tracked.Add(newProgUid))
+                _pvsOverride.AddSessionOverride(newProgUid, actorComp.PlayerSession);
+        }
+    }
+
+    public void DetachViewer(EntityUid terminalProgUid, EntityUid? actor = null, EntityUid? targetComputerUid = null)
+    {
+        if (actor == null)
+        {
+            if (targetComputerUid == null)
+                return;
+            var remQuery = EntityQueryEnumerator<ActiveRemoteScreenViewerComponent, ActorComponent>();
+            var tComp = _router.UnwrapComputerEntity(targetComputerUid.Value);
+            var tNet = GetNetEntity(tComp);
+            while (remQuery.MoveNext(out var vUid, out var rComp, out var aComp))
+            {
+                if (rComp.AuthorizedTargets.Contains(tNet))
+                    DetachSpecificTarget(vUid, aComp.PlayerSession, rComp, tComp);
+            }
+            return;
+        }
+
+        if (!TryComp<ActiveRemoteScreenViewerComponent>(actor.Value, out var rem) ||
+            !TryComp<ActorComponent>(actor.Value, out var actorComp))
+        {
+            return;
+        }
+
+        if (targetComputerUid is { } specific)
+        {
+            DetachSpecificTarget(actor.Value, actorComp.PlayerSession, rem, _router.UnwrapComputerEntity(specific));
         }
         else
         {
-            foreach (var session in _sessionsByTerminal.Values)
+            RevokeAllForActor(actor.Value, actorComp.PlayerSession);
+        }
+    }
+
+    private void DetachSpecificTarget(
+        EntityUid actorUid,
+        ICommonSession session,
+        ActiveRemoteScreenViewerComponent rem,
+        EntityUid targetCompUid)
+    {
+        var compSys = EntityManager.System<OxydComputerSystem>();
+        var targetNet = GetNetEntity(targetCompUid);
+        rem.AuthorizedTargets.Remove(targetNet);
+
+        if (TryComp<OxydComputerComponent>(targetCompUid, out var comp))
+        {
+            var key = compSys.GetPrimaryUiKey(targetCompUid, comp);
+            _ui.CloseUi(targetCompUid, key, actorUid);
+
+            foreach (var progUid in comp.RunningPrograms)
             {
-                foreach (var pvsEnt in session.ActivePvsEntities)
+                rem.AuthorizedTargets.Remove(GetNetEntity(progUid));
+                if (Exists(progUid))
+                    _ui.CloseUi(progUid, ProgramUiKey.Key, actorUid);
+                if (_viewerTrackedPvs.TryGetValue(actorUid, out var tracked) && tracked.Remove(progUid))
+                    _pvsOverride.RemoveSessionOverride(progUid, session);
+            }
+        }
+
+        if (TryComp<ComputerStatsComponent>(targetCompUid, out var stats) &&
+            stats.PrimaryDriveUid is { } dUid &&
+            _viewerTrackedPvs.TryGetValue(actorUid, out var t2) &&
+            t2.Remove(dUid))
+        {
+            _pvsOverride.RemoveSessionOverride(dUid, session);
+        }
+
+        if (_viewerTrackedPvs.TryGetValue(actorUid, out var t3) && t3.Remove(targetCompUid))
+            _pvsOverride.RemoveSessionOverride(targetCompUid, session);
+
+        if (rem.AuthorizedTargets.Count == 0)
+            RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
+        else
+            Dirty(actorUid, rem);
+    }
+
+    private void RevokeAllForActor(EntityUid actorUid, ICommonSession session)
+    {
+        if (TryComp<ActiveRemoteScreenViewerComponent>(actorUid, out var rem))
+        {
+            var compSys = EntityManager.System<OxydComputerSystem>();
+            foreach (var netEnt in rem.AuthorizedTargets.ToList())
+            {
+                var ent = GetEntity(netEnt);
+                if (Exists(ent))
                 {
-                    if (!TerminatingOrDeleted(pvsEnt))
-                        _pvsOverride.RemoveSessionOverride(pvsEnt, e.Session);
+                    if (TryComp<OxydComputerComponent>(ent, out var comp))
+                        _ui.CloseUi(ent, compSys.GetPrimaryUiKey(ent, comp), actorUid);
+                    else if (HasComp<ProgramComponent>(ent))
+                        _ui.CloseUi(ent, ProgramUiKey.Key, actorUid);
                 }
             }
-        }
-    }
-
-    private void OnTerminalShutdown(EntityUid uid, TerminalCartridgeComponent comp, ComponentShutdown args)
-    {
-        DetachViewer(uid);
-    }
-
-    private void OnTerminalTerminating(EntityUid uid, TerminalCartridgeComponent comp, ref EntityTerminatingEvent args)
-    {
-        DetachViewer(uid);
-    }
-
-    private void OnViewerTerminating(EntityUid uid, ActiveRemoteScreenViewerComponent comp, ref EntityTerminatingEvent args)
-    {
-        DetachViewerFromAll(uid);
-    }
-
-    private void OnDeviceTerminating(EntityUid uid, DeviceGuidComponent comp, ref EntityTerminatingEvent args)
-    {
-        TerminateRemoteSessionsForDevice(uid);
-    }
-
-    /// <summary>
-    /// Ensures all map-initialized APCs, Air Alarms, Static Computers, and PDAs have a network GUID
-    /// registered for network scanning without mass-spawning cartridges or mutating unvisited entities every tick.
-    /// </summary>
-    public void EnsureAllDevicesProvisioned()
-    {
-        var hostQuery = AllEntityQuery<EmbeddedComputerHostComponent, MetaDataComponent>();
-        while (hostQuery.MoveNext(out _, out var host, out var meta))
-        {
-            if (host.ComputerEntity is { } compUid && Exists(compUid))
-            {
-                var guid = EnsureComp<DeviceGuidComponent>(compUid);
-                _guidSystem.EnsureGuid(compUid, guid);
-            }
+            RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
         }
 
-        var compQuery = AllEntityQuery<ComputerComponent, MetaDataComponent>();
-        while (compQuery.MoveNext(out var uid, out _, out var meta))
+        if (_viewerTrackedPvs.Remove(actorUid, out var tracked))
         {
-            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
+            foreach (var ent in tracked)
             {
-                var guid = EnsureComp<DeviceGuidComponent>(uid);
-                _guidSystem.EnsureGuid(uid, guid);
-            }
-        }
-
-        var pdaQuery = AllEntityQuery<PdaComponent, MetaDataComponent>();
-        while (pdaQuery.MoveNext(out var uid, out _, out var meta))
-        {
-            if (meta.EntityLifeStage == EntityLifeStage.MapInitialized)
-            {
-                var guid = EnsureComp<DeviceGuidComponent>(uid);
-                _guidSystem.EnsureGuid(uid, guid);
+                if (Exists(ent))
+                    _pvsOverride.RemoveSessionOverride(ent, session);
             }
         }
     }
 
-    /// <summary>
-    /// Ensures that an APC, Air Alarm, Static Computer, or PDA has a network GUID, hardware stats,
-    /// bandwidth metrics, and an embedded filesystem so it can be discovered, SSHed into, and screen-shared.
-    /// </summary>
-    public void EnsureDeviceProvisioned(EntityUid uid)
+    public string GetDeviceCategory(EntityUid uid, OxydComputerComponent? comp = null)
     {
-        if (TerminatingOrDeleted(uid))
-            return;
-
-        if (TryComp<EmbeddedComputerHostComponent>(uid, out var host) && host.ComputerEntity is { } comp && Exists(comp))
+        if (Resolve(uid, ref comp, false))
         {
-            EnsureDeviceProvisioned(comp);
-            return;
+            if (comp.Template == ComputerTemplate.Pda)
+                return "PDA Terminal";
+            if (comp.Template == ComputerTemplate.Desktop)
+                return "Workstation";
+            if (comp.HostMachine is { } hm)
+                return MetaData(hm).EntityName;
         }
 
-        EnsureComp<DeviceGuidComponent>(uid);
-
-        if (HasComp<PdaComponent>(uid))
-        {
-            _pdaSystem.EnsurePdaInitialized(uid);
-            return;
-        }
-
-        var stats = EnsureComp<ComputerStatsComponent>(uid);
-        var bw = EnsureComp<NetworkBandwidthComponent>(uid);
-        var fs = EnsureComp<FileSystemComponent>(uid);
-
-        if (HasComp<ApcComponent>(uid))
-        {
-            stats.CpuFrequencyMhz = 25;
-            stats.RamMb = 16;
-            bw.MaxBps = 64000;
-            if (fs.Files.Count == 0)
-            {
-                WriteDefaultEmbeddedFiles(fs,
-                    "NTOS-EMBEDDED-PWR-1.2\nSUBSYSTEM: AREA POWER CONTROLLER (APC)\nDISPLAY: BUI-280x260",
-                    "APC power distribution telemetry nominal. Remote breaker control enabled via SSH/GUI.");
-            }
-        }
-        else if (HasComp<AirAlarmComponent>(uid) || HasComp<AtmosMonitorComponent>(uid))
-        {
-            stats.CpuFrequencyMhz = 40;
-            stats.RamMb = 32;
-            bw.MaxBps = 64000;
-            if (fs.Files.Count == 0)
-            {
-                WriteDefaultEmbeddedFiles(fs,
-                    "NTOS-EMBEDDED-ATMOS-2.0\nSUBSYSTEM: ATMOSPHERIC ALARM CONTROLLER\nDISPLAY: BUI-500x420",
-                    "Atmospheric sensor/vent/scrubber control matrix online.");
-            }
-        }
-        else if (HasComp<ComputerComponent>(uid))
-        {
-            stats.CpuFrequencyMhz = 200;
-            stats.RamMb = 256;
-            bw.MaxBps = 500000;
-            if (fs.Files.Count == 0)
-            {
-                WriteDefaultEmbeddedFiles(fs,
-                    $"NTOS-WORKSTATION-4.2\nSUBSYSTEM: STATIC CONSOLE ({MetaData(uid).EntityName})",
-                    "Station console terminal active.");
-            }
-        }
-
-        Dirty(uid, stats);
-        Dirty(uid, bw);
-    }
-
-    private static void WriteDefaultEmbeddedFiles(FileSystemComponent fs, string osContent, string logContent)
-    {
-        var osFile = new TextVirtualFile
-        {
-            Name = "os",
-            Extension = "sys",
-            Directory = "/sys/",
-            Size = osContent.Length,
-            TextContent = osContent,
-            IsReadOnly = true
-        };
-        fs.Files[osFile.FullPath] = osFile;
-
-        var statusFile = new TextVirtualFile
-        {
-            Name = "status",
-            Extension = "txt",
-            Directory = "/notes/",
-            Size = logContent.Length,
-            TextContent = logContent,
-            IsReadOnly = false
-        };
-        fs.Files[statusFile.FullPath] = statusFile;
-    }
-
-    /// <summary>
-    /// Returns a short category label for a networked device (used by terminal `scan` and `screen status`).
-    /// </summary>
-    public string GetDeviceCategory(EntityUid uid)
-    {
-        if (TryComp<OxydComputerComponent>(uid, out var oxydComp))
-        {
-            if (oxydComp.HostMachine is { } host && Exists(host))
-            {
-                if (HasComp<ApcComponent>(host))
-                    return "APC";
-                if (HasComp<AirAlarmComponent>(host))
-                    return "AIR-ALARM";
-                if (HasComp<LatheComponent>(host))
-                    return "LATHE";
-            }
-            if (oxydComp.Template == ComputerUiTemplate.Embedded)
-                return "EMBEDDED";
-        }
-
-        if (HasComp<ApcComponent>(uid))
-            return "APC";
-        if (HasComp<AirAlarmComponent>(uid))
-            return "AIR-ALARM";
-        if (HasComp<AtmosMonitorComponent>(uid))
-            return "ATMOS-MON";
-        if (HasComp<PdaComponent>(uid))
-            return "PDA";
-        if (HasComp<DeviceNetworkRouterComponent>(uid))
-            return "ROUTER";
-        if (HasComp<DataServerComponent>(uid))
-            return "SERVER";
-        if (HasComp<ComputerComponent>(uid))
-            return "COMPUTER";
-        return "DEVICE";
-    }
-
-    /// <summary>
-    /// Returns true if the target entity has a shareable graphical interface (PDA, CartridgeLoader, or BUI).
-    /// </summary>
-    public bool CanShareScreen(EntityUid uid)
-    {
-        if (TerminatingOrDeleted(uid))
-            return false;
-
-        if (TryComp<EmbeddedComputerHostComponent>(uid, out var host) && host.ComputerEntity is { } compUid && Exists(compUid))
-            return CanShareScreen(compUid);
-
-        if (HasComp<PdaComponent>(uid) || HasComp<CartridgeLoaderComponent>(uid))
-            return true;
-
-        return TryGetPrimaryUiKey(uid, out _, out _);
-    }
-
-    /// <summary>
-    /// Resolves the primary BoundUserInterface key and metadata for a device.
-    /// </summary>
-    public bool TryGetPrimaryUiKey(EntityUid uid, out Enum? uiKey, out InterfaceData? interfaceData)
-    {
-        uiKey = null;
-        interfaceData = null;
-
-        if (!TryComp<UserInterfaceComponent>(uid, out var uiComp))
-            return false;
-
-        if (TryComp<ActivatableUIComponent>(uid, out var actUi) &&
-            actUi.Key is { } key &&
-            _uiSystem.TryGetInterfaceData((uid, uiComp), key, out var actData))
-        {
-            uiKey = key;
-            interfaceData = actData;
-            return true;
-        }
-
-        if (HasComp<PdaComponent>(uid) &&
-            _uiSystem.TryGetInterfaceData((uid, uiComp), PdaUiKey.Key, out var pdaData))
-        {
-            uiKey = PdaUiKey.Key;
-            interfaceData = pdaData;
-            return true;
-        }
-
-        if (_uiSystem.TryGetInterfaceData((uid, uiComp), ApcUiKey.Key, out var apcData))
-        {
-            uiKey = ApcUiKey.Key;
-            interfaceData = apcData;
-            return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Synchronizes the viewers' PVS overrides, remote interaction authorizations, and open remote BUIs
-    /// for the entire chain of screens visible from <paramref name=\"terminalUid\"/>.
-    /// Supports multiple concurrent viewers without kicking each other off.
-    /// </summary>
-    public void SyncViewerChain(
-        EntityUid terminalUid,
-        EntityUid? viewerActor,
-        HashSet<EntityUid> newTargets,
-        HashSet<EntityUid> newPvsEntities)
-    {
-        if (viewerActor is { } vActor && (!Exists(vActor) || TerminatingOrDeleted(vActor)))
-            viewerActor = null;
-
-        // Ensure host device is never treated as a remote target of itself
-        var hostDevice = Transform(terminalUid).ParentUid;
-        if (hostDevice.IsValid())
-        {
-            newTargets.Remove(hostDevice);
-
-            if (viewerActor is { } actor && !IsDeviceOpenForActor(hostDevice, actor))
-            {
-                DetachViewer(terminalUid, actor);
-                return;
-            }
-        }
-
-        if (!_sessionsByTerminal.TryGetValue(terminalUid, out var session))
-        {
-            session = new TerminalViewerSession();
-            _sessionsByTerminal[terminalUid] = session;
-        }
-
-        if (viewerActor is { } explicitActor)
-        {
-            session.ViewerActors.Add(explicitActor);
-        }
-
-        // Also add any actor currently viewing the host console or computer interface
-        if (hostDevice.IsValid() && TryComp<UserInterfaceComponent>(hostDevice, out var hostUi))
-        {
-            foreach (var actorSet in hostUi.Actors.Values)
-            {
-                foreach (var actor in actorSet)
-                {
-                    if (Exists(actor) && !TerminatingOrDeleted(actor))
-                        session.ViewerActors.Add(actor);
-                }
-            }
-        }
-
-        session.ViewerActors.RemoveWhere(a => !Exists(a) || TerminatingOrDeleted(a));
-        if (session.ViewerActors.Count == 0)
-        {
-            DetachViewer(terminalUid);
-            return;
-        }
-
-        // 1. Update PVS overrides for entities in the screen chain (including PDA cartridge programs)
-        foreach (var oldPvs in session.ActivePvsEntities.ToList())
-        {
-            if (!newPvsEntities.Contains(oldPvs))
-            {
-                session.ActivePvsEntities.Remove(oldPvs);
-                foreach (var actor in session.ViewerActors)
-                {
-                    if (_playerManager.TryGetSessionByEntity(actor, out var playerSession) && playerSession != null)
-                    {
-                        if (!IsPvsNeededByActor(actor, oldPvs) && !TerminatingOrDeleted(oldPvs))
-                            _pvsOverride.RemoveSessionOverride(oldPvs, playerSession);
-                    }
-                }
-            }
-        }
-
-        foreach (var addedPvs in newPvsEntities)
-        {
-            if (!TerminatingOrDeleted(addedPvs))
-            {
-                session.ActivePvsEntities.Add(addedPvs);
-                foreach (var actor in session.ViewerActors)
-                {
-                    if (_playerManager.TryGetSessionByEntity(actor, out var playerSession) && playerSession != null)
-                    {
-                        _pvsOverride.AddSessionOverride(addedPvs, playerSession);
-                    }
-                }
-            }
-        }
-
-        // Ensure all viewers have overrides for all active PVS entities
-        foreach (var actor in session.ViewerActors)
-        {
-            if (_playerManager.TryGetSessionByEntity(actor, out var playerSession) && playerSession != null)
-            {
-                foreach (var pvsEnt in session.ActivePvsEntities)
-                {
-                    if (!TerminatingOrDeleted(pvsEnt))
-                        _pvsOverride.AddSessionOverride(pvsEnt, playerSession);
-                }
-            }
-        }
-
-        // 2. Update active target devices & open their BUIs if needed
-        foreach (var oldTarget in session.ActiveTargets.ToList())
-        {
-            if (!newTargets.Contains(oldTarget))
-            {
-                session.ActiveTargets.Remove(oldTarget);
-                session.AlreadyOpenTargets.RemoveWhere(pair => pair.Target == oldTarget);
-            }
-        }
-
-        foreach (var target in newTargets)
-        {
-            if (!TerminatingOrDeleted(target) && session.ActiveTargets.Add(target))
-            {
-                foreach (var actor in session.ViewerActors)
-                {
-                    if (IsDeviceOpenForActor(target, actor))
-                    {
-                        session.AlreadyOpenTargets.Add((actor, target));
-                    }
-                }
-            }
-        }
-
-        // 3. Update authorizations and ensure all active device BUIs (including PDAs) are open for each viewer
-        foreach (var actor in session.ViewerActors.ToList())
-        {
-            RebuildActorAuthorizedTargets(actor);
-
-            foreach (var target in session.ActiveTargets.ToList())
-            {
-                if (TryGetPrimaryUiKey(target, out var uiKey, out _) && uiKey != null)
-                {
-                    if (!_uiSystem.IsUiOpen(target, uiKey, actor))
-                    {
-                        var key = (actor, target);
-                        if (!_closingUis.Contains(key) && _openingUis.Add(key))
-                        {
-                            try
-                            {
-                                RaiseLocalEvent(target, new BeforeActivatableUIOpenEvent(actor));
-                                _uiSystem.OpenUi(target, uiKey, actor);
-                                RaiseLocalEvent(target, new AfterActivatableUIOpenEvent(actor));
-                            }
-                            finally
-                            {
-                                _openingUis.Remove(key);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Account for screen streaming bandwidth on target devices and receiving host
-        foreach (var target in session.ActiveTargets)
-        {
-            _bandwidth.RecordScreenSharingBandwidth(target, terminalUid);
-        }
-    }
-
-    /// <summary>
-    /// Detaches viewer(s) from a terminal session, removing PVS overrides, closing remote BUIs,
-    /// and cleaning up session state. If <paramref name=\"explicitActor\"/> is specified, only that
-    /// viewer is removed.
-    /// </summary>
-    public void DetachViewer(EntityUid terminalUid, EntityUid? explicitActor = null)
-    {
-        if (!_sessionsByTerminal.TryGetValue(terminalUid, out var session))
-            return;
-
-        var actorsToDetach = explicitActor.HasValue
-            ? new List<EntityUid> { explicitActor.Value }
-            : session.ViewerActors.ToList();
-
-        foreach (var actor in actorsToDetach)
-        {
-            session.ViewerActors.Remove(actor);
-
-            if (_playerManager.TryGetSessionByEntity(actor, out var playerSession) && playerSession != null)
-            {
-                foreach (var pvsEnt in session.ActivePvsEntities.ToList())
-                {
-                    if (!IsPvsNeededByActor(actor, pvsEnt) && !TerminatingOrDeleted(pvsEnt))
-                        _pvsOverride.RemoveSessionOverride(pvsEnt, playerSession);
-                }
-            }
-
-            foreach (var target in session.ActiveTargets.ToList())
-            {
-                if (!IsTargetNeededByActor(actor, target) && !TerminatingOrDeleted(target))
-                {
-                    if (!session.AlreadyOpenTargets.Contains((actor, target)))
-                    {
-                        if (TryGetPrimaryUiKey(target, out var uiKey, out _) && uiKey != null)
-                        {
-                            _uiSystem.CloseUi(target, uiKey, actor);
-                        }
-                    }
-                }
-            }
-
-            session.AlreadyOpenTargets.RemoveWhere(pair => pair.Actor == actor);
-            RebuildActorAuthorizedTargets(actor);
-        }
-
-        if (session.ViewerActors.Count == 0 || explicitActor == null)
-        {
-            _sessionsByTerminal.Remove(terminalUid);
-        }
-    }
-
-    /// <summary>
-    /// Forcibly detaches a viewer actor from all active terminal sessions they participate in.
-    /// </summary>
-    public void DetachViewerFromAll(EntityUid actor)
-    {
-        var terms = _sessionsByTerminal.Keys.ToList();
-        foreach (var term in terms)
-        {
-            if (_sessionsByTerminal.TryGetValue(term, out var session) && session.ViewerActors.Contains(actor))
-            {
-                DetachViewer(term, actor);
-            }
-        }
-    }
-
-    public bool WasDeviceAlreadyOpenForActor(EntityUid device, EntityUid actor)
-    {
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (session.ViewerActors.Contains(actor) && session.AlreadyOpenTargets.Contains((actor, device)))
-                return true;
-        }
-
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (session.ViewerActors.Contains(actor) && session.ActiveTargets.Contains(device))
-                return false;
-        }
-
-        return IsDeviceOpenForActor(device, actor);
-    }
-
-    private bool IsDeviceOpenForActor(EntityUid device, EntityUid actor)
-    {
-        if (!Exists(actor) || TerminatingOrDeleted(actor))
-            return false;
-
-        if (TryComp<UserInterfaceComponent>(device, out var uiComp))
-        {
-            foreach (var actors in uiComp.Actors.Values)
-            {
-                if (actors.Contains(actor))
-                    return true;
-            }
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Forcibly terminates all remote screen sessions viewing <paramref name=\"targetUid\"/> or its host/computer,
-    /// and closes the target's BoundUserInterface for any viewing players.
-    /// </summary>
-    public void TerminateRemoteSessionsForDevice(EntityUid targetUid)
-    {
-        var targetGuid = _guidSystem.GetGuid(targetUid);
-
-        var targetsToCheck = new HashSet<EntityUid> { targetUid };
-        if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostComp) && hostComp.ComputerEntity is { } comp && Exists(comp))
-            targetsToCheck.Add(comp);
-        if (TryComp<OxydComputerComponent>(targetUid, out var oxydComp) && oxydComp.HostMachine is { } host && Exists(host))
-            targetsToCheck.Add(host);
-
-        var terminalsToDetach = new List<EntityUid>();
-        foreach (var (termUid, session) in _sessionsByTerminal)
-        {
-            if (session.ActiveTargets.Overlaps(targetsToCheck) || session.ActivePvsEntities.Overlaps(targetsToCheck))
-                terminalsToDetach.Add(termUid);
-        }
-
-        foreach (var termUid in terminalsToDetach)
-        {
-            if (TryComp<TerminalCartridgeComponent>(termUid, out var termComp))
-            {
-                termComp.IsScreenAttached = false;
-                termComp.History.Add($"[SYSTEM] Remote screen session to [{targetGuid}] terminated: access revoked.");
-                Dirty(termUid, termComp);
-                if (Transform(termUid).ParentUid is { } loaderUid && loaderUid.IsValid())
-                {
-                    Get<TerminalCartridgeSystem>().UpdateUiState(termUid, loaderUid, termComp);
-                }
-            }
-            DetachViewer(termUid);
-        }
-
-        foreach (var ent in targetsToCheck)
-        {
-            CloseActiveUisForDevice(ent);
-        }
-    }
-
-    private void CloseActiveUisForDevice(EntityUid ent)
-    {
-        if (TryGetPrimaryUiKey(ent, out var uiKey, out _) && uiKey != null &&
-            TryComp<UserInterfaceComponent>(ent, out var uiComp))
-        {
-            foreach (var actors in uiComp.Actors.Values)
-            {
-                foreach (var actor in actors.ToList())
-                {
-                    _uiSystem.CloseUi(ent, uiKey, actor);
-                }
-            }
-        }
-    }
-
-    public void DetachAllForHostDevice(EntityUid actor, EntityUid hostDeviceUid)
-    {
-        var toDetach = new List<EntityUid>();
-        foreach (var (termUid, session) in _sessionsByTerminal)
-        {
-            if (session.ViewerActors.Contains(actor) && Transform(termUid).ParentUid == hostDeviceUid)
-                toDetach.Add(termUid);
-        }
-
-        foreach (var termUid in toDetach)
-        {
-            DetachViewer(termUid, actor);
-        }
-    }
-
-    private bool IsTargetNeededByActor(EntityUid actor, EntityUid target)
-    {
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (session.ViewerActors.Contains(actor) && session.ActiveTargets.Contains(target))
-                return true;
-        }
-        return false;
-    }
-
-    private bool IsPvsNeededByActor(EntityUid actor, EntityUid entity)
-    {
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (session.ViewerActors.Contains(actor) && session.ActivePvsEntities.Contains(entity))
-                return true;
-        }
-        return false;
-    }
-
-    private void RebuildActorAuthorizedTargets(EntityUid actor)
-    {
-        var allTargets = new HashSet<NetEntity>();
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (!session.ViewerActors.Contains(actor))
-                continue;
-
-            foreach (var target in session.ActiveTargets.ToList())
-            {
-                if (!TerminatingOrDeleted(target))
-                    allTargets.Add(GetNetEntity(target));
-            }
-        }
-
-        if (allTargets.Count == 0)
-        {
-            RemComp<ActiveRemoteScreenViewerComponent>(actor);
-            return;
-        }
-
-        var viewerComp = EnsureComp<ActiveRemoteScreenViewerComponent>(actor);
-        viewerComp.AuthorizedTargets = allTargets;
-        Dirty(actor, viewerComp);
-    }
-
-    /// <summary>
-    /// Checks if a native BoundUserInterface is currently open on <paramref name=\"targetUid\"/>
-    /// for <paramref name=\"viewerActor\"/> (or any active viewer observing this screen).
-    /// </summary>
-    private bool IsNativeUiOpenForViewer(EntityUid targetUid, Enum? uiKey, EntityUid? viewerActor)
-    {
-        if (viewerActor is { } actor && Exists(actor))
-        {
-            if (uiKey != null && _uiSystem.IsUiOpen(targetUid, uiKey, actor))
-                return true;
-            return IsDeviceOpenForActor(targetUid, actor);
-        }
-
-        foreach (var session in _sessionsByTerminal.Values)
-        {
-            if (!session.ActiveTargets.Contains(targetUid))
-                continue;
-
-            foreach (var vActor in session.ViewerActors)
-            {
-                if (!Exists(vActor))
-                    continue;
-
-                if (uiKey != null && _uiSystem.IsUiOpen(targetUid, uiKey, vActor))
-                    return true;
-                if (IsDeviceOpenForActor(targetUid, vActor))
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Recursively constructs a <see cref=\"RemoteScreenState\"/> for <paramref name=\"targetUid\"/>,\n    /// detecting any cycle in <paramref name=\"visitedGuids\"/> and emitting a PiP cycle reference\n    /// (`IsCycleReference = true`) instead of recursing infinitely.\n    /// When native BUI is open for the viewer, duplicates are stripped from the networked state.
-    /// </summary>
-    public RemoteScreenState? BuildRemoteScreenState(
-        EntityUid targetUid,
-        HashSet<string> visitedGuids,
-        HashSet<EntityUid>? chainTargets = null,
-        HashSet<EntityUid>? chainPvsEntities = null,
-        int maxDepth = 4,
-        EntityUid? viewerActor = null)
-    {
-        if (!Exists(targetUid) || TerminatingOrDeleted(targetUid))
-            return null;
-
-        if (TryComp<EmbeddedComputerHostComponent>(targetUid, out var hostComp) && hostComp.ComputerEntity is { } compUid && Exists(compUid))
-            targetUid = compUid;
-
-        EnsureDeviceProvisioned(targetUid);
-
-        var targetGuid = _guidSystem.GetGuid(targetUid);
-        var deviceName = MetaData(targetUid).EntityName;
-
-        // Cycle detected (e.g., A -> A, A -> B -> A, or A -> B -> C -> A):
-        // Emit a lightweight PiP cycle reference so the client renders the cycle via PipScreenSurface!
-        if (!visitedGuids.Add(targetGuid))
-        {
-            TryGetPrimaryUiKey(targetUid, out var cycleUiKey, out _);
-            return new RemoteScreenState(
-                GetNetEntity(targetUid),
-                targetGuid,
-                deviceName,
-                uiKey: cycleUiKey ?? PdaUiKey.Key,
-                isCycleReference: true);
-        }
-
-        chainTargets?.Add(targetUid);
-        chainPvsEntities?.Add(targetUid);
-
-        // Case 1: PDA / Cartridge host device
-        if (TryComp<PdaComponent>(targetUid, out var remPda))
-        {
-            if (remPda.LastState == null)
-                _pdaSystem.UpdatePdaUi(targetUid, remPda);
-
-            if (chainPvsEntities != null && TryComp<CartridgeLoaderComponent>(targetUid, out var loader))
-            {
-                foreach (var prog in _cartridgeLoader.GetAllPrograms(targetUid).ToList())
-                {
-                    if (!TerminatingOrDeleted(prog))
-                        chainPvsEntities.Add(prog);
-                }
-                if (loader.ActiveProgram is { } activeProg && !TerminatingOrDeleted(activeProg))
-                    chainPvsEntities.Add(activeProg);
-            }
-
-            if (remPda.LastState is { } lastState)
-            {
-                var remoteCartridgeState = lastState.CartridgeState;
-                string? viewingGuid = null;
-
-                // If the remote PDA is itself running a Terminal with an attached screen, resolve the next hop!
-                if (remoteCartridgeState is TerminalUiState remTerm &&
-                    remTerm.IsScreenAttached &&
-                    !string.IsNullOrEmpty(remTerm.SshHost))
-                {
-                    viewingGuid = remTerm.SshHost;
-                    RemoteScreenState? nestedScreen = null;
-
-                    if (visitedGuids.Count <= maxDepth &&
-                        _guidSystem.TryGetEntityByGuid(remTerm.SshHost, out var nextTarget) &&
-                        nextTarget.HasValue)
-                    {
-                        nestedScreen = BuildRemoteScreenState(
-                            nextTarget.Value,
-                            visitedGuids,
-                            chainTargets,
-                            chainPvsEntities,
-                            maxDepth,
-                            viewerActor);
-                    }
-
-                    remoteCartridgeState = new TerminalUiState(
-                        remTerm.Lines,
-                        remTerm.Prompt,
-                        remTerm.DeviceGuid,
-                        remTerm.SshHost,
-                        remTerm.IsPasswordPrompt,
-                        remTerm.IsSshLocalMode,
-                        isScreenAttached: nestedScreen != null,
-                        remotePdaState: nestedScreen?.PdaState,
-                        remoteScreen: nestedScreen);
-                }
-
-                var pdaState = new PdaUpdateState(
-                    lastState.Programs,
-                    lastState.ActiveUI,
-                    lastState.FlashlightEnabled,
-                    lastState.HasPen,
-                    lastState.HasPai,
-                    lastState.PdaOwnerInfo,
-                    lastState.StationName,
-                    lastState.HasUplink,
-                    lastState.CanPlayMusic,
-                    lastState.Address,
-                    lastState.DeviceGuid,
-                    lastState.CpuUsagePercent,
-                    lastState.RamUsedMb,
-                    lastState.RamTotalMb,
-                    lastState.StorageUsedBytes,
-                    lastState.StorageTotalBytes,
-                    lastState.IsNetworkSaturated,
-                    lastState.OpenPrograms,
-                    remoteCartridgeState,
-                    lastState.HasDisk,
-                    lastState.DiskName,
-                    lastState.HasCaptainAccess,
-                    lastState.SshPassword,
-                    lastState.CurrentView,
-                    lastState.Template,
-                    lastState.BootState,
-                    lastState.BootDiagnosticMessage,
-                    lastState.DefaultScreenSize,
-                    lastState.BootProgram,
-                    lastState.UploadBps,
-                    lastState.DownloadBps,
-                    lastState.BatteryChargePercent,
-                    lastState.HasBattery);
-
-                InterfaceData? pdaData = null;
-                if (TryComp<UserInterfaceComponent>(targetUid, out var uiComp))
-                    _uiSystem.TryGetInterfaceData((targetUid, uiComp), PdaUiKey.Key, out pdaData);
-
-                // Deduplicate BUI state: If native BUI is active and open for the viewer,
-                // do NOT duplicate the entire BUI state inside TerminalUiState.RemoteScreen.
-                var isNativeUiOpen = IsNativeUiOpenForViewer(targetUid, PdaUiKey.Key, viewerActor);
-
-                var res1 = new RemoteScreenState(
-                    GetNetEntity(targetUid),
-                    targetGuid,
-                    deviceName,
-                    uiKey: PdaUiKey.Key,
-                    buiClientType: pdaData?.ClientType,
-                    buiState: isNativeUiOpen ? null : pdaState,
-                    pdaState: isNativeUiOpen ? null : pdaState,
-                    viewingTargetGuid: viewingGuid);
-                res1.WasAlreadyOpen = viewerActor.HasValue && WasDeviceAlreadyOpenForActor(targetUid, viewerActor.Value);
-                _bandwidth.RecordDataTransmitted(targetUid, 2048);
-                return res1;
-            }
-        }
-
-        // Case 2: Generic BoundUserInterface device (APC, Air Alarm, Static Computer, etc.)
-        if (TryGetPrimaryUiKey(targetUid, out var uiKey, out var iData) &&
-            uiKey != null &&
-            iData != null)
-        {
-            _uiSystem.TryGetUiState<BoundUserInterfaceState>(targetUid, uiKey, out var buiState);
-
-            // Deduplicate BUI state: If native BUI is active and open for the viewer,
-            // do NOT duplicate the entire BUI state inside TerminalUiState.RemoteScreen.
-            var isNativeUiOpen = IsNativeUiOpenForViewer(targetUid, uiKey, viewerActor);
-
-            var res2 = new RemoteScreenState(
-                GetNetEntity(targetUid),
-                targetGuid,
-                deviceName,
-                uiKey: uiKey,
-                buiClientType: iData.ClientType,
-                buiState: isNativeUiOpen ? null : buiState);
-            res2.WasAlreadyOpen = viewerActor.HasValue && WasDeviceAlreadyOpenForActor(targetUid, viewerActor.Value);
-            _bandwidth.RecordDataTransmitted(targetUid, 2048);
-            return res2;
-        }
-
-        return null;
+        return MetaData(uid).EntityName;
     }
 }

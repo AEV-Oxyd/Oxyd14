@@ -6,7 +6,7 @@ namespace Content.Shared._Oxyd.Computers.Network;
 
 public sealed partial class SharedDeviceGuidSystem : EntitySystem
 {
-    [Dependency] private readonly INetManager _netManager = default!;
+    [Dependency] private INetManager _netManager = default!;
 
     private readonly Dictionary<string, EntityUid> _guidToEntity = new(StringComparer.OrdinalIgnoreCase);
 

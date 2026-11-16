@@ -243,14 +243,14 @@ public abstract partial class SharedRingerSystem : EntitySystem
         // Toggle the unlock state
         ent.Comp.Unlocked = !ent.Comp.Unlocked;
 
-        // Update PDA UI if needed
-        _pda.UpdatePdaUi(ent.Owner);
-
         // Close store UI if we're locking
         if (!ent.Comp.Unlocked)
         {
             UI.CloseUi(ent.Owner, StoreUiKey.Key);
         }
+
+        // Notify host computer via PDA hardware update if present
+        _pda.NotifyHardwareStateChanged(ent.Owner);
 
         return true;
     }

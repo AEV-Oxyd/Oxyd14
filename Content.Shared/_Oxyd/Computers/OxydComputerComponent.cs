@@ -1,13 +1,9 @@
-using System.Numerics;
-using Content.Shared.CartridgeLoader;
+using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Payloads;
-using Content.Shared.PDA;
-using Robust.Shared.GameObjects;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
-using Robust.Shared.Utility;
 
 namespace Content.Shared._Oxyd.Computers;
 
@@ -18,66 +14,158 @@ public enum OxydComputerWireStatusKey : byte
     RemoteControl,
     Network,
     Storage,
-    DeviceLink
+    DeviceLink,
+    BootProgram,
+    Wires
+}
+
+[Serializable, NetSerializable]
+public enum ComputerTemplate : byte
+{
+    Pda = 0,
+    Desktop = 1,
+    Embedded = 2
+}
+
+[Serializable, NetSerializable]
+public enum ComputerBootState : byte
+{
+    Off = 0,
+    NoPower = 1,
+    WireCut = 2,
+    NoHardDrive = 3,
+    NoRam = 4,
+    NoBootProgram = 5,
+    Running = 6,
+    NoCpu = 7
 }
 
 /// <summary>
-/// Universal computer root component shared across Workstations, Laptops, PDAs, Routers,
-/// APC controllers, Atmos controllers, and Autolathe embedded computers.
+/// DeviceLink port descriptor mirroring a port on either the computer or its represented host machine.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed class MirroredDevicePortInfo
+{
+    public NetEntity OwnerNetEntity { get; }
+    public string OwnerName { get; }
+    public string PortId { get; }
+    public string PortName { get; }
+    public bool IsSource { get; }
+    public bool IsHostPort { get; }
+    public List<string> LinkedTargets { get; }
+
+    public MirroredDevicePortInfo(
+        NetEntity ownerNetEntity,
+        string ownerName,
+        string portId,
+        string portName,
+        bool isSource,
+        bool isHostPort,
+        List<string> linkedTargets)
+    {
+        OwnerNetEntity = ownerNetEntity;
+        OwnerName = ownerName;
+        PortId = portId;
+        PortName = portName;
+        IsSource = isSource;
+        IsHostPort = isHostPort;
+        LinkedTargets = linkedTargets;
+    }
+}
+
+/// <summary>
+/// Attached to every computer entity (which is always encapsulated separately from its host machine).
+/// Manages hardware-bounded execution, boot-first-.nte policy, and DeviceLink port mirroring.
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class OxydComputerComponent : Component
 {
-    [DataField, AutoNetworkedField]
-    public ComputerUiTemplate Template = ComputerUiTemplate.Desktop;
+    public const string ContainerPrograms = "program_container";
 
     [DataField, AutoNetworkedField]
-    public List<EntityUid> OpenPrograms = new();
+    public ComputerTemplate Template = ComputerTemplate.Pda;
 
     [DataField, AutoNetworkedField]
-    public Vector2 DefaultScreenSize = new(680f, 520f);
+    public Vector2i DefaultScreenSize = new(600, 480);
 
     [DataField, AutoNetworkedField]
-    public ComputerBootState BootState = ComputerBootState.Running;
+    public bool AllowRemoteControl = true;
 
     [DataField, AutoNetworkedField]
-    public string BootDiagnosticMessage = string.Empty;
-
-    /// <summary>
-    /// The first program started on boot (typically the OS or a dedicated controller program).
-    /// This program stays running and cannot be closed while the computer is booted.
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public EntityUid? BootProgram;
+    public bool AllowDeviceLink = true;
 
     [DataField, AutoNetworkedField]
-    public bool RequireHardDriveToBoot = true;
-
-    [DataField, AutoNetworkedField]
-    public bool RequireRamToBoot = true;
+    public bool IsPowered = true;
 
     [DataField, AutoNetworkedField]
     public bool RequirePowerToBoot = false;
 
     [DataField, AutoNetworkedField]
-    public bool AllowRemoteControl = true;
+    public bool AutoBootWhenPowered = true;
 
     /// <summary>
-    /// Automatically discover and link compatible DeviceLink ports on parent/nearby entities.
+    /// Physical hardware prototypes spawned into slots on map initialization.
+    /// </summary>
+    [DataField]
+    public List<EntProtoId> DefaultHardware = new();
+
+    /// <summary>
+    /// Optional explicit startup app launched by EmbeddedOS after the boot program initializes.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public bool AutoLinkLocalPorts = true;
+    public string? EmbeddedDefaultAppPath;
 
     /// <summary>
-    /// If this computer is embedded inside a host machine (APC, Autolathe, AirAlarm),
-    /// tracks the host machine entity.
+    /// Back-reference to the host device entity (PDA, APC, AirAlarm, Autolathe, Workstation, Router).
     /// </summary>
     [DataField, AutoNetworkedField]
     public EntityUid? HostMachine;
 
+    [DataField, AutoNetworkedField]
+    public string HostTitle = "NTOS 1.4";
+
+    [DataField, AutoNetworkedField]
+    public string HostSubtitle = " | Terminal";
+
+    [DataField, AutoNetworkedField]
+    public string BorderColor = "#00D4FF";
+
+    [DataField, AutoNetworkedField]
+    public string AccentHColor = "#00D4FF";
+
+    [DataField, AutoNetworkedField]
+    public string AccentVColor = "#005577";
+
     /// <summary>
-    /// Motherboard wire cut states controlled by WiresSystem.
+    /// First .nte program spawned at boot. Has total ownership of the display UI.
     /// </summary>
+    [DataField, AutoNetworkedField]
+    public EntityUid? BootProgram;
+
+    /// <summary>
+    /// Currently focused foreground program launched by the OS / computer.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public EntityUid? ActiveProgram;
+
+    [DataField, AutoNetworkedField]
+    public List<EntityUid> RunningPrograms = new();
+
+    [DataField, AutoNetworkedField]
+    public ComputerBootState BootState = ComputerBootState.Off;
+
+    [DataField, AutoNetworkedField]
+    public bool IsBooted;
+
+    [DataField, AutoNetworkedField]
+    public string BootError = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public bool RequireIdAccess;
+
+    [DataField, AutoNetworkedField]
+    public bool LockIdSlot;
+
     [DataField, AutoNetworkedField]
     public bool PowerWireCut;
 
@@ -92,737 +180,169 @@ public sealed partial class OxydComputerComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool DeviceLinkWireCut;
+
+    [DataField, AutoNetworkedField]
+    public HashSet<string> LockedDeviceLinkPorts = new();
+
+    [DataField, AutoNetworkedField]
+    public string SshPassword = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public bool DisableLocalShell;
 }
 
 /// <summary>
-/// Attached to a host machine (such as an APC, Autolathe, or AirAlarm) that contains an embedded
-/// computer entity inside its container.
+/// Attached to host devices (PDAs, APCs, AirAlarms, Autolathes, Workstations, Routers, Servers)
+/// to encapsulate their computer inside a dedicated child entity container.
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class EmbeddedComputerHostComponent : Component
 {
-    [DataField]
-    public EntProtoId ComputerPrototype = "BaseOxydEmbeddedController";
+    public const string ContainerBoard = "computer_board";
 
-    [DataField]
-    public string ContainerId = "computer_board";
+    [DataField(required: true)]
+    public EntProtoId ComputerPrototype = "BaseOxydEmbeddedController";
 
     [DataField, AutoNetworkedField]
     public EntityUid? ComputerEntity;
 
+    /// <summary>
+    /// Overrides the hardware spawned in the encapsulated computer if non-empty.
+    /// </summary>
     [DataField]
-    public List<EntProtoId> DefaultPrograms = new();
+    public List<EntProtoId> DefaultHardware = new();
 
     [DataField, AutoNetworkedField]
-    public string? BorderColor;
+    public string? EmbeddedDefaultAppPath;
 
-    [DataField, AutoNetworkedField]
-    public string? AccentHColor;
+    [DataField]
+    public string BorderColor = "#00D4FF";
 
-    [DataField, AutoNetworkedField]
-    public string? AccentVColor;
+    [DataField]
+    public string AccentHColor = "#00D4FF";
 
-    [DataField, AutoNetworkedField]
-    public string? Title;
+    [DataField]
+    public string AccentVColor = "#005577";
 
-    [DataField, AutoNetworkedField]
-    public string? Subtitle;
+    [DataField]
+    public string Title = "NTOS";
+
+    [DataField]
+    public string Subtitle = " | Embedded Subsystem";
 }
 
 /// <summary>
-/// Per-entity state component attached to each Program (Cartridge) entity.
-/// Allows convenient PVS control for remote applications and offloads per-program UI state
-/// onto the program entity itself instead of bloating a single BUI state.
+/// Hardware-level computer display shell UI state. Never carries child program BUI states;
+/// program entities use direct BUI updates on <see cref="ProgramUiKey.Key"/>.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
-public sealed partial class ProgramStateComponent : Component
+[Serializable, NetSerializable]
+public sealed class ComputerDisplayUiState : BoundUserInterfaceState
 {
-    [AutoNetworkedField]
-    public BoundUserInterfaceState? State;
+    public string ComputerName { get; }
+    public string DeviceGuid { get; }
+    public string Title { get; }
+    public string Subtitle { get; }
+    public string BorderColor { get; }
+    public string AccentHColor { get; }
+    public string AccentVColor { get; }
+    public Vector2i ScreenSize { get; }
+    public bool IsBooted { get; }
+    public string BootError { get; }
+    public NetEntity? BootProgram { get; }
+    public NetEntity? ActiveProgram { get; }
+    public NetEntity? HostMachine { get; }
+    public int CpuFrequencyMhz { get; }
+    public int RamUsedMb { get; }
+    public int RamTotalMb { get; }
+    public int StorageUsedBytes { get; }
+    public int StorageTotalBytes { get; }
+    public bool HasCpu { get; }
+    public bool HasRam { get; }
+    public bool HasHardDrive { get; }
+    public bool HasNetworkCard { get; }
+    public bool HasDataPort { get; }
 
-    [AutoNetworkedField]
-    public NetEntity? LoaderEntity;
-}
-
-/// <summary>
-/// Raised on a computer entity when a program entity or terminal executes a base console command
-/// (e.g., to trigger a device link, send data through a port, or query hardware/network state).
-/// </summary>
-public sealed class ExecuteComputerCommandEvent : HandledEntityEventArgs
-{
-    public EntityUid? ProgramUid;
-    public EntityUid? UserUid;
-    public string CommandLine;
-    public string Output = string.Empty;
-    public bool Success;
-
-    public ExecuteComputerCommandEvent(string commandLine, EntityUid? programUid = null, EntityUid? userUid = null)
+    public ComputerDisplayUiState(
+        string computerName,
+        string deviceGuid,
+        string title,
+        string subtitle,
+        string borderColor,
+        string accentHColor,
+        string accentVColor,
+        Vector2i screenSize,
+        bool isBooted,
+        string bootError,
+        NetEntity? bootProgram,
+        NetEntity? activeProgram,
+        NetEntity? hostMachine,
+        int cpuFrequencyMhz,
+        int ramUsedMb,
+        int ramTotalMb,
+        int storageUsedBytes,
+        int storageTotalBytes,
+        bool hasCpu,
+        bool hasRam,
+        bool hasHardDrive,
+        bool hasNetworkCard,
+        bool hasDataPort)
     {
-        CommandLine = commandLine;
-        ProgramUid = programUid;
-        UserUid = userUid;
+        ComputerName = computerName;
+        DeviceGuid = deviceGuid;
+        Title = title;
+        Subtitle = subtitle;
+        BorderColor = borderColor;
+        AccentHColor = accentHColor;
+        AccentVColor = accentVColor;
+        ScreenSize = screenSize;
+        IsBooted = isBooted;
+        BootError = bootError;
+        BootProgram = bootProgram;
+        ActiveProgram = activeProgram;
+        HostMachine = hostMachine;
+        CpuFrequencyMhz = cpuFrequencyMhz;
+        RamUsedMb = ramUsedMb;
+        RamTotalMb = ramTotalMb;
+        StorageUsedBytes = storageUsedBytes;
+        StorageTotalBytes = storageTotalBytes;
+        HasCpu = hasCpu;
+        HasRam = hasRam;
+        HasHardDrive = hasHardDrive;
+        HasNetworkCard = hasNetworkCard;
+        HasDataPort = hasDataPort;
     }
 }
 
-/// <summary>
-/// Network payload sent over <see cref="Content.Shared.DeviceLinking.Systems.DeviceLinkSystem"/>
-/// between a computer entity and its linked machine (Lathe, APC, AirAlarm, etc.).
-/// </summary>
 [Serializable, NetSerializable]
-public partial record struct ComputerDeviceLinkPayload(
+public sealed class ComputerRetryBootMessage : BoundUserInterfaceMessage;
+
+[Serializable, NetSerializable]
+public sealed partial class ComputerDeviceLinkPayload : ISignalNetworkPayload
+{
+    public string Command { get; set; } = string.Empty;
+    public string Argument { get; set; } = string.Empty;
+    public string SenderGuid { get; set; } = string.Empty;
+
+    public ComputerDeviceLinkPayload()
+    {
+    }
+
+    public ComputerDeviceLinkPayload(string command, string argument = "", string senderGuid = "")
+    {
+        Command = command;
+        Argument = argument;
+        SenderGuid = senderGuid;
+    }
+
+    public ISignalNetworkPayload Clone()
+    {
+        return new ComputerDeviceLinkPayload(Command, Argument, SenderGuid);
+    }
+}
+
+[ByRefEvent]
+public readonly record struct ExecuteComputerCommandEvent(
+    EntityUid ComputerUid,
     string Command,
-    string Argument = "",
-    Dictionary<string, string>? Data = null) : ISignalNetworkPayload;
-
-/// <summary>
-/// Default OS program component. Always runs as the primary system shell for PDAs and workstations.
-/// Handles system settings, launching apps, device link management, and hardware inspection.
-/// </summary>
-[RegisterComponent]
-public sealed partial class OsCartridgeComponent : Component
-{
-}
-
-/// <summary>
-/// Dedicated operating system shell for embedded machine controllers (APCs, Air Alarms, Lathes, Subsystems).
-/// Focuses purely on machine diagnostics, local terminal access, hardware monitoring, and launching subsystem controllers.
-/// </summary>
-[RegisterComponent]
-public sealed partial class EmbeddedOsCartridgeComponent : Component
-{
-}
-
-[Serializable, NetSerializable]
-public sealed class OsProgramEntry
-{
-    public NetEntity Uid;
-    public string Name = string.Empty;
-    public string? Description;
-    public SpriteSpecifier? Icon;
-    public InstallationStatus InstallationStatus = InstallationStatus.Installed;
-    public bool IsRunning;
-    public bool IsBootProgram;
-}
-
-[Serializable, NetSerializable]
-public sealed class OsHardwareEntry
-{
-    public string SlotName = string.Empty;
-    public string PartName = string.Empty;
-    public string Size = string.Empty;
-    public string Details = string.Empty;
-}
-
-[Serializable, NetSerializable]
-public sealed class OsDeviceLinkEntry
-{
-    public string SourcePort = string.Empty;
-    public string TargetEntityName = string.Empty;
-    public NetEntity TargetEntity;
-    public string SinkPort = string.Empty;
-}
-
-[Serializable, NetSerializable]
-public sealed class OsUiState : BoundUserInterfaceState
-{
-    public string DeviceGuid;
-    public ComputerUiTemplate Template;
-    public bool AllowRemoteControl;
-    public int CpuLoadPercent;
-    public int RamUsedMB;
-    public int RamTotalMB;
-    public int DiskUsedKB;
-    public int DiskTotalKB;
-    public int UploadBps;
-    public int DownloadBps;
-    public float BatteryPercent;
-    public bool HasBattery;
-    public List<OsProgramEntry> Programs;
-    public List<OsHardwareEntry> Hardware;
-    public List<OsDeviceLinkEntry> LinkedPorts;
-    public string StatusMessage;
-    public PdaIdInfoText PdaOwnerInfo;
-    public string? StationName;
-    public string? SshPassword;
-    public bool HasCaptainAccess;
-    public bool CanPlayMusic;
-    public bool HasUplink;
-
-    public bool FlashlightEnabled;
-    public bool HasFlashlight;
-    public bool HasPen;
-    public bool HasPai;
-    public bool HasDisk;
-    public string? DiskName;
-    public bool HasId;
-    public NetEntity? ActiveProgram;
-
-    public OsUiState(
-        string deviceGuid,
-        ComputerUiTemplate template,
-        bool allowRemoteControl,
-        int cpuLoadPercent,
-        int ramUsedMB,
-        int ramTotalMB,
-        int diskUsedKB,
-        int diskTotalKB,
-        int uploadBps,
-        int downloadBps,
-        float batteryPercent,
-        bool hasBattery,
-        List<OsProgramEntry> programs,
-        List<OsHardwareEntry> hardware,
-        List<OsDeviceLinkEntry> linkedPorts,
-        string statusMessage = "",
-        PdaIdInfoText pdaOwnerInfo = default,
-        string? stationName = null,
-        string? sshPassword = null,
-        bool hasCaptainAccess = false,
-        bool canPlayMusic = false,
-        bool hasUplink = false,
-        bool flashlightEnabled = false,
-        bool hasFlashlight = false,
-        bool hasPen = false,
-        bool hasPai = false,
-        bool hasDisk = false,
-        string? diskName = null,
-        bool hasId = false,
-        NetEntity? activeProgram = null)
-    {
-        DeviceGuid = deviceGuid;
-        Template = template;
-        AllowRemoteControl = allowRemoteControl;
-        CpuLoadPercent = cpuLoadPercent;
-        RamUsedMB = ramUsedMB;
-        RamTotalMB = ramTotalMB;
-        DiskUsedKB = diskUsedKB;
-        DiskTotalKB = diskTotalKB;
-        UploadBps = uploadBps;
-        DownloadBps = downloadBps;
-        BatteryPercent = batteryPercent;
-        HasBattery = hasBattery;
-        Programs = programs;
-        Hardware = hardware;
-        LinkedPorts = linkedPorts;
-        StatusMessage = statusMessage;
-        PdaOwnerInfo = pdaOwnerInfo;
-        StationName = stationName;
-        SshPassword = sshPassword;
-        HasCaptainAccess = hasCaptainAccess;
-        CanPlayMusic = canPlayMusic;
-        HasUplink = hasUplink;
-        FlashlightEnabled = flashlightEnabled;
-        HasFlashlight = hasFlashlight;
-        HasPen = hasPen;
-        HasPai = hasPai;
-        HasDisk = hasDisk;
-        DiskName = diskName;
-        HasId = hasId;
-        ActiveProgram = activeProgram;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum OsUiAction : byte
-{
-    LaunchProgram,
-    CloseProgram,
-    InstallProgram,
-    UninstallProgram,
-    ToggleRemoteControl,
-    ScanAndLinkDevices,
-    RunCommand,
-    Refresh,
-    ShowRingtone,
-    ShowMusic,
-    ShowUplink,
-    LockUplink,
-    ToggleFlashlight,
-    EjectId,
-    EjectPen,
-    EjectPai,
-    EjectDisk,
-    PowerOff,
-    InsertId,
-    InsertPen,
-    InsertPai,
-    InsertDisk
-}
-
-[Serializable, NetSerializable]
-public sealed class OsUiMessageEvent : CartridgeMessageEvent
-{
-    public OsUiAction Action;
-    public NetEntity? TargetProgram;
-    public string Command = string.Empty;
-
-    public OsUiMessageEvent(OsUiAction action, NetEntity? targetProgram = null, string command = "")
-    {
-        Action = action;
-        TargetProgram = targetProgram;
-        Command = command;
-    }
-}
-
-[Serializable, NetSerializable]
-public sealed class EmbeddedOsUiState : BoundUserInterfaceState
-{
-    public string DeviceGuid;
-    public string MachineName;
-    public string MachineType;
-    public ComputerUiTemplate Template;
-    public bool AllowRemoteControl;
-    public int CpuLoadPercent;
-    public int RamUsedMB;
-    public int RamTotalMB;
-    public int DiskUsedKB;
-    public int DiskTotalKB;
-    public int UploadBps;
-    public int DownloadBps;
-    public float BatteryPercent;
-    public bool HasBattery;
-    public List<OsProgramEntry> Programs;
-    public List<OsHardwareEntry> Hardware;
-    public List<OsDeviceLinkEntry> LinkedPorts;
-    public string StatusMessage;
-    public NetEntity? ActiveProgram;
-
-    public EmbeddedOsUiState(
-        string deviceGuid,
-        string machineName,
-        string machineType,
-        ComputerUiTemplate template,
-        bool allowRemoteControl,
-        int cpuLoadPercent,
-        int ramUsedMB,
-        int ramTotalMB,
-        int diskUsedKB,
-        int diskTotalKB,
-        int uploadBps,
-        int downloadBps,
-        float batteryPercent,
-        bool hasBattery,
-        List<OsProgramEntry> programs,
-        List<OsHardwareEntry> hardware,
-        List<OsDeviceLinkEntry> linkedPorts,
-        string statusMessage = "",
-        NetEntity? activeProgram = null)
-    {
-        DeviceGuid = deviceGuid;
-        MachineName = machineName;
-        MachineType = machineType;
-        Template = template;
-        AllowRemoteControl = allowRemoteControl;
-        CpuLoadPercent = cpuLoadPercent;
-        RamUsedMB = ramUsedMB;
-        RamTotalMB = ramTotalMB;
-        DiskUsedKB = diskUsedKB;
-        DiskTotalKB = diskTotalKB;
-        UploadBps = uploadBps;
-        DownloadBps = downloadBps;
-        BatteryPercent = batteryPercent;
-        HasBattery = hasBattery;
-        Programs = programs;
-        Hardware = hardware;
-        LinkedPorts = linkedPorts;
-        StatusMessage = statusMessage;
-        ActiveProgram = activeProgram;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum EmbeddedOsUiAction : byte
-{
-    LaunchProgram,
-    CloseProgram,
-    ToggleRemoteControl,
-    ScanAndLinkDevices,
-    RunCommand,
-    Refresh
-}
-
-[Serializable, NetSerializable]
-public sealed class EmbeddedOsUiMessageEvent : CartridgeMessageEvent
-{
-    public EmbeddedOsUiAction Action;
-    public NetEntity? TargetProgram;
-    public string Command = string.Empty;
-
-    public EmbeddedOsUiMessageEvent(EmbeddedOsUiAction action, NetEntity? targetProgram = null, string command = "")
-    {
-        Action = action;
-        TargetProgram = targetProgram;
-        Command = command;
-    }
-}
-
-/// <summary>
-/// Router management program component. Allows inspecting active connections, connected devices,
-/// packet logs, DNS records, closing connections, and blacklisting GUIDs.
-/// </summary>
-[RegisterComponent]
-public sealed partial class RouterCartridgeComponent : Component
-{
-}
-
-[Serializable, NetSerializable]
-public sealed class RouterConnectionView
-{
-    public string ConnectionId = string.Empty;
-    public string SourceGuid = string.Empty;
-    public string TargetGuid = string.Empty;
-    public string ConnectionType = string.Empty;
-    public string Description = string.Empty;
-}
-
-[Serializable, NetSerializable]
-public sealed class RouterPacketLogView
-{
-    public uint PacketId;
-    public string SenderGuid = string.Empty;
-    public string TargetGuid = string.Empty;
-    public string PacketType = string.Empty;
-    public bool IsEncrypted;
-    public string DecipheredSummary = string.Empty;
-}
-
-[Serializable, NetSerializable]
-public sealed class RouterUiState : BoundUserInterfaceState
-{
-    public string RouterGuid;
-    public List<RouterConnectionView> ActiveConnections;
-    public List<string> ConnectedDevices;
-    public List<string> BlacklistedGuids;
-    public List<RouterPacketLogView> PacketLogs;
-    public List<string> ConnectionLogs;
-    public Dictionary<string, string> DnsRecords;
-
-    public RouterUiState(
-        string routerGuid,
-        List<RouterConnectionView> activeConnections,
-        List<string> connectedDevices,
-        List<string> blacklistedGuids,
-        List<RouterPacketLogView> packetLogs,
-        List<string> connectionLogs,
-        Dictionary<string, string> dnsRecords)
-    {
-        RouterGuid = routerGuid;
-        ActiveConnections = activeConnections;
-        ConnectedDevices = connectedDevices;
-        BlacklistedGuids = blacklistedGuids;
-        PacketLogs = packetLogs;
-        ConnectionLogs = connectionLogs;
-        DnsRecords = dnsRecords;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum RouterUiAction : byte
-{
-    Refresh,
-    CloseConnection,
-    BlacklistGuid,
-    UnblacklistGuid,
-    RegisterDns,
-    ClearLogs
-}
-
-[Serializable, NetSerializable]
-public sealed class RouterUiMessageEvent : CartridgeMessageEvent
-{
-    public RouterUiAction Action;
-    public string TargetId;
-    public string ExtraValue;
-
-    public RouterUiMessageEvent(RouterUiAction action, string targetId = "", string extraValue = "")
-    {
-        Action = action;
-        TargetId = targetId;
-        ExtraValue = extraValue;
-    }
-}
-
-/// <summary>
-/// Packet Sniffer & Re-emitter program component. Captures packets on the local network/router,
-/// displays plaintext if unencrypted (or ciphertext if encrypted), and allows modifying and re-emitting unencrypted packets.
-/// </summary>
-[RegisterComponent]
-public sealed partial class PacketSnifferCartridgeComponent : Component
-{
-    [DataField]
-    public bool IsCapturing = true;
-}
-
-[Serializable, NetSerializable]
-public sealed class CapturedPacketView
-{
-    public uint PacketId;
-    public string SenderGuid = string.Empty;
-    public string TargetGuid = string.Empty;
-    public string PacketType = string.Empty;
-    public bool IsEncrypted;
-    public string PayloadPreview = string.Empty;
-    public Dictionary<string, string> Parameters = new();
-}
-
-[Serializable, NetSerializable]
-public sealed class PacketSnifferUiState : BoundUserInterfaceState
-{
-    public bool IsCapturing;
-    public List<CapturedPacketView> Packets;
-    public string StatusMessage;
-
-    public PacketSnifferUiState(bool isCapturing, List<CapturedPacketView> packets, string statusMessage = "")
-    {
-        IsCapturing = isCapturing;
-        Packets = packets;
-        StatusMessage = statusMessage;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum PacketSnifferUiAction : byte
-{
-    ToggleCapture,
-    Refresh,
-    Clear,
-    ReemitPacket
-}
-
-[Serializable, NetSerializable]
-public sealed class PacketSnifferUiMessageEvent : CartridgeMessageEvent
-{
-    public PacketSnifferUiAction Action;
-    public uint PacketId;
-    public string TargetGuid;
-    public string ModifiedPayload;
-
-    public PacketSnifferUiMessageEvent(PacketSnifferUiAction action, uint packetId = 0, string targetGuid = "", string modifiedPayload = "")
-    {
-        Action = action;
-        PacketId = packetId;
-        TargetGuid = targetGuid;
-        ModifiedPayload = modifiedPayload;
-    }
-}
-
-/// <summary>
-/// Autolathe control program component. Links to the Lathe via DeviceLinkSystem through terminal commands,
-/// reads designs from a data disk or internal storage, displays materials and queue status, and sends print/cancel commands.
-/// </summary>
-[RegisterComponent]
-public sealed partial class LatheControlCartridgeComponent : Component
-{
-    [DataField]
-    public EntityUid? LinkedLathe;
-
-    [DataField]
-    public string? LinkedLatheGuid;
-}
-
-[Serializable, NetSerializable]
-public sealed class LatheDesignView
-{
-    public string Id = string.Empty;
-    public string Name = string.Empty;
-    public string MaterialsSummary = string.Empty;
-    public bool CanProduce;
-}
-
-[Serializable, NetSerializable]
-public sealed class LatheControlUiState : BoundUserInterfaceState
-{
-    public bool IsLinked;
-    public string LatheName;
-    public string CurrentProducing;
-    public List<string> QueueItems;
-    public Dictionary<string, int> Materials;
-    public List<LatheDesignView> Designs;
-    public string StatusMessage;
-
-    public LatheControlUiState(
-        bool isLinked,
-        string latheName,
-        string currentProducing,
-        List<string> queueItems,
-        Dictionary<string, int> materials,
-        List<LatheDesignView> designs,
-        string statusMessage = "")
-    {
-        IsLinked = isLinked;
-        LatheName = latheName;
-        CurrentProducing = currentProducing;
-        QueueItems = queueItems;
-        Materials = materials;
-        Designs = designs;
-        StatusMessage = statusMessage;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum LatheControlUiAction : byte
-{
-    LinkLathe,
-    SyncDiskDesigns,
-    PrintDesign,
-    CancelQueue,
-    Refresh
-}
-
-[Serializable, NetSerializable]
-public sealed class LatheControlUiMessageEvent : CartridgeMessageEvent
-{
-    public LatheControlUiAction Action;
-    public string DesignId;
-    public int Amount;
-    public string TargetGuid;
-
-    public LatheControlUiMessageEvent(LatheControlUiAction action, string designId = "", int amount = 1, string targetGuid = "")
-    {
-        Action = action;
-        DesignId = designId;
-        Amount = amount;
-        TargetGuid = targetGuid;
-    }
-}
-
-/// <summary>
-/// Area Power Controller (APC) control program component. Sends terminal commands through the computer
-/// entity to toggle main breaker / channels and monitor charge over DeviceLinkSystem.
-/// </summary>
-[RegisterComponent]
-public sealed partial class ApcControlCartridgeComponent : Component
-{
-    [DataField]
-    public EntityUid? LinkedApc;
-
-    [DataField]
-    public string? LinkedApcGuid;
-
-    [DataField]
-    public string LastStatusMessage = "";
-}
-
-[Serializable, NetSerializable]
-public sealed class ApcControlUiState : BoundUserInterfaceState
-{
-    public bool IsLinked;
-    public string ApcName;
-    public bool MainBreakerEnabled;
-    public float ChargePercent;
-    public int LoadWatts;
-    public string ExternalPowerState;
-    public string StatusMessage;
-
-    public ApcControlUiState(
-        bool isLinked,
-        string apcName,
-        bool mainBreakerEnabled,
-        float chargePercent,
-        int loadWatts,
-        string externalPowerState,
-        string statusMessage = "")
-    {
-        IsLinked = isLinked;
-        ApcName = apcName;
-        MainBreakerEnabled = mainBreakerEnabled;
-        ChargePercent = chargePercent;
-        LoadWatts = loadWatts;
-        ExternalPowerState = externalPowerState;
-        StatusMessage = statusMessage;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum ApcControlUiAction : byte
-{
-    LinkApc,
-    ToggleMainBreaker,
-    SetBreakerOn,
-    SetBreakerOff,
-    Refresh
-}
-
-[Serializable, NetSerializable]
-public sealed class ApcControlUiMessageEvent : CartridgeMessageEvent
-{
-    public ApcControlUiAction Action;
-    public string TargetGuid;
-
-    public ApcControlUiMessageEvent(ApcControlUiAction action, string targetGuid = "")
-    {
-        Action = action;
-        TargetGuid = targetGuid;
-    }
-}
-
-/// <summary>
-/// Atmospheric Controller (Air Alarm) program component. Sends terminal commands through the computer
-/// entity to query air telemetry and change alarm modes over DeviceLinkSystem.
-/// </summary>
-[RegisterComponent]
-public sealed partial class AtmosControlCartridgeComponent : Component
-{
-    [DataField]
-    public EntityUid? LinkedAirAlarm;
-
-    [DataField]
-    public string? LinkedAlarmGuid;
-
-    [DataField]
-    public string LastStatusMessage = "";
-}
-
-[Serializable, NetSerializable]
-public sealed class AtmosControlUiState : BoundUserInterfaceState
-{
-    public bool IsLinked;
-    public string AlarmName;
-    public float PressureKpa;
-    public float TemperatureKelvin;
-    public string CurrentMode;
-    public string DangerLevel;
-    public string StatusMessage;
-
-    public AtmosControlUiState(
-        bool isLinked,
-        string alarmName,
-        float pressureKpa,
-        float temperatureKelvin,
-        string currentMode,
-        string dangerLevel,
-        string statusMessage = "")
-    {
-        IsLinked = isLinked;
-        AlarmName = alarmName;
-        PressureKpa = pressureKpa;
-        TemperatureKelvin = temperatureKelvin;
-        CurrentMode = currentMode;
-        DangerLevel = dangerLevel;
-        StatusMessage = statusMessage;
-    }
-}
-
-[Serializable, NetSerializable]
-public enum AtmosControlUiAction : byte
-{
-    LinkAlarm,
-    SetModeFiltering,
-    SetModeFill,
-    SetModePanic,
-    SetModeNone,
-    Refresh
-}
-
-[Serializable, NetSerializable]
-public sealed class AtmosControlUiMessageEvent : CartridgeMessageEvent
-{
-    public AtmosControlUiAction Action;
-    public string TargetGuid;
-
-    public AtmosControlUiMessageEvent(AtmosControlUiAction action, string targetGuid = "")
-    {
-        Action = action;
-        TargetGuid = targetGuid;
-    }
-}
+    bool Handled = false,
+    string Output = "");

@@ -1,22 +1,25 @@
-using Content.Server._Oxyd.Computers;
+using Content.Server._Oxyd.Computers.ScreenSharing;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
 using Content.Server.Power.Pow3r;
 using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared.Access.Systems;
 using Content.Shared.Administration.Logs;
 using Content.Shared.APC;
 using Content.Shared.Database;
+using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Events;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Emag.Systems;
 using Content.Shared.Emp;
 using Content.Shared.Popups;
 using Content.Shared.Power;
 using Content.Shared.Rounding;
-using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server.Power.EntitySystems;
@@ -32,12 +35,15 @@ public sealed partial class ApcSystem : EntitySystem
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
     [Dependency] private IGameTiming _gameTiming = default!;
     [Dependency] private EmagSystem _emag = default!;
-    [Dependency] private OxydComputerSystem _oxydComputer = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
-    [Dependency] private SharedRemoteScreenSystem _remoteScreen = default!;
+    [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
+
+    private static readonly ProtoId<SourcePortPrototype> PortApcStatusSource = "ApcStatusSource";
+    private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
 
     /// <inheritdoc />
     public override void Initialize()
@@ -46,29 +52,76 @@ public sealed partial class ApcSystem : EntitySystem
 
         UpdatesAfter.Add(typeof(PowerNetSystem));
         SubscribeLocalEvent<ApcComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
+        SubscribeLocalEvent<ApcComponent, SignalReceivedEvent<ComputerPacket>>(OnComputerPacketSignal);
+    }
+
+    private void OnComputerPacketSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
+    {
+        EntityUid? actor = args.Data.ProtectedReferences.TryGetValue("Actor", out var actUid) ? actUid : args.Trigger;
+        HandleDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor);
     }
 
     private void OnComputerDeviceLinkSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
-        var cmd = args.Data.Command?.Trim().ToLowerInvariant() ?? string.Empty;
+        HandleDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger);
+    }
+
+    private void HandleDeviceLinkCommand(Entity<ApcComponent> ent, string? rawCmd, string rawArg, EntityUid? triggerOrActor)
+    {
+        var cmd = rawCmd?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (cmd is "status" or "status_request")
+        {
+            EmitApcStatusPacket(ent.Owner, ent.Comp);
+            return;
+        }
+
         if (cmd is "apc_toggle_breaker" or "toggle_breaker" or "toggle" or "breaker")
         {
-            if (args.Trigger == null || !_accessReader.IsAllowed(args.Trigger.Value, ent.Owner))
+            if (!IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                 return;
 
-            ApcToggleBreaker(ent.Owner, ent.Comp, user: args.Trigger.Value);
+            ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);
         }
         else if (cmd is "apc_set_breaker" or "set_breaker")
         {
-            var wantEnabled = args.Data.Argument is "1" or "true" or "on";
+            var wantEnabled = rawArg is "1" or "true" or "on";
             if (ent.Comp.MainBreakerEnabled != wantEnabled)
             {
-                if (args.Trigger == null || !_accessReader.IsAllowed(args.Trigger.Value, ent.Owner))
+                if (!IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                     return;
 
-                ApcToggleBreaker(ent.Owner, ent.Comp, user: args.Trigger.Value);
+                ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);
             }
         }
+    }
+
+    private bool IsDeviceLinkActorAllowed(EntityUid apcUid, EntityUid? actor)
+    {
+        return actor == null ||
+               actor == apcUid ||
+               (TryComp<EmbeddedComputerHostComponent>(apcUid, out var hostComp) && hostComp.ComputerEntity == actor) ||
+               _accessReader.IsAllowed(actor.Value, apcUid);
+    }
+
+    private void EmitApcStatusPacket(EntityUid uid, ApcComponent apc, PowerNetworkBatteryComponent? netBat = null)
+    {
+        if (!Resolve(uid, ref netBat, false))
+            return;
+
+        var battery = netBat.NetworkBattery;
+        var pct = battery.Capacity > 0 ? Math.Clamp(battery.CurrentStorage / battery.Capacity * 100f, 0f, 100f) : 0f;
+
+        var pkt = new ComputerPacket("ApcStatus");
+        pkt.Set("AreaName", MetaData(uid).EntityName);
+        pkt.Set("MainBreaker", apc.MainBreakerEnabled.ToString());
+        pkt.Set("BreakerTripped", apc.TripFlag.ToString());
+        pkt.Set("Locked", "False");
+        pkt.Set("ChargePercent", pct.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+        pkt.Set("LoadWatts", (int) MathF.Ceiling(battery.CurrentSupply));
+        pkt.Set("ExternalPower", apc.LastExternalState.ToString());
+
+        _deviceLink.InvokePort(uid, PortApcStatusSource, ref pkt);
+        _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
     }
 
     /// <inheritdoc />
@@ -292,7 +345,7 @@ public sealed partial class ApcSystem : EntitySystem
             apc.TripFlag);
 
         _ui.SetUiState((uid, ui), ApcUiKey.Key, state);
-        _oxydComputer.NotifyComputerFromMachine(uid, "apc_state_changed");
+        EmitApcStatusPacket(uid, apc, netBat);
     }
     #endregion Public API
 
