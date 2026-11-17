@@ -28,8 +28,6 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 /// </summary>
 public sealed partial class RemoteScreenView : LayoutContainer
 {
-    private static LayoutContainer? s_OffscreenStash;
-
     /// <summary>
     /// Dedicated offscreen container parented to WindowRoot at an unreachable negative coordinate.
     /// Allows remote target windows to maintain active layout, measurement, and style resolution
@@ -37,19 +35,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
     /// </summary>
     public static LayoutContainer GetOrCreateOffscreenStash(IUserInterfaceManager uiManager)
     {
-        if (s_OffscreenStash != null && !s_OffscreenStash.Disposed && s_OffscreenStash.Parent != null)
-            return s_OffscreenStash;
-
-        s_OffscreenStash = new LayoutContainer
-        {
-            Name = "RemoteOffscreenStash",
-            RectClipContent = true,
-            SetSize = new Vector2(2000, 2000)
-        };
-
-        uiManager.WindowRoot.AddChild(s_OffscreenStash);
-        LayoutContainer.SetPosition(s_OffscreenStash, new Vector2(-30000, -30000));
-        return s_OffscreenStash;
+        return IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().GetOrCreateOffscreenStash(uiManager);
     }
 
     [Dependency] private IEntityManager _entManager = default!;
@@ -200,6 +186,17 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         DisposeActiveTarget();
         _statusLabel.Text = $"STREAM CONNECTED: {state.DeviceName} (NO ACTIVE UI)";
+        _statusLabel.Visible = true;
+    }
+
+    public void ClearScreen()
+    {
+        DisposeActiveTarget();
+        _deviceGuid = null;
+        _isCycle = false;
+        _surface.Visible = false;
+        _surface.DeviceGuid = null;
+        _statusLabel.Text = "INITIALIZING REMOTE STREAM...";
         _statusLabel.Visible = true;
     }
 
@@ -846,32 +843,41 @@ public sealed partial class RemoteScreenView : LayoutContainer
     /// </summary>
     public sealed class RemoteBuiTarget : IRemoteTargetUi
     {
-        private static readonly Dictionary<EntityUid, RemoteBuiTarget> s_ActiveTargetsByUid = new();
-
         public static bool TryBringTargetToScreen(EntityUid uid)
         {
-            if (s_ActiveTargetsByUid.TryGetValue(uid, out var target))
-            {
-                if (!target.IsPoppedOut)
-                {
-                    target.PullWindowOnScreen();
-                    return true;
-                }
-            }
-
-            return false;
+            return IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().TryBringTargetToScreen(uid);
         }
 
         public static bool TryGetForEntity(EntityUid uid, out RemoteBuiTarget target)
         {
-            return s_ActiveTargetsByUid.TryGetValue(uid, out target!);
+            return IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().TryGetForEntity(uid, out target);
         }
 
-        private static int s_ApplyStateDepth;
+        /// <summary>
+        /// Intercepts direct window closes (e.g. Escape, close shortcut, or Win.Close()) while
+        /// the window is actively streamed via RemoteScreenView, moving it offscreen instead of
+        /// disposing the control or closing the underlying BoundUserInterface.
+        /// </summary>
+        public static bool TryHandleWindowClose(BaseWindow window)
+        {
+            return IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().TryHandleWindowClose(window);
+        }
+
+        public bool TryInterceptWindowClose(BaseWindow window)
+        {
+            if (_isDisposing || _trackedWindow != window || window.Disposed)
+                return false;
+
+            StashWindowOffscreen();
+            return true;
+        }
+
+        private int _applyStateDepth;
 
         private readonly IEntityManager _entManager;
         private readonly IPlayerManager _playerManager;
         private readonly IUserInterfaceManager _uiManager;
+        private readonly ClientRemoteScreenSystem _remoteSys;
 
         public NetEntity TargetNetEntity { get; }
         public Enum UiKey { get; }
@@ -883,11 +889,15 @@ public sealed partial class RemoteScreenView : LayoutContainer
         private BoundUserInterfaceState? _latestState;
 
         private BaseWindow? _trackedWindow;
-        private BaseButton? _trackedCloseButton;
+        private Control? _trackedCloseButton;
         private RemoteCloseButtonInterceptor? _closeInterceptor;
         private bool _isPoppedOut;
         private bool _userExplicitlyPoppedOut;
         private bool _wasAlreadyOpenOnScreen;
+        private bool _initializedPopOutState;
+        private bool _isDisposing;
+        private bool _pendingDeferSync;
+        private bool? _lastReportedLocalOpenState;
         public Control? RootControl => _routedBui?.RootControl;
         private Vector2 _targetSize = new Vector2(640, 520);
         public Vector2 TargetSize
@@ -920,6 +930,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
             _entManager = entManager;
             _playerManager = playerManager;
             _uiManager = uiManager;
+            _remoteSys = _entManager.System<ClientRemoteScreenSystem>();
+            _remoteSys.RegisterTarget(this);
         }
 
         public bool Matches(NetEntity target, Enum uiKey)
@@ -933,10 +945,14 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void UpdateState(RemoteScreenState state)
         {
-            if (state.WasAlreadyOpen)
+            if (!_initializedPopOutState)
             {
-                _wasAlreadyOpenOnScreen = true;
-                _isPoppedOut = true;
+                _initializedPopOutState = true;
+                if (state.WasAlreadyOpen)
+                {
+                    _wasAlreadyOpenOnScreen = true;
+                    _isPoppedOut = true;
+                }
             }
 
             if (state.BuiState != null)
@@ -949,14 +965,36 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         public void FrameUpdate(FrameEventArgs args)
         {
-            if (_currentBui == null || !_currentBui.IsOpened)
-                TryEnsureBui();
-
-            if (_trackedWindow == null && RootControl != null)
-                AttachWindow(RootControl);
-
             if (_routedBui?.RootControl is ApcMenu apcMenu)
                 apcMenu.SetAccessEnabled(true);
+
+            // Never modify WindowRoot or RemoteOffscreenStash children synchronously inside
+            // Control.DoFrameUpdateRecursive, as WindowRoot enumerates its Children live.
+            var needsSync = _currentBui == null ||
+                            !_currentBui.IsOpened ||
+                            ((_trackedWindow == null || _trackedWindow.Disposed) && RootControl != null && !RootControl.Disposed);
+
+            if (needsSync && !_pendingDeferSync && !_isDisposing)
+            {
+                _pendingDeferSync = true;
+                _uiManager.DeferAction(() =>
+                {
+                    _pendingDeferSync = false;
+                    SyncAttachment();
+                });
+            }
+        }
+
+        public void SyncAttachment()
+        {
+            if (_isDisposing)
+                return;
+
+            if (_currentBui == null || !_currentBui.IsOpened || (_trackedWindow != null && _trackedWindow.Disposed))
+                TryEnsureBui();
+
+            if ((_trackedWindow == null || _trackedWindow.Disposed) && RootControl != null && !RootControl.Disposed)
+                AttachWindow(RootControl);
         }
 
         private void TryEnsureBui()
@@ -969,7 +1007,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
             }
 
             var uid = _targetUid.Value;
-            s_ActiveTargetsByUid[uid] = this;
+            _remoteSys.RegisterTargetUid(uid, this);
 
             if (!_entManager.TryGetComponent<UserInterfaceComponent>(uid, out var uiComp))
                 return;
@@ -981,6 +1019,17 @@ public sealed partial class RemoteScreenView : LayoutContainer
                 if (_routedBui != null)
                     _routedBui.OnRootChanged -= OnRootChanged;
 
+                if (_trackedWindow != null)
+                {
+                    if (_currentBui != null && currentBui != null)
+                    {
+                        _wasAlreadyOpenOnScreen = false;
+                        _userExplicitlyPoppedOut = false;
+                        _isPoppedOut = false;
+                    }
+                    DetachWindow();
+                }
+
                 _currentBui = currentBui;
                 _routedBui = currentBui as RoutedBoundUserInterface;
 
@@ -991,7 +1040,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
                         OnTargetRootAttached(_routedBui.RootControl);
                 }
             }
-            else if (_trackedWindow == null && RootControl != null)
+            else if ((_trackedWindow == null || _trackedWindow.Disposed) && RootControl != null)
             {
                 OnTargetRootAttached(RootControl);
             }
@@ -1001,6 +1050,8 @@ public sealed partial class RemoteScreenView : LayoutContainer
         {
             if (root != null)
                 OnTargetRootAttached(root);
+            else
+                DetachWindow();
         }
 
         private void OnTargetRootAttached(Control control)
@@ -1019,7 +1070,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         private void AttachWindow(Control root)
         {
             var window = FindTargetWindow(root);
-            if (window == _trackedWindow && _trackedWindow != null)
+            if (window == _trackedWindow && _trackedWindow != null && !_trackedWindow.Disposed)
                 return;
 
             DetachWindow();
@@ -1028,6 +1079,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
             if (_trackedWindow != null)
             {
+                _remoteSys.RegisterTargetWindow(_trackedWindow, this);
                 _trackedCloseButton = FindCloseButton(_trackedWindow);
                 if (_trackedCloseButton != null && _closeInterceptor == null)
                 {
@@ -1051,6 +1103,9 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
         private void DetachWindow()
         {
+            if (_trackedWindow != null)
+                _remoteSys.UnregisterTargetWindow(_trackedWindow, this);
+
             if (_closeInterceptor != null)
             {
                 _closeInterceptor.Parent?.RemoveChild(_closeInterceptor);
@@ -1079,10 +1134,10 @@ public sealed partial class RemoteScreenView : LayoutContainer
         return null;
     }
 
-    private static BaseButton? FindCloseButton(Control control)
+    private static Control? FindCloseButton(Control control)
     {
-        if (control.Name == "CloseButton" && control is BaseButton btn)
-            return btn;
+        if (control.Name == "CloseButton" && (control is BaseButton || control is ContentButton))
+            return control;
 
         for (var i = 0; i < control.ChildCount; i++)
         {
@@ -1092,6 +1147,15 @@ public sealed partial class RemoteScreenView : LayoutContainer
         }
 
         return null;
+    }
+
+    private void NotifyServerLocalWindowState(bool isOpenOnScreen)
+    {
+        if (_isDisposing || TargetNetEntity == NetEntity.Invalid || _lastReportedLocalOpenState == isOpenOnScreen)
+            return;
+
+        _lastReportedLocalOpenState = isOpenOnScreen;
+        _entManager.System<ClientRemoteScreenSystem>().NotifyLocalWindowState(TargetNetEntity, isOpenOnScreen);
     }
 
     public void StashWindowOffscreen()
@@ -1105,7 +1169,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
             return;
         }
 
-        var stash = GetOrCreateOffscreenStash(_uiManager);
+        var stash = _remoteSys.GetOrCreateOffscreenStash(_uiManager);
         if (_trackedWindow.Parent != stash)
         {
             _trackedWindow.Parent?.RemoveChild(_trackedWindow);
@@ -1113,10 +1177,22 @@ public sealed partial class RemoteScreenView : LayoutContainer
             LayoutContainer.SetPosition(_trackedWindow, Vector2.Zero);
         }
 
+        if (_trackedWindow is UI.ComputerDisplayWindow compWin)
+        {
+            compWin.ScreenSurface.InvalidateCapture(3);
+            PipSurfaceRegistry.InvalidateDevice(compWin.ScreenSurface.DeviceGuid);
+        }
+
+        NotifyServerLocalWindowState(false);
         OnPopOutChanged?.Invoke(_isPoppedOut);
     }
 
     public void PullWindowOnScreen()
+    {
+        PullWindowOnScreen(bringToFront: false);
+    }
+
+    public void PullWindowOnScreen(bool bringToFront)
     {
         _userExplicitlyPoppedOut = true;
         _isPoppedOut = true;
@@ -1126,15 +1202,31 @@ public sealed partial class RemoteScreenView : LayoutContainer
             return;
         }
 
-        if (_trackedWindow.Parent != _uiManager.WindowRoot)
+        var wasAlreadyOnWindowRoot = _trackedWindow.Parent == _uiManager.WindowRoot;
+        if (!wasAlreadyOnWindowRoot)
         {
             _trackedWindow.Parent?.RemoveChild(_trackedWindow);
             _uiManager.WindowRoot.AddChild(_trackedWindow);
         }
 
         _trackedWindow.Visible = true;
-        _trackedWindow.OpenCentered();
+        if (!wasAlreadyOnWindowRoot)
+        {
+            _trackedWindow.OpenCentered();
+            _trackedWindow.MoveToFront();
+        }
+        else if (bringToFront)
+        {
+            _trackedWindow.MoveToFront();
+        }
 
+        if (_trackedWindow is UI.ComputerDisplayWindow compWin)
+        {
+            compWin.ScreenSurface.InvalidateCapture(3);
+            PipSurfaceRegistry.InvalidateDevice(compWin.ScreenSurface.DeviceGuid);
+        }
+
+        NotifyServerLocalWindowState(true);
         OnPopOutChanged?.Invoke(_isPoppedOut);
     }
 
@@ -1156,10 +1248,10 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
     private void ApplyLatestState()
     {
-        if (s_ApplyStateDepth > 0 || _latestState == null)
+        if (_applyStateDepth > 0 || _latestState == null)
             return;
 
-        s_ApplyStateDepth++;
+        _applyStateDepth++;
         try
         {
             if (_targetUid is { } uid)
@@ -1181,29 +1273,33 @@ public sealed partial class RemoteScreenView : LayoutContainer
         }
         finally
         {
-            s_ApplyStateDepth--;
+            _applyStateDepth--;
         }
     }
 
     public void Dispose()
     {
-        if (_targetUid.HasValue && s_ActiveTargetsByUid.TryGetValue(_targetUid.Value, out var existing) && existing == this)
-        {
-            s_ActiveTargetsByUid.Remove(_targetUid.Value);
-        }
+        if (_isDisposing)
+            return;
+
+        _isDisposing = true;
+        _remoteSys.UnregisterTarget(this);
+
+        if (_targetUid.HasValue)
+            _remoteSys.UnregisterTargetUid(_targetUid.Value, this);
 
         var window = _trackedWindow;
+        var offscreenStash = _remoteSys.GetExistingOffscreenStash();
+        var wasStashedOffscreen = window != null && offscreenStash != null && window.Parent == offscreenStash;
         DetachWindow();
 
-        var stash = s_OffscreenStash;
-        if (stash != null && window != null && window.Parent == stash)
-        {
-            stash.RemoveChild(window);
-        }
-
-        if (window != null && window.IsOpen)
+        // Only close windows that were moved/kept offscreen solely for remote viewing.
+        // Any target window open on the player's WindowRoot must stay open cleanly with normal controls.
+        if (wasStashedOffscreen && window != null && !window.Disposed)
         {
             window.Close();
+            if (offscreenStash != null && window.Parent == offscreenStash)
+                offscreenStash.RemoveChild(window);
         }
 
         if (_routedBui != null)

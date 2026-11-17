@@ -102,6 +102,14 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         }
         _scroll.ScrollOffsetY = float.MaxValue;
     }
+
+    public override void Close()
+    {
+        if (ScreenSharing.RemoteScreenView.RemoteBuiTarget.TryHandleWindowClose(this))
+            return;
+
+        base.Close();
+    }
 }
 
 public sealed class HardwareDebuggerBoundUserInterface : RoutedBoundUserInterface

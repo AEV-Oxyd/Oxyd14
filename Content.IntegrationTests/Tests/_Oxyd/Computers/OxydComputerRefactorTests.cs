@@ -1261,6 +1261,738 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(8);
     }
 
+    [Test]
+    public async Task TestRemoteScreenStaysWorkingWhenAlreadyOpenTargetClosed()
+    {
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+
+        await PlaceInHands("DetectivePDA");
+
+        EntityUid apcUid = default;
+        EntityUid wsUid = default;
+        EntityUid wsCompUid = default;
+        string apcGuid = string.Empty;
+        string wsGuid = string.Empty;
+        bool initialBreaker = false;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+            apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
+
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
+        });
+        await RunTicks(6);
+
+        // 1) Open Workstation UI FIRST (already open BEFORE remote screen attaches).
+        Target = FromServer(wsUid);
+        await Activate();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? wsWin = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            wsWin = openWins[0];
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot));
+        });
+
+        // Open held PDA -> Apps -> Terminal
+        await UseInHand();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(2));
+            pdaWin = openWins.First(w => w != wsWin);
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaWin, btns);
+            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            pdaWin.MoveToFront();
+        });
+        await ClickViaHitTest(pdaAppsBtn!);
+
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(pdaWin!, osList);
+            termRunBtn = FindRowRunButton(osList[0], "Terminal");
+            Assert.That(termRunBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(termRunBtn!);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? termInput = null;
+        TerminalUiControl? termCtrl = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(pdaWin!, termList);
+            Assert.That(termList.Count, Is.EqualTo(1));
+            termCtrl = termList[0];
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(termCtrl, inputs);
+            termInput = inputs[0];
+        });
+
+        // Connect to already-open Workstation via SSH + screen open
+        await TypeIntoLineEdit(termInput!, $"ssh {wsGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(15);
+
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView? remoteView = null;
+        Content.Client.UserInterface.Controls.ContentButton? wsCloseBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            // Already-open target UI MUST NOT be forced into RemoteScreenView or off-screen!
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot));
+
+            var views = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView>();
+            CollectDescendants(termCtrl!, views);
+            Assert.That(views.Count, Is.EqualTo(1));
+            remoteView = views[0];
+            Assert.That(HasAncestor(wsWin, remoteView), Is.False, "Target UI must never be parented inside RemoteScreenView.");
+
+            var allBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(wsWin, allBtns);
+            wsCloseBtn = allBtns.FirstOrDefault(b => b.Name == "CloseButton");
+            Assert.That(wsCloseBtn, Is.Not.Null);
+            wsWin.MoveToFront();
+        });
+
+        // User closes already-open Workstation by clicking its CloseButton ('X'):
+        // Must move it to RemoteOffscreenStash instead of closing the BUI, and remote clicking must keep working!
+        await ClickViaHitTest(wsCloseBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? remoteWsAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent?.Name, Is.EqualTo("RemoteOffscreenStash"),
+                "Closing an already-open target window via X while remote-viewed must move it offscreen instead of closing BUI.");
+            pdaWin!.MoveToFront();
+
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(wsWin.ScreenInsetControl, osList);
+            Assert.That(osList.Count, Is.EqualTo(1));
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(osList[0], btns);
+            remoteWsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, wsWin!.ScreenInsetControl, remoteWsAppsBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? remoteNoteRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(wsWin.ScreenInsetControl, osList);
+            remoteNoteRunBtn = FindRowRunButton(osList[0], "Notekeeper");
+            Assert.That(remoteNoteRunBtn, Is.Not.Null);
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, wsWin.ScreenInsetControl, remoteNoteRunBtn!);
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid);
+            Assert.That(comp.ActiveProgram, Is.Not.Null);
+            var prog = SEntMan.GetComponent<Content.Shared._Oxyd.Computers.Programs.ProgramComponent>(comp.ActiveProgram!.Value);
+            Assert.That(prog.Prototype?.Id, Is.EqualTo("NotekeeperProgram"));
+        });
+
+        // Reopen the previously closed Workstation via in-world Activate while still remote-viewing it:
+        // Workstation window MUST reappear on WindowRoot (not closed/hidden) AND remote screen must stay interactive!
+        Target = FromServer(wsUid);
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Reopening a previously closed remote-viewed Workstation must bring its UI back onto WindowRoot.");
+            Assert.That(wsWin.VisibleInTree, Is.True);
+            var noteCtrls = new System.Collections.Generic.List<NotekeeperUiControl>();
+            CollectDescendants(wsWin.ScreenInsetControl, noteCtrls);
+            Assert.That(noteCtrls.Count, Is.EqualTo(1), "Reopened Workstation must keep mounted child program UIs intact.");
+            wsWin.MoveToFront();
+        });
+
+        // Close Workstation a second time via X -> still stashes offscreen cleanly, remote view still works!
+        await ClickViaHitTest(wsCloseBtn!);
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent?.Name, Is.EqualTo("RemoteOffscreenStash"));
+            pdaWin!.MoveToFront();
+        });
+
+        // 2) Detach, exit SSH, open APC UI FIRST, stream it via screen open, then close apcWin via Close() (Escape / shortcut simulation)
+        Content.Client.UserInterface.Controls.ContentButton? detachBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termCtrl!, termBtns);
+            detachBtn = termBtns.First(b => b.VisibleInTree && b.Text == "Detach Screen");
+        });
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+
+        await TypeIntoLineEdit(termInput!, "exit", submit: true);
+
+        Target = FromServer(apcUid);
+        await Activate();
+        await RunTicks(10);
+
+        ComputerDisplayWindow? apcWin = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen && w != pdaWin).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            apcWin = openWins[0];
+            pdaWin!.MoveToFront();
+        });
+
+        await TypeIntoLineEdit(termInput!, $"ssh {apcGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(15);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent, Is.EqualTo(UiMan.WindowRoot));
+            Assert.That(HasAncestor(apcWin, remoteView!), Is.False);
+        });
+
+        await Client.WaitPost(() => apcWin!.Close());
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? remoteBreakerBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent?.Name, Is.EqualTo("RemoteOffscreenStash"),
+                "Calling Close() on an already-open target window while remote-viewed must move it offscreen instead of closing BUI.");
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcWin.ScreenInsetControl, btns);
+            remoteBreakerBtn = btns.First(b => b.VisibleInTree && !b.Disabled && b.Text != null &&
+                (b.Text.Contains("Breaker", StringComparison.OrdinalIgnoreCase) || b.Text.Contains("Toggle", StringComparison.OrdinalIgnoreCase)));
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, apcWin!.ScreenInsetControl, remoteBreakerBtn!);
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterBreaker, Is.EqualTo(!initialBreaker),
+                "Remote screen clicking must continue toggling server APC state after already-open target window is closed.");
+        });
+
+        // Reopen the previously closed APC via Activate while still remote-viewing it, then verify BOTH
+        // the reopened APC window is visible on WindowRoot AND clicking Toggle Breaker inside RemoteScreenView still works!
+        Target = FromServer(apcUid);
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Reopening a previously closed remote-viewed APC must bring its UI back onto WindowRoot.");
+            Assert.That(apcWin.VisibleInTree, Is.True);
+            pdaWin!.MoveToFront();
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, apcWin!.ScreenInsetControl, remoteBreakerBtn!);
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterReopenBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterReopenBreaker, Is.EqualTo(initialBreaker),
+                "Remote screen clicking must still work after reopening a previously closed target UI.");
+        });
+
+        await Client.WaitPost(() => pdaWin!.Close());
+        await RunTicks(8);
+    }
+
+    [Test]
+    public async Task TestCloseAndReopenRemoteViewPreservesOpenAndPhysicallyOpenedTargetUi()
+    {
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+
+        await PlaceInHands("DetectivePDA");
+
+        EntityUid apcUid = default;
+        EntityUid wsUid = default;
+        EntityUid wsCompUid = default;
+        string apcGuid = string.Empty;
+        string wsGuid = string.Empty;
+        bool initialBreaker = false;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+            apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
+
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
+        });
+        await RunTicks(6);
+
+        // 1) Workstation is ALREADY OPEN at start of remote view -> Detach remote view ->
+        //    Workstation MUST stay open on WindowRoot, click inside it works, then re-opening remote view keeps Workstation open!
+        Target = FromServer(wsUid);
+        await Activate();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? wsWin = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            wsWin = openWins[0];
+        });
+
+        await UseInHand();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(2));
+            pdaWin = openWins.First(w => w != wsWin);
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaWin, btns);
+            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            pdaWin.MoveToFront();
+        });
+        await ClickViaHitTest(pdaAppsBtn!);
+
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(pdaWin!, osList);
+            termRunBtn = FindRowRunButton(osList[0], "Terminal");
+            Assert.That(termRunBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(termRunBtn!);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? termInput = null;
+        TerminalUiControl? termCtrl = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(pdaWin!, termList);
+            termCtrl = termList[0];
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(termCtrl, inputs);
+            termInput = inputs[0];
+        });
+
+        await TypeIntoLineEdit(termInput!, $"ssh {wsGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(12);
+
+        // Detach remote view while Workstation is open -> Workstation must stay open on WindowRoot
+        Content.Client.UserInterface.Controls.ContentButton? detachBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot));
+            var termBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termCtrl!, termBtns);
+            detachBtn = termBtns.First(b => b.VisibleInTree && b.Text == "Detach Screen");
+            pdaWin!.MoveToFront();
+        });
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? wsAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Detaching remote view must keep already-open target window visible on WindowRoot.");
+            wsWin.MoveToFront();
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(wsWin.ScreenInsetControl, btns);
+            wsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+        });
+
+        // First click directly inside Workstation window after closing remote view must NOT close/hide it
+        await ClickViaHitTest(wsAppsBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? wsNoteRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot));
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(wsWin.ScreenInsetControl, osList);
+            wsNoteRunBtn = FindRowRunButton(osList[0], "Notekeeper");
+            Assert.That(wsNoteRunBtn, Is.Not.Null, "First click on already-open target window after closing remote view must keep window open and interactive.");
+            pdaWin!.MoveToFront();
+        });
+
+        // Reopen remote view (`screen open` again) while Workstation is open on WindowRoot ->
+        // Workstation stays open on WindowRoot AND remote screen click launches Notekeeper!
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(12);
+
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView? remoteView = null;
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.Disposed, Is.False);
+            Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Reopening remote view must NOT hide an already-open target window off-screen.");
+            var views = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView>();
+            CollectDescendants(termCtrl!, views);
+            remoteView = views[0];
+            pdaWin!.MoveToFront();
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, wsWin!.ScreenInsetControl, wsNoteRunBtn!);
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid);
+            Assert.That(comp.ActiveProgram, Is.Not.Null);
+            var prog = SEntMan.GetComponent<Content.Shared._Oxyd.Computers.Programs.ProgramComponent>(comp.ActiveProgram!.Value);
+            Assert.That(prog.Prototype?.Id, Is.EqualTo("NotekeeperProgram"));
+        });
+
+        // 2) Physically open APC DURING remote view -> click Breaker on APC -> close remote view ->
+        //    APC stays open, reopen remote view -> APC STILL stays open and remote click works!
+        await Client.WaitAssertion(() =>
+        {
+            var termBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termCtrl!, termBtns);
+            detachBtn = termBtns.First(b => b.VisibleInTree && b.Text == "Detach Screen");
+            pdaWin!.MoveToFront();
+        });
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+        await TypeIntoLineEdit(termInput!, "exit", submit: true);
+
+        // Close Workstation manually now that remote view is detached (normal X close must work!)
+        Content.Client.UserInterface.Controls.ContentButton? wsCloseBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(wsWin!, btns);
+            wsCloseBtn = btns.First(b => b.Name == "CloseButton");
+            wsWin!.MoveToFront();
+        });
+        await ClickViaHitTest(wsCloseBtn!);
+        await RunTicks(8);
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(wsWin!.IsOpen, Is.False, "After remote view is detached, closing target window must close normally.");
+            pdaWin!.MoveToFront();
+        });
+
+        // Start remote view on CLOSED APC -> physically activate APC during remote view!
+        await TypeIntoLineEdit(termInput!, $"ssh {apcGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(12);
+
+        Target = FromServer(apcUid);
+        await Activate();
+        await RunTicks(10);
+
+        ComputerDisplayWindow? apcWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? apcBreakerBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var stash = UiMan.WindowRoot.Children.FirstOrDefault(c => c.Name == "RemoteOffscreenStash");
+            Assert.That(stash == null || !stash.Children.OfType<ComputerDisplayWindow>().Any(), Is.True,
+                "Physically opening APC during remote view must pull it out of RemoteOffscreenStash.");
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen && w != pdaWin).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            apcWin = openWins[0];
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcWin.ScreenInsetControl, btns);
+            apcBreakerBtn = btns.First(b => b.VisibleInTree && !b.Disabled && b.Text != null &&
+                (b.Text.Contains("Breaker", StringComparison.OrdinalIgnoreCase) || b.Text.Contains("Toggle", StringComparison.OrdinalIgnoreCase)));
+            apcWin.MoveToFront();
+        });
+
+        // First click directly inside physically-opened APC window must NOT make window disappear!
+        await ClickViaHitTest(apcBreakerBtn!);
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterBreaker, Is.EqualTo(!initialBreaker));
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "First click inside physically-opened APC during remote view must keep window visible on WindowRoot.");
+            var termBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termCtrl!, termBtns);
+            detachBtn = termBtns.First(b => b.VisibleInTree && b.Text == "Detach Screen");
+            pdaWin!.MoveToFront();
+        });
+
+        // Close remote view (Detach Screen) -> Reopen remote view (`screen open`) -> APC STILL visible & remote click toggles breaker!
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Detaching remote view must keep physically-opened APC window open on WindowRoot.");
+        });
+
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(apcWin!.Disposed, Is.False);
+            Assert.That(apcWin.Parent, Is.EqualTo(UiMan.WindowRoot),
+                "Reopening remote view must keep physically-opened APC window open on WindowRoot.");
+            pdaWin!.MoveToFront();
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, apcWin!.ScreenInsetControl, apcBreakerBtn!);
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterSecondToggle = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterSecondToggle, Is.EqualTo(initialBreaker));
+        });
+
+        await Client.WaitPost(() => pdaWin!.Close());
+        await RunTicks(8);
+    }
+
+    [Test]
+    public async Task TestApcWalkAwayRemoteReopenAndRewalkInRangeDoesNotCrashUiFrameUpdate()
+    {
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+        var xformSys = SEntMan.System<Robust.Shared.GameObjects.SharedTransformSystem>();
+
+        await PlaceInHands("DetectivePDA");
+
+        EntityUid apcUid = default;
+        EntityUid apcCompUid = default;
+        string apcGuid = string.Empty;
+        bool initialBreaker = false;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+            apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
+        });
+        await RunTicks(6);
+
+        // 1) Open APC physically
+        Target = FromServer(apcUid);
+        await Activate();
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1), "Physical APC activation should open 1 ComputerDisplayWindow.");
+        });
+
+        // 2) Walk away out of physical UI range -> APC window closes cleanly
+        await Server.WaitPost(() =>
+        {
+            var farCoords = SEntMan.GetCoordinates(TargetCoords).Offset(new Vector2(25f, 0f));
+            xformSys.SetCoordinates(SPlayer, farCoords);
+        });
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(0), "Walking out of APC range must close the physical APC window.");
+        });
+
+        // 3) Reopen APC remotely via handheld PDA Terminal while still out of physical range
+        await UseInHand();
+        await RunTicks(10);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            pdaWin = openWins[0];
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaWin, btns);
+            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+        });
+        await ClickViaHitTest(pdaAppsBtn!);
+
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(pdaWin!, osList);
+            termRunBtn = FindRowRunButton(osList[0], "Terminal");
+            Assert.That(termRunBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(termRunBtn!);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? termInput = null;
+        TerminalUiControl? termCtrl = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(pdaWin!, termList);
+            termCtrl = termList[0];
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(termCtrl, inputs);
+            termInput = inputs[0];
+        });
+
+        // Add sibling window after pdaWin on WindowRoot so DoFrameUpdateRecursive enumerates multiple WindowRoot children
+        var siblingWin = default(Robust.Client.UserInterface.CustomControls.DefaultWindow);
+        await Client.WaitPost(() =>
+        {
+            siblingWin = new Robust.Client.UserInterface.CustomControls.DefaultWindow { SetSize = new Vector2(100, 100) };
+            siblingWin.Open();
+        });
+
+        await TypeIntoLineEdit(termInput!, $"ssh {apcGuid}", submit: true);
+        await TypeIntoLineEdit(termInput!, "screen open", submit: true);
+        await RunTicks(2);
+
+        var frameUpdateMethod = UiMan.GetType().GetMethod("FrameUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.That(frameUpdateMethod, Is.Not.Null);
+        var frameArgs = new Robust.Shared.Timing.FrameEventArgs(0.016f);
+
+        // Explicitly drive UI FrameUpdate directly (as Clyde render loop does) with RemoteScreenView active
+        await Client.WaitPost(() =>
+        {
+            frameUpdateMethod!.Invoke(UiMan, [frameArgs]);
+        });
+        await RunTicks(12);
+
+        // 4) Walk back into physical range of APC while remote terminal view is open,
+        //    exercise FrameUpdate, and activate APC physically -> no InvalidOperationException in DoFrameUpdateRecursive
+        await Server.WaitPost(() =>
+        {
+            var nearCoords = SEntMan.GetCoordinates(TargetCoords);
+            xformSys.SetCoordinates(SPlayer, nearCoords);
+        });
+        await RunTicks(10);
+
+        await Client.WaitPost(() =>
+        {
+            frameUpdateMethod!.Invoke(UiMan, [frameArgs]);
+        });
+
+        Target = FromServer(apcUid);
+        await Activate();
+        await RunTicks(10);
+
+        await Client.WaitPost(() =>
+        {
+            frameUpdateMethod!.Invoke(UiMan, [frameArgs]);
+        });
+
+        ComputerDisplayWindow? apcWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? apcBreakerBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var stash = UiMan.WindowRoot.Children.FirstOrDefault(c => c.Name == "RemoteOffscreenStash");
+            Assert.That(stash == null || !stash.Children.OfType<ComputerDisplayWindow>().Any(), Is.True,
+                "Activating APC after walking back into range should bring APC window onto WindowRoot cleanly.");
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen && w != pdaWin).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            apcWin = openWins[0];
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcWin.ScreenInsetControl, btns);
+            apcBreakerBtn = btns.First(b => b.VisibleInTree && !b.Disabled && b.Text != null &&
+                (b.Text.Contains("Breaker", StringComparison.OrdinalIgnoreCase) || b.Text.Contains("Toggle", StringComparison.OrdinalIgnoreCase)));
+            pdaWin!.MoveToFront();
+        });
+
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView? remoteView = null;
+        await Client.WaitAssertion(() =>
+        {
+            var views = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView>();
+            CollectDescendants(termCtrl!, views);
+            remoteView = views[0];
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, apcWin!.ScreenInsetControl, apcBreakerBtn!);
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var afterBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
+            Assert.That(afterBreaker, Is.EqualTo(!initialBreaker));
+        });
+
+        await Client.WaitPost(() =>
+        {
+            siblingWin?.Close();
+            pdaWin!.Close();
+        });
+        await RunTicks(8);
+    }
+
 #if DEBUG
     [Test]
     public async Task TestDebugModeDownloadServerAlwaysAvailable()

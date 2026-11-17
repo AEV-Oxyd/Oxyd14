@@ -165,6 +165,7 @@ public sealed class TerminalUiControl : ProgramUiControl
         }
         else
         {
+            _remoteScreenView.ClearScreen();
             _remoteScreenPanel.Visible = false;
             _shellPanel.Visible = true;
             _promptLabel.Text = state.Prompt;

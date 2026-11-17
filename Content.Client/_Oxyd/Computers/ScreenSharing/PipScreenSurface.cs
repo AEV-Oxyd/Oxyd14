@@ -15,35 +15,16 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 /// </summary>
 public static class PipSurfaceRegistry
 {
-    private static readonly Dictionary<string, List<PipScreenSurface>> s_Surfaces =
-        new(StringComparer.OrdinalIgnoreCase);
+    private static ClientRemoteScreenSystem RemoteSys => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>();
 
     public static void Register(string guid, PipScreenSurface surface)
     {
-        if (string.IsNullOrWhiteSpace(guid))
-            return;
-
-        if (!s_Surfaces.TryGetValue(guid, out var list))
-        {
-            list = new List<PipScreenSurface>(2);
-            s_Surfaces[guid] = list;
-        }
-
-        if (!list.Contains(surface))
-            list.Add(surface);
+        RemoteSys.RegisterPipSurface(guid, surface);
     }
 
     public static void Unregister(string guid, PipScreenSurface surface)
     {
-        if (string.IsNullOrWhiteSpace(guid))
-            return;
-
-        if (!s_Surfaces.TryGetValue(guid, out var list))
-            return;
-
-        list.Remove(surface);
-        if (list.Count == 0)
-            s_Surfaces.Remove(guid);
+        RemoteSys.UnregisterPipSurface(guid, surface);
     }
 
     /// <summary>
@@ -84,34 +65,7 @@ public static class PipSurfaceRegistry
     /// </summary>
     public static PipScreenSurface? ResolveSurface(Control requester, string? deviceGuid)
     {
-        if (string.IsNullOrWhiteSpace(deviceGuid))
-            return null;
-
-        var ancestor = FindAncestorSurface(requester, deviceGuid);
-        if (ancestor != null && !ancestor.Disposed && ancestor.ReadTexture != null)
-            return ancestor;
-
-        if (s_Surfaces.TryGetValue(deviceGuid, out var list))
-        {
-            for (var i = 0; i < list.Count; i++)
-            {
-                var candidate = list[i];
-                if (!candidate.Disposed && candidate != requester && candidate.ReadTexture != null)
-                    return candidate;
-            }
-
-            for (var i = 0; i < list.Count; i++)
-            {
-                var candidate = list[i];
-                if (!candidate.Disposed && candidate.VisibleInTree)
-                    return candidate;
-            }
-        }
-
-        if (ancestor != null && !ancestor.Disposed)
-            return ancestor;
-
-        return null;
+        return RemoteSys.ResolvePipSurface(requester, deviceGuid);
     }
 
     /// <summary>
@@ -119,15 +73,7 @@ public static class PipSurfaceRegistry
     /// </summary>
     public static void InvalidateDevice(string? deviceGuid, int cascadeBounces = 3)
     {
-        if (string.IsNullOrWhiteSpace(deviceGuid) || !s_Surfaces.TryGetValue(deviceGuid, out var list))
-            return;
-
-        for (var i = 0; i < list.Count; i++)
-        {
-            var surface = list[i];
-            if (!surface.Disposed)
-                surface.InvalidateCapture(cascadeBounces);
-        }
+        RemoteSys.InvalidatePipDevice(deviceGuid, cascadeBounces);
     }
 }
 
@@ -141,6 +87,9 @@ public static class PipSurfaceRegistry
 public partial class PipScreenSurface : BoxContainer
 {
     [Dependency] private IClyde _clyde = default!;
+    [Dependency] private IEntityManager _entManager = default!;
+    private ClientRemoteScreenSystem? _remoteSys;
+    private ClientRemoteScreenSystem RemoteSys => _remoteSys ??= _entManager.System<ClientRemoteScreenSystem>();
 
     /// <summary>
     /// Maximum nested offscreen capture depth per UI frame.
@@ -149,42 +98,17 @@ public partial class PipScreenSurface : BoxContainer
     /// </summary>
     public const int MaxCaptureDepth = 2;
 
-    private static readonly Queue<IRenderTexture> s_DeferredDisposeQueue = new();
-    private static readonly HashSet<Control> s_ActiveCaptureControls = new();
-    private static readonly HashSet<string> s_ActiveCaptureGuids = new(StringComparer.OrdinalIgnoreCase);
-    private static int s_CaptureDepth;
-    private static uint s_CurrentFrameId;
-
-    private static IRenderHandle? s_CaptureRenderHandle;
-    private static Control? s_CaptureControl;
-    private static readonly Action s_CaptureAction = OnCaptureRender;
-
-    private static void OnCaptureRender()
-    {
-        if (s_CaptureRenderHandle == null || s_CaptureControl == null)
-            return;
-
-        s_CaptureRenderHandle.SetScissor(null);
-        s_CaptureRenderHandle.DrawingHandleScreen.Modulate = Color.White;
-        s_CaptureRenderHandle.DrawingHandleScreen.SetTransform(Matrix3x2.Identity);
-        s_CaptureControl.UserInterfaceManager.RenderControl(s_CaptureRenderHandle, s_CaptureControl, Vector2i.Zero);
-    }
-
     /// <summary>
     /// Minimum interval between steady-state background captures once the initial cascade bounces are seeded.
     /// </summary>
     private const float BackgroundCaptureIntervalSeconds = 0.05f;
 
-    public static bool IsCapturingOffscreen => s_CaptureDepth > 0;
-    public static int CaptureDepth => s_CaptureDepth;
+    public static bool IsCapturingOffscreen => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().IsCapturingOffscreen;
+    public static int CaptureDepth => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().CaptureDepth;
 
     public static void BeginUiFrame()
     {
-        s_CurrentFrameId++;
-        s_CaptureDepth = 0;
-        s_ActiveCaptureControls.Clear();
-        s_ActiveCaptureGuids.Clear();
-        FlushDeferredDisposals();
+        IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().BeginPipUiFrame();
     }
 
     /// <summary>
@@ -194,7 +118,7 @@ public partial class PipScreenSurface : BoxContainer
     public static void DeferDispose(IRenderTexture? target)
     {
         if (target != null)
-            s_DeferredDisposeQueue.Enqueue(target);
+            IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().DeferPipDispose(target);
     }
 
     /// <summary>
@@ -202,13 +126,7 @@ public partial class PipScreenSurface : BoxContainer
     /// </summary>
     public static void FlushDeferredDisposals()
     {
-        if (s_CaptureDepth > 0)
-            return;
-
-        while (s_DeferredDisposeQueue.TryDequeue(out var target))
-        {
-            target.Dispose();
-        }
+        IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().FlushDeferredPipDisposals();
     }
 
     private string? _deviceGuid;
@@ -285,17 +203,10 @@ public partial class PipScreenSurface : BoxContainer
     /// </summary>
     public bool CanCapture(Control control, string? targetGuid = null)
     {
-        if (_isCapturing || s_CaptureDepth >= MaxCaptureDepth)
+        if (_isCapturing)
             return false;
 
-        if (s_ActiveCaptureControls.Contains(control))
-            return false;
-
-        var guid = targetGuid ?? _deviceGuid;
-        if (!string.IsNullOrEmpty(guid) && s_ActiveCaptureGuids.Contains(guid))
-            return false;
-
-        return true;
+        return RemoteSys.CanCapturePip(control, targetGuid ?? _deviceGuid);
     }
 
     /// <summary>
@@ -321,14 +232,14 @@ public partial class PipScreenSurface : BoxContainer
     {
         base.FrameUpdate(args);
         _timeSinceLastCapture += args.DeltaSeconds;
-        FlushDeferredDisposals();
+        RemoteSys.FlushDeferredPipDisposals();
     }
 
     protected override void PostRenderChildren(ref ControlRenderArguments args)
     {
         base.PostRenderChildren(ref args);
 
-        if (_observedFramesRemaining <= 0 || s_CaptureDepth > 0 || _isCapturing)
+        if (_observedFramesRemaining <= 0 || RemoteSys.IsCapturingOffscreen || _isCapturing)
             return;
 
         _observedFramesRemaining--;
@@ -368,36 +279,14 @@ public partial class PipScreenSurface : BoxContainer
         if (_writeTarget == null)
             return false;
 
-        var captureGuid = _deviceGuid;
-        var addedControl = s_ActiveCaptureControls.Add(control);
-        var addedGuid = !string.IsNullOrEmpty(captureGuid) && s_ActiveCaptureGuids.Add(captureGuid);
-        var prevModulate = renderHandle.DrawingHandleScreen.Modulate;
-        var prevTransform = renderHandle.DrawingHandleScreen.GetTransform();
-
-        var prevHandle = s_CaptureRenderHandle;
-        var prevControl = s_CaptureControl;
-        s_CaptureRenderHandle = renderHandle;
-        s_CaptureControl = control;
-
         _isCapturing = true;
-        s_CaptureDepth++;
         try
         {
-            renderHandle.RenderInRenderTarget(_writeTarget, s_CaptureAction, Color.FromHex("#070B12"));
+            RemoteSys.RenderPipToTarget(renderHandle, _writeTarget, control, _deviceGuid);
         }
         finally
         {
-            s_CaptureRenderHandle = prevHandle;
-            s_CaptureControl = prevControl;
-
-            renderHandle.DrawingHandleScreen.Modulate = prevModulate;
-            renderHandle.DrawingHandleScreen.SetTransform(prevTransform);
-            s_CaptureDepth--;
             _isCapturing = false;
-            if (addedGuid && !string.IsNullOrEmpty(captureGuid))
-                s_ActiveCaptureGuids.Remove(captureGuid);
-            if (addedControl)
-                s_ActiveCaptureControls.Remove(control);
         }
 
         (_readTarget, _writeTarget) = (_writeTarget, _readTarget);
@@ -409,7 +298,7 @@ public partial class PipScreenSurface : BoxContainer
 
         if (_writeTarget != null && _writeTarget.Size != clampedSize)
         {
-            DeferDispose(_writeTarget);
+            RemoteSys.DeferPipDispose(_writeTarget);
             _writeTarget = null;
         }
 
@@ -428,7 +317,7 @@ public partial class PipScreenSurface : BoxContainer
 
         if (_writeTarget != null)
         {
-            DeferDispose(_writeTarget);
+            RemoteSys.DeferPipDispose(_writeTarget);
             _writeTarget = null;
         }
 
@@ -441,9 +330,9 @@ public partial class PipScreenSurface : BoxContainer
 
     private void DisposeRenderTargets()
     {
-        DeferDispose(_readTarget);
+        RemoteSys.DeferPipDispose(_readTarget);
         _readTarget = null;
-        DeferDispose(_writeTarget);
+        RemoteSys.DeferPipDispose(_writeTarget);
         _writeTarget = null;
         _hasValidReadFrame = false;
     }

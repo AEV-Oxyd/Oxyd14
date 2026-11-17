@@ -176,14 +176,17 @@ public class ContentButton : ContentControl
 
     protected override Vector2 MeasureOverride(Vector2 availableSize)
     {
-        _label.Measure(availableSize);
+        foreach (var child in Children)
+            child.Measure(availableSize);
         var labelSize = _label.DesiredSize;
         return new Vector2(MathF.Max(labelSize.X + 16, 24), MathF.Max(labelSize.Y + 8, 24));
     }
 
     protected override Vector2 ArrangeOverride(Vector2 finalSize)
     {
-        _label.Arrange(new UIBox2(Vector2.Zero, finalSize));
+        var box = new UIBox2(Vector2.Zero, finalSize);
+        foreach (var child in Children)
+            child.Arrange(box);
         return finalSize;
     }
 

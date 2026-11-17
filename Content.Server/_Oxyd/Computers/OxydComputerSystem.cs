@@ -159,6 +159,15 @@ public sealed partial class OxydComputerSystem : EntitySystem
         var key = GetPrimaryUiKey(compUid, comp);
         if (_ui.IsUiOpen(compUid, key, args.User))
         {
+            if (_remoteScreen.IsRemoteScreenAuthorized(args.User, compUid))
+            {
+                // Keep the computer & child program BUIs open for active remote viewers and bring
+                // any locally closed (stashed) window back onto the player's screen.
+                UpdateComputerDisplayUi(compUid, comp);
+                _remoteScreen.HandleLocalOpenWhileViewing(compUid, key, args.User);
+                return;
+            }
+
             CloseComputerForActor(compUid, args.User, key);
             return;
         }
@@ -179,11 +188,19 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!key.Equals(args.UiKey))
             return;
 
-        CloseChildProgramUisForActor(ent.Owner, args.Actor, ent.Comp);
+        if (_remoteScreen.IsRemoteScreenAuthorized(args.Actor, ent.Owner))
+        {
+            // Keep child program BUIs and remote stream alive if user closes a popped-out target window locally;
+            // only genuinely tear down when ServerRemoteScreenSystem initiates a detach.
+            if (!_remoteScreen.IsDetachingViewer(args.Actor, ent.Owner))
+                _remoteScreen.HandleTargetUiClosedWhileViewing(ent.Owner, args.Actor);
+            else
+                CloseChildProgramUisForActor(ent.Owner, args.Actor, ent.Comp);
+            return;
+        }
 
-        // Revoke PVS overrides only if the actor is not still viewing remotely via SSH screen share.
-        if (!_remoteScreen.IsRemoteScreenAuthorized(args.Actor, ent.Owner))
-            RevokeViewerPvsOverrides(ent.Owner, args.Actor, ent.Comp);
+        CloseChildProgramUisForActor(ent.Owner, args.Actor, ent.Comp);
+        RevokeViewerPvsOverrides(ent.Owner, args.Actor, ent.Comp);
     }
 
     private void OnHardwareOrProgramInserted(Entity<OxydComputerComponent> ent, ref EntInsertedIntoContainerMessage args)

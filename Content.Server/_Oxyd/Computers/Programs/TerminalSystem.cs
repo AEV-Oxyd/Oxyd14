@@ -47,6 +47,7 @@ public sealed partial class TerminalSystem : EntitySystem
         {
             subs.Event<TerminalExecuteCommandMessage>(OnExecuteCommand);
             subs.Event<TerminalRemoteScreenActionMessage>(OnRemoteScreenAction);
+            subs.Event<BoundUIOpenedEvent>(OnBuiOpened);
             subs.Event<BoundUIClosedEvent>(OnBuiClosed);
         });
     }
@@ -71,9 +72,15 @@ public sealed partial class TerminalSystem : EntitySystem
         DetachRemoteScreenSession(ent.Owner, ent.Comp);
     }
 
+    private void OnBuiOpened(Entity<TerminalProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        UpdateTerminalUi(ent.Owner);
+    }
+
     private void OnBuiClosed(Entity<TerminalProgramComponent> ent, ref BoundUIClosedEvent args)
     {
         DetachRemoteScreenSession(ent.Owner, ent.Comp, args.Actor);
+        UpdateTerminalUi(ent.Owner);
     }
 
     private void DetachRemoteScreenSession(EntityUid progUid, TerminalProgramComponent comp, EntityUid? actor = null)

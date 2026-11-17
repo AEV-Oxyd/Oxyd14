@@ -82,9 +82,16 @@ public class ContentLabel : ContentControl
                 continue;
             }
 
-            if (font.TryGetCharMetrics(rune, UIScale, out var metrics))
+            try
             {
-                currentWidth += metrics.Advance;
+                if (font.TryGetCharMetrics(rune, UIScale, out var metrics))
+                {
+                    currentWidth += metrics.Advance;
+                }
+            }
+            catch (Exception)
+            {
+                // Skip glyphs whose fallback font format cannot be rasterized by FreeType.
             }
         }
 

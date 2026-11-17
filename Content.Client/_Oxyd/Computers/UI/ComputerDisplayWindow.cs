@@ -266,6 +266,14 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
             _bootProgramViewport.RemoveAllChildren();
     }
 
+    public override void Close()
+    {
+        if (ScreenSharing.RemoteScreenView.RemoteBuiTarget.TryHandleWindowClose(this))
+            return;
+
+        base.Close();
+    }
+
     [Obsolete("Controls should only be removed from UI tree instead of being disposed")]
     protected override void Dispose(bool disposing)
     {

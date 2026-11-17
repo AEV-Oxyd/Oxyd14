@@ -4,7 +4,10 @@ using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
+using Content.Shared.Interaction;
+using Content.Shared.Interaction.Events;
 using Content.Shared.PDA;
+using Content.Shared.UserInterface;
 using Robust.Server.GameStates;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
@@ -24,12 +27,26 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 
     private readonly Dictionary<EntityUid, HashSet<EntityUid>> _viewerTrackedPvs = new();
     private readonly Dictionary<(EntityUid Actor, EntityUid Target), bool> _alreadyOpenOnAttach = new();
+    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _detachingTargets = new();
 
     public override void Initialize()
     {
         base.Initialize();
         SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, ComponentShutdown>(OnViewerShutdown);
         SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, PlayerDetachedEvent>(OnViewerDetached);
+        SubscribeNetworkEvent<RemoteScreenLocalWindowStateEvent>(OnLocalWindowState);
+    }
+
+    private void OnLocalWindowState(RemoteScreenLocalWindowStateEvent ev, EntitySessionEventArgs args)
+    {
+        if (args.SenderSession.AttachedEntity is not { } actor || !TryGetEntity(ev.TargetEntity, out var targetUid))
+            return;
+
+        if (!IsRemoteScreenAuthorized(actor, targetUid.Value))
+            return;
+
+        var compUid = _router.UnwrapComputerEntity(targetUid.Value);
+        _alreadyOpenOnAttach[(actor, compUid)] = ev.IsOpenOnScreen;
     }
 
     private void OnViewerShutdown(Entity<ActiveRemoteScreenViewerComponent> ent, ref ComponentShutdown args)
@@ -253,70 +270,148 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         }
     }
 
+    public bool IsDetachingViewer(EntityUid actor, EntityUid targetCompUid)
+    {
+        return _detachingTargets.Contains((actor, _router.UnwrapComputerEntity(targetCompUid)));
+    }
+
+    /// <summary>
+    /// Handles re-activating/re-opening a device locally while it is actively streamed in RemoteScreenView.
+    /// Keeps all active BUIs intact instead of toggling them closed, and asks the client to pop any
+    /// offscreen-stashed window back onto WindowRoot.
+    /// </summary>
+    public void HandleLocalOpenWhileViewing(EntityUid targetUid, Enum key, EntityUid actor)
+    {
+        var compUid = _router.UnwrapComputerEntity(targetUid);
+        if (!Exists(compUid) || !Exists(actor))
+            return;
+
+        _alreadyOpenOnAttach[(actor, compUid)] = true;
+
+        if (!_ui.IsUiOpen(compUid, key, actor))
+            _ui.OpenUi(compUid, key, actor);
+
+        if (TryComp<OxydComputerComponent>(compUid, out var comp))
+        {
+            foreach (var progUid in comp.RunningPrograms)
+            {
+                if (Exists(progUid) && !_ui.IsUiOpen(progUid, ProgramUiKey.Key, actor))
+                    _ui.OpenUi(progUid, ProgramUiKey.Key, actor);
+            }
+        }
+
+        if (TryComp<ActorComponent>(actor, out var actorComp))
+            RaiseNetworkEvent(new RemoteScreenBringToFrontEvent(GetNetEntity(compUid)), actorComp.PlayerSession);
+    }
+
+    /// <summary>
+    /// Ensures a remote-viewed computer UI stays open (moving it offscreen cleanly on the client)
+    /// when a local close event reaches the server while an active remote screen session still views it.
+    /// </summary>
+    public void HandleTargetUiClosedWhileViewing(EntityUid compUid, EntityUid actor)
+    {
+        compUid = _router.UnwrapComputerEntity(compUid);
+        if (!TryComp<OxydComputerComponent>(compUid, out var comp) ||
+            !comp.AllowRemoteControl ||
+            comp.RemoteControlWireCut ||
+            comp.PowerWireCut ||
+            !Exists(actor))
+        {
+            return;
+        }
+
+        _alreadyOpenOnAttach[(actor, compUid)] = false;
+
+        var compSys = EntityManager.System<OxydComputerSystem>();
+        var key = compSys.GetPrimaryUiKey(compUid, comp);
+        _ui.OpenUi(compUid, key, actor);
+        compSys.UpdateComputerDisplayUi(compUid, comp);
+
+        foreach (var progUid in comp.RunningPrograms)
+        {
+            if (Exists(progUid) && !_ui.IsUiOpen(progUid, ProgramUiKey.Key, actor))
+                _ui.OpenUi(progUid, ProgramUiKey.Key, actor);
+        }
+    }
+
     private void DetachSpecificTarget(
         EntityUid actorUid,
         ICommonSession session,
         ActiveRemoteScreenViewerComponent rem,
         EntityUid targetCompUid)
     {
-        _alreadyOpenOnAttach.Remove((actorUid, targetCompUid));
-        var compSys = EntityManager.System<OxydComputerSystem>();
-        var targetNet = GetNetEntity(targetCompUid);
-        rem.AuthorizedTargets.Remove(targetNet);
-
-        if (TryComp<OxydComputerComponent>(targetCompUid, out var comp))
+        var keepLocalUiOpen = _alreadyOpenOnAttach.Remove((actorUid, targetCompUid), out var openOnClient) && openOnClient;
+        _detachingTargets.Add((actorUid, targetCompUid));
+        try
         {
-            var key = compSys.GetPrimaryUiKey(targetCompUid, comp);
-            _ui.CloseUi(targetCompUid, key, actorUid);
+            var compSys = EntityManager.System<OxydComputerSystem>();
+            var targetNet = GetNetEntity(targetCompUid);
+            rem.AuthorizedTargets.Remove(targetNet);
 
-            foreach (var progUid in comp.RunningPrograms)
+            if (TryComp<OxydComputerComponent>(targetCompUid, out var comp))
             {
-                rem.AuthorizedTargets.Remove(GetNetEntity(progUid));
-                if (Exists(progUid))
-                    _ui.CloseUi(progUid, ProgramUiKey.Key, actorUid);
-                if (_viewerTrackedPvs.TryGetValue(actorUid, out var tracked) && tracked.Remove(progUid))
-                    _pvsOverride.RemoveSessionOverride(progUid, session);
+                var key = compSys.GetPrimaryUiKey(targetCompUid, comp);
+                if (!keepLocalUiOpen)
+                    _ui.CloseUi(targetCompUid, key, actorUid);
+
+                foreach (var progUid in comp.RunningPrograms)
+                {
+                    rem.AuthorizedTargets.Remove(GetNetEntity(progUid));
+                    if (!keepLocalUiOpen && Exists(progUid))
+                        _ui.CloseUi(progUid, ProgramUiKey.Key, actorUid);
+                    if (!keepLocalUiOpen && _viewerTrackedPvs.TryGetValue(actorUid, out var tracked) && tracked.Remove(progUid))
+                        _pvsOverride.RemoveSessionOverride(progUid, session);
+                }
             }
-        }
 
-        if (TryComp<ComputerStatsComponent>(targetCompUid, out var stats) &&
-            stats.PrimaryDriveUid is { } dUid &&
-            _viewerTrackedPvs.TryGetValue(actorUid, out var t2) &&
-            t2.Remove(dUid))
+            if (!keepLocalUiOpen &&
+                TryComp<ComputerStatsComponent>(targetCompUid, out var stats) &&
+                stats.PrimaryDriveUid is { } dUid &&
+                _viewerTrackedPvs.TryGetValue(actorUid, out var t2) &&
+                t2.Remove(dUid))
+            {
+                _pvsOverride.RemoveSessionOverride(dUid, session);
+            }
+
+            if (!keepLocalUiOpen && _viewerTrackedPvs.TryGetValue(actorUid, out var t3) && t3.Remove(targetCompUid))
+                _pvsOverride.RemoveSessionOverride(targetCompUid, session);
+
+            if (rem.AuthorizedTargets.Count == 0)
+                RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
+            else
+                Dirty(actorUid, rem);
+        }
+        finally
         {
-            _pvsOverride.RemoveSessionOverride(dUid, session);
+            _detachingTargets.Remove((actorUid, targetCompUid));
         }
-
-        if (_viewerTrackedPvs.TryGetValue(actorUid, out var t3) && t3.Remove(targetCompUid))
-            _pvsOverride.RemoveSessionOverride(targetCompUid, session);
-
-        if (rem.AuthorizedTargets.Count == 0)
-            RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
-        else
-            Dirty(actorUid, rem);
     }
 
     private void RevokeAllForActor(EntityUid actorUid, ICommonSession session)
     {
-        foreach (var k in _alreadyOpenOnAttach.Keys.Where(k => k.Actor == actorUid).ToList())
-            _alreadyOpenOnAttach.Remove(k);
-
         if (TryComp<ActiveRemoteScreenViewerComponent>(actorUid, out var rem))
         {
-            var compSys = EntityManager.System<OxydComputerSystem>();
-            foreach (var netEnt in rem.AuthorizedTargets.ToList())
+            var targets = rem.AuthorizedTargets.Select(GetEntity).ToList();
+            foreach (var ent in targets)
             {
-                var ent = GetEntity(netEnt);
-                if (Exists(ent))
+                if (Exists(ent) && HasComp<OxydComputerComponent>(ent))
+                    DetachSpecificTarget(actorUid, session, rem, ent);
+            }
+
+            if (HasComp<ActiveRemoteScreenViewerComponent>(actorUid))
+            {
+                foreach (var netEnt in rem.AuthorizedTargets.ToList())
                 {
-                    if (TryComp<OxydComputerComponent>(ent, out var comp))
-                        _ui.CloseUi(ent, compSys.GetPrimaryUiKey(ent, comp), actorUid);
-                    else if (HasComp<ProgramComponent>(ent))
+                    var ent = GetEntity(netEnt);
+                    if (Exists(ent) && HasComp<ProgramComponent>(ent))
                         _ui.CloseUi(ent, ProgramUiKey.Key, actorUid);
                 }
+                RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
             }
-            RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
         }
+
+        foreach (var k in _alreadyOpenOnAttach.Keys.Where(k => k.Actor == actorUid).ToList())
+            _alreadyOpenOnAttach.Remove(k);
 
         if (_viewerTrackedPvs.Remove(actorUid, out var tracked))
         {
