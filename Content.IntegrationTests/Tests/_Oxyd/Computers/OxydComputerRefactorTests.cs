@@ -2122,5 +2122,230 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(dlProg!.ProgramId, Is.EqualTo("NanoTaskProgram"));
         });
     }
+
+    [Test]
+    public async Task TestRemoteScreenTerminalKeepsTextInputFocus()
+    {
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+        var fsSys = Server.System<Content.Shared._Oxyd.Computers.FileSystem.SharedFileSystemSystem>();
+
+        var pdaNet = await PlaceInHands("DetectivePDA");
+        var pdaUid = ToServer(pdaNet);
+
+        EntityUid wsUid = default;
+        EntityUid wsCompUid = default;
+        EntityUid pdaCompUid = default;
+        string wsGuid = string.Empty;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
+            Assert.That(routerSys.IsNetworkConnected(pdaCompUid), Is.True);
+            Assert.That(routerSys.IsNetworkConnected(wsCompUid), Is.True);
+        });
+
+        await UseInHand();
+        await RunTicks(12);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            pdaWin = openWins[0];
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaWin, btns);
+            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+        });
+        await ClickViaHitTest(pdaAppsBtn!);
+
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(pdaWin!, osList);
+            Assert.That(osList.Count, Is.EqualTo(1));
+            termRunBtn = FindRowRunButton(osList[0], "Terminal");
+            Assert.That(termRunBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(termRunBtn!);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? pdaTermInput = null;
+        TerminalUiControl? pdaTermCtrl = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(pdaWin!, termList);
+            Assert.That(termList.Count, Is.EqualTo(1));
+            pdaTermCtrl = termList[0];
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(pdaTermCtrl, inputs);
+            Assert.That(inputs.Count, Is.EqualTo(1));
+            pdaTermInput = inputs[0];
+        });
+
+        await TypeIntoLineEdit(pdaTermInput!, $"ssh {wsGuid}", submit: true);
+        await TypeIntoLineEdit(pdaTermInput!, "screen open", submit: true);
+        await RunTicks(18);
+
+        Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView? remoteView = null;
+        ComputerDisplayWindow? stashedWsWin = null;
+        OsUiControl? wsOsCtrl = null;
+        Content.Client.UserInterface.Controls.ContentButton? remoteWsAppsBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var views = new System.Collections.Generic.List<Content.Client._Oxyd.Computers.ScreenSharing.RemoteScreenView>();
+            CollectDescendants(pdaTermCtrl!, views);
+            Assert.That(views.Count, Is.EqualTo(1));
+            remoteView = views[0];
+
+            var stash = UiMan.WindowRoot.Children.FirstOrDefault(c => c.Name == "RemoteOffscreenStash");
+            Assert.That(stash, Is.Not.Null);
+            stashedWsWin = stash!.Children.OfType<ComputerDisplayWindow>().FirstOrDefault(w => !w.Disposed);
+            Assert.That(stashedWsWin, Is.Not.Null);
+
+            var osList = new System.Collections.Generic.List<OsUiControl>();
+            CollectDescendants(stashedWsWin!.ScreenInsetControl, osList);
+            Assert.That(osList.Count, Is.EqualTo(1));
+            wsOsCtrl = osList[0];
+
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(wsOsCtrl, btns);
+            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            Assert.That(remoteWsAppsBtn, Is.Not.Null);
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, stashedWsWin!.ScreenInsetControl, remoteWsAppsBtn!);
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? remoteTermRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            remoteTermRunBtn = FindRowRunButton(wsOsCtrl!, "Terminal");
+            Assert.That(remoteTermRunBtn, Is.Not.Null, "Clicking Apps inside RemoteScreenView must reveal Terminal Run ContentButton");
+        });
+
+        await ClickThroughRemoteScreenView(remoteView!, stashedWsWin.ScreenInsetControl, remoteTermRunBtn!);
+        await RunTicks(12);
+
+        Content.Client.UserInterface.Controls.ContentLineEdit? remoteTermInput = null;
+        await Client.WaitAssertion(() =>
+        {
+            var termList = new System.Collections.Generic.List<TerminalUiControl>();
+            CollectDescendants(stashedWsWin.ScreenInsetControl, termList);
+            Assert.That(termList.Count, Is.EqualTo(1));
+            var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(termList[0], inputs);
+            Assert.That(inputs.Count, Is.EqualTo(1));
+            remoteTermInput = inputs[0];
+            Assert.That(remoteTermInput.VisibleInTree, Is.True);
+        });
+
+        // Clicking remote Terminal input through RemoteScreenView must keep KeyboardFocused on remoteTermInput AFTER MouseUp.
+        await ClickThroughRemoteScreenView(remoteView!, stashedWsWin.ScreenInsetControl, remoteTermInput!);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(UiMan.KeyboardFocused, Is.EqualTo(remoteTermInput),
+                $"Expected KeyboardFocused to remain on remote Terminal ContentLineEdit after UIClick release, got {UiMan.KeyboardFocused?.GetType().Name ?? "null"}");
+            Assert.That(remoteTermInput!.HasKeyboardFocus(), Is.True);
+        });
+
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(UiMan.KeyboardFocused, Is.EqualTo(remoteTermInput),
+                "Remote Terminal ContentLineEdit lost focus across subsequent frames/ticks.");
+        });
+
+        // Now type and edit without re-clicking, exercising TextEntered, TextBackspace, and TextSubmit directly on UiMan.
+        await Client.WaitPost(() =>
+        {
+            var uiType = UiMan.GetType();
+            var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mText = uiType.GetMethod("TextEntered", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+
+            foreach (var ch in "write /notes/remote_term.txt hx")
+                mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(ch.ToString()) });
+
+            var sc = new ScreenCoordinates(remoteView!.GlobalPixelPosition + remoteView.PixelSize / 2, remoteView.Window?.Id ?? default);
+            mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Down, sc, false, false) });
+            mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextBackspace, BoundKeyState.Up, sc, false, false) });
+            mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs("i") });
+
+            Assert.That(remoteTermInput!.Text, Is.EqualTo("write /notes/remote_term.txt hi"));
+            Assert.That(UiMan.KeyboardFocused, Is.EqualTo(remoteTermInput));
+        });
+
+        await RunTicks(4);
+
+        await Client.WaitPost(() =>
+        {
+            Assert.That(UiMan.KeyboardFocused, Is.EqualTo(remoteTermInput));
+            var uiType = UiMan.GetType();
+            var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var sc = new ScreenCoordinates(remoteView!.GlobalPixelPosition + remoteView.PixelSize / 2, remoteView.Window?.Id ?? default);
+            mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Down, sc, false, false) });
+            mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Up, sc, false, false) });
+        });
+
+        await RunTicks(12);
+
+        // Even after command submission and server TerminalUiState refresh, focus must remain in the remote command box.
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(UiMan.KeyboardFocused, Is.EqualTo(remoteTermInput),
+                "Remote Terminal ContentLineEdit lost focus after submitting command and receiving updated TerminalUiState.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            var uiType = UiMan.GetType();
+            var mKeyDown = uiType.GetMethod("KeyBindDown", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mKeyUp = uiType.GetMethod("KeyBindUp", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(Robust.Shared.Input.BoundKeyEventArgs) }, null)!;
+            var mText = uiType.GetMethod("TextEntered", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+            foreach (var ch in "ls")
+                mText.Invoke(UiMan, new object[] { new Robust.Client.Input.TextEnteredEventArgs(ch.ToString()) });
+            var sc = new ScreenCoordinates(remoteView!.GlobalPixelPosition + remoteView.PixelSize / 2, remoteView.Window?.Id ?? default);
+            mKeyDown.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Down, sc, false, false) });
+            mKeyUp.Invoke(UiMan, new object[] { new Robust.Shared.Input.BoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Up, sc, false, false) });
+        });
+
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsCompUid, out var driveUid, out var fs), Is.True);
+            Assert.That(fsSys.TryGetFile<Content.Shared._Oxyd.Computers.FileSystem.TextVirtualFile>(driveUid!.Value, "/notes/remote_term.txt", out var noteFile, fs), Is.True);
+            Assert.That(noteFile!.TextContent, Is.EqualTo("hi"));
+
+            var wsComp = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid);
+            Assert.That(wsComp.ActiveProgram, Is.Not.Null);
+            var termComp = SEntMan.GetComponent<Content.Shared._Oxyd.Computers.Programs.TerminalProgramComponent>(wsComp.ActiveProgram!.Value);
+            Assert.That(termComp.History.Any(l => l.Contains("system.log")), Is.True,
+                $"Expected `ls` executed via remote Terminal to list system.log, got:\n{string.Join("\n", termComp.History)}");
+        });
+
+        await Client.WaitPost(() => pdaWin!.Close());
+        await RunTicks(8);
+    }
 #endif
 }

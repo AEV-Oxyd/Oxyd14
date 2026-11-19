@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using Content.Client._Oxyd.Computers.ScreenSharing;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
@@ -107,10 +108,24 @@ public class ContentLineEdit : ContentControl
         _drawOffset = 0f;
     }
 
+    private void InvalidateAncestorPipSurface()
+    {
+        for (var cur = Parent; cur != null; cur = cur.Parent)
+        {
+            if (cur is PipScreenSurface surface && !surface.Disposed)
+            {
+                surface.InvalidateCapture(2);
+                PipSurfaceRegistry.InvalidateDevice(surface.DeviceGuid, 2);
+                break;
+            }
+        }
+    }
+
     private void ResetCaretBlink()
     {
         _caretBlink = true;
         _caretTimer = 0f;
+        InvalidateAncestorPipSurface();
     }
 
     protected override void KeyboardFocusEntered()
@@ -129,6 +144,7 @@ public class ContentLineEdit : ContentControl
 
         _caretBlink = false;
         Root?.Window?.TextInputStop();
+        InvalidateAncestorPipSurface();
     }
 
     protected override void KeyBindDown(GUIBoundKeyEventArgs args)
@@ -150,6 +166,7 @@ public class ContentLineEdit : ContentControl
         if (args.Function == EngineKeyFunctions.TextReleaseFocus)
         {
             ReleaseKeyboardFocus();
+            InvalidateAncestorPipSurface();
             args.Handle();
             return;
         }
@@ -160,6 +177,7 @@ public class ContentLineEdit : ContentControl
         if (args.Function == EngineKeyFunctions.TextSubmit || args.Function == EngineKeyFunctions.TextNewline)
         {
             OnTextEntered?.Invoke(new LineEditEventArgs(this, _text));
+            InvalidateAncestorPipSurface();
             args.Handle();
             return;
         }
@@ -204,6 +222,16 @@ public class ContentLineEdit : ContentControl
             ResetCaretBlink();
             args.Handle();
             return;
+        }
+    }
+
+    protected override void KeyBindUp(GUIBoundKeyEventArgs args)
+    {
+        base.KeyBindUp(args);
+
+        if (args.Function == EngineKeyFunctions.UIClick)
+        {
+            args.Handle();
         }
     }
 

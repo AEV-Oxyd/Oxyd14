@@ -511,6 +511,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
                     if (targetArgs.Handled)
                     {
+                        _surface.InvalidateCapture(2);
                         args.Handle();
                         return;
                     }
@@ -567,8 +568,9 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
             heldRelay.RelayKeyBindUp(targetArgs);
 
-            if (targetArgs.Handled)
+            if (targetArgs.Handled || heldControl.MouseFilter == MouseFilterMode.Stop)
             {
+                _surface.InvalidateCapture(2);
                 args.Handle();
                 return;
             }
@@ -601,13 +603,18 @@ public sealed partial class RemoteScreenView : LayoutContainer
 
                             if (targetArgs.Handled)
                             {
+                                _surface.InvalidateCapture(2);
                                 args.Handle();
                                 return;
                             }
                         }
 
                         if (cur.MouseFilter == MouseFilterMode.Stop)
-                            break;
+                        {
+                            _surface.InvalidateCapture(2);
+                            args.Handle();
+                            return;
+                        }
                     }
 
                     if (cur == targetRoot)
