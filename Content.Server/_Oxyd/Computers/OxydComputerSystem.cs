@@ -1416,6 +1416,53 @@ public sealed partial class OxydComputerSystem : EntitySystem
             packet: packet);
     }
 
+    /// <summary>
+    /// Resolves an ID card currently inserted into this computer's host PDA, host ID slot,
+    /// or modular computer ID slot hardware.
+    /// </summary>
+    public bool TryGetInsertedIdCard(EntityUid compUid, out EntityUid idCardUid)
+    {
+        idCardUid = EntityUid.Invalid;
+        if (!_computerQuery.TryComp(compUid, out var comp))
+            return false;
+
+        if (comp.HostMachine is { } hostUid && Exists(hostUid))
+        {
+            if (TryComp<PdaComponent>(hostUid, out var pda))
+            {
+                var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
+                if (pdaCard is { Valid: true } pId && Exists(pId) && HasComp<IdCardComponent>(pId))
+                {
+                    idCardUid = pId;
+                    return true;
+                }
+            }
+
+            if (TryComp<ItemSlotsComponent>(hostUid, out var hostSlots))
+            {
+                foreach (var slot in hostSlots.Slots.Values)
+                {
+                    if (slot.Item is { Valid: true } sId && Exists(sId) && HasComp<IdCardComponent>(sId))
+                    {
+                        idCardUid = sId;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModule, out var modSlot) &&
+            modSlot.Item is { Valid: true } modId &&
+            Exists(modId) &&
+            HasComp<IdCardComponent>(modId))
+        {
+            idCardUid = modId;
+            return true;
+        }
+
+        return false;
+    }
+
     private void RelayDeviceLinkToPrograms(
         EntityUid compUid,
         EntityUid sourceEntity,

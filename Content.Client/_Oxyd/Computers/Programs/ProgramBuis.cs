@@ -24,3 +24,4 @@ public sealed class NetProbeProgramBui(EntityUid owner, Enum uiKey) : ProgramBou
 public sealed class LogProbeProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<LogProbeUiControl>(owner, uiKey);
 public sealed class MedTekProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<UtilityProgramUiControl>(owner, uiKey);
 public sealed class AstroNavProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<UtilityProgramUiControl>(owner, uiKey);
+public sealed class AccessEncoderProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<AccessEncoderUiControl>(owner, uiKey);

@@ -269,6 +269,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
             RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes: {string.Join(", ", bf.GetAllRecipes())}\nEncrypted: {bf.IsEncrypted}\nRemaining DRM Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
             DatabaseVirtualFile df => $"Database Table: {df.TableName}\nEntries: {df.Data.Count}\n" + string.Join("\n", df.Data.Select(kv => $"  {kv.Key}: {kv.Value}")),
             TaskListVirtualFile tk => $"NanoTask Checklist ({tk.Tasks.Count} items)\n" + string.Join("\n", tk.Tasks.Select(t => $"  [{(t.IsTaskDone ? "x" : " ")}] #{t.Id} {t.Description} -> {t.TaskIsFor}")),
+            AccessCodesVirtualFile acc => $"ID Access Codes (.acc)\nHolder: {acc.OwnerName}{(string.IsNullOrWhiteSpace(acc.JobTitle) ? "" : $" ({acc.JobTitle})")}\nAccess Levels ({acc.AccessTags.Count}): {(acc.AccessTags.Count > 0 ? string.Join(", ", acc.AccessTags.Select(t => t.Id)) : "(none)")}",
             _ => $"{f.Name}.{f.Extension} ({f.Size} B)"
         };
     }

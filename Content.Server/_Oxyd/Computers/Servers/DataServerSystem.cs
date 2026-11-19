@@ -268,6 +268,7 @@ public sealed partial class DataServerSystem : EntitySystem
             ("/bin/packet_sniffer.nte", "packet_sniffer", "OxydPacketSnifferProgram", "Packet Sniffer"),
             ("/bin/medtek.nte", "medtek", "MedTekProgram", "MedTek"),
             ("/bin/astronav.nte", "astronav", "AstroNavProgram", "AstroNav"),
+            ("/bin/access_encoder.nte", "access_encoder", "AccessEncoderProgram", "ID Access Encoder"),
             ("/bin/downloader.nte", "downloader", "OxydDownloaderProgram", "Downloader"),
         ];
 

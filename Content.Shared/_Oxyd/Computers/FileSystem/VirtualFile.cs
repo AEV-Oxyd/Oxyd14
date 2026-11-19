@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Shared.Access;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Content.Shared.Research.Prototypes;
@@ -229,6 +230,42 @@ public sealed partial class TaskListVirtualFile : VirtualFile
                 IsTaskDone = t.IsTaskDone,
                 Priority = t.Priority
             }).ToList()
+        };
+        CopyBaseFields(copy);
+        return copy;
+    }
+}
+
+/// <summary>
+/// Serialized ID card access codes built from an ID card via ID Access Encoder
+/// and stored in the filesystem (default /keys/*.acc) for remote Terminal authorization.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed partial class AccessCodesVirtualFile : VirtualFile
+{
+    [DataField]
+    public string OwnerName = string.Empty;
+
+    [DataField]
+    public string JobTitle = string.Empty;
+
+    [DataField]
+    public List<ProtoId<AccessLevelPrototype>> AccessTags = new();
+
+    public AccessCodesVirtualFile()
+    {
+        Extension = "acc";
+        Directory = "/keys/";
+        Size = 256;
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new AccessCodesVirtualFile
+        {
+            OwnerName = OwnerName,
+            JobTitle = JobTitle,
+            AccessTags = new List<ProtoId<AccessLevelPrototype>>(AccessTags)
         };
         CopyBaseFields(copy);
         return copy;

@@ -59,6 +59,7 @@ public sealed partial class NetworkCommandSystem : EntitySystem
                 ? string.Join(",", bp.Recipes.Select(r => r.Id))
                 : bp.Recipe?.Id ?? string.Empty,
             ProgramVirtualFile prog => $"program:{prog.ProgramId}:{prog.Title}",
+            AccessCodesVirtualFile acc => $"access:{acc.OwnerName}:{string.Join(",", acc.AccessTags.Select(t => t.Id))}",
             _ => string.Empty
         };
 

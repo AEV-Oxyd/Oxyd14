@@ -2711,4 +2711,276 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         });
         await RunTicks(8);
     }
+
+    [Test]
+    public async Task TestRemoteIdAuthCommandAndAccessEncoderApp()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var lockSys = Server.System<LockSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+        var slots = Server.System<ItemSlotsSystem>();
+
+        var pdaNet = await PlaceInHands("DetectivePDA");
+        var pdaUid = ToServer(pdaNet);
+
+        EntityUid apcUid = default;
+        EntityUid apcCompUid = default;
+        EntityUid alarmUid = default;
+        EntityUid alarmCompUid = default;
+        EntityUid wsUid = default;
+        EntityUid wsCompUid = default;
+        EntityUid pdaCompUid = default;
+        EntityUid pdaTermUid = default;
+        EntityUid engCardUid = default;
+        string apcGuid = string.Empty;
+        string alarmGuid = string.Empty;
+        bool initialBreaker = false;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            power.SetNeedsPower(routerHost, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+            initialBreaker = SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled;
+
+            alarmUid = SEntMan.SpawnEntity("AirAlarm", coords);
+            power.SetNeedsPower(alarmUid, false);
+            alarmCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmUid).ComputerEntity!.Value;
+
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+
+            engCardUid = SEntMan.SpawnEntity("EngineeringIDCard", coords);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
+            alarmGuid = routerSys.EnsureDeviceGuid(alarmCompUid);
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True);
+
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/terminal.nte", out var tUid, out _), Is.True);
+            pdaTermUid = tUid!.Value;
+        });
+
+        // Open PDA UI so live RemoteScreenView updates can be observed too.
+        await UseInHand();
+        await RunTicks(10);
+
+        // 1) SSH into locked APC + open live screen; DetectiveIDCard (inserted by default) lacks Engineering -> DENIED.
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {apcGuid}"), FromServer(pdaTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("screen open"), FromServer(pdaTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("auth"), FromServer(pdaTermUid));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "Unauthorized Detective ID in PDA must not unlock Engineering APC.");
+            var term = SEntMan.GetComponent<TerminalProgramComponent>(pdaTermUid);
+            Assert.That(term.History.Any(l => l.Contains("ACCESS DENIED", StringComparison.OrdinalIgnoreCase)), Is.True);
+        });
+
+        // 2) Replace PDA's ID with EngineeringIDCard -> `auth` in SSH unlocks remote APC automatically!
+        await Server.WaitPost(() =>
+        {
+            slots.TryEject(pdaUid, PdaComponent.PdaIdSlotId, null, out _);
+            Assert.That(slots.TryInsert(pdaUid, PdaComponent.PdaIdSlotId, engCardUid, null), Is.True);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("auth"), FromServer(pdaTermUid));
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.False, "Authorized Engineering ID inserted in PDA must unlock APC via 'auth'.");
+        });
+
+        // Toggle breaker over SSH now that APC is unlocked!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("apc toggle_breaker"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled, Is.EqualTo(!initialBreaker));
+        });
+
+        // Re-lock over SSH (`auth lock`) and exit SSH, then verify local `auth <guid>` also works with inserted ID.
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("auth lock"), FromServer(pdaTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("exit"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"auth {apcGuid} unlock"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.False, "Local shell 'auth <guid> unlock' with inserted PDA ID must unlock APC.");
+        });
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"auth {apcGuid} lock"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+        });
+
+        // 3) Launch ID Access Encoder on PDA -> build /keys/eng_key.acc from inserted EngineeringIDCard -> persists in FS!
+        EntityUid pdaEncUid = default;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/access_encoder.nte", out var eUid, out var err), Is.True, err);
+            pdaEncUid = eUid!.Value;
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryGetBui(ProgramUiKey.Key, out var encBui, FromServer(pdaEncUid)), Is.True);
+            var encCtrl = ((ProgramBoundUserInterface) encBui!).Control;
+            Assert.That(encCtrl, Is.TypeOf<AccessEncoderUiControl>());
+            var srcLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains("Engineering"), encCtrl!);
+            Assert.That(srcLabel, Is.Not.Null, "ID Access Encoder UI must display Engineering access from inserted PDA ID.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "eng_key"), FromServer(pdaEncUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(pdaCompUid, out var driveUid, out var fs), Is.True);
+            Assert.That(fsSys.TryGetFile<AccessCodesVirtualFile>(driveUid!.Value, "/keys/eng_key.acc", out var accFile, fs), Is.True,
+                "ID Access Encoder must save .acc file into /keys/ on the filesystem.");
+            Assert.That(accFile!.AccessTags.Any(t => t.Id == "Engineering"), Is.True);
+
+            // Reboot PDA and verify the saved .acc file persists in filesystem!
+            compSys.RebootComputer(pdaCompUid);
+            Assert.That(fsSys.TryFindFileSystem(pdaCompUid, out var driveAfter, out var fsAfter), Is.True);
+            Assert.That(fsSys.TryGetFile<AccessCodesVirtualFile>(driveAfter!.Value, "/keys/eng_key.acc", out _, fsAfter), Is.True,
+                "Saved .acc file must persist in the filesystem across computer reboots.");
+        });
+
+        // 4) Eject ID from PDA (NO ID inserted!) -> `auth <apcGuid>` without file fails; `auth <apcGuid> /keys/eng_key.acc` SUCCEEDS!
+        await Server.WaitPost(() =>
+        {
+            slots.TryEject(pdaUid, PdaComponent.PdaIdSlotId, null, out _);
+            Assert.That(compSys.TryGetInsertedIdCard(pdaCompUid, out _), Is.False);
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/terminal.nte", out var tUid2, out _), Is.True);
+            pdaTermUid = tUid2!.Value;
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"auth {apcGuid}"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "Without inserted ID or .acc argument, auth must not unlock APC.");
+            var term = SEntMan.GetComponent<TerminalProgramComponent>(pdaTermUid);
+            Assert.That(term.History.Any(l => l.Contains("No ID card inserted", StringComparison.OrdinalIgnoreCase)), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("cat /keys/eng_key.acc"), FromServer(pdaTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"auth {apcGuid} /keys/eng_key.acc"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.False, "Remote auth using /keys/eng_key.acc must unlock APC even with no ID inserted.");
+            var term = SEntMan.GetComponent<TerminalProgramComponent>(pdaTermUid);
+            Assert.That(term.History.Any(l => l.Contains("[ACC]")), Is.True);
+            Assert.That(term.History.Any(l => l.Contains("Codes (") && l.Contains("Engineering")), Is.True);
+            var reader = SEntMan.GetComponent<AccessReaderComponent>(apcUid);
+            Assert.That(reader.AccessLog.Count, Is.GreaterThan(0), "Remote .acc authorization must log access on target AccessReader.");
+        });
+
+        // Short filename resolution (`eng_key`) also works to re-lock!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"auth {apcGuid} lock eng_key"), FromServer(pdaTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "Short filename 'eng_key' must resolve to /keys/eng_key.acc and re-lock APC.");
+        });
+
+        // Close PDA window before workstation test.
+        await Client.WaitPost(() =>
+        {
+            foreach (var w in UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().ToList())
+                w.Close();
+        });
+        await RunTicks(6);
+
+        // 5) Workstation (no PDA) -> open ID Access Encoder -> swipe AtmosIDCard on Workstation -> save /keys/atmos_key.acc -> SSH + auth AirAlarm!
+        EntityUid wsEncUid = default;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsCompUid, "/bin/access_encoder.nte", out var wEnc, out var err), Is.True, err);
+            wsEncUid = wEnc!.Value;
+        });
+
+        Target = FromServer(wsUid);
+        await Activate();
+        await RunTicks(8);
+        await InteractUsing("AtmosIDCard");
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var encComp = SEntMan.GetComponent<AccessEncoderProgramComponent>(wsEncUid);
+            Assert.That(encComp.HasScannedCard, Is.True, "Swiping AtmosIDCard on Workstation running ID Access Encoder must scan the card.");
+            Assert.That(encComp.ScannedAccessTags.Any(t => t.Id == "Atmospherics"), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "atmos_key"), FromServer(wsEncUid));
+        await RunTicks(6);
+
+        EntityUid wsTermUid = default;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsCompUid, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryGetFile<AccessCodesVirtualFile>(wsDrive!.Value, "/keys/atmos_key.acc", out var atmosAcc, wsFs), Is.True);
+            Assert.That(atmosAcc!.AccessTags.Any(t => t.Id == "Atmospherics"), Is.True);
+
+            Assert.That(compSys.TryLaunchExecutable(wsCompUid, "/bin/terminal.nte", out var wt, out _), Is.True);
+            wsTermUid = wt!.Value;
+        });
+        await RunTicks(6);
+
+        // SSH into locked AirAlarm from Workstation and unlock using /keys/atmos_key.acc!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {alarmGuid}"), FromServer(wsTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("auth /keys/atmos_key.acc"), FromServer(wsTermUid));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("atmos set_mode Panic"), FromServer(wsTermUid));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.False, "SSH 'auth /keys/atmos_key.acc' must unlock AirAlarm.");
+            Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(AirAlarmMode.Panic),
+                "Unlocked AirAlarm must accept remote 'atmos set_mode Panic'.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("auth lock /keys/atmos_key.acc"), FromServer(wsTermUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True, "SSH 'auth lock /keys/atmos_key.acc' must re-lock AirAlarm.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            foreach (var w in UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().ToList())
+                w.Close();
+        });
+        await RunTicks(6);
+    }
 }

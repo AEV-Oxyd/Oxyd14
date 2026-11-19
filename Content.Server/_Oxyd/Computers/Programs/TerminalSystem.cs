@@ -7,7 +7,10 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
+using Content.Shared.Access.Components;
+using Content.Shared.Access.Systems;
 using Content.Shared.Lock;
+using Content.Shared.StationRecords;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
@@ -27,6 +30,7 @@ public sealed partial class TerminalSystem : EntitySystem
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private LockSystem _lock = default!;
+    [Dependency] private AccessReaderSystem _access = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
@@ -244,6 +248,7 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.History.Add("  apc | atmos | lathe [...]       - Quick DeviceLink machine commands");
                 comp.History.Add("  ifconfig | ping <guid> | scan   - Network diagnostics (NIC required)");
                 comp.History.Add("  ssh <guid> | scp / upload       - Connect & transfer files over router");
+                comp.History.Add("  auth <guid> [unlock|lock] [acc] - Remotely authorize ID (PDA ID or .acc)");
                 comp.History.Add("  passwd [pass] | keygen          - Configure local SSH password/keys");
                 comp.History.Add("  switch | clear | exit           - Toggle remote/local mode or close");
                 break;
@@ -365,6 +370,20 @@ public sealed partial class TerminalSystem : EntitySystem
                 InitiateSsh(compUid, comp, parts[1], localGuid);
                 break;
 
+            case "auth":
+            case "authorize":
+                if (parts.Length < 2)
+                {
+                    comp.History.Add("Usage: auth <guid|dns> [unlock|lock|toggle|status] [file.acc]");
+                    comp.History.Add("  Uses inserted ID card automatically, or an .acc file built with ID Access Encoder.");
+                    break;
+                }
+                if (!RequireNetwork(compUid, comp))
+                    break;
+                ParseAuthArgs(parts, startIndex: 2, out var localAuthAction, out var localAuthFile);
+                HandleRemoteAuthCommand(compUid, comp, parts[1], localAuthAction, localAuthFile);
+                break;
+
             case "exit":
             case "quit":
                 if (comp.ConnectedRemoteGuid != null)
@@ -434,6 +453,7 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.History.Add("  ls | cd | pwd | cat | write | rm - Manage remote hard drive files");
                 comp.History.Add("  run <file.nte> | ps | kill <id>  - Run/stop remote .nte program entities");
                 comp.History.Add("  screen [open|close|info]         - Attach live remote GUI Screen View");
+                comp.History.Add("  auth [unlock|lock|status] [file] - Authorize lock via PDA ID or .acc file");
                 comp.History.Add("  scp / fetch <remoteFile>         - Download remote file to local HDD");
                 comp.History.Add("  upload / put <localFile>         - Upload local file to remote HDD");
                 comp.History.Add("  devlink | apc | atmos | lathe    - Control remote DeviceLink ports");
@@ -554,6 +574,12 @@ public sealed partial class TerminalSystem : EntitySystem
                 }
                 break;
 
+            case "auth":
+            case "authorize":
+                ParseAuthArgs(parts, startIndex: 1, out var remoteAuthAction, out var remoteAuthFile);
+                HandleRemoteAuthCommand(localCompUid, comp, targetGuid, remoteAuthAction, remoteAuthFile);
+                break;
+
             default:
                 if (_computer.ExecuteComputerCommand(targetUid, input, out var remOut, actor) && !string.IsNullOrEmpty(remOut))
                     comp.History.Add(remOut);
@@ -598,6 +624,275 @@ public sealed partial class TerminalSystem : EntitySystem
             comp.History.Add($"Transferred '{srcPath}' ({file.Size} B) across router -> destination HDD.");
         else
             comp.History.Add("transfer: destination hard drive full.");
+    }
+
+    private static void ParseAuthArgs(string[] parts, int startIndex, out string action, out string? fileArg)
+    {
+        action = "toggle";
+        fileArg = null;
+
+        if (parts.Length <= startIndex)
+            return;
+
+        var first = parts[startIndex];
+        var firstLower = first.ToLowerInvariant();
+        if (firstLower is "unlock" or "lock" or "toggle" or "status")
+        {
+            action = firstLower;
+            if (parts.Length > startIndex + 1)
+                fileArg = parts[startIndex + 1];
+        }
+        else
+        {
+            fileArg = first;
+        }
+    }
+
+    private void HandleRemoteAuthCommand(
+        EntityUid localCompUid,
+        TerminalProgramComponent comp,
+        string rawTarget,
+        string action,
+        string? fileArg)
+    {
+        var localGuid = _guid.GetGuid(localCompUid);
+        var resolvedGuid = _router.ResolveDns(localCompUid, rawTarget) ?? rawTarget.ToUpperInvariant();
+
+        if (_router.IsGuidBlacklisted(localCompUid, localGuid) || _router.IsGuidBlacklisted(localCompUid, resolvedGuid))
+        {
+            comp.History.Add($"auth: blocked by router blacklist ({resolvedGuid}).");
+            return;
+        }
+
+        if (!_router.TryFindDeviceByGuid(resolvedGuid, out var targetUid) ||
+            !_computerQuery.TryComp(targetUid, out var targetComp))
+        {
+            comp.History.Add($"auth: Could not resolve host '{rawTarget}'.");
+            return;
+        }
+
+        if (!_router.HasActiveNetworkCard(targetUid))
+        {
+            comp.History.Add($"auth: Host [{resolvedGuid}] unreachable (no active network card).");
+            return;
+        }
+
+        if (!targetComp.AllowRemoteControl || targetComp.RemoteControlWireCut || targetComp.PowerWireCut)
+        {
+            comp.History.Add($"auth: Connection to [{resolvedGuid}] refused (remote control disabled).");
+            return;
+        }
+
+        if (targetComp.HostMachine is not { } targetHostUid ||
+            !Exists(targetHostUid) ||
+            !TryComp<LockComponent>(targetHostUid, out var targetLock))
+        {
+            comp.History.Add($"auth: Target [{resolvedGuid}] does not have a lockable interface.");
+            return;
+        }
+
+        var hostName = MetaData(targetHostUid).EntityName;
+
+        if (action == "status")
+        {
+            comp.History.Add($"auth: [{resolvedGuid}] ({hostName}) lock status: {(targetLock.Locked ? "LOCKED" : "UNLOCKED")}.");
+            return;
+        }
+
+        // Resolve credentials: explicit access codes file (.acc) if given, otherwise inserted ID card on local device.
+        EntityUid? insertedCardUid = null;
+        AccessCodesVirtualFile? accFile = null;
+        string sourceDesc;
+        string packetSummary;
+
+        if (!string.IsNullOrWhiteSpace(fileArg))
+        {
+            if (!TryResolveAccessCodesFile(localCompUid, comp.CurrentDirectory, fileArg, out var resolvedPath, out accFile, out var resolveErr))
+            {
+                comp.History.Add(resolveErr);
+                return;
+            }
+
+            if (accFile!.IsEncrypted)
+            {
+                comp.History.Add($"auth: Access codes file '{resolvedPath}' is encrypted.");
+                return;
+            }
+
+            sourceDesc = $"access file '{resolvedPath}' ({accFile.AccessTags.Count} codes)";
+            packetSummary = $"Remote Auth ({action}) via {resolvedPath}";
+        }
+        else if (_computer.TryGetInsertedIdCard(localCompUid, out var cardUid))
+        {
+            insertedCardUid = cardUid;
+            var cardLabel = TryComp<IdCardComponent>(cardUid, out var idCard) && !string.IsNullOrWhiteSpace(idCard.FullName)
+                ? idCard.FullName
+                : MetaData(cardUid).EntityName;
+            sourceDesc = $"inserted ID ({cardLabel})";
+            packetSummary = $"Remote Auth ({action}) via inserted ID";
+        }
+        else
+        {
+            comp.History.Add("auth: No ID card inserted in local device. Insert an ID card or pass an access codes file (e.g. auth /keys/engineering.acc).");
+            return;
+        }
+
+        var pkt = new NetworkDataPacket
+        {
+            PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            SourceAddress = localGuid,
+            TargetAddress = resolvedGuid,
+            Protocol = "ID/AUTH",
+            PayloadSummary = packetSummary,
+            ByteSize = 192,
+            Timestamp = _timing.CurTime
+        };
+
+        if (!_router.RecordAndValidatePacket(localCompUid, targetUid, pkt))
+        {
+            comp.History.Add("auth: Authorization packet dropped by router or firewall.");
+            return;
+        }
+
+        if (targetLock.UseAccess)
+        {
+            var allowed = false;
+            if (insertedCardUid != null)
+            {
+                allowed = _lock.HasUserAccess((targetHostUid, targetLock), insertedCardUid.Value, quiet: true);
+            }
+            else if (accFile != null)
+            {
+                if (!TryComp<AccessReaderComponent>(targetHostUid, out var reader))
+                {
+                    allowed = true;
+                }
+                else if (_access.IsAllowed(accFile.AccessTags, Array.Empty<StationRecordKey>(), targetHostUid, reader))
+                {
+                    allowed = true;
+                    var logAccessor = string.IsNullOrWhiteSpace(accFile.OwnerName)
+                        ? $"REMOTE-KEY:{accFile.Name}"
+                        : $"{accFile.OwnerName} (Remote Key)";
+                    _access.LogAccess((targetHostUid, reader), logAccessor);
+                }
+            }
+
+            if (!allowed)
+            {
+                comp.History.Add($"auth: ACCESS DENIED on [{resolvedGuid}] ({hostName}) using {sourceDesc}.");
+                return;
+            }
+        }
+
+        var wantLock = action switch
+        {
+            "lock" => true,
+            "unlock" => false,
+            _ => !targetLock.Locked
+        };
+
+        if (wantLock)
+        {
+            if (targetLock.Locked)
+            {
+                comp.History.Add($"auth: [{resolvedGuid}] ({hostName}) is already LOCKED.");
+                return;
+            }
+
+            if (!targetLock.AllowRepeatedLocking)
+            {
+                comp.History.Add($"auth: [{resolvedGuid}] ({hostName}) cannot be re-locked.");
+                return;
+            }
+
+            _lock.Lock(targetHostUid, null, targetLock);
+            comp.History.Add($"auth: LOCKED [{resolvedGuid}] ({hostName}) using {sourceDesc}.");
+        }
+        else
+        {
+            if (!targetLock.Locked)
+            {
+                comp.History.Add($"auth: [{resolvedGuid}] ({hostName}) is already UNLOCKED.");
+                return;
+            }
+
+            _lock.Unlock(targetHostUid, null, targetLock);
+            comp.History.Add($"auth: UNLOCKED [{resolvedGuid}] ({hostName}) using {sourceDesc}.");
+        }
+
+        var stateVerb = wantLock ? "LOCKED" : "UNLOCKED";
+        if (_fileSystem.TryFindFileSystem(localCompUid, out var localDrive, out _))
+            _fileSystem.LogSystemActivity(localDrive.Value, "ID-AUTH", $"{stateVerb} {resolvedGuid} ({hostName}) via {sourceDesc}");
+        if (_fileSystem.TryFindFileSystem(targetUid, out var remDrive, out _))
+            _fileSystem.LogSystemActivity(remDrive.Value, "ID-AUTH", $"Remote {stateVerb} by {localGuid} via {sourceDesc}");
+    }
+
+    private bool TryResolveAccessCodesFile(
+        EntityUid compUid,
+        string currentDir,
+        string rawArg,
+        out string resolvedPath,
+        out AccessCodesVirtualFile? accFile,
+        out string error)
+    {
+        resolvedPath = string.Empty;
+        accFile = null;
+        error = string.Empty;
+
+        if (!_fileSystem.TryFindFileSystem(compUid, out _, out var fs) || fs == null)
+        {
+            error = "auth: No hard drive installed on local device.";
+            return false;
+        }
+
+        var candidates = new List<string> { ResolvePath(currentDir, rawArg) };
+        if (!rawArg.EndsWith(".acc", StringComparison.OrdinalIgnoreCase))
+            candidates.Add(ResolvePath(currentDir, rawArg + ".acc"));
+
+        if (!rawArg.StartsWith('/'))
+        {
+            candidates.Add(AccessEncoderProgramComponent.DefaultDirectory + rawArg);
+            if (!rawArg.EndsWith(".acc", StringComparison.OrdinalIgnoreCase))
+                candidates.Add(AccessEncoderProgramComponent.DefaultDirectory + rawArg + ".acc");
+        }
+
+        VirtualFile? found = null;
+        foreach (var candidate in candidates)
+        {
+            if (fs.Files.TryGetValue(candidate, out found))
+            {
+                resolvedPath = candidate;
+                break;
+            }
+
+            foreach (var (k, v) in fs.Files)
+            {
+                if (k.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+                {
+                    resolvedPath = k;
+                    found = v;
+                    break;
+                }
+            }
+
+            if (found != null)
+                break;
+        }
+
+        if (found == null)
+        {
+            error = $"auth: Access codes file '{rawArg}' not found on local hard drive.";
+            return false;
+        }
+
+        if (found is not AccessCodesVirtualFile typed)
+        {
+            error = $"auth: '{resolvedPath}' is not an access codes (.acc) file.";
+            return false;
+        }
+
+        accFile = typed;
+        return true;
     }
 
     private void InitiateSsh(EntityUid localCompUid, TerminalProgramComponent comp, string rawTarget, string localGuid)
@@ -742,6 +1037,11 @@ public sealed partial class TerminalSystem : EntitySystem
         else if (file is RecipeBlueprintFile bp)
         {
             comp.History.Add($"Recipes: {string.Join(", ", bp.GetAllRecipes())} (Uses={bp.RemainingUses?.ToString() ?? "inf"}, Enc={bp.IsEncrypted})");
+        }
+        else if (file is AccessCodesVirtualFile acc)
+        {
+            comp.History.Add($"[ACC] Holder: {acc.OwnerName}{(string.IsNullOrWhiteSpace(acc.JobTitle) ? "" : $" ({acc.JobTitle})")}");
+            comp.History.Add($"      Codes ({acc.AccessTags.Count}): {(acc.AccessTags.Count > 0 ? string.Join(", ", acc.AccessTags.Select(t => t.Id)) : "(none)")}");
         }
     }
 

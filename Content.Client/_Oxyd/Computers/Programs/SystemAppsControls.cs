@@ -49,6 +49,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         AddDirBtn("/bin", "/bin/");
         AddDirBtn("/notes", "/notes/");
         AddDirBtn("/tasks", "/tasks/");
+        AddDirBtn("/keys", "/keys/");
         AddDirBtn("/blueprints", "/blueprints/");
         AddDirBtn("/records", "/records/");
         AddDirBtn("/logs", "/logs/");

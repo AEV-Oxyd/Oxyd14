@@ -456,6 +456,13 @@
         size: 2048
         programId: NewsReaderProgram
         title: "News Reader"
+      "/bin/access_encoder.nte": !type:ProgramVirtualFile
+        name: access_encoder
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: AccessEncoderProgram
+        title: "ID Access Encoder"
 
 - type: entity
   parent: ComputerPartHardDriveBasic
@@ -517,6 +524,13 @@
         size: 2048
         programId: NotekeeperProgram
         title: "Notekeeper"
+      "/bin/access_encoder.nte": !type:ProgramVirtualFile
+        name: access_encoder
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: AccessEncoderProgram
+        title: "ID Access Encoder"
 
 - type: entity
   parent: ComputerPartHardDriveBasic
@@ -709,6 +723,13 @@
         size: 4096
         programId: OxydPacketSnifferProgram
         title: "Packet Sniffer"
+      "/bin/access_encoder.nte": !type:ProgramVirtualFile
+        name: access_encoder
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: AccessEncoderProgram
+        title: "ID Access Encoder"
       "/blueprints/multitool.lathe": !type:RecipeBlueprintFile
         name: multitool
         extension: lathe
@@ -959,3 +980,20 @@
         size: 4096
         programId: NanoTaskProgram
         title: "Tasks"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskAccessEncoder
+  name: ID Access Encoder software disk
+  description: Contains access_encoder.nte for encoding ID card access codes to /keys/*.acc files.
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/access_encoder.nte": !type:ProgramVirtualFile
+        name: access_encoder
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: AccessEncoderProgram
+        title: "ID Access Encoder"

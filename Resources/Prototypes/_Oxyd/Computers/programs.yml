@@ -375,3 +375,22 @@
     interfaces:
       enum.ProgramUiKey.Key:
         type: AstroNavProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: AccessEncoderProgram
+  name: ID access encoder
+  description: Extracts access codes from an inserted or swiped ID card and saves them as .acc files in /keys/ for remote Terminal authorization.
+  components:
+  - type: Program
+    title: "ID Access Encoder"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: AccessEncoderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AccessEncoderProgramBui
