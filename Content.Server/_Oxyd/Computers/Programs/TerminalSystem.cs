@@ -7,6 +7,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
+using Content.Shared.Lock;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
@@ -25,6 +26,7 @@ public sealed partial class TerminalSystem : EntitySystem
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private LockSystem _lock = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
@@ -108,6 +110,13 @@ public sealed partial class TerminalSystem : EntitySystem
         if (oxydComp.DisableLocalShell && ent.Comp.ConnectedRemoteGuid == null)
         {
             ent.Comp.History.Add("LOCAL SHELL DISABLED ON THIS CONTROLLER.");
+            UpdateTerminalUi(ent.Owner);
+            return;
+        }
+
+        if (oxydComp.HostMachine is { } hm && _lock.IsLocked(hm) && ent.Comp.ConnectedRemoteGuid == null)
+        {
+            ent.Comp.History.Add("DEVICE LOCKED — Swipe authorized ID card to unlock.");
             UpdateTerminalUi(ent.Owner);
             return;
         }
@@ -670,9 +679,10 @@ public sealed partial class TerminalSystem : EntitySystem
 
         _router.RefreshRouterDevices(router.Value);
         var netLabel = _router.GetConnectedNetworkLabel(localCompUid);
+        var routerGuid = _router.EnsureDeviceGuid(router.Value.Owner);
         var headerPrefix = string.IsNullOrEmpty(netLabel)
-            ? $"Router [{_guid.GetGuid(router.Value.Owner)}]"
-            : $"Global Debug Router [{_guid.GetGuid(router.Value.Owner)}] ({netLabel})";
+            ? $"Router [{routerGuid}]"
+            : $"Global Debug Router [{routerGuid}] ({netLabel})";
         comp.History.Add($"{headerPrefix} Active Network Hosts ({router.Value.Comp.ConnectedDevices.Count}):");
         foreach (var dGuid in router.Value.Comp.ConnectedDevices)
         {

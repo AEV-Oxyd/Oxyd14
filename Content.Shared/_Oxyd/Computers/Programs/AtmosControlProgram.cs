@@ -22,6 +22,9 @@ public sealed partial class AtmosControlProgramComponent : Component
     public bool AutoMode = true;
 
     [DataField]
+    public bool Locked = true;
+
+    [DataField]
     public float PressureKpa;
 
     [DataField]
@@ -51,6 +54,7 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
     public string AlarmLevel { get; }
     public string CurrentMode { get; }
     public bool AutoMode { get; }
+    public bool Locked { get; }
     public float PressureKpa { get; }
     public float TemperatureCelsius { get; }
     public int VentCount { get; }
@@ -65,6 +69,7 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
         string alarmLevel,
         string currentMode,
         bool autoMode,
+        bool locked,
         float pressureKpa,
         float temperatureCelsius,
         int ventCount,
@@ -78,6 +83,7 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
         AlarmLevel = alarmLevel;
         CurrentMode = currentMode;
         AutoMode = autoMode;
+        Locked = locked;
         PressureKpa = pressureKpa;
         TemperatureCelsius = temperatureCelsius;
         VentCount = ventCount;

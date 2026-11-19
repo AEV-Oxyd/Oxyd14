@@ -22,7 +22,7 @@ public sealed partial class ApcControlProgramComponent : Component
     public bool BreakerTripped;
 
     [DataField]
-    public bool Locked;
+    public bool Locked = true;
 
     [DataField]
     public float ChargePercent;

@@ -13,6 +13,7 @@ using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Emag.Systems;
 using Content.Shared.Emp;
+using Content.Shared.Lock;
 using Content.Shared.Popups;
 using Content.Shared.Power;
 using Content.Shared.Rounding;
@@ -35,6 +36,7 @@ public sealed partial class ApcSystem : EntitySystem
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
     [Dependency] private IGameTiming _gameTiming = default!;
     [Dependency] private EmagSystem _emag = default!;
+    [Dependency] private LockSystem _lock = default!;
     [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
@@ -77,17 +79,29 @@ public sealed partial class ApcSystem : EntitySystem
 
         if (cmd is "apc_toggle_breaker" or "toggle_breaker" or "toggle" or "breaker")
         {
-            if (!IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
+            if (_lock.IsLocked(ent.Owner))
+            {
+                EmitApcStatusPacket(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (!HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                 return;
 
             ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);
         }
         else if (cmd is "apc_set_breaker" or "set_breaker")
         {
+            if (_lock.IsLocked(ent.Owner))
+            {
+                EmitApcStatusPacket(ent.Owner, ent.Comp);
+                return;
+            }
+
             var wantEnabled = rawArg is "1" or "true" or "on";
             if (ent.Comp.MainBreakerEnabled != wantEnabled)
             {
-                if (!IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
+                if (!HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                     return;
 
                 ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);
@@ -115,7 +129,7 @@ public sealed partial class ApcSystem : EntitySystem
         pkt.Set("AreaName", MetaData(uid).EntityName);
         pkt.Set("MainBreaker", apc.MainBreakerEnabled.ToString());
         pkt.Set("BreakerTripped", apc.TripFlag.ToString());
-        pkt.Set("Locked", "False");
+        pkt.Set("Locked", _lock.IsLocked(uid).ToString());
         pkt.Set("ChargePercent", pct.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
         pkt.Set("LoadWatts", (int) MathF.Ceiling(battery.CurrentSupply));
         pkt.Set("ExternalPower", apc.LastExternalState.ToString());
@@ -197,6 +211,12 @@ public sealed partial class ApcSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
+    private void OnLockToggled(Entity<ApcComponent> ent, ref LockToggledEvent args)
+    {
+        EmitApcStatusPacket(ent.Owner, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
     private void OnToggleMainBreaker(Entity<ApcComponent> ent, ref ApcToggleMainBreakerMessage args)
     {
         var attemptEv = new ApcToggleMainBreakerAttemptEvent();
@@ -206,6 +226,20 @@ public sealed partial class ApcSystem : EntitySystem
         {
             _popup.PopupCursor(Loc.GetString("apc-component-on-toggle-cancel"),
                 args.Actor, PopupType.Medium);
+            return;
+        }
+
+        if (HasComp<LockComponent>(ent.Owner))
+        {
+            if (!_lock.IsLocked(ent.Owner))
+            {
+                ApcToggleBreaker(ent, ent.Comp, user: args.Actor);
+            }
+            else
+            {
+                _popup.PopupCursor(Loc.GetString("apc-component-insufficient-access"),
+                    args.Actor, PopupType.Medium);
+            }
             return;
         }
 

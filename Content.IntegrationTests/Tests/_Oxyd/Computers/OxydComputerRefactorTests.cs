@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -25,7 +26,9 @@ using Content.Shared.Atmos.Monitor;
 using Content.Shared.Atmos.Monitor.Components;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DeviceLinking.Components;
+using Content.Shared.Examine;
 using Content.Shared.Lathe;
+using Content.Shared.Lock;
 using Content.Shared.Materials;
 using Content.Shared.PDA;
 using Robust.Client.UserInterface;
@@ -277,11 +280,19 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(apcPorts.Any(p => p.IsHostPort && p.PortId == "ApcCommandSink"), Is.True);
             Assert.That(apcPorts.Any(p => p.IsHostPort && p.PortId == "ApcStatusSource"), Is.True);
 
-            // Launch ApcControlProgram on APC computer & toggle MainBreaker over DeviceLink
+            // Launch ApcControlProgram on APC computer & verify lock gating over DeviceLink
             Assert.That(compSys.TryLaunchExecutable(apcCompUid, "/bin/apc_control.nte", out var apcProg, out _), Is.True);
             var apcComp = SEntMan.GetComponent<ApcComponent>(apcUid);
+            var lockSys = Server.System<LockSystem>();
             var initialBreaker = apcComp.MainBreakerEnabled;
 
+            // Starts locked: breaker toggle over DeviceLink must be rejected while locked
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+            Assert.That(compSys.TryInvokeDeviceLinkPort(apcCompUid, "ApcCommandSink", true, "toggle_breaker", "", out _), Is.True);
+            Assert.That(apcComp.MainBreakerEnabled, Is.EqualTo(initialBreaker), "Locked APC must not toggle breaker.");
+
+            // Unlock APC -> breaker toggle succeeds
+            lockSys.Unlock(apcUid, null);
             Assert.That(compSys.TryInvokeDeviceLinkPort(apcCompUid, "ApcCommandSink", true, "toggle_breaker", "", out _), Is.True);
             Assert.That(apcComp.MainBreakerEnabled, Is.EqualTo(!initialBreaker));
 
@@ -290,8 +301,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(compSys.TryInvokeDeviceLinkPort(apcCompUid, "ApcCommandSink", true, "toggle_breaker", "", out var dlErr), Is.False);
             Assert.That(dlErr, Does.Contain("DeviceLink"));
 
-            // AirAlarm mode toggle strictly over DeviceLink
+            // AirAlarm mode toggle strictly over DeviceLink (blocked while locked, allowed once unlocked)
             Assert.That(compSys.TryLaunchExecutable(alarmCompUid, "/bin/atmos_control.nte", out _, out _), Is.True);
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True);
+            var initialMode = SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode;
+            Assert.That(compSys.TryInvokeDeviceLinkPort(alarmCompUid, "AirAlarmCommandSink", true, "set_mode", "Panic", out _), Is.True);
+            Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(initialMode), "Locked AirAlarm must not change mode.");
+
+            lockSys.Unlock(alarmUid, null);
             Assert.That(compSys.TryInvokeDeviceLinkPort(alarmCompUid, "AirAlarmCommandSink", true, "set_mode", "Panic", out _), Is.True);
             Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(AirAlarmMode.Panic));
 
@@ -970,6 +987,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Server.WaitPost(() =>
         {
             SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            Server.System<LockSystem>().Unlock(apcUid, null);
             initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
         });
 
@@ -1073,6 +1091,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             apcUid = SEntMan.SpawnEntity("APCBasic", coords);
             SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            Server.System<LockSystem>().Unlock(apcUid, null);
             initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
             apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
 
@@ -1284,6 +1303,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             apcUid = SEntMan.SpawnEntity("APCBasic", coords);
             SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            Server.System<LockSystem>().Unlock(apcUid, null);
             initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
             var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
             apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
@@ -1563,6 +1583,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             apcUid = SEntMan.SpawnEntity("APCBasic", coords);
             SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            Server.System<LockSystem>().Unlock(apcUid, null);
             initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
             var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
             apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
@@ -1835,6 +1856,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             apcUid = SEntMan.SpawnEntity("APCBasic", coords);
             SEntMan.RemoveComponent<Content.Shared.Access.Components.AccessReaderComponent>(apcUid);
+            Server.System<LockSystem>().Unlock(apcUid, null);
             initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcUid).MainBreakerEnabled;
             apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
             apcGuid = routerSys.EnsureDeviceGuid(apcCompUid);
@@ -2348,4 +2370,345 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(8);
     }
 #endif
+
+    [Test]
+    public async Task TestDeviceGuidOnlyOnEmbeddedComputerAndHiddenOnExamine()
+    {
+        var guidSys = Server.System<SharedDeviceGuidSystem>();
+        var examineSys = Server.System<ExamineSystemShared>();
+        var power = Server.System<PowerReceiverSystem>();
+
+        var protos = new[]
+        {
+            "OxydWorkstationComputer",
+            "DetectivePDA",
+            "APCBasic",
+            "AirAlarm",
+            "StationNetworkRouter",
+            "StationManifestServer"
+        };
+
+        var spawned = new List<(string Proto, EntityUid HostUid, EntityUid CompUid, string CompGuid)>();
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            foreach (var proto in protos)
+            {
+                var hostUid = SEntMan.SpawnEntity(proto, coords);
+                if (SEntMan.HasComponent<ApcPowerReceiverComponent>(hostUid))
+                    power.SetNeedsPower(hostUid, false);
+
+                var emb = SEntMan.GetComponent<EmbeddedComputerHostComponent>(hostUid);
+                Assert.That(emb.ComputerEntity, Is.Not.Null, $"{proto} must have an embedded computer entity.");
+                var compUid = emb.ComputerEntity!.Value;
+                var compGuid = guidSys.GetGuid(compUid);
+                spawned.Add((proto, hostUid, compUid, compGuid));
+            }
+        });
+        await RunTicks(5);
+
+        await Server.WaitAssertion(() =>
+        {
+            var playerUid = ToServer(Player);
+            foreach (var (proto, hostUid, compUid, compGuid) in spawned)
+            {
+                Assert.That(SEntMan.HasComponent<DeviceGuidComponent>(hostUid), Is.False,
+                    $"Host machine {proto} must NOT carry DeviceGuidComponent directly.");
+                Assert.That(SEntMan.HasComponent<DeviceGuidComponent>(compUid), Is.True,
+                    $"Embedded computer of {proto} must carry DeviceGuidComponent.");
+                Assert.That(compGuid, Is.Not.Null.And.Length.EqualTo(8),
+                    $"Embedded computer of {proto} must have a valid 8-char GUID.");
+                Assert.That(guidSys.GetGuid(hostUid), Is.EqualTo(compGuid),
+                    $"SharedDeviceGuidSystem.GetGuid({proto} host) must resolve to the embedded computer's GUID.");
+
+                var hostExamine = examineSys.GetExamineText(hostUid, playerUid).ToMarkup();
+                Assert.That(hostExamine, Does.Not.Contain(compGuid),
+                    $"Examining {proto} host must NOT reveal Device GUID.");
+                Assert.That(hostExamine, Does.Not.Contain("Device Network GUID"),
+                    $"Examining {proto} host must NOT show Device Network GUID text.");
+
+                var compExamine = examineSys.GetExamineText(compUid, playerUid).ToMarkup();
+                Assert.That(compExamine, Does.Not.Contain(compGuid),
+                    $"Examining embedded computer of {proto} must NOT reveal Device GUID.");
+            }
+        });
+
+        // Verify the embedded computer's GUID IS shown in the device UI (Workstation + APC).
+        var wsEntry = spawned.First(s => s.Proto == "OxydWorkstationComputer");
+        Target = FromServer(wsEntry.HostUid);
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var winBase), Is.True);
+            var win = (ComputerDisplayWindow) winBase!;
+            Assert.That(win.ScreenSurface.DeviceGuid, Is.EqualTo(wsEntry.CompGuid));
+            var guidLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains(wsEntry.CompGuid), win);
+            Assert.That(guidLabel, Is.Not.Null, "Workstation UI must display the embedded computer's GUID.");
+            win.Close();
+        });
+        await RunTicks(8);
+
+        var apcEntry = spawned.First(s => s.Proto == "APCBasic");
+        Target = FromServer(apcEntry.HostUid);
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var winBase), Is.True);
+            var win = (ComputerDisplayWindow) winBase!;
+            Assert.That(win.ScreenSurface.DeviceGuid, Is.EqualTo(apcEntry.CompGuid));
+            var guidLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains(apcEntry.CompGuid), win);
+            Assert.That(guidLabel, Is.Not.Null, "APC UI must display the embedded computer's GUID.");
+            win.Close();
+        });
+        await RunTicks(8);
+    }
+
+    [Test]
+    public async Task TestApcAndAirAlarmAlwaysOpenUiAndRequireIdSwipeUnlock()
+    {
+        var lockSys = Server.System<LockSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+
+        // -----------------------------------------------------------------
+        // 1) APC: Opens UI without access, locked by default, swipe ID to unlock/lock
+        // -----------------------------------------------------------------
+        await SpawnTarget("APCBasic");
+        var apcUid = ToServer(Target)!.Value;
+        EntityUid apcProgUid = default;
+        bool initialBreaker = false;
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "APC must start locked.");
+            initialBreaker = SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled;
+            var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
+            apcProgUid = SEntMan.GetComponent<OxydComputerComponent>(apcCompUid).ActiveProgram!.Value;
+        });
+
+        // Player has NO ID/access -> activating APC must STILL open the UI!
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True,
+                "APC UI must open even when player has no access.");
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var apcCtrls = new List<ApcControlUiControl>();
+            CollectDescendants(apcWin, apcCtrls);
+            Assert.That(apcCtrls.Count, Is.EqualTo(1));
+
+            var lockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains("LOCKED", StringComparison.OrdinalIgnoreCase) &&
+                     !l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), apcCtrls[0]);
+            Assert.That(lockedLabel, Is.Not.Null, "Locked APC UI must clearly display LOCKED status.");
+
+            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcCtrls[0], apcBtns);
+            Assert.That(apcBtns.Count, Is.GreaterThan(0));
+            Assert.That(apcBtns.All(b => b.Disabled), Is.True, "All APC control buttons must be disabled while locked.");
+        });
+
+        // Sending BUI action while locked must be blocked server-side!
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(apcProgUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled, Is.EqualTo(initialBreaker),
+                "Breaker must not toggle while APC is locked.");
+        });
+
+        // Swiping an unauthorized ID card (PassengerIDCard) must keep APC locked!
+        await InteractUsing("PassengerIDCard");
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "Unauthorized Passenger ID swipe must NOT unlock APC.");
+        });
+
+        // Swiping an authorized ID card (EngineeringIDCard) must UNLOCK APC and live-update the open UI!
+        await InteractUsing("EngineeringIDCard");
+        await RunTicks(10);
+
+        Content.Client.UserInterface.Controls.ContentButton? apcToggleBtn = null;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.False, "Authorized Engineering ID swipe must unlock APC.");
+        });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var apcCtrls = new List<ApcControlUiControl>();
+            CollectDescendants(apcWin, apcCtrls);
+            Assert.That(apcCtrls.Count, Is.EqualTo(1));
+
+            var unlockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), apcCtrls[0]);
+            Assert.That(unlockedLabel, Is.Not.Null, "Unlocked APC UI must update to display UNLOCKED status.");
+
+            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcCtrls[0], apcBtns);
+            Assert.That(apcBtns.All(b => !b.Disabled), Is.True, "APC control buttons must be enabled once unlocked.");
+            apcToggleBtn = apcBtns.FirstOrDefault(b => b.Text == "Toggle Breaker");
+            Assert.That(apcToggleBtn, Is.Not.Null);
+        });
+
+        // Clicking Toggle Breaker now works!
+        await ClickViaHitTest(apcToggleBtn!);
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled, Is.EqualTo(!initialBreaker),
+                "Unlocked APC breaker must toggle on button click.");
+        });
+
+        // Swiping EngineeringIDCard again re-locks APC and disables UI buttons again!
+        await Interact();
+        await RunTicks(10);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(apcUid), Is.True, "Second authorized ID swipe must re-lock APC.");
+        });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var apcCtrls = new List<ApcControlUiControl>();
+            CollectDescendants(apcWin, apcCtrls);
+            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcCtrls[0], apcBtns);
+            Assert.That(apcBtns.All(b => b.Disabled), Is.True, "Re-locked APC buttons must be disabled again.");
+            apcWin.Close();
+        });
+        await RunTicks(8);
+
+        // -----------------------------------------------------------------
+        // 2) AirAlarm: Opens UI without access, locked by default, swipe ID to unlock/lock
+        // -----------------------------------------------------------------
+        await SpawnTarget("AirAlarm");
+        var alarmUid = ToServer(Target)!.Value;
+        EntityUid alarmProgUid = default;
+        AirAlarmMode initialMode = default;
+
+        await Server.WaitPost(() =>
+        {
+            power.SetNeedsPower(alarmUid, false);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True, "AirAlarm must start locked.");
+            initialMode = SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode;
+            var alarmCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmUid).ComputerEntity!.Value;
+            alarmProgUid = SEntMan.GetComponent<OxydComputerComponent>(alarmCompUid).ActiveProgram!.Value;
+        });
+
+        // Drop EngineeringIDCard so player has NO access -> activating AirAlarm must STILL open UI!
+        await Drop();
+        await Activate();
+        await RunTicks(12);
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True,
+                "AirAlarm UI must open even when player has no access.");
+            var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var atmosCtrls = new List<AtmosControlUiControl>();
+            CollectDescendants(alarmWin, atmosCtrls);
+            Assert.That(atmosCtrls.Count, Is.EqualTo(1));
+
+            var lockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains("LOCKED", StringComparison.OrdinalIgnoreCase) &&
+                     !l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), atmosCtrls[0]);
+            Assert.That(lockedLabel, Is.Not.Null, "Locked AirAlarm UI must clearly display LOCKED status.");
+
+            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], alarmBtns);
+            Assert.That(alarmBtns.Count, Is.GreaterThan(0));
+            Assert.That(alarmBtns.All(b => b.Disabled), Is.True, "All AirAlarm control buttons must be disabled while locked.");
+        });
+
+        // BUI mode change while locked must be rejected server-side!
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(alarmProgUid));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(initialMode),
+                "AirAlarm mode must not change while locked.");
+        });
+
+        // Unauthorized Passenger ID swipe must NOT unlock AirAlarm
+        await InteractUsing("PassengerIDCard");
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True, "Unauthorized Passenger ID swipe must NOT unlock AirAlarm.");
+        });
+
+        // Authorized AtmosIDCard swipe must UNLOCK AirAlarm and live-update open UI!
+        await InteractUsing("AtmosIDCard");
+        await RunTicks(10);
+
+        Content.Client.UserInterface.Controls.ContentButton? panicBtn = null;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.False, "Authorized Atmos ID swipe must unlock AirAlarm.");
+        });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True);
+            var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var atmosCtrls = new List<AtmosControlUiControl>();
+            CollectDescendants(alarmWin, atmosCtrls);
+            Assert.That(atmosCtrls.Count, Is.EqualTo(1));
+
+            var unlockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Text != null && l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), atmosCtrls[0]);
+            Assert.That(unlockedLabel, Is.Not.Null, "Unlocked AirAlarm UI must update to display UNLOCKED status.");
+
+            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], alarmBtns);
+            Assert.That(alarmBtns.All(b => !b.Disabled), Is.True, "AirAlarm control buttons must be enabled once unlocked.");
+            panicBtn = alarmBtns.FirstOrDefault(b => b.Text == "Panic");
+            Assert.That(panicBtn, Is.Not.Null);
+        });
+
+        // Clicking Panic button now changes AirAlarm mode!
+        await ClickViaHitTest(panicBtn!);
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(AirAlarmMode.Panic),
+                "Unlocked AirAlarm must switch to Panic mode on button click.");
+        });
+
+        // Swiping AtmosIDCard again re-locks AirAlarm!
+        await Interact();
+        await RunTicks(10);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True, "Second authorized ID swipe must re-lock AirAlarm.");
+        });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True);
+            var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var atmosCtrls = new List<AtmosControlUiControl>();
+            CollectDescendants(alarmWin, atmosCtrls);
+            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], alarmBtns);
+            Assert.That(alarmBtns.All(b => b.Disabled), Is.True, "Re-locked AirAlarm buttons must be disabled again.");
+            alarmWin.Close();
+        });
+        await RunTicks(8);
+    }
 }

@@ -24,6 +24,7 @@ using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.DeviceNetwork;
 using Content.Shared.DeviceNetwork.Events;
 using Content.Shared.DeviceNetwork.Components;
+using Content.Shared.Lock;
 using Content.Shared.UserInterface;
 using Robust.Shared.Prototypes;
 
@@ -40,6 +41,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
     [Dependency] private DeviceNetworkSystem _deviceNet = default!;
     [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private DeviceListSystem _deviceList = default!;
+    [Dependency] private LockSystem _lock = default!;
     [Dependency] private PopupSystem _popup = default!;
     [Dependency] private UserInterfaceSystem _ui = default!;
 
@@ -212,6 +214,12 @@ public sealed partial class AirAlarmSystem : EntitySystem
             return;
         }
 
+        if (_lock.IsLocked(ent.Owner))
+        {
+            EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+            return;
+        }
+
         if (cmd is "atmos_set_mode" or "set_mode" or "mode")
         {
             var modeStr = rawArg.Trim().ToLowerInvariant();
@@ -259,6 +267,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
         pkt.Set("AlarmLevel", highestAlarm.Value.ToString());
         pkt.Set("Mode", alarm.CurrentMode.ToString());
         pkt.Set("AutoMode", alarm.AutoMode.ToString());
+        pkt.Set("Locked", _lock.IsLocked(uid).ToString());
         pkt.Set("Pressure", pressure.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
         pkt.Set("TemperatureC", (temperature - 273.15f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
         pkt.Set("Vents", alarm.VentData.Count);
@@ -452,10 +461,30 @@ public sealed partial class AirAlarmSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
+    private void OnLockToggled(Entity<AirAlarmComponent> ent, ref LockToggledEvent args)
+    {
+        EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+    }
+
     private bool AccessCheck(EntityUid uid, EntityUid? user, AirAlarmComponent? component = null)
     {
         if (!Resolve(uid, ref component))
             return false;
+
+        if (HasComp<LockComponent>(uid))
+        {
+            if (!_lock.IsLocked(uid))
+                return true;
+
+            if (user != null)
+            {
+                _popup.PopupEntity(Loc.GetString("air-alarm-ui-access-denied"), user.Value, user.Value);
+                _adminLogger.Add(LogType.AtmosDeviceSetting, LogImpact.Low, $"{ToPrettyString(user)} attempted to access locked {ToPrettyString(uid)}");
+            }
+
+            return false;
+        }
 
         // if it has no access reader behave as if the user has AA
         if (!TryComp<AccessReaderComponent>(uid, out var reader))

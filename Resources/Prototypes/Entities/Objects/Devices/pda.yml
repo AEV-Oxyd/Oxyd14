@@ -87,7 +87,6 @@
     savableAddress: false
   - type: WirelessNetwork
     range: 500
-  - type: DeviceGuid
   - type: EmbeddedComputerHost
     computerPrototype: BaseOxydPdaEmbeddedController
     borderColor: "#00D4FF"

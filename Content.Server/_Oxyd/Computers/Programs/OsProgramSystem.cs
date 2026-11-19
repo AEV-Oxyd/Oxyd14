@@ -5,6 +5,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access.Components;
+using Content.Shared.Lock;
 using Content.Shared.PDA;
 using Content.Shared.PDA.Ringer;
 using Content.Shared.Store.Components;
@@ -22,6 +23,7 @@ public sealed partial class OsProgramSystem : EntitySystem
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private LockSystem _lock = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
     private EntityQuery<OxydComputerComponent> _computerQuery;
@@ -55,6 +57,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         SubscribeLocalEvent<EmbeddedOsProgramComponent, ProgramDeviceLinkReceivedEvent>(OnEmbeddedDeviceLinkReceived);
         Subs.BuiEvents<EmbeddedOsProgramComponent>(ProgramUiKey.Key, subs =>
         {
+            subs.Event<BoundUIOpenedEvent>(OnEmbeddedBuiOpened);
             subs.Event<EmbeddedOsSetViewMessage>(OnEmbeddedSetView);
             subs.Event<EmbeddedOsLaunchProgramMessage>(OnEmbeddedLaunchProgram);
             subs.Event<EmbeddedOsSwitchProgramMessage>(OnEmbeddedSwitchProgram);
@@ -174,8 +177,49 @@ public sealed partial class OsProgramSystem : EntitySystem
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
+    private void OnHostLockToggled(Entity<EmbeddedComputerHostComponent> ent, ref LockToggledEvent args)
+    {
+        if (ent.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
+            return;
+
+        if (comp.BootProgram is not { } bootUid || !Exists(bootUid))
+            return;
+
+        if (args.Locked && TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp) && embComp.CurrentView != 0)
+        {
+            embComp.CurrentView = 0;
+            Dirty(bootUid, embComp);
+        }
+
+        UpdateOsUi(bootUid);
+    }
+
+    private bool IsHostLocked(EntityUid compUid)
+    {
+        return _computerQuery.TryComp(compUid, out var comp) &&
+               comp.HostMachine is { } hm &&
+               _lock.IsLocked(hm);
+    }
+
+    private void OnEmbeddedBuiOpened(Entity<EmbeddedOsProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        UpdateOsUi(ent.Owner);
+    }
+
     private void OnEmbeddedSetView(Entity<EmbeddedOsProgramComponent> ent, ref EmbeddedOsSetViewMessage args)
     {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && IsHostLocked(compUid))
+        {
+            if (ent.Comp.CurrentView != 0)
+            {
+                ent.Comp.CurrentView = 0;
+                Dirty(ent);
+            }
+            UpdateOsUi(ent.Owner);
+            return;
+        }
+
         ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 3);
         Dirty(ent);
         UpdateOsUi(ent.Owner);
@@ -185,6 +229,12 @@ public sealed partial class OsProgramSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (IsHostLocked(compUid))
+        {
+            UpdateOsUi(ent.Owner);
+            return;
+        }
 
         if (_computer.TryLaunchExecutable(compUid, args.ExecutablePath, out _, out _, args.Actor))
         {
@@ -198,6 +248,12 @@ public sealed partial class OsProgramSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (IsHostLocked(compUid))
+        {
+            UpdateOsUi(ent.Owner);
+            return;
+        }
 
         var target = GetEntity(args.ProgramEntity);
         if (_computer.SwitchActiveProgram(compUid, target, actor: args.Actor))
@@ -213,6 +269,12 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (IsHostLocked(compUid))
+        {
+            UpdateOsUi(ent.Owner);
+            return;
+        }
+
         var target = GetEntity(args.ProgramEntity);
         _computer.CloseProgram(compUid, target);
         UpdateOsUi(ent.Owner);
@@ -222,6 +284,12 @@ public sealed partial class OsProgramSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (IsHostLocked(compUid))
+        {
+            UpdateOsUi(ent.Owner);
+            return;
+        }
 
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdateOsUi(ent.Owner);
@@ -285,17 +353,22 @@ public sealed partial class OsProgramSystem : EntitySystem
                 ? MetaData(hm).EntityName
                 : MetaData(compUid).EntityName;
 
+            var hasLock = comp.HostMachine is { } lockHost && HasComp<LockComponent>(lockHost);
+            var isHostLocked = hasLock && _lock.IsLocked(comp.HostMachine!.Value);
+
             var state = new EmbeddedOsUiState(
                 comp.HostTitle,
                 comp.HostSubtitle,
                 hostName,
                 _router.EnsureDeviceGuid(compUid),
-                embComp.CurrentView,
+                isHostLocked ? 0 : embComp.CurrentView,
                 activeChild,
                 installed,
                 running,
                 ports,
-                hwSummary);
+                hwSummary,
+                hasLock,
+                isHostLocked);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);

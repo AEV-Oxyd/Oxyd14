@@ -14,8 +14,10 @@ namespace Content.Client._Oxyd.Computers.Programs;
 public sealed class ApcControlUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _lockStatusLabel;
     private readonly ContentLabel _telemetryLabel;
     private readonly ContentLabel _statusLabel;
+    private readonly List<ContentButton> _controlButtons = new();
 
     public ApcControlUiControl()
     {
@@ -23,15 +25,17 @@ public sealed class ApcControlUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        _headerLabel = new ContentLabel { Text = "AREA POWER CONTROLLER", FontColorOverride = Color.FromHex("#FFA726") };
-        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _headerLabel = new ContentLabel { Text = "AREA POWER CONTROLLER [LOCKED]", FontColorOverride = Color.FromHex("#FFA726") };
+        _lockStatusLabel = new ContentLabel { Text = "Status: LOCKED — Swipe authorized ID card on APC to unlock", FontColorOverride = Color.FromHex("#FF5555"), Margin = new Thickness(0, 4, 0, 2) };
+        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 4) };
         _statusLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
 
         var btnRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 6) };
         void AddBtn(string text, ApcControlAction action)
         {
-            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0) };
+            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0), Disabled = true };
             b.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(action));
+            _controlButtons.Add(b);
             btnRow.AddChild(b);
         }
 
@@ -42,6 +46,7 @@ public sealed class ApcControlUiControl : ProgramUiControl
         AddBtn("Save Log (.txt)", ApcControlAction.SaveLog);
 
         root.AddChild(_headerLabel);
+        root.AddChild(_lockStatusLabel);
         root.AddChild(_telemetryLabel);
         root.AddChild(btnRow);
         root.AddChild(_statusLabel);
@@ -53,13 +58,20 @@ public sealed class ApcControlUiControl : ProgramUiControl
         if (raw is not ApcControlUiState state)
             return;
 
-        _headerLabel.Text = $"APC: {state.AreaName} | DeviceLink: {(state.IsDeviceLinkEnabled ? "CONNECTED" : "SEVERED")}";
+        _headerLabel.Text = $"APC: {state.AreaName} | {(state.Locked ? "[LOCKED]" : "[UNLOCKED]")} | DeviceLink: {(state.IsDeviceLinkEnabled ? "CONNECTED" : "SEVERED")}";
+        _lockStatusLabel.Text = state.Locked
+            ? "Status: LOCKED — Swipe authorized ID card on APC to unlock"
+            : "Status: UNLOCKED — Swipe authorized ID card on APC to lock";
+        _lockStatusLabel.FontColorOverride = state.Locked ? Color.FromHex("#FF5555") : Color.FromHex("#55FF88");
         _telemetryLabel.Text =
             $"Main Breaker: {(state.MainBreakerEnabled ? "CLOSED (POWER ON)" : "OPEN (OFF)")} {(state.BreakerTripped ? "[TRIPPED]" : "")}\n" +
             $"Battery Charge: {state.ChargePercent:0.0}%\n" +
             $"Current Load: {state.LoadWatts} W\n" +
             $"External Supply: {state.ExternalPowerState}";
         _statusLabel.Text = state.StatusMessage;
+
+        foreach (var btn in _controlButtons)
+            btn.Disabled = state.Locked;
     }
 }
 
@@ -70,8 +82,10 @@ public sealed class ApcControlUiControl : ProgramUiControl
 public sealed class AtmosControlUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _lockStatusLabel;
     private readonly ContentLabel _telemetryLabel;
     private readonly ContentLabel _statusLabel;
+    private readonly List<ContentButton> _controlButtons = new();
 
     public AtmosControlUiControl()
     {
@@ -79,15 +93,17 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        _headerLabel = new ContentLabel { Text = "AIR ALARM CONTROLLER", FontColorOverride = Color.FromHex("#33B5E5") };
-        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 6) };
+        _headerLabel = new ContentLabel { Text = "AIR ALARM CONTROLLER [LOCKED]", FontColorOverride = Color.FromHex("#33B5E5") };
+        _lockStatusLabel = new ContentLabel { Text = "Status: LOCKED — Swipe authorized ID card on Air Alarm to unlock", FontColorOverride = Color.FromHex("#FF5555"), Margin = new Thickness(0, 4, 0, 2) };
+        _telemetryLabel = new ContentLabel { Text = "Waiting for DeviceLink telemetry...", Margin = new Thickness(0, 4) };
         _statusLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88CCCC"), Margin = new Thickness(0, 4) };
 
         var modeRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
         void AddBtn(ContentBoxContainer parent, string text, AtmosControlAction action)
         {
-            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0) };
+            var b = new ContentButton { Text = text, Margin = new Thickness(2, 0), Disabled = true };
             b.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(action));
+            _controlButtons.Add(b);
             parent.AddChild(b);
         }
 
@@ -104,6 +120,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         AddBtn(ctrlRow, "Save Log (.txt)", AtmosControlAction.SaveLog);
 
         root.AddChild(_headerLabel);
+        root.AddChild(_lockStatusLabel);
         root.AddChild(_telemetryLabel);
         root.AddChild(modeRow);
         root.AddChild(ctrlRow);
@@ -116,12 +133,19 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         if (raw is not AtmosControlUiState state)
             return;
 
-        _headerLabel.Text = $"AIR ALARM | State: {state.AlarmLevel} | Mode: {state.CurrentMode} (Auto: {state.AutoMode}) | Link: {(state.IsDeviceLinkEnabled ? "OK" : "CUT")}";
+        _headerLabel.Text = $"AIR ALARM | {(state.Locked ? "[LOCKED]" : "[UNLOCKED]")} | State: {state.AlarmLevel} | Mode: {state.CurrentMode} (Auto: {state.AutoMode}) | Link: {(state.IsDeviceLinkEnabled ? "OK" : "CUT")}";
+        _lockStatusLabel.Text = state.Locked
+            ? "Status: LOCKED — Swipe authorized ID card on Air Alarm to unlock"
+            : "Status: UNLOCKED — Swipe authorized ID card on Air Alarm to lock";
+        _lockStatusLabel.FontColorOverride = state.Locked ? Color.FromHex("#FF5555") : Color.FromHex("#55FF88");
         _telemetryLabel.Text =
             $"Pressure: {state.PressureKpa:0.0} kPa | Temperature: {state.TemperatureCelsius:0.0} C\n" +
             $"Devices: {state.SensorCount} sensors, {state.VentCount} vents, {state.ScrubberCount} scrubbers\n" +
             $"{state.GasSummary}";
         _statusLabel.Text = state.StatusMessage;
+
+        foreach (var btn in _controlButtons)
+            btn.Disabled = state.Locked;
     }
 }
 

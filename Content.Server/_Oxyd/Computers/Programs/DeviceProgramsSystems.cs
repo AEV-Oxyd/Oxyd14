@@ -35,6 +35,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         SubscribeLocalEvent<ApcControlProgramComponent, ProgramDeviceLinkReceivedEvent>(OnApcDeviceLink);
         Subs.BuiEvents<ApcControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
+            subs.Event<BoundUIOpenedEvent>(OnApcBuiOpened);
             subs.Event<ApcControlActionMessage>(OnApcUiAction);
         });
 
@@ -44,6 +45,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         SubscribeLocalEvent<AtmosControlProgramComponent, ProgramDeviceLinkReceivedEvent>(OnAtmosDeviceLink);
         Subs.BuiEvents<AtmosControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
+            subs.Event<BoundUIOpenedEvent>(OnAtmosBuiOpened);
             subs.Event<AtmosControlActionMessage>(OnAtmosUiAction);
         });
 
@@ -73,6 +75,15 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    private void OnApcBuiOpened(Entity<ApcControlProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        RequestApcStatus(compUid, ent.Comp, args.Actor);
+        UpdateApcUi(ent.Owner, compUid, ent.Comp);
+    }
+
     private void OnApcDeviceLink(Entity<ApcControlProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         if (args.Packet is not { PacketType: "ApcStatus" } pkt)
@@ -82,12 +93,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         ent.Comp.AreaName = pkt.GetString("AreaName", ent.Comp.AreaName) ?? ent.Comp.AreaName;
         ent.Comp.MainBreakerEnabled = pkt.GetString("MainBreaker", "False") == "True";
         ent.Comp.BreakerTripped = pkt.GetString("BreakerTripped", "False") == "True";
-        ent.Comp.Locked = pkt.GetString("Locked", "False") == "True";
+        ent.Comp.Locked = pkt.GetString("Locked", "True") == "True";
         if (float.TryParse(pkt.GetString("ChargePercent", "0"), out var pct))
             ent.Comp.ChargePercent = pct;
         ent.Comp.LoadWatts = pkt.GetInt("LoadWatts", 0);
         ent.Comp.ExternalPowerState = pkt.GetString("ExternalPower", "None") ?? "None";
-        ent.Comp.StatusMessage = "DeviceLink telemetry synchronized.";
+        ent.Comp.StatusMessage = ent.Comp.Locked
+            ? "Interface LOCKED. Swipe authorized ID card on APC to unlock."
+            : "Interface UNLOCKED. DeviceLink telemetry synchronized.";
         Dirty(ent);
 
         UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp);
@@ -97,6 +110,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (ent.Comp.Locked)
+        {
+            ent.Comp.StatusMessage = "Action blocked: APC is LOCKED. Swipe authorized ID card on APC to unlock.";
+            RequestApcStatus(compUid, ent.Comp, args.Actor);
+            UpdateApcUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
 
         switch (args.Action)
         {
@@ -195,6 +216,15 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    private void OnAtmosBuiOpened(Entity<AtmosControlProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        SendAtmosDeviceLink(compUid, ent.Comp, "status", string.Empty, args.Actor);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
     private void OnAtmosDeviceLink(Entity<AtmosControlProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         if (args.Packet is not { PacketType: "AirAlarmStatus" } pkt)
@@ -204,6 +234,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         ent.Comp.AlarmLevel = pkt.GetString("AlarmLevel", ent.Comp.AlarmLevel) ?? ent.Comp.AlarmLevel;
         ent.Comp.CurrentMode = pkt.GetString("Mode", ent.Comp.CurrentMode) ?? ent.Comp.CurrentMode;
         ent.Comp.AutoMode = pkt.GetString("AutoMode", "True") == "True";
+        ent.Comp.Locked = pkt.GetString("Locked", "True") == "True";
         if (float.TryParse(pkt.GetString("Pressure", "0"), out var pres))
             ent.Comp.PressureKpa = pres;
         if (float.TryParse(pkt.GetString("TemperatureC", "20"), out var temp))
@@ -212,7 +243,9 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         ent.Comp.ScrubberCount = pkt.GetInt("Scrubbers", 0);
         ent.Comp.SensorCount = pkt.GetInt("Sensors", 0);
         ent.Comp.GasSummary = pkt.GetString("GasSummary", ent.Comp.GasSummary) ?? ent.Comp.GasSummary;
-        ent.Comp.StatusMessage = "Air Alarm DeviceLink synchronized.";
+        ent.Comp.StatusMessage = ent.Comp.Locked
+            ? "Interface LOCKED. Swipe authorized ID card on Air Alarm to unlock."
+            : "Interface UNLOCKED. Air Alarm DeviceLink synchronized.";
         Dirty(ent);
 
         UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp);
@@ -222,6 +255,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (ent.Comp.Locked)
+        {
+            ent.Comp.StatusMessage = "Action blocked: Air Alarm is LOCKED. Swipe authorized ID card on Air Alarm to unlock.";
+            SendAtmosDeviceLink(compUid, ent.Comp, "status", string.Empty, args.Actor);
+            UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
 
         switch (args.Action)
         {
@@ -294,6 +335,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             comp.AlarmLevel,
             comp.CurrentMode,
             comp.AutoMode,
+            comp.Locked,
             comp.PressureKpa,
             comp.TemperatureCelsius,
             comp.VentCount,

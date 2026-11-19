@@ -410,6 +410,9 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly IEntityManager _entMan;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
+    private readonly ContentButton _appViewBtn;
+    private readonly ContentButton _listViewBtn;
+    private readonly ContentButton _linkViewBtn;
     private readonly ContentBoxContainer _tabRow;
     private readonly ContentBoxContainer _childViewport;
     private readonly ContentBoxContainer _appsView;
@@ -448,16 +451,16 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         topRow.AddChild(_headerLabel);
 
-        var appViewBtn = new ContentButton { Text = "Controller", Margin = new Thickness(2, 0), MinWidth = 75 };
-        appViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(0));
-        var listViewBtn = new ContentButton { Text = "Programs (.nte)", Margin = new Thickness(2, 0), MinWidth = 100 };
-        listViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(1));
-        var linkViewBtn = new ContentButton { Text = "DeviceLinks", Margin = new Thickness(2, 0), MinWidth = 85 };
-        linkViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(2));
+        _appViewBtn = new ContentButton { Text = "Controller", Margin = new Thickness(2, 0), MinWidth = 75 };
+        _appViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(0));
+        _listViewBtn = new ContentButton { Text = "Programs (.nte)", Margin = new Thickness(2, 0), MinWidth = 100 };
+        _listViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(1));
+        _linkViewBtn = new ContentButton { Text = "DeviceLinks", Margin = new Thickness(2, 0), MinWidth = 85 };
+        _linkViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(2));
 
-        topRow.AddChild(appViewBtn);
-        topRow.AddChild(listViewBtn);
-        topRow.AddChild(linkViewBtn);
+        topRow.AddChild(_appViewBtn);
+        topRow.AddChild(_listViewBtn);
+        topRow.AddChild(_linkViewBtn);
         root.AddChild(topRow);
 
         _tabRow = new ContentBoxContainer
@@ -524,8 +527,15 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         var nicText = hw.HasNetworkCard
             ? (!string.IsNullOrEmpty(hw.NetworkLabel) ? $"UP ({hw.NetworkLabel})" : "UP")
             : "NONE";
-        _headerLabel.Text = $"{state.HostName} | [{state.DeviceGuid}]";
+        var lockSuffix = state.HasLock
+            ? (state.IsHostLocked ? " | [LOCKED]" : " | [UNLOCKED]")
+            : string.Empty;
+        _headerLabel.Text = $"{state.HostName} | [{state.DeviceGuid}]{lockSuffix}";
         _statusLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}KB | NIC: {nicText} | DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
+
+        _appViewBtn.Disabled = state.IsHostLocked;
+        _listViewBtn.Disabled = state.IsHostLocked;
+        _linkViewBtn.Disabled = state.IsHostLocked;
 
         _childViewport.Visible = state.CurrentView == 0;
         _appsView.Visible = state.CurrentView == 1;
@@ -537,11 +547,11 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             if (rp.IsBootProgram || rp.RunningEntity is not { } ent)
                 continue;
 
-            var btn = new ContentButton { Text = rp.Name, Margin = new Thickness(2, 0) };
+            var btn = new ContentButton { Text = rp.Name, Margin = new Thickness(2, 0), Disabled = state.IsHostLocked };
             btn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
             _tabRow.AddChild(btn);
 
-            var closeBtn = new ContentButton { Text = "x", Margin = new Thickness(0, 0, 4, 0), MinWidth = 22 };
+            var closeBtn = new ContentButton { Text = "x", Margin = new Thickness(0, 0, 4, 0), MinWidth = 22, Disabled = state.IsHostLocked };
             closeBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsCloseProgramMessage(ent));
             _tabRow.AddChild(closeBtn);
         }
@@ -556,13 +566,13 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             {
                 if (exec.IsRunning && exec.RunningEntity is { } runEnt)
                 {
-                    var sw = new ContentButton { Text = "Open", MinWidth = 60 };
+                    var sw = new ContentButton { Text = "Open", MinWidth = 60, Disabled = state.IsHostLocked };
                     sw.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(runEnt));
                     row.AddChild(sw);
                 }
                 else
                 {
-                    var run = new ContentButton { Text = "Run .nte", MinWidth = 75 };
+                    var run = new ContentButton { Text = "Run .nte", MinWidth = 75, Disabled = state.IsHostLocked };
                     run.OnPressed += _ => SendProgramMessage(new EmbeddedOsLaunchProgramMessage(exec.FilePath));
                     row.AddChild(run);
                 }
@@ -579,7 +589,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
                 Text = $"[{(port.IsHostPort ? "HOST" : "COMP")} {(port.IsSource ? "OUT" : "IN ")}] {port.PortId} -> {(port.LinkedTargets.Count > 0 ? string.Join(", ", port.LinkedTargets) : "(none)")}",
                 HorizontalExpand = true
             });
-            var pulse = new ContentButton { Text = "Status", MinWidth = 60 };
+            var pulse = new ContentButton { Text = "Status", MinWidth = 60, Disabled = state.IsHostLocked };
             pulse.OnPressed += _ => SendProgramMessage(new EmbeddedOsInvokePortMessage(port.PortId, port.IsHostPort, "status"));
             row.AddChild(pulse);
             _portsContainer.AddChild(row);

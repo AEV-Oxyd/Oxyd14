@@ -22,6 +22,12 @@
     netsync: false
   - type: AccessReader
     access: [["Engineering"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
   - type: Sprite
     drawdepth: WallMountedItems
     sprite: Structures/Wallmounts/apc.rsi

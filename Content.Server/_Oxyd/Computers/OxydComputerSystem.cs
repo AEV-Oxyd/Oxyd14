@@ -20,6 +20,7 @@ using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Systems;
+using Content.Shared.Lock;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
 using Content.Shared.Power;
@@ -144,7 +145,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     private void OnHostActivated(Entity<EmbeddedComputerHostComponent> ent, ref EmbeddedComputerHostActivatedEvent args)
     {
-        if (TryComp<AccessReaderComponent>(ent.Owner, out var access) && !_access.IsAllowed(args.User, ent.Owner, access))
+        // Devices with a LockComponent (e.g., APCs and Air Alarms) always open their UI regardless of access,
+        // displaying their locked status and gating all actions until unlocked by swiping an authorized ID card.
+        if (!HasComp<LockComponent>(ent.Owner) &&
+            TryComp<AccessReaderComponent>(ent.Owner, out var access) &&
+            !_access.IsAllowed(args.User, ent.Owner, access))
         {
             _popup.PopupEntity(Loc.GetString("apc-component-insufficient-access"), ent.Owner, args.User);
             return;
@@ -313,6 +318,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             BindHostDeviceLinks(host.Owner, compUid);
             RecalculateHardwareStats(compUid, comp);
             RefreshComputerBootState(compUid, comp);
+            SendPacketToHost(compUid, "MachineCommandReceiver", new ComputerPacket("status"));
+            if (comp.BootProgram is { } bootProg && Exists(bootProg))
+                _osPrograms.UpdateOsUi(bootProg);
         }
 
         return true;

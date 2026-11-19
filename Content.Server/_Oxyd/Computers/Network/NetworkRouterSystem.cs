@@ -114,7 +114,7 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     private void OnRouterMapInit(Entity<NetworkRouterComponent> ent, ref MapInitEvent args)
     {
-        _guid.GetGuid(ent.Owner);
+        EnsureDeviceGuid(ent.Owner);
         RefreshDnsDirectory(ent);
     }
 

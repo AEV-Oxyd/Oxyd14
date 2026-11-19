@@ -29,6 +29,8 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
     public List<OsProgramEntryDto> RunningPrograms { get; }
     public List<MirroredDevicePortInfo> MirroredPorts { get; }
     public OsHardwareSummaryDto Hardware { get; }
+    public bool HasLock { get; }
+    public bool IsHostLocked { get; }
 
     public EmbeddedOsUiState(
         string title,
@@ -40,7 +42,9 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         List<OsProgramEntryDto> installedExecutables,
         List<OsProgramEntryDto> runningPrograms,
         List<MirroredDevicePortInfo> mirroredPorts,
-        OsHardwareSummaryDto hardware)
+        OsHardwareSummaryDto hardware,
+        bool hasLock = false,
+        bool isHostLocked = false)
     {
         Title = title;
         Subtitle = subtitle;
@@ -52,6 +56,8 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         RunningPrograms = runningPrograms;
         MirroredPorts = mirroredPorts;
         Hardware = hardware;
+        HasLock = hasLock;
+        IsHostLocked = isHostLocked;
     }
 }
 

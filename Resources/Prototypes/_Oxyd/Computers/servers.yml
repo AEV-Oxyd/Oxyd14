@@ -18,7 +18,6 @@
   - type: DeviceNetwork
     deviceNetId: Wired
     autoConnect: true
-  - type: DeviceGuid
   - type: DataServer
     serverProtocols:
       - ManifestService
@@ -106,7 +105,6 @@
   - type: DeviceNetwork
     deviceNetId: Wired
     autoConnect: true
-  - type: DeviceGuid
   - type: DeviceNetworkRouter
   - type: NetworkRouter
   - type: EmbeddedComputerHost

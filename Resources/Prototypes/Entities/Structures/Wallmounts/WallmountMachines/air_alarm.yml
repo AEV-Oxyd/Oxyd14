@@ -78,6 +78,12 @@
     layoutId: AirAlarm
   - type: AccessReader
     access: [["Atmospherics"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
   - type: ContainerFill
     containers:
       board: [ AirAlarmElectronics ]
