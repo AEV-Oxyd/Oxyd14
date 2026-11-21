@@ -44,6 +44,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         SubscribeLocalEvent<OsProgramComponent, ProgramDeviceLinkReceivedEvent>(OnOsDeviceLinkReceived);
         Subs.BuiEvents<OsProgramComponent>(ProgramUiKey.Key, subs =>
         {
+            subs.Event<BoundUIOpenedEvent>(OnOsBuiOpened);
             subs.Event<OsSetViewMessage>(OnOsSetView);
             subs.Event<OsLaunchProgramMessage>(OnOsLaunchProgram);
             subs.Event<OsSwitchProgramMessage>(OnOsSwitchProgram);
@@ -86,6 +87,11 @@ public sealed partial class OsProgramSystem : EntitySystem
     }
 
     private void OnOsDeviceLinkReceived(Entity<OsProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
+    {
+        UpdateOsUi(ent.Owner);
+    }
+
+    private void OnOsBuiOpened(Entity<OsProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         UpdateOsUi(ent.Owner);
     }
@@ -375,7 +381,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         }
     }
 
-    private (List<OsProgramEntryDto> installed, List<OsProgramEntryDto> running) BuildProgramLists(EntityUid compUid, OxydComputerComponent comp)
+    internal (List<OsProgramEntryDto> installed, List<OsProgramEntryDto> running) BuildProgramLists(EntityUid compUid, OxydComputerComponent comp)
     {
         var installed = new List<OsProgramEntryDto>();
         var running = new List<OsProgramEntryDto>();
@@ -425,7 +431,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         return (installed, running);
     }
 
-    private OsHardwareSummaryDto BuildHardwareSummary(EntityUid compUid, OxydComputerComponent comp, ComputerStatsComponent stats)
+    internal OsHardwareSummaryDto BuildHardwareSummary(EntityUid compUid, OxydComputerComponent comp, ComputerStatsComponent stats)
     {
         var hostName = comp.HostMachine is { } hm && Exists(hm)
             ? MetaData(hm).EntityName

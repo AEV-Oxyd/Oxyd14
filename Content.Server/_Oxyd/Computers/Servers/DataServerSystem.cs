@@ -269,6 +269,7 @@ public sealed partial class DataServerSystem : EntitySystem
             ("/bin/medtek.nte", "medtek", "MedTekProgram", "MedTek"),
             ("/bin/astronav.nte", "astronav", "AstroNavProgram", "AstroNav"),
             ("/bin/access_encoder.nte", "access_encoder", "AccessEncoderProgram", "ID Access Encoder"),
+            ("/bin/pda_os.nte", "pda_os", "OxydPdaOsProgram", "NTOS Pocket"),
             ("/bin/downloader.nte", "downloader", "OxydDownloaderProgram", "Downloader"),
         ];
 

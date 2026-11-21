@@ -75,14 +75,46 @@ public class ContentBoxContainer : ContentControl
         if (Orientation == LayoutOrientation.Horizontal)
         {
             width += totalSeparation;
+            var fixedWidth = 0f;
+            var totalStretch = 0f;
+            var expandChildren = new List<Control>();
+
+            // Pass 1: Measure non-expanding children (e.g. action buttons) first so expanding labels
+            // can wrap cleanly within the remaining horizontal space without pushing buttons off-screen.
             foreach (var child in Children)
             {
                 if (!child.Visible)
                     continue;
 
+                if (child.HorizontalExpand)
+                {
+                    expandChildren.Add(child);
+                    totalStretch += Math.Max(0.001f, child.SizeFlagsStretchRatio);
+                    continue;
+                }
+
                 child.Measure(availableSize);
-                width += child.DesiredSize.X;
+                fixedWidth += child.DesiredSize.X;
                 height = Math.Max(height, child.DesiredSize.Y);
+            }
+
+            width += fixedWidth;
+
+            if (expandChildren.Count > 0)
+            {
+                var remainingX = float.IsFinite(availableSize.X)
+                    ? MathF.Max(0f, availableSize.X - fixedWidth - totalSeparation)
+                    : availableSize.X;
+
+                foreach (var child in expandChildren)
+                {
+                    var share = float.IsFinite(remainingX)
+                        ? remainingX * (Math.Max(0.001f, child.SizeFlagsStretchRatio) / totalStretch)
+                        : float.PositiveInfinity;
+                    child.Measure(new Vector2(share, availableSize.Y));
+                    width += child.DesiredSize.X;
+                    height = Math.Max(height, child.DesiredSize.Y);
+                }
             }
         }
         else

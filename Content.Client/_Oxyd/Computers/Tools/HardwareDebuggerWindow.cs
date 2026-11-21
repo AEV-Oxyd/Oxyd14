@@ -42,7 +42,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         topRow.AddChild(discBtn);
         root.AddChild(topRow);
 
-        _hwLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
+        _hwLabel = new ContentLabel { Text = "", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
         root.AddChild(_hwLabel);
 
         _portsContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
@@ -54,7 +54,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         root.AddChild(_scroll);
 
         var inRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4, 0, 0) };
-        _promptLabel = new ContentLabel { Text = "jtag> ", FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 0, 4, 0) };
+        _promptLabel = new ContentLabel { Text = "jtag> ", WordWrap = false, FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 0, 4, 0) };
         _input = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Enter data port command (hw, devlink list, ls, boot)..." };
         _input.OnTextEntered += args =>
         {
@@ -98,7 +98,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         _historyContainer.RemoveAllChildren();
         foreach (var line in state.Lines)
         {
-            _historyContainer.AddChild(new ContentLabel { Text = line, FontColorOverride = Color.FromHex("#D6F5F5") });
+            _historyContainer.AddChild(new ContentLabel { Text = line, HorizontalExpand = true, FontColorOverride = Color.FromHex("#D6F5F5") });
         }
         _scroll.ScrollOffsetY = float.MaxValue;
     }

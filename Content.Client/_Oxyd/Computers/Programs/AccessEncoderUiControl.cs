@@ -1,6 +1,7 @@
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Shared.Maths;
 
@@ -10,11 +11,13 @@ namespace Content.Client._Oxyd.Computers.Programs;
 /// Client UI for ID Access Encoder (/bin/access_encoder.nte).
 /// Builds .acc access code files from an inserted PDA/computer ID card or a swiped ID card
 /// and manages saved .acc files stored under /keys/ on the hard drive.
+/// Uses wrapping containers and scrollable regions so long access code lists never go out of bounds.
 /// </summary>
 public sealed class AccessEncoderUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _sourceLabel;
+    private readonly ContentWrapContainer _sourceTagsWrap;
     private readonly ContentLabel _statusLabel;
     private readonly ContentLineEdit _fileNameInput;
     private readonly ContentButton _buildBtn;
@@ -27,17 +30,23 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
+        var rootScroll = new ContentScrollContainer
+        {
+            HorizontalExpand = true,
+            VerticalExpand = true
+        };
+
         var root = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
-            VerticalExpand = true,
             Margin = new Thickness(6)
         };
 
         _headerLabel = new ContentLabel
         {
             Text = "ID ACCESS ENCODER (/keys/*.acc)",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#00D4FF"),
             Margin = new Thickness(0, 0, 0, 4)
         };
@@ -46,22 +55,25 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         _sourceLabel = new ContentLabel
         {
             Text = "Source ID: None (Insert ID into PDA or swipe ID card on computer)",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#FFD54F"),
             Margin = new Thickness(0, 0, 0, 4)
         };
         root.AddChild(_sourceLabel);
 
-        var buildRow = new ContentBoxContainer
+        _sourceTagsWrap = new ContentWrapContainer
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
-            Margin = new Thickness(0, 2, 0, 4)
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
+            Margin = new Thickness(0, 0, 0, 6)
         };
+        root.AddChild(_sourceTagsWrap);
 
         _fileNameInput = new ContentLineEdit
         {
             HorizontalExpand = true,
-            PlaceHolder = "Access file name (e.g. engineering)..."
+            PlaceHolder = "Access file name (e.g. engineering)...",
+            Margin = new Thickness(0, 0, 0, 4)
         };
 
         void SubmitBuild()
@@ -71,12 +83,19 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         }
 
         _fileNameInput.OnTextEntered += _ => SubmitBuild();
+        root.AddChild(_fileNameInput);
+
+        var actionsWrap = new ContentWrapContainer
+        {
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
 
         _buildBtn = new ContentButton
         {
             Text = "Build & Save .acc",
-            MinWidth = 125,
-            Margin = new Thickness(4, 0, 0, 0),
+            MinWidth = 120,
             Disabled = true
         };
         _buildBtn.OnPressed += _ => SubmitBuild();
@@ -84,8 +103,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         var refreshBtn = new ContentButton
         {
             Text = "Refresh",
-            MinWidth = 68,
-            Margin = new Thickness(4, 0, 0, 0)
+            MinWidth = 68
         };
         refreshBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.Refresh));
 
@@ -93,20 +111,19 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         {
             Text = "Use Inserted ID",
             MinWidth = 110,
-            Margin = new Thickness(4, 0, 0, 0),
             Visible = false
         };
         _clearScannedBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ClearScanned));
 
-        buildRow.AddChild(_fileNameInput);
-        buildRow.AddChild(_buildBtn);
-        buildRow.AddChild(refreshBtn);
-        buildRow.AddChild(_clearScannedBtn);
-        root.AddChild(buildRow);
+        actionsWrap.AddChild(_buildBtn);
+        actionsWrap.AddChild(refreshBtn);
+        actionsWrap.AddChild(_clearScannedBtn);
+        root.AddChild(actionsWrap);
 
         _statusLabel = new ContentLabel
         {
             Text = "",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#88CCCC"),
             Margin = new Thickness(0, 0, 0, 4)
         };
@@ -115,33 +132,32 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         var listHeader = new ContentLabel
         {
             Text = "Saved Access Code Files (/keys/):",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#B0BEC5"),
             Margin = new Thickness(0, 2, 0, 2)
         };
         root.AddChild(listHeader);
 
-        var scroll = new ContentScrollContainer
-        {
-            HorizontalExpand = true,
-            VerticalExpand = true
-        };
         _filesContainer = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
-            HorizontalExpand = true
+            HorizontalExpand = true,
+            Margin = new Thickness(0, 0, 0, 6)
         };
-        scroll.AddChild(_filesContainer);
-        root.AddChild(scroll);
+        root.AddChild(_filesContainer);
 
         _detailLabel = new ContentLabel
         {
             Text = "Select a saved .acc file to inspect its encoded access levels.",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#A5D6A7"),
+            VerticalAlignment = VAlignment.Top,
             Margin = new Thickness(0, 4, 0, 0)
         };
         root.AddChild(_detailLabel);
 
-        AddChild(root);
+        rootScroll.AddChild(root);
+        AddChild(rootScroll);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -153,16 +169,49 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
             ? $"ID ACCESS ENCODER ({state.SavedFiles.Count} saved in /keys/)"
             : "ID ACCESS ENCODER [NO HARD DRIVE]";
 
+        _sourceTagsWrap.RemoveAllChildren();
         if (state.HasSourceCard)
         {
-            var tagPreview = state.SourceAccessTags.Count > 0
-                ? string.Join(", ", state.SourceAccessTags)
-                : "(no access tags)";
             var jobPart = string.IsNullOrWhiteSpace(state.SourceJobTitle) ? string.Empty : $" ({state.SourceJobTitle})";
             _sourceLabel.Text =
-                $"Source: {state.SourceLabel} | Holder: {state.SourceOwnerName}{jobPart}\n" +
-                $"Access Codes ({state.SourceAccessTags.Count}): {tagPreview}";
+                $"Source: {state.SourceLabel} | Holder: {state.SourceOwnerName}{jobPart} ({state.SourceAccessTags.Count} codes):";
             _sourceLabel.FontColorOverride = Color.FromHex("#55FF88");
+
+            if (state.SourceAccessTags.Count == 0)
+            {
+                _sourceTagsWrap.AddChild(new ContentLabel
+                {
+                    Text = "(no access tags)",
+                    WordWrap = false,
+                    FontColorOverride = Color.FromHex("#78909C")
+                });
+            }
+            else
+            {
+                foreach (var tag in state.SourceAccessTags)
+                {
+                    var chip = new ContentPanelContainer
+                    {
+                        PanelOverride = new StyleBoxFlat
+                        {
+                            BackgroundColor = Color.FromHex("#132A38"),
+                            BorderColor = Color.FromHex("#2E6B8A"),
+                            BorderThickness = new Thickness(1),
+                            ContentMarginLeftOverride = 5,
+                            ContentMarginRightOverride = 5,
+                            ContentMarginTopOverride = 2,
+                            ContentMarginBottomOverride = 2
+                        }
+                    };
+                    chip.AddChild(new ContentLabel
+                    {
+                        Text = tag,
+                        WordWrap = false,
+                        FontColorOverride = Color.FromHex("#B3E5FC")
+                    });
+                    _sourceTagsWrap.AddChild(chip);
+                }
+            }
         }
         else
         {
@@ -180,6 +229,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
             _filesContainer.AddChild(new ContentLabel
             {
                 Text = "  (No access code files saved on hard drive yet)",
+                HorizontalExpand = true,
                 FontColorOverride = Color.FromHex("#78909C")
             });
         }

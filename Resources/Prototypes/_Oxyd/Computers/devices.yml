@@ -218,7 +218,7 @@
     defaultHardware:
     - ComputerPartCpuBasic
     - ComputerPartRamBasic
-    - ComputerPartHardDriveBasic
+    - ComputerPartHardDrivePda
     - ComputerPartNetworkCardBasic
     - ComputerPartBatterySmall
 
@@ -407,6 +407,84 @@
         programId: OxydOsProgram
         title: "NTOS System"
         ramUsageMb: 32
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydDownloaderProgram
+        title: "Downloader"
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/notekeeper.nte": !type:ProgramVirtualFile
+        name: notekeeper
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NotekeeperProgram
+        title: "Notekeeper"
+      "/bin/nanotask.nte": !type:ProgramVirtualFile
+        name: nanotask
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NanoTaskProgram
+        title: "Tasks"
+      "/bin/news_reader.nte": !type:ProgramVirtualFile
+        name: news_reader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: NewsReaderProgram
+        title: "News Reader"
+      "/bin/access_encoder.nte": !type:ProgramVirtualFile
+        name: access_encoder
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: AccessEncoderProgram
+        title: "ID Access Encoder"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDrivePda
+  name: NTOS Pocket PDA drive (8 MB)
+  description: Compact solid-state drive preloaded with NTOS Pocket PDA OS and mobile utilities.
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 8388608
+    size: Small
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/bin/pda_os.nte": !type:ProgramVirtualFile
+        name: pda_os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        isReadOnly: false
+        programId: OxydPdaOsProgram
+        title: "NTOS Pocket"
+        ramUsageMb: 24
       "/bin/terminal.nte": !type:ProgramVirtualFile
         name: terminal
         extension: nte
@@ -730,6 +808,14 @@
         size: 4096
         programId: AccessEncoderProgram
         title: "ID Access Encoder"
+      "/bin/pda_os.nte": !type:ProgramVirtualFile
+        name: pda_os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydPdaOsProgram
+        title: "NTOS Pocket"
+        ramUsageMb: 24
       "/blueprints/multitool.lathe": !type:RecipeBlueprintFile
         name: multitool
         extension: lathe
@@ -997,3 +1083,21 @@
         size: 4096
         programId: AccessEncoderProgram
         title: "ID Access Encoder"
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskPdaOs
+  name: NTOS Pocket OS install disk
+  description: Contains pda_os.nte handheld PDA operating system.
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/pda_os.nte": !type:ProgramVirtualFile
+        name: pda_os
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydPdaOsProgram
+        title: "NTOS Pocket"
+        ramUsageMb: 24

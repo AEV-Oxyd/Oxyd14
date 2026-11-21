@@ -36,6 +36,25 @@
 
 - type: entity
   parent: BaseOxydProgram
+  id: OxydPdaOsProgram
+  name: NTOS Pocket (PDA OS)
+  description: Dedicated handheld PDA operating system managing pocket hardware slots, station status, utilities, and mobile apps.
+  components:
+  - type: Program
+    title: "NTOS Pocket"
+    ramUsageMb: 24
+    cpuUsagePercent: 4.0
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda
+  - type: PdaOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: PdaOsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
   id: OxydEmbeddedOsProgram
   name: embedded system controller
   description: Core embedded controller operating system for machinery, APCs, life support, and industrial DeviceLink supervision.

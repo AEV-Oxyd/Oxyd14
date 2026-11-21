@@ -41,6 +41,7 @@ public sealed class TerminalUiControl : ProgramUiControl
         _headerLabel = new ContentLabel
         {
             Text = "NTOS Terminal",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#00D4FF"),
             Margin = new Thickness(0, 0, 0, 4)
         };
@@ -118,6 +119,7 @@ public sealed class TerminalUiControl : ProgramUiControl
         _promptLabel = new ContentLabel
         {
             Text = "$ ",
+            WordWrap = false,
             FontColorOverride = Color.FromHex("#00FF88"),
             Margin = new Thickness(0, 0, 4, 0)
         };
@@ -176,6 +178,7 @@ public sealed class TerminalUiControl : ProgramUiControl
                 _historyLines.AddChild(new ContentLabel
                 {
                     Text = line,
+                    HorizontalExpand = true,
                     FontColorOverride = Color.FromHex("#D6F5F5")
                 });
             }

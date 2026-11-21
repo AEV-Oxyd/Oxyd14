@@ -98,6 +98,7 @@ public class ContentButton : ContentControl
         {
             HorizontalAlignment = HAlignment.Center,
             VerticalAlignment = VAlignment.Center,
+            WordWrap = false,
             Margin = new Thickness(8, 4)
         };
         AddChild(_label);

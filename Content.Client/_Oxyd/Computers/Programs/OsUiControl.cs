@@ -20,8 +20,8 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly IEntityManager _entMan;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusBarLabel;
-    private readonly ContentBoxContainer _tabStrip;
-    private readonly ContentBoxContainer _homeView;
+    private readonly ContentWrapContainer _tabStrip;
+    private readonly ContentScrollContainer _homeView;
     private readonly ContentBoxContainer _programsView;
     private readonly ContentBoxContainer _hardwareView;
     private readonly ContentBoxContainer _childViewport;
@@ -47,32 +47,32 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             Margin = new Thickness(6)
         };
 
-        // Top OS Header + Navigation Bar
-        var navRow = new ContentBoxContainer
-        {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-
+        // Top OS Header + Wrapped Navigation Bar
         _headerLabel = new ContentLabel
         {
             Text = "NTOS 1.4",
             HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#00D4FF")
+            FontColorOverride = Color.FromHex("#00D4FF"),
+            Margin = new Thickness(0, 0, 0, 4)
         };
-        navRow.AddChild(_headerLabel);
+        root.AddChild(_headerLabel);
 
+        var navRow = new ContentWrapContainer
+        {
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
         navRow.AddChild(MakeNavBtn("Home", 0));
         navRow.AddChild(MakeNavBtn("Apps", 1));
         navRow.AddChild(MakeNavBtn("HW / Links", 2));
         root.AddChild(navRow);
 
-        // Running Child Program Tabs
-        _tabStrip = new ContentBoxContainer
+        // Wrapped Running Child Program Tabs
+        _tabStrip = new ContentWrapContainer
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
             Margin = new Thickness(0, 0, 0, 4)
         };
         root.AddChild(_tabStrip);
@@ -81,19 +81,25 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         _statusBarLabel = new ContentLabel
         {
             Text = "Initializing NTOS...",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#88CCCC"),
             Margin = new Thickness(0, 0, 0, 4)
         };
         root.AddChild(_statusBarLabel);
 
-        // View 0: Home & Quick Hardware Actions
-        _homeView = new ContentBoxContainer
+        // View 0: Home & Quick Hardware Actions (scrollable)
+        _homeView = new ContentScrollContainer
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
             VerticalExpand = true
         };
-        BuildHomeView();
+        var homeInner = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true
+        };
+        BuildHomeView(homeInner);
+        _homeView.AddChild(homeInner);
         root.AddChild(_homeView);
 
         // View 1: Installed .nte Executables & Running Tasks
@@ -122,15 +128,21 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             VerticalExpand = true,
             Visible = false
         };
-        _hwDetailsLabel = new ContentLabel { FontColorOverride = Color.FromHex("#E0F7FA"), Margin = new Thickness(0, 0, 0, 6) };
-        _hardwareView.AddChild(_hwDetailsLabel);
         var portScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var hwInner = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true
+        };
+        _hwDetailsLabel = new ContentLabel { HorizontalExpand = true, FontColorOverride = Color.FromHex("#E0F7FA"), Margin = new Thickness(0, 0, 0, 6) };
+        hwInner.AddChild(_hwDetailsLabel);
         _portsContainer = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true
         };
-        portScroll.AddChild(_portsContainer);
+        hwInner.AddChild(_portsContainer);
+        portScroll.AddChild(hwInner);
         _hardwareView.AddChild(portScroll);
         root.AddChild(_hardwareView);
 
@@ -152,19 +164,18 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         var btn = new ContentButton
         {
             Text = text,
-            Margin = new Thickness(2, 0),
             MinWidth = 65
         };
         btn.OnPressed += _ => SendProgramMessage(new OsSetViewMessage(viewIdx));
         return btn;
     }
 
-    private void BuildHomeView()
+    private void BuildHomeView(ContentBoxContainer container)
     {
-        var actionsRow = new ContentBoxContainer
+        var actionsRow = new ContentWrapContainer
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
             Margin = new Thickness(0, 4, 0, 8)
         };
 
@@ -172,8 +183,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             var btn = new ContentButton
             {
-                Text = label,
-                Margin = new Thickness(2, 0)
+                Text = label
             };
             btn.OnPressed += _ => SendProgramMessage(new OsHardwareActionMessage(action));
             actionsRow.AddChild(btn);
@@ -187,22 +197,23 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         AddHwBtn("Eject Pen", "eject_pen");
         AddHwBtn("Eject Disk", "eject_disk");
 
-        _homeView.AddChild(new ContentLabel
+        container.AddChild(new ContentLabel
         {
             Text = "HOST DEVICE CONTROLS (via DeviceLink):",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#00D4FF"),
             Margin = new Thickness(0, 4)
         });
-        _homeView.AddChild(actionsRow);
+        container.AddChild(actionsRow);
 
         var openAppsBtn = new ContentButton
         {
             Text = "Open Installed Programs (.nte)",
             HorizontalAlignment = HAlignment.Left,
-            MinWidth = 240
+            MinWidth = 220
         };
         openAppsBtn.OnPressed += _ => SendProgramMessage(new OsSetViewMessage(1));
-        _homeView.AddChild(openAppsBtn);
+        container.AddChild(openAppsBtn);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -240,22 +251,23 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             if (prog.IsBootProgram || prog.RunningEntity is not { } rEnt)
                 continue;
 
+            var tabPair = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal };
             var tabBtn = new ContentButton
             {
-                Text = prog.Name + (prog.RunningEntity == state.ActiveChildProgram && state.CurrentView == 3 ? " *" : ""),
-                Margin = new Thickness(2, 0)
+                Text = prog.Name + (prog.RunningEntity == state.ActiveChildProgram && state.CurrentView == 3 ? " *" : "")
             };
             tabBtn.OnPressed += _ => SendProgramMessage(new OsSwitchProgramMessage(rEnt));
-            _tabStrip.AddChild(tabBtn);
+            tabPair.AddChild(tabBtn);
 
             var closeBtn = new ContentButton
             {
                 Text = "x",
-                Margin = new Thickness(0, 0, 4, 0),
+                Margin = new Thickness(2, 0, 0, 0),
                 MinWidth = 22
             };
             closeBtn.OnPressed += _ => SendProgramMessage(new OsCloseProgramMessage(rEnt));
-            _tabStrip.AddChild(closeBtn);
+            tabPair.AddChild(closeBtn);
+            _tabStrip.AddChild(tabPair);
         }
     }
 
@@ -413,7 +425,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly ContentButton _appViewBtn;
     private readonly ContentButton _listViewBtn;
     private readonly ContentButton _linkViewBtn;
-    private readonly ContentBoxContainer _tabRow;
+    private readonly ContentWrapContainer _tabRow;
     private readonly ContentBoxContainer _childViewport;
     private readonly ContentBoxContainer _appsView;
     private readonly ContentBoxContainer _portsView;
@@ -436,26 +448,27 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             Margin = new Thickness(6)
         };
 
-        var topRow = new ContentBoxContainer
-        {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-
         _headerLabel = new ContentLabel
         {
             Text = "EMBEDDED CONTROLLER OS",
             HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#FFA726")
+            FontColorOverride = Color.FromHex("#FFA726"),
+            Margin = new Thickness(0, 0, 0, 4)
         };
-        topRow.AddChild(_headerLabel);
+        root.AddChild(_headerLabel);
 
-        _appViewBtn = new ContentButton { Text = "Controller", Margin = new Thickness(2, 0), MinWidth = 75 };
+        var topRow = new ContentWrapContainer
+        {
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        _appViewBtn = new ContentButton { Text = "Controller", MinWidth = 75 };
         _appViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(0));
-        _listViewBtn = new ContentButton { Text = "Programs (.nte)", Margin = new Thickness(2, 0), MinWidth = 100 };
+        _listViewBtn = new ContentButton { Text = "Programs (.nte)", MinWidth = 100 };
         _listViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(1));
-        _linkViewBtn = new ContentButton { Text = "DeviceLinks", Margin = new Thickness(2, 0), MinWidth = 85 };
+        _linkViewBtn = new ContentButton { Text = "DeviceLinks", MinWidth = 85 };
         _linkViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(2));
 
         topRow.AddChild(_appViewBtn);
@@ -463,10 +476,10 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         topRow.AddChild(_linkViewBtn);
         root.AddChild(topRow);
 
-        _tabRow = new ContentBoxContainer
+        _tabRow = new ContentWrapContainer
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4,
             Margin = new Thickness(0, 0, 0, 4)
         };
         root.AddChild(_tabRow);
@@ -474,6 +487,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _statusLabel = new ContentLabel
         {
             Text = "Initializing...",
+            HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#88AAAA"),
             Margin = new Thickness(0, 0, 0, 4)
         };
@@ -547,13 +561,15 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             if (rp.IsBootProgram || rp.RunningEntity is not { } ent)
                 continue;
 
-            var btn = new ContentButton { Text = rp.Name, Margin = new Thickness(2, 0), Disabled = state.IsHostLocked };
+            var tabPair = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal };
+            var btn = new ContentButton { Text = rp.Name, Disabled = state.IsHostLocked };
             btn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
-            _tabRow.AddChild(btn);
+            tabPair.AddChild(btn);
 
-            var closeBtn = new ContentButton { Text = "x", Margin = new Thickness(0, 0, 4, 0), MinWidth = 22, Disabled = state.IsHostLocked };
+            var closeBtn = new ContentButton { Text = "x", Margin = new Thickness(2, 0, 0, 0), MinWidth = 22, Disabled = state.IsHostLocked };
             closeBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsCloseProgramMessage(ent));
-            _tabRow.AddChild(closeBtn);
+            tabPair.AddChild(closeBtn);
+            _tabRow.AddChild(tabPair);
         }
 
         _appsContainer.RemoveAllChildren();

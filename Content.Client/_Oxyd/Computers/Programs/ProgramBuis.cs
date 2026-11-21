@@ -6,6 +6,7 @@ namespace Content.Client._Oxyd.Computers.Programs;
 /// Concrete BoundUserInterface types registered in YAML for every NTOS Program Entity.
 /// </summary>
 public sealed class OsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<OsUiControl>(owner, uiKey);
+public sealed class PdaOsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<PdaOsUiControl>(owner, uiKey);
 public sealed class EmbeddedOsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<EmbeddedOsUiControl>(owner, uiKey);
 public sealed class TerminalProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<TerminalUiControl>(owner, uiKey);
 public sealed class FileBrowserProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<FileBrowserUiControl>(owner, uiKey);

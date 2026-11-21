@@ -16,6 +16,11 @@ public abstract class ProgramUiControl : ContentControl
     public EntityUid? ProgramUid { get; set; }
     public EntityUid? ComputerUid { get; set; }
 
+    protected ProgramUiControl()
+    {
+        RectClipContent = true;
+    }
+
     public void BindSendMessage(Action<BoundUserInterfaceMessage> sendMessage)
     {
         _sendMessage = sendMessage;

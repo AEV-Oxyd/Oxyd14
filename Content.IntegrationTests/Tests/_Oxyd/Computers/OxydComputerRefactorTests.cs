@@ -789,7 +789,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(6);
     }
 
-    private static Content.Client.UserInterface.Controls.ContentButton? FindRowRunButton(OsUiControl osCtrl, string appTitle)
+    private static Content.Client.UserInterface.Controls.ContentButton? FindRowRunButton(Control osCtrl, string appTitle)
     {
         var rows = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentBoxContainer>();
         CollectDescendants(osCtrl, rows);
@@ -826,14 +826,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(12);
 
         ComputerDisplayWindow? win = null;
-        OsUiControl? osCtrl = null;
+        PdaOsUiControl? osCtrl = null;
         Content.Client.UserInterface.Controls.ContentButton? appsBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(1));
             win = openWins[0];
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(win, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
             osCtrl = osList[0];
@@ -1132,7 +1132,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
@@ -1350,7 +1350,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
             Assert.That(termRunBtn, Is.Not.Null);
@@ -1629,7 +1629,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
             Assert.That(termRunBtn, Is.Not.Null);
@@ -1908,7 +1908,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
             Assert.That(termRunBtn, Is.Not.Null);
@@ -2199,7 +2199,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
-            var osList = new System.Collections.Generic.List<OsUiControl>();
+            var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
@@ -2982,5 +2982,153 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 w.Close();
         });
         await RunTicks(6);
+    }
+
+    [Test]
+    public async Task TestPdaOsProgramAndControlWrapping()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var power = Server.System<PowerReceiverSystem>();
+        var slots = Server.System<ItemSlotsSystem>();
+
+        // 1) Verify PDA boots dedicated /bin/pda_os.nte (PdaOsProgramComponent + PdaOsUiControl)
+        //    while Workstation continues booting /bin/os.nte (OsProgramComponent + OsUiControl).
+        var pdaNet = await PlaceInHands("DetectivePDA");
+        var pdaUid = ToServer(pdaNet);
+        EntityUid pdaCompUid = default;
+        EntityUid pdaBootUid = default;
+        EntityUid wsUid = default;
+        EntityUid wsBootUid = default;
+        EntityUid capIdUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            power.SetNeedsPower(wsUid, false);
+            var wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            wsBootUid = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).BootProgram!.Value;
+
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+            pdaBootUid = SEntMan.GetComponent<OxydComputerComponent>(pdaCompUid).BootProgram!.Value;
+
+            capIdUid = SEntMan.SpawnEntity("CaptainIDCard", coords);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.HasComponent<PdaOsProgramComponent>(pdaBootUid), Is.True, "PDA must boot PdaOsProgramComponent.");
+            Assert.That(SEntMan.GetComponent<ProgramComponent>(pdaBootUid).ExecutablePath, Is.EqualTo("/bin/pda_os.nte"));
+
+            Assert.That(SEntMan.HasComponent<OsProgramComponent>(wsBootUid), Is.True, "Workstation must still boot OsProgramComponent.");
+            Assert.That(SEntMan.GetComponent<ProgramComponent>(wsBootUid).ExecutablePath, Is.EqualTo("/bin/os.nte"));
+        });
+
+        // Open PDA UI and verify PdaOsUiControl + Flashlight toggle + wrapping bounds
+        await UseInHand();
+        await RunTicks(10);
+
+        ComputerDisplayWindow? pdaWin = null;
+        Content.Client.UserInterface.Controls.ContentButton? flashlightBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
+            Assert.That(openWins.Count, Is.EqualTo(1));
+            pdaWin = openWins[0];
+
+            var pdaOsList = new List<PdaOsUiControl>();
+            CollectDescendants(pdaWin, pdaOsList);
+            Assert.That(pdaOsList.Count, Is.EqualTo(1), "PDA window must mount PdaOsUiControl.");
+
+            var btns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(pdaOsList[0], btns);
+            flashlightBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.StartsWith("Flashlight:", StringComparison.OrdinalIgnoreCase));
+            Assert.That(flashlightBtn, Is.Not.Null, "PDA OS Home dashboard must expose Flashlight toggle button.");
+
+            AssertAllVisibleChildrenWithinViewport(pdaWin, pdaOsList[0], "PdaOsUiControl Home");
+        });
+
+        await ClickViaHitTest(flashlightBtn!);
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<PdaComponent>(pdaUid).FlashlightOn, Is.True,
+                "Clicking Flashlight in PDA OS must toggle PDA flashlight ON.");
+        });
+
+        // 2) Insert CaptainIDCard (AllAccess — 20+ access codes!) into PDA, open ID Access Encoder,
+        //    save /keys/captain.acc, and verify all controls + access code chips wrap cleanly inside bounds!
+        EntityUid encUid = default;
+        await Server.WaitPost(() =>
+        {
+            slots.TryEject(pdaUid, PdaComponent.PdaIdSlotId, null, out _);
+            Assert.That(slots.TryInsert(pdaUid, PdaComponent.PdaIdSlotId, capIdUid, null), Is.True);
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/access_encoder.nte", out var eUid, out var err), Is.True, err);
+            encUid = eUid!.Value;
+        });
+        await RunTicks(10);
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "captain"), FromServer(encUid));
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var encList = new List<AccessEncoderUiControl>();
+            CollectDescendants(pdaWin!, encList);
+            Assert.That(encList.Count, Is.EqualTo(1));
+
+            // Access code chip wrap container must wrap Captain's 20+ access tags onto multiple rows!
+            var wraps = new List<Content.Client.UserInterface.Controls.ContentWrapContainer>();
+            CollectDescendants(encList[0], wraps);
+            var tagWrap = wraps.FirstOrDefault(w => w.ChildCount >= 10);
+            Assert.That(tagWrap, Is.Not.Null, "ID Access Encoder must display Captain's access codes inside a ContentWrapContainer.");
+            Assert.That(tagWrap!.Size.Y, Is.GreaterThan(40f),
+                $"Expected Captain's {tagWrap.ChildCount} access codes to wrap onto multiple rows, but height was {tagWrap.Size.Y}.");
+
+            AssertAllVisibleChildrenWithinViewport(pdaWin!, encList[0], "AccessEncoderUiControl (Captain AllAccess)");
+        });
+
+        // 3) Launch File Browser (9 directory buttons in dirBar!) on PDA and verify directory bar wraps within bounds!
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/file_browser.nte", out _, out var err), Is.True, err);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var fbList = new List<FileBrowserUiControl>();
+            CollectDescendants(pdaWin!, fbList);
+            Assert.That(fbList.Count, Is.EqualTo(1));
+            AssertAllVisibleChildrenWithinViewport(pdaWin!, fbList[0], "FileBrowserUiControl");
+
+            pdaWin!.Close();
+        });
+        await RunTicks(8);
+    }
+
+    private static void AssertAllVisibleChildrenWithinViewport(ComputerDisplayWindow win, Control root, string context)
+    {
+        var viewportRight = win.ScreenInsetControl.GlobalPosition.X + win.ScreenInsetControl.Size.X;
+        var all = new List<Control>();
+        CollectDescendants(root, all);
+
+        foreach (var ctrl in all)
+        {
+            if (!ctrl.VisibleInTree || ctrl.Size.X <= 0f || ctrl.Size.Y <= 0f)
+                continue;
+
+            // Only verify interactive/leaf UI elements (buttons, labels, line edits, wrap containers)
+            if (ctrl is not (Content.Client.UserInterface.Controls.ContentButton or
+                Content.Client.UserInterface.Controls.ContentLabel or
+                Content.Client.UserInterface.Controls.ContentLineEdit or
+                Content.Client.UserInterface.Controls.ContentWrapContainer))
+                continue;
+
+            var right = ctrl.GlobalPosition.X + ctrl.Size.X;
+            Assert.That(right, Is.LessThanOrEqualTo(viewportRight + 2f),
+                $"[{context}] Control {ctrl.GetType().Name} overflowed viewport right edge ({right:0.#} > {viewportRight:0.#}).");
+        }
     }
 }

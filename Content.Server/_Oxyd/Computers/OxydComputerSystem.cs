@@ -61,6 +61,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private DeviceNetworkSystem _deviceNet = default!;
     [Dependency] private OsProgramSystem _osPrograms = default!;
+    [Dependency] private PdaOsSystem _pdaOs = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
 
     private EntityQuery<OxydComputerComponent> _computerQuery;
@@ -320,7 +321,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
             RefreshComputerBootState(compUid, comp);
             SendPacketToHost(compUid, "MachineCommandReceiver", new ComputerPacket("status"));
             if (comp.BootProgram is { } bootProg && Exists(bootProg))
+            {
                 _osPrograms.UpdateOsUi(bootProg);
+                _pdaOs.UpdatePdaOsUi(bootProg);
+            }
         }
 
         return true;
@@ -577,6 +581,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         var hwEv = new ComputerHardwareChangedEvent(compUid);
         RaiseLocalEvent(compUid, ref hwEv);
+        if (comp.BootProgram is { } bootUid && Exists(bootUid))
+            RaiseLocalEvent(bootUid, ref hwEv);
     }
 
     public void RefreshComputerBootState(EntityUid compUid, OxydComputerComponent? comp = null)
@@ -911,14 +917,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 osComp.CurrentView = 3; // Active child application view
                 Dirty(bootUid, osComp);
+                _osPrograms.UpdateOsUi(bootUid);
+            }
+            else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp))
+            {
+                pdaOsComp.CurrentView = 3; // Active child application view
+                Dirty(bootUid, pdaOsComp);
+                _pdaOs.UpdatePdaOsUi(bootUid);
             }
             else if (TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp))
             {
                 embComp.CurrentView = 0; // Active child application view
                 Dirty(bootUid, embComp);
+                _osPrograms.UpdateOsUi(bootUid);
             }
-
-            _osPrograms.UpdateOsUi(bootUid);
+            else
+            {
+                _osPrograms.UpdateOsUi(bootUid);
+            }
         }
 
         UpdateComputerDisplayUi(compUid, comp);
@@ -962,6 +978,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     osComp.CurrentView = 1; // Return to Apps launcher
                     Dirty(bootUid, osComp);
                 }
+                else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp) && pdaOsComp.CurrentView == 3)
+                {
+                    pdaOsComp.CurrentView = 1; // Return to Apps launcher
+                    Dirty(bootUid, pdaOsComp);
+                }
                 else if (TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp))
                 {
                     embComp.CurrentView = 1;
@@ -970,6 +991,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
 
             _osPrograms.UpdateOsUi(bootUid);
+            _pdaOs.UpdatePdaOsUi(bootUid);
         }
 
         UpdateComputerDisplayUi(compUid, comp);

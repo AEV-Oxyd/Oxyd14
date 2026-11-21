@@ -13,7 +13,7 @@ namespace Content.Client._Oxyd.Computers.Programs;
 
 public sealed class NotekeeperUiControl : ProgramUiControl
 {
-    private readonly ContentBoxContainer _fileBar;
+    private readonly ContentWrapContainer _fileBar;
     private readonly ContentLineEdit _newNameInput;
     private readonly ContentLineEdit _editorLine;
     private readonly ContentLabel _bodyPreview;
@@ -27,7 +27,7 @@ public sealed class NotekeeperUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
-        _fileBar = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
+        _fileBar = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4, Margin = new Thickness(0, 0, 0, 4) };
         root.AddChild(_fileBar);
 
         var newRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
@@ -40,20 +40,20 @@ public sealed class NotekeeperUiControl : ProgramUiControl
             _newNameInput.Text = string.Empty;
         }
         _newNameInput.OnTextEntered += _ => SubmitCreate();
-        var createBtn = new ContentButton { Text = "Create .txt", MinWidth = 85 };
+        var createBtn = new ContentButton { Text = "Create .txt", MinWidth = 85, Margin = new Thickness(4, 0, 0, 0) };
         createBtn.OnPressed += _ => SubmitCreate();
-        var delBtn = new ContentButton { Text = "Delete", MinWidth = 60, Margin = new Thickness(2, 0) };
+        var delBtn = new ContentButton { Text = "Delete", MinWidth = 60, Margin = new Thickness(4, 0, 0, 0) };
         delBtn.OnPressed += _ => SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.DeleteFile, _currentPath));
         newRow.AddChild(_newNameInput);
         newRow.AddChild(createBtn);
         newRow.AddChild(delBtn);
         root.AddChild(newRow);
 
-        _statusLabel = new ContentLabel { Text = "shift_notes.txt", FontColorOverride = Color.FromHex("#00D4FF"), Margin = new Thickness(0, 0, 0, 4) };
+        _statusLabel = new ContentLabel { Text = "shift_notes.txt", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF"), Margin = new Thickness(0, 0, 0, 4) };
         root.AddChild(_statusLabel);
 
         var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _bodyPreview = new ContentLabel { FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
+        _bodyPreview = new ContentLabel { HorizontalExpand = true, FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
         scroll.AddChild(_bodyPreview);
         root.AddChild(scroll);
 
@@ -66,9 +66,9 @@ public sealed class NotekeeperUiControl : ProgramUiControl
             SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.SaveFile, _currentPath, nextText));
         }
         _editorLine.OnTextEntered += _ => SubmitSave();
-        var saveBtn = new ContentButton { Text = "Save", MinWidth = 60, Margin = new Thickness(2, 0) };
+        var saveBtn = new ContentButton { Text = "Save", MinWidth = 58, Margin = new Thickness(4, 0, 0, 0) };
         saveBtn.OnPressed += _ => SubmitSave();
-        var replaceBtn = new ContentButton { Text = "Overwrite", MinWidth = 80 };
+        var replaceBtn = new ContentButton { Text = "Overwrite", MinWidth = 76, Margin = new Thickness(4, 0, 0, 0) };
         replaceBtn.OnPressed += _ =>
         {
             var text = _editorLine.Text;
@@ -120,7 +120,7 @@ public sealed class NanoTaskUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
-        _statusLabel = new ContentLabel { Text = "NanoTask Checklist (/tasks/tasks.tsk)", FontColorOverride = Color.FromHex("#00D4FF") };
+        _statusLabel = new ContentLabel { Text = "NanoTask Checklist (/tasks/tasks.tsk)", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
         root.AddChild(_statusLabel);
 
         var addRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
@@ -229,6 +229,7 @@ public sealed class CrewManifestUiControl : ProgramUiControl
                 _listing.AddChild(new ContentLabel
                 {
                     Text = $"{entry.Name} — {entry.JobTitle}",
+                    HorizontalExpand = true,
                     FontColorOverride = Color.FromHex("#E0F7FA")
                 });
             }
@@ -252,10 +253,10 @@ public sealed class NewsReaderUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(6) };
-        var navRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
+        var navRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4, Margin = new Thickness(0, 0, 0, 4) };
         var prevBtn = new ContentButton { Text = "< Prev", MinWidth = 65 };
         prevBtn.OnPressed += _ => SendProgramMessage(new NewsReaderActionMessage(NewsReaderUiAction.Prev));
-        var nextBtn = new ContentButton { Text = "Next >", MinWidth = 65, Margin = new Thickness(4, 0) };
+        var nextBtn = new ContentButton { Text = "Next >", MinWidth = 65 };
         nextBtn.OnPressed += _ => SendProgramMessage(new NewsReaderActionMessage(NewsReaderUiAction.Next));
         var syncBtn = new ContentButton { Text = "Sync", MinWidth = 55 };
         syncBtn.OnPressed += _ => SendProgramMessage(new NewsReaderActionMessage(NewsReaderUiAction.SyncNetwork));
@@ -264,13 +265,13 @@ public sealed class NewsReaderUiControl : ProgramUiControl
         navRow.AddChild(syncBtn);
         root.AddChild(navRow);
 
-        _titleLabel = new ContentLabel { Text = "Station News", FontColorOverride = Color.FromHex("#FFE066") };
-        _metaLabel = new ContentLabel { Text = "", FontColorOverride = Color.FromHex("#88AAAA"), Margin = new Thickness(0, 2, 0, 6) };
+        _titleLabel = new ContentLabel { Text = "Station News", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066") };
+        _metaLabel = new ContentLabel { Text = "", HorizontalExpand = true, FontColorOverride = Color.FromHex("#88AAAA"), Margin = new Thickness(0, 2, 0, 6) };
         root.AddChild(_titleLabel);
         root.AddChild(_metaLabel);
 
         var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _bodyLabel = new ContentLabel { FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
+        _bodyLabel = new ContentLabel { HorizontalExpand = true, FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
         scroll.AddChild(_bodyLabel);
         root.AddChild(scroll);
 
@@ -339,6 +340,7 @@ public sealed class WantedListUiControl : ProgramUiControl
             _listContainer.AddChild(new ContentLabel
             {
                 Text = $"[{rec.Status}] {rec.TargetInfo.Name} ({rec.TargetInfo.JobTitle}) - {rec.Reason ?? "No reason"}",
+                HorizontalExpand = true,
                 FontColorOverride = Color.FromHex("#FFE066")
             });
         }
@@ -381,7 +383,7 @@ public sealed class NetProbeUiControl : ProgramUiControl
 
         _list.RemoveAllChildren();
         foreach (var d in state.ProbedDevices)
-            _list.AddChild(new ContentLabel { Text = $"{d.Name} | {d.Address} | {d.Frequency} | {d.NetId}" });
+            _list.AddChild(new ContentLabel { Text = $"{d.Name} | {d.Address} | {d.Frequency} | {d.NetId}", HorizontalExpand = true });
     }
 }
 
@@ -421,7 +423,7 @@ public sealed class LogProbeUiControl : ProgramUiControl
         _list.RemoveAllChildren();
         var n = 1;
         foreach (var l in state.PulledLogs)
-            _list.AddChild(new ContentLabel { Text = $"{n++}. [{TimeSpan.FromSeconds(Math.Truncate(l.Time.TotalSeconds))}] {l.Accessor}" });
+            _list.AddChild(new ContentLabel { Text = $"{n++}. [{TimeSpan.FromSeconds(Math.Truncate(l.Time.TotalSeconds))}] {l.Accessor}", HorizontalExpand = true });
     }
 }
 
@@ -435,12 +437,14 @@ public sealed class UtilityProgramUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(12) };
-        _titleLabel = new ContentLabel { Text = "Peripheral Module", FontColorOverride = Color.FromHex("#00FF88") };
-        _descLabel = new ContentLabel { Text = "Active.", Margin = new Thickness(0, 6) };
+        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, Margin = new Thickness(12) };
+        _titleLabel = new ContentLabel { Text = "Peripheral Module", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00FF88") };
+        _descLabel = new ContentLabel { Text = "Active.", HorizontalExpand = true, Margin = new Thickness(0, 6) };
         root.AddChild(_titleLabel);
         root.AddChild(_descLabel);
-        AddChild(root);
+        scroll.AddChild(root);
+        AddChild(scroll);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)

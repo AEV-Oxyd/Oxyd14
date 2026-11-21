@@ -110,6 +110,13 @@ namespace Content.Server.PDA
                 return;
             }
 
+            if (c == "eject_pai")
+            {
+                ItemSlotsSystem.TryEject(ent.Owner, PdaComponent.PdaPaiSlotId, actor, out _);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
             if (actor is { } user)
             {
                 if (c == "show_ringtone")
