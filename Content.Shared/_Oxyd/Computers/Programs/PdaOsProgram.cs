@@ -13,7 +13,7 @@ namespace Content.Shared._Oxyd.Computers.Programs;
 public sealed partial class PdaOsProgramComponent : Component
 {
     /// <summary>
-    /// 0 = PDA Home Dashboard, 1 = Installed Apps (.nte), 2 = Device & Links, 3 = Active App.
+    /// 0 = Home (Round time, Owner/ID & VFS Apps), 1 = Device & Hardware, 2 = Active App.
     /// </summary>
     [DataField, AutoNetworkedField]
     public int CurrentView;

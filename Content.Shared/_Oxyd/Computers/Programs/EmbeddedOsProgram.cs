@@ -31,6 +31,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
     public OsHardwareSummaryDto Hardware { get; }
     public bool HasLock { get; }
     public bool IsHostLocked { get; }
+    public string? DefaultAppPath { get; }
 
     public EmbeddedOsUiState(
         string title,
@@ -44,7 +45,8 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         List<MirroredDevicePortInfo> mirroredPorts,
         OsHardwareSummaryDto hardware,
         bool hasLock = false,
-        bool isHostLocked = false)
+        bool isHostLocked = false,
+        string? defaultAppPath = null)
     {
         Title = title;
         Subtitle = subtitle;
@@ -58,6 +60,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         Hardware = hardware;
         HasLock = hasLock;
         IsHostLocked = isHostLocked;
+        DefaultAppPath = defaultAppPath;
     }
 }
 

@@ -419,9 +419,16 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 /// </summary>
 public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 {
+    private const string ApcAppPath = "/bin/apc_control.nte";
+    private const string AtmosAppPath = "/bin/atmos_control.nte";
+    private const string LatheAppPath = "/bin/lathe_control.nte";
+    private const string TerminalAppPath = "/bin/terminal.nte";
+
     private readonly IEntityManager _entMan;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
+    private readonly ContentButton _simpleControllerTabBtn;
+    private readonly ContentButton _simpleTerminalTabBtn;
     private readonly ContentButton _appViewBtn;
     private readonly ContentButton _listViewBtn;
     private readonly ContentButton _linkViewBtn;
@@ -431,8 +438,12 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly ContentBoxContainer _portsView;
     private readonly ContentBoxContainer _appsContainer;
     private readonly ContentBoxContainer _portsContainer;
+    private readonly HardwareLockOverlayControl _lockOverlay;
     private readonly Dictionary<EntityUid, ProgramUiControl> _mountedChildren = new();
     private NetEntity? _activeChildNet;
+    private NetEntity? _defaultAppRunningEnt;
+    private NetEntity? _terminalRunningEnt;
+    private string _defaultAppPath = ApcAppPath;
 
     public EmbeddedOsUiControl()
     {
@@ -459,9 +470,28 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 
         var topRow = new ContentWrapContainer
         {
+            Name = "EmbeddedTabBar",
             HorizontalSeparation = 4,
             VerticalSeparation = 4,
             Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        _simpleControllerTabBtn = new ContentButton { Name = "ApcTabControllerButton", Text = "Controller", MinWidth = 84, Visible = false };
+        _simpleControllerTabBtn.OnPressed += _ =>
+        {
+            if (_defaultAppRunningEnt is { } ent)
+                SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
+            else
+                SendProgramMessage(new EmbeddedOsLaunchProgramMessage(_defaultAppPath));
+        };
+
+        _simpleTerminalTabBtn = new ContentButton { Name = "ApcTabTerminalButton", Text = "Terminal", MinWidth = 84, Visible = false };
+        _simpleTerminalTabBtn.OnPressed += _ =>
+        {
+            if (_terminalRunningEnt is { } ent)
+                SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
+            else
+                SendProgramMessage(new EmbeddedOsLaunchProgramMessage(TerminalAppPath));
         };
 
         _appViewBtn = new ContentButton { Text = "Controller", MinWidth = 75 };
@@ -471,6 +501,8 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _linkViewBtn = new ContentButton { Text = "DeviceLinks", MinWidth = 85 };
         _linkViewBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSetViewMessage(2));
 
+        topRow.AddChild(_simpleControllerTabBtn);
+        topRow.AddChild(_simpleTerminalTabBtn);
         topRow.AddChild(_appViewBtn);
         topRow.AddChild(_listViewBtn);
         topRow.AddChild(_linkViewBtn);
@@ -527,7 +559,13 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _portsView.AddChild(pScroll);
         root.AddChild(_portsView);
 
+        _lockOverlay = new HardwareLockOverlayControl
+        {
+            Visible = false
+        };
+
         AddChild(root);
+        AddChild(_lockOverlay);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -537,14 +575,75 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 
         _activeChildNet = state.ActiveChildProgram;
         var hw = state.Hardware;
+        var isSimpleTwoTabMode =
+            string.Equals(state.DefaultAppPath, ApcAppPath, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(state.DefaultAppPath, AtmosAppPath, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(state.DefaultAppPath, LatheAppPath, StringComparison.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(state.DefaultAppPath))
+            _defaultAppPath = state.DefaultAppPath;
+
+        _defaultAppRunningEnt = null;
+        _terminalRunningEnt = null;
+        foreach (var rp in state.RunningPrograms)
+        {
+            if (rp.IsBootProgram || rp.RunningEntity is not { } rEnt)
+                continue;
+
+            if (string.Equals(rp.FilePath, _defaultAppPath, StringComparison.OrdinalIgnoreCase))
+                _defaultAppRunningEnt = rEnt;
+            else if (string.Equals(rp.FilePath, TerminalAppPath, StringComparison.OrdinalIgnoreCase))
+                _terminalRunningEnt = rEnt;
+        }
+
+        _lockOverlay.Visible = state.IsHostLocked;
+        if (state.IsHostLocked)
+        {
+            var deviceName = string.IsNullOrWhiteSpace(state.HostName) ? "device" : state.HostName;
+            _lockOverlay.SetSubtitle($"Swipe authorized ID card on {deviceName} to unlock");
+        }
+
+        if (isSimpleTwoTabMode)
+        {
+            // Simplified controller layout (APC & Autolathe): strictly 2 tabs (Controller & Terminal), no hardware stats bar.
+            var terminalActive = _terminalRunningEnt != null && state.ActiveChildProgram == _terminalRunningEnt;
+
+            _headerLabel.Visible = false;
+            _statusLabel.Visible = false;
+            _tabRow.Visible = false;
+
+            _simpleControllerTabBtn.Visible = true;
+            _simpleTerminalTabBtn.Visible = true;
+            _simpleControllerTabBtn.Pressed = !terminalActive;
+            _simpleTerminalTabBtn.Pressed = terminalActive;
+            _simpleControllerTabBtn.Disabled = state.IsHostLocked;
+            _simpleTerminalTabBtn.Disabled = state.IsHostLocked;
+
+            _appViewBtn.Visible = false;
+            _listViewBtn.Visible = false;
+            _linkViewBtn.Visible = false;
+
+            _childViewport.Visible = true;
+            _appsView.Visible = false;
+            _portsView.Visible = false;
+
+            SyncVisibleChildProgram();
+            return;
+        }
+
+        _headerLabel.Visible = true;
+        _statusLabel.Visible = true;
+        _tabRow.Visible = true;
+        _simpleControllerTabBtn.Visible = false;
+        _simpleTerminalTabBtn.Visible = false;
+        _appViewBtn.Visible = true;
+        _listViewBtn.Visible = true;
+        _linkViewBtn.Visible = true;
 
         var nicText = hw.HasNetworkCard
             ? (!string.IsNullOrEmpty(hw.NetworkLabel) ? $"UP ({hw.NetworkLabel})" : "UP")
             : "NONE";
-        var lockSuffix = state.HasLock
-            ? (state.IsHostLocked ? " | [LOCKED]" : " | [UNLOCKED]")
-            : string.Empty;
-        _headerLabel.Text = $"{state.HostName} | [{state.DeviceGuid}]{lockSuffix}";
+        _headerLabel.Text = $"{state.HostName} | [{state.DeviceGuid}]";
         _statusLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}KB | NIC: {nicText} | DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
 
         _appViewBtn.Disabled = state.IsHostLocked;

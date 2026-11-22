@@ -597,6 +597,12 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
+        if (_fileSystem.IsCopyProtectedBlueprint(file))
+        {
+            comp.History.Add("transfer: encrypted recipe files are copy-protected and cannot be transferred.");
+            return;
+        }
+
         if (!_fileSystem.TryFindFileSystem(dstComp, out var dstDrive, out var dstFs))
         {
             comp.History.Add("transfer: destination has no hard drive.");
@@ -1009,7 +1015,7 @@ public sealed partial class TerminalSystem : EntitySystem
         }
 
         foreach (var (path, f) in matches)
-            comp.History.Add($"  {path,-28} {f.Size,6} B{(f.IsReadOnly ? " [RO]" : "")}");
+            comp.History.Add($"  {path,-28} {f.Size,6} B  [{f.LastModified:hh\\:mm\\:ss}]{(f.IsReadOnly ? " [RO]" : "")}");
     }
 
     private void AppendCatFile(EntityUid compUid, string path, TerminalProgramComponent comp)

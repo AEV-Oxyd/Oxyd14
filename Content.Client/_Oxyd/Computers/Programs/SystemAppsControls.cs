@@ -3,6 +3,7 @@ using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
+using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Maths;
@@ -107,7 +108,10 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         {
             _browserPanel.Visible = false;
             _previewPanel.Visible = true;
-            _previewTitle.Text = state.ViewedFileName;
+            var tsLabel = state.ViewedFileLastModified is { } modTs
+                ? $" [Modified {modTs:hh\\:mm\\:ss}]"
+                : string.Empty;
+            _previewTitle.Text = $"{state.ViewedFileName}{tsLabel}";
             _previewBody.Text = state.ViewedFileContent ?? string.Empty;
             return;
         }
@@ -137,11 +141,21 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         {
             var dir = file.Directory.EndsWith('/') ? file.Directory : file.Directory + "/";
             var fullPath = $"{dir}{file.Name}.{file.Extension}";
+            var isCopyProtected = file.Extension.Equals("lathe", StringComparison.OrdinalIgnoreCase) &&
+                                  (file.IsEncrypted || file.RemainingUses != null);
+
+            var flags = string.Empty;
+            if (file.IsEncrypted)
+                flags += " [ENC]";
+            if (file.RemainingUses != null)
+                flags += $" [{file.RemainingUses} uses]";
+            if (file.IsReadOnly)
+                flags += " [RO]";
 
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
             row.AddChild(new ContentLabel
             {
-                Text = $"{file.Name}.{file.Extension} ({file.Size}B){(file.IsReadOnly ? " [RO]" : "")}",
+                Text = $"{file.Name}.{file.Extension} ({file.Size}B) [{file.LastModified:hh\\:mm\\:ss}]{flags}",
                 HorizontalExpand = true
             });
 
@@ -156,7 +170,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
                 row.AddChild(runBtn);
             }
 
-            if (state.HasDisk)
+            if (state.HasDisk && !isCopyProtected)
             {
                 var cpBtn = new ContentButton { Text = file.IsOnDisk ? "->HDD" : "->Disk", MinWidth = 54, Margin = new Thickness(1, 0) };
                 cpBtn.OnPressed += _ => SendProgramMessage(new FileBrowserActionMessage(
@@ -381,15 +395,33 @@ public sealed class RouterUiControl : ProgramUiControl
 }
 
 // =============================================================================
-// Packet Sniffer Program UI
+// Packet Sniffer Program UI (Player-Relevant Capture & Live Packet Editor)
 // =============================================================================
 
 public sealed class PacketSnifferUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
+    private readonly ContentButton _filterRelevantBtn;
     private readonly ContentBoxContainer _packetsContainer;
     private readonly ContentLineEdit _targetInput;
     private readonly ContentLineEdit _payloadInput;
+
+    // Inline Packet Editor Panel
+    private readonly ContentPanelContainer _editorPanel;
+    private readonly ContentLabel _editorHeaderLabel;
+    private readonly ContentLineEdit _editTargetInput;
+    private readonly ContentBoxContainer _editEntriesContainer;
+    private readonly ContentLineEdit _newEntryKeyInput;
+    private readonly ContentLineEdit _newEntryValInput;
+
+    private PacketSnifferUiState? _lastState;
+    private bool _relevantOnly = true;
+    private string? _editingPacketId;
+    private string _editingSourceGuid = string.Empty;
+    private string _editingProtocol = string.Empty;
+    private string _editingFilePath = string.Empty;
+    private readonly List<(string Key, ContentLineEdit ValueEdit)> _entryEditors = new();
+    private readonly Dictionary<string, string> _editingEntries = new();
 
     public PacketSnifferUiControl()
     {
@@ -401,25 +433,36 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
             VerticalExpand = true,
-            Margin = new Thickness(4)
+            Margin = new Thickness(4),
+            SeparationOverride = 4
         };
 
         _headerLabel = new ContentLabel { Text = "Packet Sniffer", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
         root.AddChild(_headerLabel);
 
-        var btnBar = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4, Margin = new Thickness(0, 2, 0, 4) };
+        var btnBar = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         var refBtn = new ContentButton { Text = "Refresh" };
         refBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.Refresh));
+
+        _filterRelevantBtn = new ContentButton { Name = "SnifferFilterRelevantButton", Text = "Filter: Relevant Only" };
+        _filterRelevantBtn.OnPressed += _ =>
+        {
+            _relevantOnly = !_relevantOnly;
+            _filterRelevantBtn.Text = _relevantOnly ? "Filter: Relevant Only" : "Filter: All Packets";
+            RebuildPacketList();
+        };
+
         var saveBtn = new ContentButton { Text = "Save to HDD" };
         saveBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.SaveLogsToFile));
         var clrBtn = new ContentButton { Text = "Clear" };
         clrBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.ClearLogs));
         btnBar.AddChild(refBtn);
+        btnBar.AddChild(_filterRelevantBtn);
         btnBar.AddChild(saveBtn);
         btnBar.AddChild(clrBtn);
         root.AddChild(btnBar);
 
-        var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
+        var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
         _targetInput = new ContentLineEdit { MinWidth = 90, PlaceHolder = "Target GUID" };
         _payloadInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Raw packet payload...", Margin = new Thickness(4, 0, 0, 0) };
         var emitBtn = new ContentButton { Text = "Emit", MinWidth = 55, Margin = new Thickness(4, 0, 0, 0) };
@@ -429,12 +472,219 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         emitRow.AddChild(emitBtn);
         root.AddChild(emitRow);
 
+        // Inline Player-Editable Packet Modification Panel
+        _editorPanel = new ContentPanelContainer
+        {
+            Name = "SnifferPacketEditorPanel",
+            HorizontalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#101D2A"),
+                BorderColor = Color.FromHex("#00C8A0"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 6,
+                ContentMarginRightOverride = 6,
+                ContentMarginTopOverride = 6,
+                ContentMarginBottomOverride = 6
+            }
+        };
+
+        var edRoot = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+
+        _editorHeaderLabel = new ContentLabel
+        {
+            Text = "PACKET EDITOR",
+            HorizontalExpand = true,
+            FontColorOverride = Color.FromHex("#00FFCC")
+        };
+        edRoot.AddChild(_editorHeaderLabel);
+
+        var targetRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        targetRow.AddChild(new ContentLabel { Text = "Target GUID:", WordWrap = false, FontColorOverride = Color.FromHex("#88CCCC") });
+        _editTargetInput = new ContentLineEdit { Name = "SnifferEditTargetInput", HorizontalExpand = true, PlaceHolder = "Destination GUID..." };
+        targetRow.AddChild(_editTargetInput);
+        edRoot.AddChild(targetRow);
+
+        var edScroll = new ContentScrollContainer { HorizontalExpand = true, MaxHeight = 140 };
+        _editEntriesContainer = new ContentBoxContainer
+        {
+            Name = "SnifferEditEntriesContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 3
+        };
+        edScroll.AddChild(_editEntriesContainer);
+        edRoot.AddChild(edScroll);
+
+        var addRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        _newEntryKeyInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Key (e.g. Name)..." };
+        _newEntryValInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Value (e.g. Job Title)..." };
+        var addEntryBtn = new ContentButton { Text = "+ Add", MinWidth = 54 };
+        addEntryBtn.OnPressed += _ =>
+        {
+            var k = (_newEntryKeyInput.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(k))
+                return;
+            SyncEditorsToDictionary();
+            _editingEntries[k] = (_newEntryValInput.Text ?? string.Empty).Trim();
+            _newEntryKeyInput.Text = string.Empty;
+            _newEntryValInput.Text = string.Empty;
+            RebuildEditorRows();
+        };
+        addRow.AddChild(_newEntryKeyInput);
+        addRow.AddChild(_newEntryValInput);
+        addRow.AddChild(addEntryBtn);
+        edRoot.AddChild(addRow);
+
+        var edActions = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
+        var sendTargetBtn = new ContentButton { Name = "SnifferTransmitModifiedButton", Text = "Transmit to Target" };
+        sendTargetBtn.OnPressed += _ => SubmitEditedPacket(applyToSource: false);
+
+        var poisonSrvBtn = new ContentButton { Name = "SnifferPoisonServerButton", Text = "Poison Server Copy" };
+        poisonSrvBtn.OnPressed += _ => SubmitEditedPacket(applyToSource: true);
+
+        var closeEdBtn = new ContentButton { Text = "Close Editor" };
+        closeEdBtn.OnPressed += _ => CloseEditor();
+
+        edActions.AddChild(sendTargetBtn);
+        edActions.AddChild(poisonSrvBtn);
+        edActions.AddChild(closeEdBtn);
+        edRoot.AddChild(edActions);
+
+        _editorPanel.AddChild(edRoot);
+        root.AddChild(_editorPanel);
+
         var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _packetsContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
+        _packetsContainer = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 3
+        };
         scroll.AddChild(_packetsContainer);
         root.AddChild(scroll);
 
         AddChild(root);
+    }
+
+    private void OpenEditor(NetworkDataPacket pkt)
+    {
+        _editingPacketId = pkt.PacketId;
+        _editingSourceGuid = pkt.SourceAddress;
+        _editingProtocol = pkt.Protocol;
+        _editingFilePath = pkt.FilePath;
+        _editTargetInput.Text = pkt.TargetAddress;
+
+        _editingEntries.Clear();
+        foreach (var (k, v) in pkt.EditableEntries)
+            _editingEntries[k] = v;
+
+        _editorHeaderLabel.Text = $"EDIT [{pkt.PacketId}] {pkt.Protocol} ({pkt.FilePath}) | Src: {pkt.SourceAddress}";
+        _editorPanel.Visible = true;
+        RebuildEditorRows();
+    }
+
+    private void CloseEditor()
+    {
+        _editingPacketId = null;
+        _editorPanel.Visible = false;
+        _entryEditors.Clear();
+        _editingEntries.Clear();
+        _editEntriesContainer.RemoveAllChildren();
+    }
+
+    private void SyncEditorsToDictionary()
+    {
+        foreach (var (key, edit) in _entryEditors)
+            _editingEntries[key] = edit.Text ?? string.Empty;
+    }
+
+    private void RebuildEditorRows()
+    {
+        _entryEditors.Clear();
+        _editEntriesContainer.RemoveAllChildren();
+
+        if (_editingEntries.Count == 0)
+        {
+            _editEntriesContainer.AddChild(new ContentLabel
+            {
+                Text = "(No entries — add a key/value entry below)",
+                FontColorOverride = Color.FromHex("#8899AA"),
+                HorizontalExpand = true
+            });
+            return;
+        }
+
+        foreach (var (k, v) in _editingEntries.ToList())
+        {
+            var capturedKey = k;
+            var row = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 4
+            };
+
+            row.AddChild(new ContentLabel
+            {
+                Text = $"{capturedKey}:",
+                MinWidth = 110,
+                FontColorOverride = Color.FromHex("#FFE066")
+            });
+
+            var valEdit = new ContentLineEdit
+            {
+                Text = v,
+                HorizontalExpand = true
+            };
+            _entryEditors.Add((capturedKey, valEdit));
+            row.AddChild(valEdit);
+
+            var remBtn = new ContentButton { Text = "x", MinWidth = 24 };
+            remBtn.OnPressed += _ =>
+            {
+                SyncEditorsToDictionary();
+                _editingEntries.Remove(capturedKey);
+                RebuildEditorRows();
+            };
+            row.AddChild(remBtn);
+
+            _editEntriesContainer.AddChild(row);
+        }
+    }
+
+    private void SubmitEditedPacket(bool applyToSource)
+    {
+        if (string.IsNullOrEmpty(_editingPacketId))
+            return;
+
+        SyncEditorsToDictionary();
+        var payloadDict = new Dictionary<string, string>(_editingEntries);
+        SendProgramMessage(new PacketSnifferActionMessage(
+            PacketSnifferAction.ModifyAndTransmitPacket,
+            sourceGuid: _editingSourceGuid,
+            targetGuid: (_editTargetInput.Text ?? string.Empty).Trim(),
+            protocol: _editingProtocol,
+            payload: string.Empty,
+            packetId: _editingPacketId,
+            modifiedEntries: payloadDict,
+            applyToSource: applyToSource));
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -442,16 +692,74 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         if (raw is not PacketSnifferUiState state)
             return;
 
-        _headerLabel.Text = $"Sniffer [{state.RouterGuid}] | {(state.HasNetworkCard ? "NIC UP" : "NO NIC")} | {state.StatusMessage}";
+        _lastState = state;
+        var relCount = state.Packets.Count(p => p.IsPlayerRelevant);
+        _headerLabel.Text = $"Sniffer [{state.RouterGuid}] | {(state.HasNetworkCard ? "NIC UP" : "NO NIC")} | Relevant: {relCount}/{state.Packets.Count} | {state.StatusMessage}";
+        RebuildPacketList();
+    }
+
+    private void RebuildPacketList()
+    {
         _packetsContainer.RemoveAllChildren();
-        foreach (var p in state.Packets.TakeLast(40).Reverse())
+        if (_lastState == null)
+            return;
+
+        IEnumerable<NetworkDataPacket> filtered = _relevantOnly
+            ? _lastState.Packets.Where(p => p.IsPlayerRelevant)
+            : _lastState.Packets;
+
+        var displayList = filtered.TakeLast(40).Reverse().ToList();
+        if (displayList.Count == 0)
         {
             _packetsContainer.AddChild(new ContentLabel
             {
-                Text = $"[{p.Timestamp:mm\\:ss}] {p.SourceAddress}->{p.TargetAddress} [{p.Protocol}] {p.ByteSize}B: {p.PayloadSummary}",
+                Text = _relevantOnly
+                    ? "(No player-relevant packets captured yet — click 'Filter: Relevant Only' to inspect all traffic)"
+                    : "(No network packets captured yet)",
                 HorizontalExpand = true,
-                FontColorOverride = p.Dropped ? Color.FromHex("#FF5555") : Color.FromHex("#E0F7FA")
+                FontColorOverride = Color.FromHex("#8899AA")
             });
+            return;
+        }
+
+        foreach (var p in displayList)
+        {
+            var pkt = p;
+            var row = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 4
+            };
+
+            var tag = pkt.IsEditable ? " [EDITABLE]" : pkt.IsPlayerRelevant ? " [RELEVANT]" : string.Empty;
+            var color = pkt.Dropped
+                ? Color.FromHex("#FF5555")
+                : pkt.IsEditable
+                    ? Color.FromHex("#00FFCC")
+                    : Color.FromHex("#E0F7FA");
+
+            row.AddChild(new ContentLabel
+            {
+                Text = $"[{pkt.Timestamp:mm\\:ss}] {pkt.SourceAddress}->{pkt.TargetAddress} [{pkt.Protocol}] {pkt.ByteSize}B{tag}: {pkt.PayloadSummary}",
+                HorizontalExpand = true,
+                FontColorOverride = color
+            });
+
+            if (pkt.IsPlayerRelevant && pkt.IsEditable)
+            {
+                var editBtn = new ContentButton
+                {
+                    Name = "SnifferEditPacketButton",
+                    Text = "Edit",
+                    MinWidth = 48,
+                    VerticalAlignment = VAlignment.Center
+                };
+                editBtn.OnPressed += _ => OpenEditor(pkt);
+                row.AddChild(editBtn);
+            }
+
+            _packetsContainer.AddChild(row);
         }
     }
 }

@@ -160,8 +160,10 @@ public sealed partial class LatheMenu : FancyWindow
             Color statusColor;
             if (file.IsEncrypted)
             {
-                statusText = "🔒 Encrypted";
-                statusColor = Color.FromHex("#FF6666");
+                statusText = file.RemainingUses != null
+                    ? $"🔒 Encrypted ({file.RemainingUses} LP)"
+                    : "🔒 Encrypted";
+                statusColor = Color.FromHex("#FFD166");
             }
             else if (file.RemainingUses != null)
             {

@@ -108,6 +108,23 @@ public sealed partial class DownloaderSystem : EntitySystem
 
     private void CommitTransfer(EntityUid progUid, ActiveNetworkTransferComponent xfer, DownloaderProgramComponent dlComp)
     {
+        var editableEntries = new Dictionary<string, string>();
+        var isEditable = false;
+        if (xfer.File is DatabaseVirtualFile dbFile)
+        {
+            isEditable = true;
+            foreach (var (k, v) in dbFile.Data)
+            {
+                if (!k.StartsWith("__"))
+                    editableEntries[k] = v;
+            }
+        }
+        else if (xfer.File is TextVirtualFile txtFile)
+        {
+            isEditable = true;
+            editableEntries["content"] = txtFile.TextContent;
+        }
+
         var pkt = new NetworkDataPacket
         {
             PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
@@ -115,6 +132,10 @@ public sealed partial class DownloaderSystem : EntitySystem
             TargetAddress = _router.EnsureDeviceGuid(xfer.IsUpload ? xfer.ServerCompUid : xfer.ComputerUid),
             Protocol = xfer.IsUpload ? "TCP/UPLOAD" : "TCP/DOWNLOAD",
             PayloadSummary = $"{(xfer.IsUpload ? "PUT" : "GET")} {xfer.TargetPath} ({xfer.TotalBytes} B)",
+            IsPlayerRelevant = isEditable,
+            IsEditable = isEditable,
+            FilePath = xfer.TargetPath,
+            EditableEntries = editableEntries,
             ByteSize = xfer.TotalBytes,
             Timestamp = _timing.CurTime
         };
@@ -193,6 +214,12 @@ public sealed partial class DownloaderSystem : EntitySystem
             return;
         }
 
+        if (_fileSystem.IsCopyProtectedBlueprint(sourceFile))
+        {
+            dlComp.StatusMessage = "Transfer refused: encrypted recipe files are copy-protected and disk-only.";
+            return;
+        }
+
         var active = EnsureComp<ActiveNetworkTransferComponent>(progUid);
         active.IsUpload = isUpload;
         active.ComputerUid = compUid;
@@ -224,6 +251,9 @@ public sealed partial class DownloaderSystem : EntitySystem
         {
             foreach (var (path, file) in srvFs.Files)
             {
+                if (_fileSystem.IsCopyProtectedBlueprint(file))
+                    continue;
+
                 var cat = file switch
                 {
                     ProgramVirtualFile => "Programs",
@@ -260,6 +290,9 @@ public sealed partial class DownloaderSystem : EntitySystem
         {
             foreach (var (path, file) in localFs.Files)
             {
+                if (_fileSystem.IsCopyProtectedBlueprint(file))
+                    continue;
+
                 if (file is TextVirtualFile or RecipeBlueprintFile or TaskListVirtualFile or DatabaseVirtualFile)
                     localUploadables.Add(new LocalUploadCandidateDto(path, file.Size));
             }

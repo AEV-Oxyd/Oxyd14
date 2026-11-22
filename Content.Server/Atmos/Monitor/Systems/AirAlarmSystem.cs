@@ -246,7 +246,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
         }
         else if (cmd == "resync_devices")
         {
-            SyncAllSensors(ent.Owner);
+            SyncRegisterAllDevices(ent.Owner);
             EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
         }
     }
@@ -782,9 +782,22 @@ public sealed partial class AirAlarmSystem : EntitySystem
         if (_timer >= Delay)
         {
             _timer = 0f;
+            var synced = new HashSet<EntityUid>();
             foreach (var uid in _activeUserInterfaces)
             {
-                SyncAllSensors(uid);
+                if (synced.Add(uid))
+                    SyncAllSensors(uid);
+            }
+
+            var embQuery = EntityQueryEnumerator<AirAlarmComponent, EmbeddedComputerHostComponent>();
+            while (embQuery.MoveNext(out var uid, out var alarm, out var host))
+            {
+                if (host.ComputerEntity is not { } compUid || !_ui.IsUiOpen(compUid, ComputerUiKey.Key))
+                    continue;
+
+                if (synced.Add(uid))
+                    SyncAllSensors(uid);
+                EmitAirAlarmStatusPacket(uid, alarm);
             }
         }
     }

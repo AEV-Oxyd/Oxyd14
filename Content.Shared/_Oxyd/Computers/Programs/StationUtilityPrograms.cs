@@ -28,17 +28,20 @@ public sealed class CrewManifestUiState : BoundUserInterfaceState
     public CrewManifestEntries? Entries { get; }
     public bool IsOnlineSync { get; }
     public string StatusMessage { get; }
+    public TimeSpan? FileTimestamp { get; }
 
     public CrewManifestUiState(
         string stationName,
         CrewManifestEntries? entries,
         bool isOnlineSync = true,
-        string statusMessage = "")
+        string statusMessage = "",
+        TimeSpan? fileTimestamp = null)
     {
         StationName = stationName;
         Entries = entries;
         IsOnlineSync = isOnlineSync;
         StatusMessage = statusMessage;
+        FileTimestamp = fileTimestamp;
     }
 }
 
@@ -89,19 +92,22 @@ public sealed class NewsReaderBoundUserInterfaceState : BoundUserInterfaceState
     public int TotalNum { get; }
     public bool NotificationOn { get; }
     public string StatusMessage { get; }
+    public TimeSpan? FileTimestamp { get; }
 
     public NewsReaderBoundUserInterfaceState(
         NewsArticle? article,
         int targetNum,
         int totalNum,
         bool notificationOn,
-        string statusMessage = "")
+        string statusMessage = "",
+        TimeSpan? fileTimestamp = null)
     {
         Article = article;
         TargetNum = targetNum;
         TotalNum = totalNum;
         NotificationOn = notificationOn;
         StatusMessage = statusMessage;
+        FileTimestamp = fileTimestamp;
     }
 }
 
@@ -124,12 +130,18 @@ public sealed class WantedListUiState : BoundUserInterfaceState
     public List<WantedRecord> Records { get; }
     public bool IsOnlineSync { get; }
     public string StatusMessage { get; }
+    public TimeSpan? FileTimestamp { get; }
 
-    public WantedListUiState(List<WantedRecord> records, bool isOnlineSync = true, string statusMessage = "")
+    public WantedListUiState(
+        List<WantedRecord> records,
+        bool isOnlineSync = true,
+        string statusMessage = "",
+        TimeSpan? fileTimestamp = null)
     {
         Records = records;
         IsOnlineSync = isOnlineSync;
         StatusMessage = statusMessage;
+        FileTimestamp = fileTimestamp;
     }
 }
 

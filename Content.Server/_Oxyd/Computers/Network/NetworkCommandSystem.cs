@@ -51,6 +51,9 @@ public sealed partial class NetworkCommandSystem : EntitySystem
         if (!_fileSystem.TryGetFile<VirtualFile>(driveUid.Value, args.Data.TargetPath, out var file, fsComp))
             return;
 
+        if (_fileSystem.IsCopyProtectedBlueprint(file))
+            return;
+
         var content = file switch
         {
             TextVirtualFile txt => txt.TextContent,

@@ -118,9 +118,11 @@
     title: "FABRICATION TERMINAL"
     subtitle: " | Autolathe Subsystem"
   - type: DeviceLinkSink
+    invokeLimit: 0
     ports:
     - AutolatheBlueprintSink
     - AutolatheCommandSink
+    - AutolatheSetRecipeSink
     - MachineCommandReceiver
   - type: DeviceLinkSource
     ports:

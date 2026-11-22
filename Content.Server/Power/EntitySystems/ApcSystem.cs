@@ -44,6 +44,8 @@ public sealed partial class ApcSystem : EntitySystem
     [Dependency] private UserInterfaceSystem _ui = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
 
+    private static readonly ProtoId<SinkPortPrototype> PortApcCommandSink = "ApcCommandSink";
+    private static readonly ProtoId<SinkPortPrototype> PortMachineCommandReceiver = "MachineCommandReceiver";
     private static readonly ProtoId<SourcePortPrototype> PortApcStatusSource = "ApcStatusSource";
     private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
 
@@ -53,8 +55,17 @@ public sealed partial class ApcSystem : EntitySystem
         base.Initialize();
 
         UpdatesAfter.Add(typeof(PowerNetSystem));
+        SubscribeLocalEvent<ApcComponent, SignalReceivedEvent>(OnSignalReceived);
         SubscribeLocalEvent<ApcComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkSignal);
         SubscribeLocalEvent<ApcComponent, SignalReceivedEvent<ComputerPacket>>(OnComputerPacketSignal);
+    }
+
+    private void OnSignalReceived(Entity<ApcComponent> ent, ref SignalReceivedEvent args)
+    {
+        if (args.Port != PortApcCommandSink && args.Port != PortMachineCommandReceiver)
+            return;
+
+        ApcToggleBreaker(ent.Owner, ent.Comp, user: args.Trigger);
     }
 
     private void OnComputerPacketSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
@@ -138,6 +149,16 @@ public sealed partial class ApcSystem : EntitySystem
         _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
     }
 
+    private bool HasOpenApcUi(EntityUid uid, UserInterfaceComponent ui)
+    {
+        if (_ui.IsUiOpen((uid, ui), ApcUiKey.Key))
+            return true;
+
+        return TryComp<EmbeddedComputerHostComponent>(uid, out var host) &&
+               host.ComputerEntity is { } compUid &&
+               _ui.IsUiOpen(compUid, ComputerUiKey.Key);
+    }
+
     /// <inheritdoc />
     public override void Update(float deltaTime)
     {
@@ -145,7 +166,7 @@ public sealed partial class ApcSystem : EntitySystem
         var curTime = _gameTiming.CurTime;
         while (query.MoveNext(out var uid, out var apc, out var battery, out var ui))
         {
-            if (apc.LastUiUpdate + ApcComponent.VisualsChangeDelay < curTime && _ui.IsUiOpen((uid, ui), ApcUiKey.Key))
+            if (apc.LastUiUpdate + ApcComponent.VisualsChangeDelay < curTime && HasOpenApcUi(uid, ui))
             {
                 apc.LastUiUpdate = curTime;
                 UpdateUIState(uid, apc, battery);
@@ -325,6 +346,7 @@ public sealed partial class ApcSystem : EntitySystem
         if (!Resolve(uid, ref apc, ref battery, false))
             return;
 
+        var uiDirty = false;
         if (apc.LastChargeStateTime == null || forceChargeCheck || apc.LastChargeStateTime + ApcComponent.VisualsChangeDelay < _gameTiming.CurTime)
         {
             var newState = CalcChargeState((uid, apc), battery.NetworkBattery);
@@ -334,6 +356,7 @@ public sealed partial class ApcSystem : EntitySystem
                 apc.LastChargeStateTime = _gameTiming.CurTime;
 
                 _appearance.SetData(uid, ApcVisuals.ChargeState, newState);
+                uiDirty = true;
             }
         }
 
@@ -342,14 +365,18 @@ public sealed partial class ApcSystem : EntitySystem
         {
             apc.LastChannelState = channelState;
             _appearance.SetData(uid, ApcVisuals.ChannelState, channelState);
+            uiDirty = true;
         }
 
         var extPowerState = CalcExtPowerState(uid, battery.NetworkBattery);
         if (extPowerState != apc.LastExternalState)
         {
             apc.LastExternalState = extPowerState;
-            UpdateUIState(uid, apc, battery);
+            uiDirty = true;
         }
+
+        if (uiDirty)
+            UpdateUIState(uid, apc, battery);
 
         apc.NeedStateUpdate = false;
     }

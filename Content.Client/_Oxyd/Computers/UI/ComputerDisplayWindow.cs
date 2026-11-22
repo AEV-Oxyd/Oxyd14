@@ -32,6 +32,9 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     private readonly ContentPanelContainer _bezelPanel;
     private readonly StyleBoxFlat _bezelStyle;
     private readonly StyleBoxFlat _screenBgStyle;
+    private bool _appliedInitialScreenSize;
+    private float _autoExpandedHeight;
+    private float _lastAppliedHeight;
 
     public ComputerDisplayWindow()
     {
@@ -203,7 +206,16 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         _titleLabel.Text = $"{state.Title}{state.Subtitle} [{state.DeviceGuid}]";
         ScreenSurface.DeviceGuid = state.DeviceGuid;
         if (state.ScreenSize.X >= 360 && state.ScreenSize.Y >= 320)
+        {
             MinSize = new Vector2(state.ScreenSize.X, state.ScreenSize.Y);
+            if (!_appliedInitialScreenSize)
+            {
+                var targetHeight = ClampAutoHeight(MathF.Max(state.ScreenSize.Y, _autoExpandedHeight));
+                SetSize = new Vector2(state.ScreenSize.X, targetHeight);
+                _lastAppliedHeight = targetHeight;
+                _appliedInitialScreenSize = true;
+            }
+        }
 
         if (Color.TryFromHex(state.BorderColor, out var borderCol))
         {
@@ -229,6 +241,39 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
         ScreenSurface.InvalidateCapture();
         PipSurfaceRegistry.InvalidateDevice(ScreenSurface.DeviceGuid);
+    }
+
+    /// <summary>
+    /// Allows an embedded program UI (such as the Autolathe controller expanding for up to 8 recipes)
+    /// to resize the window height up to the available viewport height, unless the user manually resized it.
+    /// </summary>
+    public void RequestAutoExpandedHeight(float preferredHeight)
+    {
+        _autoExpandedHeight = preferredHeight;
+
+        if (_appliedInitialScreenSize &&
+            !float.IsNaN(SetHeight) &&
+            _lastAppliedHeight > 0f &&
+            MathF.Abs(SetHeight - _lastAppliedHeight) > 2f)
+        {
+            return;
+        }
+
+        var width = !float.IsNaN(SetWidth) ? SetWidth : MathF.Max(MinSize.X, 640f);
+        var targetHeight = ClampAutoHeight(MathF.Max(MinSize.Y, preferredHeight));
+        SetSize = new Vector2(width, targetHeight);
+        _lastAppliedHeight = targetHeight;
+        _appliedInitialScreenSize = true;
+    }
+
+    private float ClampAutoHeight(float desiredHeight)
+    {
+        var minH = MathF.Max(MinSize.Y, 320f);
+        var clamped = MathF.Max(minH, desiredHeight);
+        var rootHeight = UserInterfaceManager.RootControl.Size.Y;
+        if (rootHeight > 320f)
+            clamped = MathF.Min(clamped, MathF.Max(minH, rootHeight - 24f));
+        return clamped;
     }
 
     public void MountBootProgram(ProgramUiControl control)

@@ -30,6 +30,7 @@ public sealed class FileBrowserItemDto
     public bool IsEncrypted { get; }
     public int? RemainingUses { get; }
     public bool IsOnDisk { get; }
+    public TimeSpan LastModified { get; }
 
     public FileBrowserItemDto(
         string name,
@@ -39,7 +40,8 @@ public sealed class FileBrowserItemDto
         bool isReadOnly,
         bool isEncrypted,
         int? remainingUses,
-        bool isOnDisk = false)
+        bool isOnDisk = false,
+        TimeSpan lastModified = default)
     {
         Name = name;
         Extension = extension;
@@ -49,6 +51,7 @@ public sealed class FileBrowserItemDto
         IsEncrypted = isEncrypted;
         RemainingUses = remainingUses;
         IsOnDisk = isOnDisk;
+        LastModified = lastModified;
     }
 }
 
@@ -74,6 +77,7 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
     public string? DiskName { get; }
     public int? DiskUsedBytes { get; }
     public int? DiskTotalBytes { get; }
+    public TimeSpan? ViewedFileLastModified { get; }
 
     public FileBrowserUiState(
         string currentDirectory,
@@ -94,7 +98,8 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
         bool hasDisk = false,
         string? diskName = null,
         int? diskUsedBytes = null,
-        int? diskTotalBytes = null)
+        int? diskTotalBytes = null,
+        TimeSpan? viewedFileLastModified = null)
     {
         CurrentDirectory = currentDirectory;
         Files = files;
@@ -115,6 +120,7 @@ public sealed class FileBrowserUiState : BoundUserInterfaceState
         DiskName = diskName;
         DiskUsedBytes = diskUsedBytes;
         DiskTotalBytes = diskTotalBytes;
+        ViewedFileLastModified = viewedFileLastModified;
     }
 }
 

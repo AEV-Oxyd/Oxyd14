@@ -220,7 +220,8 @@ public sealed class CrewManifestUiControl : ProgramUiControl
         if (raw is not CrewManifestUiState state)
             return;
 
-        _headerLabel.Text = $"{state.StationName} — {state.StatusMessage}";
+        var tsText = state.FileTimestamp is { } ts ? $" [File: {ts:hh\\:mm\\:ss}]" : string.Empty;
+        _headerLabel.Text = $"{state.StationName}{tsText} — {state.StatusMessage}";
         _listing.RemoveAllChildren();
         if (state.Entries?.Entries != null)
         {
@@ -283,17 +284,18 @@ public sealed class NewsReaderUiControl : ProgramUiControl
         if (raw is not NewsReaderBoundUserInterfaceState state)
             return;
 
+        var tsText = state.FileTimestamp is { } ts ? $" [File: {ts:hh\\:mm\\:ss}]" : string.Empty;
         if (state.Article == null)
         {
             _titleLabel.Text = "No News Articles";
-            _metaLabel.Text = state.StatusMessage;
+            _metaLabel.Text = $"{state.StatusMessage}{tsText}";
             _bodyLabel.Text = string.Empty;
             return;
         }
 
         _titleLabel.Text = $"[{state.TargetNum}/{state.TotalNum}] {state.Article.Value.Title}";
-        _metaLabel.Text = $"Author: {state.Article.Value.Author ?? "Anonymous"} | {state.StatusMessage}";
-        _bodyLabel.Text = FormattedMessage.RemoveMarkupOrThrow(state.Article.Value.Content);
+        _metaLabel.Text = $"Author: {state.Article.Value.Author ?? "Anonymous"}{tsText} | {state.StatusMessage}";
+        _bodyLabel.Text = FormattedMessage.RemoveMarkupPermissive(state.Article.Value.Content);
     }
 }
 
@@ -333,7 +335,8 @@ public sealed class WantedListUiControl : ProgramUiControl
         if (raw is not WantedListUiState state)
             return;
 
-        _headerLabel.Text = $"Wanted List ({state.Records.Count}) | {state.StatusMessage}";
+        var tsText = state.FileTimestamp is { } ts ? $" [File: {ts:hh\\:mm\\:ss}]" : string.Empty;
+        _headerLabel.Text = $"Wanted List ({state.Records.Count}){tsText} | {state.StatusMessage}";
         _listContainer.RemoveAllChildren();
         foreach (var rec in state.Records)
         {

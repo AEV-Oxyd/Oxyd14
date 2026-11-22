@@ -12,6 +12,7 @@ using Content.Server._Oxyd.Computers.Programs;
 using Content.Server._Oxyd.Computers.ScreenSharing;
 using Content.Server._Oxyd.Computers.Tools;
 using Content.Server.Atmos.Monitor.Components;
+using Content.Server.Materials;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
 using Content.Shared._Oxyd.Computers;
@@ -31,6 +32,7 @@ using Content.Shared.Lathe;
 using Content.Shared.Lock;
 using Content.Shared.Materials;
 using Content.Shared.PDA;
+using Content.Shared.Research.Prototypes;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Containers;
@@ -827,7 +829,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         ComputerDisplayWindow? win = null;
         PdaOsUiControl? osCtrl = null;
-        Content.Client.UserInterface.Controls.ContentButton? appsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? homeBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
@@ -839,12 +841,11 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             osCtrl = osList[0];
             var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(osCtrl, btns);
-            appsBtn = btns.FirstOrDefault(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
-            Assert.That(appsBtn, Is.Not.Null);
+            homeBtn = btns.FirstOrDefault(b => b.Text != null && b.Text.Equals("Home", StringComparison.OrdinalIgnoreCase));
+            Assert.That(homeBtn, Is.Not.Null);
         });
 
-        await ClickViaHitTest(appsBtn!);
-
+        // Home and Apps are merged on PDA OS, so Notekeeper is immediately launchable from Home
         Content.Client.UserInterface.Controls.ContentButton? noteRunBtn = null;
         await Client.WaitAssertion(() =>
         {
@@ -931,8 +932,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(labels.Any(l => l.Text != null && l.Text.Contains("SINGLE_UI_WORKS")), Is.True);
         });
 
-        // Switch to Apps tab, launch Terminal, verify ONLY 1 TerminalUiControl, type `ls` and submit
-        await ClickViaHitTest(appsBtn!);
+        // Switch back to merged Home tab, launch Terminal, verify ONLY 1 TerminalUiControl, type `ls` and submit
+        await ClickViaHitTest(homeBtn!);
         Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
@@ -1112,26 +1113,17 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(routerSys.IsNetworkConnected(wsCompUid), Is.True);
         });
 
-        // Open held PDA and launch Terminal
+        // Open held PDA and launch Terminal directly from merged Home view
         await UseInHand();
         await RunTicks(12);
 
         ComputerDisplayWindow? pdaWin = null;
-        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(1));
             pdaWin = openWins[0];
-            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaWin, btns);
-            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
-        });
-        await ClickViaHitTest(pdaAppsBtn!);
-
-        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
-        await Client.WaitAssertion(() =>
-        {
             var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
@@ -1329,27 +1321,18 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(wsWin.Parent, Is.EqualTo(UiMan.WindowRoot));
         });
 
-        // Open held PDA -> Apps -> Terminal
+        // Open held PDA -> merged Home -> Terminal
         await UseInHand();
         await RunTicks(12);
 
         ComputerDisplayWindow? pdaWin = null;
-        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(2));
             pdaWin = openWins.First(w => w != wsWin);
-            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaWin, btns);
-            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
             pdaWin.MoveToFront();
-        });
-        await ClickViaHitTest(pdaAppsBtn!);
-
-        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
-        await Client.WaitAssertion(() =>
-        {
             var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
@@ -1613,22 +1596,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(12);
 
         ComputerDisplayWindow? pdaWin = null;
-        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(2));
             pdaWin = openWins.First(w => w != wsWin);
-            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaWin, btns);
-            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
             pdaWin.MoveToFront();
-        });
-        await ClickViaHitTest(pdaAppsBtn!);
-
-        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
-        await Client.WaitAssertion(() =>
-        {
             var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
@@ -1893,21 +1867,12 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(10);
 
         ComputerDisplayWindow? pdaWin = null;
-        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(1));
             pdaWin = openWins[0];
-            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaWin, btns);
-            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
-        });
-        await ClickViaHitTest(pdaAppsBtn!);
-
-        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
-        await Client.WaitAssertion(() =>
-        {
             var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             termRunBtn = FindRowRunButton(osList[0], "Terminal");
@@ -2184,21 +2149,12 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(12);
 
         ComputerDisplayWindow? pdaWin = null;
-        Content.Client.UserInterface.Controls.ContentButton? pdaAppsBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
             Assert.That(openWins.Count, Is.EqualTo(1));
             pdaWin = openWins[0];
-            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaWin, btns);
-            pdaAppsBtn = btns.First(b => b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
-        });
-        await ClickViaHitTest(pdaAppsBtn!);
-
-        Content.Client.UserInterface.Controls.ContentButton? termRunBtn = null;
-        await Client.WaitAssertion(() =>
-        {
             var osList = new System.Collections.Generic.List<PdaOsUiControl>();
             CollectDescendants(pdaWin!, osList);
             Assert.That(osList.Count, Is.EqualTo(1));
@@ -2501,19 +2457,64 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True,
                 "APC UI must open even when player has no access.");
             var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var embList = new List<EmbeddedOsUiControl>();
+            CollectDescendants(apcWin, embList);
+            Assert.That(embList.Count, Is.EqualTo(1));
+
+            // Simplified APC layout: strictly 2 tabs (Controller & Terminal) and NO hardware stats on Controller view
+            var allEmbBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(embList[0], allEmbBtns);
+            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                w => w.Name == "EmbeddedTabBar", embList[0]);
+            Assert.That(tabBar, Is.Not.Null);
+            var visibleTabBtns = tabBar!.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>()
+                .Where(b => b.VisibleInTree).Select(b => b.Text).ToList();
+            Assert.That(visibleTabBtns, Is.EquivalentTo(new[] { "Controller", "Terminal" }),
+                "Simplified APC UI must expose strictly 2 tabs: Controller and Terminal.");
+
+            var allVisibleLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(embList[0], allVisibleLabels);
+            var visibleTexts = allVisibleLabels.Where(l => l.VisibleInTree && !string.IsNullOrEmpty(l.Text)).Select(l => l.Text!).ToList();
+            Assert.That(visibleTexts.Any(t => t.Contains("CPU:", StringComparison.Ordinal) || t.Contains("RAM:", StringComparison.Ordinal)),
+                Is.False, "APC Controller tab must NOT display computer hardware stats.");
+
+            // Hardware lock must render as a full-UI transparent overlay with a lock icon
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, embList[0]);
+            Assert.That(lockOverlay, Is.Not.Null, "Locked APC must have HardwareLockOverlayControl.");
+            Assert.That(lockOverlay!.VisibleInTree, Is.True, "Hardware lock overlay must be visible while APC is locked.");
+            var lockIcon = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentTextureRect>(
+                t => t.Name == "HardwareLockIcon", lockOverlay);
+            Assert.That(lockIcon, Is.Not.Null, "Hardware lock overlay must include the locked keyhole icon.");
+
             var apcCtrls = new List<ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
             Assert.That(apcCtrls.Count, Is.EqualTo(1));
 
-            var lockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
-                l => l.Text != null && l.Text.Contains("LOCKED", StringComparison.OrdinalIgnoreCase) &&
-                     !l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), apcCtrls[0]);
-            Assert.That(lockedLabel, Is.Not.Null, "Locked APC UI must clearly display LOCKED status.");
+            // No redundant [LOCKED]/[UNLOCKED] text or Area Power Controller header inside ApcControlUiControl
+            var apcLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(apcCtrls[0], apcLabels);
+            Assert.That(apcLabels.Any(l => l.VisibleInTree && l.Text != null &&
+                (l.Text.Contains("[LOCKED]", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("[UNLOCKED]", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("AREA POWER CONTROLLER", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "APC controller UI must not duplicate outer box title or [LOCKED] text.");
 
             var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(apcCtrls[0], apcBtns);
             Assert.That(apcBtns.Count, Is.GreaterThan(0));
+            Assert.That(apcBtns.Any(b => b.Text != null &&
+                (b.Text.Equals("Refresh", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Save Log", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "APC controller UI must not show Refresh or Save Log buttons.");
             Assert.That(apcBtns.All(b => b.Disabled), Is.True, "All APC control buttons must be disabled while locked.");
+
+            // Clicking over an APC button while locked must hit the full-UI lock overlay
+            var btnCenter = apcBtns[0].GlobalPixelPosition + apcBtns[0].PixelSize / 2;
+            var hit = UiMan.MouseGetControl(new ScreenCoordinates(btnCenter, apcWin.Window?.Id ?? default));
+            Assert.That(hit == lockOverlay || (hit != null && HasAncestor(hit, lockOverlay)), Is.True,
+                "Hardware lock overlay must cover and intercept clicks over the whole APC UI while locked.");
+
+            AssertAllVisibleChildrenWithinViewport(apcWin, embList[0], "APC Locked UI");
         });
 
         // Sending BUI action while locked must be blocked server-side!
@@ -2538,6 +2539,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(10);
 
         Content.Client.UserInterface.Controls.ContentButton? apcToggleBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? apcTerminalTabBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? apcControllerTabBtn = null;
         await Server.WaitAssertion(() =>
         {
             Assert.That(lockSys.IsLocked(apcUid), Is.False, "Authorized Engineering ID swipe must unlock APC.");
@@ -2546,22 +2549,30 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
             var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, apcWin);
+            Assert.That(lockOverlay, Is.Not.Null);
+            Assert.That(lockOverlay!.VisibleInTree, Is.False, "Hardware lock overlay must hide once APC is unlocked.");
+
+            apcControllerTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "ApcTabControllerButton", apcWin);
+            apcTerminalTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "ApcTabTerminalButton", apcWin);
+            Assert.That(apcControllerTabBtn, Is.Not.Null);
+            Assert.That(apcTerminalTabBtn, Is.Not.Null);
+
             var apcCtrls = new List<ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
             Assert.That(apcCtrls.Count, Is.EqualTo(1));
 
-            var unlockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
-                l => l.Text != null && l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), apcCtrls[0]);
-            Assert.That(unlockedLabel, Is.Not.Null, "Unlocked APC UI must update to display UNLOCKED status.");
-
             var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(apcCtrls[0], apcBtns);
+            Assert.That(apcBtns.Count, Is.EqualTo(1), "APC menu must expose strictly a single Toggle Breaker button.");
             Assert.That(apcBtns.All(b => !b.Disabled), Is.True, "APC control buttons must be enabled once unlocked.");
             apcToggleBtn = apcBtns.FirstOrDefault(b => b.Text == "Toggle Breaker");
             Assert.That(apcToggleBtn, Is.Not.Null);
         });
 
-        // Clicking Toggle Breaker now works!
+        // Clicking Toggle Breaker now works and live-updates the open UI without needing Refresh!
         await ClickViaHitTest(apcToggleBtn!);
         await RunTicks(8);
         await Server.WaitAssertion(() =>
@@ -2569,8 +2580,45 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled, Is.EqualTo(!initialBreaker),
                 "Unlocked APC breaker must toggle on button click.");
         });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var apcCtrls = new List<ApcControlUiControl>();
+            CollectDescendants(apcWin, apcCtrls);
+            var expectedBreakerText = !initialBreaker ? "Power: ON" : "Power: OFF";
+            var telemetryLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.VisibleInTree && l.Text != null && l.Text.Contains(expectedBreakerText, StringComparison.Ordinal),
+                apcCtrls[0]);
+            Assert.That(telemetryLabel, Is.Not.Null, "Open APC UI must automatically update Power: ON/OFF state without Refresh.");
+            Assert.That(telemetryLabel!.Text, Does.Not.Contain("(POWER ON)").And.Not.Contain("(OFF)"));
+        });
 
-        // Swiping EngineeringIDCard again re-locks APC and disables UI buttons again!
+        // Clicking Terminal tab launches/focuses Terminal inside APC, and Controller switches back!
+        await ClickViaHitTest(apcTerminalTabBtn!);
+        await RunTicks(10);
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var termList = new List<TerminalUiControl>();
+            CollectDescendants(apcWin, termList);
+            Assert.That(termList.Count, Is.EqualTo(1), "Clicking APC Terminal tab must open TerminalUiControl.");
+            Assert.That(termList[0].VisibleInTree, Is.True);
+        });
+        await ClickViaHitTest(apcControllerTabBtn!);
+        await RunTicks(8);
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
+            var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var apcCtrls = new List<ApcControlUiControl>();
+            CollectDescendants(apcWin, apcCtrls);
+            Assert.That(apcCtrls.Count, Is.EqualTo(1));
+            Assert.That(apcCtrls[0].VisibleInTree, Is.True, "Clicking APC Controller tab must return to ApcControlUiControl.");
+        });
+
+        // Swiping EngineeringIDCard again re-locks APC, restores lock overlay, and disables UI buttons again!
         await Interact();
         await RunTicks(10);
         await Server.WaitAssertion(() =>
@@ -2581,6 +2629,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
             var apcWin = (ComputerDisplayWindow) apcWinBase!;
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, apcWin);
+            Assert.That(lockOverlay, Is.Not.Null);
+            Assert.That(lockOverlay!.VisibleInTree, Is.True, "Re-locking APC must show the hardware lock overlay again.");
             var apcCtrls = new List<ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
             var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
@@ -2622,18 +2673,43 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True,
                 "AirAlarm UI must open even when player has no access.");
             var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, alarmWin);
+            Assert.That(lockOverlay, Is.Not.Null, "Locked AirAlarm must have HardwareLockOverlayControl.");
+            Assert.That(lockOverlay!.VisibleInTree, Is.True, "Hardware lock overlay must be visible while AirAlarm is locked.");
+
+            // Strictly 2 tabs: Controller & Terminal (no Programs (.nte), no DeviceLinks, no hardware stats bar)
+            var alarmTabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                c => c.Name == "EmbeddedTabBar", alarmWin);
+            Assert.That(alarmTabBar, Is.Not.Null);
+            var alarmTabBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(alarmTabBar!, alarmTabBtns);
+            alarmTabBtns = alarmTabBtns.Where(b => b.Visible).ToList();
+            Assert.That(alarmTabBtns.Select(b => b.Text).ToList(), Is.EqualTo(new[] { "Controller", "Terminal" }),
+                "AirAlarm embedded UI must expose strictly Controller and Terminal tabs.");
+            var alarmOsLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(alarmWin, alarmOsLabels);
+            Assert.That(alarmOsLabels.Any(l => l.VisibleInTree && (l.Text ?? string.Empty).Contains("CPU:")), Is.False,
+                "Simplified AirAlarm UI must hide the embedded OS hardware stats bar.");
+
             var atmosCtrls = new List<AtmosControlUiControl>();
             CollectDescendants(alarmWin, atmosCtrls);
             Assert.That(atmosCtrls.Count, Is.EqualTo(1));
 
-            var lockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
-                l => l.Text != null && l.Text.Contains("LOCKED", StringComparison.OrdinalIgnoreCase) &&
-                     !l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), atmosCtrls[0]);
-            Assert.That(lockedLabel, Is.Not.Null, "Locked AirAlarm UI must clearly display LOCKED status.");
+            var atmosLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(atmosCtrls[0], atmosLabels);
+            Assert.That(atmosLabels.Any(l => l.VisibleInTree && l.Text != null &&
+                (l.Text.Contains("[LOCKED]", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("[UNLOCKED]", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("AIR ALARM CONTROLLER", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "AirAlarm controller UI must not duplicate outer box title or [LOCKED] text.");
 
             var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(atmosCtrls[0], alarmBtns);
             Assert.That(alarmBtns.Count, Is.GreaterThan(0));
+            Assert.That(alarmBtns.Any(b => b.Text != null &&
+                (b.Text.Equals("Refresh", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Save Log", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "AirAlarm controller UI must not show Refresh or Save Log buttons.");
             Assert.That(alarmBtns.All(b => b.Disabled), Is.True, "All AirAlarm control buttons must be disabled while locked.");
         });
 
@@ -2667,13 +2743,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True);
             var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, alarmWin);
+            Assert.That(lockOverlay, Is.Not.Null);
+            Assert.That(lockOverlay!.VisibleInTree, Is.False, "Hardware lock overlay must hide once AirAlarm is unlocked.");
+
             var atmosCtrls = new List<AtmosControlUiControl>();
             CollectDescendants(alarmWin, atmosCtrls);
             Assert.That(atmosCtrls.Count, Is.EqualTo(1));
-
-            var unlockedLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
-                l => l.Text != null && l.Text.Contains("UNLOCKED", StringComparison.OrdinalIgnoreCase), atmosCtrls[0]);
-            Assert.That(unlockedLabel, Is.Not.Null, "Unlocked AirAlarm UI must update to display UNLOCKED status.");
 
             var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(atmosCtrls[0], alarmBtns);
@@ -2682,13 +2758,24 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(panicBtn, Is.Not.Null);
         });
 
-        // Clicking Panic button now changes AirAlarm mode!
+        // Clicking Panic button now changes AirAlarm mode and automatically updates open UI!
         await ClickViaHitTest(panicBtn!);
         await RunTicks(8);
         await Server.WaitAssertion(() =>
         {
             Assert.That(SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode, Is.EqualTo(AirAlarmMode.Panic),
                 "Unlocked AirAlarm must switch to Panic mode on button click.");
+        });
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var alarmWinBase), Is.True);
+            var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
+            var atmosCtrls = new List<AtmosControlUiControl>();
+            CollectDescendants(alarmWin, atmosCtrls);
+            var modeLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.VisibleInTree && l.Text != null && l.Text.Contains("Mode: Panic", StringComparison.Ordinal),
+                atmosCtrls[0]);
+            Assert.That(modeLabel, Is.Not.Null, "Open AirAlarm UI must automatically update mode without Refresh.");
         });
 
         // Swiping AtmosIDCard again re-locks AirAlarm!
@@ -3025,12 +3112,19 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(SEntMan.GetComponent<ProgramComponent>(wsBootUid).ExecutablePath, Is.EqualTo("/bin/os.nte"));
         });
 
-        // Open PDA UI and verify PdaOsUiControl + Flashlight toggle + wrapping bounds
+        // Open PDA UI and verify reworked PdaOsUiControl:
+        // - Single unified tab bar (Home, Device, + inline running app tabs; NO Apps or Active App tab)
+        // - Merged Home displays Round Time, Name, Inserted ID & VFS apps list
+        // - Top-bar clickable utility icons (Flashlight toggle works)
+        // - Hardware stats hidden on Home and shown ONLY inside Device tab
         await UseInHand();
         await RunTicks(10);
 
         ComputerDisplayWindow? pdaWin = null;
+        PdaOsUiControl? pdaOsCtrl = null;
         Content.Client.UserInterface.Controls.ContentButton? flashlightBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? deviceTabBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? homeTabBtn = null;
         await Client.WaitAssertion(() =>
         {
             var openWins = UiMan.WindowRoot.Children.OfType<ComputerDisplayWindow>().Where(w => w.IsOpen).ToList();
@@ -3040,13 +3134,42 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var pdaOsList = new List<PdaOsUiControl>();
             CollectDescendants(pdaWin, pdaOsList);
             Assert.That(pdaOsList.Count, Is.EqualTo(1), "PDA window must mount PdaOsUiControl.");
+            pdaOsCtrl = pdaOsList[0];
 
             var btns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(pdaOsList[0], btns);
-            flashlightBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.StartsWith("Flashlight:", StringComparison.OrdinalIgnoreCase));
-            Assert.That(flashlightBtn, Is.Not.Null, "PDA OS Home dashboard must expose Flashlight toggle button.");
+            CollectDescendants(pdaOsCtrl, btns);
 
-            AssertAllVisibleChildrenWithinViewport(pdaWin, pdaOsList[0], "PdaOsUiControl Home");
+            // Single unified tab bar: Home & Device present, NO separate Apps or Active App tab
+            homeTabBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Name == "TabHomeButton");
+            deviceTabBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Name == "TabDeviceButton");
+            Assert.That(homeTabBtn, Is.Not.Null, "Unified tab bar must contain Home tab.");
+            Assert.That(deviceTabBtn, Is.Not.Null, "Unified tab bar must contain Device tab.");
+            Assert.That(btns.Any(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Equals("Apps", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Equals("Active App", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "PDA OS must merge Home+Apps and omit redundant Active App tab.");
+
+            // Top-bar clickable utility icon for Flashlight
+            flashlightBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Name == "UtilityFlashlightButton");
+            Assert.That(flashlightBtn, Is.Not.Null, "PDA OS top bar must expose clickable Flashlight utility icon button.");
+
+            // Merged Home shows Round Time, Name, Inserted ID & VFS apps, while hiding hardware stats (CPU/RAM/HDD)
+            var visibleLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(pdaOsCtrl, visibleLabels);
+            var visibleTexts = visibleLabels.Where(l => l.VisibleInTree && !string.IsNullOrEmpty(l.Text)).Select(l => l.Text!).ToList();
+
+            Assert.That(visibleTexts.Any(t => t.StartsWith("Round Time:", StringComparison.Ordinal)), Is.True,
+                "Home view must display Round Time.");
+            Assert.That(visibleTexts.Any(t => t.StartsWith("Name:", StringComparison.Ordinal)), Is.True,
+                "Home view must display Owner Name.");
+            Assert.That(visibleTexts.Any(t => t.StartsWith("Inserted ID:", StringComparison.Ordinal)), Is.True,
+                "Home view must display Inserted ID.");
+            Assert.That(FindRowRunButton(pdaOsCtrl, "Terminal"), Is.Not.Null,
+                "Merged Home view must list VFS apps (Terminal) directly.");
+            Assert.That(visibleTexts.Any(t => t.Contains("CPU:", StringComparison.Ordinal) || t.Contains("RAM:", StringComparison.Ordinal)),
+                Is.False, "Hardware stats (CPU/RAM) must NOT be shown on Home or always-visible PDA chrome.");
+
+            AssertAllVisibleChildrenWithinViewport(pdaWin, pdaOsCtrl, "PdaOsUiControl Home");
         });
 
         await ClickViaHitTest(flashlightBtn!);
@@ -3054,8 +3177,24 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Server.WaitAssertion(() =>
         {
             Assert.That(SEntMan.GetComponent<PdaComponent>(pdaUid).FlashlightOn, Is.True,
-                "Clicking Flashlight in PDA OS must toggle PDA flashlight ON.");
+                "Clicking Flashlight icon in PDA OS must toggle PDA flashlight ON.");
         });
+
+        // Switch to Device tab -> hardware stats ARE visible here, and still within bounds!
+        await ClickViaHitTest(deviceTabBtn!);
+        await RunTicks(6);
+        await Client.WaitAssertion(() =>
+        {
+            var visibleLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(pdaOsCtrl!, visibleLabels);
+            var visibleTexts = visibleLabels.Where(l => l.VisibleInTree && !string.IsNullOrEmpty(l.Text)).Select(l => l.Text!).ToList();
+
+            Assert.That(visibleTexts.Any(t => t.Contains("CPU:", StringComparison.Ordinal) && t.Contains("RAM:", StringComparison.Ordinal)),
+                Is.True, "Device tab must display hardware diagnostics.");
+            AssertAllVisibleChildrenWithinViewport(pdaWin!, pdaOsCtrl!, "PdaOsUiControl Device");
+        });
+        await ClickViaHitTest(homeTabBtn!);
+        await RunTicks(4);
 
         // 2) Insert CaptainIDCard (AllAccess — 20+ access codes!) into PDA, open ID Access Encoder,
         //    save /keys/captain.acc, and verify all controls + access code chips wrap cleanly inside bounds!
@@ -3106,6 +3245,1521 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             pdaWin!.Close();
         });
         await RunTicks(8);
+    }
+
+    [Test]
+    public async Task TestNetworkConfiguratorLinkPdaToButtonDoesNotAssertOnServer()
+    {
+        // Regression test: using NetworkConfigurator to link a SignalButton to a PDA (including in-hand)
+        // previously asserted on server with "Why are you raising predictive events on the server?"
+        // because OpenDeviceLinkUi passed predicted: true to SharedUserInterfaceSystem.OpenUi.
+        await SpawnTarget("SignalButton");
+        var buttonUid = ToServer(Target)!.Value;
+
+        EntityUid pdaUid = default;
+        await Server.WaitPost(() =>
+        {
+            pdaUid = SEntMan.SpawnEntity("DetectivePDA", SEntMan.GetCoordinates(TargetCoords));
+        });
+        await RunTicks(4);
+
+        var cfgNet = await PlaceInHands("NetworkConfigurator");
+        var cfgUid = ToServer(cfgNet);
+
+        // 1) Click SignalButton with NetworkConfigurator -> automatically switches to LinkMode and starts link on button
+        await Interact();
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var cfg = SEntMan.GetComponent<Content.Shared.DeviceConfigurator.Components.NetworkConfiguratorComponent>(cfgUid);
+            Assert.That(cfg.ActiveDeviceLink, Is.EqualTo(buttonUid),
+                "Clicking SignalButton with NetworkConfigurator must start linking from SignalButton.");
+        });
+
+        // 2) Interact active NetworkConfigurator with the PDA -> opens Link UI cleanly without server assert!
+        await Server.WaitPost(() =>
+        {
+            var interactionSys = Server.System<Content.Shared.Interaction.SharedInteractionSystem>();
+            interactionSys.InteractUsing(SPlayer, cfgUid, pdaUid, SEntMan.GetComponent<Robust.Shared.GameObjects.TransformComponent>(pdaUid).Coordinates);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var cfg = SEntMan.GetComponent<Content.Shared.DeviceConfigurator.Components.NetworkConfiguratorComponent>(cfgUid);
+            Assert.That(cfg.DeviceLinkTarget, Is.EqualTo(pdaUid), "DeviceLinkTarget must be set to the PDA.");
+            Assert.That(Server.System<SharedUserInterfaceSystem>().IsUiOpen(cfgUid, Content.Shared.DeviceConfigurator.NetworkConfiguratorUiKey.Link, SPlayer),
+                Is.True, "NetworkConfigurator Link UI must open cleanly on server without predictive assert.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow(typeof(Content.Client.NetworkConfigurator.NetworkConfiguratorLinkMenu), out var linkWin),
+                Is.True, "NetworkConfiguratorLinkMenu must open cleanly on client.");
+            ((Robust.Client.UserInterface.CustomControls.BaseWindow) linkWin!).Close();
+        });
+        await RunTicks(6);
+    }
+
+    [Test]
+    public async Task TestAutolatheTwoTabUiInMemoryBlueprintsAndPrinting()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var matSys = Server.System<SharedMaterialStorageSystem>();
+
+        await SpawnTarget("Autolathe");
+        var latheUid = ToServer(Target)!.Value;
+        EntityUid latheCompUid = default;
+        EntityUid latheBootUid = default;
+        EntityUid latheProgUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            Server.System<PowerReceiverSystem>().SetNeedsPower(latheUid, false);
+            latheCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid).ComputerEntity!.Value;
+
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Steel", 8000), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Plastic", 4000), Is.True);
+        });
+        await RunTicks(8);
+
+        // 1) All default autolathe blueprints must live in computer VFS memory (/blueprints/*.lathe) with timestamps!
+        string wirecutterFilePath = string.Empty;
+        string wrenchFilePath = string.Empty;
+        await Server.WaitAssertion(() =>
+        {
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
+            Assert.That(cComp.IsBooted, Is.True, "Powered Autolathe embedded computer must boot.");
+            latheBootUid = cComp.BootProgram!.Value;
+            latheProgUid = cComp.ActiveProgram!.Value;
+
+            Assert.That(fsSys.TryFindFileSystem(latheCompUid, out _, out var fs), Is.True);
+            var bpFiles = fs!.Files.Values.OfType<RecipeBlueprintFile>().ToList();
+            Assert.That(bpFiles.Count, Is.GreaterThan(0), "Autolathe static blueprints must be materialized into computer memory.");
+
+            foreach (var bp in bpFiles)
+            {
+                if (bp.GetAllRecipes().Any(r => r.Id == "Wirecutter"))
+                    wirecutterFilePath = bp.FullPath;
+                if (bp.GetAllRecipes().Any(r => r.Id == "Wrench"))
+                    wrenchFilePath = bp.FullPath;
+            }
+
+            Assert.That(wirecutterFilePath, Is.Not.Empty, "Wirecutter blueprint must exist in computer memory.");
+            Assert.That(wrenchFilePath, Is.Not.Empty, "Wrench blueprint must exist in computer memory.");
+        });
+
+        // 2) Open Autolathe UI and verify simplified 2-tab mode (Controller & Terminal only) + rich LatheControlUiControl!
+        await Activate();
+        await RunTicks(10);
+
+        ComputerDisplayWindow? win = null;
+        await Client.WaitAssertion(() =>
+        {
+            win = GetWindow<ComputerDisplayWindow>();
+            Assert.That(win.IsOpen, Is.True);
+
+            // Strictly 2 tabs: Controller & Terminal (no Programs (.nte), no DeviceLinks, no hardware stats bar)
+            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                c => c.Name == "EmbeddedTabBar", win);
+            Assert.That(tabBar, Is.Not.Null);
+            var visibleTabButtons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(tabBar!, visibleTabButtons);
+            visibleTabButtons = visibleTabButtons.Where(b => b.Visible).ToList();
+            Assert.That(visibleTabButtons.Select(b => b.Text).ToList(), Is.EqualTo(new[] { "Controller", "Terminal" }),
+                "Autolathe embedded UI must expose strictly Controller and Terminal tabs.");
+
+            // Rich LatheControlUiControl: materials as MaterialIconTile icons with overlaid counts, NOT text split by '|'
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            Assert.That(latheUi, Is.Not.Null);
+
+            var matTiles = new List<MaterialIconTile>();
+            CollectDescendants(latheUi!, matTiles);
+            Assert.That(matTiles.Count, Is.GreaterThanOrEqualTo(2), "Materials must render as MaterialIconTile icon controls.");
+            Assert.That(matTiles.Any(t => t.MaterialId == "Steel" && t.CountText == "80"), Is.True);
+            Assert.That(matTiles.Any(t => t.MaterialId == "Plastic" && t.CountText == "40"), Is.True);
+
+            // Recipe cards with descriptions & costs
+            var cards = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(latheUi!, cards);
+            var recipeCards = cards.Where(c => c.Name == "LatheRecipeCard").ToList();
+            Assert.That(recipeCards.Count, Is.GreaterThan(5), "In-memory blueprints must populate recipe browser cards.");
+        });
+
+        // 3) Queue Wirecutter x2 + Wrench x1 from in-memory blueprints and verify live printing + queue UI + actual item output!
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.PrintRecipe, "Wirecutter", wirecutterFilePath, 2), FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.PrintRecipe, "Wrench", wrenchFilePath, 1), FromServer(latheProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.CurrentRecipe?.Id, Is.EqualTo("Wirecutter"), "Printing an in-memory blueprint must start fabricating.");
+            Assert.That(latheComp.Queue.Count, Is.GreaterThanOrEqualTo(2), "Remaining items must be queued.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win!);
+            Assert.That(latheUi, Is.Not.Null);
+
+            var nameLbl = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheCurrentPrintingName", latheUi!);
+            var usageLbl = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheCurrentUsageLabel", latheUi!);
+            var progBar = GetControlFromChildren<ContentProgressBar>(
+                p => p.Name == "LatheProgressBar", latheUi!);
+            var queueContainer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                w => w.Name == "LatheQueueContainer", latheUi!);
+
+            Assert.That(nameLbl!.Text, Does.Contain("wirecutter").IgnoreCase);
+            Assert.That(usageLbl!.Text, Does.Contain("Steel").IgnoreCase);
+            Assert.That(progBar!.OverlayText, Does.Contain("%"));
+
+            var queueLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(queueContainer!, queueLabels);
+            Assert.That(queueLabels.Any(l => (l.Text ?? string.Empty).Contains("x1")), Is.True,
+                "Queue must display queued item icon + name + count.");
+        });
+
+        // Regression test: rapidly queuing >10 items (including a same-tick burst!) must NOT trigger DeviceLink
+        // InvokeLimit overload or freeze the Autolathe UI on a single stuck state!
+        for (var i = 0; i < 12; i++)
+        {
+            await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(
+                LatheControlAction.PrintRecipe,
+                i % 2 == 0 ? "Wrench" : "Wirecutter",
+                i % 2 == 0 ? wrenchFilePath : wirecutterFilePath,
+                1), FromServer(latheProgUid));
+        }
+        await RunTicks(6);
+
+        var expectedQueued = 0;
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            expectedQueued = latheComp.Queue.Sum(b => Math.Max(0, b.ItemsRequested - b.ItemsPrinted));
+            Assert.That(expectedQueued, Is.GreaterThanOrEqualTo(8),
+                "Autolathe queue must keep accepting items beyond the default DeviceLink InvokeLimit.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win!);
+            var queueHeader = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheQueueHeader", latheUi!);
+            Assert.That(queueHeader!.Text, Is.EqualTo($"Queue ({expectedQueued} items):"),
+                "Autolathe UI must stay synchronized with server queue after rapidly queuing >10 items.");
+        });
+
+        // Cancel queue and verify UI transitions cleanly back to Standby / Queue: Empty (not stuck on Printing!)
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.CancelAll), FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win!);
+            var nameLbl = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheCurrentPrintingName", latheUi!);
+            var queueHeader = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheQueueHeader", latheUi!);
+            Assert.That(nameLbl!.Text, Does.Contain("Standby"),
+                "Autolathe UI must return cleanly to Standby after cancelling queue.");
+            Assert.That(queueHeader!.Text, Is.EqualTo("Queue: Empty"));
+        });
+
+        // Re-queue 1 Wirecutter after rapid burst + cancel and advance past CompleteTime (2s) to prove printing still works!
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.PrintRecipe, "Wirecutter", wirecutterFilePath, 1), FromServer(latheProgUid));
+        await RunSeconds(3f);
+
+        await Server.WaitAssertion(() =>
+        {
+            var spawnedWirecutters = 0;
+            var metaQuery = SEntMan.EntityQueryEnumerator<MetaDataComponent>();
+            while (metaQuery.MoveNext(out _, out var meta))
+            {
+                if (meta.EntityPrototype?.ID == "Wirecutter")
+                    spawnedWirecutters++;
+            }
+
+            Assert.That(spawnedWirecutters, Is.GreaterThanOrEqualTo(1),
+                "Autolathe must actually spawn the fabricated Wirecutter item from its in-memory blueprint.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win!);
+            var nameLbl = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheCurrentPrintingName", latheUi!);
+            Assert.That(nameLbl!.Text, Does.Contain("Standby"),
+                "Autolathe UI must update back to Standby when final queued item finishes printing.");
+        });
+
+        // 4) Switch to Terminal tab inside the 2-tab embedded OS
+        await SendBui(ProgramUiKey.Key, new EmbeddedOsLaunchProgramMessage("/bin/terminal.nte"), FromServer(latheBootUid));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var termCtrl = GetControlFromChildren<TerminalUiControl>(_ => true, win!);
+            Assert.That(termCtrl, Is.Not.Null);
+            Assert.That(termCtrl!.VisibleInTree, Is.True);
+            win!.Close();
+        });
+        await RunTicks(6);
+    }
+
+    [Test]
+    public async Task TestPdaEjectPlacesItemInUserHandWhileHoldingPda()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var handsSys = Server.System<Content.Shared.Hands.EntitySystems.SharedHandsSystem>();
+
+        // Give InteractionTestMob a second hand (it only starts with hand_right) so it can hold the PDA AND receive ejected items.
+        await Server.WaitPost(() =>
+        {
+            handsSys.AddHand(SPlayer, "hand_left", Content.Shared.Hands.Components.HandLocation.Left);
+        });
+
+        // Hold CaptainPDA (which starts with an ID card & fountain pen inserted) in player's hand.
+        var pdaNet = await PlaceInHands("CaptainPDA");
+        var pdaUid = ToServer(pdaNet);
+        EntityUid pdaCompUid = default;
+        EntityUid pdaBootUid = default;
+        EntityUid idUid = default;
+        EntityUid penUid = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+            pdaBootUid = SEntMan.GetComponent<OxydComputerComponent>(pdaCompUid).BootProgram!.Value;
+            var pda = SEntMan.GetComponent<PdaComponent>(pdaUid);
+            Assert.That(pda.IdSlot.Item, Is.Not.Null, "CaptainPDA should start with an ID card.");
+            Assert.That(pda.PenSlot.Item, Is.Not.Null, "CaptainPDA should start with a pen.");
+            idUid = pda.IdSlot.Item!.Value;
+            penUid = pda.PenSlot.Item!.Value;
+
+            compSys.OpenComputerForActor(pdaCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        // Click Eject ID via PDA OS while holding the PDA -> ID card must land in the player's free hand!
+        await SendBui(ProgramUiKey.Key, new PdaOsHardwareActionMessage("eject_id"), FromServer(pdaBootUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var held = handsSys.EnumerateHeld(SPlayer).ToList();
+            Assert.That(held, Contains.Item(pdaUid), "Player should still be holding the PDA.");
+            Assert.That(held, Contains.Item(idUid), "Ejecting ID while holding the PDA must put the ID card in the user's hand.");
+
+            // Drop the ID card to free the other hand, then test Eject Pen too.
+            handsSys.TryDrop(SPlayer, idUid);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new PdaOsHardwareActionMessage("eject_pen"), FromServer(pdaBootUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var held = handsSys.EnumerateHeld(SPlayer).ToList();
+            Assert.That(held, Contains.Item(penUid), "Ejecting Pen while holding the PDA must put the pen in the user's hand.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            win.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestRecordFileDownloadTimestampsComputerRoutersAndEditablePacketSniffer()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var guidSys = Server.System<SharedDeviceGuidSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var itemSlots = Server.System<ItemSlotsSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid routerCompUid = default;
+        EntityUid serverHost = default;
+        EntityUid serverCompUid = default;
+        EntityUid pda1Host = default;
+        EntityUid pda1CompUid = default;
+        EntityUid pda2Host = default;
+        EntityUid pda2CompUid = default;
+        EntityUid wsHost = default;
+        EntityUid wsCompUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            routerCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost).ComputerEntity!.Value;
+
+            serverHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            serverCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost).ComputerEntity!.Value;
+
+            pda1Host = SEntMan.SpawnEntity("DetectivePDA", coords);
+            pda1CompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pda1Host).ComputerEntity!.Value;
+
+            pda2Host = SEntMan.SpawnEntity("DetectivePDA", coords);
+            pda2CompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pda2Host).ComputerEntity!.Value;
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost).ComputerEntity!.Value;
+        });
+        await RunTicks(8);
+
+        // 1) Verify both Router and DataServer are real booted computers with HDDs, and place a local Crew Manifest copy on DataServer's HDD!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(routerCompUid).IsBooted, Is.True, "StationNetworkRouter must be a booted computer.");
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(serverCompUid).IsBooted, Is.True, "BaseDataServer must be a booted computer.");
+            Assert.That(fsSys.TryFindFileSystem(routerCompUid, out _, out _), Is.True, "Router computer must have its own HDD.");
+            Assert.That(fsSys.TryFindFileSystem(serverCompUid, out var srvDrive, out var srvFs), Is.True, "DataServer computer must have its own HDD.");
+
+            Assert.That(fsSys.TryWriteFile(srvDrive!.Value, new DatabaseVirtualFile
+            {
+                Name = "crew_manifest",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "crew_manifest",
+                Data = new Dictionary<string, string>
+                {
+                    ["__station"] = "NSS Oxyd",
+                    ["row_0"] = "Alice\tCaptain\tCaptain\tJobIconCaptain",
+                    ["row_1"] = "Bob\tStation Engineer\tStationEngineer\tJobIconStationEngineer"
+                },
+                Size = 256
+            }, srvFs), Is.True);
+        });
+
+        // 2) Launch CrewManifest & FileBrowser on PDA #1 -> must download /records/crew_manifest.db from DataServer's local copy into PDA #1's memory with a timestamp!
+        EntityUid pda1ManifestProg = default;
+        EntityUid pda1FileBrowserProg = default;
+        TimeSpan firstDownloadTs = default;
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(pda1CompUid, "/bin/crew_manifest.nte", out var mProg, out var mErr), Is.True, mErr);
+            pda1ManifestProg = mProg!.Value;
+            Assert.That(compSys.TryLaunchExecutable(pda1CompUid, "/bin/file_browser.nte", out var fbProg, out var fbErr), Is.True, fbErr);
+            pda1FileBrowserProg = fbProg!.Value;
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(pda1CompUid, out var pda1Drive, out var pda1Fs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(pda1Drive!.Value, CrewManifestProgramComponent.CacheFilePath, out var localManifest, pda1Fs), Is.True,
+                "CrewManifest program must download /records/crew_manifest.db into PDA memory.");
+            Assert.That(localManifest!.Data.Values.Any(v => v.StartsWith("Alice\tCaptain\t")), Is.True);
+            Assert.That(localManifest.Data.Values.Any(v => v.StartsWith("Bob\tStation Engineer\t")), Is.True);
+            Assert.That(localManifest.LastModified, Is.GreaterThan(TimeSpan.Zero), "Files in memory must record a LastModified timestamp.");
+            firstDownloadTs = localManifest.LastModified;
+        });
+
+        // Open PDA #1 UI and verify timestamps render in FileBrowser & CrewManifest UI!
+        await Server.WaitPost(() =>
+        {
+            compSys.SwitchActiveProgram(pda1CompUid, pda1FileBrowserProg, actor: SPlayer);
+            compSys.OpenComputerForActor(pda1CompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var fb = GetControlFromChildren<FileBrowserUiControl>(_ => true, win);
+            Assert.That(fb, Is.Not.Null);
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(fb!, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("crew_manifest.db") && (l.Text ?? string.Empty).Contains("[")), Is.True,
+                "FileBrowser must show timestamp on files in memory.");
+            win.Close();
+        });
+        await RunTicks(4);
+
+        // 3) Open PacketSniffer on Workstation -> verify player-relevant editable TCP/MANIFEST packet was captured!
+        EntityUid snifferProg = default;
+        string capturedPacketId = string.Empty;
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsCompUid, "/bin/packet_sniffer.nte", out var sProg, out var sErr), Is.True, sErr);
+            snifferProg = sProg!.Value;
+            compSys.OpenComputerForActor(wsCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var routerComp = SEntMan.GetComponent<NetworkRouterComponent>(routerHost);
+            var manifestPkt = routerComp.RecordedPackets.LastOrDefault(p =>
+                p.Protocol == "TCP/MANIFEST" && p.IsPlayerRelevant && p.IsEditable);
+            Assert.That(manifestPkt, Is.Not.Null, "Router & PacketSniffer must capture player-relevant editable TCP/MANIFEST packet.");
+            Assert.That(manifestPkt!.EditableEntries["Alice"], Is.EqualTo("Captain"));
+            Assert.That(manifestPkt.EditableEntries["Bob"], Is.EqualTo("Station Engineer"));
+            capturedPacketId = manifestPkt.PacketId;
+        });
+
+        ComputerDisplayWindow? wsWin = null;
+        await Client.WaitAssertion(() =>
+        {
+            wsWin = GetWindow<ComputerDisplayWindow>();
+            var snifferUi = GetControlFromChildren<PacketSnifferUiControl>(_ => true, wsWin);
+            Assert.That(snifferUi, Is.Not.Null);
+            var editBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "SnifferEditPacketButton", snifferUi!);
+            Assert.That(editBtn, Is.Not.Null, "PacketSniffer UI must provide an Edit button for captured player-relevant editable packets.");
+        });
+
+        // 4) Modify captured Crew Manifest packet (Alice -> Clown) and transmit directly to PDA #1!
+        await RunTicks(5);
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.ModifyAndTransmitPacket,
+            targetGuid: guidSys.GetGuid(pda1CompUid),
+            packetId: capturedPacketId,
+            modifiedEntries: new Dictionary<string, string>
+            {
+                ["Alice"] = "Clown",
+                ["Bob"] = "Station Engineer"
+            },
+            applyToSource: false), FromServer(snifferProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(pda1CompUid, out var pda1Drive, out var pda1Fs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(pda1Drive!.Value, CrewManifestProgramComponent.CacheFilePath, out var updatedManifest, pda1Fs), Is.True);
+            Assert.That(updatedManifest!.Data.Values.Any(v => v.StartsWith("Alice\tClown\t")), Is.True,
+                "Transmitting modified Crew Manifest packet must update target device's local /records/crew_manifest.db.");
+            Assert.That(updatedManifest.LastModified, Is.GreaterThanOrEqualTo(firstDownloadTs));
+        });
+
+        // 5) Poison DataServer's local copy via PacketSniffer (applyToSource: true -> Bob = Syndicate Agent) and confirm PDA #2 downloads the poisoned copy!
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.ModifyAndTransmitPacket,
+            sourceGuid: guidSys.GetGuid(serverCompUid),
+            packetId: capturedPacketId,
+            modifiedEntries: new Dictionary<string, string>
+            {
+                ["Alice"] = "Captain",
+                ["Bob"] = "Syndicate Agent"
+            },
+            applyToSource: true), FromServer(snifferProg));
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            wsWin!.Close();
+        });
+        await RunTicks(4);
+
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(pda2CompUid, "/bin/crew_manifest.nte", out _, out var err), Is.True, err);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(pda2CompUid, out var pda2Drive, out var pda2Fs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(pda2Drive!.Value, CrewManifestProgramComponent.CacheFilePath, out var pda2Manifest, pda2Fs), Is.True);
+            Assert.That(pda2Manifest!.Data.Values.Any(v => v.StartsWith("Bob\tSyndicate Agent\t")), Is.True,
+                "New clients downloading Crew Manifest must receive the server computer's modified local copy.");
+        });
+
+        // 6) Verify Router computer also serves its own local copy when DataServer is offline!
+        await Server.WaitPost(() =>
+        {
+            // Cut DataServer's network wire so only the Router computer handles network record downloads
+            SEntMan.GetComponent<OxydComputerComponent>(serverCompUid).NetworkWireCut = true;
+            compSys.RecalculateHardwareStats(serverCompUid);
+
+            Assert.That(fsSys.TryFindFileSystem(routerCompUid, out var rDrive, out var rFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(rDrive!.Value, new DatabaseVirtualFile
+            {
+                Name = "crew_manifest",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "crew_manifest",
+                Data = new Dictionary<string, string>
+                {
+                    ["__station"] = "Router Local Copy",
+                    ["row_0"] = "Charlie\tRouter Admin\tAssistant\tJobIconAssistant"
+                },
+                Size = 256
+            }, rFs), Is.True);
+
+            // Force PDA #2 to refresh CrewManifest from the Router computer's local copy
+            var pda2Comp = SEntMan.GetComponent<OxydComputerComponent>(pda2CompUid);
+            var pda2ManifestProg = pda2Comp.RunningPrograms.First(p => SEntMan.HasComponent<CrewManifestProgramComponent>(p));
+            compSys.SwitchActiveProgram(pda2CompUid, pda2ManifestProg);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(pda2CompUid, out var pda2Drive, out var pda2Fs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(pda2Drive!.Value, CrewManifestProgramComponent.CacheFilePath, out var routerCopy, pda2Fs), Is.True);
+            Assert.That(routerCopy!.Data["__station"], Is.EqualTo("Router Local Copy"));
+            Assert.That(routerCopy.Data.Values.Any(v => v.StartsWith("Charlie\tRouter Admin\t")), Is.True,
+                "StationNetworkRouter computer must serve its own local /records/crew_manifest.db copy.");
+        });
+
+        // 7) Verify offline reading from local cached file when PDA #1 loses its NIC!
+        await Server.WaitPost(() =>
+        {
+            itemSlots.TryEject(pda1CompUid, ModularComputerComponent.SlotNetwork, null, out _);
+            compSys.RecalculateHardwareStats(pda1CompUid);
+            compSys.SwitchActiveProgram(pda1CompUid, pda1ManifestProg, actor: SPlayer);
+            compSys.OpenComputerForActor(pda1CompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var manifestUi = GetControlFromChildren<CrewManifestUiControl>(_ => true, win);
+            Assert.That(manifestUi, Is.Not.Null);
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(manifestUi!, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("Alice — Clown")), Is.True,
+                "Offline CrewManifest must render its local cached /records/crew_manifest.db file from memory.");
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("[File:")), Is.True,
+                "CrewManifest UI must display the cached file timestamp.");
+            win.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestEncryptedRecipeDiskUsesCopyProtectionInstantLoadAndLimitedLatheMemory()
+    {
+        await SpawnTarget("Autolathe");
+        var latheUid = ToServer(Target)!.Value;
+        EntityUid latheCompUid = default;
+        EntityUid latheProgUid = default;
+        EntityUid latheDriveUid = default;
+        EntityUid secDiskUid = default;
+        EntityUid hudDiskUid = default;
+        EntityUid engDiskUid = default;
+        EntityUid bigPackDiskUid = default;
+        EntityUid pdaUid = default;
+        EntityUid pdaCompUid = default;
+        EntityUid pdaBrowserProg = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(latheUid).Coordinates;
+            Server.System<PowerReceiverSystem>().SetNeedsPower(latheUid, false);
+            latheCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid).ComputerEntity!.Value;
+
+            var matSys = Server.System<MaterialStorageSystem>();
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Steel", 20000), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Glass", 20000), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Plastic", 20000), Is.True);
+
+            secDiskUid = SEntMan.SpawnAtPosition("BaseRecipeDisk", coords);
+            hudDiskUid = SEntMan.SpawnAtPosition("OxydRecipeDiskEncrypted", coords);
+            engDiskUid = SEntMan.SpawnAtPosition("OxydDataDiskEngineering", coords);
+            bigPackDiskUid = SEntMan.SpawnAtPosition("OxydDataDiskBlank", coords);
+            pdaUid = SEntMan.SpawnAtPosition("PassengerPDA", coords);
+            pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+
+            // Populate an unencrypted 10-recipe multi-blueprint file on bigPackDiskUid (> 20 KB)
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var bigPackFs = SEntMan.GetComponent<FileSystemComponent>(bigPackDiskUid);
+            var wroteBig = fsSys.TryWriteFile(bigPackDiskUid, new RecipeBlueprintFile
+            {
+                Name = "mega_engineering_pack",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipes = new List<ProtoId<LatheRecipePrototype>>
+                {
+                    "DoorElectronics",
+                    "FirelockElectronics",
+                    "SolarTrackerElectronics",
+                    "APCElectronics",
+                    "AirAlarmElectronics",
+                    "FireAlarmElectronics",
+                    "PowerCellSmall",
+                    "PowerCellMedium",
+                    "Multitool",
+                    "Wirecutter"
+                },
+                IsEncrypted = false,
+                DrmLocked = false,
+                RemainingUses = null
+            }, bigPackFs);
+            Assert.That(wroteBig, Is.True, "Writing multi-blueprint file to blank disk must succeed.");
+        });
+
+        await RunTicks(12);
+
+        // 1) Verify dynamic file sizing (multi-blueprint > single-blueprint) & tight Autolathe HDD free space!
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
+            Assert.That(cComp.IsBooted, Is.True);
+            latheProgUid = cComp.ActiveProgram!.Value;
+
+            Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out var latheFs), Is.True);
+            latheDriveUid = drive!.Value;
+
+            var secFs = SEntMan.GetComponent<FileSystemComponent>(secDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(secDiskUid, "/blueprints/security_gear.lathe", out var secBp, secFs), Is.True);
+
+            var engFs = SEntMan.GetComponent<FileSystemComponent>(engDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(engDiskUid, "/blueprints/door_electronics.lathe", out var doorBp, engFs), Is.True);
+
+            var bigFs = SEntMan.GetComponent<FileSystemComponent>(bigPackDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(bigPackDiskUid, "/blueprints/mega_engineering_pack.lathe", out var bigBp, bigFs), Is.True);
+
+            Assert.That(secBp!.IsEncrypted, Is.True, "BaseRecipeDisk security_gear.lathe must be encrypted.");
+            Assert.That(secBp.Size, Is.EqualTo(16896), "4-recipe DRM pack size must include per-recipe + pointUsage scaling.");
+            Assert.That(doorBp!.Size, Is.EqualTo(2560), "Single-recipe blueprint must be 2.5 KB.");
+            Assert.That(bigBp!.Size, Is.EqualTo(20992), "10-recipe multi-blueprint file must be 20.5 KB.");
+            Assert.That(bigBp.Size, Is.GreaterThan(secBp.Size));
+            Assert.That(secBp.Size, Is.GreaterThan(doorBp.Size));
+
+            var freeBytes = latheFs!.MaxStorageBytes - latheFs.UsedStorageBytes;
+            Assert.That(latheFs.MaxStorageBytes, Is.EqualTo(241664), "Autolathe drive must have compact 236 KB capacity.");
+            Assert.That(freeBytes, Is.GreaterThanOrEqualTo(doorBp.Size), "Autolathe must still have enough free space to save a few small blueprints.");
+            Assert.That(freeBytes, Is.LessThan(bigBp.Size), "Autolathe limited memory must not have enough free space for a large 10-recipe pack.");
+
+            // Encrypted recipe files can NEVER be written directly to any ComputerHardDriveComponent!
+            var encryptedClone = (RecipeBlueprintFile) secBp.Clone();
+            Assert.That(fsSys.TryWriteFile(latheDriveUid, encryptedClone, latheFs), Is.False,
+                "SharedFileSystemSystem must block storing encrypted recipe files on computer hard drives.");
+        });
+
+        // 2) Open Autolathe UI, insert BaseRecipeDisk (encrypted, 30 LP), verify INSTANT load + NO Save/Decrypt buttons!
+        await Server.WaitPost(() =>
+        {
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryInsert(latheUid, SharedLatheSystem.diskSlot, secDiskUid, null), Is.True);
+            Server.System<OxydComputerSystem>().OpenComputerForActor(latheCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            Assert.That(latheUi, Is.Not.Null);
+
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi!, labels);
+            Assert.That(labels.Any(l => l.Name == "LatheMemoryLabel" && (l.Text ?? string.Empty).Contains("free")), Is.True,
+                "Autolathe UI must display remaining lathe memory.");
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("DISK") && (l.Text ?? string.Empty).Contains("security_gear.lathe") && (l.Text ?? string.Empty).Contains("30 LP")), Is.True,
+                "Inserting an encrypted recipe disk must instantly load its designs into the Autolathe UI.");
+
+            var buttons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(latheUi!, buttons);
+            Assert.That(buttons.Any(b => b.Text == "Decrypt"), Is.False,
+                "Encrypted recipe disks must not offer a free Decrypt button.");
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveBlueprintButton" && b.VisibleInTree), Is.False,
+                "Encrypted disk recipes must NOT show a Save button.");
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveDiskButton" && b.VisibleInTree), Is.False,
+                "Save Unencrypted button must remain hidden when disk only holds encrypted blueprints.");
+        });
+
+        // 3) Print DRMHud (4 LP) and DRMCuffs (2 LP) directly off BaseRecipeDisk and verify exact use subtraction (30 -> 26 -> 24)!
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.PrintRecipe, "DRMHud", "/blueprints/security_gear.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var secFs = SEntMan.GetComponent<FileSystemComponent>(secDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(secDiskUid, "/blueprints/security_gear.lathe", out var secBp, secFs), Is.True);
+            Assert.That(secBp!.RemainingUses, Is.EqualTo(26), "Printing DRMHud (4 LP) from encrypted disk must subtract 4 uses (30 -> 26).");
+        });
+
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.PrintRecipe, "DRMCuffs", "/blueprints/security_gear.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var secFs = SEntMan.GetComponent<FileSystemComponent>(secDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(secDiskUid, "/blueprints/security_gear.lathe", out var secBp, secFs), Is.True);
+            Assert.That(secBp!.RemainingUses, Is.EqualTo(24), "Printing DRMCuffs (2 LP) from encrypted disk must subtract 2 uses (26 -> 24).");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi!, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("security_gear.lathe") && (l.Text ?? string.Empty).Contains("24 LP")), Is.True,
+                "Autolathe UI must immediately update remaining uses after printing from encrypted disk.");
+        });
+
+        // 4) Eject BaseRecipeDisk via UI action, insert OxydRecipeDiskEncrypted (5 uses), exhaust uses 5 -> 0 & verify block at 0!
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.EjectDisk), FromServer(latheProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.diskSlot?.Item, Is.Null, "EjectDisk UI action must eject the disk from lathe slot.");
+
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryInsert(latheUid, SharedLatheSystem.diskSlot, hudDiskUid, null), Is.True);
+        });
+        await RunTicks(8);
+
+        // Attempt to copy/import encrypted disk into lathe memory & decrypt — BOTH MUST BE BLOCKED!
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.ImportDiskBlueprints, string.Empty, "/blueprints/security_hud.lathe"),
+            FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.ImportDiskBlueprints),
+            FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.DecryptBlueprint, "ClothingEyesHudSecurity", "/blueprints/security_hud.lathe"),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var latheFs = SEntMan.GetComponent<FileSystemComponent>(latheDriveUid);
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/security_hud.lathe"), Is.False,
+                "Encrypted recipe file must NEVER be copied into lathe memory.");
+
+            var hudFs = SEntMan.GetComponent<FileSystemComponent>(hudDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(hudDiskUid, "/blueprints/security_hud.lathe", out var hudBp, hudFs), Is.True);
+            Assert.That(hudBp!.IsEncrypted, Is.True, "DecryptBlueprint must not strip encryption from encrypted recipe disk.");
+        });
+
+        // Exhaust all 5 uses of OxydRecipeDiskEncrypted
+        for (var i = 0; i < 5; i++)
+        {
+            await SendBui(ProgramUiKey.Key,
+                new LatheControlActionMessage(LatheControlAction.PrintRecipe, "ClothingEyesHudSecurity", "/blueprints/security_hud.lathe", 1, fromDisk: true),
+                FromServer(latheProgUid));
+        }
+        await RunTicks(8);
+
+        var queueBeforeRefusal = 0;
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var hudFs = SEntMan.GetComponent<FileSystemComponent>(hudDiskUid);
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(hudDiskUid, "/blueprints/security_hud.lathe", out var hudBp, hudFs), Is.True);
+            Assert.That(hudBp!.RemainingUses, Is.EqualTo(0), "Printing 5 times from OxydRecipeDiskEncrypted must exhaust all 5 uses.");
+
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            queueBeforeRefusal = latheComp.Queue.Sum(b => Math.Max(0, b.ItemsRequested - b.ItemsPrinted));
+        });
+
+        // 6th print attempt at 0 uses must be refused!
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.PrintRecipe, "ClothingEyesHudSecurity", "/blueprints/security_hud.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            var queueAfterRefusal = latheComp.Queue.Sum(b => Math.Max(0, b.ItemsRequested - b.ItemsPrinted));
+            Assert.That(queueAfterRefusal, Is.LessThanOrEqualTo(queueBeforeRefusal),
+                "Autolathe must refuse printing from an encrypted disk with 0 remaining uses.");
+        });
+
+        // Cancel remaining queue cleanly so we can test unencrypted disks & PDA FileBrowser copy protection
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.CancelAll), FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.EjectDisk), FromServer(latheProgUid));
+        await RunTicks(6);
+
+        // 5) Insert unencrypted OxydDataDiskEngineering: instant load + direct print + secondary save (2.5 KB fits!)
+        await Server.WaitAssertion(() =>
+        {
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryInsert(latheUid, SharedLatheSystem.diskSlot, engDiskUid, null), Is.True);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var buttons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(latheUi!, buttons);
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveBlueprintButton" && b.VisibleInTree), Is.True,
+                "Unencrypted disk blueprints must expose a secondary Save button.");
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveDiskButton" && b.VisibleInTree), Is.True,
+                "Save Unencrypted button must be visible for unencrypted disks.");
+        });
+
+        // Print directly from disk BEFORE saving to memory
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.PrintRecipe, "DoorElectronics", "/blueprints/door_electronics.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.CurrentRecipe?.Id, Is.EqualTo("DoorElectronics"),
+                "Unencrypted disk designs must print directly from disk without needing to save to memory first.");
+        });
+
+        // Secondary action: save /blueprints/door_electronics.lathe (2.5 KB) to lathe memory
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.ImportDiskBlueprints, "DoorElectronics", "/blueprints/door_electronics.lathe"),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheFs = SEntMan.GetComponent<FileSystemComponent>(latheDriveUid);
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/door_electronics.lathe"), Is.True,
+                "Saving a small unencrypted blueprint file (2.5 KB) to lathe memory must succeed.");
+        });
+
+        // 6) Swap to 10-recipe multi-blueprint disk (20.5 KB): prints directly off disk, but saving to tight lathe memory is refused!
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.CancelAll), FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.EjectDisk), FromServer(latheProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryInsert(latheUid, SharedLatheSystem.diskSlot, bigPackDiskUid, null), Is.True);
+        });
+        await RunTicks(8);
+
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.PrintRecipe, "APCElectronics", "/blueprints/mega_engineering_pack.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.ImportDiskBlueprints, "APCElectronics", "/blueprints/mega_engineering_pack.lathe"),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.CurrentRecipe?.Id, Is.EqualTo("APCElectronics"),
+                "Large multi-blueprint disk must still print directly from disk even when too big for lathe memory.");
+
+            var latheFs = SEntMan.GetComponent<FileSystemComponent>(latheDriveUid);
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/mega_engineering_pack.lathe"), Is.False,
+                "Large multi-blueprint file (20.5 KB) must be rejected when lathe memory has insufficient free space.");
+
+            var progComp = SEntMan.GetComponent<LatheControlProgramComponent>(latheProgUid);
+            Assert.That(progComp.StatusMessage, Does.Contain("Insufficient lathe memory").IgnoreCase);
+        });
+
+        await Client.WaitPost(() => GetWindow<ComputerDisplayWindow>().Close());
+        await RunTicks(4);
+
+        // 7) Verify PDA FileBrowser ALSO hides copy button & blocks copying encrypted recipe disk files!
+        await Server.WaitAssertion(() =>
+        {
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryInsert(pdaUid, PdaComponent.PdaDiskSlotId, secDiskUid, null), Is.True);
+
+            var compSys = Server.System<OxydComputerSystem>();
+            Assert.That(compSys.TryLaunchExecutable(pdaCompUid, "/bin/file_browser.nte", out var launched, out _, SPlayer), Is.True);
+            pdaBrowserProg = launched!.Value;
+            compSys.SwitchActiveProgram(pdaCompUid, pdaBrowserProg, actor: SPlayer);
+            compSys.OpenComputerForActor(pdaCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        await SendBui(ProgramUiKey.Key, new FileBrowserActionMessage(FileBrowserAction.ChangeDirectory, "/disk/"), FromServer(pdaBrowserProg));
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var fbUi = GetControlFromChildren<FileBrowserUiControl>(_ => true, win);
+            Assert.That(fbUi, Is.Not.Null);
+
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(fbUi!, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("security_gear.lathe") && (l.Text ?? string.Empty).Contains("[ENC]")), Is.True,
+                "FileBrowser must mark encrypted recipe files with [ENC].");
+
+            var buttons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(fbUi!, buttons);
+            Assert.That(buttons.Any(b => b.Text == "->HDD"), Is.False,
+                "FileBrowser must NOT display ->HDD copy button for encrypted recipe files.");
+        });
+
+        // Even sending CopyToInternal directly over the network must be refused!
+        await SendBui(ProgramUiKey.Key, new FileBrowserActionMessage(FileBrowserAction.CopyToInternal, "/blueprints/security_gear.lathe"), FromServer(pdaBrowserProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryFindFileSystem(pdaCompUid, out _, out var pdaFs), Is.True);
+            Assert.That(pdaFs!.Files.ContainsKey("/blueprints/security_gear.lathe"), Is.False,
+                "FileBrowser CopyToInternal must refuse copying encrypted recipe files to PDA hard drive.");
+        });
+
+        await Client.WaitPost(() => GetWindow<ComputerDisplayWindow>().Close());
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestAutolatheMaterialEjectRemoteDiskEjectAndMixedDiskSaveUnencrypted()
+    {
+        await SpawnTarget("Autolathe");
+        var latheUid = ToServer(Target)!.Value;
+        EntityUid latheCompUid = default;
+        EntityUid latheProgUid = default;
+        EntityUid latheDriveUid = default;
+        EntityUid handcuffsDiskUid = default;
+        EntityUid engDiskUid = default;
+        EntityUid mixedDiskUid = default;
+        EntityUid remoteDiskUid = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(latheUid).Coordinates;
+            Server.System<PowerReceiverSystem>().SetNeedsPower(latheUid, false);
+            latheCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid).ComputerEntity!.Value;
+
+            var matSys = Server.System<MaterialStorageSystem>();
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Steel", 500), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Glass", 50), Is.True);
+
+            handcuffsDiskUid = SEntMan.SpawnAtPosition("OxydRecipeDisk", coords);
+            engDiskUid = SEntMan.SpawnAtPosition("OxydDataDiskEngineering", coords);
+            mixedDiskUid = SEntMan.SpawnAtPosition("OxydDataDiskBlank", coords);
+            remoteDiskUid = SEntMan.SpawnAtPosition("BaseRecipeDisk", coords);
+
+            // Populate mixedDiskUid with 1 unencrypted copyable file + 3 protected files (encrypted, drm-locked, limited-use)
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var mixedFs = SEntMan.GetComponent<FileSystemComponent>(mixedDiskUid);
+            Assert.That(fsSys.TryWriteFile(mixedDiskUid, new RecipeBlueprintFile
+            {
+                Name = "custom_unencrypted",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipe = "DoorElectronics",
+                IsEncrypted = false,
+                DrmLocked = false,
+                RemainingUses = null
+            }, mixedFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(mixedDiskUid, new RecipeBlueprintFile
+            {
+                Name = "mixed_encrypted",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipe = "ClothingEyesHudSecurity",
+                IsEncrypted = true,
+                DrmLocked = true,
+                RemainingUses = 10
+            }, mixedFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(mixedDiskUid, new RecipeBlueprintFile
+            {
+                Name = "mixed_drm",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipe = "DRMCuffs",
+                IsEncrypted = false,
+                DrmLocked = true,
+                RemainingUses = null
+            }, mixedFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(mixedDiskUid, new RecipeBlueprintFile
+            {
+                Name = "mixed_limited",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipe = "Handcuffs",
+                IsEncrypted = false,
+                DrmLocked = false,
+                RemainingUses = 4
+            }, mixedFs), Is.True);
+        });
+
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
+            Assert.That(cComp.IsBooted, Is.True);
+            latheProgUid = cComp.ActiveProgram!.Value;
+            Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out _), Is.True);
+            latheDriveUid = drive!.Value;
+
+            // Verify OxydDataDiskEngineering only carries its 3 unencrypted engineering files (no inherited encrypted file).
+            var engFs = SEntMan.GetComponent<FileSystemComponent>(engDiskUid);
+            Assert.That(engFs.Files.Count, Is.EqualTo(3), "OxydDataDiskEngineering must not inherit BaseRecipeDisk encrypted files.");
+
+            Server.System<OxydComputerSystem>().OpenComputerForActor(latheCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        // 1) Scroll wheel on Steel MaterialIconTile (1 -> 3 sheets), verify plain sheet count ("5") & click ejects 3 Steel sheets (300 units)!
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            Assert.That(latheUi, Is.Not.Null);
+
+            // Verify scrollable recipe list is clearly denoted and window expands for up to 8 recipes without clipping
+            var recipeScroll = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentScrollContainer>(
+                s => s.Name == "LatheRecipeScroll", latheUi!);
+            Assert.That(recipeScroll, Is.Not.Null);
+            Assert.That(recipeScroll!.ShowScrollVisuals, Is.True);
+            Assert.That(recipeScroll.AlwaysShowBackground, Is.True);
+            Assert.That(latheUi!.DesiredExpandedWindowHeight, Is.GreaterThanOrEqualTo(760f),
+                "Autolathe UI must request expanded height for up to 8 recipes.");
+            Assert.That(win.SetHeight, Is.GreaterThanOrEqualTo(680f),
+                "Autolathe window must auto-expand beyond its base height when multiple recipes are loaded.");
+            AssertAllVisibleChildrenWithinViewport(win, latheUi!, "Autolathe UI");
+
+            var tiles = new List<MaterialIconTile>();
+            CollectDescendants(latheUi!, tiles);
+            var steelTile = tiles.FirstOrDefault(t => t.MaterialId == "Steel");
+            Assert.That(steelTile, Is.Not.Null, "Steel MaterialIconTile must be present in Autolathe UI.");
+            Assert.That(steelTile!.CountText, Is.EqualTo("5"), "Material tile must display sheet count (5), not raw units (500).");
+            Assert.That(steelTile.SelectedSheets, Is.EqualTo(1));
+            Assert.That(steelTile.MaxEjectable, Is.EqualTo(5));
+
+            // Scroll wheel up twice -> select 3 sheets to eject
+            var wheelUp = new GUIMouseWheelEventArgs(new Vector2(0f, 1f), steelTile, new Vector2(10, 10), default, new Vector2(10, 10), new Vector2(10, 10));
+            steelTile.RelayMouseWheel(wheelUp);
+            steelTile.RelayMouseWheel(new GUIMouseWheelEventArgs(new Vector2(0f, 1f), steelTile, new Vector2(10, 10), default, new Vector2(10, 10), new Vector2(10, 10)));
+            Assert.That(steelTile.SelectedSheets, Is.EqualTo(3), "Mouse wheel up twice must adjust selected eject amount to 3 sheets.");
+
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            steelTile.RelayKeyBindDown(downArgs);
+            steelTile.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var matSys = Server.System<MaterialStorageSystem>();
+            var steelAfter = matSys.GetMaterialAmount(latheUid, "Steel");
+            Assert.That(steelAfter, Is.EqualTo(200), "Clicking Steel tile after scrolling to 3 sheets must eject 3 sheets (300 units: 500 -> 200).");
+
+            var xformSys = Server.System<SharedTransformSystem>();
+            var lathePos = xformSys.GetMapCoordinates(latheUid);
+            var spawnedNearLathe = false;
+            var sheetQuery = SEntMan.EntityQueryEnumerator<Content.Shared.Stacks.StackComponent, MetaDataComponent, TransformComponent>();
+            while (sheetQuery.MoveNext(out var sheetUid, out var stackComp, out var meta, out var sheetXform))
+            {
+                if (meta.EntityPrototype?.ID != "SheetSteel1")
+                    continue;
+                if ((xformSys.GetMapCoordinates(sheetUid, sheetXform).Position - lathePos.Position).Length() < 1.5f &&
+                    stackComp.Count == 3)
+                {
+                    spawnedNearLathe = true;
+                    break;
+                }
+            }
+            Assert.That(spawnedNearLathe, Is.True, "Clicking Steel tile after scrolling to 3 must physically spawn a 3-sheet Steel stack at the Autolathe.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi!, labels);
+            Assert.That(labels.Any(l => l.VisibleInTree && (l.Text ?? string.Empty).Contains("Ejected", StringComparison.OrdinalIgnoreCase)), Is.False,
+                "Autolathe menu must not display action messages like Ejected.");
+        });
+
+        // Clicking Glass tile with only 50 units (< 1 sheet) must not crash or deduct partial material and should show feedback
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var tiles = new List<MaterialIconTile>();
+            CollectDescendants(latheUi!, tiles);
+            var glassTile = tiles.FirstOrDefault(t => t.MaterialId == "Glass");
+            Assert.That(glassTile, Is.Not.Null);
+
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            glassTile!.RelayKeyBindDown(downArgs);
+            glassTile.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var matSys = Server.System<MaterialStorageSystem>();
+            Assert.That(matSys.GetMaterialAmount(latheUid, "Glass"), Is.EqualTo(50), "Less than 1 sheet of Glass must stay in storage.");
+        });
+
+        // 2) Verify OxydRecipeDisk (10 uses) is copy-protected (no Save Unencrypted button, refused on import)
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(Server.System<ItemSlotsSystem>().TryInsert(latheUid, SharedLatheSystem.diskSlot, handcuffsDiskUid, null), Is.True);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi!, labels);
+            Assert.That(labels.Any(l => l.Name == "LatheDiskLabel" && (l.Text ?? string.Empty).Contains("Encrypted", StringComparison.OrdinalIgnoreCase)), Is.False,
+                "Autolathe disk label must not display [Encrypted — Disk-Only].");
+
+            var buttons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(latheUi!, buttons);
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveDiskButton" && b.VisibleInTree), Is.False,
+                "Limited-use OxydRecipeDisk must NOT expose Save Unencrypted.");
+            Assert.That(buttons.Any(b => b.Name == "LatheSaveBlueprintButton" && b.VisibleInTree), Is.False,
+                "Limited-use OxydRecipeDisk must NOT expose per-card Save button.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.ImportDiskBlueprints), FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheFs = SEntMan.GetComponent<FileSystemComponent>(latheDriveUid);
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/handcuffs.lathe"), Is.False,
+                "Limited-use OxydRecipeDisk must never be copied into lathe memory.");
+            Assert.That(Server.System<ItemSlotsSystem>().TryEject(latheUid, SharedLatheSystem.diskSlot, null, out _), Is.True);
+            Assert.That(Server.System<ItemSlotsSystem>().TryInsert(latheUid, SharedLatheSystem.diskSlot, mixedDiskUid, null), Is.True);
+        });
+        await RunTicks(8);
+
+        // 3) Mixed disk (1 unencrypted + 3 encrypted/DRM/limited): clicking "Save Unencrypted" saves ONLY the unencrypted file!
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var buttons = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(latheUi!, buttons);
+
+            var saveUnencBtn = buttons.FirstOrDefault(b => b.Name == "LatheSaveDiskButton" && b.VisibleInTree);
+            Assert.That(saveUnencBtn, Is.Not.Null, "Save Unencrypted must be visible when disk has an unencrypted blueprint.");
+
+            // Only the 1 unencrypted card should have a per-card Save button
+            var perCardSaveCount = buttons.Count(b => b.Name == "LatheSaveBlueprintButton" && b.VisibleInTree);
+            Assert.That(perCardSaveCount, Is.EqualTo(1), "Only the unencrypted card on a mixed disk may show a Save button.");
+
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            saveUnencBtn!.RelayKeyBindDown(downArgs);
+            saveUnencBtn.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheFs = SEntMan.GetComponent<FileSystemComponent>(latheDriveUid);
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/custom_unencrypted.lathe"), Is.True,
+                "Save Unencrypted must save the unencrypted blueprint file.");
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/mixed_encrypted.lathe"), Is.False,
+                "Save Unencrypted must NEVER save encrypted blueprint files.");
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/mixed_drm.lathe"), Is.False,
+                "Save Unencrypted must NEVER save DRM-locked blueprint files.");
+            Assert.That(latheFs.Files.ContainsKey("/blueprints/mixed_limited.lathe"), Is.False,
+                "Save Unencrypted must NEVER save finite-use blueprint files.");
+        });
+
+        await Client.WaitPost(() => GetWindow<ComputerDisplayWindow>().Close());
+        await RunTicks(4);
+
+        // 4) Remote screen disk ejection: when actor is far away (> 10 tiles), EjectDisk must drop disk AT THE LATHE, NOT teleport to player hand!
+        EntityCoordinates origPlayerCoords = default;
+        await Server.WaitAssertion(() =>
+        {
+            var xformSys = Server.System<SharedTransformSystem>();
+            var itemSlots = Server.System<ItemSlotsSystem>();
+            Assert.That(itemSlots.TryEject(latheUid, SharedLatheSystem.diskSlot, null, out _), Is.True);
+            Assert.That(itemSlots.TryInsert(latheUid, SharedLatheSystem.diskSlot, remoteDiskUid, null), Is.True);
+
+            origPlayerCoords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            // Move player 15 tiles away from the Autolathe (simulating remote screen operation)
+            var latheCoords = SEntMan.GetComponent<TransformComponent>(latheUid).Coordinates;
+            xformSys.SetCoordinates(SPlayer, latheCoords.Offset(new Vector2(15f, 0f)));
+        });
+        await RunTicks(4);
+
+        // Send EjectDisk as SPlayer (same packet path as clicking Eject Disk through a remote screen)
+        await Server.WaitAssertion(() =>
+        {
+            var compSys = Server.System<OxydComputerSystem>();
+            var pkt = new Content.Shared._Oxyd.Computers.Packets.ComputerPacket("eject_disk");
+            pkt.SetReference("Actor", SPlayer);
+            Assert.That(compSys.TryInvokeDeviceLinkPort(latheCompUid, "AutolatheCommandSink", isHostPort: true, "eject_disk", string.Empty, out _, SPlayer, pkt), Is.True);
+        });
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var xformSys = Server.System<SharedTransformSystem>();
+            var handsSys = Server.System<Content.Server.Hands.Systems.HandsSystem>();
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.diskSlot?.Item, Is.Null, "Remote EjectDisk must eject the disk from the Autolathe.");
+
+            var heldByPlayer = handsSys.EnumerateHeld(SPlayer).Contains(remoteDiskUid);
+            Assert.That(heldByPlayer, Is.False, "Remote EjectDisk must NOT teleport the disk into the remote player's hand.");
+
+            var lathePos = xformSys.GetMapCoordinates(latheUid).Position;
+            var diskPos = xformSys.GetMapCoordinates(remoteDiskUid).Position;
+            var playerPos = xformSys.GetMapCoordinates(SPlayer).Position;
+            Assert.That((diskPos - lathePos).Length(), Is.LessThan(1.5f), "Remotely ejected disk must drop right next to the Autolathe.");
+            Assert.That((diskPos - playerPos).Length(), Is.GreaterThan(10f), "Remotely ejected disk must stay at the Autolathe, far from the remote player.");
+
+            // Now move player back within interaction range, re-insert disk, and verify local eject DOES put disk into hand!
+            xformSys.SetCoordinates(SPlayer, origPlayerCoords);
+            Assert.That(Server.System<ItemSlotsSystem>().TryInsert(latheUid, SharedLatheSystem.diskSlot, remoteDiskUid, null), Is.True);
+        });
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var compSys = Server.System<OxydComputerSystem>();
+            var pkt = new Content.Shared._Oxyd.Computers.Packets.ComputerPacket("eject_disk");
+            pkt.SetReference("Actor", SPlayer);
+            Assert.That(compSys.TryInvokeDeviceLinkPort(latheCompUid, "AutolatheCommandSink", isHostPort: true, "eject_disk", string.Empty, out _, SPlayer, pkt), Is.True);
+        });
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var handsSys = Server.System<Content.Server.Hands.Systems.HandsSystem>();
+            Assert.That(handsSys.EnumerateHeld(SPlayer).Contains(remoteDiskUid), Is.True,
+                "Local in-range EjectDisk should place the ejected disk into the player's hand.");
+        });
+    }
+
+    [Test]
+    public async Task TestAirAlarmApcUnlockedLinkingPdaAccessAndLatheSetRecipeMemory()
+    {
+        EntityUid apcUid = default;
+        EntityUid alarmUid = default;
+        EntityUid ventUid = default;
+        EntityUid apcButtonUid = default;
+        EntityUid latheUid = default;
+        EntityUid latheCompUid = default;
+        EntityUid latheProgUid = default;
+        EntityUid latheDriveUid = default;
+        EntityUid lathePrintBtnUid = default;
+        EntityUid latheSetRecipeBtnUid = default;
+        EntityUid recipeDiskUid = default;
+        EntityUid multitoolUid = default;
+        EntityUid pdaUid = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var xform = Server.System<SharedTransformSystem>();
+            var handsSys = Server.System<Content.Server.Hands.Systems.HandsSystem>();
+            var devLink = Server.System<Content.Shared.DeviceLinking.Systems.DeviceLinkSystem>();
+            var accessReader = Server.System<Content.Shared.Access.Systems.AccessReaderSystem>();
+            var lockSys = Server.System<LockSystem>();
+            var matSys = Server.System<SharedMaterialStorageSystem>();
+            var compSys = Server.System<OxydComputerSystem>();
+            var powerSys = Server.System<PowerReceiverSystem>();
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            alarmUid = SEntMan.SpawnEntity("AirAlarm", coords);
+            ventUid = SEntMan.SpawnEntity("GasVentPump", coords);
+            apcButtonUid = SEntMan.SpawnEntity("SignalButton", coords);
+            latheUid = SEntMan.SpawnEntity("Autolathe", coords);
+            lathePrintBtnUid = SEntMan.SpawnEntity("SignalButton", coords);
+            latheSetRecipeBtnUid = SEntMan.SpawnEntity("SignalButton", coords);
+            recipeDiskUid = SEntMan.SpawnEntity("OxydRecipeDisk", coords);
+            multitoolUid = SEntMan.SpawnEntity("Multitool", coords);
+
+            powerSys.SetNeedsPower(alarmUid, false);
+            powerSys.SetNeedsPower(latheUid, false);
+
+            // 1) Verify holding a PDA with an ID card inside grants access via AccessReaderSystem!
+            pdaUid = SEntMan.SpawnEntity("CaptainPDA", coords);
+            Assert.That(handsSys.TryPickupAnyHand(SPlayer, pdaUid), Is.True);
+            Assert.That(accessReader.IsAllowed(SPlayer, alarmUid), Is.True,
+                "Holding/wearing a PDA with an authorized ID card inside must grant AirAlarm AccessReader access.");
+            Assert.That(accessReader.IsAllowed(SPlayer, apcUid), Is.True,
+                "Holding/wearing a PDA with an authorized ID card inside must grant APC AccessReader access.");
+
+            // Drop PDA so the player now has ZERO ID access.
+            Assert.That(handsSys.TryDrop(SPlayer, pdaUid, checkActionBlocker: false), Is.True);
+            xform.SetCoordinates(pdaUid, coords.Offset(new Vector2(20f, 0f)));
+            Assert.That(accessReader.IsAllowed(SPlayer, alarmUid), Is.False);
+            Assert.That(accessReader.IsAllowed(SPlayer, apcUid), Is.False);
+
+            // 2) Locked APC rejects linking without access; UNLOCKED APC allows linking a SignalButton without access!
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+            Assert.That(devLink.ToggleLink(SPlayer, apcButtonUid, apcUid, "Pressed", "MachineCommandReceiver"), Is.False,
+                "Locked APC must refuse DeviceLink from an unauthorized user.");
+
+            lockSys.Unlock(apcUid, null);
+            Assert.That(devLink.ToggleLink(SPlayer, apcButtonUid, apcUid, "Pressed", "MachineCommandReceiver"), Is.True,
+                "Unlocked APC must allow DeviceLink from a multitool even without an ID card.");
+
+            // Pressing the linked SignalButton on MachineCommandReceiver must toggle the APC main breaker!
+            var apcComp = SEntMan.GetComponent<ApcComponent>(apcUid);
+            var breakerBefore = apcComp.MainBreakerEnabled;
+            var pressEv = new Content.Shared.Interaction.ActivateInWorldEvent(SPlayer, apcButtonUid, true);
+            SEntMan.EventBus.RaiseLocalEvent(apcButtonUid, pressEv);
+            Assert.That(apcComp.MainBreakerEnabled, Is.EqualTo(!breakerBefore),
+                "Pressing a SignalButton linked to APC MachineCommandReceiver must toggle its breaker.");
+
+            // 3) Unlocked AirAlarm must allow multitool DeviceList configuration (linking a GasVentPump) without Access Denied!
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True);
+            lockSys.Unlock(alarmUid, null);
+            Assert.That(handsSys.TryPickupAnyHand(SPlayer, multitoolUid), Is.True);
+
+            // 4) Prepare Autolathe with materials + linked SignalButtons (print + SetRecipe)
+            Assert.That(compSys.EnsureComputerBoundToHost((latheUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid)), out latheCompUid), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Steel", 2000), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Plastic", 2000), Is.True);
+            Assert.That(matSys.TryChangeMaterialAmount(latheUid, "Glass", 2000), Is.True);
+
+            Assert.That(devLink.ToggleLink(SPlayer, lathePrintBtnUid, latheUid, "Pressed", "AutolatheCommandSink"), Is.True);
+            Assert.That(devLink.ToggleLink(SPlayer, latheSetRecipeBtnUid, latheUid, "Pressed", "AutolatheSetRecipeSink"), Is.True);
+        });
+
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var interSys = Server.System<Content.Shared.Interaction.SharedInteractionSystem>();
+            // Save vent to multitool list mode, then use multitool on unlocked AirAlarm to open Configure UI
+            interSys.InteractUsing(SPlayer, multitoolUid, ventUid, coords);
+            interSys.InteractUsing(SPlayer, multitoolUid, alarmUid, coords);
+            var cfgComp = SEntMan.GetComponent<Content.Shared.DeviceConfigurator.Components.NetworkConfiguratorComponent>(multitoolUid);
+            Assert.That(cfgComp.ActiveDeviceList, Is.EqualTo(alarmUid),
+                "Unlocked AirAlarm must allow opening multitool DeviceList configuration to link vents without Access Denied.");
+            Server.System<SharedUserInterfaceSystem>().CloseUi(multitoolUid, Content.Shared.DeviceConfigurator.NetworkConfiguratorUiKey.Configure);
+
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
+            Assert.That(cComp.IsBooted, Is.True);
+            latheProgUid = cComp.ActiveProgram!.Value;
+            Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out _), Is.True);
+            latheDriveUid = drive!.Value;
+
+            // Pressing print button BEFORE any recipe is selected must NOT start printing
+            var pressEmpty = new Content.Shared.Interaction.ActivateInWorldEvent(SPlayer, lathePrintBtnUid, true);
+            SEntMan.EventBus.RaiseLocalEvent(lathePrintBtnUid, pressEmpty);
+            Assert.That(SEntMan.GetComponent<LatheComponent>(latheUid).CurrentRecipe, Is.Null,
+                "Pressing a linked button on a lathe with no selected recipe must not print.");
+
+            // Open Autolathe UI
+            Server.System<OxydComputerSystem>().OpenComputerForActor(latheCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        // Select Wirecutter via UI action (routes through AutolatheSetRecipeSink)
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.SelectRecipe, "Wirecutter", "/blueprints/tools.lathe", 1, fromDisk: false),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
+            var selLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheSelectedRecipeLabel", latheUi!);
+            Assert.That(selLabel, Is.Not.Null);
+            Assert.That(selLabel!.Text, Does.Contain("wirecutter").IgnoreCase);
+
+            // Close the UI -> selected recipe MUST persist!
+            win.Close();
+        });
+        await RunTicks(6);
+
+        // Press linked print button AFTER closing UI -> must print remembered Wirecutter!
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.SelectedRecipeId?.Id, Is.EqualTo("Wirecutter"),
+                "Closing the Autolathe UI must NOT reset the remembered selected recipe.");
+
+            var pressEv = new Content.Shared.Interaction.ActivateInWorldEvent(SPlayer, lathePrintBtnUid, true);
+            SEntMan.EventBus.RaiseLocalEvent(lathePrintBtnUid, pressEv);
+            Assert.That(latheComp.CurrentRecipe?.Id, Is.EqualTo("Wirecutter"),
+                "Pressing a linked button after closing the UI must print the remembered selected recipe.");
+        });
+        await RunTicks(4);
+
+        // Delete /blueprints/tools.lathe from lathe HDD memory -> physical file removed -> selected recipe MUST clear!
+        await Server.WaitAssertion(() =>
+        {
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryDeleteFile(latheDriveUid, "/blueprints/tools.lathe"), Is.True);
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.SelectedRecipeId, Is.Null,
+                "Deleting the blueprint file from lathe memory must clear the selected recipe.");
+        });
+        await RunTicks(4);
+
+        // Insert OxydRecipeDisk (Handcuffs, 10 uses), select from disk, close UI, press button -> prints & subtracts use (10 -> 9)!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(Server.System<ItemSlotsSystem>().TryInsert(latheUid, SharedLatheSystem.diskSlot, recipeDiskUid, null), Is.True);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.CancelAll), FromServer(latheProgUid));
+        await SendBui(ProgramUiKey.Key,
+            new LatheControlActionMessage(LatheControlAction.SelectRecipe, "Handcuffs", "/blueprints/handcuffs.lathe", 1, fromDisk: true),
+            FromServer(latheProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var latheComp = SEntMan.GetComponent<LatheComponent>(latheUid);
+            Assert.That(latheComp.SelectedRecipeId?.Id, Is.EqualTo("Handcuffs"));
+            Assert.That(latheComp.SelectedRecipeFromDisk, Is.True);
+
+            var pressEv = new Content.Shared.Interaction.ActivateInWorldEvent(SPlayer, lathePrintBtnUid, true);
+            SEntMan.EventBus.RaiseLocalEvent(lathePrintBtnUid, pressEv);
+            Assert.That(latheComp.CurrentRecipe?.Id, Is.EqualTo("Handcuffs"),
+                "Signal-triggered print of a selected disk recipe must start printing Handcuffs.");
+
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryGetFile<RecipeBlueprintFile>(recipeDiskUid, "/blueprints/handcuffs.lathe", out var bp), Is.True);
+            Assert.That(bp!.RemainingUses, Is.EqualTo(9), "Signal-triggered print from recipe disk must subtract 1 use (10 -> 9).");
+
+            // Eject physical disk -> selected disk recipe MUST immediately clear!
+            Assert.That(Server.System<ItemSlotsSystem>().TryEject(latheUid, SharedLatheSystem.diskSlot, null, out _), Is.True);
+            Assert.That(latheComp.SelectedRecipeId, Is.Null,
+                "Ejecting the recipe disk must immediately clear a disk-sourced selected recipe.");
+
+            // Pulsing SetRecipe button directly must cycle and select an accessible memory recipe!
+            var pulseSet = new Content.Shared.Interaction.ActivateInWorldEvent(SPlayer, latheSetRecipeBtnUid, true);
+            SEntMan.EventBus.RaiseLocalEvent(latheSetRecipeBtnUid, pulseSet);
+            Assert.That(latheComp.SelectedRecipeId, Is.Not.Null,
+                "Pulsing AutolatheSetRecipeSink must cycle and select an accessible blueprint.");
+        });
     }
 
     private static void AssertAllVisibleChildrenWithinViewport(ComputerDisplayWindow win, Control root, string context)

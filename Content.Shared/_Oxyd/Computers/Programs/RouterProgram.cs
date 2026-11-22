@@ -138,7 +138,8 @@ public enum PacketSnifferAction : byte
     Refresh,
     ClearLogs,
     SaveLogsToFile,
-    EmitPacket
+    EmitPacket,
+    ModifyAndTransmitPacket
 }
 
 [Serializable, NetSerializable]
@@ -149,18 +150,27 @@ public sealed class PacketSnifferActionMessage : BoundUserInterfaceMessage
     public string TargetGuid { get; }
     public string Protocol { get; }
     public string Payload { get; }
+    public string PacketId { get; }
+    public Dictionary<string, string>? ModifiedEntries { get; }
+    public bool ApplyToSource { get; }
 
     public PacketSnifferActionMessage(
         PacketSnifferAction action,
         string sourceGuid = "",
         string targetGuid = "",
         string protocol = "TCP/RAW",
-        string payload = "")
+        string payload = "",
+        string packetId = "",
+        Dictionary<string, string>? modifiedEntries = null,
+        bool applyToSource = false)
     {
         Action = action;
         SourceGuid = sourceGuid;
         TargetGuid = targetGuid;
         Protocol = protocol;
         Payload = payload;
+        PacketId = packetId;
+        ModifiedEntries = modifiedEntries;
+        ApplyToSource = applyToSource;
     }
 }

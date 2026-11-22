@@ -5,7 +5,9 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Interaction;
 using Content.Shared.PDA;
+using Robust.Shared.Containers;
 
 namespace Content.Server._Oxyd.Computers.Programs;
 
@@ -16,6 +18,8 @@ public sealed partial class FileBrowserSystem : EntitySystem
     [Dependency] private SharedDeviceGuidSystem _guid = default!;
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private SharedContainerSystem _container = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
 
@@ -130,6 +134,12 @@ public sealed partial class FileBrowserSystem : EntitySystem
                     _fileSystem.TryGetFile<VirtualFile>(driveUid.Value, args.Path, out var srcFile, fsComp) &&
                     TryGetInsertedDisk(compUid, out var dstDisk, out var dstDiskFs, out _))
                 {
+                    if (_fileSystem.IsCopyProtectedBlueprint(srcFile))
+                    {
+                        ent.Comp.StatusMessage = "Cannot copy encrypted recipe file — encrypted blueprints are hardware-locked to their disk.";
+                        break;
+                    }
+
                     var clone = srcFile.Clone();
                     clone.IsReadOnly = false;
                     ent.Comp.StatusMessage = _fileSystem.TryWriteFile(dstDisk, clone, dstDiskFs)
@@ -147,6 +157,12 @@ public sealed partial class FileBrowserSystem : EntitySystem
                     TryGetInsertedDisk(compUid, out var srcDisk, out var srcDiskFs, out _) &&
                     _fileSystem.TryGetFile<VirtualFile>(srcDisk, args.Path, out var diskFile, srcDiskFs))
                 {
+                    if (_fileSystem.IsCopyProtectedBlueprint(diskFile))
+                    {
+                        ent.Comp.StatusMessage = "Cannot copy encrypted recipe file — encrypted blueprints are hardware-locked to their disk.";
+                        break;
+                    }
+
                     var clone = diskFile.Clone();
                     clone.IsReadOnly = false;
                     ent.Comp.StatusMessage = _fileSystem.TryWriteFile(driveUid.Value, clone, fsComp)
@@ -181,12 +197,32 @@ public sealed partial class FileBrowserSystem : EntitySystem
                 break;
 
             case FileBrowserAction.EjectDisk:
-                if (TryComp<OxydComputerComponent>(compUid, out var oxyd) && oxyd.HostMachine is { } hostUid)
-                    _itemSlots.TryEject(hostUid, PdaComponent.PdaDiskSlotId, args.Actor, out _);
+                if (TryComp<OxydComputerComponent>(compUid, out var oxyd) &&
+                    oxyd.HostMachine is { } hostUid &&
+                    _itemSlots.TryGetSlot(hostUid, PdaComponent.PdaDiskSlotId, out var diskSlot))
+                {
+                    if (IsHeldOrWornByUser(hostUid, args.Actor) || _interaction.InRangeUnobstructed(args.Actor, hostUid))
+                        _itemSlots.TryEjectToHands(hostUid, diskSlot, args.Actor);
+                    else
+                        _itemSlots.TryEject(hostUid, diskSlot, null, out _);
+                }
                 break;
         }
 
         UpdateUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private bool IsHeldOrWornByUser(EntityUid entity, EntityUid user)
+    {
+        var current = entity;
+        while (_container.TryGetContainingContainer((current, null), out var container))
+        {
+            if (container.Owner == user)
+                return true;
+            current = container.Owner;
+        }
+
+        return false;
     }
 
     public void UpdateUi(EntityUid progUid, EntityUid compUid, FileBrowserProgramComponent comp)
@@ -199,8 +235,8 @@ public sealed partial class FileBrowserSystem : EntitySystem
             foreach (var f in fsComp.Files.Values)
             {
                 int? uses = f is RecipeBlueprintFile bp ? bp.RemainingUses : null;
-                var enc = f is RecipeBlueprintFile bpEnc && bpEnc.IsEncrypted;
-                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: false));
+                var enc = _fileSystem.IsCopyProtectedBlueprint(f);
+                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: false, lastModified: f.LastModified));
             }
         }
 
@@ -210,13 +246,14 @@ public sealed partial class FileBrowserSystem : EntitySystem
             foreach (var f in diskFs.Files.Values)
             {
                 int? uses = f is RecipeBlueprintFile bp ? bp.RemainingUses : null;
-                var enc = f is RecipeBlueprintFile bpEnc && bpEnc.IsEncrypted;
-                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: true));
+                var enc = _fileSystem.IsCopyProtectedBlueprint(f);
+                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: true, lastModified: f.LastModified));
             }
         }
 
         string? viewedName = null;
         string? viewedContent = null;
+        TimeSpan? viewedLastModified = null;
         if (!string.IsNullOrEmpty(comp.ViewedFilePath))
         {
             VirtualFile? targetFile = null;
@@ -229,6 +266,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
             {
                 viewedName = $"{targetFile.Name}.{targetFile.Extension}";
                 viewedContent = FormatFileContent(targetFile);
+                viewedLastModified = targetFile.LastModified;
             }
         }
 
@@ -254,7 +292,8 @@ public sealed partial class FileBrowserSystem : EntitySystem
             hasDisk,
             hasDisk ? diskName : null,
             diskFs?.UsedStorageBytes,
-            diskFs?.MaxStorageBytes);
+            diskFs?.MaxStorageBytes,
+            viewedLastModified);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);
@@ -266,7 +305,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
         {
             TextVirtualFile tf => tf.TextContent,
             ProgramVirtualFile pf => $"NTOS Executable (.nte)\nProgram Prototype: {pf.ProgramId}\nTitle: {pf.Title}\nRAM Footprint: {pf.RamUsageMb} MB\nCPU Budget: {pf.CpuUsagePercent:0.#}%",
-            RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes: {string.Join(", ", bf.GetAllRecipes())}\nEncrypted: {bf.IsEncrypted}\nRemaining DRM Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
+            RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes ({bf.GetAllRecipes().Count()}): {string.Join(", ", bf.GetAllRecipes())}\nSize: {bf.Size} B\nCopy-Protected: {(bf.IsEncrypted ? "Yes (Encrypted Disk-Only)" : "No")}\nRemaining Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
             DatabaseVirtualFile df => $"Database Table: {df.TableName}\nEntries: {df.Data.Count}\n" + string.Join("\n", df.Data.Select(kv => $"  {kv.Key}: {kv.Value}")),
             TaskListVirtualFile tk => $"NanoTask Checklist ({tk.Tasks.Count} items)\n" + string.Join("\n", tk.Tasks.Select(t => $"  [{(t.IsTaskDone ? "x" : " ")}] #{t.Id} {t.Description} -> {t.TaskIsFor}")),
             AccessCodesVirtualFile acc => $"ID Access Codes (.acc)\nHolder: {acc.OwnerName}{(string.IsNullOrWhiteSpace(acc.JobTitle) ? "" : $" ({acc.JobTitle})")}\nAccess Levels ({acc.AccessTags.Count}): {(acc.AccessTags.Count > 0 ? string.Join(", ", acc.AccessTags.Select(t => t.Id)) : "(none)")}",

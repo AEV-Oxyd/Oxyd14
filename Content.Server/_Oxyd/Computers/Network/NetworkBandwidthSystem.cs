@@ -121,17 +121,31 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
             Dropped = dropped
         };
 
-        if (!_bwQuery.Resolve(uid, ref comp, false))
-            return pkt;
+        return StorePacket(uid, pkt, comp);
+    }
 
-        comp.StoredPackets.Add(pkt);
+    public NetworkDataPacket StorePacket(
+        EntityUid uid,
+        NetworkDataPacket packet,
+        NetworkBandwidthComponent? comp = null)
+    {
+        var clone = packet.Clone();
+        if (string.IsNullOrEmpty(clone.PacketId))
+            clone.PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        if (clone.Timestamp == TimeSpan.Zero)
+            clone.Timestamp = _timing.CurTime;
+
+        if (!_bwQuery.Resolve(uid, ref comp, false))
+            return clone;
+
+        comp.StoredPackets.Add(clone);
         while (comp.StoredPackets.Count > comp.MaxStoredPackets)
         {
             comp.StoredPackets.RemoveAt(0);
         }
 
         Dirty(uid, comp);
-        return pkt;
+        return clone;
     }
 
     public void LogPacketToRouters(NetworkDataPacket pkt, EntityUid? senderUid = null)
@@ -139,23 +153,20 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         var routerQuery = EntityQueryEnumerator<NetworkRouterComponent>();
         while (routerQuery.MoveNext(out var rUid, out var netRouter))
         {
+            EntityUid? routerCompUid = null;
             if (TryComp<EmbeddedComputerHostComponent>(rUid, out var host) && host.ComputerEntity is { } hostComp)
             {
                 if (!TryComp<OxydComputerComponent>(hostComp, out var oxyd) || !oxyd.IsPowered)
                     continue;
+                routerCompUid = hostComp;
             }
 
             if (_bwQuery.TryComp(rUid, out var rBw))
-            {
-                rBw.StoredPackets.Add(pkt);
-                while (rBw.StoredPackets.Count > rBw.MaxStoredPackets)
-                {
-                    rBw.StoredPackets.RemoveAt(0);
-                }
-                Dirty(rUid, rBw);
-            }
+                StorePacket(rUid, pkt, rBw);
+            else if (routerCompUid != null && _bwQuery.TryComp(routerCompUid.Value, out var compBw))
+                StorePacket(routerCompUid.Value, pkt, compBw);
 
-            netRouter.RecordedPackets.Add(pkt);
+            netRouter.RecordedPackets.Add(pkt.Clone());
             while (netRouter.RecordedPackets.Count > netRouter.MaxRecordedPackets)
             {
                 netRouter.RecordedPackets.RemoveAt(0);

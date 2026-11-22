@@ -14,6 +14,7 @@ using Content.Shared.Implants;
 using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
+using Content.Shared.Interaction;
 using Content.Shared.Inventory;
 using Content.Shared.Light;
 using Content.Shared.Light.EntitySystems;
@@ -31,7 +32,7 @@ namespace Content.Server.PDA
     /// All software, filesystems, and UI programs run inside its separate encapsulated computer entity
     /// and interface strictly through DeviceLink.
     /// </summary>
-    public sealed class PdaSystem : SharedPdaSystem
+    public sealed partial class PdaSystem : SharedPdaSystem
     {
         [Dependency] private InstrumentSystem _instrument = default!;
         [Dependency] private RingerSystem _ringer = default!;
@@ -40,6 +41,8 @@ namespace Content.Server.PDA
         [Dependency] private UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
         [Dependency] private IdCardSystem _idCard = default!;
         [Dependency] private DeviceLinkSystem _deviceLink = default!;
+        [Dependency] private SharedContainerSystem _container = default!;
+        [Dependency] private SharedInteractionSystem _interaction = default!;
 
         private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
         private static readonly ProtoId<SourcePortPrototype> PortFlashlightStatusSource = "PdaFlashlightStatusSource";
@@ -48,8 +51,6 @@ namespace Content.Server.PDA
         {
             base.Initialize();
 
-            SubscribeLocalEvent<PdaComponent, EntInsertedIntoContainerMessage>(OnItemInserted);
-            SubscribeLocalEvent<PdaComponent, EntRemovedFromContainerMessage>(OnItemRemoved);
             SubscribeLocalEvent<PdaComponent, LightToggleEvent>(OnLightToggle);
             SubscribeLocalEvent<StationRenamedEvent>(OnStationRenamed);
             SubscribeLocalEvent<AlertLevelChangedEvent>(OnAlertLevelChanged);
@@ -91,28 +92,28 @@ namespace Content.Server.PDA
 
             if (port == "PdaIdSlotEjectSink" || c == "eject_id")
             {
-                ItemSlotsSystem.TryEject(ent.Owner, PdaComponent.PdaIdSlotId, actor, out _);
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaIdSlotId, actor);
                 NotifyHardwareStateChanged(ent.Owner, ent.Comp);
                 return;
             }
 
             if (port == "PdaPenSlotEjectSink" || c == "eject_pen")
             {
-                ItemSlotsSystem.TryEject(ent.Owner, PdaComponent.PdaPenSlotId, actor, out _);
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaPenSlotId, actor);
                 NotifyHardwareStateChanged(ent.Owner, ent.Comp);
                 return;
             }
 
             if (c == "eject_disk")
             {
-                ItemSlotsSystem.TryEject(ent.Owner, PdaComponent.PdaDiskSlotId, actor, out _);
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaDiskSlotId, actor);
                 NotifyHardwareStateChanged(ent.Owner, ent.Comp);
                 return;
             }
 
             if (c == "eject_pai")
             {
-                ItemSlotsSystem.TryEject(ent.Owner, PdaComponent.PdaPaiSlotId, actor, out _);
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaPaiSlotId, actor);
                 NotifyHardwareStateChanged(ent.Owner, ent.Comp);
                 return;
             }
@@ -149,34 +150,63 @@ namespace Content.Server.PDA
                 NotifyHardwareStateChanged(ent.Owner, ent.Comp);
         }
 
-        private void OnItemInserted(EntityUid uid, PdaComponent pda, EntInsertedIntoContainerMessage args)
+        private void TryEjectPdaSlot(EntityUid pdaUid, string slotId, EntityUid? actor)
         {
+            if (!ItemSlotsSystem.TryGetSlot(pdaUid, slotId, out var slot))
+                return;
+
+            if (actor is { } user &&
+                (IsHeldOrWornByUser(pdaUid, user) || _interaction.InRangeUnobstructed(user, pdaUid)))
+            {
+                ItemSlotsSystem.TryEjectToHands(pdaUid, slot, user);
+            }
+            else
+            {
+                ItemSlotsSystem.TryEject(pdaUid, slot, null, out _);
+            }
+        }
+
+        private bool IsHeldOrWornByUser(EntityUid entity, EntityUid user)
+        {
+            var current = entity;
+            while (_container.TryGetContainingContainer((current, null), out var container))
+            {
+                if (container.Owner == user)
+                    return true;
+                current = container.Owner;
+            }
+
+            return false;
+        }
+
+        protected override void OnItemInserted(EntityUid uid, PdaComponent pda, EntInsertedIntoContainerMessage args)
+        {
+            base.OnItemInserted(uid, pda, args);
+
             if (args.Container.ID == PdaComponent.PdaIdSlotId && TryComp<IdCardComponent>(args.Entity, out var idCard))
             {
-                pda.ContainedId = args.Entity;
                 pda.OwnerName = idCard.FullName;
                 Dirty(uid, pda);
             }
             else if (args.Container.ID == PdaComponent.PdaDiskSlotId)
             {
-                pda.ContainedDisk = args.Entity;
                 Dirty(uid, pda);
             }
 
             NotifyHardwareStateChanged(uid, pda);
         }
 
-        private void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
+        protected override void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
         {
+            base.OnItemRemoved(uid, pda, args);
+
             if (args.Container.ID == PdaComponent.PdaIdSlotId)
             {
-                pda.ContainedId = null;
                 pda.OwnerName = null;
                 Dirty(uid, pda);
             }
             else if (args.Container.ID == PdaComponent.PdaDiskSlotId)
             {
-                pda.ContainedDisk = null;
                 Dirty(uid, pda);
             }
 

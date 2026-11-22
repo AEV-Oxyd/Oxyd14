@@ -338,9 +338,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
         _deviceLink.EnsureSourcePort(compUid, PortComputerCommandSender);
         _deviceLink.EnsureSinkPort(compUid, PortComputerStatusReceiver);
 
+        if (_sinkQuery.TryComp(compUid, out var compSink))
+            _deviceLink.SetInvokeLimit((compUid, compSink), 0);
+
         var outLinks = new List<DeviceLink>();
         if (_sinkQuery.TryComp(hostUid, out var hostSinks))
         {
+            _deviceLink.SetInvokeLimit((hostUid, hostSinks), 0);
             foreach (var sinkPort in hostSinks.Ports)
             {
                 outLinks.Add(new DeviceLink(PortComputerCommandSender, sinkPort));
@@ -645,7 +649,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         var bootRam = execFile.RamUsageMb;
-        if (execProto.Components.TryGetValue("Program", out var progEntry) && progEntry.Component is ProgramComponent defProg)
+        if (execProto.TryComp<ProgramComponent>(out var defProg, EntityManager.ComponentFactory))
             bootRam = Math.Max(1, defProg.RamUsageMb);
 
         if (bootRam > stats.RamMb || stats.MaxConcurrentPrograms < 1)
@@ -843,7 +847,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         var ramNeeded = execFile.RamUsageMb;
-        if (progProto.Components.TryGetValue("Program", out var compReg) && compReg.Component is ProgramComponent defComp)
+        if (progProto.TryComp<ProgramComponent>(out var defComp, EntityManager.ComponentFactory))
             ramNeeded = Math.Max(1, defComp.RamUsageMb);
 
         RecalculateHardwareStats(compUid, comp);
@@ -921,7 +925,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
             else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp))
             {
-                pdaOsComp.CurrentView = 3; // Active child application view
+                pdaOsComp.CurrentView = 2; // Active child application view
                 Dirty(bootUid, pdaOsComp);
                 _pdaOs.UpdatePdaOsUi(bootUid);
             }
@@ -978,14 +982,17 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     osComp.CurrentView = 1; // Return to Apps launcher
                     Dirty(bootUid, osComp);
                 }
-                else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp) && pdaOsComp.CurrentView == 3)
+                else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp) && pdaOsComp.CurrentView == 2)
                 {
-                    pdaOsComp.CurrentView = 1; // Return to Apps launcher
+                    pdaOsComp.CurrentView = 0; // Return to merged Home/Apps view
                     Dirty(bootUid, pdaOsComp);
                 }
                 else if (TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp))
                 {
-                    embComp.CurrentView = 1;
+                    var isTwoTabController =
+                        string.Equals(comp.EmbeddedDefaultAppPath, "/bin/apc_control.nte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(comp.EmbeddedDefaultAppPath, "/bin/lathe_control.nte", StringComparison.OrdinalIgnoreCase);
+                    embComp.CurrentView = isTwoTabController ? 0 : 1;
                     Dirty(bootUid, embComp);
                 }
             }

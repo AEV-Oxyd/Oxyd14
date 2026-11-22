@@ -10,6 +10,7 @@ using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Systems;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Interaction;
+using Content.Shared.Lock;
 using Content.Shared.Popups;
 using Content.Shared.Timing.Systems;
 using Content.Shared.UserInterface;
@@ -239,6 +240,10 @@ public sealed partial class NetworkConfiguratorSystem : EntitySystem
     private bool AccessCheck(EntityUid target, EntityUid? user, Entity<NetworkConfiguratorComponent> configurator)
     {
         if (user == null)
+            return true;
+
+        // If the target has an unlocked physical lock (e.g. an unlocked Air Alarm or APC), allow configuring/linking it.
+        if (TryComp<LockComponent>(target, out var lockComp) && !lockComp.Locked)
             return true;
 
         if (_accessSystem.IsAllowed(user.Value, target))

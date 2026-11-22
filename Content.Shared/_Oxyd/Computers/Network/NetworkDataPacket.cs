@@ -27,6 +27,18 @@ public sealed partial class NetworkDataPacket
     public bool IsEncrypted = false;
 
     [DataField]
+    public bool IsPlayerRelevant = false;
+
+    [DataField]
+    public bool IsEditable = false;
+
+    [DataField]
+    public string FilePath = string.Empty;
+
+    [DataField]
+    public Dictionary<string, string> EditableEntries = new();
+
+    [DataField]
     public Dictionary<string, string> Parameters = new();
 
     [DataField]
@@ -37,4 +49,26 @@ public sealed partial class NetworkDataPacket
 
     [DataField]
     public bool Dropped = false;
+
+    public NetworkDataPacket Clone()
+    {
+        return new NetworkDataPacket
+        {
+            PacketId = PacketId,
+            SourceAddress = SourceAddress,
+            TargetAddress = TargetAddress,
+            Protocol = Protocol,
+            PayloadSummary = PayloadSummary,
+            RawPayload = RawPayload,
+            IsEncrypted = IsEncrypted,
+            IsPlayerRelevant = IsPlayerRelevant,
+            IsEditable = IsEditable,
+            FilePath = FilePath,
+            EditableEntries = new Dictionary<string, string>(EditableEntries),
+            Parameters = new Dictionary<string, string>(Parameters),
+            ByteSize = ByteSize,
+            Timestamp = Timestamp,
+            Dropped = Dropped
+        };
+    }
 }

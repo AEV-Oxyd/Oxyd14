@@ -43,13 +43,9 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private DataServerSystem _dataServer = default!;
-    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private ServerStationSystem _station = default!;
-    [Dependency] private CrewManifestSystem _crewManifest = default!;
-    [Dependency] private StationRecordsSystem _records = default!;
-    [Dependency] private NewsSystem _news = default!;
     [Dependency] private PaperSystem _paper = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
@@ -397,7 +393,7 @@ public sealed partial class StationAppsSystem : EntitySystem
     }
 
     // =========================================================================
-    // CREW MANIFEST (Network sync -> /records/crew_manifest.db)
+    // CREW MANIFEST (Network download from Server/Router local copy -> /records/crew_manifest.db)
     // =========================================================================
 
     private void OnCrewManifestStartup(Entity<CrewManifestProgramComponent> ent, ref ProgramStartupEvent args)
@@ -424,77 +420,105 @@ public sealed partial class StationAppsSystem : EntitySystem
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        if (station != EntityUid.Invalid &&
-            _router.HasActiveNetworkCard(compUid) &&
+        if (_router.HasActiveNetworkCard(compUid) &&
             _router.IsNetworkConnected(compUid))
         {
-            var srvOnline = _dataServer.TryGetFirstOnlineRepositoryServer(compUid, out _, out var srvCompUid, out _, out _, out _);
-            if (srvOnline)
+            if (_dataServer.TryGetLocalRecordCopyFromHost(
+                    compUid,
+                    "ManifestService",
+                    CrewManifestProgramComponent.CacheFilePath,
+                    station,
+                    out var srvCompUid,
+                    out var serverCopy,
+                    out var netErr))
             {
-                var (stName, liveEntries) = _crewManifest.GetCrewManifest(station);
-                var data = new Dictionary<string, string> { ["__station"] = stName };
-                if (liveEntries?.Entries != null)
+                var editableEntries = new Dictionary<string, string>();
+                var parameters = new Dictionary<string, string>();
+                if (serverCopy.Data.TryGetValue("__station", out var stName))
+                    parameters["__station"] = stName;
+
+                foreach (var (k, v) in serverCopy.Data)
                 {
-                    var idx = 0;
-                    foreach (var entry in liveEntries.Entries)
-                    {
-                        data[$"row_{idx++}"] = $"{entry.Name}\t{entry.JobTitle}\t{entry.JobPrototype}\t{entry.JobIcon}";
-                    }
+                    if (!k.StartsWith("row_"))
+                        continue;
+                    var cols = v.Split('\t');
+                    if (cols.Length < 2)
+                        continue;
+
+                    var charName = cols[0];
+                    var jobTitle = cols[1];
+                    var jobProto = cols.Length > 2 ? cols[2] : string.Empty;
+                    var jobIcon = cols.Length > 3 ? cols[3] : "JobIconUnknown";
+                    editableEntries[charName] = jobTitle;
+                    parameters[$"meta:{charName}"] = $"{jobProto}\t{jobIcon}";
                 }
 
-                var size = Math.Max(128, data.Count * 48);
+                var size = Math.Max(128, serverCopy.Size);
                 var pkt = new NetworkDataPacket
                 {
                     PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
                     SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
                     TargetAddress = _router.EnsureDeviceGuid(compUid),
                     Protocol = "TCP/MANIFEST",
-                    PayloadSummary = $"Manifest sync ({data.Count - 1} crew)",
+                    PayloadSummary = $"Crew Manifest ({editableEntries.Count} crew) [{MetaData(srvCompUid).EntityName}]",
+                    RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
+                    IsPlayerRelevant = true,
+                    IsEditable = true,
+                    FilePath = CrewManifestProgramComponent.CacheFilePath,
+                    EditableEntries = editableEntries,
+                    Parameters = parameters,
                     ByteSize = size,
                     Timestamp = _timing.CurTime
                 };
 
                 if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
                 {
-                    _fileSystem.TryWriteFile(driveUid.Value, new DatabaseVirtualFile
-                    {
-                        Name = "crew_manifest",
-                        Extension = "db",
-                        Directory = "/records/",
-                        TableName = "crew_manifest",
-                        Data = data,
-                        Size = size
-                    }, fs);
+                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                    localFile.Data.Remove("__tampered");
+                    localFile.Data.Remove("__source_hash");
+                    localFile.Size = size;
+                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
                     online = true;
-                    statusMsg = $"Synced live from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> HDD.";
+                    statusMsg = $"Downloaded from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {CrewManifestProgramComponent.CacheFilePath}";
                 }
             }
             else
             {
-                statusMsg = "Manifest server offline — showing cached HDD file.";
+                statusMsg = $"{netErr} — showing local {CrewManifestProgramComponent.CacheFilePath}.";
             }
         }
         else
         {
-            statusMsg = "Offline / no NIC — showing local /records/crew_manifest.db cache.";
+            statusMsg = $"Offline / no NIC — reading local {CrewManifestProgramComponent.CacheFilePath}.";
         }
 
-        // Render UI purely from the cached HDD file!
+        SendCrewManifestFromLocalCache(progUid, compUid, online, statusMsg);
+    }
+
+    public void SendCrewManifestFromLocalCache(EntityUid progUid, EntityUid compUid, bool online, string statusMsg)
+    {
+        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
+
         var stationName = "Unknown Station";
         var loadedEntries = new List<CrewManifestEntry>();
+        TimeSpan? fileTimestamp = null;
+
         if (driveUid != null && fs != null &&
             _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, CrewManifestProgramComponent.CacheFilePath, out var db, fs))
         {
-            if (db.Data.TryGetValue("__station", out var sName))
+            fileTimestamp = db.LastModified;
+            if (db.Data.TryGetValue("__station", out var sName) && !string.IsNullOrWhiteSpace(sName))
                 stationName = sName;
 
-            foreach (var (k, v) in db.Data)
+            foreach (var (k, v) in db.Data.OrderBy(kv => kv.Key, StringComparer.Ordinal))
             {
                 if (!k.StartsWith("row_"))
                     continue;
                 var cols = v.Split('\t');
                 if (cols.Length >= 4)
                     loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], cols[2], cols[3]));
+                else if (cols.Length >= 2)
+                    loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], string.Empty, "JobIconUnknown"));
             }
         }
 
@@ -504,12 +528,13 @@ public sealed partial class StationAppsSystem : EntitySystem
                 stationName,
                 loadedEntries.Count > 0 ? new CrewManifestEntries { Entries = loadedEntries.ToArray() } : null,
                 online,
-                statusMsg));
+                statusMsg,
+                fileTimestamp));
         }
     }
 
     // =========================================================================
-    // WANTED LIST (Network sync -> /records/wanted_list.db)
+    // WANTED LIST (Network download from Server/Router local copy -> /records/wanted_list.db)
     // =========================================================================
 
     private void OnWantedStartup(Entity<WantedListProgramComponent> ent, ref ProgramStartupEvent args)
@@ -545,72 +570,102 @@ public sealed partial class StationAppsSystem : EntitySystem
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        if (station != EntityUid.Invalid &&
-            _router.HasActiveNetworkCard(compUid) &&
-            _router.IsNetworkConnected(compUid) &&
-            _dataServer.TryGetFirstOnlineRepositoryServer(compUid, out _, out var srvCompUid, out _, out _, out _))
+        if (_router.HasActiveNetworkCard(compUid) &&
+            _router.IsNetworkConnected(compUid))
         {
-            var data = new Dictionary<string, string>();
-            var records = _records.GetRecordsOfType<CriminalRecord>(station)
-                .Where(cr => cr.Item2.Status is not SecurityStatus.None || cr.Item2.History.Count > 0)
-                .ToList();
-
-            var idx = 0;
-            foreach (var (recId, rec) in records)
+            if (_dataServer.TryGetLocalRecordCopyFromHost(
+                    compUid,
+                    "StationRecordsService",
+                    WantedListProgramComponent.CacheFilePath,
+                    station,
+                    out var srvCompUid,
+                    out var serverCopy,
+                    out var netErr))
             {
-                var key = new StationRecordKey(recId, station);
-                if (_records.TryGetRecord(key, out GeneralStationRecord? gen))
+                var editableEntries = new Dictionary<string, string>();
+                var parameters = new Dictionary<string, string>();
+                foreach (var (k, v) in serverCopy.Data)
                 {
-                    data[$"rec_{idx++}"] = $"{gen.Name}\t{gen.JobTitle}\t{rec.Status}\t{rec.Reason ?? ""}\t{rec.InitiatorName ?? ""}";
+                    if (!k.StartsWith("rec_"))
+                        continue;
+                    var cols = v.Split('\t');
+                    if (cols.Length < 3)
+                        continue;
+
+                    var charName = cols[0];
+                    var jobTitle = cols[1];
+                    var secStatus = cols[2];
+                    var reason = cols.Length > 3 ? cols[3] : string.Empty;
+                    var initiator = cols.Length > 4 ? cols[4] : string.Empty;
+                    editableEntries[charName] = string.IsNullOrWhiteSpace(reason) ? secStatus : $"{secStatus} | {reason}";
+                    parameters[$"meta:{charName}"] = $"{jobTitle}\t{initiator}";
+                }
+
+                var size = Math.Max(128, serverCopy.Size);
+                var pkt = new NetworkDataPacket
+                {
+                    PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+                    SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
+                    TargetAddress = _router.EnsureDeviceGuid(compUid),
+                    Protocol = "TCP/RECORDS",
+                    PayloadSummary = $"Wanted List ({editableEntries.Count} entries) [{MetaData(srvCompUid).EntityName}]",
+                    RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
+                    IsPlayerRelevant = true,
+                    IsEditable = true,
+                    FilePath = WantedListProgramComponent.CacheFilePath,
+                    EditableEntries = editableEntries,
+                    Parameters = parameters,
+                    ByteSize = size,
+                    Timestamp = _timing.CurTime
+                };
+
+                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
+                {
+                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                    localFile.Data.Remove("__tampered");
+                    localFile.Data.Remove("__source_hash");
+                    localFile.Size = size;
+                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                    online = true;
+                    statusMsg = $"Downloaded from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {WantedListProgramComponent.CacheFilePath}";
                 }
             }
-
-            var size = Math.Max(128, data.Count * 64);
-            var pkt = new NetworkDataPacket
+            else
             {
-                PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
-                SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
-                TargetAddress = _router.EnsureDeviceGuid(compUid),
-                Protocol = "TCP/RECORDS",
-                PayloadSummary = $"Security wanted list ({data.Count})",
-                ByteSize = size,
-                Timestamp = _timing.CurTime
-            };
-
-            if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
-            {
-                _fileSystem.TryWriteFile(driveUid.Value, new DatabaseVirtualFile
-                {
-                    Name = "wanted_list",
-                    Extension = "db",
-                    Directory = "/records/",
-                    TableName = "wanted_list",
-                    Data = data,
-                    Size = size
-                }, fs);
-                online = true;
-                statusMsg = $"Synced from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> /records/wanted_list.db";
+                statusMsg = $"{netErr} — reading local {WantedListProgramComponent.CacheFilePath}.";
             }
         }
         else
         {
-            statusMsg = "Offline / no NIC — reading local /records/wanted_list.db";
+            statusMsg = $"Offline / no NIC — reading local {WantedListProgramComponent.CacheFilePath}.";
         }
 
+        SendWantedListFromLocalCache(progUid, compUid, online, statusMsg);
+    }
+
+    public void SendWantedListFromLocalCache(EntityUid progUid, EntityUid compUid, bool online, string statusMsg)
+    {
+        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
+
         var output = new List<WantedRecord>();
-        if (station != EntityUid.Invalid &&
-            driveUid != null &&
+        TimeSpan? fileTimestamp = null;
+
+        if (driveUid != null &&
             fs != null &&
             _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, WantedListProgramComponent.CacheFilePath, out var db, fs))
         {
-            foreach (var v in db.Data.Values)
+            fileTimestamp = db.LastModified;
+            foreach (var (k, v) in db.Data.OrderBy(kv => kv.Key, StringComparer.Ordinal))
             {
+                if (!k.StartsWith("rec_"))
+                    continue;
+
                 var cols = v.Split('\t');
                 if (cols.Length < 3)
                     continue;
 
                 var genRec = new GeneralStationRecord { Name = cols[0], JobTitle = cols[1] };
-                Enum.TryParse<SecurityStatus>(cols[2], out var secStatus);
+                Enum.TryParse<SecurityStatus>(cols[2], true, out var secStatus);
                 output.Add(new WantedRecord(
                     genRec,
                     secStatus,
@@ -621,11 +676,11 @@ public sealed partial class StationAppsSystem : EntitySystem
         }
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, new WantedListUiState(output, online, statusMsg));
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new WantedListUiState(output, online, statusMsg, fileTimestamp));
     }
 
     // =========================================================================
-    // NEWS READER (Network sync -> /news/articles.db)
+    // NEWS READER (Network download from Server/Router local copy -> /news/articles.db)
     // =========================================================================
 
     private void OnNewsStartup(Entity<NewsReaderProgramComponent> ent, ref ProgramStartupEvent args)
@@ -657,16 +712,26 @@ public sealed partial class StationAppsSystem : EntitySystem
         {
             case NewsReaderUiAction.Next:
                 ent.Comp.ArticleNumber++;
-                break;
+                Dirty(ent);
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                return;
+
             case NewsReaderUiAction.Prev:
                 ent.Comp.ArticleNumber--;
-                break;
+                Dirty(ent);
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                return;
+
             case NewsReaderUiAction.NotificationSwitch:
                 ent.Comp.NotificationOn = !ent.Comp.NotificationOn;
-                break;
+                Dirty(ent);
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                return;
+
+            case NewsReaderUiAction.SyncNetwork:
+                SyncAndSendNews(ent.Owner, compUid, ent.Comp);
+                return;
         }
-        Dirty(ent);
-        SyncAndSendNews(ent.Owner, compUid, ent.Comp);
     }
 
     private void SyncAndSendNews(EntityUid progUid, EntityUid compUid, NewsReaderProgramComponent comp)
@@ -675,50 +740,88 @@ public sealed partial class StationAppsSystem : EntitySystem
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        if (station != EntityUid.Invalid &&
-            _router.HasActiveNetworkCard(compUid) &&
-            _router.IsNetworkConnected(compUid) &&
-            _news.TryGetNewsArticles(station, out var liveArticles))
+        if (_router.HasActiveNetworkCard(compUid) &&
+            _router.IsNetworkConnected(compUid))
         {
-            var data = new Dictionary<string, string>();
-            for (var i = 0; i < liveArticles.Count; i++)
+            if (_dataServer.TryGetLocalRecordCopyFromHost(
+                    compUid,
+                    "NewsService",
+                    NewsReaderProgramComponent.CacheFilePath,
+                    station,
+                    out var srvCompUid,
+                    out var serverCopy,
+                    out var netErr))
             {
-                var a = liveArticles[i];
-                data[$"art_{i}"] = $"{a.Title}\t{a.Author ?? "Anonymous"}\t{a.ShareTime.Ticks}\t{a.Content.Replace('\t', ' ')}";
-            }
-
-            if (driveUid != null && fs != null)
-            {
-                var netLabel = _router.GetConnectedNetworkLabel(compUid);
-                var srvSource = !string.IsNullOrEmpty(netLabel) ? netLabel : "NEWS-SRV";
-                var bytes = Math.Max(128, data.Count * 128);
-                _bandwidth.RecordDataTransmitted(compUid, bytes, isUpload: false);
-                _bandwidth.StorePacket(compUid, srvSource, _router.EnsureDeviceGuid(compUid), "TCP/NEWS", $"News sync ({data.Count} articles)", bytes);
-                _fileSystem.TryWriteFile(driveUid.Value, new DatabaseVirtualFile
+                var editableEntries = new Dictionary<string, string>();
+                var parameters = new Dictionary<string, string>();
+                foreach (var (k, v) in serverCopy.Data)
                 {
-                    Name = "articles",
-                    Extension = "db",
-                    Directory = "/news/",
-                    TableName = "station_news",
-                    Data = data,
-                    Size = bytes
-                }, fs);
-                status = string.IsNullOrEmpty(netLabel)
-                    ? $"Synced {liveArticles.Count} articles to /news/articles.db."
-                    : $"Synced {liveArticles.Count} articles ({netLabel}) to /news/articles.db.";
+                    if (!k.StartsWith("art_"))
+                        continue;
+                    var cols = v.Split('\t', 4);
+                    if (cols.Length < 4)
+                        continue;
+
+                    editableEntries[cols[0]] = cols[3];
+                    parameters[$"meta:{cols[0]}"] = $"{cols[1]}\t{cols[2]}";
+                }
+
+                var size = Math.Max(128, serverCopy.Size);
+                var pkt = new NetworkDataPacket
+                {
+                    PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+                    SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
+                    TargetAddress = _router.EnsureDeviceGuid(compUid),
+                    Protocol = "TCP/NEWS",
+                    PayloadSummary = $"Station News ({editableEntries.Count} articles) [{MetaData(srvCompUid).EntityName}]",
+                    RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
+                    IsPlayerRelevant = true,
+                    IsEditable = true,
+                    FilePath = NewsReaderProgramComponent.CacheFilePath,
+                    EditableEntries = editableEntries,
+                    Parameters = parameters,
+                    ByteSize = size,
+                    Timestamp = _timing.CurTime
+                };
+
+                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
+                {
+                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                    localFile.Data.Remove("__tampered");
+                    localFile.Data.Remove("__source_hash");
+                    localFile.Size = size;
+                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                    status = $"Downloaded {editableEntries.Count} articles from {MetaData(srvCompUid).EntityName} -> {NewsReaderProgramComponent.CacheFilePath}";
+                }
+            }
+            else
+            {
+                status = $"{netErr} — reading local {NewsReaderProgramComponent.CacheFilePath}.";
             }
         }
         else
         {
-            status = "Offline — reading cached /news/articles.db.";
+            status = $"Offline — reading cached {NewsReaderProgramComponent.CacheFilePath}.";
         }
 
+        SendNewsFromLocalCache(progUid, compUid, comp, status);
+    }
+
+    public void SendNewsFromLocalCache(EntityUid progUid, EntityUid compUid, NewsReaderProgramComponent comp, string status)
+    {
+        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
+
         var articles = new List<NewsArticle>();
+        TimeSpan? fileTimestamp = null;
+
         if (driveUid != null && fs != null &&
             _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, NewsReaderProgramComponent.CacheFilePath, out var db, fs))
         {
-            foreach (var v in db.Data.Values)
+            fileTimestamp = db.LastModified;
+            foreach (var (k, v) in db.Data.OrderBy(kv => kv.Key, StringComparer.Ordinal))
             {
+                if (!k.StartsWith("art_"))
+                    continue;
                 var cols = v.Split('\t', 4);
                 if (cols.Length < 4)
                     continue;
@@ -736,7 +839,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (articles.Count == 0)
         {
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
-                _ui.SetUiState(progUid, ProgramUiKey.Key, new NewsReaderBoundUserInterfaceState(null, 0, 0, comp.NotificationOn, status));
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new NewsReaderBoundUserInterfaceState(null, 0, 0, comp.NotificationOn, status, fileTimestamp));
             return;
         }
 
@@ -753,7 +856,43 @@ public sealed partial class StationAppsSystem : EntitySystem
                 comp.ArticleNumber + 1,
                 articles.Count,
                 comp.NotificationOn,
-                status));
+                status,
+                fileTimestamp));
+        }
+    }
+
+    /// <summary>
+    /// Refreshes any open networked-record UI on a target computer directly from its local HDD file
+    /// (for instance, immediately after a modified packet updates its local VFS memory).
+    /// </summary>
+    public void RefreshRecordProgramsFromLocalCache(EntityUid compUid, string filePath)
+    {
+        if (filePath.Equals(CrewManifestProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var q = EntityQueryEnumerator<CrewManifestProgramComponent, ProgramComponent>();
+            while (q.MoveNext(out var progUid, out _, out var prog))
+            {
+                if (prog.Computer == compUid)
+                    SendCrewManifestFromLocalCache(progUid, compUid, true, $"Updated from network packet -> {filePath}");
+            }
+        }
+        else if (filePath.Equals(WantedListProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var q = EntityQueryEnumerator<WantedListProgramComponent, ProgramComponent>();
+            while (q.MoveNext(out var progUid, out _, out var prog))
+            {
+                if (prog.Computer == compUid)
+                    SendWantedListFromLocalCache(progUid, compUid, true, $"Updated from network packet -> {filePath}");
+            }
+        }
+        else if (filePath.Equals(NewsReaderProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var q = EntityQueryEnumerator<NewsReaderProgramComponent, ProgramComponent>();
+            while (q.MoveNext(out var progUid, out var newsComp, out var prog))
+            {
+                if (prog.Computer == compUid)
+                    SendNewsFromLocalCache(progUid, compUid, newsComp, $"Updated from network packet -> {filePath}");
+            }
         }
     }
 

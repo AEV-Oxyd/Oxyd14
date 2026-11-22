@@ -85,7 +85,7 @@ public sealed partial class DeviceLinkSystem
             return;
 
         var invokeCounter = GetEffectiveInvokeCounter(sink.Comp);
-        if (invokeCounter > sink.Comp.InvokeLimit)
+        if (sink.Comp.InvokeLimit > 0 && invokeCounter > sink.Comp.InvokeLimit)
         {
             SetInvokeCounter(sink!, 0);
             var args = new DeviceLinkOverloadedEvent();
@@ -132,7 +132,7 @@ public sealed partial class DeviceLinkSystem
             return;
 
         var invokeCounter = GetEffectiveInvokeCounter(sink.Comp);
-        if (invokeCounter > sink.Comp.InvokeLimit)
+        if (sink.Comp.InvokeLimit > 0 && invokeCounter > sink.Comp.InvokeLimit)
         {
             SetInvokeCounter(sink!, 0);
             var args = new DeviceLinkOverloadedEvent();
@@ -143,9 +143,17 @@ public sealed partial class DeviceLinkSystem
 
         SetInvokeCounter(sink!, invokeCounter + 1);
 
-        // Just skip using device networking if the source or the sink doesn't support it,
-        // or if the typed payload is non-networked / custom (only LogicStatePayload has a net relay).
-        if (!_deviceNetworkQuery.HasComp(source) || !_deviceNetworkQuery.TryComp(sink, out var sinkNetwork) || data is not LogicStatePayload)
+        // Non-logic typed payloads (e.g. ComputerPacket / ComputerDeviceLinkPayload) dispatch directly
+        // without firing an untyped SignalReceivedEvent so plain button/switch handlers do not double-trigger.
+        if (data is not LogicStatePayload)
+        {
+            var eventWithData = new SignalReceivedEvent<T>(sinkPort, data, source);
+            RaiseLocalEvent(sink, ref eventWithData);
+            return;
+        }
+
+        // Just skip using device networking if the source or the sink doesn't support it
+        if (!_deviceNetworkQuery.HasComp(source) || !_deviceNetworkQuery.TryComp(sink, out var sinkNetwork))
         {
             var eventArgs = new SignalReceivedEvent(sinkPort, source);
             RaiseLocalEvent(sink, ref eventArgs);

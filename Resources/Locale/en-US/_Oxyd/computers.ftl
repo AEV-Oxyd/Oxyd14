@@ -47,6 +47,8 @@ signal-port-oxyd-autolathe-blueprint-sink = Autolathe Blueprint Input
 signal-port-desc-oxyd-autolathe-blueprint-sink = Receives blueprint and recipe file references from linked programs or disks.
 signal-port-oxyd-autolathe-command-sink = Autolathe Command Input
 signal-port-desc-oxyd-autolathe-command-sink = Receives print, cancel, and material ejection commands via packet.
+signal-port-oxyd-autolathe-set-recipe-sink = Set Recipe
+signal-port-desc-oxyd-autolathe-set-recipe-sink = Selects or cycles the active recipe remembered by the autolathe for signal-triggered printing.
 signal-port-oxyd-autolathe-status-source = Autolathe Status Output
 signal-port-desc-oxyd-autolathe-status-source = Transmits operational telemetry (standby, printing, materials, queue).
 

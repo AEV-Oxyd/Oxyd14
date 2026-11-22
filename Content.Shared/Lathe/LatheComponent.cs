@@ -84,6 +84,29 @@ namespace Content.Shared.Lathe
         [DataField]
         public string? SelectedBlueprintFile = null;
 
+        /// <summary>
+        /// Remembered recipe selected for external signal-triggered printing (via UI or SetRecipe port).
+        /// Persists across UI closes and only clears if physical access to its disk or blueprint file is lost.
+        /// </summary>
+        [DataField]
+        public ProtoId<LatheRecipePrototype>? SelectedRecipeId;
+
+        [DataField]
+        public string? SelectedRecipeFilePath;
+
+        [DataField]
+        public bool SelectedRecipeFromDisk;
+
+        [ViewVariables]
+        public EntityUid? SelectedRecipeDriveUid;
+
+        /// <summary>
+        /// Tracks whether default static blueprints have already been materialized into the
+        /// lathe's embedded computer VFS memory (/blueprints/*.lathe).
+        /// </summary>
+        [DataField]
+        public bool EmbeddedBlueprintsSeeded;
+
         #region MachineUpgrading
         /// <summary>
         /// A modifier that changes how long it takes to print a recipe

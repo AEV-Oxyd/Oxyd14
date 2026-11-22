@@ -192,10 +192,30 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (comp.BootProgram is not { } bootUid || !Exists(bootUid))
             return;
 
-        if (args.Locked && TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp) && embComp.CurrentView != 0)
+        if (args.Locked && TryComp<EmbeddedOsProgramComponent>(bootUid, out var embComp))
         {
-            embComp.CurrentView = 0;
-            Dirty(bootUid, embComp);
+            if (embComp.CurrentView != 0)
+            {
+                embComp.CurrentView = 0;
+                Dirty(bootUid, embComp);
+            }
+
+            var isTwoTabController =
+                string.Equals(comp.EmbeddedDefaultAppPath, "/bin/apc_control.nte", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(comp.EmbeddedDefaultAppPath, "/bin/lathe_control.nte", StringComparison.OrdinalIgnoreCase);
+            if (isTwoTabController)
+            {
+                foreach (var rUid in comp.RunningPrograms)
+                {
+                    if (_programQuery.TryComp(rUid, out var rProg) &&
+                        string.Equals(rProg.ExecutablePath, comp.EmbeddedDefaultAppPath, StringComparison.OrdinalIgnoreCase) &&
+                        comp.ActiveProgram != rUid)
+                    {
+                        _computer.SwitchActiveProgram(compUid, rUid);
+                        break;
+                    }
+                }
+            }
         }
 
         UpdateOsUi(bootUid);
@@ -374,7 +394,8 @@ public sealed partial class OsProgramSystem : EntitySystem
                 ports,
                 hwSummary,
                 hasLock,
-                isHostLocked);
+                isHostLocked,
+                comp.EmbeddedDefaultAppPath);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);

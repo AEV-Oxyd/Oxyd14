@@ -23,6 +23,12 @@ public sealed partial class NetworkConfiguratorBoundUserInterface(EntityUid owne
     {
         base.Open();
 
+        if (_configurationMenu != null && !_configurationMenu.Disposed)
+        {
+            Update();
+            return;
+        }
+
         _configurationMenu = this.CreateWindow<NetworkConfiguratorConfigurationMenu>();
         _configurationMenu.Set.OnPressed += _ => SendPredictedMessage(new NetworkConfiguratorSetMessage());
         _configurationMenu.Add.OnPressed += _ => SendPredictedMessage(new NetworkConfiguratorAddMessage());

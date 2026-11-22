@@ -34,6 +34,8 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private IGameTiming _timing = default!;
 #if DEBUG
     [Dependency] private PowerReceiverSystem _power = default!;
@@ -51,7 +53,11 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     private static readonly EntProtoId DebugRouterPrototype = "StationNetworkRouter";
 
     public const string DebugServerDisplayName = "DEV DEBUG SERVER";
+#endif
 
+    private const float RouterLookupRange = 512f;
+
+#if DEBUG
     private EntityUid _debugRouter;
     private bool _ensuringDebugRouter;
     private bool _flushingEntities;
@@ -411,13 +417,329 @@ public sealed partial class NetworkRouterSystem : EntitySystem
                 };
 
                 _bandwidth.RecordDataTransmitted(compUid, pkt.ByteSize, isUpload: true);
-                _bandwidth.StorePacket(compUid, pkt.SourceAddress, pkt.TargetAddress, pkt.Protocol, pkt.PayloadSummary, pkt.ByteSize, false, pkt.RawPayload);
+                _bandwidth.StorePacket(compUid, pkt);
                 _bandwidth.LogPacketToRouters(pkt, compUid);
                 ent.Comp.StatusMessage = $"Injected {pkt.Protocol} frame ({pkt.ByteSize} B) -> {tgtGuid}.";
+                break;
+
+            case PacketSnifferAction.ModifyAndTransmitPacket:
+                HandleModifyAndTransmitPacket(compUid, ent.Comp, msg);
                 break;
         }
 
         UpdatePacketSnifferUi(ent.Owner);
+    }
+
+    private void HandleModifyAndTransmitPacket(EntityUid compUid, PacketSnifferProgramComponent snifferComp, PacketSnifferActionMessage msg)
+    {
+        if (!HasActiveNetworkCard(compUid))
+        {
+            snifferComp.StatusMessage = "Cannot transmit modified packet: no active network card installed.";
+            return;
+        }
+
+        var router = FindNearestRouter(compUid);
+        NetworkDataPacket? captured = null;
+
+        if (router != null)
+        {
+            captured = router.Value.Comp.RecordedPackets.LastOrDefault(p =>
+                p.PacketId.Equals(msg.PacketId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (captured == null && TryComp<NetworkBandwidthComponent>(compUid, out var localBw))
+        {
+            captured = localBw.StoredPackets.LastOrDefault(p =>
+                p.PacketId.Equals(msg.PacketId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (captured == null)
+        {
+            snifferComp.StatusMessage = $"Packet '{msg.PacketId}' no longer in capture buffer.";
+            return;
+        }
+
+        if (!captured.IsPlayerRelevant || !captured.IsEditable)
+        {
+            snifferComp.StatusMessage = $"Packet '{captured.PacketId}' ({captured.Protocol}) is not player-editable.";
+            return;
+        }
+
+        var modifiedEntries = msg.ModifiedEntries != null
+            ? new Dictionary<string, string>(msg.ModifiedEntries)
+            : new Dictionary<string, string>(captured.EditableEntries);
+
+        var destGuid = msg.ApplyToSource
+            ? (!string.IsNullOrWhiteSpace(msg.SourceGuid) ? msg.SourceGuid.Trim().ToUpperInvariant() : captured.SourceAddress)
+            : (!string.IsNullOrWhiteSpace(msg.TargetGuid) ? msg.TargetGuid.Trim().ToUpperInvariant() : captured.TargetAddress);
+
+        if (!TryFindDeviceByGuid(destGuid, out var destCompUid))
+        {
+            snifferComp.StatusMessage = $"Destination device [{destGuid}] not found on network.";
+            return;
+        }
+
+        var rawSummary = string.Join("; ", modifiedEntries.Select(kv => $"{kv.Key}={kv.Value}"));
+        var modPkt = captured.Clone();
+        modPkt.PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        modPkt.SourceAddress = EnsureDeviceGuid(compUid);
+        modPkt.TargetAddress = destGuid;
+        modPkt.EditableEntries = modifiedEntries;
+        modPkt.RawPayload = rawSummary;
+        modPkt.PayloadSummary = $"[MODIFIED] {captured.Protocol} ({modifiedEntries.Count} entries) -> {destGuid}";
+        modPkt.ByteSize = Math.Max(128, rawSummary.Length * 2 + 64);
+        modPkt.Timestamp = _timing.CurTime;
+
+        if (!RecordAndValidatePacket(compUid, destCompUid, modPkt))
+        {
+            snifferComp.StatusMessage = $"Blocked: router denied modified {modPkt.Protocol} transmission to [{destGuid}].";
+            return;
+        }
+
+        var markTampered = msg.ApplyToSource;
+        if (!markTampered &&
+            _computerQuery.TryComp(destCompUid, out var destOxyd) &&
+            destOxyd.HostMachine is { } destHost &&
+            (HasComp<DataServerComponent>(destHost) || HasComp<NetworkRouterComponent>(destHost)))
+        {
+            markTampered = true;
+        }
+
+        if (!ApplyModifiedPacketToComputerVfs(destCompUid, modPkt, markTampered, out var applyErr))
+        {
+            snifferComp.StatusMessage = $"Transmitted modified {modPkt.Protocol}, but target VFS update failed: {applyErr}";
+            return;
+        }
+
+        snifferComp.StatusMessage = markTampered
+            ? $"Poisoned server/router local copy {modPkt.FilePath} on [{destGuid}] ({modifiedEntries.Count} entries)."
+            : $"Transmitted modified {modPkt.Protocol} to [{destGuid}] ({modifiedEntries.Count} entries).";
+        RefreshAllPacketSniffers();
+    }
+
+    private bool ApplyModifiedPacketToComputerVfs(
+        EntityUid destCompUid,
+        NetworkDataPacket pkt,
+        bool markTampered,
+        out string error)
+    {
+        error = string.Empty;
+        if (!_fileSystem.TryFindFileSystem(destCompUid, out var driveUid, out var fs))
+        {
+            error = "no hard drive on target computer";
+            return false;
+        }
+
+        var path = pkt.FilePath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            error = "packet has no associated VFS file path";
+            return false;
+        }
+
+        if (path.Equals(CrewManifestProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var data = new Dictionary<string, string>();
+            var stationName = pkt.Parameters.TryGetValue("__station", out var st) && !string.IsNullOrWhiteSpace(st)
+                ? st
+                : "Unknown Station";
+
+            if (_fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, path, out var existingDb, fs) &&
+                existingDb.Data.TryGetValue("__station", out var existingSt) &&
+                !string.IsNullOrWhiteSpace(existingSt))
+            {
+                stationName = existingSt;
+            }
+
+            data["__station"] = stationName;
+            if (markTampered)
+                data["__tampered"] = "1";
+
+            var idx = 0;
+            foreach (var (charName, jobTitle) in pkt.EditableEntries)
+            {
+                if (string.IsNullOrWhiteSpace(charName))
+                    continue;
+
+                var jobProto = string.Empty;
+                var jobIcon = "JobIconUnknown";
+                if (pkt.Parameters.TryGetValue($"meta:{charName}", out var metaRaw))
+                {
+                    var mCols = metaRaw.Split('\t');
+                    if (mCols.Length >= 1)
+                        jobProto = mCols[0];
+                    if (mCols.Length >= 2)
+                        jobIcon = mCols[1];
+                }
+
+                data[$"row_{idx++}"] = $"{charName.Trim()}\t{jobTitle.Trim()}\t{jobProto}\t{jobIcon}";
+            }
+
+            var updated = new DatabaseVirtualFile
+            {
+                Name = "crew_manifest",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "crew_manifest",
+                Data = data,
+                Size = Math.Max(128, data.Count * 64)
+            };
+
+            if (!_fileSystem.TryWriteFile(driveUid.Value, updated, fs))
+            {
+                error = "target storage full or read-only";
+                return false;
+            }
+
+            _fileSystem.LogSystemActivity(driveUid.Value, "NET-PKT", $"Updated {path} from {pkt.Protocol} ({pkt.PacketId})");
+            EntityManager.System<StationAppsSystem>().RefreshRecordProgramsFromLocalCache(destCompUid, path);
+            return true;
+        }
+
+        if (path.Equals(WantedListProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var data = new Dictionary<string, string>();
+            if (markTampered)
+                data["__tampered"] = "1";
+
+            var idx = 0;
+            foreach (var (charName, rawVal) in pkt.EditableEntries)
+            {
+                if (string.IsNullOrWhiteSpace(charName))
+                    continue;
+
+                var parts = rawVal.Split('|', 2);
+                var statusStr = parts[0].Trim();
+                var reason = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+                var jobTitle = "Crew";
+                var initiator = "Security";
+                if (pkt.Parameters.TryGetValue($"meta:{charName}", out var metaRaw))
+                {
+                    var mCols = metaRaw.Split('\t');
+                    if (mCols.Length >= 1 && !string.IsNullOrWhiteSpace(mCols[0]))
+                        jobTitle = mCols[0];
+                    if (mCols.Length >= 2)
+                        initiator = mCols[1];
+                }
+
+                data[$"rec_{idx++}"] = $"{charName.Trim()}\t{jobTitle}\t{statusStr}\t{reason}\t{initiator}";
+            }
+
+            var updated = new DatabaseVirtualFile
+            {
+                Name = "wanted_list",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "wanted_list",
+                Data = data,
+                Size = Math.Max(128, data.Count * 64)
+            };
+
+            if (!_fileSystem.TryWriteFile(driveUid.Value, updated, fs))
+            {
+                error = "target storage full or read-only";
+                return false;
+            }
+
+            _fileSystem.LogSystemActivity(driveUid.Value, "NET-PKT", $"Updated {path} from {pkt.Protocol} ({pkt.PacketId})");
+            EntityManager.System<StationAppsSystem>().RefreshRecordProgramsFromLocalCache(destCompUid, path);
+            return true;
+        }
+
+        if (path.Equals(NewsReaderProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var data = new Dictionary<string, string>();
+            if (markTampered)
+                data["__tampered"] = "1";
+
+            var idx = 0;
+            foreach (var (title, content) in pkt.EditableEntries)
+            {
+                if (string.IsNullOrWhiteSpace(title))
+                    continue;
+
+                var author = "Anonymous";
+                var ticks = _timing.CurTime.Ticks.ToString();
+                if (pkt.Parameters.TryGetValue($"meta:{title}", out var metaRaw))
+                {
+                    var mCols = metaRaw.Split('\t');
+                    if (mCols.Length >= 1 && !string.IsNullOrWhiteSpace(mCols[0]))
+                        author = mCols[0];
+                    if (mCols.Length >= 2 && !string.IsNullOrWhiteSpace(mCols[1]))
+                        ticks = mCols[1];
+                }
+
+                data[$"art_{idx++}"] = $"{title.Trim()}\t{author}\t{ticks}\t{content.Replace('\t', ' ')}";
+            }
+
+            var updated = new DatabaseVirtualFile
+            {
+                Name = "articles",
+                Extension = "db",
+                Directory = "/news/",
+                TableName = "station_news",
+                Data = data,
+                Size = Math.Max(128, data.Count * 128)
+            };
+
+            if (!_fileSystem.TryWriteFile(driveUid.Value, updated, fs))
+            {
+                error = "target storage full or read-only";
+                return false;
+            }
+
+            _fileSystem.LogSystemActivity(driveUid.Value, "NET-PKT", $"Updated {path} from {pkt.Protocol} ({pkt.PacketId})");
+            EntityManager.System<StationAppsSystem>().RefreshRecordProgramsFromLocalCache(destCompUid, path);
+            return true;
+        }
+
+        // Generic .db or .txt file override
+        var slashIdx = path.LastIndexOf('/');
+        var dir = slashIdx >= 0 ? path[..(slashIdx + 1)] : "/";
+        var fileWithExt = slashIdx >= 0 ? path[(slashIdx + 1)..] : path;
+        var dotIdx = fileWithExt.LastIndexOf('.');
+        var fName = dotIdx > 0 ? fileWithExt[..dotIdx] : fileWithExt;
+        var fExt = dotIdx > 0 ? fileWithExt[(dotIdx + 1)..] : "db";
+
+        VirtualFile genericFile;
+        if (fExt.Equals("txt", StringComparison.OrdinalIgnoreCase))
+        {
+            var body = pkt.EditableEntries.TryGetValue("content", out var textBody)
+                ? textBody
+                : string.Join("\n", pkt.EditableEntries.Select(kv => $"{kv.Key}: {kv.Value}"));
+            genericFile = new TextVirtualFile
+            {
+                Name = fName,
+                Extension = fExt,
+                Directory = dir,
+                TextContent = body,
+                Size = Math.Max(64, body.Length)
+            };
+        }
+        else
+        {
+            var dbData = new Dictionary<string, string>(pkt.EditableEntries);
+            if (markTampered)
+                dbData["__tampered"] = "1";
+            genericFile = new DatabaseVirtualFile
+            {
+                Name = fName,
+                Extension = fExt,
+                Directory = dir,
+                TableName = fName,
+                Data = dbData,
+                Size = Math.Max(128, dbData.Count * 64)
+            };
+        }
+
+        if (!_fileSystem.TryWriteFile(driveUid.Value, genericFile, fs))
+        {
+            error = "target storage full or read-only";
+            return false;
+        }
+
+        _fileSystem.LogSystemActivity(driveUid.Value, "NET-PKT", $"Updated {path} from {pkt.Protocol} ({pkt.PacketId})");
+        return true;
     }
 
     public void RefreshDnsDirectory(Entity<NetworkRouterComponent> router)
@@ -507,28 +829,31 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
     public Entity<NetworkRouterComponent>? FindNearestRouter(EntityUid origin)
     {
-        var originXform = Transform(origin);
+        var originCoords = _transform.GetMapCoordinates(origin);
         Entity<NetworkRouterComponent>? best = null;
         var bestDist = float.MaxValue;
 
-        var query = EntityQueryEnumerator<NetworkRouterComponent>();
-        while (query.MoveNext(out var rUid, out var rComp))
+        if (originCoords.MapId != MapId.Nullspace)
         {
-            if (_debugFallbackQuery.HasComp(rUid))
-                continue;
+            var candidates = _lookup.GetEntitiesInRange<NetworkRouterComponent>(
+                originCoords,
+                RouterLookupRange,
+                LookupFlags.All | LookupFlags.Approximate);
 
-            if (!IsRouterOperational(rUid))
-                continue;
-
-            var rXform = Transform(rUid);
-            if (rXform.MapID != originXform.MapID)
-                continue;
-
-            var dist = (rXform.Coordinates.Position - originXform.Coordinates.Position).LengthSquared();
-            if (dist < bestDist)
+            foreach (var rEnt in candidates)
             {
-                bestDist = dist;
-                best = (rUid, rComp);
+                if (_debugFallbackQuery.HasComp(rEnt.Owner))
+                    continue;
+
+                if (!IsRouterOperational(rEnt.Owner))
+                    continue;
+
+                var dist = (_transform.GetMapCoordinates(rEnt.Owner).Position - originCoords.Position).LengthSquared();
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = rEnt;
+                }
             }
         }
 
@@ -697,8 +1022,8 @@ public sealed partial class NetworkRouterSystem : EntitySystem
 
         _bandwidth.RecordDataTransmitted(sComp, packet.ByteSize, isUpload: true);
         _bandwidth.RecordDataTransmitted(tComp, packet.ByteSize, isUpload: false);
-        _bandwidth.StorePacket(sComp, packet.SourceAddress, packet.TargetAddress, packet.Protocol, packet.PayloadSummary, packet.ByteSize, packet.IsEncrypted, packet.RawPayload);
-        _bandwidth.StorePacket(tComp, packet.SourceAddress, packet.TargetAddress, packet.Protocol, packet.PayloadSummary, packet.ByteSize, packet.IsEncrypted, packet.RawPayload);
+        _bandwidth.StorePacket(sComp, packet);
+        _bandwidth.StorePacket(tComp, packet);
         _bandwidth.LogPacketToRouters(packet, sComp);
 
         RefreshAllPacketSniffers();

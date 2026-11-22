@@ -4,6 +4,7 @@ using System.Text;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Programs;
 using Robust.Shared.Containers;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Oxyd.Computers.FileSystem;
 
@@ -11,6 +12,7 @@ public partial class SharedFileSystemSystem : EntitySystem
 {
     [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private Robust.Shared.Timing.IGameTiming _timing = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
 
     private const string DefaultLogHeader = "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------";
     private const int MaxLogEntries = 148;
@@ -20,8 +22,75 @@ public partial class SharedFileSystemSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
+        SubscribeLocalEvent<FileSystemComponent, ComponentStartup>(OnStartup);
+        SubscribeLocalEvent<FileSystemComponent, MapInitEvent>(OnMapInit);
         SubscribeLocalEvent<FileSystemComponent, AfterAutoHandleStateEvent>(OnAfterState);
         SubscribeLocalEvent<FileSystemComponent, ComponentShutdown>(OnShutdown);
+    }
+
+    private void OnStartup(EntityUid uid, FileSystemComponent comp, ref ComponentStartup args)
+    {
+        InitializeFileTimestamps(uid, comp);
+    }
+
+    private void OnMapInit(EntityUid uid, FileSystemComponent comp, ref MapInitEvent args)
+    {
+        InitializeFileTimestamps(uid, comp);
+    }
+
+    private void InitializeFileTimestamps(EntityUid uid, FileSystemComponent comp)
+    {
+        if (comp.Files.Count == 0)
+            return;
+
+        var curTime = _timing.CurTime;
+        foreach (var file in comp.Files.Values)
+        {
+            if (file is RecipeBlueprintFile bp)
+                bp.Size = bp.CalculateSize(_proto);
+
+            if (file.LastModified == TimeSpan.Zero && curTime > TimeSpan.Zero)
+                file.LastModified = curTime;
+        }
+
+        RecalculateStorageUsage(comp);
+        UpdateNetworkedHeaders(uid, comp);
+    }
+
+    /// <summary>
+    /// Encrypted or DRM/limited-use recipe blueprint files are hardware-locked to physical recipe disks
+    /// and cannot be copied, transferred, uploaded, or duplicated onto computer hard drives.
+    /// </summary>
+    public bool IsCopyProtectedBlueprint(VirtualFile file)
+    {
+        return file is RecipeBlueprintFile bp &&
+               (bp.IsEncrypted ||
+                bp.DrmLocked ||
+                bp.RemainingUses != null ||
+                !string.IsNullOrWhiteSpace(bp.EncryptionKeyHash));
+    }
+
+    /// <summary>
+    /// Refreshes storage usage, modification timestamp, networked headers, and change notifications
+    /// after an in-place mutation of an existing file (such as decrementing recipe disk DRM uses).
+    /// </summary>
+    public void NotifyFileModified(EntityUid uid, string fullPath, FileSystemComponent? comp = null)
+    {
+        if (!Resolve(uid, ref comp))
+            return;
+
+        if (comp.Files.TryGetValue(fullPath, out var file))
+        {
+            if (file is RecipeBlueprintFile bp)
+                bp.Size = bp.CalculateSize(_proto);
+
+            file.LastModified = _timing.CurTime;
+        }
+
+        RecalculateStorageUsage(comp);
+        UpdateNetworkedHeaders(uid, comp);
+        var ev = new FileSystemChangedEvent(fullPath);
+        RaiseLocalEvent(uid, ref ev, broadcast: true);
     }
 
     private void OnShutdown(EntityUid uid, FileSystemComponent comp, ref ComponentShutdown args)
@@ -216,7 +285,8 @@ public partial class SharedFileSystemSystem : EntitySystem
                     file.Size,
                     file.GetType().Name,
                     file.IsEncrypted,
-                    file.IsReadOnly
+                    file.IsReadOnly,
+                    file.LastModified
                 ));
             }
         }
@@ -228,6 +298,16 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (!Resolve(uid, ref comp))
             return false;
 
+        if (file is RecipeBlueprintFile bp)
+        {
+            // Encrypted recipe files are a physical recipe-disk-only concept and cannot be stored on computer hard drives.
+            if ((bp.IsEncrypted || !string.IsNullOrWhiteSpace(bp.EncryptionKeyHash)) &&
+                HasComp<ComputerHardDriveComponent>(uid))
+                return false;
+
+            bp.Size = bp.CalculateSize(_proto);
+        }
+
         var fullPath = file.FullPath;
         if (comp.Files.TryGetValue(fullPath, out var existing) && existing.IsReadOnly)
             return false;
@@ -236,11 +316,12 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (comp.UsedStorageBytes + sizeDelta > comp.MaxStorageBytes)
             return false;
 
+        file.LastModified = _timing.CurTime;
         comp.Files[fullPath] = file;
         RecalculateStorageUsage(comp);
         UpdateNetworkedHeaders(uid, comp);
         var ev = new FileSystemChangedEvent(fullPath);
-        RaiseLocalEvent(uid, ref ev);
+        RaiseLocalEvent(uid, ref ev, broadcast: true);
         return true;
     }
 
@@ -257,7 +338,7 @@ public partial class SharedFileSystemSystem : EntitySystem
             RecalculateStorageUsage(comp);
             UpdateNetworkedHeaders(uid, comp);
             var ev = new FileSystemChangedEvent(fullPath);
-            RaiseLocalEvent(uid, ref ev);
+            RaiseLocalEvent(uid, ref ev, broadcast: true);
             return true;
         }
 
@@ -273,7 +354,8 @@ public partial class SharedFileSystemSystem : EntitySystem
             f.Size,
             f.GetType().Name,
             f.IsEncrypted,
-            f.IsReadOnly
+            f.IsReadOnly,
+            f.LastModified
         )).ToList();
         Dirty(uid, comp);
     }

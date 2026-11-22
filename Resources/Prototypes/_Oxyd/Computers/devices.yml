@@ -186,6 +186,7 @@
     - OutputTrigger2
     - ComputerCommandSender
   - type: DeviceLinkSink
+    invokeLimit: 0
     ports:
     - PowerTrigger
     - InternetLink
@@ -246,7 +247,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 640, 480
+    defaultScreenSize: 700, 480
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/lathe_control.nte"
@@ -613,10 +614,13 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveLathe
-  name: autolathe controller drive
+  name: autolathe controller drive (236 KB)
+  description: Compact embedded fabrication storage drive with limited space for saving additional lathe blueprints.
   components:
+  - type: ComputerHardDrive
+    capacityBytes: 241664
   - type: FileSystem
-    maxStorageBytes: 8388608
+    maxStorageBytes: 241664
     files:
       "/bin/embedded_os.nte": !type:ProgramVirtualFile
         name: embedded_os
@@ -747,6 +751,13 @@
         size: 2048
         programId: OxydTerminalProgram
         title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
 
 - type: entity
   parent: ComputerPartHardDriveBasic
@@ -773,6 +784,13 @@
         size: 2048
         programId: OxydTerminalProgram
         title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
       "/bin/wanted_list.nte": !type:ProgramVirtualFile
         name: wanted_list
         extension: nte
@@ -822,12 +840,16 @@
         directory: /blueprints/
         size: 4096
         recipe: Multitool
+        drmLocked: false
+        isEncrypted: false
       "/blueprints/door_electronics.lathe": !type:RecipeBlueprintFile
         name: door_electronics
         extension: lathe
         directory: /blueprints/
         size: 4096
         recipe: DoorElectronics
+        drmLocked: false
+        isEncrypted: false
       "/notes/station_sop.txt": !type:TextVirtualFile
         name: station_sop
         extension: txt
@@ -933,8 +955,8 @@
         size: 32
         recipe: Handcuffs
         remainingUses: 10
-        drmLocked: false
-        isEncrypted: false
+        drmLocked: true
+        isEncrypted: true
 
 - type: entity
   parent: BaseRecipeDisk

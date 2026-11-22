@@ -14,7 +14,8 @@ public record struct FileHeader(
     int Size,
     string MimeType,
     bool IsEncrypted,
-    bool IsReadOnly
+    bool IsReadOnly,
+    TimeSpan LastModified = default
 );
 
 [ImplicitDataDefinitionForInheritors, Serializable, NetSerializable]
@@ -27,6 +28,7 @@ public abstract partial class VirtualFile
     [DataField] public bool IsReadOnly = false;
     [DataField] public bool IsEncrypted = false;
     [DataField] public string? EncryptionKeyHash = null;
+    [DataField] public TimeSpan LastModified = TimeSpan.Zero;
 
     public string FullPath => (Directory.EndsWith('/') ? Directory : Directory + "/") + Name + "." + Extension;
 
@@ -41,6 +43,7 @@ public abstract partial class VirtualFile
         target.IsReadOnly = IsReadOnly;
         target.IsEncrypted = IsEncrypted;
         target.EncryptionKeyHash = EncryptionKeyHash;
+        target.LastModified = LastModified;
     }
 }
 
@@ -68,7 +71,7 @@ public sealed partial class RecipeBlueprintFile : VirtualFile
     [DataField] public ProtoId<LatheRecipePrototype>? Recipe = null;
     [DataField] public List<ProtoId<LatheRecipePrototype>> Recipes = new();
     [DataField] public int? RemainingUses = null;
-    [DataField] public bool DrmLocked = true;
+    [DataField] public bool DrmLocked = false;
 
     public RecipeBlueprintFile()
     {
@@ -102,28 +105,22 @@ public sealed partial class RecipeBlueprintFile : VirtualFile
 
     public int CalculateSize(IPrototypeManager proto)
     {
-        if (Size > 0)
-            return Size;
-
         var recipes = GetAllRecipes().ToList();
         if (recipes.Count == 0)
-            return 1024;
+            return 512;
 
-        var totalPoints = 0;
+        // 512 B header + 2 KB per recipe + 1 KB per DRM point cost so multi-blueprint files scale significantly larger.
+        var totalBytes = 512;
         foreach (var r in recipes)
         {
+            var pointCost = 0;
             if (proto.TryIndex<LatheRecipePrototype>(r, out var recipeProto) && recipeProto.pointUsage > 0)
-            {
-                totalPoints += recipeProto.pointUsage;
-            }
-            else
-            {
-                totalPoints += 1;
-            }
+                pointCost = recipeProto.pointUsage;
+
+            totalBytes += 2048 + pointCost * 1024;
         }
 
-        // Dynamic size: number of designs multiplied by points cost in KB
-        return Math.Max(1024, recipes.Count * totalPoints * 1024);
+        return totalBytes;
     }
 }
 

@@ -29,7 +29,7 @@
             - Handcuffs
           remainingUses: 30
           drmLocked: true
-          isEncrypted: false
+          isEncrypted: true
 
 - type: entity
   parent: BaseRecipeDisk

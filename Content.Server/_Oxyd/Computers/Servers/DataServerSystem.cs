@@ -1,14 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
 using Content.Server._Oxyd.Computers.Network;
+using Content.Server.CrewManifest;
+using Content.Server.MassMedia.Systems;
 using Content.Server.Power.EntitySystems;
+using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.Servers;
+using Content.Shared.CriminalRecords;
 using Content.Shared.DeviceNetwork.Events;
 using Content.Shared.DeviceNetwork.Systems;
 using Content.Shared.GameTicking;
+using Content.Shared.Security;
+using Content.Shared.StationRecords;
+using Content.Shared.StationRecords.Systems;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 
@@ -27,6 +36,10 @@ public sealed partial class DataServerSystem : EntitySystem
     [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private PowerReceiverSystem _power = default!;
     [Dependency] private MetaDataSystem _meta = default!;
+    [Dependency] private ServerStationSystem _station = default!;
+    [Dependency] private CrewManifestSystem _crewManifest = default!;
+    [Dependency] private StationRecordsSystem _records = default!;
+    [Dependency] private NewsSystem _news = default!;
 
 #if DEBUG
     private static readonly EntProtoId DebugDataServerPrototype = "BaseDataServer";
@@ -111,20 +124,341 @@ public sealed partial class DataServerSystem : EntitySystem
         if (driveUid == null || fs == null)
             return;
 
-        if (args.Data.ServiceName == "ManifestService" &&
-            _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, "/records/manifest.db", out var manifestFile, fs))
+        if (args.Data.ServiceName == "ManifestService")
         {
-            _bandwidth.RecordDataTransmitted(ent.Owner, manifestFile.Size, isUpload: true);
-            var response = new FileTransferPayload
+            var station = _station.GetOwningStation(ent.Owner) ?? _station.GetStationsSet().FirstOrDefault();
+            if (!_fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, CrewManifestProgramComponent.CacheFilePath, out var manifestFile, fs) &&
+                !_fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, "/records/manifest.db", out manifestFile, fs) &&
+                station != EntityUid.Invalid)
             {
-                Path = manifestFile.Directory,
-                FileName = manifestFile.Name,
-                Extension = manifestFile.Extension,
-                FileContent = string.Join("\n", manifestFile.Data.Select(kv => $"{kv.Key}={kv.Value}")),
-                AuthToken = args.Data.AuthToken
-            };
-            _deviceNet.SendPacket(ent.Owner, args.SenderAddress, ref response, args.Frequency);
+                var snap = BuildLiveRecordSnapshot(CrewManifestProgramComponent.CacheFilePath, station, out var liveHash, out var tableName, out var dir, out var name);
+                if (snap != null)
+                {
+                    snap["__source_hash"] = liveHash;
+                    manifestFile = new DatabaseVirtualFile
+                    {
+                        Name = name,
+                        Extension = "db",
+                        Directory = dir,
+                        TableName = tableName,
+                        Data = snap,
+                        Size = Math.Max(128, snap.Count * 64)
+                    };
+                    _fileSystem.TryWriteFile(driveUid.Value, manifestFile, fs);
+                }
+            }
+
+            if (manifestFile != null)
+            {
+                _bandwidth.RecordDataTransmitted(ent.Owner, manifestFile.Size, isUpload: true);
+                var response = new FileTransferPayload
+                {
+                    Path = manifestFile.Directory,
+                    FileName = manifestFile.Name,
+                    Extension = manifestFile.Extension,
+                    FileContent = string.Join("\n", manifestFile.Data.Select(kv => $"{kv.Key}={kv.Value}")),
+                    AuthToken = args.Data.AuthToken
+                };
+                _deviceNet.SendPacket(ent.Owner, args.SenderAddress, ref response, args.Frequency);
+            }
         }
+    }
+
+    /// <summary>
+    /// Resolves the online computer-backed network handler (protocol-matching DataServer computer,
+    /// general DataServer computer, operational StationNetworkRouter computer, or #if DEBUG server computer)
+    /// that serves local VFS copies of station databases.
+    /// </summary>
+    public bool TryFindRecordHostComputer(
+        EntityUid originCompUid,
+        string serviceProtocol,
+        string filePath,
+        out EntityUid hostUid,
+        out EntityUid hostCompUid,
+        [NotNullWhen(true)] out EntityUid? hostDriveUid,
+        [NotNullWhen(true)] out FileSystemComponent? hostFs,
+        out string error)
+    {
+        hostUid = EntityUid.Invalid;
+        hostCompUid = EntityUid.Invalid;
+        hostDriveUid = null;
+        hostFs = null;
+        error = string.Empty;
+
+        if (!_router.HasActiveNetworkCard(originCompUid))
+        {
+            error = "No active network card installed.";
+            return false;
+        }
+
+        var originGuid = _router.EnsureDeviceGuid(originCompUid);
+        if (_router.IsGuidBlacklisted(originCompUid, originGuid))
+        {
+            error = "Station network router unreachable or blacklisted.";
+            return false;
+        }
+
+        var router = _router.FindNearestRouter(originCompUid);
+
+        // If the active router computer itself has a tampered local override for this file, it serves its own copy!
+        if (router != null &&
+            !_router.IsUsingDebugFallbackRouter(router.Value) &&
+            _fileSystem.TryFindFileSystem(router.Value.Owner, out var rDrive, out var rFs) &&
+            rFs.Files.TryGetValue(filePath, out var rRaw) &&
+            rRaw is DatabaseVirtualFile rDb &&
+            rDb.Data.TryGetValue("__tampered", out var rTamp) &&
+            rTamp == "1")
+        {
+            hostUid = router.Value.Owner;
+            hostCompUid = _router.UnwrapComputerEntity(router.Value.Owner);
+            hostDriveUid = rDrive;
+            hostFs = rFs;
+            return true;
+        }
+
+        if (_router.IsNetworkConnected(originCompUid))
+        {
+            // 1. Prefer an online real DataServer computer explicitly serving this protocol.
+            EntityUid fallbackSrvUid = EntityUid.Invalid;
+            EntityUid fallbackSrvComp = EntityUid.Invalid;
+            EntityUid? fallbackDrive = null;
+            FileSystemComponent? fallbackFs = null;
+
+            var query = EntityQueryEnumerator<DataServerComponent>();
+            while (query.MoveNext(out var uid, out var srvComp))
+            {
+                if (IsDebugFallbackServer(uid))
+                    continue;
+
+                var cUid = _router.UnwrapComputerEntity(uid);
+                if (!_router.IsRouterOperational(uid) || !_router.HasActiveNetworkCard(cUid))
+                    continue;
+
+                if (!_fileSystem.TryFindFileSystem(uid, out var dUid, out var fsComp))
+                    continue;
+
+                if (!string.IsNullOrEmpty(serviceProtocol) && srvComp.ServerProtocols.Contains(serviceProtocol))
+                {
+                    hostUid = uid;
+                    hostCompUid = cUid;
+                    hostDriveUid = dUid;
+                    hostFs = fsComp;
+                    return true;
+                }
+
+                if (fallbackDrive == null)
+                {
+                    fallbackSrvUid = uid;
+                    fallbackSrvComp = cUid;
+                    fallbackDrive = dUid;
+                    fallbackFs = fsComp;
+                }
+            }
+
+            // 2. Any online real DataServer computer with an HDD.
+            if (fallbackDrive != null && fallbackFs != null)
+            {
+                hostUid = fallbackSrvUid;
+                hostCompUid = fallbackSrvComp;
+                hostDriveUid = fallbackDrive;
+                hostFs = fallbackFs;
+                return true;
+            }
+
+            // 3. Operational real StationNetworkRouter computer acting as local network file handler!
+            if (router != null &&
+                !_router.IsUsingDebugFallbackRouter(router.Value) &&
+                _fileSystem.TryFindFileSystem(router.Value.Owner, out var routerDrive, out var routerFs))
+            {
+                hostUid = router.Value.Owner;
+                hostCompUid = _router.UnwrapComputerEntity(router.Value.Owner);
+                hostDriveUid = routerDrive;
+                hostFs = routerFs;
+                return true;
+            }
+        }
+
+#if DEBUG
+        if (TryEnsureDebugRepositoryServer(out hostUid, out hostCompUid, out hostDriveUid, out hostFs))
+            return true;
+#else
+        if (!_router.IsNetworkConnected(originCompUid))
+        {
+            error = "Station network router unreachable or blacklisted.";
+            return false;
+        }
+#endif
+
+        error = "No online Data Server or Router computer reachable on station network.";
+        return false;
+    }
+
+    /// <summary>
+    /// Retrieves a clone of the local record database stored on the network server/router computer's own HDD.
+    /// Seeds the server/router computer's local copy from live station records on first access (or when live
+    /// station records change and the host's local copy has not been manually edited/tampered).
+    /// Always serves from the host computer's local VFS copy.
+    /// </summary>
+    public bool TryGetLocalRecordCopyFromHost(
+        EntityUid originCompUid,
+        string serviceProtocol,
+        string filePath,
+        EntityUid station,
+        out EntityUid hostCompUid,
+        [NotNullWhen(true)] out DatabaseVirtualFile? localCopy,
+        out string error)
+    {
+        hostCompUid = EntityUid.Invalid;
+        localCopy = null;
+
+        if (!TryFindRecordHostComputer(originCompUid, serviceProtocol, filePath, out _, out hostCompUid, out var hostDriveUid, out var hostFs, out error))
+            return false;
+
+        var liveSnapshot = BuildLiveRecordSnapshot(filePath, station, out var liveHash, out var tableName, out var dir, out var name);
+
+        if (hostFs.Files.TryGetValue(filePath, out var existingRaw) && existingRaw is DatabaseVirtualFile existingDb)
+        {
+            var isTampered = existingDb.Data.TryGetValue("__tampered", out var tVal) && tVal == "1";
+            var hasSourceHash = existingDb.Data.TryGetValue("__source_hash", out var prevHash);
+
+            // Preserve the server/router computer's local copy if it was tampered, manually created (no source hash),
+            // or if live station state has not changed since it was last seeded.
+            if (isTampered || !hasSourceHash || prevHash == liveHash || liveSnapshot == null)
+            {
+                localCopy = (DatabaseVirtualFile) existingDb.Clone();
+                return true;
+            }
+
+            // Station records updated naturally on an untampered seeded file -> refresh the host computer's local copy.
+            var refreshed = new DatabaseVirtualFile
+            {
+                Name = name,
+                Extension = "db",
+                Directory = dir,
+                TableName = tableName,
+                Data = liveSnapshot,
+                Size = Math.Max(128, liveSnapshot.Count * 64)
+            };
+            refreshed.Data["__source_hash"] = liveHash;
+            _fileSystem.TryWriteFile(hostDriveUid.Value, refreshed, hostFs);
+            localCopy = (DatabaseVirtualFile) refreshed.Clone();
+            return true;
+        }
+
+        // First access on this server/router computer: materialize its local VFS copy on its HDD!
+        var seedData = liveSnapshot ?? new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(liveHash))
+            seedData["__source_hash"] = liveHash;
+
+        var created = new DatabaseVirtualFile
+        {
+            Name = name,
+            Extension = "db",
+            Directory = dir,
+            TableName = tableName,
+            Data = seedData,
+            Size = Math.Max(128, seedData.Count * 64)
+        };
+        _fileSystem.TryWriteFile(hostDriveUid.Value, created, hostFs);
+        localCopy = (DatabaseVirtualFile) created.Clone();
+        return true;
+    }
+
+    private Dictionary<string, string>? BuildLiveRecordSnapshot(
+        string filePath,
+        EntityUid station,
+        out string sourceHash,
+        out string tableName,
+        out string dir,
+        out string name)
+    {
+        sourceHash = string.Empty;
+        tableName = "records";
+        dir = "/records/";
+        name = "records";
+
+        if (filePath.Equals(CrewManifestProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tableName = "crew_manifest";
+            dir = "/records/";
+            name = "crew_manifest";
+
+            if (station == EntityUid.Invalid)
+                return null;
+
+            var (stName, liveEntries) = _crewManifest.GetCrewManifest(station);
+            var data = new Dictionary<string, string> { ["__station"] = stName };
+            var sb = new StringBuilder(stName);
+            if (liveEntries?.Entries != null)
+            {
+                var idx = 0;
+                foreach (var entry in liveEntries.Entries)
+                {
+                    var row = $"{entry.Name}\t{entry.JobTitle}\t{entry.JobPrototype}\t{entry.JobIcon}";
+                    data[$"row_{idx++}"] = row;
+                    sb.Append('\n').Append(row);
+                }
+            }
+
+            sourceHash = sb.ToString().GetHashCode().ToString("X8");
+            return data;
+        }
+
+        if (filePath.Equals(WantedListProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tableName = "wanted_list";
+            dir = "/records/";
+            name = "wanted_list";
+
+            if (station == EntityUid.Invalid)
+                return null;
+
+            var data = new Dictionary<string, string>();
+            var sb = new StringBuilder();
+            var records = _records.GetRecordsOfType<CriminalRecord>(station)
+                .Where(cr => cr.Item2.Status is not SecurityStatus.None || cr.Item2.History.Count > 0)
+                .ToList();
+
+            var idx = 0;
+            foreach (var (recId, rec) in records)
+            {
+                var key = new StationRecordKey(recId, station);
+                if (_records.TryGetRecord(key, out GeneralStationRecord? gen))
+                {
+                    var row = $"{gen.Name}\t{gen.JobTitle}\t{rec.Status}\t{rec.Reason ?? ""}\t{rec.InitiatorName ?? ""}";
+                    data[$"rec_{idx++}"] = row;
+                    sb.Append('\n').Append(row);
+                }
+            }
+
+            sourceHash = sb.ToString().GetHashCode().ToString("X8");
+            return data;
+        }
+
+        if (filePath.Equals(NewsReaderProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tableName = "station_news";
+            dir = "/news/";
+            name = "articles";
+
+            if (station == EntityUid.Invalid || !_news.TryGetNewsArticles(station, out var liveArticles))
+                return null;
+
+            var data = new Dictionary<string, string>();
+            var sb = new StringBuilder();
+            for (var i = 0; i < liveArticles.Count; i++)
+            {
+                var a = liveArticles[i];
+                var row = $"{a.Title}\t{a.Author ?? "Anonymous"}\t{a.ShareTime.Ticks}\t{a.Content.Replace('\t', ' ')}";
+                data[$"art_{i}"] = row;
+                sb.Append('\n').Append(row);
+            }
+
+            sourceHash = sb.ToString().GetHashCode().ToString("X8");
+            return data;
+        }
+
+        return null;
     }
 
     public EntityUid? GetServerDrive(EntityUid serverUid, out FileSystemComponent? fs)

@@ -16,10 +16,11 @@ public sealed partial class NetworkConfiguratorSystem
             return;
 
         if (!targetUid.HasValue || !configurator.Comp.ActiveDeviceLink.HasValue ||
+            !AccessCheck(configurator.Comp.ActiveDeviceLink.Value, userUid, configurator) ||
             !AccessCheck(targetUid.Value, userUid, configurator))
             return;
 
-        _uiSystem.OpenUi(configurator.Owner, NetworkConfiguratorUiKey.Link, userUid, true);
+        _uiSystem.OpenUi(configurator.Owner, NetworkConfiguratorUiKey.Link, userUid);
         configurator.Comp.DeviceLinkTarget = targetUid;
         DirtyField(configurator.AsNullable(), nameof(NetworkConfiguratorComponent.DeviceLinkTarget));
 
@@ -62,7 +63,7 @@ public sealed partial class NetworkConfiguratorSystem
         DirtyField(configurator.AsNullable(), nameof(NetworkConfiguratorComponent.ActiveDeviceList));
         DirtyField(targetUid.Value, list, nameof(DeviceListComponent.Configurators));
 
-        if (!_uiSystem.TryOpenUi(configurator.Owner, NetworkConfiguratorUiKey.Configure, userUid, true))
+        if (!_uiSystem.TryOpenUi(configurator.Owner, NetworkConfiguratorUiKey.Configure, userUid))
             return;
         
         if (_uiSystem.TryGetOpenUi(configurator.Owner, NetworkConfiguratorUiKey.Configure, out var bui))

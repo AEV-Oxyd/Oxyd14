@@ -74,7 +74,7 @@ public sealed partial class PdaOsSystem : EntitySystem
 
     private void OnPdaOsSetView(Entity<PdaOsProgramComponent> ent, ref PdaOsSetViewMessage args)
     {
-        ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 3);
+        ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 2);
         Dirty(ent);
         UpdatePdaOsUi(ent.Owner);
     }
@@ -86,7 +86,7 @@ public sealed partial class PdaOsSystem : EntitySystem
 
         if (_computer.TryLaunchExecutable(compUid, args.ExecutablePath, out _, out _, args.Actor))
         {
-            ent.Comp.CurrentView = 3;
+            ent.Comp.CurrentView = 2;
             Dirty(ent);
         }
 
@@ -101,7 +101,7 @@ public sealed partial class PdaOsSystem : EntitySystem
         var target = GetEntity(args.ProgramEntity);
         if (_computer.SwitchActiveProgram(compUid, target, actor: args.Actor))
         {
-            ent.Comp.CurrentView = 3;
+            ent.Comp.CurrentView = 2;
             Dirty(ent);
         }
 
@@ -115,6 +115,15 @@ public sealed partial class PdaOsSystem : EntitySystem
 
         var target = GetEntity(args.ProgramEntity);
         _computer.CloseProgram(compUid, target);
+
+        if (_computerQuery.TryComp(compUid, out var comp) &&
+            (comp.ActiveProgram == null || comp.ActiveProgram == ent.Owner) &&
+            ent.Comp.CurrentView == 2)
+        {
+            ent.Comp.CurrentView = 0;
+            Dirty(ent);
+        }
+
         UpdatePdaOsUi(ent.Owner);
     }
 

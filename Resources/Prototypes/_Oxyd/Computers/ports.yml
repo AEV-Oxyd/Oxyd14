@@ -114,6 +114,11 @@
   name: signal-port-oxyd-autolathe-command-sink
   description: signal-port-desc-oxyd-autolathe-command-sink
 
+- type: sinkPort
+  id: AutolatheSetRecipeSink
+  name: signal-port-oxyd-autolathe-set-recipe-sink
+  description: signal-port-desc-oxyd-autolathe-set-recipe-sink
+
 - type: sourcePort
   id: AutolatheStatusSource
   name: signal-port-oxyd-autolathe-status-source

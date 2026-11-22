@@ -148,6 +148,8 @@ public sealed partial class AccessReaderSystem : EntitySystem
     {
         if (args.User == null) // AutoLink (and presumably future external linkers) have no user.
             return;
+        if (TryComp<LockComponent>(uid, out var lockComp) && !lockComp.Locked)
+            return;
         if (!IsAllowed(args.User.Value, uid, component))
             args.Cancelled = true;
     }

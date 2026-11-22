@@ -22,6 +22,7 @@
     serverProtocols:
       - ManifestService
       - StationRecordsService
+      - NewsService
   - type: EmbeddedComputerHost
     computerPrototype: BaseOxydServerEmbeddedController
     borderColor: "#00D4FF"
