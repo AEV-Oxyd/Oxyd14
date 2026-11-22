@@ -207,13 +207,23 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         ScreenSurface.DeviceGuid = state.DeviceGuid;
         if (state.ScreenSize.X >= 360 && state.ScreenSize.Y >= 320)
         {
-            MinSize = new Vector2(state.ScreenSize.X, state.ScreenSize.Y);
+            var rootSize = UserInterfaceManager.RootControl.Size;
+            var minW = rootSize.X > 360f ? MathF.Min(state.ScreenSize.X, rootSize.X - 16f) : state.ScreenSize.X;
+            var minH = rootSize.Y > 320f ? MathF.Min(state.ScreenSize.Y, rootSize.Y - 24f) : state.ScreenSize.Y;
+            MinSize = new Vector2(MathF.Max(360f, minW), MathF.Max(320f, minH));
+
             if (!_appliedInitialScreenSize)
             {
-                var targetHeight = ClampAutoHeight(MathF.Max(state.ScreenSize.Y, _autoExpandedHeight));
-                SetSize = new Vector2(state.ScreenSize.X, targetHeight);
+                var targetHeight = ClampAutoHeight(MathF.Max(MinSize.Y, _autoExpandedHeight));
+                SetSize = new Vector2(MinSize.X, targetHeight);
                 _lastAppliedHeight = targetHeight;
                 _appliedInitialScreenSize = true;
+                CenterInsideScreen();
+            }
+            else if (!float.IsNaN(SetWidth) && SetWidth < MinSize.X)
+            {
+                SetSize = new Vector2(MinSize.X, MathF.Max(SetHeight, MinSize.Y));
+                KeepInsideScreen();
             }
         }
 
@@ -251,19 +261,23 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     {
         _autoExpandedHeight = preferredHeight;
 
-        if (_appliedInitialScreenSize &&
-            !float.IsNaN(SetHeight) &&
+        // Wait until UpdateDisplayState applies the device's ScreenSize if it hasn't yet,
+        // otherwise apply immediately (unless the user has manually resized the window).
+        if (!_appliedInitialScreenSize)
+            return;
+
+        if (!float.IsNaN(SetHeight) &&
             _lastAppliedHeight > 0f &&
             MathF.Abs(SetHeight - _lastAppliedHeight) > 2f)
         {
             return;
         }
 
-        var width = !float.IsNaN(SetWidth) ? SetWidth : MathF.Max(MinSize.X, 640f);
+        var width = MathF.Max(MinSize.X, !float.IsNaN(SetWidth) ? SetWidth : 640f);
         var targetHeight = ClampAutoHeight(MathF.Max(MinSize.Y, preferredHeight));
         SetSize = new Vector2(width, targetHeight);
         _lastAppliedHeight = targetHeight;
-        _appliedInitialScreenSize = true;
+        KeepInsideScreen();
     }
 
     private float ClampAutoHeight(float desiredHeight)
@@ -274,6 +288,48 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         if (rootHeight > 320f)
             clamped = MathF.Min(clamped, MathF.Max(minH, rootHeight - 24f));
         return clamped;
+    }
+
+    private void CenterInsideScreen()
+    {
+        if (Parent == null)
+            return;
+
+        var rootSize = UserInterfaceManager.RootControl.Size;
+        if (rootSize.X <= 360f || rootSize.Y <= 320f)
+            return;
+
+        var w = !float.IsNaN(SetWidth) ? SetWidth : MathF.Max(Size.X, MinSize.X);
+        var h = !float.IsNaN(SetHeight) ? SetHeight : MathF.Max(Size.Y, MinSize.Y);
+        var maxX = MathF.Max(8f, rootSize.X - w - 8f);
+        var maxY = MathF.Max(8f, rootSize.Y - h - 8f);
+        var centered = new Vector2(
+            Math.Clamp((rootSize.X - w) * 0.5f, 8f, maxX),
+            Math.Clamp((rootSize.Y - h) * 0.5f, 8f, maxY));
+
+        Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(this, centered);
+    }
+
+    private void KeepInsideScreen()
+    {
+        if (Parent == null || Size.X <= 0f || Size.Y <= 0f)
+            return;
+
+        var rootSize = UserInterfaceManager.RootControl.Size;
+        if (rootSize.X <= 360f || rootSize.Y <= 320f)
+            return;
+
+        var w = !float.IsNaN(SetWidth) ? SetWidth : MathF.Max(Size.X, MinSize.X);
+        var h = !float.IsNaN(SetHeight) ? SetHeight : MathF.Max(Size.Y, MinSize.Y);
+        var pos = Position;
+        var maxX = MathF.Max(8f, rootSize.X - w - 8f);
+        var maxY = MathF.Max(8f, rootSize.Y - h - 8f);
+        var clampedPos = new Vector2(
+            Math.Clamp(pos.X, 8f, maxX),
+            Math.Clamp(pos.Y, 8f, maxY));
+
+        if ((clampedPos - pos).LengthSquared() > 1f)
+            Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(this, clampedPos);
     }
 
     public void MountBootProgram(ProgramUiControl control)

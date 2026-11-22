@@ -207,6 +207,9 @@ public sealed partial class NetworkConfiguratorSystem : EntitySystem
             || _deviceLinkSinkQuery.HasComp(target) && _deviceLinkSinkQuery.HasComp(configurator.Comp.ActiveDeviceLink))
             return;
 
+        if (!AccessCheck(target.Value, user, configurator))
+            return;
+
         _popupSystem.PopupEntity(Loc.GetString("network-configurator-link-mode-started", ("device", Name(target.Value))), target.Value, user);
         configurator.Comp.ActiveDeviceLink = target;
         DirtyField(configurator.AsNullable(), nameof(NetworkConfiguratorComponent.ActiveDeviceLink));
@@ -242,22 +245,34 @@ public sealed partial class NetworkConfiguratorSystem : EntitySystem
         if (user == null)
             return true;
 
-        // If the target has an unlocked physical lock (e.g. an unlocked Air Alarm or APC), allow configuring/linking it.
-        if (TryComp<LockComponent>(target, out var lockComp) && !lockComp.Locked)
-            return true;
+        // Lockable devices (e.g. APC, Air Alarm) must be physically unlocked themselves to configure/link,
+        // regardless of whether the user is wearing an authorized ID.
+        if (TryComp<LockComponent>(target, out var lockComp))
+        {
+            if (!lockComp.Locked)
+                return true;
+
+            _popupSystem.PopupEntity(Loc.GetString("network-configurator-device-access-denied"), target, user.Value);
+            PlayNoAccessSound(configurator, user.Value);
+            return false;
+        }
 
         if (_accessSystem.IsAllowed(user.Value, target))
             return true;
 
         _popupSystem.PopupEntity(Loc.GetString("network-configurator-device-access-denied"), target, user.Value);
+        PlayNoAccessSound(configurator, user.Value);
+        return false;
+    }
 
+    private void PlayNoAccessSound(Entity<NetworkConfiguratorComponent> configurator, EntityUid user)
+    {
         if (configurator.Comp.SoundNoAccess == null)
-            return false;
+            return;
 
         var audioParams = configurator.Comp.SoundNoAccess.Params;
         audioParams = audioParams.AddVolume(-2f).WithPitchScale(1.2f);
-        _audioSystem.PlayPredicted(configurator.Comp.SoundNoAccess, configurator, user.Value, audioParams);
-        return false;
+        _audioSystem.PlayPredicted(configurator.Comp.SoundNoAccess, configurator, user, audioParams);
     }
 
     [SubscribeLocalEvent]

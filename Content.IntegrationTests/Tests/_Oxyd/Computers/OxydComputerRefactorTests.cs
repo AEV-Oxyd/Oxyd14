@@ -731,7 +731,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             screenCoords = new ScreenCoordinates(center, btn.Window?.Id ?? default);
             var hit = UiMan.MouseGetControl(screenCoords);
             Assert.That(hit, Is.Not.Null);
-            Assert.That(HasAncestor(hit!, btn) || HasAncestor(btn, hit!), Is.True,
+            Assert.That(hit == btn || HasAncestor(hit!, btn), Is.True,
                 $"Mouse click hit {hit!.GetType().Name} instead of target button {btn.GetType().Name}");
         });
 
@@ -4333,8 +4333,24 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(recipeScroll.AlwaysShowBackground, Is.True);
             Assert.That(latheUi!.DesiredExpandedWindowHeight, Is.GreaterThanOrEqualTo(760f),
                 "Autolathe UI must request expanded height for up to 8 recipes.");
+            Assert.That(win.MinSize.X, Is.GreaterThanOrEqualTo(700f),
+                "Autolathe window must enforce a proper minimum width so controls are not cramped.");
+            Assert.That(win.MinSize.Y, Is.GreaterThanOrEqualTo(600f),
+                "Autolathe window must enforce a proper minimum height so controls are not smushed.");
+            Assert.That(win.SetWidth, Is.GreaterThanOrEqualTo(700f),
+                "Autolathe window must open at its full proper width.");
             Assert.That(win.SetHeight, Is.GreaterThanOrEqualTo(680f),
                 "Autolathe window must auto-expand beyond its base height when multiple recipes are loaded.");
+
+            var searchInput = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLineEdit>(
+                e => e.Name == "LatheRecipeSearch", latheUi!);
+            Assert.That(searchInput, Is.Not.Null);
+            Assert.That(searchInput!.VisibleInTree, Is.True);
+            Assert.That(searchInput.Size.X, Is.GreaterThanOrEqualTo(200f),
+                "Autolathe recipe search bar must not be horizontally smushed.");
+            Assert.That(searchInput.Size.Y, Is.GreaterThanOrEqualTo(24f),
+                "Autolathe recipe search bar must not be vertically smushed.");
+
             AssertAllVisibleChildrenWithinViewport(win, latheUi!, "Autolathe UI");
 
             var tiles = new List<MaterialIconTile>();
@@ -4606,13 +4622,28 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(accessReader.IsAllowed(SPlayer, apcUid), Is.True,
                 "Holding/wearing a PDA with an authorized ID card inside must grant APC AccessReader access.");
 
+            // EVEN WHILE holding an authorized CaptainPDA, a physically LOCKED APC or AirAlarm MUST refuse linking!
+            Assert.That(lockSys.IsLocked(apcUid), Is.True);
+            Assert.That(lockSys.IsLocked(alarmUid), Is.True);
+            Assert.That(devLink.ToggleLink(SPlayer, apcButtonUid, apcUid, "Pressed", "MachineCommandReceiver"), Is.False,
+                "Locked APC must refuse DeviceLink even when the user wears/holds an authorized ID.");
+
+            var interSysEarly = Server.System<Content.Shared.Interaction.SharedInteractionSystem>();
+            handsSys.AddHand(SPlayer, "second_hand", Content.Shared.Hands.Components.HandLocation.Left);
+            Assert.That(handsSys.TryPickupAnyHand(SPlayer, multitoolUid), Is.True);
+            interSysEarly.InteractUsing(SPlayer, multitoolUid, alarmUid, coords);
+            var cfgLocked = SEntMan.GetComponent<Content.Shared.DeviceConfigurator.Components.NetworkConfiguratorComponent>(multitoolUid);
+            Assert.That(cfgLocked.ActiveDeviceList, Is.Null,
+                "Locked AirAlarm must refuse multitool DeviceList configuration even when user holds CaptainPDA.");
+            Assert.That(handsSys.TryDrop(SPlayer, multitoolUid, checkActionBlocker: false), Is.True);
+
             // Drop PDA so the player now has ZERO ID access.
             Assert.That(handsSys.TryDrop(SPlayer, pdaUid, checkActionBlocker: false), Is.True);
             xform.SetCoordinates(pdaUid, coords.Offset(new Vector2(20f, 0f)));
             Assert.That(accessReader.IsAllowed(SPlayer, alarmUid), Is.False);
             Assert.That(accessReader.IsAllowed(SPlayer, apcUid), Is.False);
 
-            // 2) Locked APC rejects linking without access; UNLOCKED APC allows linking a SignalButton without access!
+            // 2) Locked APC rejects linking; UNLOCKED APC allows linking a SignalButton without an ID card!
             Assert.That(lockSys.IsLocked(apcUid), Is.True);
             Assert.That(devLink.ToggleLink(SPlayer, apcButtonUid, apcUid, "Pressed", "MachineCommandReceiver"), Is.False,
                 "Locked APC must refuse DeviceLink from an unauthorized user.");
@@ -4721,18 +4752,26 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         });
         await RunTicks(4);
 
-        // Insert OxydRecipeDisk (Handcuffs, 10 uses), select from disk, close UI, press button -> prints & subtracts use (10 -> 9)!
+        // Insert OxydRecipeDisk (Handcuffs, 10 uses), re-open UI, select from disk, close UI, press button -> prints & subtracts use (10 -> 9)!
         await Server.WaitAssertion(() =>
         {
             Assert.That(Server.System<ItemSlotsSystem>().TryInsert(latheUid, SharedLatheSystem.diskSlot, recipeDiskUid, null), Is.True);
+            Server.System<OxydComputerSystem>().OpenComputerForActor(latheCompUid, SPlayer);
         });
-        await RunTicks(6);
+        await RunTicks(8);
 
         await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.CancelAll), FromServer(latheProgUid));
         await SendBui(ProgramUiKey.Key,
             new LatheControlActionMessage(LatheControlAction.SelectRecipe, "Handcuffs", "/blueprints/handcuffs.lathe", 1, fromDisk: true),
             FromServer(latheProgUid));
         await RunTicks(6);
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow(typeof(ComputerDisplayWindow), out var openWin))
+                openWin!.Close();
+        });
+        await RunTicks(4);
 
         await Server.WaitAssertion(() =>
         {
@@ -4759,7 +4798,389 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             SEntMan.EventBus.RaiseLocalEvent(latheSetRecipeBtnUid, pulseSet);
             Assert.That(latheComp.SelectedRecipeId, Is.Not.Null,
                 "Pulsing AutolatheSetRecipeSink must cycle and select an accessible blueprint.");
+
+            Server.System<Content.Server.Hands.Systems.HandsSystem>().RemoveHand(SPlayer, "second_hand");
         });
+    }
+
+    [Test]
+    public async Task TestAirAlarmLinkedDevicesScrollControlsAndTemplates()
+    {
+        EntityUid alarmUid = default;
+        EntityUid alarmCompUid = default;
+        EntityUid vent1Uid = default;
+        EntityUid vent2Uid = default;
+        EntityUid scrubberUid = default;
+        EntityUid sensorUid = default;
+
+        float initialVent1Ext = 0f;
+        float initialScrubberRate = 0f;
+        bool initialScrubberHadO2 = false;
+        float initialSensorPresHiWrn = 0f;
+        string sensorAddrStr = string.Empty;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var powerSys = Server.System<PowerReceiverSystem>();
+            var lockSys = Server.System<LockSystem>();
+            var compSys = Server.System<OxydComputerSystem>();
+            var devListSys = Server.System<Content.Shared.DeviceConfigurator.Systems.DeviceListSystem>();
+
+            alarmUid = SEntMan.SpawnEntity("AirAlarm", coords);
+            vent1Uid = SEntMan.SpawnEntity("GasVentPump", coords);
+            vent2Uid = SEntMan.SpawnEntity("GasVentPump", coords);
+            scrubberUid = SEntMan.SpawnEntity("GasVentScrubber", coords);
+            sensorUid = SEntMan.SpawnEntity("AirSensor", coords);
+
+            powerSys.SetNeedsPower(alarmUid, false);
+            powerSys.SetNeedsPower(vent1Uid, false);
+            powerSys.SetNeedsPower(vent2Uid, false);
+            powerSys.SetNeedsPower(scrubberUid, false);
+            powerSys.SetNeedsPower(sensorUid, false);
+
+            lockSys.Unlock(alarmUid, null);
+
+            Assert.That(compSys.EnsureComputerBoundToHost((alarmUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmUid)), out alarmCompUid), Is.True);
+
+            // Same component NetworkConfiguratorSystem ensures when linking devices via multitool
+            SEntMan.EnsureComponent<Content.Shared.DeviceConfigurator.Components.LinkedDeviceNetworkComponent>(vent1Uid);
+            SEntMan.EnsureComponent<Content.Shared.DeviceConfigurator.Components.LinkedDeviceNetworkComponent>(vent2Uid);
+            SEntMan.EnsureComponent<Content.Shared.DeviceConfigurator.Components.LinkedDeviceNetworkComponent>(scrubberUid);
+            SEntMan.EnsureComponent<Content.Shared.DeviceConfigurator.Components.LinkedDeviceNetworkComponent>(sensorUid);
+
+            var res = devListSys.UpdateDeviceList(alarmUid, new[] { vent1Uid, vent2Uid, scrubberUid, sensorUid });
+            Assert.That(res, Is.EqualTo(Content.Shared.DeviceConfigurator.DeviceListUpdateResult.UpdateOk));
+
+            var v1 = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentPumpComponent>(vent1Uid);
+            initialVent1Ext = v1.ExternalPressureBound;
+
+            var sc = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentScrubberComponent>(scrubberUid);
+            initialScrubberRate = sc.TransferRate;
+            initialScrubberHadO2 = Enumerable.Contains(sc.FilterGases, Content.Shared.Atmos.Gas.Oxygen);
+
+            var sens = SEntMan.GetComponent<AtmosMonitorComponent>(sensorUid);
+            initialSensorPresHiWrn = sens.PressureThreshold?.UpperWarningBound.Value ?? 0f;
+            var sensorNet = SEntMan.GetComponent<Content.Shared.DeviceNetwork.Components.DeviceNetworkComponent>(sensorUid);
+            sensorAddrStr = new Content.Shared.DeviceNetwork.LocDeviceAddress(sensorNet.Address, sensorNet.Prefix).ToString();
+        });
+
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(alarmCompUid);
+            Assert.That(cComp.IsBooted, Is.True);
+            Server.System<OxydComputerSystem>().OpenComputerForActor(alarmCompUid, SPlayer);
+        });
+        await RunTicks(12);
+
+        // 1) Verify NO 'All' tab exists (strictly categorized: Vents, Scrubbers, Sensors), and Vents view renders on open
+        ScrollNumberChip? firstVentExtChip = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            Assert.That(win.MinSize.X, Is.GreaterThanOrEqualTo(740f), "AirAlarm window must open wide enough for expanded controls.");
+            Assert.That(win.MinSize.Y, Is.GreaterThanOrEqualTo(600f), "AirAlarm window must enforce tall enough minimum height.");
+
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win);
+            Assert.That(atmosUi, Is.Not.Null);
+            AssertAllVisibleChildrenWithinViewport(win, atmosUi!, "AirAlarm Expanded Controller UI");
+
+            var catRow = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                w => w.Name == "AtmosCategoryRow", atmosUi!);
+            var catBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(catRow!, catBtns);
+            Assert.That(catBtns.Count, Is.EqualTo(3), "Category strip must contain strictly Vents, Scrubbers, and Sensors (no All tab).");
+            Assert.That(catBtns.Any(b => b.Text != null && b.Text.StartsWith("All", StringComparison.OrdinalIgnoreCase)), Is.False,
+                "All tab must be removed so devices are always categorized.");
+
+            // Single-template UX: no template name input and no multi-template chip buttons
+            var allEdits = new List<Content.Client.UserInterface.Controls.ContentLineEdit>();
+            CollectDescendants(atmosUi!, allEdits);
+            Assert.That(allEdits.Any(e => e.Name == "AtmosTemplateNameInput"), Is.False,
+                "Single-template Atmos UI must not show multi-template name input.");
+
+            var panels = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(atmosUi!, panels);
+            var ventCards = panels.Where(p => p.Name == "AtmosVentCard" && p.VisibleInTree).ToList();
+            var scrubberCards = panels.Where(p => p.Name == "AtmosScrubberCard" && p.VisibleInTree).ToList();
+            var sensorCards = panels.Where(p => p.Name == "AtmosSensorCard" && p.VisibleInTree).ToList();
+
+            Assert.That(ventCards.Count, Is.EqualTo(2), "Vents category must render both linked vents immediately on open.");
+            Assert.That(scrubberCards.Count, Is.EqualTo(0), "Scrubbers must stay in their own category tab.");
+            Assert.That(sensorCards.Count, Is.EqualTo(0), "Sensors must stay in their own category tab.");
+
+            firstVentExtChip = GetControlFromChildren<ScrollNumberChip>(c => c.Name == "AtmosVentExtBoundChip", ventCards[0]);
+            Assert.That(firstVentExtChip, Is.Not.Null);
+        });
+
+        // 2) Sustained multi-step scrolling spread over server round-trips (10 notches x 5 ticks = 50 ticks / ~1.65s):
+        //    In-flight server echoes MUST NEVER override or rubber-band the chip back!
+        float prevScrolledVal = initialVent1Ext;
+        for (var i = 0; i < 10; i++)
+        {
+            await Client.WaitAssertion(() =>
+            {
+                Assert.That(firstVentExtChip!.Value, Is.GreaterThanOrEqualTo(prevScrolledVal - 0.01f),
+                    $"Server state must not rubber-band chip backward before scroll #{i + 1} (was {firstVentExtChip.Value}, expected >= {prevScrolledVal}).");
+                firstVentExtChip.RelayMouseWheel(new GUIMouseWheelEventArgs(
+                    new Vector2(0f, 1f), firstVentExtChip, new Vector2(10, 10), default, new Vector2(10, 10), new Vector2(10, 10)));
+                Assert.That(firstVentExtChip.Value, Is.GreaterThan(prevScrolledVal),
+                    $"Scroll #{i + 1} must monotonically advance the chip value.");
+                prevScrolledVal = firstVentExtChip.Value;
+            });
+            // 5 ticks (~167ms) exceeds the 140ms debounce so intermediate server packets arrive DURING scrolling!
+            await RunTicks(5);
+        }
+
+        await RunTicks(14);
+
+        EntityUid modifiedVentUid = default;
+        EntityUid otherVentUid = default;
+        await Server.WaitAssertion(() =>
+        {
+            var v1 = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentPumpComponent>(vent1Uid);
+            var v2 = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentPumpComponent>(vent2Uid);
+            float modifiedVentExt;
+            if (MathF.Abs(v1.ExternalPressureBound - initialVent1Ext) > 1f)
+            {
+                modifiedVentUid = vent1Uid;
+                otherVentUid = vent2Uid;
+                modifiedVentExt = v1.ExternalPressureBound;
+            }
+            else
+            {
+                modifiedVentUid = vent2Uid;
+                otherVentUid = vent1Uid;
+                modifiedVentExt = v2.ExternalPressureBound;
+            }
+
+            Assert.That(modifiedVentExt, Is.EqualTo(prevScrolledVal).Within(0.5f),
+                "After 10 spread-out scroll notches, server vent ExternalPressureBound must reach the full final value without rubber-banding.");
+            Assert.That(modifiedVentExt, Is.GreaterThanOrEqualTo(149.5f),
+                "10 scroll-up notches (+5 kPa each from 101.325 kPa) must reach 150 kPa.");
+        });
+
+        // 3) Click-to-edit manual numeric entry on ScrollNumberChip: click chip -> edit number -> Enter -> commits immediately!
+        await Client.WaitAssertion(() =>
+        {
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            firstVentExtChip!.RelayKeyBindDown(downArgs);
+            Assert.That(firstVentExtChip.IsEditing, Is.True, "Clicking ScrollNumberChip must open inline numeric edit mode.");
+            Assert.That(firstVentExtChip.Editor.Visible, Is.True, "Inline ContentLineEdit must become visible when editing.");
+
+            firstVentExtChip.Editor.Text = "234";
+            var submitArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.TextSubmit, BoundKeyState.Down, default, false, new Vector2(5, 5), new Vector2(5, 5));
+            firstVentExtChip.Editor.RelayKeyBindDown(submitArgs);
+            Assert.That(firstVentExtChip.IsEditing, Is.False, "Pressing Enter must commit and close inline edit mode.");
+            Assert.That(firstVentExtChip.Value, Is.EqualTo(234f).Within(0.01f));
+        });
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var v = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentPumpComponent>(modifiedVentUid);
+            Assert.That(v.ExternalPressureBound, Is.EqualTo(234f).Within(0.5f),
+                "Manually typing 234 into ScrollNumberChip and pressing Enter must update the server vent to 234 kPa.");
+        });
+
+        // 4) Single Active Template: Save Tpl on Vent 1 -> Apply Tpl & Apply All Vents are IMMEDIATELY shown without selecting any chip!
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var panels = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(atmosUi, panels);
+            var ventCards = panels.Where(p => p.Name == "AtmosVentCard" && p.VisibleInTree).ToList();
+            var saveBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosSaveVentTemplateButton", ventCards[0]);
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            saveBtn!.RelayKeyBindDown(downArgs);
+            saveBtn.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+
+            var summary = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosTemplateSummaryLabel", atmosUi);
+            Assert.That(summary!.Text, Does.Contain("[VENT]").And.Contain("234"),
+                "Saving a vent template must immediately show the single active template summary.");
+
+            var applyAllBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosApplyTemplateAllButton", atmosUi);
+            Assert.That(applyAllBtn!.VisibleInTree, Is.True, "Apply All button must immediately show whenever a template is active.");
+            Assert.That(applyAllBtn.Text, Is.EqualTo("Apply All Vents"));
+
+            var panels = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(atmosUi, panels);
+            var ventCards = panels.Where(p => p.Name == "AtmosVentCard" && p.VisibleInTree).ToList();
+            var applySecondBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosApplyVentTemplateButton", ventCards[1]);
+            Assert.That(applySecondBtn!.VisibleInTree, Is.True,
+                "Apply Tpl button must immediately appear on matching vent cards whenever a vent template is active.");
+
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            applySecondBtn.RelayKeyBindDown(downArgs);
+            applySecondBtn.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var otherVent = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentPumpComponent>(otherVentUid);
+            Assert.That(otherVent.ExternalPressureBound, Is.EqualTo(234f).Within(0.5f),
+                "Clicking Apply Tpl on Vent 2 must apply the active single vent template (234 kPa).");
+        });
+
+        // 5) Switch to Scrubbers tab: scroll rate down 3 times spread across ticks + toggle O2 + Save Tpl (replaces single template!)
+        ScrollNumberChip? scrubRateChip = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var scrubTab = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosCategoryScrubbersButton", atmosUi);
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            scrubTab!.RelayKeyBindDown(downArgs);
+            scrubTab.RelayKeyBindUp(upArgs);
+
+            var panels = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(atmosUi, panels);
+            var scrubberCards = panels.Where(p => p.Name == "AtmosScrubberCard" && p.VisibleInTree).ToList();
+            Assert.That(scrubberCards.Count, Is.EqualTo(1), "Scrubbers tab must render the linked scrubber.");
+            Assert.That(panels.Any(p => p.Name == "AtmosVentCard" && p.VisibleInTree), Is.False, "Vents must hide when Scrubbers tab is active.");
+
+            scrubRateChip = GetControlFromChildren<ScrollNumberChip>(c => c.Name == "AtmosScrubberRateChip", scrubberCards[0]);
+            var o2Btn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosScrubberGas_Oxygen", scrubberCards[0]);
+            o2Btn!.RelayKeyBindDown(downArgs);
+            o2Btn.RelayKeyBindUp(upArgs);
+        });
+
+        for (var i = 0; i < 3; i++)
+        {
+            await Client.WaitAssertion(() =>
+            {
+                scrubRateChip!.RelayMouseWheel(new GUIMouseWheelEventArgs(
+                    new Vector2(0f, -1f), scrubRateChip, new Vector2(10, 10), default, new Vector2(10, 10), new Vector2(10, 10)));
+            });
+            await RunTicks(5);
+        }
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var sc = SEntMan.GetComponent<Content.Server.Atmos.Piping.Unary.Components.GasVentScrubberComponent>(scrubberUid);
+            Assert.That(sc.TransferRate, Is.EqualTo(initialScrubberRate - 30f).Within(0.5f),
+                "3 spread-out scroll-down notches on AtmosScrubberRateChip must lower TransferRate by -30 L/s without rubber-banding.");
+            Assert.That(Enumerable.Contains(sc.FilterGases, Content.Shared.Atmos.Gas.Oxygen), Is.EqualTo(!initialScrubberHadO2),
+                "Clicking AtmosScrubberGas_Oxygen must toggle Oxygen filtering on the server scrubber.");
+        });
+
+        // Save scrubber template -> replaces previous vent template (only 1 template exists!)
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var saveScrubBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosSaveScrubberTemplateButton", atmosUi);
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            saveScrubBtn!.RelayKeyBindDown(downArgs);
+            saveScrubBtn.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var summary = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosTemplateSummaryLabel", atmosUi);
+            Assert.That(summary!.Text, Does.Contain("[SCRUBBER]"),
+                "Saving a scrubber template must replace the single active template with the scrubber template.");
+            var applyAllBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosApplyTemplateAllButton", atmosUi);
+            Assert.That(applyAllBtn!.Text, Is.EqualTo("Apply All Scrubbers"));
+            var applyScrubBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosApplyScrubberTemplateButton", atmosUi);
+            Assert.That(applyScrubBtn!.VisibleInTree, Is.True,
+                "Apply Tpl must immediately appear on scrubber cards when scrubber template is active.");
+
+            // 6) Switch to Sensors tab and scroll the AirSensor Pressure 'Hi Wrn' chip up (+5 kPa)
+            var sensTab = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosCategorySensorsButton", atmosUi);
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            sensTab!.RelayKeyBindDown(downArgs);
+            sensTab.RelayKeyBindUp(upArgs);
+
+            var panels = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(atmosUi, panels);
+            var sensorCards = panels.Where(p => p.Name == "AtmosSensorCard" && p.VisibleInTree).ToList();
+            Content.Client.UserInterface.Controls.ContentPanelContainer? targetSensorCard = null;
+            foreach (var card in sensorCards)
+            {
+                var cardLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+                CollectDescendants(card, cardLabels);
+                if (cardLabels.Any(l => l.Text != null && l.Text.Contains(sensorAddrStr, StringComparison.OrdinalIgnoreCase)))
+                {
+                    targetSensorCard = card;
+                    break;
+                }
+            }
+            Assert.That(targetSensorCard, Is.Not.Null, $"AirSensor card for {sensorAddrStr} must render on Sensors tab.");
+            var sensorChips = new List<ScrollNumberChip>();
+            CollectDescendants(targetSensorCard!, sensorChips);
+            var presHiWrnChip = sensorChips.FirstOrDefault(c => c.Label == "Hi Wrn");
+            Assert.That(presHiWrnChip, Is.Not.Null);
+            presHiWrnChip!.RelayMouseWheel(new GUIMouseWheelEventArgs(new Vector2(0f, 1f), presHiWrnChip, new Vector2(10, 10), default, new Vector2(10, 10), new Vector2(10, 10)));
+        });
+        await RunTicks(14);
+
+        await Server.WaitAssertion(() =>
+        {
+            var sens = SEntMan.GetComponent<AtmosMonitorComponent>(sensorUid);
+            Assert.That(sens.PressureThreshold?.UpperWarningBound.Value ?? 0f, Is.GreaterThan(initialSensorPresHiWrn + 1f),
+                "Mouse-wheel scrolling AirSensor Pressure Hi Wrn chip must update the server AtmosMonitorComponent threshold.");
+        });
+
+        // 7) Clear the single template and verify Apply All hides cleanly
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var delBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosDeleteTemplateButton", atmosUi);
+            Assert.That(delBtn!.VisibleInTree, Is.True);
+            var downArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Down, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            var upArgs = new GUIBoundKeyEventArgs(EngineKeyFunctions.UIClick, BoundKeyState.Up, default, false, new Vector2(10, 10), new Vector2(10, 10));
+            delBtn.RelayKeyBindDown(downArgs);
+            delBtn.RelayKeyBindUp(upArgs);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var applyAllBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosApplyTemplateAllButton", atmosUi);
+            Assert.That(applyAllBtn!.VisibleInTree, Is.False, "Clearing the active template must hide Apply All.");
+            var summary = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosTemplateSummaryLabel", atmosUi);
+            Assert.That(summary!.Text, Does.Contain("None"));
+            win.Close();
+        });
+        await RunTicks(4);
     }
 
     private static void AssertAllVisibleChildrenWithinViewport(ComputerDisplayWindow win, Control root, string context)

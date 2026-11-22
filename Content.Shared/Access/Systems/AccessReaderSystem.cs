@@ -148,8 +148,16 @@ public sealed partial class AccessReaderSystem : EntitySystem
     {
         if (args.User == null) // AutoLink (and presumably future external linkers) have no user.
             return;
-        if (TryComp<LockComponent>(uid, out var lockComp) && !lockComp.Locked)
+
+        // Lockable devices (e.g. APC, Air Alarm) must be physically unlocked themselves to allow linking;
+        // wearing an authorized ID does not bypass a locked panel.
+        if (TryComp<LockComponent>(uid, out var lockComp))
+        {
+            if (lockComp.Locked)
+                args.Cancelled = true;
             return;
+        }
+
         if (!IsAllowed(args.User.Value, uid, component))
             args.Cancelled = true;
     }

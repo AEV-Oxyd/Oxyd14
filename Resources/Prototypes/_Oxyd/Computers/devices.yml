@@ -213,7 +213,7 @@
   components:
   - type: OxydComputer
     template: Pda
-    defaultScreenSize: 580, 480
+    defaultScreenSize: 580, 580
     allowRemoteControl: true
     requirePowerToBoot: false
     defaultHardware:
@@ -247,7 +247,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 700, 480
+    defaultScreenSize: 740, 640
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/lathe_control.nte"
@@ -282,7 +282,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 640, 480
+    defaultScreenSize: 780, 660
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/atmos_control.nte"

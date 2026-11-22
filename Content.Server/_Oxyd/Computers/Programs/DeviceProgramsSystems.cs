@@ -1,8 +1,11 @@
+using System.Globalization;
 using System.Linq;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Atmos;
+using Content.Shared.Atmos.Monitor;
 using Content.Shared.Lathe;
 using Content.Shared.Research.Prototypes;
 using Robust.Shared.Prototypes;
@@ -48,6 +51,12 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         {
             subs.Event<BoundUIOpenedEvent>(OnAtmosBuiOpened);
             subs.Event<AtmosControlActionMessage>(OnAtmosUiAction);
+            subs.Event<AtmosUpdateVentMessage>(OnAtmosUpdateVent);
+            subs.Event<AtmosUpdateScrubberMessage>(OnAtmosUpdateScrubber);
+            subs.Event<AtmosUpdateSensorThresholdMessage>(OnAtmosUpdateSensorThreshold);
+            subs.Event<AtmosSaveTemplateMessage>(OnAtmosSaveTemplate);
+            subs.Event<AtmosDeleteTemplateMessage>(OnAtmosDeleteTemplate);
+            subs.Event<AtmosApplyTemplateMessage>(OnAtmosApplyTemplate);
         });
 
         // Lathe Control
@@ -236,14 +245,17 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         ent.Comp.CurrentMode = pkt.GetString("Mode", ent.Comp.CurrentMode) ?? ent.Comp.CurrentMode;
         ent.Comp.AutoMode = pkt.GetString("AutoMode", "True") == "True";
         ent.Comp.Locked = pkt.GetString("Locked", "True") == "True";
-        if (float.TryParse(pkt.GetString("Pressure", "0"), out var pres))
+        if (float.TryParse(pkt.GetString("Pressure", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var pres))
             ent.Comp.PressureKpa = pres;
-        if (float.TryParse(pkt.GetString("TemperatureC", "20"), out var temp))
+        if (float.TryParse(pkt.GetString("TemperatureC", "20"), NumberStyles.Float, CultureInfo.InvariantCulture, out var temp))
             ent.Comp.TemperatureCelsius = temp;
         ent.Comp.VentCount = pkt.GetInt("Vents", 0);
         ent.Comp.ScrubberCount = pkt.GetInt("Scrubbers", 0);
         ent.Comp.SensorCount = pkt.GetInt("Sensors", 0);
         ent.Comp.GasSummary = pkt.GetString("GasSummary", ent.Comp.GasSummary) ?? ent.Comp.GasSummary;
+        ent.Comp.Vents = AtmosControlCodec.DecodeVents(pkt.GetString("VentsRaw", string.Empty) ?? string.Empty);
+        ent.Comp.Scrubbers = AtmosControlCodec.DecodeScrubbers(pkt.GetString("ScrubbersRaw", string.Empty) ?? string.Empty);
+        ent.Comp.Sensors = AtmosControlCodec.DecodeSensors(pkt.GetString("SensorsRaw", string.Empty) ?? string.Empty);
         ent.Comp.StatusMessage = string.Empty;
         Dirty(ent);
 
@@ -313,10 +325,169 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
     }
 
+    private void OnAtmosUpdateVent(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateVentMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        var dto = new AtmosVentEntryDto(
+            args.AddressId,
+            string.Empty,
+            args.Enabled,
+            args.PumpDirection,
+            args.PressureChecks,
+            args.ExternalPressureBound,
+            args.InternalPressureBound);
+
+        var cmd = args.ApplyToAll ? "set_all_vents" : "set_vent";
+        var pkt = new ComputerPacket(cmd);
+        pkt.Set("VentRaw", AtmosControlCodec.EncodeVents([dto]));
+        SendAtmosDeviceLinkPacket(compUid, ent.Comp, cmd, string.Empty, args.Actor, pkt);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnAtmosUpdateScrubber(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateScrubberMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        var dto = new AtmosScrubberEntryDto(
+            args.AddressId,
+            string.Empty,
+            args.Enabled,
+            args.PumpDirection,
+            args.VolumeRate,
+            args.WideNet,
+            false,
+            args.FilterGases);
+
+        var cmd = args.ApplyToAll ? "set_all_scrubbers" : "set_scrubber";
+        var pkt = new ComputerPacket(cmd);
+        pkt.Set("ScrubberRaw", AtmosControlCodec.EncodeScrubbers([dto]));
+        SendAtmosDeviceLinkPacket(compUid, ent.Comp, cmd, string.Empty, args.Actor, pkt);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnAtmosUpdateSensorThreshold(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateSensorThresholdMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        var cmd = args.ApplyToAll ? "set_all_thresholds" : "set_threshold";
+        var pkt = new ComputerPacket(cmd);
+        pkt.Set("AddressId", args.AddressId);
+        pkt.Set("ThresholdType", (int) args.ThresholdType);
+        pkt.Set("Gas", args.Gas is { } g ? (int) g : -1);
+        pkt.Set("ThresholdRaw", AtmosControlCodec.EncodeThreshold(args.Threshold));
+        SendAtmosDeviceLinkPacket(compUid, ent.Comp, cmd, string.Empty, args.Actor, pkt);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnAtmosSaveTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosSaveTemplateMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        var kind = args.Kind;
+        var cleanName = (args.Name ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(cleanName))
+        {
+            cleanName = kind switch
+            {
+                AtmosTemplateKind.Vent => "Vent",
+                AtmosTemplateKind.Scrubber => "Scrubber",
+                _ => "Sensor"
+            };
+        }
+
+        if (cleanName.Length > 24)
+            cleanName = cleanName[..24];
+
+        // Single active template slot: saving replaces any previous template.
+        ent.Comp.Templates.Clear();
+        ent.Comp.Templates.Add(new AtmosTemplateEntryDto(cleanName, kind, args.Vent, args.Scrubber, args.Sensor));
+        Dirty(ent);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnAtmosDeleteTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosDeleteTemplateMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        ent.Comp.Templates.Clear();
+        Dirty(ent);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnAtmosApplyTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosApplyTemplateMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+            return;
+
+        var kind = args.Kind;
+        var template = ent.Comp.Templates.FirstOrDefault(t => t.Kind == kind);
+        if (template == null)
+            return;
+
+        switch (template.Kind)
+        {
+            case AtmosTemplateKind.Vent when template.Vent is { } v:
+                var ventDto = new AtmosVentEntryDto(
+                    args.TargetAddressId ?? v.AddressId,
+                    string.Empty,
+                    v.Enabled,
+                    v.PumpDirection,
+                    v.PressureChecks,
+                    v.ExternalPressureBound,
+                    v.InternalPressureBound);
+                var ventCmd = args.ApplyToAll ? "set_all_vents" : "set_vent";
+                var ventPkt = new ComputerPacket(ventCmd);
+                ventPkt.Set("VentRaw", AtmosControlCodec.EncodeVents([ventDto]));
+                SendAtmosDeviceLinkPacket(compUid, ent.Comp, ventCmd, string.Empty, args.Actor, ventPkt);
+                break;
+
+            case AtmosTemplateKind.Scrubber when template.Scrubber is { } s:
+                var scrubDto = new AtmosScrubberEntryDto(
+                    args.TargetAddressId ?? s.AddressId,
+                    string.Empty,
+                    s.Enabled,
+                    s.PumpDirection,
+                    s.VolumeRate,
+                    s.WideNet,
+                    false,
+                    new List<Gas>(s.FilterGases));
+                var scrubCmd = args.ApplyToAll ? "set_all_scrubbers" : "set_scrubber";
+                var scrubPkt = new ComputerPacket(scrubCmd);
+                scrubPkt.Set("ScrubberRaw", AtmosControlCodec.EncodeScrubbers([scrubDto]));
+                SendAtmosDeviceLinkPacket(compUid, ent.Comp, scrubCmd, string.Empty, args.Actor, scrubPkt);
+                break;
+
+            case AtmosTemplateKind.Sensor when template.Sensor is { } sens:
+                var sensCmd = args.ApplyToAll ? "apply_sensor_template_all" : "apply_sensor_template";
+                var sensPkt = new ComputerPacket(sensCmd);
+                if (args.TargetAddressId is { } tid)
+                    sensPkt.Set("AddressId", tid);
+                sensPkt.Set("PressureThreshold", AtmosControlCodec.EncodeThreshold(sens.PressureThreshold));
+                sensPkt.Set("TemperatureThreshold", AtmosControlCodec.EncodeThreshold(sens.TemperatureThreshold));
+                var gasRaw = string.Join("~", sens.GasThresholds.Select(kv => $"{(int) kv.Key}={AtmosControlCodec.EncodeThreshold(kv.Value)}"));
+                sensPkt.Set("GasThresholds", gasRaw);
+                SendAtmosDeviceLinkPacket(compUid, ent.Comp, sensCmd, string.Empty, args.Actor, sensPkt);
+                break;
+        }
+
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
     private void SendAtmosDeviceLink(EntityUid compUid, AtmosControlProgramComponent comp, string cmd, string arg, EntityUid? actor)
     {
         var pkt = new ComputerPacket(cmd);
         pkt.Set("Argument", arg);
+        SendAtmosDeviceLinkPacket(compUid, comp, cmd, arg, actor, pkt);
+    }
+
+    private void SendAtmosDeviceLinkPacket(EntityUid compUid, AtmosControlProgramComponent comp, string cmd, string arg, EntityUid? actor, ComputerPacket pkt)
+    {
         var sent = _computer.TryInvokeDeviceLinkPort(compUid, "AirAlarmCommandSink", isHostPort: true, cmd, arg, out var err, actor, pkt);
         if (!sent)
             sent = _computer.TryInvokeDeviceLinkPort(compUid, "MachineCommandReceiver", isHostPort: true, cmd, arg, out err, actor, pkt);
@@ -341,7 +512,11 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             comp.ScrubberCount,
             comp.SensorCount,
             comp.GasSummary,
-            comp.StatusMessage);
+            comp.StatusMessage,
+            new List<AtmosVentEntryDto>(comp.Vents),
+            new List<AtmosScrubberEntryDto>(comp.Scrubbers),
+            new List<AtmosSensorEntryDto>(comp.Sensors),
+            new List<AtmosTemplateEntryDto>(comp.Templates));
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);

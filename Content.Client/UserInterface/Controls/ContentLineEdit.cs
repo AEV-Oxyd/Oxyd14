@@ -92,6 +92,8 @@ public class ContentLineEdit : ContentControl
 
     public event Action<LineEditEventArgs>? OnTextEntered;
     public event Action<LineEditEventArgs>? OnTextChanged;
+    public event Action<LineEditEventArgs>? OnFocusExit;
+    public event Action<LineEditEventArgs>? OnCancelRequested;
 
     public ContentLineEdit()
     {
@@ -145,6 +147,7 @@ public class ContentLineEdit : ContentControl
         _caretBlink = false;
         Root?.Window?.TextInputStop();
         InvalidateAncestorPipSurface();
+        OnFocusExit?.Invoke(new LineEditEventArgs(this, _text));
     }
 
     protected override void KeyBindDown(GUIBoundKeyEventArgs args)
@@ -165,6 +168,7 @@ public class ContentLineEdit : ContentControl
 
         if (args.Function == EngineKeyFunctions.TextReleaseFocus)
         {
+            OnCancelRequested?.Invoke(new LineEditEventArgs(this, _text));
             ReleaseKeyboardFocus();
             InvalidateAncestorPipSurface();
             args.Handle();

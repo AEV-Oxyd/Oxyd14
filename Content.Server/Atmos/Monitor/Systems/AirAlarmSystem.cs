@@ -1,6 +1,7 @@
 using Content.Server.Atmos.Monitor.Components;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Packets;
+using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceNetwork.Systems;
@@ -197,19 +198,20 @@ public sealed partial class AirAlarmSystem : EntitySystem
     private void OnComputerPacketSignal(Entity<AirAlarmComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
     {
         EntityUid? actor = args.Data.ProtectedReferences.TryGetValue("Actor", out var actUid) ? actUid : args.Trigger;
-        HandleAirAlarmDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor);
+        HandleAirAlarmDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor, args.Data);
     }
 
     private void OnComputerDeviceLinkSignal(Entity<AirAlarmComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
-        HandleAirAlarmDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger);
+        HandleAirAlarmDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger, null);
     }
 
-    private void HandleAirAlarmDeviceLinkCommand(Entity<AirAlarmComponent> ent, string? rawCmd, string rawArg, EntityUid? actor)
+    private void HandleAirAlarmDeviceLinkCommand(Entity<AirAlarmComponent> ent, string? rawCmd, string rawArg, EntityUid? actor, ComputerPacket? packet)
     {
         var cmd = rawCmd?.Trim().ToLowerInvariant() ?? string.Empty;
         if (cmd is "status" or "status_request")
         {
+            SyncAllDevices(ent.Owner);
             EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
             return;
         }
@@ -246,8 +248,223 @@ public sealed partial class AirAlarmSystem : EntitySystem
         }
         else if (cmd == "resync_devices")
         {
+            ent.Comp.KnownDevices.Clear();
+            ent.Comp.VentData.Clear();
+            ent.Comp.ScrubberData.Clear();
+            ent.Comp.SensorData.Clear();
             SyncRegisterAllDevices(ent.Owner);
             EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
+        }
+        else if (cmd is "set_vent" or "set_all_vents" && packet != null)
+        {
+            var decoded = AtmosControlCodec.DecodeVents(packet.GetString("VentRaw", string.Empty) ?? string.Empty);
+            if (decoded.Count == 0)
+                return;
+
+            var src = decoded[0];
+            var ventData = new GasVentPumpData
+            {
+                Enabled = src.Enabled,
+                PumpDirection = src.PumpDirection,
+                PressureChecks = src.PressureChecks,
+                ExternalPressureBound = MathF.Max(0f, src.ExternalPressureBound),
+                InternalPressureBound = MathF.Max(0f, src.InternalPressureBound),
+                Dirty = true
+            };
+
+            if (cmd == "set_all_vents")
+            {
+                foreach (var locAddr in ent.Comp.VentData.Keys.ToList())
+                {
+                    var clone = new GasVentPumpData
+                    {
+                        Enabled = ventData.Enabled,
+                        PumpDirection = ventData.PumpDirection,
+                        PressureChecks = ventData.PressureChecks,
+                        ExternalPressureBound = ventData.ExternalPressureBound,
+                        InternalPressureBound = ventData.InternalPressureBound,
+                        Dirty = true
+                    };
+                    ent.Comp.VentData[locAddr] = clone;
+                    SetData(ent.Owner, locAddr.AddressId, clone);
+                }
+            }
+            else
+            {
+                var targetAddr = new DeviceAddress(src.AddressId);
+                if (_deviceList.ExistsInDeviceList(ent.Owner, targetAddr) ||
+                    ent.Comp.VentData.Keys.Any(k => k.AddressId == targetAddr))
+                {
+                    foreach (var locAddr in ent.Comp.VentData.Keys.ToList())
+                    {
+                        if (locAddr.AddressId == targetAddr)
+                            ent.Comp.VentData[locAddr] = ventData;
+                    }
+                    SetDeviceData(ent.Owner, targetAddr, ventData, ent.Comp);
+                }
+            }
+
+            UpdateUI(ent.Owner, ent.Comp);
+        }
+        else if (cmd is "set_scrubber" or "set_all_scrubbers" && packet != null)
+        {
+            var decoded = AtmosControlCodec.DecodeScrubbers(packet.GetString("ScrubberRaw", string.Empty) ?? string.Empty);
+            if (decoded.Count == 0)
+                return;
+
+            var src = decoded[0];
+            var direction = ent.Comp.PanicWireCut ? ScrubberPumpDirection.Siphoning : src.PumpDirection;
+
+            GasVentScrubberData BuildScrubber() => new()
+            {
+                Enabled = src.Enabled,
+                PumpDirection = direction,
+                VolumeRate = MathF.Max(0f, src.VolumeRate),
+                WideNet = src.WideNet,
+                FilterGases = new HashSet<Gas>(src.FilterGases),
+                AirAlarmPanicWireCut = ent.Comp.PanicWireCut,
+                Dirty = true
+            };
+
+            if (cmd == "set_all_scrubbers")
+            {
+                foreach (var locAddr in ent.Comp.ScrubberData.Keys.ToList())
+                {
+                    var clone = BuildScrubber();
+                    ent.Comp.ScrubberData[locAddr] = clone;
+                    SetData(ent.Owner, locAddr.AddressId, clone);
+                }
+            }
+            else
+            {
+                var targetAddr = new DeviceAddress(src.AddressId);
+                if (_deviceList.ExistsInDeviceList(ent.Owner, targetAddr) ||
+                    ent.Comp.ScrubberData.Keys.Any(k => k.AddressId == targetAddr))
+                {
+                    var scrubData = BuildScrubber();
+                    foreach (var locAddr in ent.Comp.ScrubberData.Keys.ToList())
+                    {
+                        if (locAddr.AddressId == targetAddr)
+                            ent.Comp.ScrubberData[locAddr] = scrubData;
+                    }
+                    SetDeviceData(ent.Owner, targetAddr, scrubData, ent.Comp);
+                }
+            }
+
+            UpdateUI(ent.Owner, ent.Comp);
+        }
+        else if (cmd is "set_threshold" or "set_all_thresholds" && packet != null)
+        {
+            var typeInt = packet.GetInt("ThresholdType", (int) AtmosMonitorThresholdType.Pressure);
+            var thresholdType = (AtmosMonitorThresholdType) typeInt;
+            var gasInt = packet.GetInt("Gas", -1);
+            Gas? gas = gasInt >= 0 ? (Gas) gasInt : null;
+            var thresholdDto = AtmosControlCodec.DecodeThreshold(packet.GetString("ThresholdRaw", string.Empty) ?? string.Empty);
+            var threshold = thresholdDto.ToThreshold();
+
+            var targets = new List<DeviceAddress>();
+            if (cmd == "set_all_thresholds")
+            {
+                foreach (var locAddr in ent.Comp.SensorData.Keys)
+                    targets.Add(locAddr.AddressId);
+            }
+            else
+            {
+                var targetAddr = new DeviceAddress(packet.GetInt("AddressId", 0));
+                if (targetAddr.IsValid())
+                    targets.Add(targetAddr);
+            }
+
+            foreach (var addr in targets)
+            {
+                SetThreshold(ent.Owner, addr, thresholdType, threshold, gas);
+                UpdateCachedSensorThreshold(ent.Comp, addr, thresholdType, threshold, gas);
+            }
+
+            UpdateUI(ent.Owner, ent.Comp);
+        }
+        else if (cmd is "apply_sensor_template" or "apply_sensor_template_all" && packet != null)
+        {
+            var presDto = AtmosControlCodec.DecodeThreshold(packet.GetString("PressureThreshold", string.Empty) ?? string.Empty);
+            var tempDto = AtmosControlCodec.DecodeThreshold(packet.GetString("TemperatureThreshold", string.Empty) ?? string.Empty);
+            var gasRaw = packet.GetString("GasThresholds", string.Empty) ?? string.Empty;
+
+            var gasThresholds = new Dictionary<Gas, AtmosAlarmThreshold>();
+            if (!string.IsNullOrWhiteSpace(gasRaw))
+            {
+                foreach (var entry in gasRaw.Split('~', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = entry.Split('=', 2);
+                    if (kv.Length == 2 && int.TryParse(kv[0], out var gIdx))
+                        gasThresholds[(Gas) gIdx] = AtmosControlCodec.DecodeThreshold(kv[1]).ToThreshold();
+                }
+            }
+
+            var targets = new List<DeviceAddress>();
+            if (cmd == "apply_sensor_template_all")
+            {
+                foreach (var locAddr in ent.Comp.SensorData.Keys)
+                    targets.Add(locAddr.AddressId);
+            }
+            else
+            {
+                var targetAddr = new DeviceAddress(packet.GetInt("AddressId", 0));
+                if (targetAddr.IsValid())
+                    targets.Add(targetAddr);
+            }
+
+            var presThr = presDto.ToThreshold();
+            var tempThr = tempDto.ToThreshold();
+
+            foreach (var addr in targets)
+            {
+                SetThreshold(ent.Owner, addr, AtmosMonitorThresholdType.Pressure, presThr, null);
+                UpdateCachedSensorThreshold(ent.Comp, addr, AtmosMonitorThresholdType.Pressure, presThr, null);
+
+                SetThreshold(ent.Owner, addr, AtmosMonitorThresholdType.Temperature, tempThr, null);
+                UpdateCachedSensorThreshold(ent.Comp, addr, AtmosMonitorThresholdType.Temperature, tempThr, null);
+
+                foreach (var (g, gThr) in gasThresholds)
+                {
+                    SetThreshold(ent.Owner, addr, AtmosMonitorThresholdType.Gas, gThr, g);
+                    UpdateCachedSensorThreshold(ent.Comp, addr, AtmosMonitorThresholdType.Gas, gThr, g);
+                }
+            }
+
+            UpdateUI(ent.Owner, ent.Comp);
+        }
+    }
+
+    private static void UpdateCachedSensorThreshold(
+        AirAlarmComponent alarm,
+        DeviceAddress addr,
+        AtmosMonitorThresholdType type,
+        AtmosAlarmThreshold threshold,
+        Gas? gas)
+    {
+        foreach (var locAddr in alarm.SensorData.Keys.ToList())
+        {
+            if (locAddr.AddressId != addr)
+                continue;
+
+            var cur = alarm.SensorData[locAddr];
+            var newPres = type == AtmosMonitorThresholdType.Pressure ? new AtmosAlarmThreshold(threshold) : cur.PressureThreshold;
+            var newTemp = type == AtmosMonitorThresholdType.Temperature ? new AtmosAlarmThreshold(threshold) : cur.TemperatureThreshold;
+            var newGasMap = cur.GasThresholds != null
+                ? new Dictionary<Gas, AtmosAlarmThreshold>(cur.GasThresholds)
+                : new Dictionary<Gas, AtmosAlarmThreshold>();
+            if (type == AtmosMonitorThresholdType.Gas && gas is { } g)
+                newGasMap[g] = new AtmosAlarmThreshold(threshold);
+
+            alarm.SensorData[locAddr] = new AtmosMonitorData(
+                cur.Pressure,
+                cur.Temperature,
+                cur.TotalMoles,
+                cur.AlarmState,
+                cur.Gases ?? new Dictionary<Gas, float>(),
+                newPres,
+                newTemp,
+                newGasMap);
         }
     }
 
@@ -263,6 +480,59 @@ public sealed partial class AirAlarmSystem : EntitySystem
         var co2 = CalculateGasMolarConcentrationAverage(alarm, Gas.CarbonDioxide, out _);
         var plasma = CalculateGasMolarConcentrationAverage(alarm, Gas.Plasma, out _);
 
+        var ventDtos = new List<AtmosVentEntryDto>(alarm.VentData.Count);
+        foreach (var (addr, v) in alarm.VentData)
+        {
+            ventDtos.Add(new AtmosVentEntryDto(
+                addr.AddressId.AddressId,
+                addr.ToString(),
+                v.Enabled,
+                v.PumpDirection,
+                v.PressureChecks,
+                v.ExternalPressureBound,
+                v.InternalPressureBound));
+        }
+        ventDtos.Sort((a, b) => string.Compare(a.DisplayAddress, b.DisplayAddress, StringComparison.OrdinalIgnoreCase));
+
+        var scrubberDtos = new List<AtmosScrubberEntryDto>(alarm.ScrubberData.Count);
+        foreach (var (addr, s) in alarm.ScrubberData)
+        {
+            scrubberDtos.Add(new AtmosScrubberEntryDto(
+                addr.AddressId.AddressId,
+                addr.ToString(),
+                s.Enabled,
+                s.PumpDirection,
+                s.VolumeRate,
+                s.WideNet,
+                alarm.PanicWireCut || s.AirAlarmPanicWireCut,
+                s.FilterGases.OrderBy(g => (int) g).ToList()));
+        }
+        scrubberDtos.Sort((a, b) => string.Compare(a.DisplayAddress, b.DisplayAddress, StringComparison.OrdinalIgnoreCase));
+
+        var sensorDtos = new List<AtmosSensorEntryDto>(alarm.SensorData.Count);
+        foreach (var (addr, sens) in alarm.SensorData)
+        {
+            var gasThrDtos = new Dictionary<Gas, AtmosThresholdDto>();
+            if (sens.GasThresholds != null)
+            {
+                foreach (var (g, thr) in sens.GasThresholds)
+                    gasThrDtos[g] = AtmosThresholdDto.FromThreshold(thr);
+            }
+
+            sensorDtos.Add(new AtmosSensorEntryDto(
+                addr.AddressId.AddressId,
+                addr.ToString(),
+                sens.AlarmState,
+                sens.Pressure,
+                sens.Temperature,
+                sens.TotalMoles,
+                sens.Gases != null ? new Dictionary<Gas, float>(sens.Gases) : new Dictionary<Gas, float>(),
+                AtmosThresholdDto.FromThreshold(sens.PressureThreshold),
+                AtmosThresholdDto.FromThreshold(sens.TemperatureThreshold),
+                gasThrDtos));
+        }
+        sensorDtos.Sort((a, b) => string.Compare(a.DisplayAddress, b.DisplayAddress, StringComparison.OrdinalIgnoreCase));
+
         var pkt = new ComputerPacket("AirAlarmStatus");
         pkt.Set("AlarmLevel", highestAlarm.Value.ToString());
         pkt.Set("Mode", alarm.CurrentMode.ToString());
@@ -274,6 +544,9 @@ public sealed partial class AirAlarmSystem : EntitySystem
         pkt.Set("Scrubbers", alarm.ScrubberData.Count);
         pkt.Set("Sensors", alarm.SensorData.Count);
         pkt.Set("GasSummary", $"O2: {o2:0.0} mol | N2: {n2:0.0} mol | CO2: {co2:0.0} mol | Plasma: {plasma:0.0} mol");
+        pkt.Set("VentsRaw", AtmosControlCodec.EncodeVents(ventDtos));
+        pkt.Set("ScrubbersRaw", AtmosControlCodec.EncodeScrubbers(scrubberDtos));
+        pkt.Set("SensorsRaw", AtmosControlCodec.EncodeSensors(sensorDtos));
 
         _deviceLink.InvokePort(uid, PortAirAlarmStatusSource, ref pkt);
         _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
@@ -505,7 +778,10 @@ public sealed partial class AirAlarmSystem : EntitySystem
 
     private void OnAtmosAlarm(EntityUid uid, AirAlarmComponent component, AtmosAlarmEvent args)
     {
-        if (_ui.IsUiOpen(uid, SharedAirAlarmInterfaceKey.Key))
+        var embeddedUiOpen = TryComp<EmbeddedComputerHostComponent>(uid, out var embHost) &&
+                             embHost.ComputerEntity is { } embComp &&
+                             _ui.IsUiOpen(embComp, ComputerUiKey.Key);
+        if (_ui.IsUiOpen(uid, SharedAirAlarmInterfaceKey.Key) || embeddedUiOpen)
         {
             SyncAllDevices(uid);
         }
@@ -722,13 +998,17 @@ public sealed partial class AirAlarmSystem : EntitySystem
     {
         percentage = 0f;
 
-        var data = alarm.SensorData.Values.SelectMany(v => v.Gases.Where(g => g.Key == gas));
+        var data = alarm.SensorData.Values
+            .Where(v => v.Gases != null)
+            .SelectMany(v => v.Gases.Where(g => g.Key == gas))
+            .ToList();
 
-        if (data.Count() == 0)
+        if (data.Count == 0)
             return 0f;
 
         var averageMol = data.Select(kvp => kvp.Value).Average();
-        percentage = data.Select(kvp => kvp.Value).Sum() / alarm.SensorData.Values.Select(v => v.TotalMoles).Sum();
+        var totalMoles = alarm.SensorData.Values.Select(v => v.TotalMoles).Sum();
+        percentage = totalMoles > 0f ? data.Select(kvp => kvp.Value).Sum() / totalMoles : 0f;
 
         return averageMol;
     }
