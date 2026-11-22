@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client._Oxyd.Computers.ScreenSharing;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Shared.Input;
@@ -8,26 +9,26 @@ namespace Content.Client.UserInterface.Controls;
 
 /// <summary>
 /// A scrollable container derived from <see cref="ContentControl"/> that supports scrolling via mouse wheel
-/// and scrollbar dragging, clearly denotes scrollable wells with a textured recessed background and scrollbar,
+/// and scrollbar dragging, renders a clean foreground scrollbar over scrollable content,
 /// and relays events cleanly in remote screen views.
 /// </summary>
 public class ContentScrollContainer : ContentControl
 {
-    private const float ScrollBarLogicalWidth = 10f;
-    private const float InsetPadding = 3f;
+    private const float ScrollBarLogicalWidth = 12f;
+    private const float InsetPadding = 2f;
 
     public bool HScrollEnabled { get; set; } = false;
     public bool VScrollEnabled { get; set; } = true;
     public bool HScrollBarHidden { get; set; } = false;
 
     /// <summary>
-    /// When true, renders a subtle recessed textured background, border, scrollbar track/thumb,
-    /// and top/bottom overflow indicator strips whenever content can scroll (or always if <see cref="AlwaysShowBackground"/>).
+    /// When true, renders the scrollbar track/thumb whenever content overflows vertically.
     /// </summary>
     public bool ShowScrollVisuals { get; set; } = true;
 
     /// <summary>
-    /// When true, renders the recessed scrollable well texture/border even when content fits without scrolling.
+    /// Retained for API compatibility; background texture/well fill is intentionally omitted
+    /// so scrollable containers blend cleanly with surrounding UI elements.
     /// </summary>
     public bool AlwaysShowBackground { get; set; } = false;
 
@@ -39,6 +40,7 @@ public class ContentScrollContainer : ContentControl
         {
             _scrollOffsetX = Math.Max(0f, value);
             InvalidateArrange();
+            InvalidateAncestorPipSurface();
         }
     }
 
@@ -50,6 +52,7 @@ public class ContentScrollContainer : ContentControl
         {
             _scrollOffsetY = Math.Max(0f, value);
             InvalidateArrange();
+            InvalidateAncestorPipSurface();
         }
     }
 
@@ -61,6 +64,7 @@ public class ContentScrollContainer : ContentControl
     private bool _hoveringVBar;
     private float _dragStartPixelY;
     private float _dragStartScrollY;
+    private readonly Stack<Matrix3x2> _drawTransformStack = new();
 
     public bool IsVerticallyScrollable => VScrollEnabled && _lastMaxScrollY > 0.5f;
     public bool IsHorizontallyScrollable => HScrollEnabled && _lastMaxScrollX > 0.5f;
@@ -70,6 +74,19 @@ public class ContentScrollContainer : ContentControl
     {
         RectClipContent = true;
         MouseFilter = MouseFilterMode.Pass;
+    }
+
+    private void InvalidateAncestorPipSurface()
+    {
+        for (var cur = Parent; cur != null; cur = cur.Parent)
+        {
+            if (cur is PipScreenSurface surface && !surface.Disposed)
+            {
+                surface.InvalidateCapture(2);
+                PipSurfaceRegistry.InvalidateDevice(surface.DeviceGuid, 2);
+                break;
+            }
+        }
     }
 
     private UIBox2 GetVerticalTrackPixelRect()
@@ -112,6 +129,7 @@ public class ContentScrollContainer : ContentControl
             {
                 _scrollOffsetY = Math.Clamp(_scrollOffsetY - args.Delta.Y * 34f, 0f, maxScroll);
                 InvalidateArrange();
+                InvalidateAncestorPipSurface();
                 args.Handle();
             }
         }
@@ -124,6 +142,7 @@ public class ContentScrollContainer : ContentControl
                 var delta = args.Delta.X == 0f && !VScrollEnabled ? -args.Delta.Y : args.Delta.X;
                 _scrollOffsetX = Math.Clamp(_scrollOffsetX + delta * 34f, 0f, maxScrollX);
                 InvalidateArrange();
+                InvalidateAncestorPipSurface();
                 args.Handle();
             }
         }
@@ -157,6 +176,7 @@ public class ContentScrollContainer : ContentControl
             InvalidateArrange();
         }
 
+        InvalidateAncestorPipSurface();
         args.Handle();
     }
 
@@ -166,6 +186,7 @@ public class ContentScrollContainer : ContentControl
         if (args.Function == EngineKeyFunctions.UIClick && _draggingVThumb)
         {
             _draggingVThumb = false;
+            InvalidateAncestorPipSurface();
             args.Handle();
         }
     }
@@ -175,12 +196,21 @@ public class ContentScrollContainer : ContentControl
         base.MouseMove(args);
         if (!ShowScrollVisuals || !IsVerticallyScrollable)
         {
-            _hoveringVBar = false;
+            if (_hoveringVBar)
+            {
+                _hoveringVBar = false;
+                InvalidateAncestorPipSurface();
+            }
             return;
         }
 
         var track = GetVerticalTrackPixelRect();
-        _hoveringVBar = track.Contains(args.RelativePixelPosition);
+        var nextHover = track.Contains(args.RelativePixelPosition);
+        if (nextHover != _hoveringVBar)
+        {
+            _hoveringVBar = nextHover;
+            InvalidateAncestorPipSurface();
+        }
 
         if (_draggingVThumb)
         {
@@ -190,13 +220,18 @@ public class ContentScrollContainer : ContentControl
             var scrollDelta = (deltaY / usableTrack) * _lastMaxScrollY;
             _scrollOffsetY = Math.Clamp(_dragStartScrollY + scrollDelta, 0f, _lastMaxScrollY);
             InvalidateArrange();
+            InvalidateAncestorPipSurface();
         }
     }
 
     protected override void MouseExited()
     {
         base.MouseExited();
-        _hoveringVBar = false;
+        if (_hoveringVBar)
+        {
+            _hoveringVBar = false;
+            InvalidateAncestorPipSurface();
+        }
     }
 
     protected override Vector2 MeasureOverride(Vector2 availableSize)
@@ -244,6 +279,9 @@ public class ContentScrollContainer : ContentControl
         var childW = HScrollEnabled ? Math.Max(child.DesiredSize.X, viewW) : viewW;
         var childH = VScrollEnabled ? Math.Max(child.DesiredSize.Y, viewH) : viewH;
 
+        var prevScrollable = IsVerticallyScrollable;
+        var prevMaxScrollY = _lastMaxScrollY;
+
         _lastContentHeight = childH;
         _lastViewportHeight = viewH;
         _lastMaxScrollY = Math.Max(0f, childH - viewH);
@@ -257,73 +295,51 @@ public class ContentScrollContainer : ContentControl
             pad - _scrollOffsetY,
             pad + childW - _scrollOffsetX,
             pad + childH - _scrollOffsetY));
+
+        if (prevScrollable != IsVerticallyScrollable || MathF.Abs(prevMaxScrollY - _lastMaxScrollY) > 1f)
+            InvalidateAncestorPipSurface();
+
         return finalSize;
     }
 
     protected override void Draw(DrawingHandleScreen handle)
     {
         base.Draw(handle);
+        // Capture exact local transform on a re-entrant stack so PostRenderChildren draws the scrollbar
+        // on top of children in direct windows, offscreen remote captures, and nested PiP cascades.
+        _drawTransformStack.Push(handle.GetTransform());
+    }
 
-        if (!ShowScrollVisuals)
+    protected override void PostRenderChildren(ref ControlRenderArguments args)
+    {
+        base.PostRenderChildren(ref args);
+
+        if (_drawTransformStack.Count == 0)
             return;
 
-        var canScrollV = IsVerticallyScrollable;
-        var canScrollH = IsHorizontallyScrollable;
-        if (!AlwaysShowBackground && !canScrollV && !canScrollH)
+        var drawTransform = _drawTransformStack.Pop();
+        if (!ShowScrollVisuals || !IsVerticallyScrollable)
             return;
 
-        var rect = PixelSizeBox;
+        var handle = args.Handle.DrawingHandleScreen;
+        var oldXform = handle.GetTransform();
+        var oldMod = handle.Modulate;
+        handle.SetTransform(drawTransform);
+        handle.Modulate = args.Modulate * ActualModulateSelf;
 
-        // Recessed dark scrollable well background
-        handle.DrawRect(rect, Color.FromHex("#060D15"), filled: true);
-
-        // Subtle recessed diagonal/horizontal striped texture to clearly distinguish scrollable regions
-        var stripeStep = MathF.Max(8f, 10f * UIScale);
-        var stripeH = MathF.Max(1f, 2f * UIScale);
-        var stripeColor = new Color(0.14f, 0.36f, 0.50f, 0.10f);
-        var scrollPhase = (_scrollOffsetY * UIScale) % stripeStep;
-        for (var y = -scrollPhase; y < PixelHeight; y += stripeStep)
-        {
-            var top = MathF.Max(0f, y);
-            var bot = MathF.Min(PixelHeight, y + stripeH);
-            if (bot > top)
-                handle.DrawRect(new UIBox2(1f, top, MathF.Max(1f, PixelWidth - 1f), bot), stripeColor, filled: true);
-        }
-
-        // Inset frame border (brighter cyan tint when actively scrollable)
-        var borderColor = canScrollV || canScrollH
-            ? Color.FromHex("#225673")
-            : Color.FromHex("#143245");
-        handle.DrawRect(rect, borderColor, filled: false);
-
-        if (!canScrollV)
-            return;
-
-        // Top & bottom overflow edge accent bars showing more content exists above/below
-        var edgeH = MathF.Max(2f, 2f * UIScale);
-        var barWReserve = (ScrollBarLogicalWidth + InsetPadding) * UIScale;
-        var edgeRight = MathF.Max(2f, PixelWidth - barWReserve);
-        if (_scrollOffsetY > 0.5f)
-        {
-            handle.DrawRect(new UIBox2(2f, 1f, edgeRight, 1f + edgeH), new Color(0f, 0.83f, 1f, 0.65f), filled: true);
-        }
-
-        if (_scrollOffsetY < _lastMaxScrollY - 0.5f)
-        {
-            handle.DrawRect(new UIBox2(2f, PixelHeight - 1f - edgeH, edgeRight, PixelHeight - 1f), new Color(0f, 0.83f, 1f, 0.65f), filled: true);
-        }
-
-        // Right-edge scrollbar track & proportional thumb
         var track = GetVerticalTrackPixelRect();
-        handle.DrawRect(track, Color.FromHex("#0B1A26"), filled: true);
-        handle.DrawRect(track, Color.FromHex("#1E4C66"), filled: false);
+        handle.DrawRect(track, Color.FromHex("#0E1E2C"), filled: true);
+        handle.DrawRect(track, Color.FromHex("#2C6280"), filled: false);
 
         var thumb = GetVerticalThumbPixelRect(track);
         var thumbColor = _draggingVThumb
-            ? Color.FromHex("#66DCFF")
+            ? Color.FromHex("#88ECFF")
             : _hoveringVBar
-                ? Color.FromHex("#45BCE6")
-                : Color.FromHex("#2B87AD");
+                ? Color.FromHex("#66D4F8")
+                : Color.FromHex("#44B0D8");
         handle.DrawRect(thumb, thumbColor, filled: true);
+
+        handle.Modulate = oldMod;
+        handle.SetTransform(oldXform);
     }
 }

@@ -145,17 +145,25 @@ public partial class PipScreenSurface : BoxContainer
     public int DirtyPassesRemaining => _dirtyPassesRemaining;
 
     /// <summary>
-    /// Returns true if an offscreen capture is needed (no valid frame captured, size changed, or dirty passes remaining).
+    /// Returns true if an offscreen capture is needed (no valid frame captured, size changed,
+    /// dirty passes remaining, or periodic background refresh interval elapsed).
     /// </summary>
     public bool NeedsCapture(Vector2i targetSize)
     {
         if (!_hasValidReadFrame)
             return true;
 
-        if (_lastCapturedSize != targetSize)
+        var clampedSize = Vector2i.ComponentMin(
+            Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
+            new Vector2i(2048, 2048));
+
+        if (_lastCapturedSize != clampedSize)
             return true;
 
         if (_dirtyPassesRemaining > 0)
+            return true;
+
+        if (_timeSinceLastCapture >= 0.1f)
             return true;
 
         return false;
@@ -273,7 +281,7 @@ public partial class PipScreenSurface : BoxContainer
 
         var clampedSize = Vector2i.ComponentMin(
             Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
-            new Vector2i(1024, 1024));
+            new Vector2i(2048, 2048));
 
         EnsureWriteTarget(clampedSize);
         if (_writeTarget == null)

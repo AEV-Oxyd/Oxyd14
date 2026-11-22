@@ -2702,6 +2702,25 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                  l.Text.Contains("[UNLOCKED]", StringComparison.OrdinalIgnoreCase) ||
                  l.Text.Contains("AIR ALARM CONTROLLER", StringComparison.OrdinalIgnoreCase))),
                 Is.False, "AirAlarm controller UI must not duplicate outer box title or [LOCKED] text.");
+            Assert.That(atmosLabels.Any(l => l.VisibleInTree && l.Text != null &&
+                (l.Text.Contains("Devices:", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("(Auto:", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("0.0 mol", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("-273.", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "AirAlarm status header must omit redundant device counts, Auto duplicate, 0.0 mol dumps, and -273 C placeholder.");
+
+            var alarmBadge = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosAlarmBadgeLabel", atmosCtrls[0]);
+            var modeStatus = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosModeStatusLabel", atmosCtrls[0]);
+            var pressureStatus = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosPressureStatusLabel", atmosCtrls[0]);
+            var tempStatus = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosTempStatusLabel", atmosCtrls[0]);
+            Assert.That(alarmBadge?.VisibleInTree, Is.True);
+            Assert.That(modeStatus?.VisibleInTree, Is.True);
+            Assert.That(pressureStatus?.VisibleInTree, Is.True);
+            Assert.That(tempStatus?.VisibleInTree, Is.True);
 
             var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(atmosCtrls[0], alarmBtns);
@@ -4886,6 +4905,19 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win);
             Assert.That(atmosUi, Is.Not.Null);
             AssertAllVisibleChildrenWithinViewport(win, atmosUi!, "AirAlarm Expanded Controller UI");
+
+            var allStatusLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(atmosUi!, allStatusLabels);
+            Assert.That(allStatusLabels.Any(l => l.VisibleInTree && l.Text != null &&
+                (l.Text.Contains("Devices:", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("(Auto:", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("0.0 mol", StringComparison.OrdinalIgnoreCase))),
+                Is.False, "Formatted AirAlarm status must not display redundant device counts, Auto duplicate, or 0.0 mol entries.");
+
+            var devicesScroll = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentScrollContainer>(
+                s => s.Name == "AtmosDevicesScroll", atmosUi!);
+            Assert.That(devicesScroll, Is.Not.Null);
+            Assert.That(devicesScroll!.ShowScrollVisuals, Is.True);
 
             var catRow = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
                 w => w.Name == "AtmosCategoryRow", atmosUi!);

@@ -616,7 +616,13 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         Sensors = 2
     }
 
-    private readonly ContentLabel _telemetryLabel;
+    private readonly StyleBoxFlat _telemetryPanelStyle;
+    private readonly StyleBoxFlat _alarmBadgeStyle;
+    private readonly ContentLabel _alarmBadgeLabel;
+    private readonly ContentLabel _modeStatusLabel;
+    private readonly ContentLabel _pressureStatusLabel;
+    private readonly ContentLabel _tempStatusLabel;
+    private readonly ContentWrapContainer _gasRow;
     private readonly ContentLabel _statusLabel;
     private readonly Dictionary<string, ContentButton> _modeButtons = new(StringComparer.OrdinalIgnoreCase);
     private readonly ContentButton _autoModeBtn;
@@ -660,30 +666,106 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         };
 
         // ---------------------------------------------------------------------
-        // 1. Telemetry & Alarm Mode Strip
+        // 1. Clean Structured Air Alarm Status & Mode Strip
         // ---------------------------------------------------------------------
+        _telemetryPanelStyle = new StyleBoxFlat
+        {
+            BackgroundColor = Color.FromHex("#0D1824"),
+            BorderColor = Color.FromHex("#1F4B66"),
+            BorderThickness = new Thickness(1),
+            ContentMarginLeftOverride = 8,
+            ContentMarginRightOverride = 8,
+            ContentMarginTopOverride = 6,
+            ContentMarginBottomOverride = 6
+        };
         var telemetryPanel = new ContentPanelContainer
         {
+            Name = "AtmosStatusPanel",
             HorizontalExpand = true,
-            PanelOverride = new StyleBoxFlat
-            {
-                BackgroundColor = Color.FromHex("#0F1A26"),
-                BorderColor = Color.FromHex("#1F4B66"),
-                BorderThickness = new Thickness(1),
-                ContentMarginLeftOverride = 8,
-                ContentMarginRightOverride = 8,
-                ContentMarginTopOverride = 5,
-                ContentMarginBottomOverride = 5
-            }
+            PanelOverride = _telemetryPanelStyle
         };
 
-        _telemetryLabel = new ContentLabel
+        var statusBox = new ContentBoxContainer
         {
-            Text = "Waiting for telemetry...",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
+        var primaryRow = new ContentWrapContainer
+        {
+            Name = "AtmosStatusHeaderRow",
+            HorizontalSeparation = 10,
+            VerticalSeparation = 4
+        };
+
+        _alarmBadgeStyle = new StyleBoxFlat
+        {
+            BackgroundColor = Color.FromHex("#103326"),
+            BorderColor = Color.FromHex("#2E996B"),
+            BorderThickness = new Thickness(1),
+            ContentMarginLeftOverride = 7,
+            ContentMarginRightOverride = 7,
+            ContentMarginTopOverride = 2,
+            ContentMarginBottomOverride = 2
+        };
+        var alarmBadge = new ContentPanelContainer
+        {
+            Name = "AtmosAlarmBadgePanel",
+            PanelOverride = _alarmBadgeStyle
+        };
+        _alarmBadgeLabel = new ContentLabel
+        {
+            Name = "AtmosAlarmBadgeLabel",
+            Text = "NORMAL",
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#66EEAA")
+        };
+        alarmBadge.AddChild(_alarmBadgeLabel);
+        primaryRow.AddChild(alarmBadge);
+
+        _modeStatusLabel = new ContentLabel
+        {
+            Name = "AtmosModeStatusLabel",
+            Text = "Mode: ---",
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#BFEFFF")
+        };
+        primaryRow.AddChild(_modeStatusLabel);
+
+        _pressureStatusLabel = new ContentLabel
+        {
+            Name = "AtmosPressureStatusLabel",
+            Text = "Pressure: -- kPa",
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
             FontColorOverride = Color.FromHex("#E0F7FA")
         };
-        telemetryPanel.AddChild(_telemetryLabel);
+        primaryRow.AddChild(_pressureStatusLabel);
+
+        _tempStatusLabel = new ContentLabel
+        {
+            Name = "AtmosTempStatusLabel",
+            Text = "Temp: -- C",
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#E0F7FA")
+        };
+        primaryRow.AddChild(_tempStatusLabel);
+
+        _gasRow = new ContentWrapContainer
+        {
+            Name = "AtmosGasCompositionRow",
+            HorizontalSeparation = 8,
+            VerticalSeparation = 2,
+            Visible = false
+        };
+
+        statusBox.AddChild(primaryRow);
+        statusBox.AddChild(_gasRow);
+        telemetryPanel.AddChild(statusBox);
         root.AddChild(telemetryPanel);
 
         var modeRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
@@ -899,9 +981,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         _lastState = state;
 
-        _telemetryLabel.Text =
-            $"State: {state.AlarmLevel} | Mode: {state.CurrentMode} (Auto: {(state.AutoMode ? "ON" : "OFF")}) | Pressure: {state.PressureKpa:0.0} kPa | Temp: {state.TemperatureCelsius:0.0} C\n" +
-            $"Devices: {state.SensorCount} sensors, {state.VentCount} vents, {state.ScrubberCount} scrubbers | {state.GasSummary}";
+        UpdateStatusHeader(state);
 
         foreach (var (modeKey, btn) in _modeButtons)
             btn.Pressed = string.Equals(state.CurrentMode, modeKey, StringComparison.OrdinalIgnoreCase);
@@ -932,6 +1012,112 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         UpdateTemplateBar(state);
         SyncDevicesView();
+    }
+
+    private void UpdateStatusHeader(AtmosControlUiState state)
+    {
+        var levelUpper = string.IsNullOrWhiteSpace(state.AlarmLevel)
+            ? "NORMAL"
+            : state.AlarmLevel.ToUpperInvariant();
+        _alarmBadgeLabel.Text = levelUpper;
+
+        if (levelUpper.Contains("DANGER", StringComparison.Ordinal))
+        {
+            _telemetryPanelStyle.BorderColor = Color.FromHex("#9C2F2F");
+            _alarmBadgeStyle.BackgroundColor = Color.FromHex("#3D1216");
+            _alarmBadgeStyle.BorderColor = Color.FromHex("#CC4444");
+            _alarmBadgeLabel.FontColorOverride = Color.FromHex("#FF7A7A");
+        }
+        else if (levelUpper.Contains("WARN", StringComparison.Ordinal))
+        {
+            _telemetryPanelStyle.BorderColor = Color.FromHex("#9A7422");
+            _alarmBadgeStyle.BackgroundColor = Color.FromHex("#382B0E");
+            _alarmBadgeStyle.BorderColor = Color.FromHex("#CCA033");
+            _alarmBadgeLabel.FontColorOverride = Color.FromHex("#FFD166");
+        }
+        else
+        {
+            _telemetryPanelStyle.BorderColor = Color.FromHex("#1F4B66");
+            _alarmBadgeStyle.BackgroundColor = Color.FromHex("#103326");
+            _alarmBadgeStyle.BorderColor = Color.FromHex("#2E996B");
+            _alarmBadgeLabel.FontColorOverride = Color.FromHex("#66EEAA");
+        }
+
+        _modeStatusLabel.Text = $"Mode: {state.CurrentMode}";
+
+        var hasSensorReadings = state.SensorCount > 0 || state.Sensors.Count > 0;
+        _pressureStatusLabel.Text = hasSensorReadings
+            ? $"Pressure: {state.PressureKpa.ToString("0.0", CultureInfo.InvariantCulture)} kPa"
+            : "Pressure: -- kPa";
+
+        var tempValid = hasSensorReadings && state.TemperatureCelsius > -272.5f;
+        _tempStatusLabel.Text = tempValid
+            ? $"Temp: {state.TemperatureCelsius.ToString("0.0", CultureInfo.InvariantCulture)} C"
+            : "Temp: -- C";
+
+        // Show only present gas percentages (omit 0% gases and raw molar clutter)
+        _gasRow.RemoveAllChildren();
+        var totalMoles = 0f;
+        var gasTotals = new Dictionary<Gas, float>();
+        foreach (var sens in state.Sensors)
+        {
+            totalMoles += MathF.Max(0f, sens.TotalMoles);
+            foreach (var (gas, moles) in sens.Gases)
+            {
+                if (moles <= 0f)
+                    continue;
+                gasTotals[gas] = gasTotals.TryGetValue(gas, out var prev) ? prev + moles : moles;
+            }
+        }
+
+        var shownAnyGas = false;
+        if (totalMoles > 0.001f)
+        {
+            foreach (var gas in Enum.GetValues<Gas>())
+            {
+                if (!gasTotals.TryGetValue(gas, out var moles))
+                    continue;
+
+                var pct = (moles / totalMoles) * 100f;
+                if (pct < 0.1f)
+                    continue;
+
+                shownAnyGas = true;
+                var gasColor = gas switch
+                {
+                    Gas.Oxygen => Color.FromHex("#77E6FF"),
+                    Gas.Nitrogen => Color.FromHex("#A8C4D4"),
+                    Gas.WaterVapor => Color.FromHex("#99D6EA"),
+                    Gas.CarbonDioxide => Color.FromHex("#FFD166"),
+                    Gas.Plasma or Gas.Tritium or Gas.Ammonia or Gas.Frezon => Color.FromHex("#FF7A7A"),
+                    Gas.NitrousOxide => Color.FromHex("#FFAA66"),
+                    _ => Color.FromHex("#CFEAF5")
+                };
+
+                var gasPill = new ContentPanelContainer
+                {
+                    PanelOverride = new StyleBoxFlat
+                    {
+                        BackgroundColor = Color.FromHex("#112130"),
+                        BorderColor = gasColor.WithAlpha(0.45f),
+                        BorderThickness = new Thickness(1),
+                        ContentMarginLeftOverride = 6,
+                        ContentMarginRightOverride = 6,
+                        ContentMarginTopOverride = 1,
+                        ContentMarginBottomOverride = 1
+                    }
+                };
+                gasPill.AddChild(new ContentLabel
+                {
+                    Text = $"{FormatGasShort(gas)} {pct.ToString("0.0", CultureInfo.InvariantCulture)}%",
+                    WordWrap = false,
+                    FontColorOverride = gasColor
+                });
+                _gasRow.AddChild(gasPill);
+            }
+        }
+
+        _gasRow.Visible = shownAnyGas;
     }
 
     private static int GetCategoryCount(AtmosControlUiState state, DeviceCategory category) => category switch
@@ -1924,8 +2110,10 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                 _ => Color.FromHex("#246E5A")
             };
 
-            var tempC = sensor.Temperature - 273.15f;
-            _titleLabel.Text = $"SENSOR {sensor.DisplayAddress} [{sensor.AlarmState}] — {sensor.Pressure:0.0} kPa | {tempC:0.0} C";
+            var tempText = sensor.Temperature > 0.5f
+                ? $"{(sensor.Temperature - 273.15f).ToString("0.0", CultureInfo.InvariantCulture)} C"
+                : "-- C";
+            _titleLabel.Text = $"SENSOR {sensor.DisplayAddress} [{sensor.AlarmState}] — {sensor.Pressure.ToString("0.0", CultureInfo.InvariantCulture)} kPa | {tempText}";
             _titleLabel.FontColorOverride = sensor.AlarmState switch
             {
                 AtmosAlarmType.Danger => Color.FromHex("#FF7777"),

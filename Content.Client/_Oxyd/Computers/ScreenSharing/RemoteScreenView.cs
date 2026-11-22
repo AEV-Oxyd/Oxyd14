@@ -356,9 +356,9 @@ public sealed partial class RemoteScreenView : LayoutContainer
         {
             if (_surface.CanCapture(captureTarget, _deviceGuid))
             {
-                var hostPixelSize = (Vector2i)(TargetResolution * UIScale);
-                if (hostPixelSize.X <= 0 || hostPixelSize.Y <= 0)
-                    hostPixelSize = captureTarget.PixelSize;
+                var hostPixelSize = captureTarget.PixelWidth > 0 && captureTarget.PixelHeight > 0
+                    ? captureTarget.PixelSize
+                    : (Vector2i)(TargetResolution * UIScale);
 
                 if (hostPixelSize.X > 0 && hostPixelSize.Y > 0 && _surface.NeedsCapture(hostPixelSize))
                     _surface.CaptureControl(renderHandle, captureTarget, hostPixelSize);
@@ -663,6 +663,30 @@ public sealed partial class RemoteScreenView : LayoutContainer
             }
 
             _surface.InvalidateCapture(2);
+        }
+
+        if (_remoteHeldControls.TryGetValue(EngineKeyFunctions.UIClick, out var held))
+        {
+            var (heldRelay, heldControl) = held;
+            var offset = Vector2.Zero;
+            var ctrl = heldControl;
+            while (ctrl != null && ctrl != targetRoot)
+            {
+                offset += ctrl.PixelPosition;
+                ctrl = ctrl.Parent;
+            }
+
+            var heldPixelPos = targetPixelPos - offset;
+            var heldArgs = new GUIMouseMoveEventArgs(
+                args.Relative,
+                heldControl,
+                args.GlobalPosition,
+                args.GlobalPixelPosition,
+                heldPixelPos / MathF.Max(0.1f, heldControl.UIScale),
+                heldPixelPos);
+            heldRelay.RelayMouseMove(heldArgs);
+            _surface.InvalidateCapture(2);
+            return;
         }
 
         if (newHovered is IInputRelayTarget relay && hit != null)
