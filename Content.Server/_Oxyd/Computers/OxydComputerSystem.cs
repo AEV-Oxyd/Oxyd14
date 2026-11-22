@@ -1388,11 +1388,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (_sourceQuery.TryComp(compUid, out var ownSrc) && _deviceLink.GetSourcePorts((compUid, ownSrc)).Contains(srcPortProto))
         {
             if (packet != null)
-                _deviceLink.InvokePort(compUid, srcPortProto, ref packet);
+                _deviceLink.InvokePort((compUid, ownSrc), srcPortProto, ref packet);
             else if (!string.IsNullOrEmpty(command))
-                _deviceLink.InvokePort(compUid, srcPortProto, ref payload);
+                _deviceLink.InvokePort((compUid, ownSrc), srcPortProto, ref payload);
             else
-                _deviceLink.SendSignal(compUid, srcPortProto, true);
+                _deviceLink.SendSignal((compUid, ownSrc), srcPortProto, true);
 
             return true;
         }

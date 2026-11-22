@@ -12,6 +12,7 @@ using Content.Shared.Access.Components;
 using Content.Shared.AlertLevel;
 using Content.Shared.Implants;
 using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Interaction;
@@ -268,7 +269,9 @@ namespace Content.Server.PDA
 
         public override void NotifyHardwareStateChanged(EntityUid uid, PdaComponent? pda = null)
         {
-            if (!Resolve(uid, ref pda, false))
+            if (TerminatingOrDeleted(uid)
+                || !TryComp<DeviceLinkSourceComponent>(uid, out var srcComp)
+                || !Resolve(uid, ref pda, false))
                 return;
 
             var jobTitle = pda.ContainedId is { } idUid && TryComp<IdCardComponent>(idUid, out var idCard)
@@ -281,8 +284,8 @@ namespace Content.Server.PDA
             pkt.Set("JobTitle", jobTitle);
             pkt.Set("StationName", pda.StationName ?? string.Empty);
 
-            _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
-            _deviceLink.InvokePort(uid, PortFlashlightStatusSource, ref pkt);
+            _deviceLink.InvokePort((uid, srcComp), PortMachineStatusSender, ref pkt);
+            _deviceLink.InvokePort((uid, srcComp), PortFlashlightStatusSource, ref pkt);
         }
 
         private void UpdateStationDataOnAllPdas()

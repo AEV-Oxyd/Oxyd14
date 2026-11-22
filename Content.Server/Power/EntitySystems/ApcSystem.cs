@@ -9,6 +9,7 @@ using Content.Shared.Administration.Logs;
 using Content.Shared.APC;
 using Content.Shared.Database;
 using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Emag.Systems;
@@ -130,7 +131,9 @@ public sealed partial class ApcSystem : EntitySystem
 
     private void EmitApcStatusPacket(EntityUid uid, ApcComponent apc, PowerNetworkBatteryComponent? netBat = null)
     {
-        if (!Resolve(uid, ref netBat, false))
+        if (TerminatingOrDeleted(uid)
+            || !TryComp<DeviceLinkSourceComponent>(uid, out var srcComp)
+            || !Resolve(uid, ref netBat, false))
             return;
 
         var battery = netBat.NetworkBattery;
@@ -145,8 +148,8 @@ public sealed partial class ApcSystem : EntitySystem
         pkt.Set("LoadWatts", (int) MathF.Ceiling(battery.CurrentSupply));
         pkt.Set("ExternalPower", apc.LastExternalState.ToString());
 
-        _deviceLink.InvokePort(uid, PortApcStatusSource, ref pkt);
-        _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
+        _deviceLink.InvokePort((uid, srcComp), PortApcStatusSource, ref pkt);
+        _deviceLink.InvokePort((uid, srcComp), PortMachineStatusSender, ref pkt);
     }
 
     private bool HasOpenApcUi(EntityUid uid, UserInterfaceComponent ui)

@@ -865,8 +865,14 @@ namespace Content.Server.Lathe
 
         public void EmitLatheStatus(Entity<LatheComponent> ent, string? statusMessage = null)
         {
+            if (TerminatingOrDeleted(ent.Owner))
+                return;
+
             SyncBlueprintsToEmbeddedComputer(ent.Owner, ent.Comp);
             ValidateSelectedRecipe(ent.Owner, ent.Comp);
+
+            if (!TryComp<DeviceLinkSourceComponent>(ent.Owner, out var srcComp))
+                return;
 
             var isPrinting = ent.Comp.CurrentRecipe != null;
             var status = isPrinting ? "Printing" : "Standby";
@@ -923,14 +929,13 @@ namespace Content.Server.Lathe
                 pkt.Set("DiskName", MetaData(diskItem).EntityName);
             }
 
-            if (TryComp<DeviceLinkSourceComponent>(ent.Owner, out var srcComp) &&
-                _deviceLink.GetLinkedSinks((ent.Owner, srcComp), PortAutolatheStatusSource).Any())
+            if (_deviceLink.GetLinkedSinks((ent.Owner, srcComp), PortAutolatheStatusSource).Any())
             {
                 _deviceLink.InvokePort((ent.Owner, srcComp), PortAutolatheStatusSource, ref pkt);
             }
             else
             {
-                _deviceLink.InvokePort(ent.Owner, PortMachineStatusSender, ref pkt);
+                _deviceLink.InvokePort((ent.Owner, srcComp), PortMachineStatusSender, ref pkt);
             }
         }
         
@@ -1361,7 +1366,7 @@ namespace Content.Server.Lathe
 
         public void UpdateUserInterfaceState(EntityUid uid, LatheComponent? component = null, string? statusFeedback = null)
         {
-            if (!Resolve(uid, ref component))
+            if (TerminatingOrDeleted(uid) || !Resolve(uid, ref component, logMissing: false))
                 return;
 
             var producing = component.CurrentRecipe;

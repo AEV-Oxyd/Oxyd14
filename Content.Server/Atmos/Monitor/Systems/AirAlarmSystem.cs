@@ -3,6 +3,7 @@ using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceNetwork.Systems;
 using Content.Server.Popups;
@@ -470,6 +471,8 @@ public sealed partial class AirAlarmSystem : EntitySystem
 
     private void EmitAirAlarmStatusPacket(EntityUid uid, AirAlarmComponent alarm)
     {
+        if (TerminatingOrDeleted(uid) || !TryComp<DeviceLinkSourceComponent>(uid, out var srcComp))
+            return;
         var pressure = CalculatePressureAverage(alarm);
         var temperature = CalculateTemperatureAverage(alarm);
         if (!_atmosAlarmable.TryGetHighestAlert(uid, out var highestAlarm))
@@ -548,8 +551,8 @@ public sealed partial class AirAlarmSystem : EntitySystem
         pkt.Set("ScrubbersRaw", AtmosControlCodec.EncodeScrubbers(scrubberDtos));
         pkt.Set("SensorsRaw", AtmosControlCodec.EncodeSensors(sensorDtos));
 
-        _deviceLink.InvokePort(uid, PortAirAlarmStatusSource, ref pkt);
-        _deviceLink.InvokePort(uid, PortMachineStatusSender, ref pkt);
+        _deviceLink.InvokePort((uid, srcComp), PortAirAlarmStatusSource, ref pkt);
+        _deviceLink.InvokePort((uid, srcComp), PortMachineStatusSender, ref pkt);
     }
 
     private void OnDeviceListUpdate(EntityUid uid, AirAlarmComponent component, ref DeviceListUpdateEvent args)
