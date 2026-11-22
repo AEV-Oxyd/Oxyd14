@@ -1,0 +1,112 @@
+# The armory sells portable design disks, not finished equipment.
+# Each disk permits one print on a lathe with a disk slot.
+# Costs and discounts follow the corresponding Eris armaments.
+- type: oxydArmament
+  id: OxydNtArmamentRitualBook
+  name: oxyd-armament-ritual-book
+  desc: oxyd-armament-ritual-book-desc
+  path: OxydNtRitualBookDesignDisk
+  cost: 100
+  minCost: 10
+  discountIncrease: 25
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentEnergyCrossbow
+  name: oxyd-armament-energy-crossbow
+  desc: oxyd-armament-energy-crossbow-desc
+  path: OxydNtEnergyCrossbowDesignDisk
+  cost: 125
+  minCost: 50
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: oxydArmament
+  id: OxydNtArmamentHolyGrenade
+  name: oxyd-armament-holy-grenade
+  desc: oxyd-armament-holy-grenade-desc
+  path: OxydNtHolyGrenadeDesignDisk
+  cost: 275
+  minCost: 200
+  discountIncrease: 100
+  maxPointsIncrease: 25
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydNtRitualBookDesignDisk
+  name: ritual book design disk
+  description: A lathe design for one NeoTheology ritual book.
+  components:
+  - type: Sprite
+    state: neotheology
+  - type: DigitalDataHolder
+    files:
+    - !type:DigitalDataLathe
+      name: Ritual book
+      uses: 1
+      recipes:
+      - OxydNtRitualBookRecipe
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydNtEnergyCrossbowDesignDisk
+  name: energy crossbow design disk
+  description: A lathe design for one energy crossbow.
+  components:
+  - type: Sprite
+    state: neotheology
+  - type: DigitalDataHolder
+    files:
+    - !type:DigitalDataLathe
+      name: Energy crossbow
+      uses: 1
+      recipes:
+      - OxydNtEnergyCrossbowRecipe
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydNtHolyGrenadeDesignDisk
+  name: holy grenade design disk
+  description: A lathe design for one holy hand grenade.
+  components:
+  - type: Sprite
+    state: neotheology
+  - type: DigitalDataHolder
+    files:
+    - !type:DigitalDataLathe
+      name: Holy grenade
+      uses: 1
+      recipes:
+      - OxydNtHolyGrenadeRecipe
+
+# Oxyd recipes for the available equipment. No static recipe pack unlocks these designs.
+- type: latheRecipe
+  parent: BaseToolRecipe
+  id: OxydNtRitualBookRecipe
+  result: OxydNtBible
+  pointUsage: 1
+  materials:
+    Cloth: 100
+    Plastic: 200
+
+- type: latheRecipe
+  parent: BaseWeaponRecipeSidearm
+  id: OxydNtEnergyCrossbowRecipe
+  result: WeaponEnergyCrossbow
+  pointUsage: 1
+  materials:
+    Steel: 1200
+    Glass: 500
+    Plastic: 500
+    Gold: 200
+
+- type: latheRecipe
+  parent: BaseWeaponRecipe
+  id: OxydNtHolyGrenadeRecipe
+  result: OxydNtHolyHandGrenade
+  completetime: 3
+  pointUsage: 1
+  materials:
+    Steel: 300
+    Plasma: 500
+    Gold: 100

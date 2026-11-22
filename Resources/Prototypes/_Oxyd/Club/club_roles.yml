@@ -1,0 +1,34 @@
+# Club / Civilian service roles (Eris DEPARTMENT_CIVILIAN + SERVICE / CIVILIAN flags).
+# Unique IDs keep upstream Bartender / ServiceWorker / Passenger free to evolve.
+
+- type: playTimeTracker
+  id: JobClubManager
+
+- type: playTimeTracker
+  id: JobClubWorker
+
+- type: playTimeTracker
+  id: JobClubArtist
+
+- type: playTimeTracker
+  id: JobVagabond
+
+- type: department
+  id: Club
+  name: department-Club
+  description: department-Club-description
+  color: "#dddddd"
+  weight: -5
+  roles:
+  - ClubManager
+  - ClubWorker
+  - ClubArtist
+  - Vagabond
+
+- type: jobWeight
+  id: Club
+  weights:
+    ClubManager: 10
+    ClubWorker: 5
+    ClubArtist: 0
+    Vagabond: 0

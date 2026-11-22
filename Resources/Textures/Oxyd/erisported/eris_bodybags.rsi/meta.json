@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "States taken from CEV-Eris (https://github.com/discordia-space/CEV-Eris), converted for SS14 via Tools/eris_medical_bake.py.",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "bodybag_folded"
+    },
+    {
+      "name": "bodybag_open"
+    },
+    {
+      "name": "bodybag_closed"
+    },
+    {
+      "name": "bodybag_full"
+    },
+    {
+      "name": "stasis_folded"
+    },
+    {
+      "name": "stasis_open"
+    },
+    {
+      "name": "stasis_full"
+    },
+    {
+      "name": "stasis_used"
+    }
+  ]
+}

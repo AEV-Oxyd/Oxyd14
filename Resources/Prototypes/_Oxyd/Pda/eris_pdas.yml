@@ -1,0 +1,279 @@
+# Eris modular_pda shells → Oxyd CartridgeLoader PDAs (sprites from eris_pda.rsi)
+
+- type: entity
+  parent: BasePDA
+  id: OxydPdaClub
+  name: club PDA
+  description: Smells faintly of citrus cleaner and spilled amasec.
+  components:
+  - type: Pda
+    id: BartenderIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-club
+  - type: Sprite
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    layers:
+    - map: [ "enum.PdaVisualLayers.Base" ]
+      state: "pda-club"
+    - state: "light_overlay"
+      map: [ "enum.PdaVisualLayers.Flashlight" ]
+      shader: "unshaded"
+      visible: false
+    - state: "id_overlay"
+      map: [ "enum.PdaVisualLayers.IdLight" ]
+      shader: "unshaded"
+      visible: false
+  - type: Icon
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    state: pda-club
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingPeripheral: OxydHwPrinter
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    diskSpace: 12
+    cartridgeSlot:
+      priority: -1
+      name: device-pda-slot-component-slot-name-cartridge
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+          - Cartridge
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydTaxQuicklyCartridge
+        - id: OxydDrinkCatalogCartridge
+        - id: OxydCookCatalogCartridge
+        - id: OxydRecordsCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+
+- type: entity
+  parent: BasePDA
+  id: OxydPdaArtist
+  name: artist PDA
+  description: The screen is a little sticky.
+  components:
+  - type: Pda
+    id: ClownIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-clown
+  - type: Sprite
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    layers:
+    - map: [ "enum.PdaVisualLayers.Base" ]
+      state: "pda-clown"
+    - state: "light_overlay"
+      map: [ "enum.PdaVisualLayers.Flashlight" ]
+      shader: "unshaded"
+      visible: false
+    - state: "id_overlay"
+      map: [ "enum.PdaVisualLayers.IdLight" ]
+      shader: "unshaded"
+      visible: false
+  - type: Icon
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    state: pda-clown
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    diskSpace: 10
+    cartridgeSlot:
+      priority: -1
+      name: device-pda-slot-component-slot-name-cartridge
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+          - Cartridge
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydTaxQuicklyCartridge
+        - id: OxydTradeOrdersCartridge
+        - id: OxydBountyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydScannerCartridge
+
+- type: entity
+  parent: BasePDA
+  id: OxydPdaMoebius
+  name: Moebius PDA
+  description: Corporate teal and clinical fonts.
+  components:
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-nt
+  - type: Sprite
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    layers:
+    - map: [ "enum.PdaVisualLayers.Base" ]
+      state: "pda-nt"
+    - state: "light_overlay"
+      map: [ "enum.PdaVisualLayers.Flashlight" ]
+      shader: "unshaded"
+      visible: false
+    - state: "id_overlay"
+      map: [ "enum.PdaVisualLayers.IdLight" ]
+      shader: "unshaded"
+      visible: false
+  - type: Icon
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    state: pda-nt
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingCpu: OxydHwCpuAdv
+    startingPeripheral: OxydHwScannerMedical
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    diskSpace: 10
+    cartridgeSlot:
+      priority: -1
+      name: device-pda-slot-component-slot-name-cartridge
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+          - Cartridge
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydTaxQuicklyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydScannerCartridge
+        - id: OxydRecordsCartridge
+
+- type: entity
+  parent: BasePDA
+  id: OxydPdaChurch
+  name: NeoTheology PDA
+  description: Etched with subtle cruciform filigree.
+  components:
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-neo
+  - type: Sprite
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    layers:
+    - map: [ "enum.PdaVisualLayers.Base" ]
+      state: "pda-neo"
+    - state: "light_overlay"
+      map: [ "enum.PdaVisualLayers.Flashlight" ]
+      shader: "unshaded"
+      visible: false
+    - state: "id_overlay"
+      map: [ "enum.PdaVisualLayers.IdLight" ]
+      shader: "unshaded"
+      visible: false
+  - type: Icon
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    state: pda-neo
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    diskSpace: 10
+    cartridgeSlot:
+      priority: -1
+      name: device-pda-slot-component-slot-name-cartridge
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+          - Cartridge
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydTaxQuicklyCartridge
+
+- type: entity
+  parent: BasePDA
+  id: OxydPdaGuild
+  name: Asters Guild PDA
+  description: A merchant's best friend, after their ledger.
+  components:
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-sup
+  - type: Sprite
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    layers:
+    - map: [ "enum.PdaVisualLayers.Base" ]
+      state: "pda-sup"
+    - state: "light_overlay"
+      map: [ "enum.PdaVisualLayers.Flashlight" ]
+      shader: "unshaded"
+      visible: false
+    - state: "id_overlay"
+      map: [ "enum.PdaVisualLayers.IdLight" ]
+      shader: "unshaded"
+      visible: false
+  - type: Icon
+    sprite: _Oxyd/Devices/eris_pda.rsi
+    state: pda-sup
+  - type: OxydModularPda
+    startingHdd: OxydHwHddSmallAdv
+    startingNetwork: OxydHwNetAdvanced
+    startingPeripheral: OxydHwTeslaLink
+  - type: CartridgeLoader
+    uiKey: enum.PdaUiKey.Key
+    diskSpace: 10
+    cartridgeSlot:
+      priority: -1
+      name: device-pda-slot-component-slot-name-cartridge
+      ejectSound: /Audio/Machines/id_swipe.ogg
+      insertSound: /Audio/Machines/id_insert.ogg
+      whitelist:
+        components:
+          - Cartridge
+  - type: EntityTableContainerFill
+    containers:
+      preinstalled-program-container: !type:AllSelector
+        children:
+        - id: CrewManifestCartridge
+        - id: NotekeeperCartridge
+        - id: NanoTaskCartridge
+        - id: NewsReaderCartridge
+        - id: OxydTaxQuicklyCartridge
+        - id: OxydTradeOrdersCartridge
+        - id: OxydBountyCartridge
+        - id: OxydEmailCartridge
+        - id: OxydNtChatCartridge
+        - id: OxydSignallerCartridge

@@ -1,0 +1,52 @@
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusBiolabOfficer
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: ChiefMedicalOfficer
+  jobName: job-name-moebius-mbo
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusDoctor
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: MedicalDoctor
+  jobName: job-name-moebius-doctor
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusChemist
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Chemist
+  jobName: job-name-moebius-chemist
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusParamedic
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Paramedic
+  jobName: job-name-moebius-paramedic
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconMoebiusBioEngineer
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: Geneticist
+  jobName: job-name-moebius-bioengineer
+
+- type: jobIconGroup
+  id: MoebiusMedicalIconGroup
+  groupName: job-icon-group-moebius-medical
+  sprite:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: MedicalDoctor
+  icons:
+  - JobIconMoebiusBiolabOfficer
+  - JobIconMoebiusDoctor
+  - JobIconMoebiusChemist
+  - JobIconMoebiusParamedic
+  - JobIconMoebiusBioEngineer

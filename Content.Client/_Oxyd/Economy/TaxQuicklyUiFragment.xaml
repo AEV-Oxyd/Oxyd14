@@ -1,0 +1,41 @@
+<control:TaxQuicklyUiFragment xmlns:control="clr-namespace:Content.Client._Oxyd.Economy"
+                              xmlns="https://spacestation14.io"
+                              Orientation="Vertical"
+                              HorizontalExpand="True"
+                              VerticalExpand="True"
+                              Margin="4">
+    <Label Name="Header" Text="TaxQuickly 2565" StyleClasses="LabelHeading"/>
+    <Label Name="StatusLabel" Text="Not logged in"/>
+    <Label Name="ErrorLabel" Visible="False"/>
+
+    <BoxContainer Orientation="Horizontal" Margin="0 4 0 0">
+        <LineEdit Name="AccountEdit" PlaceHolder="Account #" HorizontalExpand="True" MinWidth="80"/>
+        <LineEdit Name="PinEdit" PlaceHolder="PIN" MinWidth="60"/>
+        <Button Name="LoginButton" Text="Login"/>
+        <Button Name="LogoutButton" Text="Logout"/>
+    </BoxContainer>
+
+    <BoxContainer Orientation="Horizontal" Margin="0 4 0 0">
+        <LineEdit Name="TargetEdit" PlaceHolder="Target acct" HorizontalExpand="True"/>
+        <LineEdit Name="AmountEdit" PlaceHolder="Amount" MinWidth="70"/>
+        <Button Name="TransferButton" Text="Transfer"/>
+    </BoxContainer>
+
+    <BoxContainer Orientation="Horizontal" Margin="0 4 0 0">
+        <Button Name="ResignButton" Text="Resign"/>
+        <Button Name="LinkButton" Text="Link emp"/>
+        <Button Name="SetWageButton" Text="Set wage"/>
+        <Button Name="DisavowButton" Text="Disavow"/>
+    </BoxContainer>
+
+    <BoxContainer Orientation="Horizontal" Margin="0 4 0 0">
+        <LineEdit Name="NameEdit" PlaceHolder="New name" HorizontalExpand="True"/>
+        <Button Name="RegPersonalButton" Text="Reg personal (500)"/>
+        <Button Name="RegDeptButton" Text="Reg dept (2000)"/>
+    </BoxContainer>
+
+    <Button Name="RefreshButton" Text="Refresh" Margin="0 4 0 0"/>
+    <ScrollContainer VerticalExpand="True" HorizontalExpand="True" MinHeight="80">
+        <Label Name="LogLabel" Text=""/>
+    </ScrollContainer>
+</control:TaxQuicklyUiFragment>

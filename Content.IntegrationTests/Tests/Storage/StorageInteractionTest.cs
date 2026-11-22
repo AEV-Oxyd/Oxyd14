@@ -80,8 +80,9 @@ public sealed class StorageInteractionTest : InteractionTest
     private ItemGridPiece GetStorageControl(NetEntity target)
     {
         var uid = ToClient(target);
-        var hotbar = GetWidget<HotbarGui>();
-        var storageContainer  = GetControlFromField<Control>(nameof(HotbarGui.SingleStorageContainer), hotbar);
-        return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, storageContainer);
+        // OXYD: the static storage UI nests the storage window inside the
+        // DynamicPanel instead of opening it as a top-level window, so search
+        // the whole UI tree for the item's grid piece.
+        return GetControlFromChildren<ItemGridPiece>(c => c.Entity == uid, UiMan.RootControl);
     }
 }

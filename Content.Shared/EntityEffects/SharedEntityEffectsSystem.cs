@@ -119,8 +119,8 @@ public sealed partial class SharedEntityEffectsSystem : EntitySystem, IEntityEff
         if (effect.Probability <= 1f && !SharedRandomExtensions.PredictedProb(_timing, effect.Probability, GetNetEntity(target), GetNetEntity(user)))
                 return false;
 
-        // See if conditions apply
-        if (!_condition.TryConditions(target, effect.Conditions))
+        // See if conditions apply — OXYD: the user is the sourceEnt so conditions see the caster.
+        if (!_condition.TryConditions(target, effect.Conditions, user))
             return false;
 
         ApplyEffect(target, effect, scale, user);

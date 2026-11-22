@@ -6,6 +6,8 @@
   components:
   - type: Sprite
     sprite: Oxyd/erisported/clothing/collectable_flat_cap.rsi
+    layers:
+    - state: icon
   - type: Clothing
     sprite: Oxyd/erisported/clothing/collectable_flat_cap.rsi
     quickEquip: true

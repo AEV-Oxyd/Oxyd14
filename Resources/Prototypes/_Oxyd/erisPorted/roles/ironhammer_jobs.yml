@@ -49,7 +49,7 @@
     id: HoSPDA
     gloves: ClothingHandsGlovesCombat
     ears: ClothingHeadsetAltSecurity
-    pocket1: WeaponPistolLamia
+    pocket1: WeaponPistolMk58Ironhammer
   storage:
     back:
     - Flash

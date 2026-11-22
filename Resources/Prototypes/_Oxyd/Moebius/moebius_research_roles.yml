@@ -1,0 +1,34 @@
+# Moebius research roles (Eris DEPARTMENT_SCIENCE).
+
+- type: playTimeTracker
+  id: JobMoebiusExpeditionOverseer
+
+- type: playTimeTracker
+  id: JobMoebiusScientist
+
+- type: playTimeTracker
+  id: JobMoebiusRoboticist
+
+- type: playTimeTracker
+  id: JobMoebiusPsychiatrist
+
+- type: department
+  id: MoebiusResearch
+  name: department-MoebiusResearch
+  description: department-MoebiusResearch-description
+  color: "#7a8fb8"
+  weight: 25
+  roles:
+  - MoebiusScientist
+  - MoebiusRoboticist
+  - MoebiusPsychiatrist
+
+- type: department
+  id: MoebiusResearchCommand
+  name: department-MoebiusResearchCommand
+  description: department-MoebiusResearchCommand-description
+  color: "#6f7fa8"
+  primary: false
+  weight: 100
+  roles:
+  - MoebiusExpeditionOverseer

@@ -1,0 +1,161 @@
+# Eris neotheology.dm: all 13 NT listings at their source TC prices.
+# Weapon fire modes are documented native adaptations; authority is checked per listing.
+- type: storeCategory
+  id: OxydNtUplink
+  name: store-category-nt-uplink
+  priority: 12
+
+- type: entity
+  parent: StorePresetUplink
+  id: OxydNtUplink
+  categories: [HideSpawnMenu]
+  components:
+  - type: Store
+    name: store-preset-name-nt-uplink
+    categories:
+    - UplinkWeaponry
+    - UplinkAmmo
+    - UplinkExplosives
+    - UplinkChemicals
+    - UplinkDeception
+    - UplinkDisruption
+    - UplinkImplants
+    - UplinkAllies
+    - UplinkWearables
+    - UplinkJob
+    - UplinkPointless
+    - UplinkObjective
+    - OxydNtUplink
+    currencyWhitelist: [Telecrystal]
+    balance: {Telecrystal: 15}
+    expectedFaction: [NanoTrasen]
+
+- type: listing
+  id: OxydNtUplinkRitualBook
+  name: uplink-nt-ritual-book-name
+  description: uplink-nt-ritual-book-desc
+  productEntity: OxydNtBible
+  cost: {Telecrystal: 1}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkCruciform
+  name: uplink-nt-cruciform-name
+  description: uplink-nt-cruciform-desc
+  productEntity: OxydNtCruciform
+  cost: {Telecrystal: 1}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkPreacherHat
+  name: uplink-nt-preacher-hat-name
+  description: uplink-nt-preacher-hat-desc
+  productEntity: erisport_preacher_hat
+  cost: {Telecrystal: 3}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkPreacherCoat
+  name: uplink-nt-preacher-coat-name
+  description: uplink-nt-preacher-coat-desc
+  productEntity: erisport_preacher_coat
+  cost: {Telecrystal: 3}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkAscensionKit
+  name: uplink-nt-ascension-name
+  description: uplink-nt-ascension-desc
+  productEntity: OxydNtPreacherAscensionKit
+  cost: {Telecrystal: 3}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkRitualBlade
+  name: uplink-nt-blade-name
+  description: uplink-nt-blade-desc
+  productEntity: OxydNtRitualBlade
+  cost: {Telecrystal: 2}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkLightfall
+  name: uplink-nt-lightfall-name
+  description: uplink-nt-lightfall-desc
+  productEntity: OxydNtLightfall
+  cost: {Telecrystal: 10}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkHalicon
+  name: uplink-nt-halicon-name
+  description: uplink-nt-halicon-desc
+  productEntity: OxydNtHalicon
+  cost: {Telecrystal: 8}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkDominion
+  name: uplink-nt-dominion-name
+  description: uplink-nt-dominion-desc
+  productEntity: OxydNtDominion
+  cost: {Telecrystal: 10}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkPurger
+  name: uplink-nt-purger-name
+  description: uplink-nt-purger-desc
+  productEntity: OxydNtPurger
+  cost: {Telecrystal: 10}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkNemesis
+  name: uplink-nt-nemesis-name
+  description: uplink-nt-nemesis-desc
+  productEntity: OxydNtNemesis
+  cost: {Telecrystal: 5}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkThemis
+  name: uplink-nt-themis-name
+  description: uplink-nt-themis-desc
+  productEntity: OxydNtThemis
+  cost: {Telecrystal: 8}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition
+
+- type: listing
+  id: OxydNtUplinkValkyrie
+  name: uplink-nt-valkyrie-name
+  description: uplink-nt-valkyrie-desc
+  productEntity: OxydNtValkyrie
+  cost: {Telecrystal: 13}
+  categories: [OxydNtUplink]
+  conditions:
+  - !type:NeoTheologyUplinkCondition

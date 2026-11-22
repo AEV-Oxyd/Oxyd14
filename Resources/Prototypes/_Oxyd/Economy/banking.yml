@@ -1,0 +1,38 @@
+# Eris station accounts database. The economy spawns one at round start unless a map already has one.
+- type: entity
+  id: OxydBankingServer
+  name: banking server
+  description: Holds the ship's money accounts.
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: OxydBankingServer
+    departments:
+    - id: Cargo
+      name: Cargo Department
+      cargoAccount: Cargo
+      canMakeAccounts: true
+    - id: Guild
+      name: Guild Department
+      cargoAccount: Guild
+      canMakeAccounts: true
+    - id: Security
+      name: Security Department
+      cargoAccount: Security
+      employer: Cargo
+      wage: 500
+    - id: Engineering
+      name: Engineering Department
+      cargoAccount: Engineering
+      employer: Cargo
+      wage: 500
+    - id: Service
+      name: Service Department
+      cargoAccount: Service
+      employer: Cargo
+      wage: 500
+    - id: Medical
+      name: Medical Department
+      cargoAccount: Medical
+    - id: Science
+      name: Science Department
+      cargoAccount: Science

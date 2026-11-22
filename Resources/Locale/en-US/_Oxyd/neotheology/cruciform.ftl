@@ -1,0 +1,19 @@
+oxyd-cruciform-inactive = The cruciform is installed but inactive.
+oxyd-cruciform-no-implant = You have no active cruciform.
+oxyd-cruciform-holiness = Holiness: { $current } / { $maximum }
+oxyd-cruciform-rank = Rank: { $rank }
+oxyd-cruciform-clearance = Clearance: { $clearance }
+oxyd-cruciform-clearance-none = None
+oxyd-cruciform-clearance-common = Common
+oxyd-cruciform-clearance-clergy = Clergy
+oxyd-access-follower = NeoTheology follower
+oxyd-access-common = NeoTheology common
+oxyd-access-clergy = NeoTheology clergy
+oxyd-neotheology-profile-disciple = Disciple
+oxyd-neotheology-profile-acolyte = Acolyte
+oxyd-neotheology-profile-agrolyte = Agrolyte
+oxyd-neotheology-profile-custodian = Custodian
+oxyd-neotheology-profile-preacher = Preacher
+oxyd-neotheology-profile-inquisitor = Inquisitor
+
+oxyd-cruciform-upgrade-not-subdued = They must be restrained or incapacitated before you can install that.

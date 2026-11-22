@@ -1,0 +1,260 @@
+# Moebius medical jobs (Eris code/game/jobs/job/medical.dm).
+# Unique prototype IDs keep upstream job definitions free to evolve.
+# Eris access list -> fork mapping lives in _Oxyd/Moebius/access.yml comments.
+
+- type: job
+  id: MoebiusBiolabOfficer
+  name: job-name-moebius-mbo
+  description: job-description-moebius-mbo
+  playTimeTracker: JobMoebiusBiolabOfficer
+  requirements:
+  - !type:RoleTimeRequirement
+    role: JobMoebiusDoctor
+    time: 3h
+  - !type:RoleTimeRequirement
+    role: JobMoebiusChemist
+    time: 1h
+  - !type:RoleTimeRequirement
+    role: JobMoebiusParamedic
+    time: 1h
+  - !type:DepartmentTimeRequirement
+    department: MoebiusMedical
+    time: 10h
+  startingGear: MoebiusBiolabOfficerGear
+  icon: JobIconMoebiusBiolabOfficer
+  supervisors: job-supervisors-captain
+  access:
+  - ChiefMedicalOfficer
+  - Command
+  - Medical
+  - Chemistry
+  - Paramedic
+  - Cryogenics
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusEquipment
+  - OxydMoebiusMorgue
+  - OxydMoebiusSurgery
+  - OxydMoebiusOfficer
+  special:
+  - !type:AddComponentSpecial
+    components:
+    - type: CommandStaff
+
+- type: startingGear
+  id: MoebiusBiolabOfficerGear
+  equipment:
+    jumpsuit: erisport_moebius_biolab_officers_jumpsuit
+    outerClothing: erisport_moebius_biolab_officers_labcoat
+    shoes: erisport_work_boots
+    gloves: erisport_nitrile_gloves
+    eyes: erisport_Health_Scanner_HUD
+    ears: ClothingHeadsetAltMedical
+    id: CMOPDA
+  storage:
+    back:
+    - OxydErisMedkitAdvanced
+    - OxydErisHypospray
+
+- type: chameleonOutfit
+  id: MoebiusBiolabOfficerChameleonOutfit
+  job: MoebiusBiolabOfficer
+  hasMindShield: true
+  equipment:
+    head: erisport_Moebius_beret
+    neck: ClothingNeckStethoscope
+
+- type: job
+  id: MoebiusDoctor
+  name: job-name-moebius-doctor
+  description: job-description-moebius-doctor
+  playTimeTracker: JobMoebiusDoctor
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: MoebiusMedical
+    time: 4h
+  startingGear: MoebiusDoctorGear
+  icon: JobIconMoebiusDoctor
+  supervisors: job-supervisors-moebius-officer
+  access:
+  - Medical
+  - Chemistry
+  - Cryogenics
+  - Maintenance
+  - OxydMoebius
+  - OxydMoebiusEquipment
+  - OxydMoebiusMorgue
+  - OxydMoebiusSurgery
+
+- type: startingGear
+  id: MoebiusDoctorGear
+  equipment:
+    jumpsuit: erisport_moebius_doctors_jumpsuit
+    outerClothing: erisport_medical_specialists_labcoat
+    shoes: ClothingShoesColorWhite
+    gloves: erisport_latex_gloves
+    mask: erisport_medical_mask
+    eyes: erisport_Health_Scanner_HUD
+    ears: ClothingHeadsetMedical
+    id: OxydMoebiusPDA
+  storage:
+    back:
+    - OxydErisMedkitAdvanced
+    - HandheldHealthAnalyzer
+
+- type: chameleonOutfit
+  id: MoebiusDoctorChameleonOutfit
+  job: MoebiusDoctor
+  equipment:
+    jumpsuit: erisport_medical_scrubs
+    head: erisport_surgical_cap
+    outerClothing: erisport_surgical_apron
+    mask: erisport_medical_mask
+    neck: ClothingNeckStethoscope
+    belt: ClothingBeltMedical
+
+- type: job
+  id: MoebiusChemist
+  name: job-name-moebius-chemist
+  description: job-description-moebius-chemist
+  playTimeTracker: JobMoebiusChemist
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: MoebiusMedical
+    time: 4h
+  startingGear: MoebiusChemistGear
+  icon: JobIconMoebiusChemist
+  supervisors: job-supervisors-moebius-officer
+  access:
+  - Medical
+  - Chemistry
+  - Cryogenics
+  - Maintenance
+  - OxydMoebius
+  - OxydMoebiusEquipment
+  - OxydMoebiusMorgue
+  - OxydMoebiusSurgery
+
+- type: startingGear
+  id: MoebiusChemistGear
+  equipment:
+    jumpsuit: erisport_moebius_chemists_jumpsuit
+    outerClothing: erisport_moebius_chemist_labcoat
+    shoes: ClothingShoesColorWhite
+    gloves: erisport_latex_gloves
+    eyes: erisport_Health_Scanner_HUD
+    ears: ClothingHeadsetMedical
+    back: erisport_chemistry_backpack
+    id: OxydMoebiusChemistPDA
+  storage:
+    back:
+    - BoxSyringe
+
+- type: chameleonOutfit
+  id: MoebiusChemistChameleonOutfit
+  job: MoebiusChemist
+  equipment:
+    jumpsuit: erisport_moebius_chemists_jumpsuit
+    outerClothing: erisport_moebius_chemist_labcoat
+    mask: erisport_medical_mask
+    back: erisport_chemistry_backpack
+    belt: ClothingBeltMedical
+
+- type: job
+  id: MoebiusParamedic
+  name: job-name-moebius-paramedic
+  description: job-description-moebius-paramedic
+  playTimeTracker: JobMoebiusParamedic
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: MoebiusMedical
+    time: 2h
+  startingGear: MoebiusParamedicGear
+  icon: JobIconMoebiusParamedic
+  supervisors: job-supervisors-moebius-officer
+  access:
+  - Medical
+  - Paramedic
+  - Cryogenics
+  - Maintenance
+  - External
+  - OxydMoebius
+  - OxydMoebiusEquipment
+  - OxydMoebiusMorgue
+  - OxydMoebiusSurgery
+
+- type: startingGear
+  id: MoebiusParamedicGear
+  equipment:
+    jumpsuit: erisport_moebius_paramedics_jumpsuit
+    outerClothing: erisport_Moebius_paramedic_armor
+    head: erisport_Moebius_paramedic_helmet
+    shoes: ClothingShoesBootsJack
+    gloves: erisport_nitrile_gloves
+    eyes: erisport_Health_Scanner_HUD
+    ears: ClothingHeadsetMedical
+    belt: ClothingBeltMedicalFilled
+    id: ParamedicPDA
+  storage:
+    back:
+    - OxydErisMedkitAdvanced
+    - OxydErisBodyBag
+    - OxydErisBodyBag
+    - OxydErisBodyBag
+    - HandheldCrewMonitor
+
+- type: chameleonOutfit
+  id: MoebiusParamedicChameleonOutfit
+  job: MoebiusParamedic
+  equipment:
+    jumpsuit: erisport_moebius_paramedics_jumpsuit
+    head: erisport_Moebius_paramedic_helmet
+    outerClothing: erisport_Moebius_paramedic_armor
+    mask: erisport_medical_mask
+    belt: ClothingBeltMedical
+
+- type: job
+  id: MoebiusBioEngineer
+  name: job-name-moebius-bioengineer
+  description: job-description-moebius-bioengineer
+  playTimeTracker: JobMoebiusBioEngineer
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: MoebiusMedical
+    time: 4h
+  startingGear: MoebiusBioEngineerGear
+  icon: JobIconMoebiusBioEngineer
+  supervisors: job-supervisors-moebius-officer
+  access:
+  - Medical
+  - Chemistry
+  - Cryogenics
+  - Maintenance
+  - OxydMoebius
+  - OxydMoebiusEquipment
+  - OxydMoebiusMorgue
+  - OxydMoebiusSurgery
+
+- type: startingGear
+  id: MoebiusBioEngineerGear
+  equipment:
+    jumpsuit: erisport_moebius_doctors_jumpsuit
+    outerClothing: erisport_moebius_bio-engineer_labcoat
+    shoes: ClothingShoesColorWhite
+    gloves: erisport_latex_gloves
+    eyes: erisport_Health_Scanner_HUD
+    ears: ClothingHeadsetMedical
+    id: OxydMoebiusPDA
+  storage:
+    back:
+    - OxydErisOrganFreezer
+
+- type: chameleonOutfit
+  id: MoebiusBioEngineerChameleonOutfit
+  job: MoebiusBioEngineer
+  equipment:
+    jumpsuit: erisport_moebius_doctors_jumpsuit
+    outerClothing: erisport_moebius_bio-engineer_labcoat
+    mask: erisport_medical_mask
+    belt: ClothingBeltMedical

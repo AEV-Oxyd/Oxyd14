@@ -14,7 +14,7 @@ using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.UI;
 
-public sealed class QuickInventoryStorage : Container
+public sealed partial class QuickInventoryStorage : Container
 {
     [Dependency] private IEntityManager entityManager = default!;
     private OxydStyler styler = default!;

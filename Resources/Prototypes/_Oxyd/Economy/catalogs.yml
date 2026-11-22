@@ -1,0 +1,54 @@
+- type: oxydCatalog
+  id: drinks
+  title: Neon Cocktails!
+  entries:
+  - name: Space Freezo
+    description: Ice-cold club classic. Garnish optional.
+  - name: Eris Sunrise
+    description: Sweet, bright, and slightly radioactive in flavor only.
+  - name: Manager's Special
+    description: Whatever is left in the shaker after last call.
+
+- type: oxydCatalog
+  id: cooking
+  title: Cooking Assistant
+  entries:
+  - name: Club Burger
+    description: Stack it high, charge it higher.
+  - name: Fried Spacecarrot
+    description: Crunchy side for the dinner rush.
+  - name: Mystery Stew
+    description: Today's special is always a surprise.
+
+- type: oxydCatalog
+  id: records
+  title: Station Records
+  entries:
+  - name: Crew manifest
+    description: Open the crew manifest cartridge for live listings. This stub tracks Eris records UI parity.
+  - name: Account link
+    description: Personal money accounts are seeded at spawn. Use TaxQuickly or the Accounts uplink to manage them.
+  - name: Security notes
+    description: Wanted status still lives on the security records console.
+
+- type: oxydCatalog
+  id: bounty
+  title: Bounty Board
+  entries:
+  - name: Active bounties
+    description: Check the cargo bounty computer for live contracts. Sales sync Guild ledgers after pallet sell.
+  - name: Artwork consignments
+    description: Artist bench pieces OverrideSell to Guild. Pallet them for Asters credit.
+  - name: Tip
+    description: economy:place vendor and economy:dept Guild for QA.
+
+- type: oxydCatalog
+  id: trade_orders
+  title: Guild Trade Orders
+  entries:
+  - name: Export cut
+    description: Artwork and OverrideSell goods credit the Guild cargo account, then OxydMoneyAccount syncs.
+  - name: Personal vs Guild
+    description: Do not dual-run OxydCredits. Credit stacks + OxydMoneyAccount + CargoAccount only.
+  - name: Next slice
+    description: Full Eris trade_orders UI (buy/sell lists) remains deferred.

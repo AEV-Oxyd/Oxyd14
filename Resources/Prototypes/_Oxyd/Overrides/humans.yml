@@ -2,6 +2,7 @@
   parent: MobHuman
   id: MobHumanOxyd
   name: Human(Oxyd)
+  description: Human(Oxyd).
   components:
     - type: Sanity
     - type: MobSkill
@@ -17,6 +18,7 @@
   parent: MobHumanOxyd
   id: MobHumanOxydZov
   name: Human(Oxyd)(Zov)
+  description: Human(Oxyd)(Zov).
   components:
     - type: LanguageKnowledge
       speaking:
@@ -30,6 +32,7 @@
   parent: MobHumanOxyd
   id: MobHumanOxydChinese
   name: Human(Oxyd)(China)
+  description: Human(Oxyd)(China).
   components:
     - type: LanguageKnowledge
       speaking:
@@ -43,6 +46,7 @@
   parent: MobHumanOxyd
   id: MobHumanOxydRussian
   name: Human(Oxyd)(Russian)
+  description: Human(Oxyd)(Russian).
   components:
     - type: LanguageKnowledge
       speaking:

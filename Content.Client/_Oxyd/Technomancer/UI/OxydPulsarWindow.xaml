@@ -1,0 +1,11 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               Title="{Loc 'oxyd-technomancer-pulsar-title'}"
+               MinSize="450 360"
+               SetSize="480 340">
+    <!-- Eris NanoUI dark skin — layout mirrors nano/templates/pulsar.tmpl (CEV-Eris). -->
+    <PanelContainer Name="Body" VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Name="Content" Orientation="Vertical" Margin="8" SeparationOverride="6"
+                      VerticalExpand="True" HorizontalExpand="True"/>
+    </PanelContainer>
+</controls:FancyWindow>

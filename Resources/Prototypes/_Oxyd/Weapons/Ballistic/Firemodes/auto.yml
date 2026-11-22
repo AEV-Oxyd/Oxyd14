@@ -18,7 +18,6 @@
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatMouseHeld
     stepBack: 6
-    validDiff: 0.4
   - !type:GunEffectStop
 
 - type: gunFiremode
@@ -41,6 +40,5 @@
   - !type:GunEffectTryFireMouseDirection
   - !type:GunEffectRepeatMouseHeld
     stepBack: 6
-    validDiff: 0.4
   - !type:GunEffectStop
 

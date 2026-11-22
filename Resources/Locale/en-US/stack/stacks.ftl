@@ -110,6 +110,7 @@ stack-fulton = fulton
 stack-credit = speso
 stack-plasma = plasma
 stack-biomass = biomass
+stack-biomatter = biomatter
 stack-pyrotton = pyrotton
 stack-sharkminnow-tooth = sharkminnow tooth
 stack-goliath-hide = goliath hide

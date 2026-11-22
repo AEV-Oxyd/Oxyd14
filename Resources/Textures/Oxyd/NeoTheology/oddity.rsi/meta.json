@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV-Eris contributors; static state extracted from icons/obj/oddities.dmi at 5f7847f26. https://github.com/discordia-space/CEV-Eris",
+  "states": [
+    {
+      "name": "nt_seal"
+    }
+  ]
+}

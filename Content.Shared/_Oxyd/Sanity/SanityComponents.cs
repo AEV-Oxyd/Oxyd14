@@ -1,7 +1,7 @@
 using Content.Shared.EntityEffects;
 using Robust.Shared.GameStates;
 
-namespace Content.Server._Oxyd.SanityInsightAndResting;
+namespace Content.Shared._Oxyd.Sanity;
 
 public enum SanIndex : int
 {

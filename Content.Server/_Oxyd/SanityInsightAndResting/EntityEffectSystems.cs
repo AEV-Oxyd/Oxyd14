@@ -1,6 +1,7 @@
 
 
 using Content.Server._Oxyd.SanityInsightAndResting;
+using Content.Shared._Oxyd.Sanity;
 using Content.Shared.EntityEffects;
 
 namespace Content.Server._Oxyd.SanityInsightAndResting;

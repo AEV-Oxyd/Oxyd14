@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "license": "CC-BY-SA-3.0",
+  "copyright": "CEV-Eris contributors; static state extracted from icons/obj/module.dmi at 5f7847f26. https://github.com/discordia-space/CEV-Eris",
+  "states": [
+    {
+      "name": "cruciform_upgrade"
+    },
+    {
+      "name": "natures_blessing"
+    },
+    {
+      "name": "faiths_shield"
+    },
+    {
+      "name": "cleansing_presence"
+    },
+    {
+      "name": "martyr_gift"
+    },
+    {
+      "name": "wrath_of_god"
+    },
+    {
+      "name": "speed_of_the_chosen"
+    }
+  ]
+}

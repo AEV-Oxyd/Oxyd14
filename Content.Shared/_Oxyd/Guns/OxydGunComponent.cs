@@ -202,7 +202,7 @@ public sealed partial class OxydBulletComponent : Component
     [DataField]
     public EntProtoId projectileEntity = default!;
     [DataField]
-    public EntProtoId casingEntity = default!;
+    public EntProtoId? casingEntity;
 }
 
 [RegisterComponent]

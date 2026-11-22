@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "States taken from CEV-Eris (https://github.com/discordia-space/CEV-Eris), converted for SS14 via Tools/eris_medical_bake.py.",
+  "size": {
+    "x": 32,
+    "y": 32
+  },
+  "states": [
+    {
+      "name": "empty"
+    },
+    {
+      "name": "reagent10"
+    },
+    {
+      "name": "reagent25"
+    },
+    {
+      "name": "reagent50"
+    },
+    {
+      "name": "reagent75"
+    },
+    {
+      "name": "reagent80"
+    },
+    {
+      "name": "reagent100"
+    },
+    {
+      "name": "tube"
+    },
+    {
+      "name": "tank_anest"
+    },
+    {
+      "name": "tank_other"
+    },
+    {
+      "name": "beaker"
+    }
+  ]
+}

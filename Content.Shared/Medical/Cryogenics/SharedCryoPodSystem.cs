@@ -28,6 +28,7 @@ using Content.Shared.Tools.Systems;
 using Content.Shared.UserInterface;
 using Content.Shared.Verbs;
 using Robust.Shared.Containers;
+using Robust.Shared.Network;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 namespace Content.Shared.Medical.Cryogenics;
@@ -52,6 +53,7 @@ public abstract partial class SharedCryoPodSystem : EntitySystem
     [Dependency] private SharedToolSystem _tool = default!;
     [Dependency] protected SharedUserInterfaceSystem UI = default!;
     [Dependency] private StandingStateSystem _standingState = default!;
+    [Dependency] private INetManager _net = default!; // OXYD
 
     [Dependency] private EntityQuery<BloodstreamComponent> _bloodstreamQuery = default!;
     [Dependency] private EntityQuery<ItemSlotsComponent> _itemSlotsQuery = default!;
@@ -125,6 +127,12 @@ public abstract partial class SharedCryoPodSystem : EntitySystem
         {
             _bloodstream.TryAddToBloodstream((patient.Value, bloodstream), solutionToInject);
             _reactive.DoEntityReaction(patient.Value, solutionToInject, ReactionMethod.Injection);
+
+            // OXYD: log the committed injection; this update runs predicted on the client,
+            // so gate the admin log to the server side where the transfer actually commits.
+            if (_net.IsServer)
+                _adminLogger.Add(LogType.ForceFeed, LogImpact.Medium,
+                    $"{ToPrettyString(entity.Owner):using} injected {solutionToInject.Volume}u into {ToPrettyString(patient.Value):target}");
         }
     }
 

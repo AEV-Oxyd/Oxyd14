@@ -1,6 +1,6 @@
 - type: entity
   parent: ClothingHeadBase
-  id: erisport_CentCom._hat
+  id: erisport_CentCom_hat
   name: CentCom. hat
   description: It's good to be emperor.
   components:

@@ -1,0 +1,275 @@
+# Eris modular computer_hardware → Oxyd PDA bay parts
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwCpuSmall
+  name: standard microprocessor
+  description: Miniaturised CPU for portable devices. Runs two program threads.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwCpu ]
+  - type: OxydComputerHardware
+    slot: Cpu
+    maxPrograms: 2
+    powerUsage: 25
+    critical: true
+
+- type: entity
+  parent: OxydHwCpuSmall
+  id: OxydHwCpuAdv
+  name: advanced microprocessor
+  description: Upgraded portable CPU. Three threads and a spare disk slot.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu_adv
+  - type: OxydComputerHardware
+    slot: Cpu
+    maxPrograms: 3
+    diskBonus: 1
+    powerUsage: 40
+    critical: true
+
+- type: entity
+  parent: OxydHwCpuSmall
+  id: OxydHwCpuSuper
+  name: photonic microprocessor
+  description: Photonic portable CPU. Four threads and two spare disk slots. Hungry.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu_super
+  - type: OxydComputerHardware
+    slot: Cpu
+    maxPrograms: 4
+    diskBonus: 2
+    powerUsage: 80
+    critical: true
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwHddMicro
+  name: micro hard drive
+  description: Tiny SSD for stripped-down PDAs. Capacity 6 programs.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/stock_parts.rsi
+    state: rom1
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwHdd ]
+  - type: OxydComputerHardware
+    slot: Hdd
+    diskCapacity: 6
+    powerUsage: 5
+    critical: true
+
+- type: entity
+  parent: OxydHwHddMicro
+  id: OxydHwHddSmall
+  name: small hard drive
+  description: Efficient portable SSD. Capacity 8 programs.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/stock_parts.rsi
+    state: hdd1
+  - type: OxydComputerHardware
+    slot: Hdd
+    diskCapacity: 8
+    powerUsage: 10
+    critical: true
+
+- type: entity
+  parent: OxydHwHddMicro
+  id: OxydHwHddSmallAdv
+  name: small advanced hard drive
+  description: Upgraded portable SSD. Capacity 12 programs.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/stock_parts.rsi
+    state: hdd2
+  - type: OxydComputerHardware
+    slot: Hdd
+    diskCapacity: 12
+    powerUsage: 20
+    critical: true
+
+- type: entity
+  parent: OxydHwHddMicro
+  id: OxydHwHddAdvanced
+  name: advanced hard drive
+  description: Hybrid drive for high-end PDAs. Capacity 16 programs.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/stock_parts.rsi
+    state: treatment_disk
+  - type: OxydComputerHardware
+    slot: Hdd
+    diskCapacity: 16
+    powerUsage: 50
+    critical: true
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwNetBasic
+  name: basic network card
+  description: Standard NTNet wireless card. 500m range.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: radio_mini
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwNet ]
+  - type: OxydComputerHardware
+    slot: Network
+    networkRange: 500
+    powerUsage: 10
+
+- type: entity
+  parent: OxydHwNetBasic
+  id: OxydHwNetAdvanced
+  name: advanced network card
+  description: Long-range NTNet card. 2000m reach.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: radio
+  - type: OxydComputerHardware
+    slot: Network
+    networkRange: 2000
+    longRange: true
+    powerUsage: 30
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwTeslaLink
+  name: tesla link
+  description: Wireless APC trickle charger for modular devices.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: charger_APC
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    teslaLink: true
+    powerUsage: 5
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwPrinter
+  name: mini printer unit
+  description: Integrated paper printer for PDA hardware reports and invoices.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: printer_mini
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    printer: true
+    powerUsage: 50
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwSignaller
+  name: signal manager module
+  description: Wireless DeviceLink transmitter for modular PDAs. Pair with the signal manager program.
+  components:
+  - type: Sprite
+    sprite: Objects/Devices/signaller.rsi
+    state: signaller
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    signaller: true
+    powerUsage: 15
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerMedical
+  name: medical scanner module
+  description: Health analyzer peripheral for modular PDAs.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/healthanalyzer.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Medical
+    powerUsage: 25
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerAtmos
+  name: atmos scanner module
+  description: Gas analyzer peripheral for modular PDAs.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Atmos/gasanalyzer.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Atmos
+    powerUsage: 20
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerPrice
+  name: price scanner module
+  description: Appraisal peripheral — click a target to price it into the scan buffer.
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/appraisal-tool.rsi
+    state: icon
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Price
+    powerUsage: 10
+
+- type: entity
+  parent: BaseItem
+  id: OxydHwScannerReagent
+  name: reagent scanner module
+  description: Chemistry peripheral — click a solution container to dump reagents into the buffer.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Chemistry/beaker.rsi
+    state: beaker
+  - type: Item
+    size: Tiny
+  - type: Tag
+    tags: [ OxydHwPeripheral ]
+  - type: OxydComputerHardware
+    slot: Peripheral
+    scanner: Reagent
+    powerUsage: 15

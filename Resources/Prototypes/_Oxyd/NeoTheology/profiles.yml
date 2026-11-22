@@ -1,0 +1,86 @@
+# Eris access story:
+#   Disciple/Acolyte/Agrolyte/Custodian: OxydNtFollower + OxydNtCommon (from modules)
+#   Preacher/Inquisitor:                 OxydNtFollower + OxydNtCommon + OxydNtClergy
+# Starting modules are the sole source for granted sets and rank modifiers.
+# Profile capacity/regen are the unmodified baseline; installed modules add the rank.
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtDisciple
+  name: oxyd-neotheology-profile-disciple
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase]
+  canChannel: false
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAcolyte
+  name: oxyd-neotheology-profile-acolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase, OxydNtModuleAcolyte]
+  canChannel: false
+  isSpecialization: true
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtAgrolyte
+  name: oxyd-neotheology-profile-agrolyte
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase, OxydNtModuleAgrolyte]
+  canChannel: false
+  isSpecialization: true
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtCustodian
+  name: oxyd-neotheology-profile-custodian
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase, OxydNtModuleCustodian]
+  canChannel: false
+  isSpecialization: true
+  countsAsChannelingFollower: true
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtPreacher
+  name: oxyd-neotheology-profile-preacher
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  - OxydNtClergy
+  # Rank modifiers live on the Red Light module, not twice on the profile.
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase, OxydNtModuleAcolyte, OxydNtModulePriest, OxydNtModuleRedLight]
+  canChannel: true
+  clearance: Clergy
+  countsAsChannelingFollower: false
+
+- type: oxydNeoTheologyProfile
+  id: OxydNtInquisitor
+  name: oxyd-neotheology-profile-inquisitor
+  accessPrivileges:
+  - OxydNtFollower
+  - OxydNtCommon
+  - OxydNtClergy
+  # The inquisitor module adds its rank capacity/regeneration.
+  cruciformCapacity: 50
+  regenerationMultiplier: 1
+  startingModules: [OxydNtModuleBase, OxydNtModuleAcolyte, OxydNtModulePriest, OxydNtModuleInquisitor, OxydNtModuleUplink]
+  canChannel: true
+  clearance: Clergy
+  countsAsChannelingFollower: false

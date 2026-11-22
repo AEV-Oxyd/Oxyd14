@@ -1,0 +1,125 @@
+<controls:FancyWindow xmlns="https://spacestation14.io"
+               xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+               xmlns:ui="clr-namespace:Content.Client._Oxyd.UI"
+               Title="{Loc 'oxyd-litany-ui-title'}"
+               MinSize="740 500"
+               SetSize="800 560">
+    <!-- Eris NanoUI dark skin (ritual_book.tmpl): flat dark body, content styled in code-behind. -->
+    <PanelContainer Name="Body" VerticalExpand="True" HorizontalExpand="True">
+        <BoxContainer Orientation="Vertical" Margin="8" SeparationOverride="6">
+        <BoxContainer Orientation="Vertical" SeparationOverride="2">
+            <BoxContainer Orientation="Horizontal" SeparationOverride="12">
+                <Label Name="HolinessLabel" HorizontalExpand="True"/>
+                <Label Name="RegenerationLabel" HorizontalAlignment="Right"/>
+            </BoxContainer>
+            <ui:ErisBar Name="HolinessBar" HorizontalExpand="True"/>
+            <BoxContainer Orientation="Horizontal" SeparationOverride="12">
+                <Label Name="RankLabel" HorizontalExpand="True"/>
+                <Label Name="ClearanceLabel" HorizontalExpand="True"/>
+            </BoxContainer>
+            <Label Name="StatusLabel"/>
+            <Label Name="CastProgressLabel"/>
+            <ui:ErisBar Name="CastProgressBar" Visible="False" HorizontalExpand="True"/>
+        </BoxContainer>
+
+        <BoxContainer Orientation="Horizontal" SeparationOverride="6">
+            <LineEdit Name="SearchBar"
+                      PlaceHolder="{Loc 'oxyd-litany-ui-search'}"
+                      HorizontalExpand="True"/>
+            <OptionButton Name="CategorySelector" MinWidth="180"/>
+        </BoxContainer>
+
+        <BoxContainer Orientation="Horizontal" VerticalExpand="True" SeparationOverride="8">
+            <ScrollContainer Name="EntryScroll"
+                             VerticalExpand="True"
+                             HorizontalExpand="True"
+                             HScrollEnabled="False"
+                             SizeFlagsStretchRatio="1">
+                <BoxContainer Name="EntryList"
+                              Orientation="Vertical"
+                              HorizontalExpand="True"
+                              VerticalExpand="True"
+                              SeparationOverride="1"/>
+            </ScrollContainer>
+
+            <BoxContainer Name="DetailsPanel"
+                          Orientation="Vertical"
+                          MinWidth="380"
+                          MaxWidth="500"
+                          VerticalExpand="True"
+                          SeparationOverride="4">
+                <!-- Details scroll so tall choice content can never push the
+                     Begin/Submit/Cancel row below the fixed window frame. -->
+                <ScrollContainer Name="DetailsScroll"
+                                 VerticalExpand="True"
+                                 HorizontalExpand="True"
+                                 HScrollEnabled="False">
+                    <BoxContainer Orientation="Vertical"
+                                  HorizontalExpand="True"
+                                  SeparationOverride="4">
+                        <Label Name="SelectedName" StyleClasses="LabelHeading"/>
+                        <RichTextLabel Name="SelectedDescription"
+                                       HorizontalExpand="True"
+                                       MinHeight="55"/>
+                        <RichTextLabel Name="PhraseLabel" HorizontalExpand="True"/>
+                        <Label Name="CostLabel"/>
+                        <Label Name="CooldownLabel"/>
+                        <Label Name="CastDurationLabel"/>
+                        <RichTextLabel Name="TargetLabel" HorizontalExpand="True"/>
+                        <RichTextLabel Name="AvailabilityLabel" HorizontalExpand="True"/>
+
+                        <BoxContainer Name="ChoiceContainer"
+                                      Orientation="Vertical"
+                                      Visible="False"
+                                      SeparationOverride="3">
+                            <PanelContainer StyleClasses="LowDivider"/>
+                            <Label Text="Choices" StyleClasses="LabelHeading"/>
+                            <Label Name="ChoiceInstructionLabel"/>
+                            <ItemList Name="ChoiceList"
+                                      SelectMode="Multiple"
+                                      MinHeight="80"
+                                      MaxHeight="150"
+                                      HorizontalExpand="True"
+                                      Visible="False"/>
+                            <Label Name="ChoiceExpiryLabel" Visible="False"/>
+                            <BoxContainer Name="RecipeRow" Orientation="Horizontal" Visible="False">
+                                <Label Name="RecipeIdLabel" Text="Recipe ID:" MinWidth="150"/>
+                                <LineEdit Name="RecipeIdEdit"
+                                          HorizontalExpand="True"
+                                          PlaceHolder="Server-provided recipe ID"/>
+                            </BoxContainer>
+                            <BoxContainer Name="PlainTextRow" Orientation="Horizontal" Visible="False">
+                                <Label Name="PlainTextLabel" Text="Message:" MinWidth="150"/>
+                                <LineEdit Name="PlainTextEdit"
+                                          HorizontalExpand="True"
+                                          PlaceHolder="Up to 512 Unicode scalars"/>
+                            </BoxContainer>
+                            <Label Name="PlainTextCountLabel" Visible="False"/>
+                            <Label Name="PendingRequestLabel" Visible="False"/>
+                        </BoxContainer>
+                    </BoxContainer>
+                </ScrollContainer>
+
+                <BoxContainer Orientation="Horizontal" SeparationOverride="4">
+                    <ui:ErisLink Name="BeginButton"
+                                 Text="{Loc 'oxyd-litany-ui-begin'}"
+                                 HorizontalExpand="True"/>
+                    <ui:ErisLink Name="SubmitChoiceButton"
+                                 Text="Submit choice"
+                                 Visible="False"
+                                 HorizontalExpand="True"/>
+                    <ui:ErisLink Name="CancelButton"
+                                 Text="{Loc 'oxyd-litany-ui-cancel'}"
+                                 Visible="False"
+                                 HorizontalExpand="True"/>
+                </BoxContainer>
+            </BoxContainer>
+        </BoxContainer>
+
+        <Label Name="EmptyCatalogLabel"
+               Text="No matching litanies."
+               Visible="False"
+               HorizontalAlignment="Center"/>
+        </BoxContainer>
+    </PanelContainer>
+</controls:FancyWindow>

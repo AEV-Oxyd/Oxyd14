@@ -9,6 +9,11 @@
   - type: Sprite
     state: produce
   - type: Produce
+  # OXYD: produce is organic matter — the bioreactor (and recyclers) yield the
+  # entity's own material contents instead of a generic per-item value.
+  - type: PhysicalComposition
+    materialComposition:
+      Biomatter: 10
   - type: PotencyVisuals
   - type: Appearance
   - type: Solution
@@ -43,6 +48,11 @@
   - type: Sprite
     state: produce
   - type: Produce
+  # OXYD: produce is organic matter — the bioreactor (and recyclers) yield the
+  # entity's own material contents instead of a generic per-item value.
+  - type: PhysicalComposition
+    materialComposition:
+      Biomatter: 10
   - type: PotencyVisuals
   - type: Appearance
   - type: Extractable

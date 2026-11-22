@@ -1,0 +1,222 @@
+# Eris Moebius injectors. Eris source: code/modules/reagents/reagent_containers/hypospray.dm.
+# Eris autoinjectors are single-use 5u hyposprays; empty ones refuse refills in Eris
+# (modeled here by giving them inject-only modes and a small internal volume).
+
+- type: entity
+  abstract: true
+  parent: [ BaseHypoInjector, BaseItem ]
+  id: OxydErisAutoinjectorBase
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+    layers:
+    - state: autoinjector
+      map: ["enum.SolutionContainerLayers.Base"]
+    - state: autoinjector
+      map: ["enum.SolutionContainerLayers.Fill"]
+      visible: false
+  - type: Item
+    size: Tiny
+  - type: Solution
+    solution:
+      maxVol: 5
+  - type: Injector
+    allowedModes:
+    - HyposprayInjectMode
+    activeModeProtoId: HyposprayInjectMode
+  - type: SolutionContainerVisuals
+    maxFillLevels: 1
+    fillBaseName: autoinjector
+    solutionName: hypospray
+    emptySpriteName: autoinjector0
+  - type: Appearance
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorInaprovaline
+  name: eris autoinjector inaprovaline
+  description: Eris Autoinjector Inaprovaline.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Inaprovaline
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorAntitoxin
+  name: eris autoinjector antitoxin
+  description: Eris Autoinjector Antitoxin.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Dylovene
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorTricordrazine
+  name: eris autoinjector tricordrazine
+  description: Eris Autoinjector Tricordrazine.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Tricordrazine
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorKelotane
+  name: eris autoinjector kelotane
+  description: Eris Autoinjector Kelotane.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Kelotane
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorBicaridine
+  name: eris autoinjector bicaridine
+  description: Eris Autoinjector Bicaridine.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Bicaridine
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorDexalin
+  name: eris autoinjector dexalin
+  description: Eris Autoinjector Dexalin.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: Dexalin
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorSpaceacillin
+  name: eris autoinjector spaceacillin
+  description: Eris Autoinjector Spaceacillin.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedSpaceacillin
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorTramadol
+  name: eris autoinjector tramadol
+  description: Eris Autoinjector Tramadol.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedTramadol
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorOxycodone
+  name: eris autoinjector oxycodone
+  description: Eris Autoinjector Oxycodone.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedOxycodone
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorPolystem
+  name: eris autoinjector polystem
+  description: Eris Autoinjector Polystem.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedPolystem
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorMeralyne
+  name: eris autoinjector meralyne
+  description: Eris Autoinjector Meralyne.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedMeralyne
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorRyetalyn
+  name: eris autoinjector ryetalyn
+  description: Eris Autoinjector Ryetalyn.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedRyetalyn
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorBloodclot
+  name: eris autoinjector bloodclot
+  description: Eris Autoinjector Bloodclot.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydMedQuickclot
+        Quantity: 5
+
+- type: entity
+  parent: OxydErisAutoinjectorBase
+  id: OxydErisAutoinjectorHyperzine
+  name: eris autoinjector hyperzine
+  description: Eris Autoinjector Hyperzine.
+  components:
+  - type: Solution
+    solution:
+      reagents:
+      - ReagentId: OxydDrugHyperzine
+        Quantity: 5
+
+# Eris Moebius hypospray (reusable, 30u in Eris; native volume kept at 20).
+- type: entity
+  parent: Hypospray
+  id: OxydErisHypospray
+  name: eris hypospray
+  description: Eris Hypospray.
+  components:
+  - type: Sprite
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+    layers:
+    - state: hypospray
+      map: ["enum.SolutionContainerLayers.Base"]
+    - state: hypospray
+      map: ["enum.SolutionContainerLayers.Fill"]
+      visible: false
+  - type: Item
+    sprite: Oxyd/erisported/eris_autoinjectors.rsi
+  - type: SolutionContainerVisuals
+    maxFillLevels: 1
+    fillBaseName: hypospray
+    solutionName: hypospray

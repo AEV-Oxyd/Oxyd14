@@ -1,0 +1,45 @@
+# Eris /datum/tech trees (code/modules/research/research.dm) -> oxydTechTree protos.
+# pointValue: Eris tech_points per deconstruction level (destructive_analyzer.dm
+# get_object_research_value) — moved off the system's hardcoded table.
+- type: oxydTechTree
+  id: OxydTreeEngineering
+  name: oxyd-rd-tree-engineering
+  shown: true
+  color: "#e8a33d"
+  pointValue: 250
+- type: oxydTechTree
+  id: OxydTreeBiotech
+  name: oxyd-rd-tree-biotech
+  shown: true
+  color: "#7fae3f"
+  pointValue: 300
+- type: oxydTechTree
+  id: OxydTreeCombat
+  name: oxyd-rd-tree-combat
+  shown: true
+  color: "#c0392b"
+  pointValue: 500
+- type: oxydTechTree
+  id: OxydTreePowerstorage
+  name: oxyd-rd-tree-powerstorage
+  shown: true
+  color: "#d8b81c"
+  pointValue: 300
+- type: oxydTechTree
+  id: OxydTreeBluespace
+  name: oxyd-rd-tree-bluespace
+  shown: true
+  color: "#4aa3d8"
+  pointValue: 1000
+- type: oxydTechTree
+  id: OxydTreeRobotics
+  name: oxyd-rd-tree-robotics
+  shown: true
+  color: "#9b59b6"
+  pointValue: 350
+- type: oxydTechTree
+  id: OxydTreeCovert
+  name: oxyd-rd-tree-covert
+  shown: false
+  color: "#555555"
+  pointValue: 5000

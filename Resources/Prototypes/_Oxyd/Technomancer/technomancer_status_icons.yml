@@ -1,0 +1,25 @@
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconTechnomancerExultant
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: ChiefEngineer
+  jobName: job-name-technomancer-exultant
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconTechnomancer
+  icon:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: StationEngineer
+  jobName: job-name-technomancer
+
+- type: jobIconGroup
+  id: TechnomancerIconGroup
+  groupName: job-icon-group-technomancer
+  sprite:
+    sprite: /Textures/Interface/Misc/job_icons.rsi
+    state: StationEngineer
+  icons:
+  - JobIconTechnomancerExultant
+  - JobIconTechnomancer

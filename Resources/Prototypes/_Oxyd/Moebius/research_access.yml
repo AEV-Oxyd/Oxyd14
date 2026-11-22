@@ -1,0 +1,23 @@
+# Moebius research access levels (Eris code/game/jobs/access_datum.dm):
+# access_rd -> Overseer suite; access_research_equipment -> R&D console;
+# access_robotics -> robotics lab; access_psychiatrist -> psych office.
+
+- type: accessLevel
+  id: OxydMoebiusResearch
+  name: oxyd-access-moebius-research
+
+- type: accessLevel
+  id: OxydMoebiusResearchEquipment
+  name: oxyd-access-moebius-research-equipment
+
+- type: accessLevel
+  id: OxydMoebiusRobotics
+  name: oxyd-access-moebius-robotics
+
+- type: accessLevel
+  id: OxydMoebiusPsychiatrist
+  name: oxyd-access-moebius-psychiatrist
+
+- type: accessLevel
+  id: OxydMoebiusOverseer
+  name: oxyd-access-moebius-overseer

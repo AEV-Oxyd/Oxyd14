@@ -1,3 +1,4 @@
+using Content.Shared._Oxyd.Medical; // OXYD
 using Content.Shared.Damage.Events;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Events;
@@ -9,6 +10,7 @@ namespace Content.Shared.Traits.Assorted;
 public sealed partial class PainNumbnessSystem : EntitySystem
 {
     [Dependency] private MobThresholdSystem _mobThresholdSystem = default!;
+    [Dependency] private PainSystem _painSystem = default!; // OXYD
 
     public override void Initialize()
     {
@@ -20,6 +22,8 @@ public sealed partial class PainNumbnessSystem : EntitySystem
 
     private void OnEffectApplied(Entity<PainNumbnessStatusEffectComponent> ent, ref StatusEffectAppliedEvent args)
     {
+        _painSystem.SetNumb(args.Target, true); // OXYD
+
         if (!HasComp<MobThresholdsComponent>(args.Target))
             return;
 
@@ -28,6 +32,8 @@ public sealed partial class PainNumbnessSystem : EntitySystem
 
     private void OnEffectRemoved(Entity<PainNumbnessStatusEffectComponent> ent, ref StatusEffectRemovedEvent args)
     {
+        _painSystem.SetNumb(args.Target, false); // OXYD
+
         if (!HasComp<MobThresholdsComponent>(args.Target))
             return;
 

@@ -45,3 +45,11 @@
   color: "#539c00"
   radioChannel: Service
   acquisitionSlip: PaperAcquisitionSlipService
+
+- type: cargoAccount
+  id: Guild
+  name: cargo-account-guild-name
+  code: cargo-account-guild-code
+  color: "#c9a227"
+  radioChannel: Supply
+  acquisitionSlip: PaperAcquisitionSlipCargo

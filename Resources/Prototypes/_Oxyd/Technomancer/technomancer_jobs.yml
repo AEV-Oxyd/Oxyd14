@@ -1,0 +1,99 @@
+# Technomancer engineering jobs (Eris code/game/jobs/job/engineering.dm).
+# Eris access list -> fork mapping lives in _Oxyd/Technomancer/access.yml comments.
+
+- type: job
+  id: TechnomancerExultant
+  name: job-name-technomancer-exultant
+  description: job-description-technomancer-exultant
+  playTimeTracker: JobTechnomancerExultant
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: TechnomancerEngineering
+    time: 10h
+  startingGear: TechnomancerExultantGear
+  icon: JobIconTechnomancerExultant
+  supervisors: job-supervisors-captain
+  access:
+  # Eris: access_engine, engine_equip, tech_storage, maint_tunnels,
+  # teleporter, network, external_airlocks, atmospherics, emergency_storage,
+  # eva, heads, construction, sec_doors, ce, RC_announce, keycard_auth,
+  # tcomsat, ai_upload, change_engineering
+  - ChiefEngineer
+  - Command
+  - Engineering
+  - Atmospherics
+  - External
+  - Maintenance
+  - OxydTechnomancer
+  - OxydTechnomancerEquipment
+  - OxydTechnomancerExultant
+  special:
+  - !type:AddComponentSpecial
+    components:
+    - type: CommandStaff
+
+- type: startingGear
+  id: TechnomancerExultantGear
+  equipment:
+    jumpsuit: erisport_exultant_jumpsuit
+    outerClothing: erisport_exultant_coat
+    head: erisport_hard_hat
+    shoes: erisport_work_boots
+    gloves: erisport_insulated_gloves
+    belt: erisport_tool_belt
+    ears: ClothingHeadsetAltCommand
+    id: CEPDA
+  storage:
+    back:
+    - ToolboxElectricalFilled
+    - FlashlightSeclite
+
+- type: chameleonOutfit
+  id: TechnomancerExultantChameleonOutfit
+  job: TechnomancerExultant
+  hasMindShield: true
+  equipment:
+    head: erisport_Technomancer_orange_beret
+
+- type: job
+  id: Technomancer
+  name: job-name-technomancer
+  description: job-description-technomancer
+  playTimeTracker: JobTechnomancer
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: TechnomancerEngineering
+    time: 4h
+  startingGear: TechnomancerGear
+  icon: JobIconTechnomancer
+  supervisors: job-supervisors-technomancer-exultant
+  access:
+  # Eris: eva, engine, engine_equip, tech_storage, maint_tunnels,
+  # external_airlocks, construction, atmospherics
+  - Engineering
+  - Atmospherics
+  - External
+  - Maintenance
+  - OxydTechnomancer
+  - OxydTechnomancerEquipment
+
+- type: startingGear
+  id: TechnomancerGear
+  equipment:
+    jumpsuit: erisport_technomancers_jumpsuit
+    head: erisport_insulated_technomancer_helmet
+    shoes: erisport_work_boots
+    gloves: erisport_insulated_gloves
+    belt: erisport_tool_belt
+    ears: ClothingHeadsetEngineering
+    id: EngineerPDA
+  storage:
+    back:
+    - ToolboxElectricalFilled
+    - FlashlightSeclite
+
+- type: chameleonOutfit
+  id: TechnomancerChameleonOutfit
+  job: Technomancer
+  equipment:
+    head: erisport_Technomancer_yellow_beret

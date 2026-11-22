@@ -1,0 +1,16 @@
+# The cruciform forge produces through a stock lathe recipe rather than a custom material dict.
+- type: latheRecipe
+  id: OxydNtCruciform
+  result: OxydNtCruciform
+  completetime: 30
+  # Material volume units: biomatter sheet is 1, plasteel/gold sheet is 100 —
+  # Eris' "10 biomatter + 5 plasteel + 2 gold".
+  materials:
+    Biomatter: 10
+    Plasteel: 500
+    Gold: 200
+
+# The forge's built-in pack — keeps OxydNtCruciform available to its headless LatheComponent.
+- type: latheRecipePack
+  id: OxydNtForgePack
+  recipes: [ OxydNtCruciform ]

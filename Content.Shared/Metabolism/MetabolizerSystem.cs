@@ -238,6 +238,9 @@ public sealed partial class MetabolizerSystem : EntitySystem
             // remove a certain amount of reagent
             if (mostToRemove > FixedPoint2.Zero)
             {
+                // OXYD
+                var metabolized = new ReagentMetabolizedEvent(proto, stage);
+                RaiseLocalEvent(actualEntity, ref metabolized);
                 solution.RemoveReagent(reagent, mostToRemove);
 
                 // We have processed a reagant, so count it towards the cap
