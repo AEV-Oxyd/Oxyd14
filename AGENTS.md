@@ -1,35 +1,42 @@
-The project makes use of a ECS-inspired arhitecture & sandboxing. The client/shared assemblies are under the scrutiny of the sandbox.
-The sandbox dissallows any usage of reflection & implements sandbox safe API's that must be used.
-Multithreading -> ParallelRobustJob, Parallel.ForEach
-
-Arhitecture
-Components which implement "active" behaviours , such as only processing when Y condition is fulfilled should be implemented under the Active Component pattern on the Entity System.
-meaning that components that should be running behaviour/logic on EntSys Update() should be given a ActiveComponent , that the EntSys will query,  instead of iterating through all instances
-of the component & checking wheter the condition is fulfilled.
-
-UI State Management
-Server sends UI states to Clients at the end of each tick, only sending the most recently assigned state.
-Avoid networking data that can be built locally from prototypes, client & server have a system to sync their prototypes.
-
-Input Management
-Inputs register through the IInputManager and the CommandBinds.Builder()
-Input execution is at it follows
-- Each bind has a priority , undefined priority means bottom priority in general
-- All binds valid for a context get executed in the order of their priority
-- A execution that handles the event stops the iteration , other binds won't be triggered
-
-Prototypes
-- Can be serialized/read from YML
-- Commonly used as a way to configure behaviours / store data, a Research computer for example can keep a ProtoId referencing a TechTreePrototype that it reads for its unlock options / when building the UI.
-- to be used in entity systems(as a variable on the EntSys or component) to implement declarable value SETS that shouldn't be duplicated for every instance & rarely/never change during active gameplay
- 
-Entity Systems
-- should make use of the [SubscribeLocalEvent], [SubscribeNetworkEvent] attributes instead of doing subscriptions in Initialize() WHEN possible.
-- systems can declare dependencies for other EntitySystems & EntityQueries, dependency fields are marked with [Dependency] and resolved during Initalize()
-- state-data should be kept in Singleton entities.
-- variable/method declarations should be done in the following order 1)EntitySystems, 2)Queries , 3)Constant prototypes ids , 4)Constant values, , 5)any variable ,6)Overrides of existing Methods , 7) Methods
-
-Important Entity Systems
-- DeviceLinkSystem , use for any behaviour that involves being aware of the state of another entity.
-- EntityLookup , use for queries to find entities with certain components , raycasts
-
+- **`RobustToolbox/` must not have anything inside modified.
+- **Sandboxing Scrutiny**: The project uses an ECS-inspired architecture where `Content.Client` and `Content.Shared` assemblies are under strict sandboxing enforcement (`Robust.Shared.Sandboxing`) and
+ any usage of reflection (`System.Reflection`, `Type.GetMethod`, `BindingFlags`) is strictly disallowed.
+- **Multithreading**: Use sandbox-safe primitives: `ParallelRobustJob`, `Parallel.ForEach`.
+- **Do NOT use scripts** to perform code changes or replacements.
+- **Semantic Solution Refactorings**: For renaming symbols across the solution, extracting methods/interfaces, or deleting dead code, use Rider's semantic MCP tools (`rename_refactoring`, `extract_method`, `extract_interface`, `change_api_signature`, `safe_delete`).
+## 4. Architecture: Active Component Pattern
+- Components implementing "active" behaviors (processing only when condition Y is met) MUST follow the **Active Component pattern**.
+- Do NOT iterate through all instances of a component in `EntitySystem.Update()` to check whether a condition is fulfilled if it can be done event-based.
+- Instead, give entities an active marker component (e.g., `ActiveFooComponent`) when the condition is met, and have the system query *only* the active component in `Update()`.
+## 5. UI State Management
+- The server sends UI states to clients at the end of each tick, transmitting only the most recently assigned state.
+- **Avoid Networking Redundant Data**: Do not network data that can be reconstructed locally from prototypes. Client and server have a built-in prototype synchronization system.
+## 6. Prototypes
+- Prototypes are serialized and deserialized from YAML (`Resources/Prototypes/`).
+- Commonly used to configure behaviors and store static data sets (e.g., a research computer referencing a `TechTreePrototype` for unlock options).
+- Stored as `ProtoId<T>` on entity systems or components for immutable sets that should not be duplicated across instances and rarely or never change during active gameplay.
+## 7. Entity Systems Conventions
+- **Event Subscriptions**: Use `[SubscribeLocalEvent]` and `[SubscribeNetworkEvent]` attributes on handler methods instead of manual subscriptions in `Initialize()` whenever possible.
+- **Dependencies**: Declare system dependencies using `[Dependency]`. Fields marked `[Dependency]` must NOT be `readonly` (to satisfy engine analyzer `RA0051`).
+- **Singleton State**: State data should be stored in Singleton entities.
+- **Member Declaration Order**: Strictly organize class members in the following order:
+  1. `EntitySystem` dependencies
+  2. `EntityQuery` dependencies
+  3. Constant prototype IDs (`ProtoId<...>`)
+  4. Constant values (`const ...`)
+  5. Variables and fields
+  6. Overrides of existing base methods (`Initialize`, `Update`, etc.)
+  7. Methods
+## 8. Important Entity Systems
+- **`DeviceLinkSystem`**: Use for any behavior that requires tracking or reacting to the state of another linked entity.
+- **`EntityLookup`**: Use for spatial queries to find entities with specific components, raycasts, or range checks.
+- **`HandsSystem`**: Read its API & Use to create properly predicted interactions when they include hands (e.g., picking up, dropping, or interacting with items).
+## 9. Prediction
+- There are 2 prediction models in the project, one for player interactions through Tick-based rollback and a custom-implementation for preserving/stopping the overwrite of states
+- Future ticks & current ticks can be discerned by IGameTiming.IsFirstTimePredicted.
+- Player Interaction Prediction follows a Tick-based model where the server is authoritative and clients predict actions locally by rerunning PredictiveEvents every future tick, for example a player inserting a item into a backpack will raise MoveItem for X ticks in the future and it is expected for the StorageSystem to handle it each tick (both current & predicted)
+- Not all events are predictive. Only events that are raised using `RaisePredictiveEvent` are predictive.
+## 10. UI Controls
+- There is an IInputRelay interface that must be implemented for any new control!
+- Make use of Content implemented controls whenever possible, most have Content pre-appended to the Engine one they're replacing.
+- Create new controls only when necessary and avoid duplicating existing functionality.
