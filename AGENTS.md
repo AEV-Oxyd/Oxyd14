@@ -2,8 +2,6 @@
 - **Sandboxing Scrutiny**: The project uses an ECS-inspired architecture where `Content.Client` and `Content.Shared` assemblies are under strict sandboxing enforcement (`Robust.Shared.Sandboxing`) and
  any usage of reflection (`System.Reflection`, `Type.GetMethod`, `BindingFlags`) is strictly disallowed.
 - **Multithreading**: Use sandbox-safe primitives: `ParallelRobustJob`, `Parallel.ForEach`.
-- **Do NOT use scripts** to perform code changes or replacements.
-- **Semantic Solution Refactorings**: For renaming symbols across the solution, extracting methods/interfaces, or deleting dead code, use Rider's semantic MCP tools (`rename_refactoring`, `extract_method`, `extract_interface`, `change_api_signature`, `safe_delete`).
 ## 4. Architecture: Active Component Pattern
 - Components implementing "active" behaviors (processing only when condition Y is met) MUST follow the **Active Component pattern**.
 - Do NOT iterate through all instances of a component in `EntitySystem.Update()` to check whether a condition is fulfilled if it can be done event-based.
