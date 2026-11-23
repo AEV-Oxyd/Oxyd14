@@ -1,15 +1,291 @@
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Body;
+using Content.Shared.Humanoid;
+using Content.Shared.Humanoid.Prototypes;
+using Content.Shared.Inventory;
+using Content.Shared.Preferences;
+using Content.Shared.Roles;
 using Content.Shared.Security;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
+using Robust.Shared.Enums;
 using Robust.Shared.GameObjects;
+using Robust.Shared.IoC;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 
 namespace Content.Client._Oxyd.Computers.Programs;
+
+// =============================================================================
+// RECORD SUBJECT PHOTO CONTROL (HEADSHOT & PRISON ATTIRE FULL-BODY MUGSHOT)
+// =============================================================================
+
+/// <summary>
+/// Renders a client-side humanoid preview entity for Station/Crew Records and Criminal/Security Records:
+/// - When <see cref="IsHeadshot"/> is true (Crew Records): renders a zoomed, cropped headshot of the subject.
+/// - When <see cref="WearPrisonAttire"/> is true (Security Records): equips the subject in a gray jumpsuit
+///   (<c>ClothingUniformJumpsuitColorGrey</c>) and black shoes (<c>ClothingShoesColorBlack</c>) and renders
+///   the entire full-body subject.
+/// </summary>
+public sealed class RecordSubjectPhotoControl : ContentControl
+{
+    public const string PrisonJumpsuitProtoId = "ClothingUniformJumpsuitColorGrey";
+    public const string PrisonShoesProtoId = "ClothingShoesColorBlack";
+
+    private readonly IEntityManager _entMan;
+    private readonly IPrototypeManager _proto;
+    private readonly List<EntityUid> _spawnedEquipment = new();
+
+    private SpriteSystem? _spriteSystem;
+    private TransformSystem? _transformSystem;
+
+    private string _lastSignature = string.Empty;
+    private string _cachedKey = string.Empty;
+    private string _cachedName = string.Empty;
+    private string _cachedSpecies = "Human";
+    private string _cachedGender = "Epicene";
+    private int _cachedAge = 25;
+    private string _cachedJobProto = string.Empty;
+    private HumanoidCharacterProfile? _cachedProfile;
+
+    public bool IsHeadshot { get; }
+    public bool WearPrisonAttire { get; }
+
+    public EntityUid PreviewDummy { get; private set; } = EntityUid.Invalid;
+    public string LoadedSubjectKey => _cachedKey;
+    public string LoadedSubjectName => _cachedName;
+    public string? EquippedJumpsuitPrototype { get; private set; }
+    public string? EquippedShoesPrototype { get; private set; }
+
+    public RecordSubjectPhotoControl(bool isHeadshot, bool wearPrisonAttire)
+    {
+        _entMan = IoCManager.Resolve<IEntityManager>();
+        _proto = IoCManager.Resolve<IPrototypeManager>();
+
+        IsHeadshot = isHeadshot;
+        WearPrisonAttire = wearPrisonAttire;
+        RectClipContent = true;
+        MinSize = isHeadshot ? new Vector2(92f, 92f) : new Vector2(104f, 128f);
+        MaxSize = isHeadshot ? new Vector2(92f, 92f) : new Vector2(104f, 128f);
+    }
+
+    public void SetSubject(
+        string key,
+        string name,
+        string species,
+        string gender,
+        int age,
+        string jobProtoId,
+        HumanoidCharacterProfile? profile)
+    {
+        _cachedKey = key ?? string.Empty;
+        _cachedName = name ?? string.Empty;
+        _cachedSpecies = string.IsNullOrWhiteSpace(species) ? "Human" : species;
+        _cachedGender = string.IsNullOrWhiteSpace(gender) ? "Epicene" : gender;
+        _cachedAge = Math.Clamp(age, 1, 200);
+        _cachedJobProto = jobProtoId ?? string.Empty;
+        _cachedProfile = profile;
+
+        if (string.IsNullOrWhiteSpace(_cachedName))
+        {
+            ClearPreview();
+            return;
+        }
+
+        var profileHash = profile != null
+            ? $"{profile.Species.Id}:{profile.Sex}:{profile.Appearance.SkinColor.ToHex()}:{profile.Appearance.EyeColor.ToHex()}:{profile.Appearance.Markings.Count}"
+            : "default";
+        var sig = $"{_cachedKey}|{_cachedName}|{_cachedSpecies}|{_cachedGender}|{_cachedAge}|{_cachedJobProto}|{IsHeadshot}|{WearPrisonAttire}|{profileHash}";
+        if (sig == _lastSignature && _entMan.EntityExists(PreviewDummy))
+            return;
+
+        RebuildPreviewEntity(sig);
+    }
+
+    public void ClearPreview()
+    {
+        _lastSignature = string.Empty;
+        EquippedJumpsuitPrototype = null;
+        EquippedShoesPrototype = null;
+
+        for (var i = 0; i < _spawnedEquipment.Count; i++)
+        {
+            var eq = _spawnedEquipment[i];
+            if (_entMan.EntityExists(eq))
+                _entMan.DeleteEntity(eq);
+        }
+        _spawnedEquipment.Clear();
+
+        if (_entMan.EntityExists(PreviewDummy))
+            _entMan.DeleteEntity(PreviewDummy);
+
+        PreviewDummy = EntityUid.Invalid;
+    }
+
+    protected override void EnteredTree()
+    {
+        base.EnteredTree();
+
+        if (!string.IsNullOrWhiteSpace(_cachedName) && !_entMan.EntityExists(PreviewDummy))
+        {
+            SetSubject(_cachedKey, _cachedName, _cachedSpecies, _cachedGender, _cachedAge, _cachedJobProto, _cachedProfile);
+        }
+    }
+
+    protected override void ExitedTree()
+    {
+        base.ExitedTree();
+        ClearPreview();
+    }
+
+    private void RebuildPreviewEntity(string signature)
+    {
+        ClearPreview();
+        _lastSignature = signature;
+
+        var validSpecies = _proto.HasIndex<SpeciesPrototype>(_cachedSpecies)
+            ? new ProtoId<SpeciesPrototype>(_cachedSpecies)
+            : HumanoidCharacterProfile.DefaultSpecies;
+
+        var parsedSex = _cachedGender.Equals("Female", StringComparison.OrdinalIgnoreCase)
+            ? Sex.Female
+            : Sex.Male;
+
+        HumanoidCharacterProfile resolvedProfile;
+        if (_cachedProfile != null)
+        {
+            resolvedProfile = new HumanoidCharacterProfile(_cachedProfile)
+            {
+                Name = _cachedName,
+                Age = _cachedAge
+            };
+            if (!_proto.HasIndex<SpeciesPrototype>(resolvedProfile.Species))
+                resolvedProfile.Species = validSpecies;
+        }
+        else
+        {
+            resolvedProfile = HumanoidCharacterProfile.DefaultWithSpecies(validSpecies, parsedSex);
+            resolvedProfile.Name = _cachedName;
+            resolvedProfile.Age = _cachedAge;
+        }
+
+        var speciesProto = _proto.Index(resolvedProfile.Species);
+        PreviewDummy = _entMan.SpawnEntity(speciesProto.DollPrototype, MapCoordinates.Nullspace);
+        _entMan.System<MetaDataSystem>().SetEntityName(PreviewDummy, _cachedName);
+        _entMan.System<SharedVisualBodySystem>().ApplyProfileTo(PreviewDummy, resolvedProfile);
+
+        var invSys = _entMan.System<InventorySystem>();
+
+        if (WearPrisonAttire)
+        {
+            // Security Records full-body mugshot: subject wears a gray jumpsuit and black shoes.
+            if (invSys.TryUnequip(PreviewDummy, "jumpsuit", out var oldSuit, silent: true, force: true, reparent: false))
+                _entMan.DeleteEntity(oldSuit.Value);
+            if (invSys.TryUnequip(PreviewDummy, "shoes", out var oldShoes, silent: true, force: true, reparent: false))
+                _entMan.DeleteEntity(oldShoes.Value);
+
+            if (_proto.HasIndex<EntityPrototype>(PrisonJumpsuitProtoId))
+            {
+                var suit = _entMan.SpawnEntity(PrisonJumpsuitProtoId, MapCoordinates.Nullspace);
+                _spawnedEquipment.Add(suit);
+                if (invSys.TryEquip(PreviewDummy, suit, "jumpsuit", silent: true, force: true))
+                    EquippedJumpsuitPrototype = PrisonJumpsuitProtoId;
+            }
+
+            if (_proto.HasIndex<EntityPrototype>(PrisonShoesProtoId))
+            {
+                var shoes = _entMan.SpawnEntity(PrisonShoesProtoId, MapCoordinates.Nullspace);
+                _spawnedEquipment.Add(shoes);
+                if (invSys.TryEquip(PreviewDummy, shoes, "shoes", silent: true, force: true))
+                    EquippedShoesPrototype = PrisonShoesProtoId;
+            }
+        }
+        else if (IsHeadshot && !string.IsNullOrWhiteSpace(_cachedJobProto) &&
+                 _proto.TryIndex<JobPrototype>(_cachedJobProto, out var jobProto) &&
+                 _proto.Resolve(jobProto.StartingGear, out var gear))
+        {
+            var suitProto = ((IEquipmentLoadout) gear).GetGear("jumpsuit");
+            if (!string.IsNullOrEmpty(suitProto) && _proto.HasIndex<EntityPrototype>(suitProto))
+            {
+                var suit = _entMan.SpawnEntity(suitProto, MapCoordinates.Nullspace);
+                _spawnedEquipment.Add(suit);
+                if (invSys.TryEquip(PreviewDummy, suit, "jumpsuit", silent: true, force: true))
+                    EquippedJumpsuitPrototype = suitProto;
+            }
+        }
+
+        InvalidateMeasure();
+    }
+
+    protected override void Draw(IRenderHandle renderHandle)
+    {
+        base.Draw(renderHandle);
+
+        var screen = renderHandle.DrawingHandleScreen;
+        var bg = WearPrisonAttire ? Color.FromHex("#1A131A") : Color.FromHex("#0A1724");
+        var border = WearPrisonAttire ? Color.FromHex("#7E3240") : Color.FromHex("#245C7E");
+        var rect = new UIBox2(Vector2.Zero, PixelSize);
+        screen.DrawRect(rect, bg);
+
+        // Subtle mugshot height lines or ID headshot backdrop grid
+        var lineColor = WearPrisonAttire ? Color.FromHex("#331D26") : Color.FromHex("#122B3F");
+        for (var y = 16; y < (int) PixelSize.Y; y += 16)
+        {
+            screen.DrawLine(new Vector2(2f, y), new Vector2(PixelSize.X - 2f, y), lineColor);
+        }
+
+        if (_entMan.EntityExists(PreviewDummy) &&
+            _entMan.TryGetComponent(PreviewDummy, out SpriteComponent? sprite) &&
+            _entMan.TryGetComponent(PreviewDummy, out TransformComponent? xform))
+        {
+            _spriteSystem ??= _entMan.System<SpriteSystem>();
+            _transformSystem ??= _entMan.System<TransformSystem>();
+            _spriteSystem.ForceUpdate(PreviewDummy);
+
+            Vector2 drawPos;
+            Vector2 drawScale;
+
+            if (IsHeadshot)
+            {
+                // Zoom in on the head & upper collar and crop below the shoulders.
+                var s = MathF.Min(PixelSize.X, PixelSize.Y) / 18f;
+                drawScale = new Vector2(s, s);
+                drawPos = new Vector2(PixelSize.X * 0.5f, PixelSize.Y * 0.84f);
+            }
+            else
+            {
+                // Full-body photo showing the entire subject from head to black shoes.
+                var s = MathF.Min(PixelSize.X, PixelSize.Y) / 38f;
+                drawScale = new Vector2(s, s);
+                drawPos = new Vector2(PixelSize.X * 0.5f, PixelSize.Y * 0.52f);
+            }
+
+            renderHandle.DrawEntity(
+                PreviewDummy,
+                drawPos,
+                drawScale,
+                Angle.Zero,
+                Angle.Zero,
+                Direction.South,
+                sprite,
+                xform,
+                _transformSystem);
+        }
+
+        // Outer photo frame border
+        screen.DrawRect(new UIBox2(0, 0, PixelSize.X, 1), border);
+        screen.DrawRect(new UIBox2(0, PixelSize.Y - 1, PixelSize.X, PixelSize.Y), border);
+        screen.DrawRect(new UIBox2(0, 0, 1, PixelSize.Y), border);
+        screen.DrawRect(new UIBox2(PixelSize.X - 1, 0, PixelSize.X, PixelSize.Y), border);
+    }
+}
 
 // =============================================================================
 // STATION RECORDS MANAGER UI (/bin/station_records.nte)
@@ -22,6 +298,8 @@ public sealed class StationRecordsUiControl : ProgramUiControl
     private readonly ContentLineEdit _searchEdit;
     private readonly ContentBoxContainer _listContainer;
 
+    private readonly RecordSubjectPhotoControl _headshotPhoto;
+    private readonly ContentLabel _headshotCaptionLabel;
     private readonly ContentLineEdit _nameEdit;
     private readonly ContentLineEdit _jobEdit;
     private readonly ContentLineEdit _ageEdit;
@@ -36,6 +314,8 @@ public sealed class StationRecordsUiControl : ProgramUiControl
 
     private StationRecordsUiState? _lastState;
     private string _loadedKey = string.Empty;
+
+    public RecordSubjectPhotoControl HeadshotControl => _headshotPhoto;
 
     public StationRecordsUiControl()
     {
@@ -144,7 +424,43 @@ public sealed class StationRecordsUiControl : ProgramUiControl
             SeparationOverride = 5
         };
 
-        ContentLineEdit MakeField(string label, string ctrlName, string placeholder)
+        // Top row of dossier: Subject Headshot + Name / Job / Age fields
+        var dossierTopRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 10
+        };
+
+        var headshotColumn = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            SeparationOverride = 3,
+            HorizontalAlignment = HAlignment.Center
+        };
+        _headshotPhoto = new RecordSubjectPhotoControl(isHeadshot: true, wearPrisonAttire: false)
+        {
+            Name = "StationRecordsHeadshotPhoto"
+        };
+        _headshotCaptionLabel = new ContentLabel
+        {
+            Name = "StationRecordsHeadshotCaption",
+            Text = "ID HEADSHOT",
+            FontColorOverride = Color.FromHex("#66B8DD"),
+            HorizontalAlignment = HAlignment.Center
+        };
+        headshotColumn.AddChild(_headshotPhoto);
+        headshotColumn.AddChild(_headshotCaptionLabel);
+        dossierTopRow.AddChild(headshotColumn);
+
+        var primaryFieldsCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
+        ContentLineEdit MakeFieldIn(ContentBoxContainer targetBox, string label, string ctrlName, string placeholder)
         {
             var row = new ContentBoxContainer
             {
@@ -168,17 +484,21 @@ public sealed class StationRecordsUiControl : ProgramUiControl
                 MinHeight = 25f
             };
             row.AddChild(edit);
-            form.AddChild(row);
+            targetBox.AddChild(row);
             return edit;
         }
 
-        _nameEdit = MakeField("Name:", "StationRecordsNameEdit", "Crewmember full name");
-        _jobEdit = MakeField("Job Title:", "StationRecordsJobEdit", "Job title");
-        _ageEdit = MakeField("Age:", "StationRecordsAgeEdit", "25");
-        _speciesEdit = MakeField("Species:", "StationRecordsSpeciesEdit", "Human");
-        _genderEdit = MakeField("Gender:", "StationRecordsGenderEdit", "Epicene");
-        _fingerprintEdit = MakeField("Fingerprint:", "StationRecordsFingerprintEdit", "Fingerprint hash");
-        _dnaEdit = MakeField("DNA:", "StationRecordsDnaEdit", "DNA hash");
+        _nameEdit = MakeFieldIn(primaryFieldsCol, "Name:", "StationRecordsNameEdit", "Crewmember full name");
+        _jobEdit = MakeFieldIn(primaryFieldsCol, "Job Title:", "StationRecordsJobEdit", "Job title");
+        _ageEdit = MakeFieldIn(primaryFieldsCol, "Age:", "StationRecordsAgeEdit", "25");
+
+        dossierTopRow.AddChild(primaryFieldsCol);
+        form.AddChild(dossierTopRow);
+
+        _speciesEdit = MakeFieldIn(form, "Species:", "StationRecordsSpeciesEdit", "Human");
+        _genderEdit = MakeFieldIn(form, "Gender:", "StationRecordsGenderEdit", "Epicene");
+        _fingerprintEdit = MakeFieldIn(form, "Fingerprint:", "StationRecordsFingerprintEdit", "Fingerprint hash");
+        _dnaEdit = MakeFieldIn(form, "DNA:", "StationRecordsDnaEdit", "DNA hash");
 
         _crimStatusLabel = new ContentLabel
         {
@@ -267,11 +587,20 @@ public sealed class StationRecordsUiControl : ProgramUiControl
             _crimStatusLabel.FontColorOverride = selected.CriminalStatus.Equals("None", StringComparison.OrdinalIgnoreCase)
                 ? Color.FromHex("#66EEAA")
                 : Color.FromHex("#FF7A7A");
+            _headshotPhoto.SetSubject(
+                selected.Key,
+                selected.Name,
+                selected.Species,
+                selected.Gender,
+                selected.Age,
+                selected.JobPrototype,
+                selected.CharacterProfile);
         }
         else
         {
             _loadedKey = string.Empty;
             _crimStatusLabel.Text = "Security Status: --";
+            _headshotPhoto.ClearPreview();
         }
     }
 
@@ -328,6 +657,8 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
     private readonly ContentLineEdit _searchEdit;
     private readonly ContentBoxContainer _listContainer;
 
+    private readonly RecordSubjectPhotoControl _subjectPhoto;
+    private readonly ContentLabel _subjectPhotoCaption;
     private readonly ContentLabel _selectedNameLabel;
     private readonly ContentLabel _selectedStatusBadge;
     private readonly Dictionary<SecurityStatus, ContentButton> _statusButtons = new();
@@ -341,6 +672,8 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
     private SecurityStatus? _statusFilter;
     private SecurityStatus _pendingStatus = SecurityStatus.None;
     private string _selectedKey = string.Empty;
+
+    public RecordSubjectPhotoControl SubjectPhotoControl => _subjectPhoto;
 
     public CriminalRecordsUiControl()
     {
@@ -464,6 +797,42 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             SeparationOverride = 6
         };
 
+        // Subject mugshot row: full-body photo in gray jumpsuit & black shoes + subject details & status controls
+        var subjectTopRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 10
+        };
+
+        var mugshotCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            SeparationOverride = 3,
+            HorizontalAlignment = HAlignment.Center
+        };
+        _subjectPhoto = new RecordSubjectPhotoControl(isHeadshot: false, wearPrisonAttire: true)
+        {
+            Name = "CriminalRecordsSubjectPhoto"
+        };
+        _subjectPhotoCaption = new ContentLabel
+        {
+            Name = "CriminalRecordsSubjectPhotoCaption",
+            Text = "SUBJECT PHOTO",
+            FontColorOverride = Color.FromHex("#E08899"),
+            HorizontalAlignment = HAlignment.Center
+        };
+        mugshotCol.AddChild(_subjectPhoto);
+        mugshotCol.AddChild(_subjectPhotoCaption);
+        subjectTopRow.AddChild(mugshotCol);
+
+        var subjectInfoCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
         _selectedNameLabel = new ContentLabel
         {
             Name = "CriminalSelectedNameLabel",
@@ -478,8 +847,8 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             FontColorOverride = Color.FromHex("#66EEAA"),
             HorizontalExpand = true
         };
-        rightBox.AddChild(_selectedNameLabel);
-        rightBox.AddChild(_selectedStatusBadge);
+        subjectInfoCol.AddChild(_selectedNameLabel);
+        subjectInfoCol.AddChild(_selectedStatusBadge);
 
         var statusBtnRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         foreach (var status in Enum.GetValues<SecurityStatus>())
@@ -499,7 +868,7 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             _statusButtons[status] = btn;
             statusBtnRow.AddChild(btn);
         }
-        rightBox.AddChild(statusBtnRow);
+        subjectInfoCol.AddChild(statusBtnRow);
 
         var reasonRow = new ContentBoxContainer
         {
@@ -533,7 +902,10 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
         };
         reasonRow.AddChild(_reasonEdit);
         reasonRow.AddChild(_applyStatusBtn);
-        rightBox.AddChild(reasonRow);
+        subjectInfoCol.AddChild(reasonRow);
+
+        subjectTopRow.AddChild(subjectInfoCol);
+        rightBox.AddChild(subjectTopRow);
 
         rightBox.AddChild(new ContentLabel
         {
@@ -621,6 +993,7 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             _selectedKey = string.Empty;
             _selectedNameLabel.Text = "No criminal records found.";
             _selectedStatusBadge.Text = "Status: --";
+            _subjectPhoto.ClearPreview();
             return;
         }
 
@@ -633,6 +1006,14 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
         _selectedStatusBadge.Text = $"Status: {sel.Status}{reasonSuffix}";
         _selectedStatusBadge.FontColorOverride = GetStatusColor(sel.Status);
         _reasonEdit.Text = sel.Reason;
+        _subjectPhoto.SetSubject(
+            sel.Key,
+            sel.Name,
+            sel.Species,
+            sel.Gender,
+            sel.Age,
+            string.Empty,
+            sel.CharacterProfile);
 
         if (sel.History.Count == 0)
         {

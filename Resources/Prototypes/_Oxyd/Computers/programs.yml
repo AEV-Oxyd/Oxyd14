@@ -489,3 +489,79 @@
     interfaces:
       enum.ProgramUiKey.Key:
         type: SurveillanceCameraProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CargoOrdersProgram
+  name: cargo orders & bank manager
+  description: Authenticates station bank accounts via Account ID and PIN to withdraw funds and place or approve cargo supply orders.
+  components:
+  - type: Program
+    title: "Cargo Orders"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-y
+  - type: CargoOrdersProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CargoOrdersProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CrewMonitorProgram
+  name: crew suit sensor monitor
+  description: Displays live crew suit sensor vitals and coordinates across the station.
+  components:
+  - type: Program
+    title: "Crew Monitor"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: crew_monitor
+  - type: CrewMonitorProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CrewMonitorProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CommsConsoleProgram
+  name: station communications console
+  description: Broadcasts station-wide announcements and manages station alert levels.
+  components:
+  - type: Program
+    title: "Communications"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: comms_console
+  - type: CommsConsoleProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CommsConsoleProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: SolarControlProgram
+  name: solar array tracking controller
+  description: Monitors solar power generation and adjusts solar array angle and tracking velocity.
+  components:
+  - type: Program
+    title: "Solar Control"
+    ramUsageMb: 8
+    cpuUsagePercent: 1.5
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: storage
+  - type: SolarControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SolarControlProgramBui

@@ -44,6 +44,34 @@ public sealed partial class StationBankAccountComponent : Component
     };
 
     /// <summary>
+    /// Bank account ID codes for each station account used to authenticate cargo orders and withdrawals.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public Dictionary<ProtoId<CargoAccountPrototype>, string> AccountIds = new()
+    {
+        { "Cargo",       "CARGO-01" },
+        { "Engineering", "ENG-02" },
+        { "Medical",     "MED-03" },
+        { "Science",     "SCI-04" },
+        { "Security",    "SEC-05" },
+        { "Service",     "SRV-06" },
+    };
+
+    /// <summary>
+    /// PIN codes for each station bank account required to authenticate and withdraw money during cargo orders.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public Dictionary<ProtoId<CargoAccountPrototype>, string> AccountPins = new()
+    {
+        { "Cargo",       "1111" },
+        { "Engineering", "2222" },
+        { "Medical",     "3333" },
+        { "Science",     "4444" },
+        { "Security",    "5555" },
+        { "Service",     "6666" },
+    };
+
+    /// <summary>
     /// A baseline distribution used for income and dispersing leftovers after sale.
     /// </summary>
     [DataField, AutoNetworkedField]

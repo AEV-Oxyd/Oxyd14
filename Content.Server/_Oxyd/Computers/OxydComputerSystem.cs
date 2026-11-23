@@ -275,6 +275,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
         return _ui.HasUi(compUid, PdaUiKey.Key) ? PdaUiKey.Key : ComputerUiKey.Key;
     }
 
+    private readonly HashSet<EntityUid> _bindingHosts = new();
+
     public bool EnsureComputerBoundToHost(Entity<EmbeddedComputerHostComponent> host, out EntityUid compUid)
     {
         if (host.Comp.ComputerEntity is { } existing && Exists(existing))
@@ -283,16 +285,25 @@ public sealed partial class OxydComputerSystem : EntitySystem
             return true;
         }
 
-        var slot = _container.EnsureContainer<ContainerSlot>(host.Owner, EmbeddedComputerHostComponent.ContainerBoard);
-        if (slot.ContainedEntity is { } contained && Exists(contained))
+        // Guard against re-entrant binding (e.g. remote APC discovery running while this host's computer boots).
+        if (!_bindingHosts.Add(host.Owner))
         {
-            compUid = contained;
+            compUid = default;
+            return false;
         }
-        else
+
+        try
         {
-            compUid = Spawn(host.Comp.ComputerPrototype, Transform(host.Owner).Coordinates);
-            _container.Insert(compUid, slot);
-        }
+            var slot = _container.EnsureContainer<ContainerSlot>(host.Owner, EmbeddedComputerHostComponent.ContainerBoard);
+            if (slot.ContainedEntity is { } contained && Exists(contained))
+            {
+                compUid = contained;
+            }
+            else
+            {
+                compUid = Spawn(host.Comp.ComputerPrototype, Transform(host.Owner).Coordinates);
+                _container.Insert(compUid, slot);
+            }
 
         host.Comp.ComputerEntity = compUid;
         Dirty(host.Owner, host.Comp);
@@ -334,6 +345,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         return true;
+        }
+        finally
+        {
+            _bindingHosts.Remove(host.Owner);
+        }
     }
 
     /// <summary>

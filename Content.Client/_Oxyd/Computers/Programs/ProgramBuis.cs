@@ -30,3 +30,7 @@ public sealed class NetworkCoreOsProgramBui(EntityUid owner, Enum uiKey) : Progr
 public sealed class StationRecordsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<StationRecordsUiControl>(owner, uiKey);
 public sealed class CriminalRecordsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CriminalRecordsUiControl>(owner, uiKey);
 public sealed class SurveillanceCameraProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SurveillanceCameraUiControl>(owner, uiKey);
+public sealed class CargoOrdersProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CargoOrdersUiControl>(owner, uiKey);
+public sealed class CrewMonitorProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CrewMonitorUiControl>(owner, uiKey);
+public sealed class CommsConsoleProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CommsConsoleUiControl>(owner, uiKey);
+public sealed class SolarControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SolarControlUiControl>(owner, uiKey);

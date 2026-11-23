@@ -220,6 +220,95 @@ public abstract partial class SharedCargoSystem : EntitySystem
 
         Dirty(ent);
     }
+
+    /// <summary>
+    /// Authenticates a Bank Account ID + PIN against <see cref="StationBankAccountComponent"/>.
+    /// Accepts either the account's assigned AccountId (e.g. "CARGO-01", "ENG-02") or the account prototype ID
+    /// (e.g. "Cargo", "Engineering").
+    /// </summary>
+    public bool TryAuthenticateBankAccount(
+        Entity<StationBankAccountComponent?> station,
+        string? rawAccountId,
+        string? rawPin,
+        out ProtoId<CargoAccountPrototype> matchedAccount,
+        out string resolvedAccountId,
+        out int balance)
+    {
+        matchedAccount = default;
+        resolvedAccountId = string.Empty;
+        balance = 0;
+
+        if (!Resolve(station, ref station.Comp) || station.Comp == null)
+            return false;
+
+        var cleanId = (rawAccountId ?? string.Empty).Trim();
+        var cleanPin = (rawPin ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(cleanId) || string.IsNullOrEmpty(cleanPin))
+            return false;
+
+        foreach (var (accountProto, curBalance) in station.Comp.Accounts)
+        {
+            var expectedId = station.Comp.AccountIds.TryGetValue(accountProto, out var mappedId)
+                ? mappedId
+                : accountProto.Id;
+            var idMatches = string.Equals(cleanId, expectedId, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(cleanId, accountProto.Id, StringComparison.OrdinalIgnoreCase);
+            if (!idMatches)
+                continue;
+
+            var expectedPin = station.Comp.AccountPins.TryGetValue(accountProto, out var mappedPin)
+                ? mappedPin
+                : "1111";
+            if (!string.Equals(cleanPin, expectedPin, StringComparison.Ordinal))
+                return false;
+
+            matchedAccount = accountProto;
+            resolvedAccountId = expectedId;
+            balance = curBalance;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the public bank account id string for a cargo account.
+    /// </summary>
+    public string GetAccountIdentifier(Entity<StationBankAccountComponent> station, ProtoId<CargoAccountPrototype> account)
+    {
+        return station.Comp.AccountIds.TryGetValue(account, out var mapped) ? mapped : account.Id;
+    }
+
+    /// <summary>
+    /// Authenticates a Bank Account ID + PIN and withdraws <paramref name="amount"/> directly from that account.
+    /// </summary>
+    public bool TryWithdrawFromAuthenticatedAccount(
+        Entity<StationBankAccountComponent?> station,
+        string? rawAccountId,
+        string? rawPin,
+        int amount,
+        out ProtoId<CargoAccountPrototype> matchedAccount,
+        out string resolvedAccountId,
+        out int remainingBalance)
+    {
+        remainingBalance = 0;
+        matchedAccount = default;
+        resolvedAccountId = string.Empty;
+        if (amount < 0 || !TryAuthenticateBankAccount(station, rawAccountId, rawPin, out matchedAccount, out resolvedAccountId, out var curBalance))
+            return false;
+
+        if (curBalance < amount)
+        {
+            remainingBalance = curBalance;
+            return false;
+        }
+
+        if (amount > 0)
+            UpdateBankAccount(station, -amount, matchedAccount);
+
+        remainingBalance = GetBalanceFromAccount(station, matchedAccount);
+        return true;
+    }
 }
 
 [NetSerializable, Serializable]

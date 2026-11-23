@@ -31,6 +31,9 @@ public sealed partial class AccessEncoderProgramComponent : Component
     [DataField]
     public List<ProtoId<AccessLevelPrototype>> ScannedAccessTags = new();
 
+    [ViewVariables]
+    public EntityUid? LastScannedCardUid;
+
     [DataField]
     public string? SelectedFilePath;
 
@@ -39,6 +42,43 @@ public sealed partial class AccessEncoderProgramComponent : Component
 
     [DataField]
     public SoundSpecifier? SoundScan = new SoundPathSpecifier("/Audio/Machines/scan_finish.ogg");
+
+    [DataField]
+    public List<ProtoId<AccessLevelPrototype>> AccessLevels = new()
+    {
+        "Armory",
+        "Atmospherics",
+        "Bar",
+        "Brig",
+        "Detective",
+        "Captain",
+        "Cargo",
+        "Chapel",
+        "Chemistry",
+        "ChiefEngineer",
+        "ChiefMedicalOfficer",
+        "Command",
+        "Cryogenics",
+        "Engineering",
+        "External",
+        "GenpopEnter",
+        "GenpopLeave",
+        "HeadOfPersonnel",
+        "HeadOfSecurity",
+        "Hydroponics",
+        "Janitor",
+        "Kitchen",
+        "Lawyer",
+        "Maintenance",
+        "Medical",
+        "Quartermaster",
+        "Research",
+        "ResearchDirector",
+        "Salvage",
+        "Security",
+        "Service",
+        "Theatre",
+    };
 }
 
 [Serializable, NetSerializable]
@@ -80,6 +120,20 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
     public string? SelectedFileSummary { get; }
     public string StatusMessage { get; }
 
+    // ID Modification / Authorization Console fields
+    public bool HasPrivilegedAuth { get; }
+    public string PrivilegedAuthLabel { get; }
+    public List<string> AllowedAccessTags { get; }
+    public bool HasTargetCard { get; }
+    public string TargetCardLabel { get; }
+    public string TargetFullName { get; }
+    public string TargetJobTitle { get; }
+    public List<string> TargetAccessTags { get; }
+    public List<string> ConsoleAccessLevels { get; }
+    public bool HasHostIdSlots { get; }
+    public bool HasPrivilegedSlotCard { get; }
+    public bool HasTargetSlotCard { get; }
+
     public AccessEncoderUiState(
         bool hasHardDrive,
         bool hasSourceCard,
@@ -91,7 +145,19 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         List<AccessCodeFileEntryDto> savedFiles,
         string? selectedFilePath,
         string? selectedFileSummary,
-        string statusMessage)
+        string statusMessage,
+        bool hasPrivilegedAuth = false,
+        string privilegedAuthLabel = "None",
+        List<string>? allowedAccessTags = null,
+        bool hasTargetCard = false,
+        string targetCardLabel = "None",
+        string targetFullName = "",
+        string targetJobTitle = "",
+        List<string>? targetAccessTags = null,
+        List<string>? consoleAccessLevels = null,
+        bool hasHostIdSlots = false,
+        bool hasPrivilegedSlotCard = false,
+        bool hasTargetSlotCard = false)
     {
         HasHardDrive = hasHardDrive;
         HasSourceCard = hasSourceCard;
@@ -104,6 +170,18 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         SelectedFilePath = selectedFilePath;
         SelectedFileSummary = selectedFileSummary;
         StatusMessage = statusMessage;
+        HasPrivilegedAuth = hasPrivilegedAuth;
+        PrivilegedAuthLabel = privilegedAuthLabel;
+        AllowedAccessTags = allowedAccessTags ?? new List<string>();
+        HasTargetCard = hasTargetCard;
+        TargetCardLabel = targetCardLabel;
+        TargetFullName = targetFullName;
+        TargetJobTitle = targetJobTitle;
+        TargetAccessTags = targetAccessTags ?? new List<string>();
+        ConsoleAccessLevels = consoleAccessLevels ?? new List<string>();
+        HasHostIdSlots = hasHostIdSlots;
+        HasPrivilegedSlotCard = hasPrivilegedSlotCard;
+        HasTargetSlotCard = hasTargetSlotCard;
     }
 }
 
@@ -114,7 +192,14 @@ public enum AccessEncoderAction : byte
     Refresh,
     ClearScanned,
     SelectFile,
-    DeleteFile
+    DeleteFile,
+    TogglePrivilegedSlot,
+    ToggleTargetSlot,
+    WriteTargetIdentity,
+    ToggleTargetAccessTag,
+    ApplyAccFileToTarget,
+    GrantAllAllowedAccess,
+    RevokeAllAllowedAccess
 }
 
 [Serializable, NetSerializable]
@@ -122,10 +207,15 @@ public sealed class AccessEncoderActionMessage : BoundUserInterfaceMessage
 {
     public AccessEncoderAction Action { get; }
     public string Argument { get; }
+    public string SecondaryArgument { get; }
 
-    public AccessEncoderActionMessage(AccessEncoderAction action, string argument = "")
+    public AccessEncoderActionMessage(
+        AccessEncoderAction action,
+        string argument = "",
+        string secondaryArgument = "")
     {
         Action = action;
         Argument = argument;
+        SecondaryArgument = secondaryArgument;
     }
 }

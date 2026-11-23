@@ -13,6 +13,7 @@ using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.CriminalRecords;
 using Content.Shared.Lock;
+using Content.Shared.Preferences;
 using Content.Shared.Security;
 using Content.Shared.StationRecords;
 using Content.Shared.StationRecords.Systems;
@@ -346,6 +347,8 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         var stationName = "Unknown Station";
         var entries = new List<StationRecordEntryDto>();
         TimeSpan? ts = null;
+        var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
+        var liveProfilesByName = BuildCharacterProfileLookup(station);
 
         // Cross-reference cached criminal status by name if available on local drive.
         var crimStatusByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -376,7 +379,22 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 var firstCol = v.Split('\t')[0];
                 var crimStatus = crimStatusByName.TryGetValue(firstCol, out var st) ? st : "None";
                 if (RecordsDbCodec.TryDecodeStationRecordRow(k, v, crimStatus, out var dto))
-                    entries.Add(dto);
+                {
+                    liveProfilesByName.TryGetValue(dto.Name, out var profile);
+                    entries.Add(new StationRecordEntryDto(
+                        dto.Key,
+                        dto.Name,
+                        dto.JobTitle,
+                        dto.JobPrototype,
+                        dto.JobIcon,
+                        dto.Age,
+                        dto.Species,
+                        dto.Gender,
+                        dto.Fingerprint,
+                        dto.Dna,
+                        dto.CriminalStatus,
+                        profile));
+                }
             }
         }
 
@@ -673,6 +691,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
 
         var entries = new List<CriminalRecordEntryDto>();
         TimeSpan? ts = null;
+        var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
+        var liveProfilesByName = BuildCharacterProfileLookup(station);
+        var bioByName = BuildStationRecordBioLookup(compUid, station, driveUid, fs);
 
         if (driveUid != null && fs != null &&
             _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, CriminalRecordsProgramComponent.CacheFilePath, out var db, fs))
@@ -683,7 +704,25 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 if (!k.StartsWith("crim_"))
                     continue;
                 if (RecordsDbCodec.TryDecodeCriminalRecordRow(k, v, out var dto))
-                    entries.Add(dto);
+                {
+                    liveProfilesByName.TryGetValue(dto.Name, out var profile);
+                    var (species, gender, age) = bioByName.TryGetValue(dto.Name, out var bio)
+                        ? bio
+                        : (profile?.Species.Id ?? "Human", profile?.Gender.ToString() ?? "Epicene", profile?.Age ?? 25);
+
+                    entries.Add(new CriminalRecordEntryDto(
+                        dto.Key,
+                        dto.Name,
+                        dto.JobTitle,
+                        dto.Status,
+                        dto.Reason,
+                        dto.Initiator,
+                        dto.History,
+                        species,
+                        gender,
+                        age,
+                        profile));
+                }
             }
         }
 
@@ -731,6 +770,65 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     // =========================================================================
     // HELPERS
     // =========================================================================
+
+    private Dictionary<string, HumanoidCharacterProfile> BuildCharacterProfileLookup(EntityUid station)
+    {
+        var map = new Dictionary<string, HumanoidCharacterProfile>(StringComparer.OrdinalIgnoreCase);
+        if (station == EntityUid.Invalid || !Exists(station))
+            return map;
+
+        foreach (var (_, gen) in _stationRecords.GetRecordsOfType<GeneralStationRecord>(station))
+        {
+            if (string.IsNullOrWhiteSpace(gen.Name) || gen.CharacterProfile == null)
+                continue;
+
+            map[gen.Name] = new HumanoidCharacterProfile(gen.CharacterProfile);
+        }
+
+        return map;
+    }
+
+    private Dictionary<string, (string Species, string Gender, int Age)> BuildStationRecordBioLookup(
+        EntityUid compUid,
+        EntityUid station,
+        EntityUid? driveUid,
+        FileSystemComponent? fs)
+    {
+        var map = new Dictionary<string, (string Species, string Gender, int Age)>(StringComparer.OrdinalIgnoreCase);
+        if (station != EntityUid.Invalid && Exists(station))
+        {
+            foreach (var (_, gen) in _stationRecords.GetRecordsOfType<GeneralStationRecord>(station))
+            {
+                if (!string.IsNullOrWhiteSpace(gen.Name))
+                    map[gen.Name] = (string.IsNullOrWhiteSpace(gen.Species) ? "Human" : gen.Species, gen.Gender.ToString(), gen.Age);
+            }
+        }
+
+        if (driveUid != null && fs != null &&
+            _fileSystem.TryGetFile<DatabaseVirtualFile>(driveUid.Value, StationRecordsProgramComponent.CacheFilePath, out var localDb, fs))
+        {
+            foreach (var (k, v) in localDb.Data)
+            {
+                if (!k.StartsWith("rec_"))
+                    continue;
+                if (RecordsDbCodec.TryDecodeStationRecordRow(k, v, "None", out var stDto) && !string.IsNullOrWhiteSpace(stDto.Name))
+                    map[stDto.Name] = (stDto.Species, stDto.Gender, stDto.Age);
+            }
+        }
+        else if (station != EntityUid.Invalid &&
+                 _dataServer.TryGetLocalRecordCopyFromHost(compUid, "StationRecordsService", StationRecordsProgramComponent.CacheFilePath, station, out _, out var hostStDb, out _))
+        {
+            foreach (var (k, v) in hostStDb.Data)
+            {
+                if (!k.StartsWith("rec_"))
+                    continue;
+                if (RecordsDbCodec.TryDecodeStationRecordRow(k, v, "None", out var stDto) && !string.IsNullOrWhiteSpace(stDto.Name))
+                    map[stDto.Name] = (stDto.Species, stDto.Gender, stDto.Age);
+            }
+        }
+
+        return map;
+    }
 
     private bool CanModifyStationRecords(EntityUid compUid, EntityUid? actor)
     {

@@ -1,3 +1,4 @@
+using Content.Shared.Preferences;
 using Robust.Shared.Enums;
 using Robust.Shared.Serialization;
 
@@ -67,4 +68,10 @@ public sealed partial record GeneralStationRecord : StationRecord
     /// </summary>
     [DataField]
     public string? DNA;
+
+    /// <summary>
+    ///     Visual character profile snapshot used for record portraits and security mugshots.
+    /// </summary>
+    [DataField]
+    public HumanoidCharacterProfile? CharacterProfile;
 }

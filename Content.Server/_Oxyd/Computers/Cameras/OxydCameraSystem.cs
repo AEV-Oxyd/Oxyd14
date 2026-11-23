@@ -7,8 +7,11 @@ using Content.Server.SurveillanceCamera.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Cameras;
 using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Access.Components;
+using Content.Shared.Access.Systems;
 using Content.Shared.CombatMode;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Damage.Components;
@@ -18,10 +21,12 @@ using Content.Shared.Emp;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
 using Content.Shared.Mobs.Components;
+using Content.Shared.PDA;
 using Content.Shared.Popups;
 using Content.Shared.Power;
 using Content.Shared.Speech;
 using Content.Shared.Speech.Components;
+using Content.Shared.StationRecords;
 using Content.Shared.SurveillanceCamera.Components;
 using Content.Shared.Throwing;
 using Content.Shared.Verbs;
@@ -54,6 +59,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private ExamineSystemShared _examine = default!;
+    [Dependency] private AccessReaderSystem _accessReader = default!;
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
@@ -66,6 +72,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
     [Dependency] private EntityQuery<ApcPowerReceiverComponent> _powerQuery = default!;
     [Dependency] private EntityQuery<EmpDisabledComponent> _empQuery = default!;
     [Dependency] private EntityQuery<WiresPanelComponent> _panelQuery = default!;
+    [Dependency] private EntityQuery<IdCardComponent> _idCardQuery = default!;
 
     private const float CameraWifiRange = 512f;
     private const float CameraWitnessLookupRange = 12f;
@@ -75,6 +82,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
     private const int MaxLiveAudioLines = 12;
 
     private static readonly SoundPathSpecifier DiskDumpSound = new("/Audio/Machines/terminal_insert_disc.ogg");
+    private static readonly SoundPathSpecifier AuthSwipeSound = new("/Audio/Machines/id_swipe.ogg");
 
     public override void Initialize()
     {
@@ -755,6 +763,32 @@ public sealed partial class OxydCameraSystem : EntitySystem
             DisconnectAllCameras(ent);
     }
 
+    [SubscribeLocalEvent]
+    private void OnProgramInteractUsing(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
+    {
+        if (relayed.Args.Handled || !TryExtractIdCard(relayed.Args.Used, out var cardUid))
+            return;
+
+        var compUid = relayed.ComputerUid;
+        if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
+        {
+            ent.Comp.IsAuthorized = true;
+            ent.Comp.AuthorizedByLabel = $"Swiped ID ({MetaData(cardUid).EntityName})";
+            ent.Comp.StatusMessage = $"Authorized camera monitoring via {ent.Comp.AuthorizedByLabel}.";
+            _audio.PlayPvs(AuthSwipeSound, relayed.Args.Target);
+            _popup.PopupEntity("Camera monitor authorized.", relayed.Args.Target, relayed.Args.User);
+        }
+        else
+        {
+            ent.Comp.StatusMessage = "Authorization denied: ID card lacks Security/Command camera monitoring clearance.";
+            _popup.PopupEntity("Access denied: insufficient camera monitoring clearance.", relayed.Args.Target, relayed.Args.User);
+        }
+
+        relayed.Args.Handled = true;
+        Dirty(ent);
+        UpdateProgramUi(ent.Owner, compUid, ent.Comp);
+    }
+
     private void OnProgramAction(Entity<SurveillanceCameraProgramComponent> ent, ref SurveillanceCameraActionMessage msg)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
@@ -772,7 +806,46 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 ent.Comp.SelectedZone = string.IsNullOrWhiteSpace(msg.Zone) ? "All" : msg.Zone;
                 break;
 
+            case SurveillanceCameraAction.SelectAccFile:
+                ent.Comp.SelectedAccFilePath = string.IsNullOrWhiteSpace(msg.Zone) ? null : msg.Zone.Trim();
+                break;
+
+            case SurveillanceCameraAction.AuthorizeWithAcc:
+                var reqPath = !string.IsNullOrWhiteSpace(msg.Zone) && !msg.Zone.Equals("All", StringComparison.OrdinalIgnoreCase)
+                    ? msg.Zone.Trim()
+                    : ent.Comp.SelectedAccFilePath;
+                if (!TryFindAccFile(compUid, reqPath, out var accFile))
+                {
+                    ent.Comp.StatusMessage = "Authorization failed: No .acc file found in /keys/.";
+                    break;
+                }
+
+                ent.Comp.SelectedAccFilePath = accFile.FullPath;
+                if (CanAccFileAuthorizeCameras(ent.Comp, compUid, accFile))
+                {
+                    ent.Comp.IsAuthorized = true;
+                    ent.Comp.AuthorizedByLabel = $".acc ({accFile.FullPath})";
+                    ent.Comp.StatusMessage = $"Authorized camera monitoring via {accFile.FullPath}.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = $"Authorization denied: {accFile.FullPath} lacks Security/Command camera monitoring clearance.";
+                }
+                break;
+
+            case SurveillanceCameraAction.RevokeAuth:
+                DisconnectAllCameras(ent);
+                ent.Comp.IsAuthorized = false;
+                ent.Comp.AuthorizedByLabel = string.Empty;
+                ent.Comp.StatusMessage = "Camera monitoring authorization locked.";
+                break;
+
             case SurveillanceCameraAction.SelectCamera:
+                if (!ent.Comp.IsAuthorized)
+                {
+                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    break;
+                }
                 if (msg.CameraEntity is { } camNet && TryGetEntity(camNet, out var camUid) && Exists(camUid.Value))
                     ConnectToCamera(ent, compUid, camUid.Value, msg.Actor);
                 break;
@@ -804,11 +877,21 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 break;
 
             case SurveillanceCameraAction.DownloadLogs:
+                if (!ent.Comp.IsAuthorized)
+                {
+                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    break;
+                }
                 var dlTarget = ResolveTargetCamera(ent, msg.CameraEntity);
                 HandleRemoteDownloadLogs(ent, compUid, dlTarget);
                 break;
 
             case SurveillanceCameraAction.ClearLogs:
+                if (!ent.Comp.IsAuthorized)
+                {
+                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    break;
+                }
                 var clrTarget = ResolveTargetCamera(ent, msg.CameraEntity);
                 if (clrTarget is { } clrCam && _logQuery.TryComp(clrCam, out var clrLog))
                 {
@@ -1110,6 +1193,8 @@ public sealed partial class OxydCameraSystem : EntitySystem
             }
         }
 
+        var accFiles = GetAvailableAccFilePaths(compUid, ref comp.SelectedAccFilePath);
+
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
             _ui.SetUiState(progUid, ProgramUiKey.Key, new SurveillanceCameraUiState(
@@ -1130,13 +1215,133 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 activeLogs,
                 new List<CameraAudioLineDto>(comp.LiveAudioFeed),
                 activeFeeds,
-                SurveillanceCameraProgramComponent.MaxActiveCameras));
+                SurveillanceCameraProgramComponent.MaxActiveCameras,
+                comp.IsAuthorized,
+                comp.AuthorizedByLabel,
+                comp.SelectedAccFilePath,
+                accFiles));
         }
     }
 
     // =========================================================================
     // HELPERS
     // =========================================================================
+
+    private bool TryExtractIdCard(EntityUid used, out EntityUid cardUid)
+    {
+        if (_idCardQuery.HasComp(used))
+        {
+            cardUid = used;
+            return true;
+        }
+
+        if (TryComp<PdaComponent>(used, out var pda))
+        {
+            var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
+            if (pdaCard is { Valid: true } pId && Exists(pId) && _idCardQuery.HasComp(pId))
+            {
+                cardUid = pId;
+                return true;
+            }
+        }
+
+        cardUid = EntityUid.Invalid;
+        return false;
+    }
+
+    private bool CanIdCardAuthorizeCameras(SurveillanceCameraProgramComponent comp, EntityUid compUid, EntityUid cardUid)
+    {
+        if (_computerQuery.TryComp(compUid, out var cComp) &&
+            cComp.HostMachine is { } hostUid &&
+            TryComp<AccessReaderComponent>(hostUid, out var reader) &&
+            reader.AccessLists.Count > 0)
+        {
+            if (_accessReader.IsAllowed(cardUid, hostUid, reader))
+                return true;
+        }
+
+        var tags = _accessReader.FindAccessTags(cardUid);
+        return comp.RequiredAccess.Count == 0 || tags.Any(t => comp.RequiredAccess.Contains(t));
+    }
+
+    private bool CanAccFileAuthorizeCameras(SurveillanceCameraProgramComponent comp, EntityUid compUid, AccessCodesVirtualFile accFile)
+    {
+        if (accFile.IsEncrypted)
+            return false;
+
+        if (_computerQuery.TryComp(compUid, out var cComp) &&
+            cComp.HostMachine is { } hostUid &&
+            TryComp<AccessReaderComponent>(hostUid, out var reader) &&
+            reader.AccessLists.Count > 0)
+        {
+            if (_accessReader.IsAllowed(accFile.AccessTags, Array.Empty<StationRecordKey>(), hostUid, reader))
+                return true;
+        }
+
+        return comp.RequiredAccess.Count == 0 || accFile.AccessTags.Any(t => comp.RequiredAccess.Contains(t));
+    }
+
+    private List<string> GetAvailableAccFilePaths(EntityUid compUid, ref string? selectedPath)
+    {
+        var paths = new List<string>();
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+        {
+            foreach (var f in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(driveUid.Value, fs).OrderBy(f => f.FullPath, StringComparer.OrdinalIgnoreCase))
+                paths.Add(f.FullPath);
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            foreach (var f in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(diskUid, diskFs).OrderBy(f => f.FullPath, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!paths.Contains(f.FullPath))
+                    paths.Add(f.FullPath);
+            }
+        }
+
+        if (string.IsNullOrEmpty(selectedPath) && paths.Count > 0)
+            selectedPath = paths[0];
+
+        return paths;
+    }
+
+    private bool TryFindAccFile(EntityUid compUid, string? requestedPath, out AccessCodesVirtualFile accFile)
+    {
+        var all = new List<AccessCodesVirtualFile>();
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+            all.AddRange(_fileSystem.GetFilesByType<AccessCodesVirtualFile>(driveUid.Value, fs));
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            all.AddRange(_fileSystem.GetFilesByType<AccessCodesVirtualFile>(diskUid, diskFs));
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedPath))
+        {
+            var match = all.FirstOrDefault(f =>
+                string.Equals(f.FullPath, requestedPath, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f.Name, requestedPath, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals($"{f.Name}.{f.Extension}", requestedPath, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                accFile = match;
+                return true;
+            }
+        }
+
+        if (all.Count > 0)
+        {
+            accFile = all.OrderBy(f => f.FullPath, StringComparer.OrdinalIgnoreCase).First();
+            return true;
+        }
+
+        accFile = default!;
+        return false;
+    }
 
     private void SyncMicrophoneSlotLock(EntityUid cameraUid)
     {

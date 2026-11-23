@@ -19,9 +19,25 @@
           3: { state: alert-2 }
           4: { state: alert-2 }
   - type: AtmosAlertsComputer
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydAtmosConsoleEmbeddedController
+    borderColor: "#00D4FF"
+    title: "REMOTE ATMOS CONTROL"
+    subtitle: " | Atmospheric Network"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    singleUser: true
-    key: enum.AtmosAlertsComputerUiKey.Key
+    singleUser: false
+    key: enum.ComputerUiKey.Key
   - type: UserInterface
     interfaces:
         enum.AtmosAlertsComputerUiKey.Key:
@@ -48,9 +64,25 @@
   - type: AtmosMonitoringConsole
     navMapTileColor: "#1a1a1a"
     navMapWallColor: "#404040"
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydAtmosConsoleEmbeddedController
+    borderColor: "#00D4FF"
+    title: "ATMOS NETWORK MONITOR"
+    subtitle: " | Remote Atmos Control"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    singleUser: true
-    key: enum.AtmosMonitoringConsoleUiKey.Key
+    singleUser: false
+    key: enum.ComputerUiKey.Key
   - type: UserInterface
     interfaces:
       enum.AtmosMonitoringConsoleUiKey.Key:
@@ -247,9 +279,25 @@
       hv:
         !type:CableDeviceNode
         nodeGroupID: HVPower
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydPowerConsoleEmbeddedController
+    borderColor: "#FFD166"
+    title: "POWER MONITORING & APC CONTROL"
+    subtitle: " | Engineering Grid"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    singleUser: true
-    key: enum.PowerMonitoringConsoleUiKey.Key
+    singleUser: false
+    key: enum.ComputerUiKey.Key
   - type: UserInterface
     interfaces:
       enum.PowerMonitoringConsoleUiKey.Key:
@@ -273,6 +321,29 @@
     color: "#1f8c28"
   - type: Computer
     board: MedicalRecordsComputerCircuitboard
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydMedicalRecordsEmbeddedController
+    borderColor: "#44DDAA"
+    title: "MEDICAL & PERSONNEL RECORDS"
+    subtitle: " | Medical Console"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
+  - type: ActivatableUI
+    key: enum.ComputerUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
   - type: AmbientMusicMarkerMedical
 
 - type: entity
@@ -376,8 +447,25 @@
     color: "#006400"
   - type: Computer
     board: CrewMonitoringComputerCircuitboard
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydCrewMonitorEmbeddedController
+    borderColor: "#44DDAA"
+    title: "CREW MONITORING CONSOLE"
+    subtitle: " | Suit Sensor Telemetry"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.CrewMonitoringUIKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: UserInterface
     interfaces:
         enum.CrewMonitoringUIKey.Key:
@@ -591,8 +679,20 @@
         - IdCard
         - Access
         requireAll: true
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydIdConsoleEmbeddedController
+    borderColor: "#3C88E6"
+    title: "ID AUTHORIZATION & MODIFICATION"
+    subtitle: " | Personnel Access Console"
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.IdCardConsoleUiKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: UserInterface
     interfaces:
       enum.IdCardConsoleUiKey.Key:
@@ -617,6 +717,8 @@
   - type: ContainerContainer
     containers:
       board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
       IdCardConsole-privilegedId: !type:ContainerSlot
       IdCardConsole-targetId: !type:ContainerSlot
 
@@ -649,8 +751,25 @@
   - type: DeviceNetwork
     deviceNetId: Wireless
     transmitFrequencyId: ShuttleTimer
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydCommsConsoleEmbeddedController
+    borderColor: "#3C88E6"
+    title: "STATION COMMUNICATIONS"
+    subtitle: " | Command Console"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.CommunicationsConsoleUiKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: UserInterface
     interfaces:
       enum.CommunicationsConsoleUiKey.Key:
@@ -745,8 +864,25 @@
   - type: ComputerVisuals
     stateScreen: solar_screen
   - type: SolarControlConsole
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydSolarConsoleEmbeddedController
+    borderColor: "#E6E227"
+    title: "SOLAR ARRAY CONTROL"
+    subtitle: " | Power Generation"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.SolarControlConsoleUiKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: UserInterface
     interfaces:
       enum.SolarControlConsoleUiKey.Key:
@@ -801,8 +937,22 @@
   - type: ActiveRadio
     channels:
     - Supply
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydCargoOrdersEmbeddedController
+    borderColor: "#E0B034"
+    title: "CARGO SUPPLY & BANK ORDERS"
+    subtitle: " | Logistics Console"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.CargoConsoleUiKey.Orders
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: UserInterface
     interfaces:
       enum.CargoConsoleUiKey.Orders:
@@ -826,6 +976,7 @@
     range: 200
     ports:
     - OrderSender
+    - MachineStatusSender
   - type: GuideHelp
     guides:
     - Cargo
@@ -1243,8 +1394,25 @@
   - type: NewsWriter
   - type: AccessReader
     access: [[ "Service" ]]
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydNewsConsoleEmbeddedController
+    borderColor: "#FFE066"
+    title: "STATION NEWS TERMINAL"
+    subtitle: " | Mass Media"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.NewsWriterUiKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: ActivatableUIRequiresVision
   - type: Transform
     anchored: true

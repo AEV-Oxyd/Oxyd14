@@ -31,6 +31,7 @@ namespace Content.Client._Oxyd.Computers.Programs;
 
 public sealed class ApcControlUiControl : ProgramUiControl
 {
+    private readonly ContentBoxContainer _remoteHeaderContainer;
     private readonly ContentLabel _telemetryLabel;
     private readonly ContentLabel _statusLabel;
     private readonly List<ContentButton> _controlButtons = new();
@@ -48,6 +49,16 @@ public sealed class ApcControlUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 6
         };
+
+        _remoteHeaderContainer = new ContentBoxContainer
+        {
+            Name = "ApcRemoteHeaderContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4,
+            Visible = false
+        };
+        root.AddChild(_remoteHeaderContainer);
 
         var telemetryPanel = new ContentPanelContainer
         {
@@ -83,7 +94,7 @@ public sealed class ApcControlUiControl : ProgramUiControl
         var btnRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         void AddBtn(string text, ApcControlAction action)
         {
-            var b = new ContentButton { Text = text, Disabled = true };
+            var b = new ContentButton { Name = "ApcToggleBreakerButton", Text = text, Disabled = true };
             b.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(action));
             _controlButtons.Add(b);
             btnRow.AddChild(b);
@@ -103,6 +114,17 @@ public sealed class ApcControlUiControl : ProgramUiControl
         if (raw is not ApcControlUiState state)
             return;
 
+        _remoteHeaderContainer.RemoveAllChildren();
+        if (state.IsRemoteConsole)
+        {
+            _remoteHeaderContainer.Visible = true;
+            BuildRemoteApcHeader(state);
+        }
+        else
+        {
+            _remoteHeaderContainer.Visible = false;
+        }
+
         var trippedTag = state.BreakerTripped ? " [TRIPPED]" : string.Empty;
         _telemetryLabel.Text =
             $"Power: {(state.MainBreakerEnabled ? "ON" : "OFF")}{trippedTag}\n" +
@@ -110,12 +132,84 @@ public sealed class ApcControlUiControl : ProgramUiControl
             $"Current Load: {state.LoadWatts} W\n" +
             $"External Supply: {state.ExternalPowerState}";
 
-        var showStatus = !state.Locked && !string.IsNullOrWhiteSpace(state.StatusMessage);
+        var showStatus = (state.IsRemoteConsole || !state.Locked) && !string.IsNullOrWhiteSpace(state.StatusMessage);
         _statusLabel.Text = showStatus ? state.StatusMessage : string.Empty;
         _statusLabel.Visible = showStatus;
 
         foreach (var btn in _controlButtons)
             btn.Disabled = state.Locked;
+    }
+
+    private void BuildRemoteApcHeader(ApcControlUiState state)
+    {
+        var targetsWrap = new ContentWrapContainer
+        {
+            Name = "ApcRemoteTargetsWrap",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4
+        };
+
+        foreach (var t in state.AvailableTargets)
+        {
+            var guidCopy = t.TargetGuid;
+            var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+            var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ AUTH]";
+            var btn = new ContentButton
+            {
+                Name = $"ApcTargetBtn_{guidCopy}",
+                Text = $"{t.AreaName} ({guidCopy}) {authTag}",
+                Pressed = isSel,
+                MinWidth = 136
+            };
+            btn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guidCopy));
+            targetsWrap.AddChild(btn);
+        }
+        _remoteHeaderContainer.AddChild(targetsWrap);
+
+        var authRow = new ContentWrapContainer
+        {
+            Name = "ApcRemoteAuthRow",
+            HorizontalSeparation = 6,
+            VerticalSeparation = 4
+        };
+
+        authRow.AddChild(new ContentLabel
+        {
+            Name = "ApcRemoteAuthStatusLabel",
+            Text = state.IsTargetAuthorized
+                ? $"APC [{state.SelectedTargetGuid}]: AUTHORIZED"
+                : $"APC [{state.SelectedTargetGuid}]: UNAUTHORIZED (Swipe ID card or use .acc file)",
+            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
+            VerticalAlignment = VAlignment.Center
+        });
+
+        foreach (var accPath in state.AvailableAccFiles)
+        {
+            var pathCopy = accPath;
+            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
+            var authBtn = new ContentButton
+            {
+                Name = $"ApcAuthAccBtn_{shortName}",
+                Text = $"Auth ({shortName})",
+                MinWidth = 108
+            };
+            authBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, pathCopy));
+            authRow.AddChild(authBtn);
+        }
+
+        if (state.AvailableAccFiles.Count > 0)
+        {
+            var quickAuthBtn = new ContentButton
+            {
+                Name = "ApcQuickAuthAccButton",
+                Text = "Authorize APC (.acc)",
+                MinWidth = 138
+            };
+            quickAuthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
+            authRow.AddChild(quickAuthBtn);
+        }
+
+        _remoteHeaderContainer.AddChild(authRow);
     }
 }
 
@@ -616,6 +710,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         Sensors = 2
     }
 
+    private readonly ContentBoxContainer _remoteHeaderContainer;
     private readonly StyleBoxFlat _telemetryPanelStyle;
     private readonly StyleBoxFlat _alarmBadgeStyle;
     private readonly ContentLabel _alarmBadgeLabel;
@@ -664,6 +759,16 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 5
         };
+
+        _remoteHeaderContainer = new ContentBoxContainer
+        {
+            Name = "AtmosRemoteHeaderContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4,
+            Visible = false
+        };
+        root.AddChild(_remoteHeaderContainer);
 
         // ---------------------------------------------------------------------
         // 1. Clean Structured Air Alarm Status & Mode Strip
@@ -981,6 +1086,17 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         _lastState = state;
 
+        _remoteHeaderContainer.RemoveAllChildren();
+        if (state.IsRemoteConsole)
+        {
+            _remoteHeaderContainer.Visible = true;
+            BuildRemoteAtmosHeader(state);
+        }
+        else
+        {
+            _remoteHeaderContainer.Visible = false;
+        }
+
         UpdateStatusHeader(state);
 
         foreach (var (modeKey, btn) in _modeButtons)
@@ -1003,7 +1119,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                 _activeCategory = DeviceCategory.Sensors;
         }
 
-        var showStatus = !state.Locked && !string.IsNullOrWhiteSpace(state.StatusMessage);
+        var showStatus = (state.IsRemoteConsole || !state.Locked) && !string.IsNullOrWhiteSpace(state.StatusMessage);
         _statusLabel.Text = showStatus ? state.StatusMessage : string.Empty;
         _statusLabel.Visible = showStatus;
 
@@ -1012,6 +1128,78 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         UpdateTemplateBar(state);
         SyncDevicesView();
+    }
+
+    private void BuildRemoteAtmosHeader(AtmosControlUiState state)
+    {
+        var targetsWrap = new ContentWrapContainer
+        {
+            Name = "AtmosRemoteTargetsWrap",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4
+        };
+
+        foreach (var t in state.AvailableTargets)
+        {
+            var guidCopy = t.TargetGuid;
+            var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+            var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ APC AUTH]";
+            var btn = new ContentButton
+            {
+                Name = $"AtmosTargetBtn_{guidCopy}",
+                Text = $"{t.AreaName} [APC {t.ApcGuid}] {authTag}",
+                Pressed = isSel,
+                MinWidth = 148
+            };
+            btn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guidCopy));
+            targetsWrap.AddChild(btn);
+        }
+        _remoteHeaderContainer.AddChild(targetsWrap);
+
+        var authRow = new ContentWrapContainer
+        {
+            Name = "AtmosRemoteAuthRow",
+            HorizontalSeparation = 6,
+            VerticalSeparation = 4
+        };
+
+        authRow.AddChild(new ContentLabel
+        {
+            Name = "AtmosRemoteAuthStatusLabel",
+            Text = state.IsTargetAuthorized
+                ? $"APC [{state.SelectedApcGuid}]: AUTHORIZED"
+                : $"APC [{state.SelectedApcGuid}]: UNAUTHORIZED (Swipe ID card or use .acc file)",
+            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
+            VerticalAlignment = VAlignment.Center
+        });
+
+        foreach (var accPath in state.AvailableAccFiles)
+        {
+            var pathCopy = accPath;
+            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
+            var authBtn = new ContentButton
+            {
+                Name = $"AtmosAuthAccBtn_{shortName}",
+                Text = $"Auth ({shortName})",
+                MinWidth = 108
+            };
+            authBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, pathCopy));
+            authRow.AddChild(authBtn);
+        }
+
+        if (state.AvailableAccFiles.Count > 0)
+        {
+            var quickAuthBtn = new ContentButton
+            {
+                Name = "AtmosQuickAuthAccButton",
+                Text = "Authorize APC (.acc)",
+                MinWidth = 138
+            };
+            quickAuthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
+            authRow.AddChild(quickAuthBtn);
+        }
+
+        _remoteHeaderContainer.AddChild(authRow);
     }
 
     private void UpdateStatusHeader(AtmosControlUiState state)

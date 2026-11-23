@@ -64,6 +64,45 @@ public sealed partial class AtmosControlProgramComponent : Component
 
     [ViewVariables]
     public List<AtmosTemplateEntryDto> Templates = new();
+
+    [DataField]
+    public string? SelectedTargetGuid;
+
+    [DataField]
+    public string? SelectedAccFilePath;
+
+    [DataField]
+    public HashSet<string> AuthorizedTargetGuids = new();
+}
+
+[Serializable, NetSerializable]
+public sealed class RemoteAtmosTargetDto
+{
+    public string TargetGuid { get; }
+    public string ApcGuid { get; }
+    public string AreaName { get; }
+    public bool IsAuthorized { get; }
+    public string AlarmLevel { get; }
+    public float PressureKpa { get; }
+    public float TemperatureCelsius { get; }
+
+    public RemoteAtmosTargetDto(
+        string targetGuid,
+        string apcGuid,
+        string areaName,
+        bool isAuthorized,
+        string alarmLevel,
+        float pressureKpa,
+        float temperatureCelsius)
+    {
+        TargetGuid = targetGuid;
+        ApcGuid = apcGuid;
+        AreaName = areaName;
+        IsAuthorized = isAuthorized;
+        AlarmLevel = alarmLevel;
+        PressureKpa = pressureKpa;
+        TemperatureCelsius = temperatureCelsius;
+    }
 }
 
 [Serializable, NetSerializable]
@@ -312,6 +351,13 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
     public List<AtmosScrubberEntryDto> Scrubbers { get; }
     public List<AtmosSensorEntryDto> Sensors { get; }
     public List<AtmosTemplateEntryDto> Templates { get; }
+    public string SelectedTargetGuid { get; }
+    public string SelectedApcGuid { get; }
+    public bool IsTargetAuthorized { get; }
+    public bool IsRemoteConsole { get; }
+    public string? SelectedAccFilePath { get; }
+    public List<string> AvailableAccFiles { get; }
+    public List<RemoteAtmosTargetDto> AvailableTargets { get; }
 
     public AtmosControlUiState(
         bool hasTelemetry,
@@ -330,7 +376,14 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
         List<AtmosVentEntryDto>? vents = null,
         List<AtmosScrubberEntryDto>? scrubbers = null,
         List<AtmosSensorEntryDto>? sensors = null,
-        List<AtmosTemplateEntryDto>? templates = null)
+        List<AtmosTemplateEntryDto>? templates = null,
+        string selectedTargetGuid = "",
+        string selectedApcGuid = "",
+        bool isTargetAuthorized = false,
+        string? selectedAccFilePath = null,
+        List<string>? availableAccFiles = null,
+        List<RemoteAtmosTargetDto>? availableTargets = null,
+        bool isRemoteConsole = false)
     {
         HasTelemetry = hasTelemetry;
         IsDeviceLinkEnabled = isDeviceLinkEnabled;
@@ -349,6 +402,13 @@ public sealed class AtmosControlUiState : BoundUserInterfaceState
         Scrubbers = scrubbers ?? new List<AtmosScrubberEntryDto>();
         Sensors = sensors ?? new List<AtmosSensorEntryDto>();
         Templates = templates ?? new List<AtmosTemplateEntryDto>();
+        SelectedTargetGuid = selectedTargetGuid;
+        SelectedApcGuid = selectedApcGuid;
+        IsTargetAuthorized = isTargetAuthorized;
+        IsRemoteConsole = isRemoteConsole;
+        SelectedAccFilePath = selectedAccFilePath;
+        AvailableAccFiles = availableAccFiles ?? new List<string>();
+        AvailableTargets = availableTargets ?? new List<RemoteAtmosTargetDto>();
     }
 }
 
@@ -363,17 +423,23 @@ public enum AtmosControlAction : byte
     SetModeNone,
     ToggleAutoMode,
     ResyncDevices,
-    SaveLog
+    SaveLog,
+    SelectTarget,
+    SelectAccFile,
+    AuthorizeWithAcc,
+    RevokeAuth
 }
 
 [Serializable, NetSerializable]
 public sealed class AtmosControlActionMessage : BoundUserInterfaceMessage
 {
     public AtmosControlAction Action { get; }
+    public string Argument { get; }
 
-    public AtmosControlActionMessage(AtmosControlAction action)
+    public AtmosControlActionMessage(AtmosControlAction action, string argument = "")
     {
         Action = action;
+        Argument = argument;
     }
 }
 

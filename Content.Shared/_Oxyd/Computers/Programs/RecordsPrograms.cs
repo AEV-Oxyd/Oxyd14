@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Content.Shared.Preferences;
 using Content.Shared.Security;
 using Robust.Shared.GameStates;
 using Robust.Shared.Serialization;
@@ -36,6 +37,7 @@ public sealed class StationRecordEntryDto
     public string Fingerprint { get; }
     public string Dna { get; }
     public string CriminalStatus { get; }
+    public HumanoidCharacterProfile? CharacterProfile { get; }
 
     public StationRecordEntryDto(
         string key,
@@ -48,7 +50,8 @@ public sealed class StationRecordEntryDto
         string gender,
         string fingerprint,
         string dna,
-        string criminalStatus)
+        string criminalStatus,
+        HumanoidCharacterProfile? characterProfile = null)
     {
         Key = key;
         Name = name;
@@ -61,6 +64,7 @@ public sealed class StationRecordEntryDto
         Fingerprint = fingerprint;
         Dna = dna;
         CriminalStatus = criminalStatus;
+        CharacterProfile = characterProfile;
     }
 }
 
@@ -183,6 +187,10 @@ public sealed class CriminalRecordEntryDto
     public string Reason { get; }
     public string Initiator { get; }
     public List<CrimeHistoryEntryDto> History { get; }
+    public string Species { get; }
+    public string Gender { get; }
+    public int Age { get; }
+    public HumanoidCharacterProfile? CharacterProfile { get; }
 
     public CriminalRecordEntryDto(
         string key,
@@ -191,7 +199,11 @@ public sealed class CriminalRecordEntryDto
         SecurityStatus status,
         string reason,
         string initiator,
-        List<CrimeHistoryEntryDto> history)
+        List<CrimeHistoryEntryDto> history,
+        string species = "Human",
+        string gender = "Epicene",
+        int age = 25,
+        HumanoidCharacterProfile? characterProfile = null)
     {
         Key = key;
         Name = name;
@@ -200,6 +212,10 @@ public sealed class CriminalRecordEntryDto
         Reason = reason;
         Initiator = initiator;
         History = history;
+        Species = species;
+        Gender = gender;
+        Age = age;
+        CharacterProfile = characterProfile;
     }
 }
 

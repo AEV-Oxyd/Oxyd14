@@ -1,18 +1,30 @@
 using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Servers;
+using Content.Server.Cargo.Components;
+using Content.Server.Cargo.Systems;
+using Content.Server.Chat.Systems;
 using Content.Server.CrewManifest;
 using Content.Server.CriminalRecords.Systems;
 using Content.Server.MassMedia.Systems;
+using Content.Server.Solar.EntitySystems;
+using Content.Server.Stack;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Access;
 using Content.Shared.Access.Components;
+using Content.Shared.Access.Systems;
+using Content.Shared.AlertLevel;
+using Content.Shared.Cargo;
+using Content.Shared.Cargo.Components;
+using Content.Shared.Cargo.Prototypes;
 using Content.Shared.CrewManifest;
 using Content.Shared.CriminalRecords;
 using Content.Shared.CriminalRecords.Systems;
+using Content.Shared.Damage.Components;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.GPS.Components;
 using Content.Shared.Hands.EntitySystems;
@@ -20,21 +32,26 @@ using Content.Shared.Interaction;
 using Content.Shared.Labels.EntitySystems;
 using Content.Shared.MassMedia.Systems;
 using Content.Shared.Medical.HealthAnalyzer;
+using Content.Shared.Medical.SuitSensors;
+using Content.Shared.Mobs.Systems;
 using Content.Shared.Paper;
 using Content.Shared.Popups;
-using Content.Shared.StationRecords.Systems;
 using Content.Shared.Security;
+using Content.Shared.Stacks;
 using Content.Shared.StationRecords;
+using Content.Shared.StationRecords.Systems;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
 
 /// <summary>
-/// Consolidated server systems for migrated station & PDA NTOS applications:
+/// Consolidated server systems for migrated station &amp; PDA NTOS applications:
 /// Notekeeper (.txt), NanoTask (.tsk), CrewManifest (.db), WantedList (.db),
-/// NewsReader (.db), NetProbe (.db), LogProbe (.db), MedTek, and AstroNav.
+/// NewsReader (.db), NetProbe (.db), LogProbe (.db), MedTek, AstroNav,
+/// CargoOrders (Bank Account ID + PIN auth &amp; withdrawal), CrewMonitor, CommsConsole, and SolarControl.
 /// Every program delivers BUI states directly on its Program Entity and persists
 /// boot-resistant state on the computer's Hard Drive FileSystemComponent.
 /// </summary>
@@ -46,15 +63,27 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private ServerStationSystem _station = default!;
+    [Dependency] private CargoSystem _cargo = default!;
+    [Dependency] private StackSystem _stack = default!;
+    [Dependency] private AlertLevelSystem _alertLevel = default!;
+    [Dependency] private ChatSystem _chat = default!;
+    [Dependency] private PowerSolarSystem _solar = default!;
+    [Dependency] private AccessReaderSystem _accessReader = default!;
+    [Dependency] private MobStateSystem _mobState = default!;
+    [Dependency] private Content.Shared.Damage.Systems.DamageableSystem _damageable = default!;
     [Dependency] private PaperSystem _paper = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private LabelSystem _label = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
     private EntityQuery<OxydComputerComponent> _computerQuery;
+
+    private static readonly ProtoId<AccessLevelPrototype> CommandAccess = "Command";
+    private static readonly ProtoId<StackPrototype> CreditStackProto = "Credit";
 
     public override void Initialize()
     {
@@ -128,6 +157,42 @@ public sealed partial class StationAppsSystem : EntitySystem
         SubscribeLocalEvent<MedTekProgramComponent, ProgramTerminatedEvent>(OnMedTekTerminated);
         SubscribeLocalEvent<AstroNavProgramComponent, ProgramStartupEvent>(OnAstroNavStartup);
         SubscribeLocalEvent<AstroNavProgramComponent, ProgramTerminatedEvent>(OnAstroNavTerminated);
+
+        // Cargo Orders (Bank Account ID + PIN auth & money withdrawal)
+        SubscribeLocalEvent<CargoOrdersProgramComponent, ProgramStartupEvent>(OnCargoOrdersStartup);
+        SubscribeLocalEvent<CargoOrdersProgramComponent, ProgramActivatedEvent>(OnCargoOrdersActivated);
+        Subs.BuiEvents<CargoOrdersProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<BoundUIOpenedEvent>(OnCargoOrdersBuiOpened);
+            subs.Event<CargoOrdersActionMessage>(OnCargoOrdersAction);
+        });
+
+        // Crew Monitor
+        SubscribeLocalEvent<CrewMonitorProgramComponent, ProgramStartupEvent>(OnCrewMonitorStartup);
+        SubscribeLocalEvent<CrewMonitorProgramComponent, ProgramActivatedEvent>(OnCrewMonitorActivated);
+        Subs.BuiEvents<CrewMonitorProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<BoundUIOpenedEvent>(OnCrewMonitorBuiOpened);
+            subs.Event<CrewMonitorRefreshMessage>(OnCrewMonitorRefresh);
+        });
+
+        // Communications Console
+        SubscribeLocalEvent<CommsConsoleProgramComponent, ProgramStartupEvent>(OnCommsStartup);
+        SubscribeLocalEvent<CommsConsoleProgramComponent, ProgramActivatedEvent>(OnCommsActivated);
+        Subs.BuiEvents<CommsConsoleProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<BoundUIOpenedEvent>(OnCommsBuiOpened);
+            subs.Event<CommsConsoleActionMessage>(OnCommsAction);
+        });
+
+        // Solar Control Console
+        SubscribeLocalEvent<SolarControlProgramComponent, ProgramStartupEvent>(OnSolarStartup);
+        SubscribeLocalEvent<SolarControlProgramComponent, ProgramActivatedEvent>(OnSolarActivated);
+        Subs.BuiEvents<SolarControlProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<BoundUIOpenedEvent>(OnSolarBuiOpened);
+            subs.Event<SolarControlActionMessage>(OnSolarAction);
+        });
     }
 
     // =========================================================================
@@ -1084,5 +1149,720 @@ public sealed partial class StationAppsSystem : EntitySystem
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
         RemComp<HandheldGPSComponent>(target);
+    }
+
+    // =========================================================================
+    // CARGO ORDERS (/bin/cargo_orders.nte) — BANK ACCOUNT ID + PIN AUTH & WITHDRAWAL
+    // =========================================================================
+
+    private void OnCargoOrdersStartup(Entity<CargoOrdersProgramComponent> ent, ref ProgramStartupEvent args)
+    {
+        UpdateCargoOrdersUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    private void OnCargoOrdersActivated(Entity<CargoOrdersProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdateCargoOrdersUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    private void OnCargoOrdersBuiOpened(Entity<CargoOrdersProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
+            UpdateCargoOrdersUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private void OnCargoOrdersAction(Entity<CargoOrdersProgramComponent> ent, ref CargoOrdersActionMessage msg)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        ResolveOrEnsureStationBank(compUid, out var stationUid, out var bankComp, out var orderDb);
+
+        switch (msg.Action)
+        {
+            case CargoOrdersAction.Refresh:
+                ent.Comp.StatusMessage = "Synced cargo catalog and bank account ledger.";
+                break;
+
+            case CargoOrdersAction.SelectCategory:
+                ent.Comp.SelectedCategory = string.IsNullOrWhiteSpace(msg.Category) ? "All" : msg.Category.Trim();
+                break;
+
+            case CargoOrdersAction.AuthenticateBank:
+                if (_cargo.TryAuthenticateBankAccount(
+                        (stationUid, bankComp),
+                        msg.AccountId,
+                        msg.Pin,
+                        out var matchedAcc,
+                        out var resolvedId,
+                        out var curBalance))
+                {
+                    ent.Comp.IsAuthenticated = true;
+                    ent.Comp.AuthenticatedAccountId = resolvedId;
+                    ent.Comp.AuthenticatedPin = msg.Pin.Trim();
+                    ent.Comp.AuthenticatedAccountProto = matchedAcc.Id;
+                    ent.Comp.StatusMessage = $"Authenticated bank account {resolvedId} ({matchedAcc.Id}) — Balance: ${curBalance}.";
+                    _audio.PlayPvs(new SoundPathSpecifier("/Audio/Machines/id_swipe.ogg"), compUid);
+                }
+                else
+                {
+                    ent.Comp.IsAuthenticated = false;
+                    ent.Comp.AuthenticatedAccountId = string.Empty;
+                    ent.Comp.AuthenticatedPin = string.Empty;
+                    ent.Comp.AuthenticatedAccountProto = string.Empty;
+                    ent.Comp.StatusMessage = "Bank authentication failed: invalid Bank Account ID or PIN.";
+                }
+                break;
+
+            case CargoOrdersAction.LogoutBank:
+                ent.Comp.IsAuthenticated = false;
+                ent.Comp.AuthenticatedAccountId = string.Empty;
+                ent.Comp.AuthenticatedPin = string.Empty;
+                ent.Comp.AuthenticatedAccountProto = string.Empty;
+                ent.Comp.StatusMessage = "Logged out of bank account.";
+                break;
+
+            case CargoOrdersAction.QueueOrder:
+                HandleCargoQueueOrder(ent.Comp, compUid, stationUid, bankComp, orderDb, msg);
+                break;
+
+            case CargoOrdersAction.PlaceAndPayOrder:
+                HandleCargoPlaceAndPayOrder(ent.Comp, compUid, stationUid, bankComp, orderDb, msg);
+                break;
+
+            case CargoOrdersAction.ApproveOrder:
+                HandleCargoApproveOrder(ent.Comp, compUid, stationUid, bankComp, orderDb, msg);
+                break;
+
+            case CargoOrdersAction.RemoveOrder:
+                HandleCargoRemoveOrder(ent.Comp, stationUid, orderDb, msg.OrderId);
+                break;
+
+            case CargoOrdersAction.WithdrawCash:
+                HandleCargoWithdrawCash(ent.Comp, compUid, stationUid, bankComp, msg);
+                break;
+        }
+
+        Dirty(ent);
+        UpdateCargoOrdersUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private bool TryResolveOrderBankAuth(
+        CargoOrdersProgramComponent comp,
+        EntityUid stationUid,
+        StationBankAccountComponent bankComp,
+        string? msgAccountId,
+        string? msgPin,
+        out ProtoId<CargoAccountPrototype> matchedAccount,
+        out string resolvedAccountId,
+        out string usedPin,
+        out int balance)
+    {
+        var accId = !string.IsNullOrWhiteSpace(msgAccountId) ? msgAccountId.Trim() : comp.AuthenticatedAccountId;
+        var pin = !string.IsNullOrWhiteSpace(msgPin) ? msgPin.Trim() : comp.AuthenticatedPin;
+        usedPin = pin;
+
+        if (_cargo.TryAuthenticateBankAccount((stationUid, bankComp), accId, pin, out matchedAccount, out resolvedAccountId, out balance))
+        {
+            comp.IsAuthenticated = true;
+            comp.AuthenticatedAccountId = resolvedAccountId;
+            comp.AuthenticatedPin = pin;
+            comp.AuthenticatedAccountProto = matchedAccount.Id;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void HandleCargoQueueOrder(
+        CargoOrdersProgramComponent comp,
+        EntityUid compUid,
+        EntityUid stationUid,
+        StationBankAccountComponent bankComp,
+        StationCargoOrderDatabaseComponent orderDb,
+        CargoOrdersActionMessage msg)
+    {
+        if (!_proto.TryIndex<CargoProductPrototype>(msg.ProductId, out var product))
+        {
+            comp.StatusMessage = "Order failed: Unknown product prototype.";
+            return;
+        }
+
+        var qty = Math.Clamp(msg.Quantity, 1, 20);
+        var requester = !string.IsNullOrWhiteSpace(msg.Requester)
+            ? msg.Requester.Trim()
+            : (msg.Actor.IsValid() && Exists(msg.Actor) ? MetaData(msg.Actor).EntityName : "Crew");
+        var reason = !string.IsNullOrWhiteSpace(msg.Reason) ? msg.Reason.Trim() : "Station supply request";
+
+        var accountProto = !string.IsNullOrWhiteSpace(comp.AuthenticatedAccountProto)
+            ? new ProtoId<CargoAccountPrototype>(comp.AuthenticatedAccountProto)
+            : ResolveConsoleDefaultAccount(compUid, bankComp);
+
+        if (!orderDb.Orders.TryGetValue(accountProto, out var list))
+        {
+            list = new List<CargoOrderData>();
+            orderDb.Orders[accountProto] = list;
+        }
+
+        var orderId = ++orderDb.NumOrdersCreated;
+        var order = new CargoOrderData(orderId, product.ID, qty, requester, reason, accountProto);
+        list.Add(order);
+        comp.StatusMessage = $"Queued request #{orderId}: {qty}x {product.Name} (${product.Cost * qty}). Authenticate bank account to approve & withdraw.";
+    }
+
+    private void HandleCargoPlaceAndPayOrder(
+        CargoOrdersProgramComponent comp,
+        EntityUid compUid,
+        EntityUid stationUid,
+        StationBankAccountComponent bankComp,
+        StationCargoOrderDatabaseComponent orderDb,
+        CargoOrdersActionMessage msg)
+    {
+        if (!_proto.TryIndex<CargoProductPrototype>(msg.ProductId, out var product))
+        {
+            comp.StatusMessage = "Order failed: Unknown product prototype.";
+            return;
+        }
+
+        if (!TryResolveOrderBankAuth(
+                comp,
+                stationUid,
+                bankComp,
+                msg.AccountId,
+                msg.Pin,
+                out var authAccount,
+                out var resolvedAccountId,
+                out var usedPin,
+                out var curBalance))
+        {
+            comp.StatusMessage = "Order denied: Valid Bank Account ID and PIN required to authorize & withdraw funds.";
+            return;
+        }
+
+        var qty = Math.Clamp(msg.Quantity, 1, 20);
+        var totalCost = product.Cost * qty;
+        if (curBalance < totalCost)
+        {
+            comp.StatusMessage = $"Insufficient funds in {resolvedAccountId} (Balance: ${curBalance}, Order Cost: ${totalCost}).";
+            return;
+        }
+
+        if (!_cargo.TryWithdrawFromAuthenticatedAccount(
+                (stationUid, bankComp),
+                resolvedAccountId,
+                usedPin,
+                totalCost,
+                out _,
+                out _,
+                out var remainingBalance))
+        {
+            comp.StatusMessage = "Withdrawal failed during cargo order.";
+            return;
+        }
+
+        var requester = !string.IsNullOrWhiteSpace(msg.Requester)
+            ? msg.Requester.Trim()
+            : (msg.Actor.IsValid() && Exists(msg.Actor) ? MetaData(msg.Actor).EntityName : resolvedAccountId);
+        var reason = !string.IsNullOrWhiteSpace(msg.Reason) ? msg.Reason.Trim() : $"Paid via {resolvedAccountId}";
+
+        if (!orderDb.Orders.TryGetValue(authAccount, out var list))
+        {
+            list = new List<CargoOrderData>();
+            orderDb.Orders[authAccount] = list;
+        }
+
+        var orderId = ++orderDb.NumOrdersCreated;
+        var order = new CargoOrderData(orderId, product.ID, qty, requester, reason, authAccount)
+        {
+            Approved = true,
+            Approver = $"{requester} [{resolvedAccountId}]",
+            ApprovingConsole = GetNetEntity(compUid)
+        };
+        list.Add(order);
+
+        _audio.PlayPvs(new SoundPathSpecifier("/Audio/Effects/Cargo/ping.ogg"), compUid);
+        comp.StatusMessage = $"Order #{orderId} paid & approved: {qty}x {product.Name} (-${totalCost} withdrawn from {resolvedAccountId}, remaining: ${remainingBalance}).";
+    }
+
+    private void HandleCargoApproveOrder(
+        CargoOrdersProgramComponent comp,
+        EntityUid compUid,
+        EntityUid stationUid,
+        StationBankAccountComponent bankComp,
+        StationCargoOrderDatabaseComponent orderDb,
+        CargoOrdersActionMessage msg)
+    {
+        if (!TryResolveOrderBankAuth(
+                comp,
+                stationUid,
+                bankComp,
+                msg.AccountId,
+                msg.Pin,
+                out var authAccount,
+                out var resolvedAccountId,
+                out var usedPin,
+                out var curBalance))
+        {
+            comp.StatusMessage = "Approval denied: Valid Bank Account ID and PIN required to withdraw order funds.";
+            return;
+        }
+
+        CargoOrderData? targetOrder = null;
+        foreach (var list in orderDb.Orders.Values)
+        {
+            targetOrder = list.FirstOrDefault(o => o.OrderId == msg.OrderId && !o.Approved);
+            if (targetOrder != null)
+                break;
+        }
+
+        if (targetOrder == null || !_proto.TryIndex<CargoProductPrototype>(targetOrder.Product, out var product))
+        {
+            comp.StatusMessage = "Order not found or already approved.";
+            return;
+        }
+
+        var totalCost = product.Cost * targetOrder.OrderQuantity;
+        if (curBalance < totalCost)
+        {
+            comp.StatusMessage = $"Insufficient funds in {resolvedAccountId} (Balance: ${curBalance}, Order Cost: ${totalCost}).";
+            return;
+        }
+
+        if (!_cargo.TryWithdrawFromAuthenticatedAccount(
+                (stationUid, bankComp),
+                resolvedAccountId,
+                usedPin,
+                totalCost,
+                out _,
+                out _,
+                out var remainingBalance))
+        {
+            comp.StatusMessage = "Withdrawal failed during order approval.";
+            return;
+        }
+
+        var approverName = msg.Actor.IsValid() && Exists(msg.Actor) ? MetaData(msg.Actor).EntityName : resolvedAccountId;
+        targetOrder.Account = authAccount;
+        targetOrder.Approved = true;
+        targetOrder.Approver = $"{approverName} [{resolvedAccountId}]";
+        targetOrder.ApprovingConsole = GetNetEntity(compUid);
+
+        _audio.PlayPvs(new SoundPathSpecifier("/Audio/Effects/Cargo/ping.ogg"), compUid);
+        comp.StatusMessage = $"Approved order #{targetOrder.OrderId} ({targetOrder.OrderQuantity}x {product.Name}): -${totalCost} withdrawn from {resolvedAccountId} (remaining: ${remainingBalance}).";
+    }
+
+    private void HandleCargoRemoveOrder(
+        CargoOrdersProgramComponent comp,
+        EntityUid stationUid,
+        StationCargoOrderDatabaseComponent orderDb,
+        int orderId)
+    {
+        foreach (var list in orderDb.Orders.Values)
+        {
+            var idx = list.FindIndex(o => o.OrderId == orderId);
+            if (idx >= 0)
+            {
+                list.RemoveAt(idx);
+                comp.StatusMessage = $"Removed order #{orderId}.";
+                return;
+            }
+        }
+
+        comp.StatusMessage = $"Order #{orderId} not found.";
+    }
+
+    private void HandleCargoWithdrawCash(
+        CargoOrdersProgramComponent comp,
+        EntityUid compUid,
+        EntityUid stationUid,
+        StationBankAccountComponent bankComp,
+        CargoOrdersActionMessage msg)
+    {
+        if (!TryResolveOrderBankAuth(
+                comp,
+                stationUid,
+                bankComp,
+                msg.AccountId,
+                msg.Pin,
+                out _,
+                out var resolvedAccountId,
+                out var usedPin,
+                out var curBalance))
+        {
+            comp.StatusMessage = "Withdrawal denied: Valid Bank Account ID and PIN required.";
+            return;
+        }
+
+        var amount = Math.Max(1, msg.Quantity);
+        if (curBalance < amount)
+        {
+            comp.StatusMessage = $"Insufficient funds in {resolvedAccountId} (Balance: ${curBalance}, Requested: ${amount}).";
+            return;
+        }
+
+        if (!_cargo.TryWithdrawFromAuthenticatedAccount(
+                (stationUid, bankComp),
+                resolvedAccountId,
+                usedPin,
+                amount,
+                out _,
+                out _,
+                out var remainingBalance))
+        {
+            comp.StatusMessage = "Cash withdrawal failed.";
+            return;
+        }
+
+        var spawnTarget = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        if (_proto.TryIndex<StackPrototype>(CreditStackProto, out var stackProto))
+        {
+            _stack.SpawnAtPosition(amount, stackProto, Transform(spawnTarget).Coordinates);
+        }
+
+        _audio.PlayPvs(new SoundPathSpecifier("/Audio/Effects/Cargo/ping.ogg"), spawnTarget);
+        comp.StatusMessage = $"Withdrew ${amount} in cash from {resolvedAccountId} (remaining: ${remainingBalance}).";
+    }
+
+    private ProtoId<CargoAccountPrototype> ResolveConsoleDefaultAccount(EntityUid compUid, StationBankAccountComponent bankComp)
+    {
+        if (_computerQuery.TryComp(compUid, out var cComp) &&
+            cComp.HostMachine is { } hostUid &&
+            TryComp<CargoOrderConsoleComponent>(hostUid, out var legacyConsole))
+        {
+            return legacyConsole.Account;
+        }
+
+        return bankComp.PrimaryAccount;
+    }
+
+    private void ResolveOrEnsureStationBank(
+        EntityUid compUid,
+        out EntityUid stationUid,
+        out StationBankAccountComponent bankComp,
+        out StationCargoOrderDatabaseComponent orderDb)
+    {
+        var anchorUid = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        var owning = _station.GetOwningStation(anchorUid) ?? _station.GetStationsSet().FirstOrDefault();
+
+        if (owning != EntityUid.Invalid && Exists(owning))
+        {
+            stationUid = owning;
+        }
+        else
+        {
+            // Fallback for test grids without a full Station entity: find or attach on grid/map
+            var q = EntityQueryEnumerator<StationBankAccountComponent>();
+            if (q.MoveNext(out var existingBankUid, out _))
+            {
+                stationUid = existingBankUid;
+            }
+            else
+            {
+                var xform = Transform(anchorUid);
+                stationUid = xform.GridUid ?? xform.MapUid ?? anchorUid;
+            }
+        }
+
+        bankComp = EnsureComp<StationBankAccountComponent>(stationUid);
+        orderDb = EnsureComp<StationCargoOrderDatabaseComponent>(stationUid);
+        foreach (var acc in bankComp.Accounts.Keys)
+        {
+            if (!orderDb.Orders.ContainsKey(acc))
+                orderDb.Orders[acc] = new List<CargoOrderData>();
+        }
+    }
+
+    private void UpdateCargoOrdersUi(EntityUid progUid, EntityUid compUid, CargoOrdersProgramComponent comp)
+    {
+        ResolveOrEnsureStationBank(compUid, out var stationUid, out var bankComp, out var orderDb);
+
+        var authBalance = 0;
+        var authName = string.Empty;
+        if (comp.IsAuthenticated &&
+            _cargo.TryAuthenticateBankAccount(
+                (stationUid, bankComp),
+                comp.AuthenticatedAccountId,
+                comp.AuthenticatedPin,
+                out var matchedProto,
+                out var resolvedId,
+                out var bal))
+        {
+            authBalance = bal;
+            comp.AuthenticatedAccountId = resolvedId;
+            comp.AuthenticatedAccountProto = matchedProto.Id;
+            authName = _proto.TryIndex<CargoAccountPrototype>(matchedProto, out var accProto)
+                ? Loc.GetString(accProto.Name)
+                : matchedProto.Id;
+        }
+        else if (comp.IsAuthenticated)
+        {
+            comp.IsAuthenticated = false;
+        }
+
+        var allowedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "market" };
+        if (_computerQuery.TryComp(compUid, out var cComp) &&
+            cComp.HostMachine is { } hostUid &&
+            TryComp<CargoOrderConsoleComponent>(hostUid, out var legacyConsole))
+        {
+            foreach (var g in legacyConsole.AllowedGroups)
+                allowedGroups.Add(g.Id);
+        }
+
+        var categorySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All" };
+        var products = new List<CargoProductEntryDto>();
+        foreach (var prod in _proto.EnumeratePrototypes<CargoProductPrototype>())
+        {
+            if (!allowedGroups.Contains(prod.Group.Id))
+                continue;
+
+            var cat = string.IsNullOrWhiteSpace(prod.Category) ? "General" : Loc.GetString(prod.Category);
+            categorySet.Add(cat);
+            products.Add(new CargoProductEntryDto(
+                prod.ID,
+                prod.Name,
+                prod.Description,
+                cat,
+                prod.Cost));
+        }
+
+        products.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        var categories = categorySet.OrderBy(c => c == "All" ? string.Empty : c, StringComparer.OrdinalIgnoreCase).ToList();
+
+        var orders = new List<CargoOrderEntryDto>();
+        foreach (var list in orderDb.Orders.Values)
+        {
+            foreach (var o in list)
+            {
+                var pName = _proto.TryIndex<CargoProductPrototype>(o.Product, out var pp) ? pp.Name : o.Product.Id;
+                var pCost = _proto.TryIndex<CargoProductPrototype>(o.Product, out var pp2) ? pp2.Cost : 0;
+                orders.Add(new CargoOrderEntryDto(
+                    o.OrderId,
+                    o.Product.Id,
+                    pName,
+                    o.OrderQuantity,
+                    pCost * o.OrderQuantity,
+                    o.Requester,
+                    o.Reason,
+                    o.Account.Id,
+                    o.Approved,
+                    o.Approver ?? string.Empty));
+            }
+        }
+        orders.Sort((a, b) => b.OrderId.CompareTo(a.OrderId));
+
+        var knownAccounts = new List<CargoBankAccountSummaryDto>();
+        foreach (var (accProto, balVal) in bankComp.Accounts)
+        {
+            var accId = _cargo.GetAccountIdentifier((stationUid, bankComp), accProto);
+            knownAccounts.Add(new CargoBankAccountSummaryDto(accProto.Id, accId, balVal));
+        }
+
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+        {
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new CargoOrdersUiState(
+                comp.IsAuthenticated,
+                comp.AuthenticatedAccountId,
+                authName,
+                authBalance,
+                comp.SelectedCategory,
+                comp.StatusMessage,
+                categories,
+                products,
+                orders,
+                knownAccounts));
+        }
+    }
+
+    // =========================================================================
+    // CREW MONITOR (/bin/crew_monitor.nte)
+    // =========================================================================
+
+    private void OnCrewMonitorStartup(Entity<CrewMonitorProgramComponent> ent, ref ProgramStartupEvent args) => UpdateCrewMonitorUi(ent.Owner, args.ComputerUid);
+    private void OnCrewMonitorActivated(Entity<CrewMonitorProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCrewMonitorUi(ent.Owner, args.ComputerUid);
+    private void OnCrewMonitorBuiOpened(Entity<CrewMonitorProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
+            UpdateCrewMonitorUi(ent.Owner, compUid);
+    }
+
+    private void OnCrewMonitorRefresh(Entity<CrewMonitorProgramComponent> ent, ref CrewMonitorRefreshMessage args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
+            UpdateCrewMonitorUi(ent.Owner, compUid);
+    }
+
+    private void UpdateCrewMonitorUi(EntityUid progUid, EntityUid compUid)
+    {
+        var anchorUid = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        var station = _station.GetOwningStation(anchorUid) ?? _station.GetStationsSet().FirstOrDefault();
+        var stationName = station != EntityUid.Invalid && Exists(station) ? MetaData(station).EntityName : "Station Telemetry";
+        var anchorMap = Transform(anchorUid).MapID;
+
+        var list = new List<CrewSensorEntryDto>();
+        var q = EntityQueryEnumerator<SuitSensorComponent, TransformComponent>();
+        while (q.MoveNext(out var sensorUid, out var sensor, out var xform))
+        {
+            if (xform.MapID != anchorMap || sensor.Mode == SuitSensorMode.SensorOff || sensor.User is not { Valid: true } wearer || !Exists(wearer))
+                continue;
+
+            var name = MetaData(wearer).EntityName;
+            var alive = !_mobState.IsDead(wearer);
+            var dmg = sensor.Mode >= SuitSensorMode.SensorVitals && TryComp<DamageableComponent>(wearer, out var dmgComp)
+                ? (int) _damageable.GetTotalDamage((wearer, dmgComp)).Int()
+                : 0;
+            var coords = sensor.Mode == SuitSensorMode.SensorCords
+                ? $"({ _transform.GetWorldPosition(wearer):0.0})"
+                : "Hidden";
+            list.Add(new CrewSensorEntryDto(name, "Crew", alive, dmg, coords));
+        }
+
+        list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, list));
+    }
+
+    // =========================================================================
+    // COMMUNICATIONS CONSOLE (/bin/comms_console.nte)
+    // =========================================================================
+
+    private void OnCommsStartup(Entity<CommsConsoleProgramComponent> ent, ref ProgramStartupEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
+    private void OnCommsActivated(Entity<CommsConsoleProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
+    private void OnCommsBuiOpened(Entity<CommsConsoleProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
+            UpdateCommsUi(ent.Owner, compUid, ent.Comp, args.Actor);
+    }
+
+    private void OnCommsAction(Entity<CommsConsoleProgramComponent> ent, ref CommsConsoleActionMessage msg)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        var canBroadcast = HasCommsAccess(compUid, msg.Actor);
+        var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
+
+        switch (msg.Action)
+        {
+            case CommsConsoleAction.BroadcastAnnouncement:
+                if (!canBroadcast)
+                {
+                    ent.Comp.StatusMessage = "Access denied: Command authorization required.";
+                    break;
+                }
+                var text = (msg.Text ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(text))
+                {
+                    ent.Comp.StatusMessage = "Announcement message cannot be empty.";
+                    break;
+                }
+                var sender = msg.Actor.IsValid() && Exists(msg.Actor) ? MetaData(msg.Actor).EntityName : "Command";
+                _chat.DispatchStationAnnouncement(station != EntityUid.Invalid ? station : compUid, text, sender);
+                ent.Comp.StatusMessage = $"Broadcasted announcement ({text.Length} chars).";
+                break;
+
+            case CommsConsoleAction.SetAlertLevel:
+                if (!canBroadcast)
+                {
+                    ent.Comp.StatusMessage = "Access denied: Command authorization required.";
+                    break;
+                }
+                if (station != EntityUid.Invalid && !string.IsNullOrWhiteSpace(msg.Text))
+                {
+                    _alertLevel.SetLevel(station, msg.Text.Trim(), true, true);
+                    ent.Comp.StatusMessage = $"Station alert level set to {msg.Text.Trim()}.";
+                }
+                break;
+        }
+
+        Dirty(ent);
+        UpdateCommsUi(ent.Owner, compUid, ent.Comp, msg.Actor);
+    }
+
+    private bool HasCommsAccess(EntityUid compUid, EntityUid? actor)
+    {
+        if (actor is { Valid: true } user && Exists(user) && _accessReader.FindAccessTags(user).Contains(CommandAccess))
+            return true;
+
+        if (_fileSystem.TryFindFileSystem(compUid, out _, out var fs) && fs != null)
+        {
+            foreach (var f in fs.Files.Values)
+            {
+                if (f is AccessCodesVirtualFile acc && !acc.IsEncrypted && acc.AccessTags.Contains(CommandAccess))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void UpdateCommsUi(EntityUid progUid, EntityUid compUid, CommsConsoleProgramComponent comp, EntityUid? actor)
+    {
+        var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
+        var currentLevel = "green";
+        var levels = new List<string> { "green", "blue", "red" };
+
+        if (station != EntityUid.Invalid && TryComp<AlertLevelComponent>(station, out var alertComp))
+        {
+            currentLevel = alertComp.CurrentAlertLevel.Id;
+            var selectable = _alertLevel.GetSelectableAlertLevels((station, alertComp));
+            if (selectable.Count > 0)
+                levels = selectable.Select(l => l.Id).ToList();
+        }
+
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+        {
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new CommsConsoleUiState(
+                HasCommsAccess(compUid, actor),
+                currentLevel,
+                levels,
+                comp.StatusMessage));
+        }
+    }
+
+    // =========================================================================
+    // SOLAR CONTROL CONSOLE (/bin/solar_control.nte)
+    // =========================================================================
+
+    private void OnSolarStartup(Entity<SolarControlProgramComponent> ent, ref ProgramStartupEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+    private void OnSolarActivated(Entity<SolarControlProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+    private void OnSolarBuiOpened(Entity<SolarControlProgramComponent> ent, ref BoundUIOpenedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+
+    private void OnSolarAction(Entity<SolarControlProgramComponent> ent, ref SolarControlActionMessage msg)
+    {
+        switch (msg.Action)
+        {
+            case SolarControlAction.SetAngle:
+                if (float.IsFinite(msg.ValueDegrees))
+                {
+                    _solar.TargetPanelRotation = Angle.FromDegrees(msg.ValueDegrees).Reduced();
+                    ent.Comp.StatusMessage = $"Set solar array target angle to {msg.ValueDegrees:0.0}°.";
+                }
+                break;
+
+            case SolarControlAction.SetVelocity:
+                if (float.IsFinite(msg.ValueDegrees))
+                {
+                    var clamped = Math.Clamp(msg.ValueDegrees, (float) -PowerSolarSystem.MaxPanelVelocityDegrees, (float) PowerSolarSystem.MaxPanelVelocityDegrees);
+                    _solar.TargetPanelVelocity = Angle.FromDegrees(clamped);
+                    ent.Comp.StatusMessage = $"Set solar array tracking velocity to {clamped:0.00}°/min.";
+                }
+                break;
+        }
+
+        Dirty(ent);
+        UpdateSolarUi(ent.Owner, ent.Comp);
+    }
+
+    private void UpdateSolarUi(EntityUid progUid, SolarControlProgramComponent comp)
+    {
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+        {
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new SolarControlUiState(
+                (float) _solar.TargetPanelRotation.Degrees,
+                (float) _solar.TargetPanelVelocity.Degrees,
+                (float) _solar.TowardsSun.Degrees,
+                _solar.TotalPanelPower,
+                comp.StatusMessage));
+        }
     }
 }

@@ -40,6 +40,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
     private readonly FixedEye _defaultEye = new();
     private readonly ContentLabel _statusLabel;
+    private readonly ContentLabel _authStatusLabel;
+    private readonly ContentWrapContainer _authButtonsWrap;
     private readonly ContentWrapContainer _zoneBar;
     private readonly ContentLineEdit _searchEdit;
     private readonly ContentBoxContainer _cameraListContainer;
@@ -121,7 +123,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             SeparationOverride = 8
         };
 
-        // Left: Zone filter + Search + Camera directory list
+        // Left: Auth bar + Zone filter + Search + Camera directory list
         var leftPane = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
@@ -129,8 +131,49 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             MaxWidth = 248f,
             VerticalExpand = true,
             RectClipContent = true,
-            SeparationOverride = 6
+            SeparationOverride = 5
         };
+
+        var authPanel = new ContentPanelContainer
+        {
+            Name = "CameraAuthPanel",
+            HorizontalExpand = true,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1824"),
+                BorderColor = Color.FromHex("#1F4B66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 6,
+                ContentMarginRightOverride = 6,
+                ContentMarginTopOverride = 4,
+                ContentMarginBottomOverride = 4
+            }
+        };
+        var authCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 3
+        };
+        _authStatusLabel = new ContentLabel
+        {
+            Name = "CameraAuthStatusLabel",
+            Text = "AUTH: LOCKED (Swipe ID or .acc)",
+            FontColorOverride = Color.FromHex("#FFD166"),
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true
+        };
+        _authButtonsWrap = new ContentWrapContainer
+        {
+            Name = "CameraAuthButtonsWrap",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 3
+        };
+        authCol.AddChild(_authStatusLabel);
+        authCol.AddChild(_authButtonsWrap);
+        authPanel.AddChild(authCol);
+        leftPane.AddChild(authPanel);
 
         var zoneScroll = new ContentScrollContainer
         {
@@ -436,6 +479,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
                  (state.StatusMessage.Contains("full", StringComparison.OrdinalIgnoreCase) ||
                   state.StatusMessage.Contains("lost", StringComparison.OrdinalIgnoreCase) ||
                   state.StatusMessage.Contains("fail", StringComparison.OrdinalIgnoreCase) ||
+                  state.StatusMessage.Contains("denied", StringComparison.OrdinalIgnoreCase) ||
+                  state.StatusMessage.Contains("Authorized", StringComparison.OrdinalIgnoreCase) ||
                   state.StatusMessage.Contains("offline", StringComparison.OrdinalIgnoreCase) ||
                   state.StatusMessage.Contains("Cannot", StringComparison.OrdinalIgnoreCase) ||
                   state.StatusMessage.Contains("Downloaded", StringComparison.OrdinalIgnoreCase) ||
@@ -444,7 +489,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             _statusLabel.Text = state.StatusMessage;
             _statusLabel.ToolTip = state.StatusMessage;
             _statusLabel.FontColorOverride = state.StatusMessage.Contains("Downloaded", StringComparison.OrdinalIgnoreCase) ||
-                                             state.StatusMessage.Contains("Cleared", StringComparison.OrdinalIgnoreCase)
+                                             state.StatusMessage.Contains("Cleared", StringComparison.OrdinalIgnoreCase) ||
+                                             state.StatusMessage.Contains("Authorized", StringComparison.OrdinalIgnoreCase)
                 ? Color.FromHex("#66EEAA")
                 : Color.FromHex("#FFD166");
             _statusLabel.Visible = true;
@@ -452,6 +498,59 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         else
         {
             _statusLabel.Visible = false;
+        }
+
+        // Update Authorization Panel
+        _authStatusLabel.Text = state.IsAuthorized
+            ? $"AUTH: {(string.IsNullOrWhiteSpace(state.AuthorizedByLabel) ? "UNLOCKED" : state.AuthorizedByLabel)}"
+            : "AUTH: LOCKED (Swipe ID or .acc)";
+        _authStatusLabel.ToolTip = _authStatusLabel.Text;
+        _authStatusLabel.FontColorOverride = state.IsAuthorized
+            ? Color.FromHex("#66EEAA")
+            : Color.FromHex("#FFD166");
+
+        _authButtonsWrap.RemoveAllChildren();
+        foreach (var accPath in state.AvailableAccFiles)
+        {
+            var pathCopy = accPath;
+            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
+            var accBtn = new ContentButton
+            {
+                Name = $"CameraAuthAccBtn_{shortName}",
+                Text = $"Auth ({shortName})",
+                MinHeight = 22f
+            };
+            accBtn.Label.Margin = new Thickness(5, 2);
+            accBtn.OnPressed += _ => SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.AuthorizeWithAcc, zone: pathCopy));
+            _authButtonsWrap.AddChild(accBtn);
+        }
+
+        if (state.AvailableAccFiles.Count > 0 && !state.IsAuthorized)
+        {
+            var quickBtn = new ContentButton
+            {
+                Name = "CameraQuickAuthAccButton",
+                Text = "Auth .acc",
+                MinHeight = 22f
+            };
+            quickBtn.Label.Margin = new Thickness(5, 2);
+            quickBtn.OnPressed += _ => SendProgramMessage(new SurveillanceCameraActionMessage(
+                SurveillanceCameraAction.AuthorizeWithAcc,
+                zone: state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
+            _authButtonsWrap.AddChild(quickBtn);
+        }
+
+        if (state.IsAuthorized)
+        {
+            var lockBtn = new ContentButton
+            {
+                Name = "CameraRevokeAuthButton",
+                Text = "Lock",
+                MinHeight = 22f
+            };
+            lockBtn.Label.Margin = new Thickness(5, 2);
+            lockBtn.OnPressed += _ => SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.RevokeAuth));
+            _authButtonsWrap.AddChild(lockBtn);
         }
 
         // Rebuild zone buttons

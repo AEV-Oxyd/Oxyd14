@@ -276,3 +276,342 @@ public sealed class UtilityProgramUiState : BoundUserInterfaceState
         Status = status;
     }
 }
+
+// ============================================================================
+// Cargo Orders Program (/bin/cargo_orders.nte) — Bank Account ID + PIN Auth & Withdrawal
+// ============================================================================
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class CargoOrdersProgramComponent : Component
+{
+    [DataField]
+    public string AuthenticatedAccountId = string.Empty;
+
+    [DataField]
+    public string AuthenticatedPin = string.Empty;
+
+    [DataField]
+    public string AuthenticatedAccountProto = string.Empty;
+
+    [DataField]
+    public bool IsAuthenticated;
+
+    [DataField]
+    public string SelectedCategory = "All";
+
+    [DataField]
+    public string StatusMessage = "Enter Bank Account ID and PIN to authenticate and withdraw funds for cargo orders.";
+}
+
+[Serializable, NetSerializable]
+public sealed class CargoProductEntryDto
+{
+    public string ProductId { get; }
+    public string Name { get; }
+    public string Description { get; }
+    public string Category { get; }
+    public int Cost { get; }
+
+    public CargoProductEntryDto(string productId, string name, string description, string category, int cost)
+    {
+        ProductId = productId;
+        Name = name;
+        Description = description;
+        Category = category;
+        Cost = cost;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CargoOrderEntryDto
+{
+    public int OrderId { get; }
+    public string ProductId { get; }
+    public string ProductName { get; }
+    public int Quantity { get; }
+    public int TotalCost { get; }
+    public string Requester { get; }
+    public string Reason { get; }
+    public string Account { get; }
+    public bool Approved { get; }
+    public string Approver { get; }
+
+    public CargoOrderEntryDto(
+        int orderId,
+        string productId,
+        string productName,
+        int quantity,
+        int totalCost,
+        string requester,
+        string reason,
+        string account,
+        bool approved,
+        string approver)
+    {
+        OrderId = orderId;
+        ProductId = productId;
+        ProductName = productName;
+        Quantity = quantity;
+        TotalCost = totalCost;
+        Requester = requester;
+        Reason = reason;
+        Account = account;
+        Approved = approved;
+        Approver = approver;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CargoBankAccountSummaryDto
+{
+    public string AccountProto { get; }
+    public string AccountId { get; }
+    public int Balance { get; }
+
+    public CargoBankAccountSummaryDto(string accountProto, string accountId, int balance)
+    {
+        AccountProto = accountProto;
+        AccountId = accountId;
+        Balance = balance;
+    }
+}
+
+[Serializable, NetSerializable]
+public enum CargoOrdersAction : byte
+{
+    Refresh,
+    SelectCategory,
+    AuthenticateBank,
+    LogoutBank,
+    PlaceAndPayOrder,
+    QueueOrder,
+    ApproveOrder,
+    RemoveOrder,
+    WithdrawCash
+}
+
+[Serializable, NetSerializable]
+public sealed class CargoOrdersActionMessage : BoundUserInterfaceMessage
+{
+    public CargoOrdersAction Action { get; }
+    public string AccountId { get; }
+    public string Pin { get; }
+    public string ProductId { get; }
+    public int Quantity { get; }
+    public int OrderId { get; }
+    public string Requester { get; }
+    public string Reason { get; }
+    public string Category { get; }
+
+    public CargoOrdersActionMessage(
+        CargoOrdersAction action,
+        string accountId = "",
+        string pin = "",
+        string productId = "",
+        int quantity = 1,
+        int orderId = 0,
+        string requester = "",
+        string reason = "",
+        string category = "All")
+    {
+        Action = action;
+        AccountId = accountId;
+        Pin = pin;
+        ProductId = productId;
+        Quantity = quantity;
+        OrderId = orderId;
+        Requester = requester;
+        Reason = reason;
+        Category = category;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CargoOrdersUiState : BoundUserInterfaceState
+{
+    public bool IsAuthenticated { get; }
+    public string AuthenticatedAccountId { get; }
+    public string AuthenticatedAccountName { get; }
+    public int AuthenticatedBalance { get; }
+    public string SelectedCategory { get; }
+    public string StatusMessage { get; }
+    public List<string> Categories { get; }
+    public List<CargoProductEntryDto> Products { get; }
+    public List<CargoOrderEntryDto> Orders { get; }
+    public List<CargoBankAccountSummaryDto> KnownAccounts { get; }
+
+    public CargoOrdersUiState(
+        bool isAuthenticated,
+        string authenticatedAccountId,
+        string authenticatedAccountName,
+        int authenticatedBalance,
+        string selectedCategory,
+        string statusMessage,
+        List<string> categories,
+        List<CargoProductEntryDto> products,
+        List<CargoOrderEntryDto> orders,
+        List<CargoBankAccountSummaryDto>? knownAccounts = null)
+    {
+        IsAuthenticated = isAuthenticated;
+        AuthenticatedAccountId = authenticatedAccountId;
+        AuthenticatedAccountName = authenticatedAccountName;
+        AuthenticatedBalance = authenticatedBalance;
+        SelectedCategory = selectedCategory;
+        StatusMessage = statusMessage;
+        Categories = categories;
+        Products = products;
+        Orders = orders;
+        KnownAccounts = knownAccounts ?? new List<CargoBankAccountSummaryDto>();
+    }
+}
+
+// ============================================================================
+// Crew Monitoring Program (/bin/crew_monitor.nte)
+// ============================================================================
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class CrewMonitorProgramComponent : Component;
+
+[Serializable, NetSerializable]
+public sealed class CrewSensorEntryDto
+{
+    public string Name { get; }
+    public string JobTitle { get; }
+    public bool IsAlive { get; }
+    public int TotalDamage { get; }
+    public string CoordinatesText { get; }
+
+    public CrewSensorEntryDto(string name, string jobTitle, bool isAlive, int totalDamage, string coordinatesText)
+    {
+        Name = name;
+        JobTitle = jobTitle;
+        IsAlive = isAlive;
+        TotalDamage = totalDamage;
+        CoordinatesText = coordinatesText;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CrewMonitorUiState : BoundUserInterfaceState
+{
+    public string StationName { get; }
+    public List<CrewSensorEntryDto> Sensors { get; }
+
+    public CrewMonitorUiState(string stationName, List<CrewSensorEntryDto> sensors)
+    {
+        StationName = stationName;
+        Sensors = sensors;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CrewMonitorRefreshMessage : BoundUserInterfaceMessage;
+
+// ============================================================================
+// Communications Console Program (/bin/comms_console.nte)
+// ============================================================================
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class CommsConsoleProgramComponent : Component
+{
+    [DataField]
+    public string StatusMessage = "Ready for station broadcast.";
+}
+
+[Serializable, NetSerializable]
+public enum CommsConsoleAction : byte
+{
+    Refresh,
+    BroadcastAnnouncement,
+    SetAlertLevel
+}
+
+[Serializable, NetSerializable]
+public sealed class CommsConsoleActionMessage : BoundUserInterfaceMessage
+{
+    public CommsConsoleAction Action { get; }
+    public string Text { get; }
+
+    public CommsConsoleActionMessage(CommsConsoleAction action, string text = "")
+    {
+        Action = action;
+        Text = text;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class CommsConsoleUiState : BoundUserInterfaceState
+{
+    public bool CanBroadcast { get; }
+    public string CurrentAlertLevel { get; }
+    public List<string> AvailableAlertLevels { get; }
+    public string StatusMessage { get; }
+
+    public CommsConsoleUiState(
+        bool canBroadcast,
+        string currentAlertLevel,
+        List<string> availableAlertLevels,
+        string statusMessage)
+    {
+        CanBroadcast = canBroadcast;
+        CurrentAlertLevel = currentAlertLevel;
+        AvailableAlertLevels = availableAlertLevels;
+        StatusMessage = statusMessage;
+    }
+}
+
+// ============================================================================
+// Solar Control Console Program (/bin/solar_control.nte)
+// ============================================================================
+
+[RegisterComponent, NetworkedComponent]
+public sealed partial class SolarControlProgramComponent : Component
+{
+    [DataField]
+    public string StatusMessage = "Solar array telemetry synced.";
+}
+
+[Serializable, NetSerializable]
+public enum SolarControlAction : byte
+{
+    Refresh,
+    SetAngle,
+    SetVelocity
+}
+
+[Serializable, NetSerializable]
+public sealed class SolarControlActionMessage : BoundUserInterfaceMessage
+{
+    public SolarControlAction Action { get; }
+    public float ValueDegrees { get; }
+
+    public SolarControlActionMessage(SolarControlAction action, float valueDegrees = 0f)
+    {
+        Action = action;
+        ValueDegrees = valueDegrees;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class SolarControlUiState : BoundUserInterfaceState
+{
+    public float PanelAngleDegrees { get; }
+    public float AngularVelocityDegreesPerMin { get; }
+    public float SunAngleDegrees { get; }
+    public float TotalPowerWatts { get; }
+    public string StatusMessage { get; }
+
+    public SolarControlUiState(
+        float panelAngleDegrees,
+        float angularVelocityDegreesPerMin,
+        float sunAngleDegrees,
+        float totalPowerWatts,
+        string statusMessage)
+    {
+        PanelAngleDegrees = panelAngleDegrees;
+        AngularVelocityDegreesPerMin = angularVelocityDegreesPerMin;
+        SunAngleDegrees = sunAngleDegrees;
+        TotalPowerWatts = totalPowerWatts;
+        StatusMessage = statusMessage;
+    }
+}

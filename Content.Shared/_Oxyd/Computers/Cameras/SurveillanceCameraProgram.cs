@@ -1,4 +1,6 @@
+using Content.Shared.Access;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers.Cameras;
@@ -115,6 +117,27 @@ public sealed partial class SurveillanceCameraProgramComponent : Component
 
     [DataField, AutoNetworkedField]
     public string StatusMessage = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public bool IsAuthorized;
+
+    [DataField, AutoNetworkedField]
+    public string AuthorizedByLabel = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public string? SelectedAccFilePath;
+
+    [DataField]
+    public List<ProtoId<AccessLevelPrototype>> RequiredAccess = new()
+    {
+        "Security",
+        "Command",
+        "Detective",
+        "Brig",
+        "HeadOfSecurity",
+        "Captain",
+        "Armory"
+    };
 
     [ViewVariables]
     public EntityUid? ActiveCameraUid;
@@ -247,7 +270,10 @@ public enum SurveillanceCameraAction : byte
     DisconnectCamera,
     Disconnect,
     DownloadLogs,
-    ClearLogs
+    ClearLogs,
+    SelectAccFile,
+    AuthorizeWithAcc,
+    RevokeAuth
 }
 
 [Serializable, NetSerializable]
@@ -289,6 +315,10 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
     public List<CameraAudioLineDto> LiveAudioFeed { get; }
     public List<ActiveCameraFeedDto> ActiveFeeds { get; }
     public int MaxActiveCameras { get; }
+    public bool IsAuthorized { get; }
+    public string AuthorizedByLabel { get; }
+    public string? SelectedAccFilePath { get; }
+    public List<string> AvailableAccFiles { get; }
 
     public SurveillanceCameraUiState(
         bool online,
@@ -308,7 +338,11 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
         List<CameraLogEntryDto> activeLogs,
         List<CameraAudioLineDto> liveAudioFeed,
         List<ActiveCameraFeedDto>? activeFeeds = null,
-        int maxActiveCameras = SurveillanceCameraProgramComponent.MaxActiveCameras)
+        int maxActiveCameras = SurveillanceCameraProgramComponent.MaxActiveCameras,
+        bool isAuthorized = false,
+        string authorizedByLabel = "",
+        string? selectedAccFilePath = null,
+        List<string>? availableAccFiles = null)
     {
         Online = online;
         RouterLabel = routerLabel;
@@ -328,5 +362,9 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
         LiveAudioFeed = liveAudioFeed;
         ActiveFeeds = activeFeeds ?? new List<ActiveCameraFeedDto>();
         MaxActiveCameras = maxActiveCameras;
+        IsAuthorized = isAuthorized;
+        AuthorizedByLabel = authorizedByLabel;
+        SelectedAccFilePath = selectedAccFilePath;
+        AvailableAccFiles = availableAccFiles ?? new List<string>();
     }
 }

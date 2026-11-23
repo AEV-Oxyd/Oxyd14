@@ -25,6 +25,7 @@ using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Tools;
 using Content.Shared.Access.Components;
+using Content.Shared.Interaction;
 using Content.Shared.Atmos.Monitor;
 using Content.Shared.Atmos.Monitor.Components;
 using Content.Shared.Containers.ItemSlots;
@@ -5482,7 +5483,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CriminalRecordsProgramComponent.CacheFilePath, out var crDb);
             novaCrimKey = crDb!.Data.First(kv => kv.Key.StartsWith("crim_") && kv.Value.StartsWith("Nova Vance\t")).Key;
-            compSys.OpenComputerForActor(crimRecCompUid, SPlayer);
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(crimRecHost).Coordinates); compSys.OpenComputerForActor(crimRecCompUid, SPlayer);
         });
         await RunTicks(8);
 
@@ -5682,8 +5683,44 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 "Camera app must NOT list cameras Wi-Fi connected to a different farther router.");
         });
 
-        // 2) Shortfall 1: Connect to Sec Hallway Cam -> Examine through camera WORKS, Details range WORKS,
-        //    while physical interaction reach remains strictly blocked!
+        // 2) Shortfall 1: Camera monitoring requires authorization by swiping ID card or .acc file!
+        //    First verify connecting without authorization is rejected, then authorize via .acc file and connect!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(secCamUid)), FromServer(camProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.IsAuthorized, Is.False, "Camera monitoring must start unauthorized.");
+            Assert.That(progComp.ActiveCameraUids, Is.Empty, "Unauthorized camera monitor must block camera connection.");
+
+            // Write a Security .acc file to /keys/sec_cam.acc on the monitor's hard drive
+            Assert.That(fsSys.TryFindFileSystem(monitorCompUid, out var monDrive, out var monFs), Is.True);
+            var secAcc = new AccessCodesVirtualFile
+            {
+                Name = "sec_cam",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "Officer Vance",
+                JobTitle = "Security Officer",
+                AccessTags = new List<ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "Security" }
+            };
+            Assert.That(fsSys.TryWriteFile(monDrive!.Value, secAcc, monFs!), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.AuthorizeWithAcc, zone: "/keys/sec_cam.acc"), FromServer(camProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.IsAuthorized, Is.True, "Camera monitoring must authorize via valid .acc file.");
+        });
+
+        // Connect to Sec Hallway Cam -> Examine through camera WORKS, Details range WORKS,
+        // while physical interaction reach remains strictly blocked!
         await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
             SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(secCamUid)), FromServer(camProgUid));
         await RunTicks(10);
@@ -6028,6 +6065,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             var mComp = SEntMan.GetComponent<OxydComputerComponent>(monitorCompUid);
             camProgUid = mComp.ActiveProgram!.Value;
+
+            // Authorize camera monitor by swiping a Security ID card on the monitor host!
+            var secCard = SEntMan.SpawnEntity("SecurityIDCard", SEntMan.GetComponent<TransformComponent>(monitorHost).Coordinates);
+            var swipeEv = new InteractUsingEvent(SPlayer, secCard, monitorHost, SEntMan.GetComponent<TransformComponent>(monitorHost).Coordinates);
+            SEntMan.EventBus.RaiseLocalEvent(monitorHost, swipeEv);
+            Assert.That(SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid).IsAuthorized, Is.True,
+                "Swiping a Security ID card on the camera monitor must authorize camera monitoring.");
+
             compSys.OpenComputerForActor(monitorCompUid, SPlayer);
         });
         await RunTicks(10);
@@ -6409,5 +6454,463 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(right, Is.LessThanOrEqualTo(viewportRight + 2f),
                 $"[{context}] Control {ctrl.GetType().Name} overflowed viewport right edge ({right:0.#} > {viewportRight:0.#}).");
         }
+    }
+
+    [Test]
+    public async Task TestPortedConsolesBankCargoRecordsPhotosIdAccAndPerApcAuth()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<Content.Server.Power.EntitySystems.PowerReceiverSystem>();
+        var cargoSys = Server.System<Content.Server.Cargo.Systems.CargoSystem>();
+        var accessSys = Server.System<Content.Shared.Access.Systems.SharedAccessSystem>();
+        var itemSlotsSys = Server.System<Content.Shared.Containers.ItemSlots.ItemSlotsSystem>();
+
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+        var baseCoords = new EntityCoordinates(gridUid, 0.5f, 0.5f);
+
+        EntityUid routerHost = default;
+        EntityUid dataServerHost = default;
+        EntityUid stationRecHost = default;
+        EntityUid crimRecHost = default;
+        EntityUid cargoHost = default;
+        EntityUid idConsoleHost = default;
+        EntityUid powerConsoleHost = default;
+        EntityUid atmosConsoleHost = default;
+        EntityUid apcAUid = default;
+        EntityUid apcBUid = default;
+        EntityUid alarmAUid = default;
+        EntityUid alarmBUid = default;
+        EntityUid targetIdCardUid = default;
+        EntityUid engIdCardUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            for (var x = 0; x <= 14; x++)
+            {
+                for (var y = 0; y <= 14; y++)
+                    Server.System<SharedMapSystem>().SetTile(gridUid, SEntMan.GetComponent<Robust.Shared.Map.Components.MapGridComponent>(gridUid), new Robust.Shared.Maths.Vector2i(x, y), new Tile(1));
+            }
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", baseCoords);
+            powerSys.SetNeedsPower(routerHost, false);
+
+            dataServerHost = SEntMan.SpawnEntity("StationRecordsServer", new EntityCoordinates(gridUid, 1.5f, 0.5f));
+            powerSys.SetNeedsPower(dataServerHost, false);
+
+            stationRecHost = SEntMan.SpawnEntity("ComputerStationRecords", new EntityCoordinates(gridUid, 2.5f, 0.5f));
+            powerSys.SetNeedsPower(stationRecHost, false);
+
+            crimRecHost = SEntMan.SpawnEntity("ComputerCriminalRecords", new EntityCoordinates(gridUid, 3.5f, 0.5f));
+            powerSys.SetNeedsPower(crimRecHost, false);
+
+            cargoHost = SEntMan.SpawnEntity("ComputerCargoOrders", new EntityCoordinates(gridUid, 4.5f, 0.5f));
+            powerSys.SetNeedsPower(cargoHost, false);
+
+            idConsoleHost = SEntMan.SpawnEntity("ComputerId", new EntityCoordinates(gridUid, 5.5f, 0.5f));
+            powerSys.SetNeedsPower(idConsoleHost, false);
+
+            powerConsoleHost = SEntMan.SpawnEntity("ComputerPowerMonitoring", new EntityCoordinates(gridUid, 6.5f, 0.5f));
+            powerSys.SetNeedsPower(powerConsoleHost, false);
+
+            atmosConsoleHost = SEntMan.SpawnEntity("ComputerAlert", new EntityCoordinates(gridUid, 7.5f, 0.5f));
+            powerSys.SetNeedsPower(atmosConsoleHost, false);
+
+            apcAUid = SEntMan.SpawnEntity("APCBasic", new EntityCoordinates(gridUid, 2.5f, 4.5f));
+            SEntMan.System<MetaDataSystem>().SetEntityName(apcAUid, "APC Alpha");
+
+            apcBUid = SEntMan.SpawnEntity("APCBasic", new EntityCoordinates(gridUid, 8.5f, 4.5f));
+            SEntMan.System<MetaDataSystem>().SetEntityName(apcBUid, "APC Beta");
+
+            alarmAUid = SEntMan.SpawnEntity("AirAlarm", new EntityCoordinates(gridUid, 2.5f, 5.5f));
+            powerSys.SetNeedsPower(alarmAUid, false);
+            SEntMan.System<MetaDataSystem>().SetEntityName(alarmAUid, "Air Alarm Alpha");
+
+            alarmBUid = SEntMan.SpawnEntity("AirAlarm", new EntityCoordinates(gridUid, 8.5f, 5.5f));
+            powerSys.SetNeedsPower(alarmBUid, false);
+            SEntMan.System<MetaDataSystem>().SetEntityName(alarmBUid, "Air Alarm Beta");
+
+            targetIdCardUid = SEntMan.SpawnEntity("PassengerIDCard", baseCoords);
+            engIdCardUid = SEntMan.SpawnEntity("EngineeringIDCard", baseCoords);
+        });
+        await RunTicks(10);
+
+        // =====================================================================
+        // 1) CARGO ORDERS: Bank Account ID + PIN Auth & Money Withdrawal
+        // =====================================================================
+        EntityUid cargoCompUid = default;
+        EntityUid cargoProgUid = default;
+        string firstProductId = string.Empty;
+        int firstProductCost = 0;
+
+        await Server.WaitAssertion(() =>
+        {
+            cargoCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(cargoHost).ComputerEntity!.Value;
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(cargoCompUid);
+            Assert.That(cComp.IsBooted, Is.True);
+            cargoProgUid = cComp.ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<CargoOrdersProgramComponent>(cargoProgUid), Is.True,
+                "Ported ComputerCargoOrders must boot into CargoOrdersProgramComponent.");
+
+            var protoMan = Server.ResolveDependency<IPrototypeManager>();
+            var prod = protoMan.EnumeratePrototypes<Content.Shared.Cargo.Prototypes.CargoProductPrototype>()
+                .First(p => p.Group == "market" && p.Cost > 0 && p.Cost <= 1000);
+            firstProductId = prod.ID;
+            firstProductCost = prod.Cost;
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(cargoHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(cargoHost).ComputerEntity!.Value, SPlayer); });
+        await RunTicks(10);
+
+        // Ordering without Bank Account ID + PIN must be rejected and not deduct funds
+        await SendBui(ProgramUiKey.Key, new CargoOrdersActionMessage(
+            CargoOrdersAction.PlaceAndPayOrder,
+            productId: firstProductId,
+            quantity: 1), FromServer(cargoProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var bankComp = SEntMan.GetComponent<Content.Shared.Cargo.Components.StationBankAccountComponent>(gridUid);
+            Assert.That(bankComp.Accounts["Cargo"], Is.EqualTo(2000),
+                "Unauthenticated cargo order must NOT withdraw money from bank account.");
+        });
+
+        // Wrong PIN must fail authentication
+        await SendBui(ProgramUiKey.Key, new CargoOrdersActionMessage(
+            CargoOrdersAction.AuthenticateBank,
+            accountId: "CARGO-01",
+            pin: "9999"), FromServer(cargoProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<CargoOrdersProgramComponent>(cargoProgUid);
+            Assert.That(progComp.IsAuthenticated, Is.False, "Wrong bank PIN must not authenticate.");
+        });
+
+        // Valid Bank Account ID ("CARGO-01") + PIN ("1111") must authenticate and withdraw money during order!
+        await SendBui(ProgramUiKey.Key, new CargoOrdersActionMessage(
+            CargoOrdersAction.AuthenticateBank,
+            accountId: "CARGO-01",
+            pin: "1111"), FromServer(cargoProgUid));
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new CargoOrdersActionMessage(
+            CargoOrdersAction.PlaceAndPayOrder,
+            productId: firstProductId,
+            quantity: 1,
+            requester: "QM Bell",
+            reason: "Station supply test"), FromServer(cargoProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<CargoOrdersProgramComponent>(cargoProgUid);
+            Assert.That(progComp.IsAuthenticated, Is.True);
+
+            var bankComp = SEntMan.GetComponent<Content.Shared.Cargo.Components.StationBankAccountComponent>(gridUid);
+            Assert.That(bankComp.Accounts["Cargo"], Is.EqualTo(2000 - firstProductCost),
+                "Authenticated cargo order must withdraw the order cost from the authenticated bank account.");
+        });
+
+        // =====================================================================
+        // 2 & 3) CREW RECORDS HEADSHOT & SECURITY RECORDS GRAY JUMPSUIT + BLACK SHOES PHOTO
+        // =====================================================================
+        EntityUid stationRecCompUid = default;
+        EntityUid stationRecProgUid = default;
+        EntityUid crimRecCompUid = default;
+        EntityUid crimRecProgUid = default;
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() =>
+        {
+            // Seed a crew record on the DataServer so both Station Records and Criminal Records display a subject
+            var dsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(dataServerHost).ComputerEntity!.Value;
+            fsSys.TryFindFileSystem(dsCompUid, out var dsDrive, out var dsFs);
+
+            var stDb = new DatabaseVirtualFile
+            {
+                Name = "station_records",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "station_records"
+            };
+            stDb.Data["__station"] = "NSS Oxyd";
+            stDb.Data["rec_1"] = RecordsDbCodec.EncodeStationRecordRow(
+                "Alice Mercer", "Scientist", "Scientist", "JobIconScientist", 29, "Human", "Female", "FP-101", "DNA-101");
+            fsSys.TryWriteFile(dsDrive!.Value, stDb, dsFs!);
+
+            var crDb = new DatabaseVirtualFile
+            {
+                Name = "criminal_records",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "criminal_records"
+            };
+            crDb.Data["crim_1"] = RecordsDbCodec.EncodeCriminalRecordRow(
+                "Alice Mercer", "Scientist", Content.Shared.Security.SecurityStatus.Suspected, "Contraband possession", "Sec", new List<CrimeHistoryEntryDto>());
+            fsSys.TryWriteFile(dsDrive.Value, crDb, dsFs);
+
+            stationRecCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(stationRecHost).ComputerEntity!.Value;
+            stationRecProgUid = SEntMan.GetComponent<OxydComputerComponent>(stationRecCompUid).ActiveProgram!.Value;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(stationRecHost).Coordinates); compSys.OpenComputerForActor(stationRecCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        await SendBui(ProgramUiKey.Key, new StationRecordsActionMessage(StationRecordsAction.Refresh), FromServer(stationRecProgUid));
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var stUi = GetControlFromChildren<StationRecordsUiControl>(_ => true, win);
+            Assert.That(stUi, Is.Not.Null);
+            Assert.That(stUi!.HeadshotControl, Is.Not.Null);
+            Assert.That(stUi.HeadshotControl.IsHeadshot, Is.True, "Crew Records must showcase a headshot.");
+            Assert.That(stUi.HeadshotControl.WearPrisonAttire, Is.False);
+            Assert.That(CEntMan.EntityExists(stUi.HeadshotControl.PreviewDummy), Is.True,
+                "Crew Records headshot control must spawn and render a valid subject preview dummy.");
+            win.Close();
+        });
+        await RunTicks(6);
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() =>
+        {
+            crimRecCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(crimRecHost).ComputerEntity!.Value;
+            crimRecProgUid = SEntMan.GetComponent<OxydComputerComponent>(crimRecCompUid).ActiveProgram!.Value;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(crimRecHost).Coordinates); compSys.OpenComputerForActor(crimRecCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        await SendBui(ProgramUiKey.Key, new CriminalRecordsActionMessage(CriminalRecordsAction.Refresh), FromServer(crimRecProgUid));
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crUi = GetControlFromChildren<CriminalRecordsUiControl>(_ => true, win);
+            Assert.That(crUi, Is.Not.Null);
+            Assert.That(crUi!.SubjectPhotoControl, Is.Not.Null);
+            Assert.That(crUi.SubjectPhotoControl.IsHeadshot, Is.False,
+                "Security Records must showcase a full-body photo of the entire subject.");
+            Assert.That(crUi.SubjectPhotoControl.WearPrisonAttire, Is.True);
+            Assert.That(CEntMan.EntityExists(crUi.SubjectPhotoControl.PreviewDummy), Is.True,
+                "Security Records photo control must spawn a valid full-body preview dummy.");
+            Assert.That(crUi.SubjectPhotoControl.EquippedJumpsuitPrototype,
+                Is.EqualTo(RecordSubjectPhotoControl.PrisonJumpsuitProtoId),
+                "Security Records subject photo must wear a gray jumpsuit (ClothingUniformJumpsuitColorGrey).");
+            Assert.That(crUi.SubjectPhotoControl.EquippedShoesPrototype,
+                Is.EqualTo(RecordSubjectPhotoControl.PrisonShoesProtoId),
+                "Security Records subject photo must wear black shoes (ClothingShoesColorBlack).");
+            win.Close();
+        });
+        await RunTicks(6);
+
+        // =====================================================================
+        // 4) ID AUTHORIZATION / MODIFICATION CONSOLE PROGRAM WITH .ACC FILES
+        // =====================================================================
+        EntityUid idCompUid = default;
+        EntityUid idProgUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            idCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(idConsoleHost).ComputerEntity!.Value;
+            idProgUid = SEntMan.GetComponent<OxydComputerComponent>(idCompUid).ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<AccessEncoderProgramComponent>(idProgUid), Is.True,
+                "Ported ComputerId must run the ID Authorization & Modification program.");
+
+            // Insert target PassengerIDCard into the console's TargetIdSlot (with NO physical Privileged ID card!)
+            var idConsoleComp = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardConsoleComponent>(idConsoleHost);
+            Assert.That(itemSlotsSys.TryInsert(idConsoleHost, idConsoleComp.TargetIdSlot, targetIdCardUid, null), Is.True);
+
+            // Write an Engineering + Command .acc file to /keys/chief.acc on ComputerId's hard drive
+            Assert.That(fsSys.TryFindFileSystem(idCompUid, out var idDrive, out var idFs), Is.True);
+            var chiefAcc = new AccessCodesVirtualFile
+            {
+                Name = "chief",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "CE Sterling",
+                JobTitle = "Chief Engineer",
+                AccessTags = new List<ProtoId<Content.Shared.Access.AccessLevelPrototype>>
+                {
+                    "Engineering",
+                    "Atmospherics",
+                    "ChiefEngineer"
+                }
+            };
+            Assert.That(fsSys.TryWriteFile(idDrive!.Value, chiefAcc, idFs!), Is.True);
+        });
+        await RunTicks(6);
+
+        // Select /keys/chief.acc as the authorization source, update target ID identity, and apply .acc access codes!
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(idConsoleHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(idConsoleHost).ComputerEntity!.Value, SPlayer); });
+        await RunTicks(10);
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.SelectFile, "/keys/chief.acc"), FromServer(idProgUid));
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.WriteTargetIdentity, " Jordan Vega", "Senior Engineer"), FromServer(idProgUid));
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var idCard = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardComponent>(targetIdCardUid);
+            Assert.That(idCard.FullName, Is.EqualTo("Jordan Vega"),
+                "ID console program must update target ID card full name when authorized by a .acc file.");
+            Assert.That(idCard.LocalizedJobTitle, Is.EqualTo("Senior Engineer"),
+                "ID console program must update target ID card job title when authorized by a .acc file.");
+
+            var tags = accessSys.TryGetTags(targetIdCardUid)!.ToList();
+            Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("Engineering")));
+            Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("Atmospherics")));
+            Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("ChiefEngineer")));
+        });
+
+        // =====================================================================
+        // 5) ENGINEERING CONTROL PROGRAMS: Per-APC Authorization via .acc or ID Swipe
+        // =====================================================================
+        EntityUid powerCompUid = default;
+        EntityUid powerProgUid = default;
+        EntityUid atmosCompUid = default;
+        EntityUid atmosProgUid = default;
+        string apcAGuid = string.Empty;
+        string apcBGuid = string.Empty;
+        string alarmBGuid = string.Empty;
+        bool initialApcABreaker = false;
+        bool initialApcBBreaker = false;
+
+        await Server.WaitPost(() =>
+        {
+            powerCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(powerConsoleHost).ComputerEntity!.Value;
+            powerProgUid = SEntMan.GetComponent<OxydComputerComponent>(powerCompUid).ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<ApcControlProgramComponent>(powerProgUid), Is.True);
+
+            atmosCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(atmosConsoleHost).ComputerEntity!.Value;
+            atmosProgUid = SEntMan.GetComponent<OxydComputerComponent>(atmosCompUid).ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<AtmosControlProgramComponent>(atmosProgUid), Is.True);
+
+            var routerSys = Server.System<Content.Server._Oxyd.Computers.Network.NetworkRouterSystem>();
+            var apcACompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcAUid).ComputerEntity!.Value;
+            var apcBCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcBUid).ComputerEntity!.Value;
+            var alarmBCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmBUid).ComputerEntity!.Value;
+            apcAGuid = routerSys.EnsureDeviceGuid(apcACompUid);
+            apcBGuid = routerSys.EnsureDeviceGuid(apcBCompUid);
+            alarmBGuid = routerSys.EnsureDeviceGuid(alarmBCompUid);
+
+            initialApcABreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcAUid).MainBreakerEnabled;
+            initialApcBBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcBUid).MainBreakerEnabled;
+
+            // Put an Engineering .acc file on powerConsoleHost's drive
+            Assert.That(fsSys.TryFindFileSystem(powerCompUid, out var pDrive, out var pFs), Is.True);
+            var engAcc = new AccessCodesVirtualFile
+            {
+                Name = "eng",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "Eng Tech",
+                JobTitle = "Station Engineer",
+                AccessTags = new List<ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "Engineering", "Atmospherics" }
+            };
+            Assert.That(fsSys.TryWriteFile(pDrive!.Value, engAcc, pFs!), Is.True);
+        });
+        await RunTicks(6);
+
+        // Select APC Alpha on Power Console -> try toggling breaker before authorization -> must be blocked!
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(powerConsoleHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(powerConsoleHost).ComputerEntity!.Value, SPlayer); });
+        await RunTicks(10);
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.SelectTarget, apcAGuid), FromServer(powerProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(powerProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcAUid).MainBreakerEnabled,
+                Is.EqualTo(initialApcABreaker),
+                "Remote APC Control must block breaker toggle before authorizing to that APC.");
+        });
+
+        // Authorize APC Alpha using /keys/eng.acc -> now toggling APC Alpha's breaker succeeds!
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, "/keys/eng.acc"), FromServer(powerProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(powerProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcAUid).MainBreakerEnabled,
+                Is.EqualTo(!initialApcABreaker),
+                "Authorizing to APC Alpha via .acc file must allow toggling APC Alpha's breaker.");
+        });
+
+        // Switch to APC Beta -> APC Beta must STILL require its own authorization!
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.SelectTarget, apcBGuid), FromServer(powerProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(powerProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcBUid).MainBreakerEnabled,
+                Is.EqualTo(initialApcBBreaker),
+                "Authorizing APC Alpha must NOT automatically authorize APC Beta (per-APC authorization required).");
+
+            // Now authorize APC Beta by swiping an Engineering ID card on powerConsoleHost!
+            var swipeEv = new InteractUsingEvent(SPlayer, engIdCardUid, powerConsoleHost, baseCoords);
+            SEntMan.EventBus.RaiseLocalEvent(powerConsoleHost, swipeEv);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(powerProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(apcBUid).MainBreakerEnabled,
+                Is.EqualTo(!initialApcBBreaker),
+                "Swiping an Engineering ID card while APC Beta is selected must authorize APC Beta.");
+        });
+
+        // Verify Remote Atmos Control (ComputerAlert) also requires per-APC authorization via ID swipe or .acc file!
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(atmosConsoleHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(atmosConsoleHost).ComputerEntity!.Value, SPlayer); });
+        await RunTicks(10);
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SelectTarget, alarmBGuid), FromServer(atmosProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(atmosProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Atmos.Monitor.Components.AirAlarmComponent>(alarmBUid).CurrentMode,
+                Is.Not.EqualTo(AirAlarmMode.Panic),
+                "Remote Atmos Control must block mode changes before authorizing to that area's APC.");
+
+            // Swipe Engineering ID card on atmosConsoleHost to authorize APC Beta's Air Alarm
+            var swipeEv = new InteractUsingEvent(SPlayer, engIdCardUid, atmosConsoleHost, baseCoords);
+            SEntMan.EventBus.RaiseLocalEvent(atmosConsoleHost, swipeEv);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(atmosProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Atmos.Monitor.Components.AirAlarmComponent>(alarmBUid).CurrentMode,
+                Is.EqualTo(AirAlarmMode.Panic),
+                "After authorizing to APC Beta via ID swipe, Remote Atmos Control must switch Air Alarm Beta to Panic mode.");
+        });
     }
 }
