@@ -739,6 +739,11 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         }
 
         _fileSystem.LogSystemActivity(driveUid.Value, "NET-PKT", $"Updated {path} from {pkt.Protocol} ({pkt.PacketId})");
+        if (path.Equals(StationRecordsProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase) ||
+            path.Equals(CriminalRecordsProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            EntityManager.System<RecordsProgramsSystem>().RefreshRecordProgramsFromLocalCache(destCompUid, path);
+        }
         return true;
     }
 

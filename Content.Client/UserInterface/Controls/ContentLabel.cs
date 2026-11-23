@@ -36,6 +36,7 @@ public class ContentLabel : ContentControl
             if (_wordWrap != value)
             {
                 _wordWrap = value;
+                RectClipContent = _clipText || _wordWrap;
                 InvalidateMeasure();
             }
         }
@@ -43,12 +44,34 @@ public class ContentLabel : ContentControl
 
     public Color? FontColorOverride { get; set; }
     public Font? FontOverride { get; set; }
-    public bool ClipText { get; set; }
+
+    /// <summary>
+    /// Controls text alignment within this label's arranged bounds independently of
+    /// <see cref="Control.HorizontalAlignment"/> so clipped labels can stay stretched to fill
+    /// their parent without collapsing to zero width.
+    /// </summary>
+    public HAlignment? TextAlignment { get; set; }
+
+    private bool _clipText;
+    public bool ClipText
+    {
+        get => _clipText;
+        set
+        {
+            if (_clipText != value)
+            {
+                _clipText = value;
+                RectClipContent = _clipText || _wordWrap;
+                InvalidateMeasure();
+            }
+        }
+    }
 
     public ContentLabel()
     {
         MouseFilter = MouseFilterMode.Ignore;
         VerticalAlignment = VAlignment.Center;
+        RectClipContent = _clipText || _wordWrap;
     }
 
     public ContentLabel(string text) : this()
@@ -222,7 +245,23 @@ public class ContentLabel : ContentControl
 
         var lines = BuildWrappedLines(font, Text, maxPixelW, out var maxLineWidth);
         var height = ComputeTotalHeight(font, lines.Count) / UIScale;
-        var width = ClipText ? 0f : maxLineWidth / UIScale;
+        var naturalWidth = maxLineWidth / UIScale;
+        float width;
+        if (ClipText)
+        {
+            // When stretched, report 0 so clipped labels never blow out parent layouts.
+            // When non-stretched (Left/Center/Right), clamp to available width so Control.Arrange
+            // does not collapse the label box to 0px and clip away all text!
+            width = HorizontalAlignment == HAlignment.Stretch
+                ? 0f
+                : float.IsFinite(availableSize.X)
+                    ? MathF.Min(naturalWidth, MathF.Max(0f, availableSize.X))
+                    : naturalWidth;
+        }
+        else
+        {
+            width = naturalWidth;
+        }
 
         if (_wordWrap && float.IsFinite(availableSize.X) && availableSize.X > 0f)
             width = MathF.Min(width, availableSize.X);
@@ -255,13 +294,14 @@ public class ContentLabel : ContentControl
             _ => Math.Max(0f, (PixelHeight - totalHeight) / 2f)
         };
 
+        var textAlign = TextAlignment ?? HorizontalAlignment;
         for (var i = 0; i < lines.Count; i++)
         {
             var (lineText, lineWidth) = lines[i];
             if (lineText.Length == 0)
                 continue;
 
-            var posX = HorizontalAlignment switch
+            var posX = textAlign switch
             {
                 HAlignment.Center => Math.Max(0f, (PixelWidth - lineWidth) / 2f),
                 HAlignment.Right => Math.Max(0f, PixelWidth - lineWidth),

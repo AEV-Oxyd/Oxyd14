@@ -1,13 +1,16 @@
 using System.Numerics;
+using Content.Client._Oxyd.Computers.Programs;
 using Content.Client._Oxyd.Computers.ScreenSharing;
 using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.StateRouting;
+using Content.Client.UserInterface.Systems.Viewport;
 using Content.Shared._Oxyd.Computers;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Maths;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Computers.UI;
 
@@ -15,6 +18,8 @@ namespace Content.Client._Oxyd.Computers.UI;
 /// Primary visual frame / bezel for an NTOS computer entity.
 /// Shows BIOS POST failure diagnostics if not booted, or yields the full screen surface
 /// to the computer's Boot Program Entity once booted.
+/// Automatically forces focus mode (docking over <c>ViewportContainer</c> and pausing world rendering)
+/// only when actively viewing the surveillance camera app with more than 2 cameras active.
 /// </summary>
 public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 {
@@ -22,6 +27,10 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     public Control ScreenInsetControl { get; }
     public PipScreenSurface ScreenSurface { get; }
+    public bool SupportsViewportDock => _supportsViewportDock;
+    public bool IsDockedInViewport => _isDockedInViewport;
+    public bool IsCameraFocusForced => _cameraFocusForced;
+    public Vector2 PreferredFloatSize => _preferredFloatSize;
 
     private readonly ContentBoxContainer _bootErrorContainer;
     private readonly ContentLabel _titleLabel;
@@ -35,6 +44,11 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     private bool _appliedInitialScreenSize;
     private float _autoExpandedHeight;
     private float _lastAppliedHeight;
+    private bool _supportsViewportDock;
+    private bool _cameraFocusForced;
+    private bool _isDockedInViewport;
+    private Vector2 _preferredFloatMinSize = new(560f, 440f);
+    private Vector2 _preferredFloatSize = new(640f, 500f);
 
     public ComputerDisplayWindow()
     {
@@ -82,6 +96,7 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
             HorizontalExpand = true,
             Margin = new Thickness(4, 2, 4, 4),
+            SeparationOverride = 4,
             MouseFilter = MouseFilterMode.Ignore
         };
 
@@ -89,6 +104,8 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         {
             Text = "NTOS Display",
             HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
             FontColorOverride = Color.FromHex("#00D4FF"),
             MouseFilter = MouseFilterMode.Ignore
         };
@@ -179,6 +196,9 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     protected override DragMode GetDragModeFor(Vector2 relativeMousePos)
     {
+        if (_isDockedInViewport)
+            return DragMode.None;
+
         const int resizeMargin = 6;
         var mode = DragMode.None;
 
@@ -201,31 +221,68 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         return mode;
     }
 
+    public void SetSupportsViewportDock(bool supports)
+    {
+        _supportsViewportDock = supports;
+        UpdateDockState();
+    }
+
+    public void SetCameraFocusForced(bool forced)
+    {
+        if (_cameraFocusForced == forced)
+            return;
+
+        _cameraFocusForced = forced;
+        UpdateDockState();
+    }
+
     public void UpdateDisplayState(ComputerDisplayUiState state)
     {
         _titleLabel.Text = $"{state.Title}{state.Subtitle} [{state.DeviceGuid}]";
         ScreenSurface.DeviceGuid = state.DeviceGuid;
+        _supportsViewportDock = state.DockInViewport;
+
         if (state.ScreenSize.X >= 360 && state.ScreenSize.Y >= 320)
         {
             var rootSize = UserInterfaceManager.RootControl.Size;
-            var minW = rootSize.X > 360f ? MathF.Min(state.ScreenSize.X, rootSize.X - 16f) : state.ScreenSize.X;
-            var minH = rootSize.Y > 320f ? MathF.Min(state.ScreenSize.Y, rootSize.Y - 24f) : state.ScreenSize.Y;
-            MinSize = new Vector2(MathF.Max(360f, minW), MathF.Max(320f, minH));
+            var targetW = rootSize.X > 360f ? MathF.Min(state.ScreenSize.X, rootSize.X - 16f) : state.ScreenSize.X;
+            var targetH = rootSize.Y > 320f ? MathF.Min(state.ScreenSize.Y, rootSize.Y - 24f) : state.ScreenSize.Y;
+
+            // Keep smaller subsystem controllers (Autolathe, AirAlarm) at their full minimum size so all
+            // controls stay unsmushed, while letting large workstations & camera monitors open big by default
+            // yet remain comfortably resizable down to 820x620 when floating.
+            var minW = state.ScreenSize.X > 820f ? MathF.Min(targetW, 820f) : targetW;
+            var minH = state.ScreenSize.Y > 660f ? MathF.Min(targetH, 620f) : targetH;
+            _preferredFloatMinSize = new Vector2(MathF.Max(360f, minW), MathF.Max(320f, minH));
 
             if (!_appliedInitialScreenSize)
             {
-                var targetHeight = ClampAutoHeight(MathF.Max(MinSize.Y, _autoExpandedHeight));
-                SetSize = new Vector2(MinSize.X, targetHeight);
-                _lastAppliedHeight = targetHeight;
+                var initW = MathF.Max(_preferredFloatMinSize.X, targetW);
+                var initH = ClampAutoHeight(MathF.Max(MathF.Max(_preferredFloatMinSize.Y, targetH), _autoExpandedHeight), _preferredFloatMinSize.Y);
+                _preferredFloatSize = new Vector2(initW, initH);
+                _lastAppliedHeight = initH;
                 _appliedInitialScreenSize = true;
-                CenterInsideScreen();
+
+                if (!ShouldBeDockedNow())
+                {
+                    MinSize = _preferredFloatMinSize;
+                    SetSize = _preferredFloatSize;
+                    CenterInsideScreen();
+                }
             }
-            else if (!float.IsNaN(SetWidth) && SetWidth < MinSize.X)
+            else if (!_isDockedInViewport)
             {
-                SetSize = new Vector2(MinSize.X, MathF.Max(SetHeight, MinSize.Y));
-                KeepInsideScreen();
+                MinSize = _preferredFloatMinSize;
+                if (!float.IsNaN(SetWidth) && SetWidth < MinSize.X)
+                {
+                    SetSize = new Vector2(MinSize.X, MathF.Max(SetHeight, MinSize.Y));
+                    KeepInsideScreen();
+                }
             }
         }
+
+        RefreshCameraFocusState();
+        UpdateDockState();
 
         if (Color.TryFromHex(state.BorderColor, out var borderCol))
         {
@@ -266,6 +323,13 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         if (!_appliedInitialScreenSize)
             return;
 
+        var minY = _preferredFloatMinSize.Y;
+        var targetHeight = ClampAutoHeight(MathF.Max(minY, preferredHeight), minY);
+        _preferredFloatSize = new Vector2(MathF.Max(_preferredFloatMinSize.X, _preferredFloatSize.X), targetHeight);
+
+        if (_isDockedInViewport)
+            return;
+
         if (!float.IsNaN(SetHeight) &&
             _lastAppliedHeight > 0f &&
             MathF.Abs(SetHeight - _lastAppliedHeight) > 2f)
@@ -274,20 +338,142 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         }
 
         var width = MathF.Max(MinSize.X, !float.IsNaN(SetWidth) ? SetWidth : 640f);
-        var targetHeight = ClampAutoHeight(MathF.Max(MinSize.Y, preferredHeight));
         SetSize = new Vector2(width, targetHeight);
         _lastAppliedHeight = targetHeight;
         KeepInsideScreen();
     }
 
-    private float ClampAutoHeight(float desiredHeight)
+    private float ClampAutoHeight(float desiredHeight, float minHeight)
     {
-        var minH = MathF.Max(MinSize.Y, 320f);
+        var minH = MathF.Max(minHeight, 320f);
         var clamped = MathF.Max(minH, desiredHeight);
         var rootHeight = UserInterfaceManager.RootControl.Size.Y;
         if (rootHeight > 320f)
             clamped = MathF.Min(clamped, MathF.Max(minH, rootHeight - 24f));
         return clamped;
+    }
+
+    public void RefreshCameraFocusState()
+    {
+        var camUi = FindActiveCameraControl(_bootProgramViewport);
+        var shouldForce = camUi is { ShouldForceViewportFocus: true };
+        if (_cameraFocusForced != shouldForce)
+            _cameraFocusForced = shouldForce;
+    }
+
+    private static SurveillanceCameraUiControl? FindActiveCameraControl(Control root)
+    {
+        if (root.Disposed || !root.Visible)
+            return null;
+
+        if (root is SurveillanceCameraUiControl cam)
+            return cam;
+
+        for (var i = 0; i < root.ChildCount; i++)
+        {
+            var found = FindActiveCameraControl(root.GetChild(i));
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private bool ShouldBeDockedNow()
+    {
+        if (!_supportsViewportDock || !_cameraFocusForced || Disposed || !Visible || !IsInsideTree)
+            return false;
+
+        if (Parent != UserInterfaceManager.WindowRoot)
+            return false;
+
+        return UserInterfaceManager.GetUIController<ViewportUIController>().TryGetViewportFocusBounds(out _);
+    }
+
+    private void UpdateDockState()
+    {
+        if (ShouldBeDockedNow())
+        {
+            if (!_isDockedInViewport)
+            {
+                _isDockedInViewport = true;
+                Resizable = false;
+                MinSize = Vector2.Zero;
+                UserInterfaceManager.GetUIController<ViewportUIController>().SetWorldRenderPaused(this, true);
+            }
+
+            SyncDockedBounds();
+        }
+        else
+        {
+            ReleaseViewportDock(restoreFloatLayout: true);
+        }
+    }
+
+    private void SyncDockedBounds()
+    {
+        if (!_isDockedInViewport || Parent == null)
+            return;
+
+        if (!UserInterfaceManager.GetUIController<ViewportUIController>().TryGetViewportFocusBounds(out var focusBounds))
+            return;
+
+        var localTopLeft = focusBounds.TopLeft - Parent.GlobalPosition;
+        var targetSize = focusBounds.Size;
+
+        if ((Position - localTopLeft).LengthSquared() > 0.25f)
+            Robust.Client.UserInterface.Controls.LayoutContainer.SetPosition(this, localTopLeft);
+
+        if (float.IsNaN(SetWidth) || float.IsNaN(SetHeight) ||
+            MathF.Abs(SetWidth - targetSize.X) > 0.25f ||
+            MathF.Abs(SetHeight - targetSize.Y) > 0.25f)
+        {
+            SetSize = targetSize;
+        }
+    }
+
+    private void ReleaseViewportDock(bool restoreFloatLayout)
+    {
+        UserInterfaceManager.GetUIController<ViewportUIController>().SetWorldRenderPaused(this, false);
+
+        if (!_isDockedInViewport)
+            return;
+
+        _isDockedInViewport = false;
+        Resizable = true;
+
+        if (restoreFloatLayout && !Disposed)
+        {
+            MinSize = _preferredFloatMinSize;
+            SetSize = _preferredFloatSize;
+            _lastAppliedHeight = _preferredFloatSize.Y;
+            if (Parent == UserInterfaceManager.WindowRoot)
+                CenterInsideScreen();
+        }
+    }
+
+    protected override void EnteredTree()
+    {
+        base.EnteredTree();
+        RefreshCameraFocusState();
+        UpdateDockState();
+    }
+
+    protected override void ExitedTree()
+    {
+        ReleaseViewportDock(restoreFloatLayout: true);
+        base.ExitedTree();
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+
+        if (_supportsViewportDock || _isDockedInViewport)
+        {
+            RefreshCameraFocusState();
+            UpdateDockState();
+        }
     }
 
     private void CenterInsideScreen()
@@ -372,6 +558,7 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         if (ScreenSharing.RemoteScreenView.RemoteBuiTarget.TryHandleWindowClose(this))
             return;
 
+        ReleaseViewportDock(restoreFloatLayout: false);
         base.Close();
     }
 
@@ -379,7 +566,10 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     protected override void Dispose(bool disposing)
     {
         if (disposing)
+        {
+            ReleaseViewportDock(restoreFloatLayout: false);
             UnmountAllBootPrograms();
+        }
 
         base.Dispose(disposing);
     }
@@ -416,6 +606,8 @@ public sealed class ComputerBoundUserInterface : RoutedBoundUserInterface
         }
 
         _window = this.CreateWindow<ComputerDisplayWindow>();
+        if (EntMan.TryGetComponent<OxydComputerComponent>(Owner, out var comp))
+            _window.SetSupportsViewportDock(comp.DockInViewport);
         SetStateScopeRoot(_window);
         _window.OnRetryBootPressed += () => SendMessage(new ComputerRetryBootMessage());
         EntMan.System<ClientComputerUiSystem>().RegisterDisplayHost(Owner, _window);

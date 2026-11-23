@@ -189,6 +189,14 @@ public sealed partial class OxydComputerComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool DisableLocalShell;
+
+    /// <summary>
+    /// When true, this computer's display UI docks into the HUD's <c>ViewportContainer</c> and pauses
+    /// normal world rendering while open locally (stationary consoles, workstations, servers, routers).
+    /// Always false for handheld PDAs, tablets, and small embedded subsystem panels.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool DockInViewport;
 }
 
 /// <summary>
@@ -229,6 +237,13 @@ public sealed partial class EmbeddedComputerHostComponent : Component
 
     [DataField]
     public string Subtitle = " | Embedded Subsystem";
+
+    /// <summary>
+    /// Optional explicit override controlling whether this host's computer display docks inside the
+    /// HUD <c>ViewportContainer</c> and pauses world rendering when opened locally.
+    /// </summary>
+    [DataField]
+    public bool? DockInViewport;
 }
 
 /// <summary>
@@ -261,6 +276,7 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
     public bool HasHardDrive { get; }
     public bool HasNetworkCard { get; }
     public bool HasDataPort { get; }
+    public bool DockInViewport { get; }
 
     public ComputerDisplayUiState(
         string computerName,
@@ -285,7 +301,8 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
         bool hasRam,
         bool hasHardDrive,
         bool hasNetworkCard,
-        bool hasDataPort)
+        bool hasDataPort,
+        bool dockInViewport = false)
     {
         ComputerName = computerName;
         DeviceGuid = deviceGuid;
@@ -310,6 +327,7 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
         HasHardDrive = hasHardDrive;
         HasNetworkCard = hasNetworkCard;
         HasDataPort = hasDataPort;
+        DockInViewport = dockInViewport;
     }
 }
 

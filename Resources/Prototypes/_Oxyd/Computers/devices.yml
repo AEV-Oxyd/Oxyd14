@@ -230,7 +230,7 @@
   components:
   - type: OxydComputer
     template: Desktop
-    defaultScreenSize: 780, 580
+    defaultScreenSize: 1040, 720
     allowRemoteControl: true
     requirePowerToBoot: true
     defaultHardware:
@@ -299,7 +299,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 760, 560
+    defaultScreenSize: 940, 660
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/router.nte"
@@ -316,7 +316,7 @@
   components:
   - type: OxydComputer
     template: Desktop
-    defaultScreenSize: 720, 540
+    defaultScreenSize: 980, 680
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/terminal.nte"
@@ -324,6 +324,57 @@
     - ComputerPartCpuWorkstation
     - ComputerPartRam1024
     - ComputerPartHardDriveServer
+    - ComputerPartNetworkCardHighSpeed
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydRecordsEmbeddedController
+  name: station records controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 960, 680
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/station_records.nte"
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveRecords
+    - ComputerPartNetworkCardHighSpeed
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydCriminalRecordsEmbeddedController
+  name: criminal records controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 960, 680
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/criminal_records.nte"
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveCriminalRecords
+    - ComputerPartNetworkCardHighSpeed
+
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydCameraMonitorEmbeddedController
+  name: camera monitor controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 1120, 760
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    embeddedDefaultAppPath: "/bin/cameras.nte"
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveCameraMonitor
     - ComputerPartNetworkCardHighSpeed
 
 # ==============================================================================
@@ -717,19 +768,19 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveRouter
-  name: station router drive
+  name: station network core drive
   components:
   - type: FileSystem
     maxStorageBytes: 16777216
     files:
-      "/bin/embedded_os.nte": !type:ProgramVirtualFile
-        name: embedded_os
+      "/bin/netcore_os.nte": !type:ProgramVirtualFile
+        name: netcore_os
         extension: nte
         directory: /bin/
-        size: 3072
-        programId: OxydEmbeddedOsProgram
-        title: "Router OS"
-        ramUsageMb: 16
+        size: 4096
+        programId: OxydNetworkCoreOsProgram
+        title: "Network Core OS"
+        ramUsageMb: 32
       "/bin/router.nte": !type:ProgramVirtualFile
         name: router
         extension: nte
@@ -758,6 +809,164 @@
         size: 2048
         programId: OxydFileBrowserProgram
         title: "File Browser"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveRecords
+  name: station records drive (32 MB)
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 33554432
+  - type: FileSystem
+    maxStorageBytes: 33554432
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Records Console OS"
+        ramUsageMb: 16
+      "/bin/station_records.nte": !type:ProgramVirtualFile
+        name: station_records
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: StationRecordsProgram
+        title: "Station Records"
+        ramUsageMb: 12
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydDownloaderProgram
+        title: "Downloader"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveCriminalRecords
+  name: criminal records drive (32 MB)
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 33554432
+  - type: FileSystem
+    maxStorageBytes: 33554432
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Security Records OS"
+        ramUsageMb: 16
+      "/bin/criminal_records.nte": !type:ProgramVirtualFile
+        name: criminal_records
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: CriminalRecordsProgram
+        title: "Criminal Records"
+        ramUsageMb: 12
+      "/bin/wanted_list.nte": !type:ProgramVirtualFile
+        name: wanted_list
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: WantedListProgram
+        title: "Wanted List"
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveCameraMonitor
+  name: surveillance monitor drive (32 MB)
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 33554432
+  - type: FileSystem
+    maxStorageBytes: 33554432
+    files:
+      "/bin/embedded_os.nte": !type:ProgramVirtualFile
+        name: embedded_os
+        extension: nte
+        directory: /bin/
+        size: 3072
+        programId: OxydEmbeddedOsProgram
+        title: "Surveillance Console OS"
+        ramUsageMb: 16
+      "/bin/cameras.nte": !type:ProgramVirtualFile
+        name: cameras
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: SurveillanceCameraProgram
+        title: "Surveillance Cameras"
+        ramUsageMb: 16
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydTerminalProgram
+        title: "Terminal"
+      "/bin/file_browser.nte": !type:ProgramVirtualFile
+        name: file_browser
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydFileBrowserProgram
+        title: "File Browser"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 2048
+        programId: OxydDownloaderProgram
+        title: "Downloader"
 
 - type: entity
   parent: ComputerPartHardDriveBasic
@@ -791,6 +1000,29 @@
         size: 2048
         programId: OxydFileBrowserProgram
         title: "File Browser"
+      "/bin/crew_manifest.nte": !type:ProgramVirtualFile
+        name: crew_manifest
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: CrewManifestProgram
+        title: "Crew Manifest"
+      "/bin/station_records.nte": !type:ProgramVirtualFile
+        name: station_records
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: StationRecordsProgram
+        title: "Station Records"
+        ramUsageMb: 12
+      "/bin/criminal_records.nte": !type:ProgramVirtualFile
+        name: criminal_records
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: CriminalRecordsProgram
+        title: "Criminal Records"
+        ramUsageMb: 12
       "/bin/wanted_list.nte": !type:ProgramVirtualFile
         name: wanted_list
         extension: nte
@@ -798,6 +1030,42 @@
         size: 4096
         programId: WantedListProgram
         title: "Wanted List"
+      "/bin/cameras.nte": !type:ProgramVirtualFile
+        name: cameras
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: SurveillanceCameraProgram
+        title: "Surveillance Cameras"
+        ramUsageMb: 16
+      "/bin/news_reader.nte": !type:ProgramVirtualFile
+        name: news_reader
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NewsReaderProgram
+        title: "News Reader"
+      "/bin/notekeeper.nte": !type:ProgramVirtualFile
+        name: notekeeper
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NotekeeperProgram
+        title: "Notekeeper"
+      "/bin/nanotask.nte": !type:ProgramVirtualFile
+        name: nanotask
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: NanoTaskProgram
+        title: "Tasks"
+      "/bin/downloader.nte": !type:ProgramVirtualFile
+        name: downloader
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: OxydDownloaderProgram
+        title: "Downloader"
       "/bin/netprobe.nte": !type:ProgramVirtualFile
         name: netprobe
         extension: nte
@@ -848,6 +1116,14 @@
         directory: /blueprints/
         size: 4096
         recipe: DoorElectronics
+        drmLocked: false
+        isEncrypted: false
+      "/blueprints/camera_mic_upgrade.lathe": !type:RecipeBlueprintFile
+        name: camera_mic_upgrade
+        extension: lathe
+        directory: /blueprints/
+        size: 2048
+        recipe: CameraMicrophoneUpgrade
         drmLocked: false
         isEncrypted: false
       "/notes/station_sop.txt": !type:TextVirtualFile
@@ -1123,3 +1399,37 @@
         programId: OxydPdaOsProgram
         title: "NTOS Pocket"
         ramUsageMb: 24
+
+- type: entity
+  parent: BaseProgramDisk
+  id: ProgramDiskCameras
+  name: Surveillance Cameras software disk
+  description: Contains cameras.nte Wi-Fi camera monitor & witness log extractor.
+  components:
+  - type: FileSystem
+    maxStorageBytes: 131072
+    files:
+      "/bin/cameras.nte": !type:ProgramVirtualFile
+        name: cameras
+        extension: nte
+        directory: /bin/
+        size: 4096
+        programId: SurveillanceCameraProgram
+        title: "Surveillance Cameras"
+        ramUsageMb: 16
+
+- type: entity
+  parent: BaseItem
+  id: CameraMicrophoneUpgrade
+  name: camera microphone module
+  description: A high-sensitivity directional microphone module that can be installed inside an open surveillance camera panel to enable live audio and speech logging.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: std_mod
+  - type: Item
+    size: Small
+  - type: Tag
+    tags: [ Oxyd ]
+  - type: CameraMicrophoneUpgrade
+    hearingRange: 10

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Content.Client.UserInterface.Controls;
 using Content.Shared.CCVar;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
@@ -22,7 +23,7 @@ namespace Content.Client.Viewport
     /// <summary>
     ///     Viewport control that has a fixed viewport size and scales it appropriately.
     /// </summary>
-    public sealed partial class ScalingViewport : Control, IViewportControl
+    public sealed partial class ScalingViewport : Control, IViewportControl, IInputRelayTarget
     {
         [Dependency] private IClyde _clyde = default!;
         [Dependency] private IEntityManager _entityManager = default!;
@@ -39,6 +40,8 @@ namespace Content.Client.Viewport
         private ScalingViewportRenderScaleMode _renderScaleMode = ScalingViewportRenderScaleMode.Fixed;
         private ScalingViewportIgnoreDimension _ignoreDimension = ScalingViewportIgnoreDimension.None;
         private int _fixedRenderScale = 1;
+        private bool _renderRequested = true;
+        private bool _hasRenderedOnce;
 
         private readonly List<CopyPixelsDelegate<Rgba32>> _queuedScreenshots = new();
 
@@ -49,6 +52,43 @@ namespace Content.Client.Viewport
         public int CurrentRenderScale => _curRenderScale;
 
         /// <summary>
+        ///     When true, skips world rendering and screen overlays while keeping GPU render targets allocated
+        ///     so resuming rendering is instantaneous.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        public bool RenderPaused { get; set; }
+
+        /// <summary>
+        ///     When true, <see cref="IClydeViewport.Render"/> only runs when <see cref="RequestRender"/> has
+        ///     been called (or once after creation/eye change); other frames simply blit the cached render target.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        public bool DeferRender { get; set; }
+
+        /// <summary>
+        ///     When true, bypasses the post-process sharpness shader when drawing this viewport.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        public bool SkipSharpness { get; set; }
+
+        /// <summary>
+        ///     When true, stretches the rendered viewport texture to fill the control's full pixel bounds.
+        ///     Used by aspect-matched camera tiles to eliminate 1-2px quantization borders while keeping
+        ///     mouse-to-world coordinate transforms exact.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        public bool StretchToFill { get; set; }
+
+        /// <summary>
+        ///     Requests a fresh <see cref="IClydeViewport.Render"/> pass on the next draw when
+        ///     <see cref="DeferRender"/> is enabled.
+        /// </summary>
+        public void RequestRender()
+        {
+            _renderRequested = true;
+        }
+
+        /// <summary>
         ///     The eye to render.
         /// </summary>
         public IEye? Eye
@@ -56,7 +96,12 @@ namespace Content.Client.Viewport
             get => _eye;
             set
             {
+                if (_eye == value)
+                    return;
+
                 _eye = value;
+                _hasRenderedOnce = false;
+                _renderRequested = true;
 
                 if (_viewport != null)
                     _viewport.Eye = value;
@@ -160,13 +205,40 @@ namespace Content.Client.Viewport
             _inputManager.ViewportKeyEvent(this, args);
         }
 
+        public void RelayKeyBindDown(GUIBoundKeyEventArgs args) => KeyBindDown(args);
+        public void RelayKeyBindUp(GUIBoundKeyEventArgs args) => KeyBindUp(args);
+        public void RelayMouseMove(GUIMouseMoveEventArgs args) => MouseMove(args);
+        public void RelayMouseWheel(GUIMouseWheelEventArgs args) => MouseWheel(args);
+        public void RelayMouseEntered() => MouseEntered();
+        public void RelayMouseExited() => MouseExited();
+        public void RelayKeyHeld(GUIKeyEventArgs args) => KeyHeld(args);
+        public void RelayTextEntered(GUITextEnteredEventArgs args) => TextEntered(args);
+        public void RelayTextEditing(GUITextEditingEventArgs args) => TextEditing(args);
+        public void RelayKeyboardFocusEntered() => KeyboardFocusEntered();
+        public void RelayKeyboardFocusExited() => KeyboardFocusExited();
+        public void RelayControlFocusExited() => ControlFocusExited();
+
         protected override void Draw(IRenderHandle handle)
         {
+            if (RenderPaused && _queuedScreenshots.Count == 0)
+            {
+                handle.DrawingHandleScreen.DrawRect(
+                    UIBox2i.FromDimensions(Vector2i.Zero, PixelSize),
+                    Color.FromHex("#060A0F"));
+                return;
+            }
+
             EnsureViewportCreated();
 
             DebugTools.AssertNotNull(_viewport);
 
-            _viewport!.Render();
+            var shouldRender = !DeferRender || _renderRequested || !_hasRenderedOnce || _queuedScreenshots.Count != 0;
+            if (shouldRender)
+            {
+                _viewport!.Render();
+                _renderRequested = false;
+                _hasRenderedOnce = true;
+            }
 
             if (_queuedScreenshots.Count != 0)
             {
@@ -187,11 +259,13 @@ namespace Content.Client.Viewport
             var drawBoxGlobal = drawBox.Translated(GlobalPixelPosition);
             _viewport.RenderScreenOverlaysBelow(handle, this, drawBoxGlobal);
 
-            ApplySharpnessShader(handle);
+            var useSharpness = !SkipSharpness && _sharpnessStrength > 0;
+            if (useSharpness)
+                ApplySharpnessShader(handle);
 
             handle.DrawingHandleScreen.DrawTextureRect(_viewport.RenderTarget.Texture, drawBox);
 
-            if (_sharpnessStrength > 0)
+            if (useSharpness)
                 handle.DrawingHandleScreen.UseShader(null);
 
             _viewport.RenderScreenOverlaysAbove(handle, this, drawBoxGlobal);
@@ -221,6 +295,9 @@ namespace Content.Client.Viewport
         private UIBox2i GetDrawBox()
         {
             DebugTools.AssertNotNull(_viewport);
+
+            if (StretchToFill)
+                return UIBox2i.FromDimensions(Vector2i.Zero, PixelSize);
 
             var vpSize = _viewport!.Size;
             var ourSize = (Vector2) PixelSize;
@@ -299,13 +376,24 @@ namespace Content.Client.Viewport
         {
             base.Resized();
 
+            // Fixed-scale viewports do not depend on control PixelSize; avoid tearing down and
+            // reallocating all GPU render targets on every resize frame.
+            if (_renderScaleMode != ScalingViewportRenderScaleMode.Fixed || _viewport == null)
+                InvalidateViewport();
+        }
+
+        protected override void ExitedTree()
+        {
             InvalidateViewport();
+            base.ExitedTree();
         }
 
         private void InvalidateViewport()
         {
             _viewport?.Dispose();
             _viewport = null;
+            _hasRenderedOnce = false;
+            _renderRequested = true;
         }
 
         public MapCoordinates ScreenToMap(Vector2 coords)

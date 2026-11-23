@@ -24,6 +24,7 @@ public sealed partial class OsProgramSystem : EntitySystem
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private LockSystem _lock = default!;
+    [Dependency] private RecordsProgramsSystem _recordsPrograms = default!;
 
     private EntityQuery<ProgramComponent> _programQuery;
     private EntityQuery<OxydComputerComponent> _computerQuery;
@@ -121,7 +122,9 @@ public sealed partial class OsProgramSystem : EntitySystem
 
     private void OnOsSetView(Entity<OsProgramComponent> ent, ref OsSetViewMessage args)
     {
-        ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 3);
+        // View 1 (legacy separate Apps tab) is merged into View 0 (Desktop & App Launcher).
+        var view = Math.Clamp(args.ViewIndex, 0, 3);
+        ent.Comp.CurrentView = view == 1 ? 0 : view;
         Dirty(ent);
         UpdateOsUi(ent.Owner);
     }
@@ -219,6 +222,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         }
 
         UpdateOsUi(bootUid);
+        _recordsPrograms.RefreshRecordsForHostLock(compUid, args.Locked);
     }
 
     private bool IsHostLocked(EntityUid compUid)

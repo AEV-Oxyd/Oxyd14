@@ -413,3 +413,79 @@
     interfaces:
       enum.ProgramUiKey.Key:
         type: AccessEncoderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydNetworkCoreOsProgram
+  name: station network core OS
+  description: Specialized station network core operating system that automatically provisions joining crew into Data Server databases and supervises routing, DNS, firewall, and Wi-Fi cameras.
+  components:
+  - type: Program
+    title: "Network Core OS"
+    ramUsageMb: 32
+    cpuUsagePercent: 5.0
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: NetworkCoreOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetworkCoreOsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: StationRecordsProgram
+  name: station records manager
+  description: Views and edits authoritative station personnel records stored in /records/station_records.db on Data Servers.
+  components:
+  - type: Program
+    title: "Station Records"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: station_records
+  - type: StationRecordsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: StationRecordsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CriminalRecordsProgram
+  name: criminal records manager
+  description: Security records application for managing crew security statuses and crime history in /records/criminal_records.db on Data Servers.
+  components:
+  - type: Program
+    title: "Criminal Records"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: CriminalRecordsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CriminalRecordsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: SurveillanceCameraProgram
+  name: surveillance camera monitor
+  description: Connects via the closest Station Network Router to Wi-Fi surveillance cameras with full examine support, live microphone audio, and downloadable witness logs.
+  components:
+  - type: Program
+    title: "Surveillance Cameras"
+    ramUsageMb: 16
+    cpuUsagePercent: 3.0
+    icon:
+      sprite: Structures/Wallmounts/camera.rsi
+      state: camera
+  - type: SurveillanceCameraProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SurveillanceCameraProgramBui

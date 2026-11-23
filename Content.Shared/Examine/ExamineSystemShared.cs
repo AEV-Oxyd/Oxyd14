@@ -1,9 +1,11 @@
 using System.Linq;
+using Content.Shared._Oxyd.Computers.Cameras;
 using Content.Shared.Eye.Blinding.Components;
 using Content.Shared.Ghost.Components;
 using Content.Shared.Interaction;
 using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
+using Content.Shared.SurveillanceCamera.Components;
 using JetBrains.Annotations;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
@@ -16,7 +18,7 @@ namespace Content.Shared.Examine
     public abstract partial class ExamineSystemShared : EntitySystem
     {
         [Dependency] private OccluderSystem _occluder = default!;
-        [Dependency] private SharedTransformSystem _transform = default!;
+        [Dependency] protected SharedTransformSystem _transform = default!;
         [Dependency] private SharedContainerSystem _containerSystem = default!;
         [Dependency] private SharedInteractionSystem _interactionSystem = default!;
         [Dependency] protected MobStateSystem MobStateSystem = default!;
@@ -24,6 +26,8 @@ namespace Content.Shared.Examine
         [Dependency] private EntityQuery<GhostComponent> _ghostQuery = default!;
         [Dependency] private EntityQuery<OccluderComponent> _occluderQuery = default!;
         [Dependency] private EntityQuery<TransformComponent> _xformQuery = default!;
+        [Dependency] private EntityQuery<ActiveCameraViewerComponent> _cameraViewerQuery = default!;
+        [Dependency] private EntityQuery<SurveillanceCameraComponent> _cameraQuery = default!;
 
         private readonly List<RayCastResults> _occluderRaycastResults = new();
 
@@ -46,6 +50,7 @@ namespace Content.Shared.Examine
 
         public const float ExamineRange = 16f;
         protected const float ExamineDetailsRange = 3f;
+        protected const float CameraExamineDetailsRange = 6f;
 
         protected const float ExamineBlurrinessMult = 2.5f;
 
@@ -80,7 +85,9 @@ namespace Content.Shared.Examine
                 return false;
 
             if (!InRangeUnOccluded(examiner, entity, ExamineDetailsRange))
-                return false;
+            {
+                return IsInCameraDetailsRange(examiner, entity);
+            }
 
             // Is the target hidden in a opaque locker or something? Currently this check allows players to examine
             // their organs, if they can somehow target them. Really this should be with userSeeInsideSelf: false, and a
@@ -90,6 +97,98 @@ namespace Content.Shared.Examine
 
             // is it inside of an open storage (e.g., an open backpack)?
             return _interactionSystem.CanAccessViaStorage(examiner, entity);
+        }
+
+        protected bool IsInCameraDetailsRange(EntityUid examiner, EntityUid entity)
+        {
+            if (!_cameraViewerQuery.TryComp(examiner, out var viewer) || viewer.ActiveCameras.Count == 0)
+                return false;
+
+            foreach (var camNet in viewer.ActiveCameras)
+            {
+                if (!TryGetEntity(camNet, out var camUid) ||
+                    !Exists(camUid.Value) ||
+                    !_cameraQuery.TryComp(camUid.Value, out var camComp) ||
+                    !camComp.Active)
+                {
+                    continue;
+                }
+
+                if (InRangeUnOccluded(camUid.Value, entity, CameraExamineDetailsRange, predicate: e => e == camUid.Value || e == entity) &&
+                    _containerSystem.IsInSameOrTransparentContainer(camUid.Value, entity, userSeeInsideSelf: false))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        protected bool IsTargetNearActiveCamera(EntityUid examiner, MapCoordinates target, float range)
+        {
+            if (!_cameraViewerQuery.TryComp(examiner, out var viewer) || viewer.ActiveCameras.Count == 0)
+                return false;
+
+            foreach (var camNet in viewer.ActiveCameras)
+            {
+                if (!TryGetEntity(camNet, out var camUid) ||
+                    !Exists(camUid.Value) ||
+                    !_cameraQuery.TryComp(camUid.Value, out var camComp) ||
+                    !camComp.Active)
+                {
+                    continue;
+                }
+
+                var camCoords = _transform.GetMapCoordinates(camUid.Value);
+                if (camCoords.MapId != target.MapId)
+                    continue;
+
+                if ((target.Position - camCoords.Position).Length() <= range + 0.5f)
+                    return true;
+            }
+
+            return false;
+        }
+
+        protected bool CanExamineThroughActiveCamera(
+            EntityUid examiner,
+            MapCoordinates target,
+            float range,
+            Ignored? predicate = null,
+            EntityUid? examined = null)
+        {
+            if (!_cameraViewerQuery.TryComp(examiner, out var viewer) || viewer.ActiveCameras.Count == 0)
+                return false;
+
+            foreach (var camNet in viewer.ActiveCameras)
+            {
+                if (!TryGetEntity(camNet, out var camUid) ||
+                    !Exists(camUid.Value) ||
+                    !_cameraQuery.TryComp(camUid.Value, out var camComp) ||
+                    !camComp.Active)
+                {
+                    continue;
+                }
+
+                if (!_xformQuery.TryComp(camUid.Value, out var camXform) || camXform.MapID != target.MapId)
+                    continue;
+
+                var camOrigin = camUid.Value;
+                Ignored camPred = e => e == camOrigin || e == examiner || (examined != null && e == examined.Value) || (predicate != null && predicate(e));
+
+                if (examined != null)
+                {
+                    if (InRangeUnOccluded(camOrigin, examined.Value, range, predicate: camPred))
+                        return true;
+                }
+                else
+                {
+                    if (InRangeUnOccluded(camOrigin, target, range, predicate: camPred))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -145,26 +244,18 @@ namespace Content.Shared.Examine
             if (!examinerComp.CheckInRangeUnOccluded)
                 return true;
 
-            if (Comp<TransformComponent>(examiner).MapID != target.MapId)
-                return false;
+            var range = GetExaminerRange(examiner);
+            if (Comp<TransformComponent>(examiner).MapID == target.MapId)
+            {
+                // Do target InRangeUnoccluded which has different checks.
+                var directOk = examined != null
+                    ? InRangeUnOccluded(examiner, examined.Value, range, predicate: predicate)
+                    : InRangeUnOccluded(examiner, target, range, predicate: predicate);
+                if (directOk)
+                    return true;
+            }
 
-            // Do target InRangeUnoccluded which has different checks.
-            if (examined != null)
-            {
-                return InRangeUnOccluded(
-                    examiner,
-                    examined.Value,
-                    GetExaminerRange(examiner),
-                    predicate: predicate);
-            }
-            else
-            {
-                return InRangeUnOccluded(
-                    examiner,
-                    target,
-                    GetExaminerRange(examiner),
-                    predicate: predicate);
-            }
+            return CanExamineThroughActiveCamera(examiner, target, range, predicate, examined);
         }
 
         /// <summary>

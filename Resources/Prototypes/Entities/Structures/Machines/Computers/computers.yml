@@ -279,17 +279,34 @@
   parent: BaseComputerAiAccess
   id: ComputerCriminalRecords
   name: criminal records computer
-  description: This can be used to check criminal records. Only security can modify them.
+  description: An NTOS security console used to view and modify authoritative criminal records on station Data Servers.
   components:
-  - type: CriminalRecordsConsole
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydCriminalRecordsEmbeddedController
+    borderColor: "#FF5566"
+    title: "CRIMINAL RECORDS"
+    subtitle: " | Security Console"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
+  - type: Lock
+    locked: true
+    unlockOnClick: false
   - type: UserInterface
     interfaces:
-      enum.CriminalRecordsConsoleKey.Key:
-        type: CriminalRecordsConsoleBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: ActivatableUI
-    key: enum.CriminalRecordsConsoleKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: ComputerVisuals
     stateScreen: explosive
     stateKeys: security_key
@@ -309,17 +326,31 @@
   parent: BaseComputerAiAccess
   id: ComputerStationRecords
   name: station records computer
-  description: This can be used to check station records.
+  description: An NTOS records terminal accessing authoritative station personnel records on station Data Servers.
   components:
-  - type: GeneralStationRecordConsole
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydRecordsEmbeddedController
+    borderColor: "#00D4FF"
+    title: "STATION RECORDS"
+    subtitle: " | Personnel Console"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: UserInterface
     interfaces:
-        enum.GeneralStationRecordConsoleKey.Key:
-          type: GeneralStationRecordConsoleBoundUserInterface
-        enum.WiresUiKey.Key:
-          type: WiresBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
   - type: ActivatableUI
-    key: enum.GeneralStationRecordConsoleKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: PointLight
     radius: 1.5
     energy: 4.0
@@ -1075,38 +1106,55 @@
   parent: BaseComputer
   id: ComputerSurveillanceCameraMonitor
   name: camera monitor
-  description: A surveillance camera monitor. You're watching them. Maybe.
+  description: An NTOS surveillance camera monitor connecting to station Wi-Fi cameras via the closest network router.
   components:
   - type: ComputerVisuals
     stateScreen: cameras
     stateKeys: tech_key
   - type: Computer
     board: SurveillanceCameraMonitorCircuitboard
-  - type: DeviceNetwork
-    deviceNetId: Wired
-    receiveFrequencyId: SurveillanceCamera
-    transmitFrequencyId: SurveillanceCamera
-    prefix: device-address-prefix-camera-monitor
-  - type: WiredNetwork
-  - type: DeviceNetworkRequiresPower
-  - type: SurveillanceCameraMonitor
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydCameraMonitorEmbeddedController
+    borderColor: "#00D4FF"
+    title: "SURVEILLANCE MONITOR"
+    subtitle: " | Camera Network"
+  - type: ContainerContainer
+    containers:
+      board: !type:Container
+        ents: []
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
   - type: ActivatableUI
-    key: enum.SurveillanceCameraMonitorUiKey.Key
+    key: enum.ComputerUiKey.Key
+    singleUser: false
   - type: ActivatableUIRequiresVision
   - type: Transform
     anchored: true
   - type: UserInterface
     interfaces:
-      enum.SurveillanceCameraMonitorUiKey.Key:
-        type: SurveillanceCameraMonitorBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
 
 - type: entity
-  parent: BaseComputer
+  parent: ComputerSurveillanceCameraMonitor
   id: ComputerSurveillanceWirelessCameraMonitor
   name: wireless camera monitor
-  description: A wireless surveillance camera monitor. You're watching them. Maybe.
+  description: A wireless NTOS surveillance camera monitor connecting via the station network router.
+  components:
+  - type: Computer
+    board: SurveillanceWirelessCameraMonitorCircuitboard
+
+- type: entity
+  abstract: true
+  parent: BaseComputer
+  id: BaseLegacyWirelessCameraMonitor
+  name: wireless camera monitor
+  description: A legacy wireless surveillance camera monitor.
   components:
   - type: ComputerVisuals
     stateScreen: cameras
@@ -1136,7 +1184,7 @@
         type: WiresBoundUserInterface
 
 - type: entity
-  parent: ComputerSurveillanceWirelessCameraMonitor
+  parent: BaseLegacyWirelessCameraMonitor
   id: ComputerSurveillanceWirelessXenoborgCameraMonitor
   name: xenoborg camera monitor
   description: A wireless xenoborg camera monitor. You're watching them. Maybe.

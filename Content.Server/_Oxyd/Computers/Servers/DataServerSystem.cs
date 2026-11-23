@@ -458,7 +458,179 @@ public sealed partial class DataServerSystem : EntitySystem
             return data;
         }
 
+        if (filePath.Equals(StationRecordsProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tableName = "station_records";
+            dir = "/records/";
+            name = "station_records";
+
+            if (station == EntityUid.Invalid)
+                return null;
+
+            var stName = Exists(station) ? MetaData(station).EntityName : "Unknown Station";
+            var data = new Dictionary<string, string> { ["__station"] = stName };
+            var sb = new StringBuilder(stName);
+            var records = _records.GetRecordsOfType<GeneralStationRecord>(station).OrderBy(r => r.Item1).ToList();
+            foreach (var (recId, gen) in records)
+            {
+                var row = RecordsDbCodec.EncodeStationRecordRow(
+                    gen.Name,
+                    gen.JobTitle,
+                    gen.JobPrototype,
+                    gen.JobIcon,
+                    gen.Age,
+                    gen.Species,
+                    gen.Gender.ToString(),
+                    gen.Fingerprint ?? string.Empty,
+                    gen.DNA ?? string.Empty);
+                data[$"rec_{recId}"] = row;
+                sb.Append('\n').Append(recId).Append(':').Append(row);
+            }
+
+            sourceHash = sb.ToString().GetHashCode().ToString("X8");
+            return data;
+        }
+
+        if (filePath.Equals(CriminalRecordsProgramComponent.CacheFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tableName = "criminal_records";
+            dir = "/records/";
+            name = "criminal_records";
+
+            if (station == EntityUid.Invalid)
+                return null;
+
+            var data = new Dictionary<string, string>();
+            var sb = new StringBuilder();
+            var generalRecords = _records.GetRecordsOfType<GeneralStationRecord>(station).OrderBy(r => r.Item1).ToList();
+            foreach (var (recId, gen) in generalRecords)
+            {
+                var key = new StationRecordKey(recId, station);
+                var status = SecurityStatus.None;
+                var reason = string.Empty;
+                var initiator = string.Empty;
+                var histList = new List<CrimeHistoryEntryDto>();
+
+                if (_records.TryGetRecord(key, out CriminalRecord? crim))
+                {
+                    status = crim.Status;
+                    reason = crim.Reason ?? string.Empty;
+                    initiator = crim.InitiatorName ?? string.Empty;
+                    for (var i = 0; i < crim.History.Count; i++)
+                    {
+                        var h = crim.History[i];
+                        var ts = TimeSpan.FromSeconds(Math.Truncate(h.AddTime.TotalSeconds)).ToString(@"hh\:mm\:ss");
+                        histList.Add(new CrimeHistoryEntryDto(i, ts, h.Crime, h.InitiatorName ?? string.Empty));
+                    }
+                }
+
+                var row = RecordsDbCodec.EncodeCriminalRecordRow(gen.Name, gen.JobTitle, status, reason, initiator, histList);
+                data[$"crim_{recId}"] = row;
+                sb.Append('\n').Append(recId).Append(':').Append(row);
+            }
+
+            sourceHash = sb.ToString().GetHashCode().ToString("X8");
+            return data;
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// Writes an updated authoritative record database back to the serving DataServer / Router computer's HDD.
+    /// Marks <c>__authoritative = "1"</c> (or removes stale <c>__source_hash</c>) so manual/app edits persist
+    /// and are not clobbered by background station snapshots.
+    /// </summary>
+    public bool TryWriteRecordCopyToHost(
+        EntityUid originCompUid,
+        string serviceProtocol,
+        string filePath,
+        DatabaseVirtualFile updatedFile,
+        out EntityUid hostCompUid,
+        out string error)
+    {
+        hostCompUid = EntityUid.Invalid;
+        if (!TryFindRecordHostComputer(originCompUid, serviceProtocol, filePath, out _, out hostCompUid, out var hostDriveUid, out var hostFs, out error))
+            return false;
+
+        var toWrite = (DatabaseVirtualFile) updatedFile.Clone();
+        toWrite.Data.Remove("__source_hash");
+        if (!_fileSystem.TryWriteFile(hostDriveUid.Value, toWrite, hostFs))
+        {
+            error = "Host data server storage full or read-only.";
+            return false;
+        }
+
+        _fileSystem.LogSystemActivity(hostDriveUid.Value, "DB-WRITE", $"Updated {filePath} ({toWrite.Size} B)");
+        return true;
+    }
+
+    /// <summary>
+    /// Locates the best operational DataServer HDD for the Network Core OS to write records to,
+    /// falling back to the Network Core Router's own HDD if no dedicated DataServer is online.
+    /// </summary>
+    public bool TryGetCoreRecordDrive(
+        EntityUid coreRouterHostOrComp,
+        string serviceProtocol,
+        out EntityUid hostCompUid,
+        [NotNullWhen(true)] out EntityUid? hostDriveUid,
+        [NotNullWhen(true)] out FileSystemComponent? hostFs)
+    {
+        hostCompUid = EntityUid.Invalid;
+        hostDriveUid = null;
+        hostFs = null;
+
+        EntityUid fallbackComp = EntityUid.Invalid;
+        EntityUid? fallbackDrive = null;
+        FileSystemComponent? fallbackFs = null;
+
+        var query = EntityQueryEnumerator<DataServerComponent>();
+        while (query.MoveNext(out var uid, out var srvComp))
+        {
+            if (IsDebugFallbackServer(uid))
+                continue;
+
+            var cUid = _router.UnwrapComputerEntity(uid);
+            if (!_router.IsRouterOperational(uid) || !_router.HasActiveNetworkCard(cUid))
+                continue;
+
+            if (!_fileSystem.TryFindFileSystem(uid, out var dUid, out var fsComp))
+                continue;
+
+            if (!string.IsNullOrEmpty(serviceProtocol) && srvComp.ServerProtocols.Contains(serviceProtocol))
+            {
+                hostCompUid = cUid;
+                hostDriveUid = dUid;
+                hostFs = fsComp;
+                return true;
+            }
+
+            if (fallbackDrive == null)
+            {
+                fallbackComp = cUid;
+                fallbackDrive = dUid;
+                fallbackFs = fsComp;
+            }
+        }
+
+        if (fallbackDrive != null && fallbackFs != null)
+        {
+            hostCompUid = fallbackComp;
+            hostDriveUid = fallbackDrive;
+            hostFs = fallbackFs;
+            return true;
+        }
+
+        var routerComp = _router.UnwrapComputerEntity(coreRouterHostOrComp);
+        if (_fileSystem.TryFindFileSystem(routerComp, out var rDrive, out var rFs))
+        {
+            hostCompUid = routerComp;
+            hostDriveUid = rDrive;
+            hostFs = rFs;
+            return true;
+        }
+
+        return false;
     }
 
     public EntityUid? GetServerDrive(EntityUid serverUid, out FileSystemComponent? fs)
@@ -595,7 +767,10 @@ public sealed partial class DataServerSystem : EntitySystem
             ("/bin/file_browser.nte", "file_browser", "OxydFileBrowserProgram", "File Browser"),
             ("/bin/nanotask.nte", "nanotask", "NanoTaskProgram", "Tasks"),
             ("/bin/crew_manifest.nte", "crew_manifest", "CrewManifestProgram", "Crew Manifest"),
+            ("/bin/station_records.nte", "station_records", "StationRecordsProgram", "Station Records"),
+            ("/bin/criminal_records.nte", "criminal_records", "CriminalRecordsProgram", "Criminal Records"),
             ("/bin/wanted_list.nte", "wanted_list", "WantedListProgram", "Wanted List"),
+            ("/bin/cameras.nte", "cameras", "SurveillanceCameraProgram", "Surveillance Cameras"),
             ("/bin/news_reader.nte", "news_reader", "NewsReaderProgram", "News Reader"),
             ("/bin/netprobe.nte", "netprobe", "NetProbeProgram", "NetProbe"),
             ("/bin/logprobe.nte", "logprobe", "LogProbeProgram", "LogProbe"),

@@ -1,7 +1,12 @@
 using System.Linq;
+using Content.Client.UserInterface.Systems.Viewport;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Damage.Components;
+using Content.Shared.Damage.Systems;
+using Robust.Client.Player;
 using Robust.Client.UserInterface;
+using Robust.Shared.Player;
 
 namespace Content.Client._Oxyd.Computers.UI;
 
@@ -29,12 +34,47 @@ public interface IOsProgramUiHost
 /// <summary>
 /// Coordinates client-side parenting between Computer Display BUIs, Boot Program BUIs, and Child Program BUIs,
 /// ensuring entity-based BUIs attach cleanly in any network packet arrival order.
+/// Also enforces safety interrupts (damage, player detach) that immediately close
+/// docked viewport consoles and resume normal world rendering.
 /// </summary>
-public sealed class ClientComputerUiSystem : EntitySystem
+public sealed partial class ClientComputerUiSystem : EntitySystem
 {
+    [Dependency] private IPlayerManager _player = default!;
+    [Dependency] private IUserInterfaceManager _uiManager = default!;
+
     private readonly Dictionary<EntityUid, IComputerDisplayHost> _displays = new();
     private readonly Dictionary<EntityUid, (EntityUid ProgUid, ProgramUiControl Control)> _bootUis = new();
     private readonly Dictionary<EntityUid, Dictionary<EntityUid, ProgramUiControl>> _childUis = new();
+
+    [SubscribeLocalEvent]
+    private void OnLocalPlayerDamageChanged(Entity<DamageableComponent> ent, ref DamageChangedEvent args)
+    {
+        if (_displays.Count == 0 || ent.Owner != _player.LocalEntity)
+            return;
+
+        if (args.DamageIncreased && args.InterruptsDoAfters)
+            CloseDockedDisplays();
+    }
+
+    [SubscribeLocalEvent]
+    private void OnLocalPlayerDetached(LocalPlayerDetachedEvent args)
+    {
+        CloseDockedDisplays();
+        _uiManager.GetUIController<ViewportUIController>().ClearWorldRenderPauses();
+    }
+
+    public void CloseDockedDisplays()
+    {
+        if (_displays.Count == 0)
+            return;
+
+        var hosts = _displays.Values.ToList();
+        for (var i = 0; i < hosts.Count; i++)
+        {
+            if (hosts[i] is ComputerDisplayWindow { IsDockedInViewport: true, Disposed: false } win)
+                win.Close();
+        }
+    }
 
     public void RegisterDisplayHost(EntityUid compUid, IComputerDisplayHost host)
     {

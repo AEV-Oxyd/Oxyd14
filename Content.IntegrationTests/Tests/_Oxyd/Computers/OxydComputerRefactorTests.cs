@@ -7,6 +7,7 @@ using Content.Client._Oxyd.Computers.Programs;
 using Content.Client._Oxyd.Computers.UI;
 using Content.IntegrationTests.Tests.Interaction;
 using Content.Server._Oxyd.Computers;
+using Content.Server._Oxyd.Computers.Cameras;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Programs;
 using Content.Server._Oxyd.Computers.ScreenSharing;
@@ -16,6 +17,7 @@ using Content.Server.Materials;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
 using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Cameras;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
@@ -33,6 +35,7 @@ using Content.Shared.Lock;
 using Content.Shared.Materials;
 using Content.Shared.PDA;
 using Content.Shared.Research.Prototypes;
+using Content.Shared.Security;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Containers;
@@ -803,10 +806,35 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 .Any(l => l.Text != null && l.Text.Contains(appTitle, StringComparison.OrdinalIgnoreCase)))
                 continue;
             var btn = row.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>()
-                .FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Run", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(b => b.VisibleInTree && b.Text != null &&
+                    (b.Text.Contains("Run", StringComparison.OrdinalIgnoreCase) ||
+                     b.Text.Contains("Launch", StringComparison.OrdinalIgnoreCase)));
             if (btn != null)
                 return btn;
         }
+
+        // Also support icon-tile launcher cards (Workstation DesktopAppsGrid AppTile_*)
+        var panels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+        CollectDescendants(osCtrl, panels);
+        foreach (var panel in panels)
+        {
+            if (!panel.VisibleInTree || panel.Name == null || !panel.Name.StartsWith("AppTile_", StringComparison.Ordinal))
+                continue;
+
+            var labels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(panel, labels);
+            if (!labels.Any(l => l.Text != null && l.Text.Contains(appTitle, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(panel, btns);
+            var btn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Contains("Launch", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Run", StringComparison.OrdinalIgnoreCase)));
+            if (btn != null)
+                return btn;
+        }
+
         return null;
     }
 
@@ -1242,7 +1270,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(wsOsCtrl, btns);
-            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Contains("Home", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase)));
             Assert.That(remoteWsAppsBtn, Is.Not.Null);
         });
 
@@ -1397,7 +1427,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(osList.Count, Is.EqualTo(1));
             var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(osList[0], btns);
-            remoteWsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            remoteWsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Contains("Home", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase)));
         });
 
         await ClickThroughRemoteScreenView(remoteView!, wsWin!.ScreenInsetControl, remoteWsAppsBtn!);
@@ -1649,7 +1681,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsWin.MoveToFront();
             var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(wsWin.ScreenInsetControl, btns);
-            wsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            wsAppsBtn = btns.First(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Contains("Home", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase)));
         });
 
         // First click directly inside Workstation window after closing remote view must NOT close/hide it
@@ -2204,7 +2238,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             var btns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(wsOsCtrl, btns);
-            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null && b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase));
+            remoteWsAppsBtn = btns.FirstOrDefault(b => b.VisibleInTree && b.Text != null &&
+                (b.Text.Contains("Home", StringComparison.OrdinalIgnoreCase) ||
+                 b.Text.Contains("Apps", StringComparison.OrdinalIgnoreCase)));
             Assert.That(remoteWsAppsBtn, Is.Not.Null);
         });
 
@@ -5213,6 +5249,1142 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             win.Close();
         });
         await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestNetworkCoreOsAutoSyncAndDataComputerRecordsConsoles()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var lockSys = Server.System<LockSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid routerCompUid = default;
+        EntityUid routerBootUid = default;
+        EntityUid serverHost = default;
+        EntityUid serverCompUid = default;
+        EntityUid serverDriveUid = default;
+        EntityUid stationRecHost = default;
+        EntityUid stationRecCompUid = default;
+        EntityUid stationRecProgUid = default;
+        EntityUid crimRecHost = default;
+        EntityUid crimRecCompUid = default;
+        EntityUid crimRecProgUid = default;
+        EntityUid stationUid = default;
+        EntityUid joiningMobUid = default;
+        Content.Shared.StationRecords.StationRecordKey novaLiveKey = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+
+            // Create a live station entity linked to the test grid so live StationRecords / CriminalRecords sync is tested too.
+            stationUid = SEntMan.SpawnEntity(null, MapCoordinates.Nullspace);
+            SEntMan.System<MetaDataSystem>().SetEntityName(stationUid, "NSS Oxyd Core");
+            SEntMan.EnsureComponent<Content.Shared.Station.Components.StationDataComponent>(stationUid);
+            SEntMan.EnsureComponent<Content.Shared.StationRecords.Components.StationRecordsComponent>(stationUid);
+            Server.System<Content.Server.Station.Systems.ServerStationSystem>().AddGridToStation(stationUid, gridUid);
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            routerCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost).ComputerEntity!.Value;
+
+            serverHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            serverCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost).ComputerEntity!.Value;
+
+            stationRecHost = SEntMan.SpawnEntity("ComputerStationRecords", coords);
+            powerSys.SetNeedsPower(stationRecHost, false);
+            stationRecCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(stationRecHost).ComputerEntity!.Value;
+
+            crimRecHost = SEntMan.SpawnEntity("ComputerCriminalRecords", coords);
+            powerSys.SetNeedsPower(crimRecHost, false);
+            crimRecCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(crimRecHost).ComputerEntity!.Value;
+        });
+        await RunTicks(8);
+
+        // 1) Verify StationNetworkRouter boots NetworkCoreOsProgramComponent (/bin/netcore_os.nte) + auto-launches /bin/router.nte,
+        //    and BaseDataServer HDD ships with all record & camera .nte apps.
+        await Server.WaitAssertion(() =>
+        {
+            var rComp = SEntMan.GetComponent<OxydComputerComponent>(routerCompUid);
+            Assert.That(rComp.IsBooted, Is.True);
+            Assert.That(rComp.BootProgram, Is.Not.Null);
+            routerBootUid = rComp.BootProgram!.Value;
+            Assert.That(SEntMan.HasComponent<NetworkCoreOsProgramComponent>(routerBootUid), Is.True,
+                "StationNetworkRouter must boot the specialized NetworkCoreOsProgramComponent (/bin/netcore_os.nte).");
+            Assert.That(rComp.RunningPrograms.Any(p => SEntMan.HasComponent<RouterProgramComponent>(p)), Is.True,
+                "Network Core OS must auto-launch Router Admin (/bin/router.nte) as a child program.");
+
+            Assert.That(fsSys.TryFindFileSystem(serverCompUid, out var sDrive, out var sFs), Is.True);
+            serverDriveUid = sDrive!.Value;
+            Assert.That(sFs!.Files.ContainsKey("/bin/crew_manifest.nte"), Is.True);
+            Assert.That(sFs.Files.ContainsKey("/bin/station_records.nte"), Is.True);
+            Assert.That(sFs.Files.ContainsKey("/bin/criminal_records.nte"), Is.True);
+            Assert.That(sFs.Files.ContainsKey("/bin/wanted_list.nte"), Is.True);
+            Assert.That(sFs.Files.ContainsKey("/bin/cameras.nte"), Is.True);
+
+            // Verify migrated physical consoles run native NTOS record programs without legacy console components.
+            var stComp = SEntMan.GetComponent<OxydComputerComponent>(stationRecCompUid);
+            Assert.That(stComp.IsBooted, Is.True);
+            Assert.That(stComp.ActiveProgram, Is.Not.Null);
+            stationRecProgUid = stComp.ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<StationRecordsProgramComponent>(stationRecProgUid), Is.True);
+            Assert.That(SEntMan.HasComponent<Content.Shared.StationRecords.Components.GeneralStationRecordConsoleComponent>(stationRecHost), Is.False);
+
+            var crComp = SEntMan.GetComponent<OxydComputerComponent>(crimRecCompUid);
+            Assert.That(crComp.IsBooted, Is.True);
+            Assert.That(crComp.ActiveProgram, Is.Not.Null);
+            crimRecProgUid = crComp.ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<CriminalRecordsProgramComponent>(crimRecProgUid), Is.True);
+            Assert.That(lockSys.IsLocked(crimRecHost), Is.True, "ComputerCriminalRecords must start locked.");
+
+            // Seed a pre-existing custom row in /records/crew_manifest.db on BaseDataServer HDD to verify incremental append preserves it!
+            Assert.That(fsSys.TryWriteFile(serverDriveUid, new DatabaseVirtualFile
+            {
+                Name = "crew_manifest",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "crew_manifest",
+                Data = new Dictionary<string, string>
+                {
+                    ["__station"] = "NSS Oxyd Core",
+                    ["row_0"] = "Legacy Chief\tChief Engineer\tChiefEngineer\tJobIconChiefEngineer"
+                },
+                Size = 192
+            }, sFs), Is.True);
+        });
+
+        // 2) Open StationNetworkRouter UI and verify NetworkCoreOsUiControl renders cleanly.
+        await Server.WaitPost(() => compSys.OpenComputerForActor(routerCompUid, SPlayer));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var netOsUi = GetControlFromChildren<NetworkCoreOsUiControl>(_ => true, win);
+            Assert.That(netOsUi, Is.Not.Null, "StationNetworkRouter must render NetworkCoreOsUiControl.");
+            var dsLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "NetCoreDataServerLabel", netOsUi!);
+            Assert.That(dsLabel!.Text, Does.Not.Contain("None online").And.Not.Contain("Checking"),
+                $"Network Core OS must detect the online Data Server (label was: '{dsLabel.Text}').");
+            win.Close();
+        });
+        await RunTicks(4);
+
+        // 3) Simulate a new player joining (PlayerSpawnCompleteEvent) -> Network Core OS must INCREMENTALLY append
+        //    to /records/crew_manifest.db, /records/station_records.db, and /records/criminal_records.db WITHOUT wiping Legacy Chief!
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetCoordinates(TargetCoords);
+            joiningMobUid = SEntMan.SpawnEntity("MobHuman", coords);
+            SEntMan.System<MetaDataSystem>().SetEntityName(joiningMobUid, "Nova Vance");
+
+            var stRecSys = Server.System<Content.Shared.StationRecords.Systems.StationRecordsSystem>();
+            var gen = new Content.Shared.StationRecords.GeneralStationRecord
+            {
+                Name = "Nova Vance",
+                Age = 31,
+                JobTitle = "Security Officer",
+                JobPrototype = "SecurityOfficer",
+                JobIcon = "JobIconSecurityOfficer",
+                Species = "Human",
+                Gender = Robust.Shared.Enums.Gender.Female,
+                Fingerprint = "FP-NOVA-99",
+                DNA = "DNA-NOVA-99"
+            };
+            novaLiveKey = stRecSys.AddRecordEntry(stationUid, gen);
+            stRecSys.AddRecordEntry(novaLiveKey, new Content.Shared.CriminalRecords.CriminalRecord());
+
+            var profile = Content.Shared.Preferences.HumanoidCharacterProfile.RandomWithSpecies()
+                .WithName("Nova Vance")
+                .WithAge(31);
+            var playerSession = SEntMan.GetComponent<Robust.Shared.Player.ActorComponent>(SPlayer).PlayerSession;
+            var joinEv = new Content.Shared.GameTicking.PlayerSpawnCompleteEvent(
+                joiningMobUid,
+                playerSession,
+                "SecurityOfficer",
+                lateJoin: true,
+                silent: true,
+                joinOrder: 2,
+                stationUid,
+                profile);
+            SEntMan.EventBus.RaiseLocalEvent(joiningMobUid, joinEv, broadcast: true);
+
+            var coreComp = SEntMan.GetComponent<NetworkCoreOsProgramComponent>(routerBootUid);
+            var routerSys = Server.System<NetworkRouterSystem>();
+            Assert.That(coreComp.AutoSyncCount, Is.GreaterThanOrEqualTo(1),
+                $"AutoSyncCount was 0! IsRouterOp={routerSys.IsRouterOperational(routerHost)}, AutoSync={coreComp.AutoSyncRecords}, Logs=[{string.Join(" | ", coreComp.SyncLogs)}]");
+            Assert.That(coreComp.SyncLogs.Any(l => l.Contains("Nova Vance")), Is.True);
+
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CrewManifestProgramComponent.CacheFilePath, out var manDb), Is.True);
+            Assert.That(manDb!.Data.Values.Any(v => v.StartsWith("Legacy Chief\t")), Is.True,
+                "Incremental join sync must NOT overwrite existing rows in /records/crew_manifest.db.");
+            Assert.That(manDb.Data.Values.Any(v => v.StartsWith("Nova Vance\t")), Is.True,
+                "Network Core OS must append the joining player to /records/crew_manifest.db.");
+
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, StationRecordsProgramComponent.CacheFilePath, out var stDb), Is.True);
+            Assert.That(stDb!.Data.Values.Any(v => v.StartsWith("Nova Vance\t")), Is.True,
+                "Network Core OS must append the joining player to /records/station_records.db.");
+
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CriminalRecordsProgramComponent.CacheFilePath, out var crDb), Is.True);
+            Assert.That(crDb!.Data.Values.Any(v => v.StartsWith("Nova Vance\t")), Is.True,
+                "Network Core OS must create a criminal records entry for the joining player in /records/criminal_records.db.");
+        });
+
+        // 4) Open migrated ComputerStationRecords -> verify StationRecordsUiControl renders & can create a new record persisted to DataServer + Crew Manifest!
+        await Server.WaitPost(() => compSys.OpenComputerForActor(stationRecCompUid, SPlayer));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var recUi = GetControlFromChildren<StationRecordsUiControl>(_ => true, win);
+            Assert.That(recUi, Is.Not.Null, "ComputerStationRecords must render StationRecordsUiControl.");
+            var nameEdit = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLineEdit>(
+                e => e.Name == "StationRecordsNameEdit", recUi!);
+            Assert.That(nameEdit!.Text, Is.EqualTo("Nova Vance"));
+        });
+
+        await SendBui(ProgramUiKey.Key, new StationRecordsActionMessage(
+            StationRecordsAction.CreateEntry,
+            name: "Dr. Kira Sol",
+            jobTitle: "Chief Medical Officer",
+            age: 42,
+            species: "Human",
+            gender: "Female",
+            fingerprint: "FP-KIRA-01",
+            dna: "DNA-KIRA-01"), FromServer(stationRecProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, StationRecordsProgramComponent.CacheFilePath, out var stDb), Is.True);
+            Assert.That(stDb!.Data.Values.Any(v => v.StartsWith("Dr. Kira Sol\tChief Medical Officer\t")), Is.True,
+                "Creating a record in StationRecordsProgram must persist directly to DataServer /records/station_records.db.");
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CrewManifestProgramComponent.CacheFilePath, out var manDb), Is.True);
+            Assert.That(manDb!.Data.Values.Any(v => v.StartsWith("Dr. Kira Sol\tChief Medical Officer\t")), Is.True,
+                "Creating a record in StationRecordsProgram must mirror to DataServer /records/crew_manifest.db.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow(typeof(ComputerDisplayWindow), out var openWin))
+                openWin!.Close();
+        });
+        await RunTicks(4);
+
+        // 5) Open migrated ComputerCriminalRecords while locked -> edits blocked; unlock -> mark Nova Vance Wanted + add history -> verify DataServer criminal_records.db, wanted_list.db, and live CriminalRecord!
+        string novaCrimKey = string.Empty;
+        await Server.WaitPost(() =>
+        {
+            fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CriminalRecordsProgramComponent.CacheFilePath, out var crDb);
+            novaCrimKey = crDb!.Data.First(kv => kv.Key.StartsWith("crim_") && kv.Value.StartsWith("Nova Vance\t")).Key;
+            compSys.OpenComputerForActor(crimRecCompUid, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crimUi = GetControlFromChildren<CriminalRecordsUiControl>(_ => true, win);
+            Assert.That(crimUi, Is.Not.Null, "ComputerCriminalRecords must render CriminalRecordsUiControl.");
+            var applyBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CriminalApplyStatusBtn", crimUi!);
+            Assert.That(applyBtn!.Disabled, Is.True, "Locked ComputerCriminalRecords must disable edit buttons.");
+        });
+
+        // Attempt mutation while locked -> rejected!
+        await SendBui(ProgramUiKey.Key, new CriminalRecordsActionMessage(
+            CriminalRecordsAction.SetStatus, key: novaCrimKey, status: SecurityStatus.Wanted, text: "Unauthorized edit"), FromServer(crimRecProgUid));
+        await RunTicks(5);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CriminalRecordsProgramComponent.CacheFilePath, out var crDb), Is.True);
+            Assert.That(crDb!.Data[novaCrimKey], Does.Not.Contain("Unauthorized edit"));
+            lockSys.Unlock(crimRecHost, null);
+        });
+        await RunTicks(6);
+
+        // Unlocking must automatically enable edit controls on the open BUI!
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crimUi = GetControlFromChildren<CriminalRecordsUiControl>(_ => true, win)!;
+            var applyBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CriminalApplyStatusBtn", crimUi);
+            Assert.That(applyBtn!.Disabled, Is.False, "Unlocking ComputerCriminalRecords must immediately enable editing.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new CriminalRecordsActionMessage(
+            CriminalRecordsAction.SetStatus, key: novaCrimKey, status: SecurityStatus.Wanted, text: "Stolen captain spare"), FromServer(crimRecProgUid));
+        await SendBui(ProgramUiKey.Key, new CriminalRecordsActionMessage(
+            CriminalRecordsAction.AddHistory, key: novaCrimKey, text: "Broke into bridge"), FromServer(crimRecProgUid));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, CriminalRecordsProgramComponent.CacheFilePath, out var crDb), Is.True);
+            Assert.That(crDb!.Data[novaCrimKey], Does.Contain("Wanted").And.Contain("Stolen captain spare").And.Contain("Broke into bridge"),
+                "CriminalRecordsProgram must persist status & history to DataServer /records/criminal_records.db.");
+
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(serverDriveUid, WantedListProgramComponent.CacheFilePath, out var wantDb), Is.True);
+            Assert.That(wantDb!.Data.Values.Any(v => v.Contains("Nova Vance") && v.Contains("Wanted")), Is.True,
+                "Setting Wanted in CriminalRecordsProgram must sync /records/wanted_list.db on DataServer.");
+
+            var stRecSys = Server.System<Content.Shared.StationRecords.Systems.StationRecordsSystem>();
+            Assert.That(stRecSys.TryGetRecord(novaLiveKey, out Content.Shared.CriminalRecords.CriminalRecord? liveCrim), Is.True);
+            Assert.That(liveCrim!.Status, Is.EqualTo(SecurityStatus.Wanted),
+                "Setting Wanted in CriminalRecordsProgram must sync to live CriminalRecord (Security HUD).");
+            Assert.That(liveCrim.Reason, Is.EqualTo("Stolen captain spare"));
+            Assert.That(liveCrim.History.Any(h => h.Crime.Contains("Broke into bridge")), Is.True);
+        });
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow(typeof(ComputerDisplayWindow), out var openWin))
+                openWin!.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestWifiCameraAppExamineThroughCameraWitnessLogsAndMicUpgrade()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var camSys = Server.System<OxydCameraSystem>();
+        var examineSys = Server.System<ExamineSystemShared>();
+        var interSys = Server.System<Content.Shared.Interaction.SharedInteractionSystem>();
+        var itemSlots = Server.System<ItemSlotsSystem>();
+
+        EntityUid nearRouterHost = default;
+        EntityUid farRouterHost = default;
+        EntityUid monitorHost = default;
+        EntityUid monitorCompUid = default;
+        EntityUid camProgUid = default;
+        EntityUid secCamUid = default;
+        EntityUid farEngCamUid = default;
+        EntityUid subjectUid = default;
+        EntityUid micUpgradeUid = default;
+        EntityUid dataDiskUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var baseCoords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+            var mapSys = Server.System<SharedMapSystem>();
+            var grid = SEntMan.GetComponent<Robust.Shared.Map.Components.MapGridComponent>(gridUid);
+            var tile = new Tile(1);
+
+            // Lay tiles out to (0, 22) and (26, 0) so distant cameras & mobs sit on valid floor tiles.
+            for (var y = -1; y <= 24; y++)
+            {
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(0, y), tile);
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(1, y), tile);
+            }
+            for (var x = 0; x <= 26; x++)
+            {
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(x, 0), tile);
+            }
+
+            // Spawn solid wall row between player and distant Security camera room to prevent direct LOS!
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, 0.5f, 4.5f));
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, 1.5f, 4.5f));
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, -0.5f, 4.5f));
+
+            nearRouterHost = SEntMan.SpawnEntity("StationNetworkRouter", baseCoords);
+            powerSys.SetNeedsPower(nearRouterHost, false);
+
+            farRouterHost = SEntMan.SpawnEntity("StationNetworkRouter", new EntityCoordinates(gridUid, 24.5f, 0.5f));
+            powerSys.SetNeedsPower(farRouterHost, false);
+
+            monitorHost = SEntMan.SpawnEntity("ComputerSurveillanceCameraMonitor", baseCoords);
+            powerSys.SetNeedsPower(monitorHost, false);
+            monitorCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(monitorHost).ComputerEntity!.Value;
+
+            // Security camera at (0.5, 19.5): closer to nearRouterHost (dist ~19) than farRouterHost (dist ~31),
+            // and well beyond player's direct ExamineRange (16f) + blocked by WallSolid!
+            secCamUid = SEntMan.SpawnEntity("SurveillanceCameraSecurity", new EntityCoordinates(gridUid, 0.5f, 19.5f));
+            powerSys.SetNeedsPower(secCamUid, false);
+            SEntMan.System<MetaDataSystem>().SetEntityName(secCamUid, "Sec Hallway Cam");
+
+            // Engineering camera at (25.5, 0.5): right next to farRouterHost (dist ~1) -> Wi-Fi connects to farRouterHost, NOT nearRouterHost!
+            farEngCamUid = SEntMan.SpawnEntity("SurveillanceCameraEngineering", new EntityCoordinates(gridUid, 25.5f, 0.5f));
+            powerSys.SetNeedsPower(farEngCamUid, false);
+
+            // Distant mob directly in view of Sec Hallway Cam (1m away from camera, ~20.5m from player behind walls!)
+            subjectUid = SEntMan.SpawnEntity("MobHuman", new EntityCoordinates(gridUid, 0.5f, 20.5f));
+            SEntMan.System<MetaDataSystem>().SetEntityName(subjectUid, "Suspicious Subject");
+
+            micUpgradeUid = SEntMan.SpawnEntity("CameraMicrophoneUpgrade", baseCoords);
+            dataDiskUid = SEntMan.SpawnEntity("ProgramDiskCameras", baseCoords);
+
+            // InteractionTestMob is minimal and lacks ExaminerComponent; add it so we test real player examine rules.
+            SEntMan.EnsureComponent<ExaminerComponent>(SPlayer);
+        });
+        await RunTicks(10);
+
+        // 1) Verify migrated ComputerSurveillanceCameraMonitor runs /bin/cameras.nte, discovers Wi-Fi cameras via closest router,
+        //    and BEFORE viewing the camera, player can examine nearby objects but CANNOT examine or physically reach the distant subject!
+        await Server.WaitAssertion(() =>
+        {
+            var mComp = SEntMan.GetComponent<OxydComputerComponent>(monitorCompUid);
+            Assert.That(mComp.IsBooted, Is.True);
+            Assert.That(mComp.ActiveProgram, Is.Not.Null);
+            camProgUid = mComp.ActiveProgram!.Value;
+            Assert.That(SEntMan.HasComponent<SurveillanceCameraProgramComponent>(camProgUid), Is.True);
+            Assert.That(SEntMan.HasComponent<Content.Server.SurveillanceCamera.SurveillanceCameraMonitorComponent>(monitorHost), Is.False);
+
+            // Closest-router Wi-Fi routing verification!
+            var secRouter = camSys.FindClosestRouterForCamera(secCamUid);
+            Assert.That(secRouter, Is.Not.Null);
+            Assert.That(secRouter!.Value.Owner, Is.EqualTo(nearRouterHost));
+
+            var farRouter = camSys.FindClosestRouterForCamera(farEngCamUid);
+            Assert.That(farRouter, Is.Not.Null);
+            Assert.That(farRouter!.Value.Owner, Is.EqualTo(farRouterHost));
+
+            // Sanity check: player can examine adjacent monitor, but CANNOT examine or physically reach distant mob behind walls
+            Assert.That(examineSys.CanExamine(SPlayer, monitorHost), Is.True,
+                "Player with ExaminerComponent must be able to examine adjacent objects.");
+            Assert.That(examineSys.CanExamine(SPlayer, subjectUid), Is.False,
+                "Player must NOT be able to examine a distant mob behind walls before viewing a camera.");
+            Assert.That(interSys.InRangeUnobstructed(SPlayer, subjectUid), Is.False,
+                "Player must NOT be within physical interaction range of the distant mob.");
+
+            compSys.OpenComputerForActor(monitorCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        // Verify Client Camera UI renders and lists Sec Hallway Cam (NOT farEngCamUid on farRouterHost!)
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win);
+            Assert.That(camUi, Is.Not.Null, "ComputerSurveillanceCameraMonitor must render SurveillanceCameraUiControl.");
+
+            var vp = GetControlFromChildren<Content.Client.Viewport.ScalingViewport>(
+                v => v.Name == "OxydCameraViewport", camUi!);
+            Assert.That(vp, Is.Not.Null);
+            Assert.That(vp!.MouseFilter, Is.EqualTo(Control.MouseFilterMode.Stop),
+                "Camera ScalingViewport must have MouseFilter=Stop so players can Shift+Click / Right-Click to examine entities through it.");
+
+            var camBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(camUi!, camBtns);
+            Assert.That(camBtns.Any(b => b.Text != null && b.Text.Contains("Sec Hallway Cam")), Is.True,
+                "Camera app must list Wi-Fi cameras connected to its closest StationNetworkRouter.");
+            Assert.That(camBtns.Any(b => b.Text != null && b.Text.Contains("Engineering")), Is.False,
+                "Camera app must NOT list cameras Wi-Fi connected to a different farther router.");
+        });
+
+        // 2) Shortfall 1: Connect to Sec Hallway Cam -> Examine through camera WORKS, Details range WORKS,
+        //    while physical interaction reach remains strictly blocked!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(secCamUid)), FromServer(camProgUid));
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.TryGetComponent<ActiveCameraViewerComponent>(SPlayer, out var viewer), Is.True,
+                "Viewing a camera must grant ActiveCameraViewerComponent to the player.");
+            Assert.That(viewer!.ActiveCameras, Contains.Item(SEntMan.GetNetEntity(secCamUid)));
+
+            Assert.That(examineSys.CanExamine(SPlayer, subjectUid), Is.True,
+                "Player actively viewing a camera MUST be able to examine people in the camera's line of sight.");
+            Assert.That(examineSys.IsInDetailsRange(SPlayer, subjectUid), Is.True,
+                "Examine details range must also resolve from the active camera when the target is near the camera.");
+            Assert.That(interSys.InRangeUnobstructed(SPlayer, subjectUid), Is.False,
+                "Viewing a camera must NEVER grant physical interaction range (anti-exploit).");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var vp = GetControlFromChildren<Content.Client.Viewport.ScalingViewport>(
+                v => v.Name == "OxydCameraViewport", camUi)!;
+            Assert.That(vp.Visible, Is.True, "Camera viewport must become visible after selecting a camera.");
+            Assert.That(vp.Eye, Is.Not.Null);
+            Assert.That(vp.ViewportSize, Is.EqualTo(new Robust.Shared.Maths.Vector2i(480, 480)),
+                "Camera viewport must render at full 480x480 native resolution.");
+        });
+
+        // 3) Shortfall 2: Bounded timestamped witness logs (damage, melee attacks, throwing) + FIFO memory cap + remote download + local disk extraction!
+        await Server.WaitAssertion(() =>
+        {
+            var dmgSys = Server.System<Content.Shared.Damage.Systems.DamageableSystem>();
+            var bluntProto = Server.ResolveDependency<IPrototypeManager>().Index<Content.Shared.Damage.Prototypes.DamageTypePrototype>("Blunt");
+            dmgSys.TryChangeDamage(subjectUid, new Content.Shared.Damage.DamageSpecifier(bluntProto, Content.Shared.FixedPoint.FixedPoint2.New(15)), true);
+
+            // Melee attack in front of camera
+            var hitEv = new Content.Shared.Weapons.Melee.Events.MeleeHitEvent(
+                new HashSet<EntityUid> { subjectUid },
+                subjectUid,
+                subjectUid,
+                new Content.Shared.Damage.DamageSpecifier(bluntProto, Content.Shared.FixedPoint.FixedPoint2.New(2)),
+                null);
+            SEntMan.EventBus.RaiseLocalEvent(subjectUid, hitEv);
+
+            // Throw an item in front of camera
+            var thrownItem = SEntMan.SpawnEntity("Crowbar", SEntMan.GetComponent<TransformComponent>(subjectUid).Coordinates);
+            var throwSys = Server.System<Content.Shared.Throwing.ThrowingSystem>();
+            throwSys.TryThrow(thrownItem, new Vector2(1f, 0f), 5f, subjectUid);
+
+            var logComp = SEntMan.GetComponent<SurveillanceCameraLogComponent>(secCamUid);
+            Assert.That(logComp.Entries.Any(e => e.Category == "COMBAT" && e.Message.Contains("Suspicious Subject")), Is.True,
+                "Camera must record timestamped [COMBAT] witness logs when someone is injured in its line of sight.");
+            Assert.That(logComp.Entries.Any(e => e.Category == "WEAPON" && e.Message.Contains("Suspicious Subject")), Is.True,
+                "Camera must record timestamped [WEAPON] witness logs when a melee attack occurs in its line of sight.");
+            Assert.That(logComp.Entries.Any(e => e.Category == "THROW" && e.Message.Contains("Suspicious Subject") && e.Message.Contains("threw")), Is.True,
+                "Camera must record timestamped [THROW] witness logs when someone throws an item in its line of sight.");
+
+            // Verify FIFO bounded memory eviction when exceeding camera memory cap!
+            var origMax = logComp.MaxMemoryBytes;
+            logComp.MaxMemoryBytes = 256;
+            for (var i = 0; i < 12; i++)
+                camSys.AppendCameraLog((secCamUid, logComp), "SIGHT", $"Patrol checkpoint event #{i} witnessed in sector.");
+
+            Assert.That(logComp.UsedMemoryBytes, Is.LessThanOrEqualTo(logComp.MaxMemoryBytes),
+                "Camera witness log ring buffer must strictly enforce MaxMemoryBytes.");
+            Assert.That(logComp.DroppedEntries, Is.GreaterThan(0),
+                "Oldest witness logs must be evicted when camera memory capacity is exceeded.");
+            logComp.MaxMemoryBytes = origMax;
+        });
+
+        // Download witness logs remotely via Camera App -> writes /logs/cam_*.txt onto monitor HDD!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(SurveillanceCameraAction.DownloadLogs), FromServer(camProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(monitorCompUid, out var monDrive, out var monFs), Is.True);
+            var remoteLog = monFs!.Files.Values.OfType<TextVirtualFile>()
+                .FirstOrDefault(f => f.FullPath.StartsWith("/logs/cam_", StringComparison.OrdinalIgnoreCase));
+            Assert.That(remoteLog, Is.Not.Null, "Downloading logs through /bin/cameras.nte must write a /logs/cam_*.txt file onto computer HDD.");
+            Assert.That(remoteLog!.TextContent, Does.Contain("Sec Hallway Cam").And.Contain("Patrol checkpoint event #11"));
+
+            // Local physical Data Disk extraction directly from the camera!
+            var logComp = SEntMan.GetComponent<SurveillanceCameraLogComponent>(secCamUid);
+            Assert.That(fsSys.TryFindFileSystem(dataDiskUid, out var diskDrive, out var diskFs), Is.True);
+            Assert.That(camSys.TryDumpCameraLogsToDrive((secCamUid, logComp), diskDrive!.Value, diskFs!, out var dumpedPath), Is.True);
+            Assert.That(fsSys.TryGetFile<TextVirtualFile>(diskDrive.Value, dumpedPath, out var diskFile, diskFs), Is.True);
+            Assert.That(diskFile!.TextContent, Does.Contain("Sec Hallway Cam").And.Contain("Patrol checkpoint event #11"));
+        });
+
+        // 4) Shortfall 3: Camera Microphone Upgrade behind locked WiresPanel -> enables hearing, live audio & [AUDIO] witness logs!
+        await Server.WaitAssertion(() =>
+        {
+            var logComp = SEntMan.GetComponent<SurveillanceCameraLogComponent>(secCamUid);
+            Assert.That(logComp.HasMicrophoneUpgrade, Is.False, "Standard wallmount camera must start without microphone upgrade.");
+            Assert.That(SEntMan.HasComponent<Content.Shared.Speech.Components.ActiveListenerComponent>(secCamUid), Is.False);
+
+            // Before mic upgrade: speech near camera must NOT be heard or logged!
+            var listenSys = Server.System<Content.Shared.Speech.EntitySystems.ListeningSystem>();
+            listenSys.PingListeners(subjectUid, "Unheard secret before mic install", null);
+            Assert.That(logComp.Entries.Any(e => e.Message.Contains("Unheard secret")), Is.False,
+                "Un-upgraded camera must NOT hear or log speech.");
+
+            // Panel is closed -> microphone slot MUST be locked!
+            Assert.That(itemSlots.TryInsert(secCamUid, SurveillanceCameraLogComponent.MicrophoneSlotId, micUpgradeUid, SPlayer), Is.False,
+                "Camera microphone upgrade slot must be locked while maintenance panel is closed.");
+
+            // Open maintenance panel -> slot unlocks -> install CameraMicrophoneUpgrade!
+            var wiresSys = Server.System<Content.Shared.Wires.SharedWiresSystem>();
+            var panel = SEntMan.GetComponent<Content.Shared.Wires.WiresPanelComponent>(secCamUid);
+            wiresSys.TogglePanel(secCamUid, panel, true);
+            Assert.That(itemSlots.TryInsert(secCamUid, SurveillanceCameraLogComponent.MicrophoneSlotId, micUpgradeUid, SPlayer), Is.True,
+                "Opening camera maintenance panel must allow installing CameraMicrophoneUpgrade.");
+
+            Assert.That(logComp.HasMicrophoneUpgrade, Is.True);
+            Assert.That(SEntMan.HasComponent<Content.Shared.Speech.Components.ActiveListenerComponent>(secCamUid), Is.True,
+                "Installing CameraMicrophoneUpgrade must enable ActiveListenerComponent on the camera.");
+
+            // Subject speaks near upgraded camera -> logged as [AUDIO] AND streamed live to SurveillanceCameraProgram!
+            listenSys.PingListeners(subjectUid, "Meet me in maint at 04:00", null);
+
+            Assert.That(logComp.Entries.Any(e => e.Category == "AUDIO" && e.Message.Contains("Meet me in maint at 04:00")), Is.True,
+                "Upgraded camera must log overheard speech into its timestamped witness logs.");
+
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.LiveAudioFeed.Any(l => l.Message.Contains("Meet me in maint at 04:00")), Is.True,
+                "Upgraded camera must relay live overheard audio to the viewing SurveillanceCameraProgram.");
+        });
+        await RunTicks(8);
+
+        Content.Client.UserInterface.Controls.ContentButton? logsToggleBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var audioBadge = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "CameraAudioBadgeLabel", camUi);
+            Assert.That(audioBadge!.Text, Is.EqualTo("AUDIO: ON"));
+            var drawer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "CameraInspectorDrawer", camUi);
+            Assert.That(drawer!.Visible, Is.False,
+                "Witness logs & audio tab must start closed by default so live camera feeds get maximum space.");
+            logsToggleBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraLogsToggleBtn", camUi);
+            Assert.That(logsToggleBtn, Is.Not.Null);
+        });
+
+        await ClickViaHitTest(logsToggleBtn!);
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var audioPanel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "CameraLiveAudioPanel", camUi);
+            Assert.That(audioPanel!.VisibleInTree, Is.True,
+                "Clicking the Logs top-bar button must open the Logs & Live Audio tab showing overheard audio.");
+        });
+
+        // 5) Disconnect -> ActiveCameraViewerComponent removed -> distant examine disabled again!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(SurveillanceCameraAction.Disconnect), FromServer(camProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.HasComponent<ActiveCameraViewerComponent>(SPlayer), Is.False,
+                "Disconnecting from camera must remove ActiveCameraViewerComponent.");
+            Assert.That(examineSys.CanExamine(SPlayer, subjectUid), Is.False,
+                "After disconnecting from camera, distant mob must no longer be examinable.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow(typeof(ComputerDisplayWindow), out var openWin))
+                openWin!.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestRefinedWorkstationUiIconsAndMultiCameraSixFeedExactPovFit()
+    {
+        var compSys = SEntMan.System<OxydComputerSystem>();
+        var examineSys = SEntMan.System<Content.Shared.Examine.ExamineSystemShared>();
+        var powerSys = SEntMan.System<Content.Server.Power.EntitySystems.PowerReceiverSystem>();
+        var metaSys = SEntMan.System<MetaDataSystem>();
+
+        // =====================================================================
+        // PART 1: REFINED WORKSTATION UI, LARGER DEFAULT SIZE, SINGLE TAB BAR & APP ICONS
+        // =====================================================================
+        EntityUid wsHost = default;
+        EntityUid wsCompUid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var baseCoords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", baseCoords);
+            powerSys.SetNeedsPower(wsHost, false);
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost).ComputerEntity!.Value;
+        });
+        await RunTicks(10);
+
+        await Server.WaitPost(() => compSys.OpenComputerForActor(wsCompUid, SPlayer));
+        await RunTicks(10);
+
+        Content.Client.UserInterface.Controls.ContentButton? noteRunBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            Assert.That(win.SetSize.X, Is.GreaterThanOrEqualTo(1000f),
+                "Workstation UI should open at a larger default width (>= 1000px).");
+            Assert.That(win.SetSize.Y, Is.GreaterThanOrEqualTo(700f),
+                "Workstation UI should open at a larger default height (>= 700px).");
+
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(win.SupportsViewportDock, Is.True,
+                "Stationary Workstation console must support docking inside ViewportContainer.");
+            Assert.That(win.IsDockedInViewport, Is.False,
+                "Workstation console must NOT force focus mode when not viewing >2 cameras.");
+            Assert.That(vpUi.IsWorldRenderPaused, Is.False,
+                "Opening a normal Workstation console must leave normal world rendering active.");
+
+            var osUi = GetControlFromChildren<OsUiControl>(_ => true, win);
+            Assert.That(osUi, Is.Not.Null);
+
+            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                c => c.Name == "WorkstationUnifiedTabBar", osUi!);
+            Assert.That(tabBar, Is.Not.Null, "Workstation OS must use a single unified top tab bar.");
+
+            var tabBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(tabBar!, tabBtns);
+            Assert.That(tabBtns.Any(b => b.Text == "Home"), Is.True, "Unified tab bar must contain Home tab.");
+            Assert.That(tabBtns.Any(b => b.Text == "System"), Is.True, "Unified tab bar must contain System tab.");
+            Assert.That(tabBtns.Any(b => b.Text == "Apps" || b.Text == "Ports"), Is.False,
+                "Old separate Apps and Ports tabs must be removed from Workstation OS.");
+
+            // Desktop app grid must show app icons resolved locally from program prototypes
+            var grid = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                c => c.Name == "DesktopAppsGrid", osUi!);
+            Assert.That(grid, Is.Not.Null, "Workstation Desktop must render DesktopAppsGrid.");
+
+            var appIcons = new List<Content.Client.UserInterface.Controls.ContentTextureRect>();
+            CollectDescendants(grid!, appIcons);
+            Assert.That(appIcons.Count, Is.GreaterThanOrEqualTo(3),
+                "Installed Workstation apps must display icons on their launcher tiles.");
+            Assert.That(appIcons.All(ic => ic.Texture != null), Is.True,
+                "Every Workstation app tile icon must resolve to a valid texture.");
+
+            noteRunBtn = FindRowRunButton(osUi!, "Notekeeper");
+            Assert.That(noteRunBtn, Is.Not.Null, "Merged Workstation Desktop must let users launch apps directly.");
+
+            AssertAllVisibleChildrenWithinViewport(win, osUi!, "Workstation Desktop");
+        });
+
+        // Launch Notekeeper -> inline running app tab with icon appears inside WorkstationUnifiedTabBar!
+        await ClickViaHitTest(noteRunBtn!);
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+                c => c.Name == "WorkstationUnifiedTabBar", win)!;
+            var tabBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(tabBar, tabBtns);
+            var runningTab = tabBtns.FirstOrDefault(b => b.Text != null && b.Text.Contains("Notekeeper", StringComparison.OrdinalIgnoreCase));
+            Assert.That(runningTab, Is.Not.Null, "Running app tab must live inline inside the single unified tab bar.");
+            Assert.That(runningTab!.Icon, Is.Not.Null, "Running app tab must render the app's icon.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow(typeof(ComputerDisplayWindow), out var openWin))
+                openWin!.Close();
+        });
+        await RunTicks(6);
+
+        // =====================================================================
+        // PART 2: CAMERA APP — UP TO 6 SIMULTANEOUS FEEDS, EXACT 1:1 POV FIT & ZERO OVERLAP
+        // =====================================================================
+        EntityUid routerHost = default;
+        EntityUid monitorHost = default;
+        EntityUid monitorCompUid = default;
+        EntityUid camProgUid = default;
+        var camUids = new List<EntityUid>();
+        EntityUid distantMobA = default;
+        EntityUid distantMobB = default;
+
+        await Server.WaitPost(() =>
+        {
+            var baseCoords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+            var mapSys = Server.System<SharedMapSystem>();
+            var grid = SEntMan.GetComponent<Robust.Shared.Map.Components.MapGridComponent>(gridUid);
+            var tile = new Tile(1);
+
+            for (var y = -1; y <= 32; y++)
+            {
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(0, y), tile);
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(1, y), tile);
+                mapSys.SetTile(gridUid, grid, new Robust.Shared.Maths.Vector2i(2, y), tile);
+            }
+
+            // Place solid wall barrier so distant subjects are occluded from the player directly.
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, 0.5f, 4.5f));
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, 1.5f, 4.5f));
+            SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, -0.5f, 4.5f));
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", baseCoords);
+            powerSys.SetNeedsPower(routerHost, false);
+
+            monitorHost = SEntMan.SpawnEntity("ComputerSurveillanceCameraMonitor", baseCoords);
+            powerSys.SetNeedsPower(monitorHost, false);
+            monitorCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(monitorHost).ComputerEntity!.Value;
+
+            // Spawn 7 operational Wi-Fi cameras connected to the closest router.
+            for (var i = 1; i <= 7; i++)
+            {
+                var yPos = i == 1 ? 18.5f : i == 6 ? 28.5f : 10.5f + i * 2f;
+                var xPos = i is 1 or 6 ? 0.5f : 2.5f;
+                var camUid = SEntMan.SpawnEntity("SurveillanceCameraGeneral",
+                    new EntityCoordinates(gridUid, xPos, yPos));
+                powerSys.SetNeedsPower(camUid, false);
+                metaSys.SetEntityName(camUid, $"MultiCam {i:00}");
+                camUids.Add(camUid);
+            }
+
+            distantMobA = SEntMan.SpawnEntity("MobHuman", new EntityCoordinates(gridUid, 0.5f, 19.5f));
+            distantMobB = SEntMan.SpawnEntity("MobHuman", new EntityCoordinates(gridUid, 0.5f, 29.5f));
+
+            SEntMan.EnsureComponent<ExaminerComponent>(SPlayer);
+
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobA), Is.False);
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobB), Is.False);
+        });
+        await RunTicks(10);
+
+        await Server.WaitPost(() =>
+        {
+            var mComp = SEntMan.GetComponent<OxydComputerComponent>(monitorCompUid);
+            camProgUid = mComp.ActiveProgram!.Value;
+            compSys.OpenComputerForActor(monitorCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            Assert.That(win.SetSize.X, Is.GreaterThanOrEqualTo(1100f),
+                "Camera Monitor should open larger by default to comfortably display multi-cam feeds.");
+            Assert.That(win.SetSize.Y, Is.GreaterThanOrEqualTo(740f));
+
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(win.IsDockedInViewport, Is.False,
+                "Camera Monitor with 0 cameras active must stay floating (not forced into focus mode).");
+            Assert.That(vpUi.IsWorldRenderPaused, Is.False);
+        });
+
+        // Connect camera 1 -> must remain floating AND use maximum (480, 480) resolution in 1-camera view!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUids[0])), FromServer(camProgUid));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(win.IsDockedInViewport, Is.False);
+            Assert.That(vpUi.IsWorldRenderPaused, Is.False);
+
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var grid = GetControlFromChildren<Control>(c => c.Name == "CameraFeedGrid", camUi)!;
+            var vps = new List<Content.Client.Viewport.ScalingViewport>();
+            CollectDescendants(grid, vps);
+            var activeVps = vps.Where(v => v.VisibleInTree).ToList();
+            Assert.That(activeVps.Count, Is.EqualTo(1));
+            Assert.That(activeVps[0].ViewportSize, Is.EqualTo(new Robust.Shared.Maths.Vector2i(480, 480)),
+                "Single active camera view must always use maximum 480x480 resolution.");
+        });
+
+        // Connect camera 2 -> must remain floating (<= 2 cameras active)!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUids[1])), FromServer(camProgUid));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(win.IsDockedInViewport, Is.False,
+                "Camera Monitor with 2 cameras active must stay floating (focus is forced only when >2 cameras are active).");
+            Assert.That(vpUi.IsWorldRenderPaused, Is.False);
+        });
+
+        // Connect camera 3 (>2 cameras active!) -> must automatically force focus mode & pause world rendering!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUids[2])), FromServer(camProgUid));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(win.IsCameraFocusForced, Is.True,
+                "Having >2 cameras active in the camera app must force focus mode.");
+            Assert.That(win.IsDockedInViewport, Is.True,
+                "Camera Monitor must automatically dock into focus mode once >2 cameras are active.");
+            Assert.That(vpUi.IsWorldRenderPaused, Is.True,
+                "Main world rendering must pause automatically once >2 cameras are active.");
+            var winBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(win, winBtns);
+            Assert.That(winBtns.Any(b => b.Name == "ViewportDockToggleButton"), Is.False,
+                "Players must not have a button to manually unfocus when focus mode is forced.");
+
+            Assert.That(vpUi.TryGetViewportFocusBounds(out var focusBounds), Is.True);
+            Assert.That(focusBounds.Left, Is.EqualTo(0f).Within(1f),
+                "Focus mode must cover over the entire left side of the screen (LeftRect).");
+            Assert.That(focusBounds.Top, Is.EqualTo(0f).Within(1f));
+            Assert.That(focusBounds.Bottom, Is.EqualTo(UiMan.RootControl.Size.Y).Within(2f),
+                "Focus mode must cover down over the bottom hands/hotbar bar (LowerBar).");
+            Assert.That(focusBounds.Right, Is.LessThan(UiMan.RootControl.Size.X - 200f),
+                "Focus mode must stop at RightRect so the right-side Chat and StatPanel tabs stay uncovered and reachable.");
+            Assert.That(win.SetSize.X, Is.EqualTo(focusBounds.Width).Within(1f));
+            Assert.That(win.SetSize.Y, Is.EqualTo(focusBounds.Height).Within(1f));
+        });
+
+        // Connect cameras 4..6 simultaneously!
+        for (var i = 3; i < 6; i++)
+        {
+            await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+                SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUids[i])), FromServer(camProgUid));
+            await RunTicks(6);
+        }
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.ActiveCameraUids.Count, Is.EqualTo(6),
+                "Surveillance camera app must support watching up to 6 cameras simultaneously.");
+
+            var viewer = SEntMan.GetComponent<ActiveCameraViewerComponent>(SPlayer);
+            Assert.That(viewer.ActiveCameras.Count, Is.EqualTo(6));
+
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobA), Is.True,
+                "Player must be able to examine entities visible through Camera #1 while 6 feeds are active.");
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobB), Is.True,
+                "Player must ALSO be able to examine entities visible through Camera #6 simultaneously.");
+        });
+
+        // Attempt to add a 7th camera -> capped cleanly at 6 with status message!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUids[6])), FromServer(camProgUid));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.ActiveCameraUids.Count, Is.EqualTo(6),
+                "Camera grid must stay capped at 6 simultaneous feeds.");
+            Assert.That(progComp.StatusMessage, Does.Contain("6/6"));
+        });
+
+        // Verify all 6 viewports render simultaneously, each dynamically adapting its ViewportSize resolution
+        // to fit its rectangular grid cell cleanly without dead bars, camera names are visible,
+        // Logs tab starts collapsed, and zero overlap occurs!
+        Content.Client.UserInterface.Controls.ContentButton? logsTabBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var grid = GetControlFromChildren<Control>(c => c.Name == "CameraFeedGrid", camUi)!;
+            var drawer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "CameraInspectorDrawer", camUi)!;
+            logsTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraLogsToggleBtn", camUi)!;
+
+            Assert.That(drawer.Visible, Is.False,
+                "Logs tab must stay collapsed by default so the 6x camera grid gets full UI height.");
+            Assert.That(grid.VisibleInTree, Is.True);
+
+            // Verify removed top-bar clutter (no SURVEILLANCE CAMERAS header, no LIVE count badge, no Refresh button)
+            var allCamLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(camUi, allCamLabels);
+            Assert.That(allCamLabels.Any(l => l.VisibleInTree && l.Text != null &&
+                (l.Text.Contains("SURVEILLANCE CAMERAS", StringComparison.OrdinalIgnoreCase) ||
+                 l.Text.Contains("/6 LIVE", StringComparison.OrdinalIgnoreCase))), Is.False,
+                "Camera app must not render the removed top title or live-camera counter.");
+
+            var allCamBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(camUi, allCamBtns);
+            Assert.That(allCamBtns.Any(b => b.VisibleInTree && b.Text != null &&
+                b.Text.Equals("Refresh", StringComparison.OrdinalIgnoreCase)), Is.False,
+                "Camera app must not render a manual Refresh button.");
+
+            // Verify sidebar camera directory buttons actually render their camera names with non-zero width!
+            var camListScroll = GetControlFromChildren<Control>(c => c.Name == "CameraListScroll", camUi)!;
+            var sidebarBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(camListScroll, sidebarBtns);
+            var namedSidebarBtns = sidebarBtns.Where(b => b.VisibleInTree && b.Text != null && b.Text.Contains("MultiCam")).ToList();
+            Assert.That(namedSidebarBtns.Count, Is.EqualTo(7), "All 7 camera directory buttons must appear.");
+            foreach (var sBtn in namedSidebarBtns)
+            {
+                Assert.That(sBtn.Label.Size.X, Is.GreaterThanOrEqualTo(60f),
+                    $"Sidebar camera button '{sBtn.Text}' label must have real visible width (not collapsed to 0px).");
+                Assert.That(sBtn.Label.Size.Y, Is.GreaterThanOrEqualTo(10f));
+            }
+
+            // Verify every active camera tile header displays its camera name with real visible width!
+            var tileBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(grid, tileBtns);
+            var focusBtns = tileBtns.Where(b => b.Name == "CameraTileFocusBtn" && b.VisibleInTree).ToList();
+            Assert.That(focusBtns.Count, Is.EqualTo(6));
+            foreach (var fBtn in focusBtns)
+            {
+                Assert.That(fBtn.Text, Does.Contain("MultiCam"));
+                Assert.That(fBtn.Label.Size.X, Is.GreaterThanOrEqualTo(40f),
+                    $"Camera tile header '{fBtn.Text}' label must have visible non-zero width.");
+            }
+
+            var vps = new List<Content.Client.Viewport.ScalingViewport>();
+            CollectDescendants(grid, vps);
+            var activeVps = vps.Where(v => v.VisibleInTree).ToList();
+            Assert.That(activeVps.Count, Is.EqualTo(6),
+                "All 6 active camera feeds must render simultaneously inside CameraFeedGrid.");
+
+            var frames = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(grid, frames);
+            var vpFrames = frames.Where(f => f.Name == "CameraViewportFrame" && f.VisibleInTree).ToList();
+            Assert.That(vpFrames.Count, Is.EqualTo(6));
+
+            foreach (var vp in activeVps)
+            {
+                Assert.That(vp.MouseFilter, Is.EqualTo(Control.MouseFilterMode.Stop));
+                Assert.That(vp.Eye, Is.Not.Null);
+                Assert.That(vp.DeferRender, Is.True, "Native ScalingViewport camera feeds must use staggered deferred rendering.");
+                Assert.That(Math.Max(vp.ViewportSize.X, vp.ViewportSize.Y), Is.EqualTo(480),
+                    "Every camera feed must keep its major axis at full 480 max resolution.");
+                Assert.That(Math.Min(vp.ViewportSize.X, vp.ViewportSize.Y), Is.InRange(192, 480),
+                    "Every camera feed must dynamically scale its minor-axis resolution to fit its cell aspect ratio.");
+            }
+
+            foreach (var frame in vpFrames)
+            {
+                var vp = GetControlFromChildren<Content.Client.Viewport.ScalingViewport>(_ => true, frame)!;
+                Assert.That(MathF.Abs(frame.Size.X - vp.Size.X), Is.LessThanOrEqualTo(3f),
+                    $"CameraViewportFrame width ({frame.Size.X:0.#}) must hug ScalingViewport width ({vp.Size.X:0.#}) with zero dead bars.");
+                Assert.That(MathF.Abs(frame.Size.Y - vp.Size.Y), Is.LessThanOrEqualTo(3f),
+                    $"CameraViewportFrame height ({frame.Size.Y:0.#}) must hug ScalingViewport height ({vp.Size.Y:0.#}) with zero dead bars.");
+            }
+
+            AssertNoOverlappingSiblings(camUi, "CameraApp 6-cam normal size");
+            AssertAllVisibleChildrenWithinViewport(win, camUi, "CameraApp 6-cam normal size");
+        });
+
+        // Clicking Logs button on top bar opens the Logs tab cleanly; clicking again returns to the 6x feeds!
+        await ClickViaHitTest(logsTabBtn!);
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var grid = GetControlFromChildren<Control>(c => c.Name == "CameraFeedGrid", camUi)!;
+            var drawer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "CameraInspectorDrawer", camUi)!;
+            Assert.That(drawer.VisibleInTree, Is.True, "Clicking Logs top-bar button must open the Logs tab.");
+            Assert.That(grid.Visible, Is.False, "Opening the full-space Logs tab must hide the feed grid.");
+            AssertNoOverlappingSiblings(camUi, "CameraApp Logs tab open");
+        });
+
+        await ClickViaHitTest(logsTabBtn!);
+        await RunTicks(6);
+
+        Content.Client.UserInterface.Controls.ContentButton? soloBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var grid = GetControlFromChildren<Control>(c => c.Name == "CameraFeedGrid", camUi)!;
+            var drawer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "CameraInspectorDrawer", camUi)!;
+            soloBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraSoloToggleBtn", camUi)!;
+
+            Assert.That(drawer.Visible, Is.False);
+            Assert.That(grid.VisibleInTree, Is.True);
+            Assert.That(win.IsDockedInViewport, Is.True);
+            Assert.That(vpUi.IsWorldRenderPaused, Is.True);
+        });
+
+        // Clicking Solo while 6 cameras are active focuses on 1 camera view -> must use full maximum (480, 480)
+        // resolution AND keep focus mode forced!
+        await ClickViaHitTest(soloBtn!);
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var grid = GetControlFromChildren<Control>(c => c.Name == "CameraFeedGrid", camUi)!;
+
+            Assert.That(win.IsDockedInViewport, Is.True, "Solo view with >2 selected cameras must remain in forced focus mode.");
+            Assert.That(vpUi.IsWorldRenderPaused, Is.True);
+
+            var vps = new List<Content.Client.Viewport.ScalingViewport>();
+            CollectDescendants(grid, vps);
+            var activeVps = vps.Where(v => v.VisibleInTree).ToList();
+            Assert.That(activeVps.Count, Is.EqualTo(1));
+            Assert.That(activeVps[0].ViewportSize, Is.EqualTo(new Robust.Shared.Maths.Vector2i(480, 480)),
+                "Focusing on 1 camera view (Solo) when multiple cameras are selected must use maximum 480x480 resolution.");
+            Assert.That(MathF.Abs(activeVps[0].Size.X - activeVps[0].Size.Y), Is.LessThanOrEqualTo(1.5f),
+                "Solo 1-camera view must render as a 1:1 square matching its 480x480 POV.");
+        });
+
+        // Return to Grid view -> all 6 cameras visible again!
+        await ClickViaHitTest(soloBtn!);
+        await RunTicks(6);
+
+        // Disconnect just Camera #2 -> 5 cameras stay streaming & both distant mobs remain examinable!
+        await SendBui(ProgramUiKey.Key, new SurveillanceCameraActionMessage(
+            SurveillanceCameraAction.DisconnectCamera, cameraEntity: FromServer(camUids[1])), FromServer(camProgUid));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid);
+            Assert.That(progComp.ActiveCameraUids.Count, Is.EqualTo(5),
+                "Disconnecting one camera must keep the other 5 feeds active.");
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobA), Is.True);
+            Assert.That(examineSys.CanExamine(SPlayer, distantMobB), Is.True);
+        });
+
+        // Safety safeguard: dealing damage to the player while focused in a docked console must
+        // automatically close the docked display and immediately resume normal world rendering!
+        await Server.WaitPost(() =>
+        {
+            SEntMan.EnsureComponent<Content.Shared.Damage.Components.DamageableComponent>(SPlayer);
+            SEntMan.EnsureComponent<Content.Shared.Damage.Components.InjurableComponent>(SPlayer);
+            var dmgSys = Server.System<Content.Shared.Damage.Systems.DamageableSystem>();
+            var bluntProto = Server.ResolveDependency<IPrototypeManager>().Index<Content.Shared.Damage.Prototypes.DamageTypePrototype>("Blunt");
+            dmgSys.TryChangeDamage(SPlayer, new Content.Shared.Damage.DamageSpecifier(bluntProto, Content.Shared.FixedPoint.FixedPoint2.New(5)));
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var vpUi = UiMan.GetUIController<Content.Client.UserInterface.Systems.Viewport.ViewportUIController>();
+            Assert.That(vpUi.IsWorldRenderPaused, Is.False,
+                "Taking damage while focused in a docked console must auto-exit focus and resume world rendering.");
+            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out _), Is.False,
+                "Docked console window must close automatically when the player takes interrupting damage.");
+        });
+        await RunTicks(4);
+    }
+
+    private static void AssertNoOverlappingSiblings(Control root, string context)
+    {
+        var containers = new List<Control>();
+        CollectDescendants(root, containers);
+
+        foreach (var container in containers)
+        {
+            if (!container.VisibleInTree)
+                continue;
+
+            var checkContainer = container is Content.Client.UserInterface.Controls.ContentBoxContainer ||
+                                 container.Name == "CameraFeedGrid" ||
+                                 (container.Name != null && container.Name.StartsWith("CameraFeedTile_", StringComparison.Ordinal));
+            if (!checkContainer)
+                continue;
+
+            var visChildren = new List<Control>();
+            foreach (var child in container.Children)
+            {
+                if (child.VisibleInTree && child.Size.X > 1f && child.Size.Y > 1f)
+                    visChildren.Add(child);
+            }
+
+            for (var i = 0; i < visChildren.Count; i++)
+            {
+                var a = visChildren[i];
+                var aBox = Robust.Shared.Maths.UIBox2.FromDimensions(a.GlobalPosition, a.Size);
+                for (var j = i + 1; j < visChildren.Count; j++)
+                {
+                    var b = visChildren[j];
+                    var bBox = Robust.Shared.Maths.UIBox2.FromDimensions(b.GlobalPosition, b.Size);
+
+                    var overlapW = MathF.Min(aBox.Right, bBox.Right) - MathF.Max(aBox.Left, bBox.Left);
+                    var overlapH = MathF.Min(aBox.Bottom, bBox.Bottom) - MathF.Max(aBox.Top, bBox.Top);
+                    Assert.That(overlapW > 1.5f && overlapH > 1.5f, Is.False,
+                        $"[{context}] Overlapping siblings inside {container.GetType().Name}({container.Name}): " +
+                        $"{a.GetType().Name}({a.Name}) {aBox} vs {b.GetType().Name}({b.Name}) {bBox}.");
+                }
+            }
+        }
     }
 
     private static void AssertAllVisibleChildrenWithinViewport(ComputerDisplayWindow win, Control root, string context)

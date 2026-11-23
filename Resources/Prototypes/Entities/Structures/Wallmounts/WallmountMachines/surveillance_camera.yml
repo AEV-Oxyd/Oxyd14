@@ -42,6 +42,22 @@
         layer:
         - TabletopMachineLayer
   - type: Eye
+  - type: DeviceGuid
+  - type: SurveillanceCameraLog
+    maxMemoryBytes: 4096
+    witnessRange: 8.5
+    hasMicrophoneUpgrade: false
+  - type: ContainerContainer
+    containers:
+      camera_mic_slot: !type:ContainerSlot {}
+  - type: ItemSlots
+    slots:
+      camera_mic_slot:
+        name: microphone upgrade slot
+        locked: true
+        whitelist:
+          components:
+            - CameraMicrophoneUpgrade
   - type: PointLight
     enabled: false
     radius: 5

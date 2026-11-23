@@ -134,11 +134,13 @@ public class ContentButton : ContentControl
     public ContentButton()
     {
         MouseFilter = MouseFilterMode.Stop;
+        RectClipContent = true;
         AddStyleClass(StyleClassButton);
 
         _label = new ContentLabel
         {
-            HorizontalAlignment = HAlignment.Center,
+            HorizontalAlignment = HAlignment.Stretch,
+            TextAlignment = HAlignment.Center,
             VerticalAlignment = VAlignment.Center,
             WordWrap = false,
             Margin = new Thickness(8, 4)

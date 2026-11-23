@@ -1,4 +1,5 @@
 using Content.Server.Administration.Logs;
+using Content.Shared._Oxyd.Computers.Cameras;
 using Content.Shared.Database;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Events;
@@ -262,6 +263,14 @@ public sealed partial class SurveillanceCameraSystem : SharedSurveillanceCameraS
 
         component.ActivePvsViewers.Add(player);
 
+        var viewerComp = EnsureComp<ActiveCameraViewerComponent>(player);
+        var camNet = GetNetEntity(camera);
+        if (!viewerComp.ActiveCameras.Contains(camNet))
+        {
+            viewerComp.ActiveCameras.Add(camNet);
+            Dirty(player, viewerComp);
+        }
+
         if (monitor != null)
         {
             component.ActiveMonitors.Add(monitor.Value);
@@ -323,6 +332,18 @@ public sealed partial class SurveillanceCameraSystem : SharedSurveillanceCameraS
             _viewSubscriberSystem.RemoveViewSubscriber(camera, actor.PlayerSession);
 
         component.ActivePvsViewers.Remove(player);
+
+        if (!TerminatingOrDeleted(player) && TryComp<ActiveCameraViewerComponent>(player, out var viewerComp))
+        {
+            var camNet = GetNetEntity(camera);
+            if (viewerComp.ActiveCameras.Remove(camNet))
+            {
+                if (viewerComp.ActiveCameras.Count == 0)
+                    RemCompDeferred<ActiveCameraViewerComponent>(player);
+                else
+                    Dirty(player, viewerComp);
+            }
+        }
 
         if (monitor != null)
         {

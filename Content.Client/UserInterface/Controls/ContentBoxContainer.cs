@@ -182,6 +182,7 @@ public class ContentBoxContainer : ContentControl
                 };
 
                 child.Arrange(new UIBox2(offset, crossOffset, offset + mainSize, crossOffset + crossSize));
+                offset += MathF.Max(mainSize, child.Size.X) + separation;
             }
             else
             {
@@ -194,9 +195,8 @@ public class ContentBoxContainer : ContentControl
                 };
 
                 child.Arrange(new UIBox2(crossOffset, offset, crossOffset + crossSize, offset + mainSize));
+                offset += MathF.Max(mainSize, child.Size.Y) + separation;
             }
-
-            offset += mainSize + separation;
         }
 
         return finalSize;

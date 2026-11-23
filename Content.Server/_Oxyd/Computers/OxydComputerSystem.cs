@@ -3,6 +3,7 @@ using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Programs;
 using Content.Server._Oxyd.Computers.ScreenSharing;
+using Content.Server.Construction.Components;
 using Content.Server.Power.EntitySystems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
@@ -11,6 +12,7 @@ using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
+using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.Containers.ItemSlots;
@@ -20,6 +22,7 @@ using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Systems;
+using Content.Shared.Item;
 using Content.Shared.Lock;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
@@ -62,6 +65,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private DeviceNetworkSystem _deviceNet = default!;
     [Dependency] private OsProgramSystem _osPrograms = default!;
     [Dependency] private PdaOsSystem _pdaOs = default!;
+    [Dependency] private NetworkCoreOsSystem _netCoreOs = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
 
     private EntityQuery<OxydComputerComponent> _computerQuery;
@@ -301,6 +305,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             comp.BorderColor = host.Comp.BorderColor;
             comp.AccentHColor = host.Comp.AccentHColor;
             comp.AccentVColor = host.Comp.AccentVColor;
+            comp.DockInViewport = ShouldDockInViewport(compUid, comp);
 
             if (!string.IsNullOrEmpty(host.Comp.EmbeddedDefaultAppPath))
                 comp.EmbeddedDefaultAppPath = host.Comp.EmbeddedDefaultAppPath;
@@ -324,6 +329,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 _osPrograms.UpdateOsUi(bootProg);
                 _pdaOs.UpdatePdaOsUi(bootProg);
+                _netCoreOs.UpdateCoreUi(bootProg);
             }
         }
 
@@ -935,6 +941,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 Dirty(bootUid, embComp);
                 _osPrograms.UpdateOsUi(bootUid);
             }
+            else if (TryComp<NetworkCoreOsProgramComponent>(bootUid, out var netCoreComp))
+            {
+                _netCoreOs.UpdateCoreUi(bootUid);
+            }
             else
             {
                 _osPrograms.UpdateOsUi(bootUid);
@@ -979,7 +989,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             {
                 if (TryComp<OsProgramComponent>(bootUid, out var osComp) && osComp.CurrentView == 3)
                 {
-                    osComp.CurrentView = 1; // Return to Apps launcher
+                    osComp.CurrentView = 0; // Return to merged Desktop & App Launcher
                     Dirty(bootUid, osComp);
                 }
                 else if (TryComp<PdaOsProgramComponent>(bootUid, out var pdaOsComp) && pdaOsComp.CurrentView == 2)
@@ -995,10 +1005,16 @@ public sealed partial class OxydComputerSystem : EntitySystem
                     embComp.CurrentView = isTwoTabController ? 0 : 1;
                     Dirty(bootUid, embComp);
                 }
+                else if (TryComp<NetworkCoreOsProgramComponent>(bootUid, out var netCoreComp) && netCoreComp.CurrentTab == 1)
+                {
+                    netCoreComp.CurrentTab = 0;
+                    Dirty(bootUid, netCoreComp);
+                }
             }
 
             _osPrograms.UpdateOsUi(bootUid);
             _pdaOs.UpdatePdaOsUi(bootUid);
+            _netCoreOs.UpdateCoreUi(bootUid);
         }
 
         UpdateComputerDisplayUi(compUid, comp);
@@ -1203,6 +1219,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!_computerQuery.Resolve(compUid, ref comp, false))
             return;
 
+        var dockInViewport = ShouldDockInViewport(compUid, comp);
+        if (comp.DockInViewport != dockInViewport)
+        {
+            comp.DockInViewport = dockInViewport;
+            Dirty(compUid, comp);
+        }
+
         var stats = CompOrNull<ComputerStatsComponent>(compUid) ?? EnsureComp<ComputerStatsComponent>(compUid);
         var state = new ComputerDisplayUiState(
             MetaData(compUid).EntityName,
@@ -1227,11 +1250,38 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats.HasRam,
             stats.HasHardDrive,
             stats.HasNetworkCard,
-            stats.HasDataPort);
+            stats.HasDataPort,
+            dockInViewport);
 
         var key = GetPrimaryUiKey(compUid, comp);
         if (_ui.HasUi(compUid, key))
             _ui.SetUiState(compUid, key, state);
+    }
+
+    /// <summary>
+    /// Determines whether this computer's display UI should dock inside the client's <c>ViewportContainer</c>
+    /// and pause normal world rendering while open locally.
+    /// Enabled for stationary consoles, workstations, data servers, and station routers;
+    /// always disabled for handheld PDAs, tablets, loose boards, and small embedded subsystem panels.
+    /// </summary>
+    private bool ShouldDockInViewport(EntityUid compUid, OxydComputerComponent comp)
+    {
+        if (comp.Template == ComputerTemplate.Pda)
+            return false;
+
+        if (comp.HostMachine is not { } host || !Exists(host))
+            return false;
+
+        if (HasComp<ItemComponent>(host) || HasComp<PdaComponent>(host))
+            return false;
+
+        if (TryComp<EmbeddedComputerHostComponent>(host, out var hostComp) && hostComp.DockInViewport.HasValue)
+            return hostComp.DockInViewport.Value;
+
+        return comp.Template == ComputerTemplate.Desktop
+            || HasComp<ComputerComponent>(host)
+            || HasComp<DataServerComponent>(host)
+            || HasComp<NetworkRouterComponent>(host);
     }
 
     /// <summary>

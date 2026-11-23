@@ -10,6 +10,7 @@ using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -36,6 +37,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly IEntityManager _entMan;
     private readonly IGameTiming _timing;
     private readonly IResourceCache _resourceCache;
+    private readonly ProgramIconResolver _icons;
     private readonly Dictionary<string, Texture?> _iconCache = new();
 
     private readonly ContentWrapContainer _unifiedTabBar;
@@ -69,6 +71,11 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         _entMan = IoCManager.Resolve<IEntityManager>();
         _timing = IoCManager.Resolve<IGameTiming>();
         _resourceCache = IoCManager.Resolve<IResourceCache>();
+        _icons = new ProgramIconResolver(
+            _entMan,
+            IoCManager.Resolve<IPrototypeManager>(),
+            _resourceCache,
+            IoCManager.Resolve<IComponentFactory>());
 
         HorizontalExpand = true;
         VerticalExpand = true;
@@ -496,8 +503,9 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             var tabBtn = new ContentButton
             {
                 Text = prog.Name,
-                Icon = TryLoadSprite(prog.Icon),
+                Icon = _icons.ResolveProgramIcon(prog),
                 IconSize = new Vector2(14, 14),
+                IconModulate = Color.White,
                 Pressed = isFocused
             };
             tabBtn.OnPressed += _ => SendProgramMessage(new PdaOsSwitchProgramMessage(rEnt));
@@ -626,7 +634,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
                 SeparationOverride = 6
             };
 
-            var appIconTex = TryLoadSprite(exec.Icon);
+            var appIconTex = _icons.ResolveProgramIcon(exec);
             if (appIconTex != null)
             {
                 row.AddChild(new ContentTextureRect
