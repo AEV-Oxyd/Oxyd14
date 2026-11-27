@@ -6714,6 +6714,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         // =====================================================================
         EntityUid idCompUid = default;
         EntityUid idProgUid = default;
+        EntityUid removedSecondSlotModule = default;
+        string originalTargetName = string.Empty;
 
         await Server.WaitPost(() =>
         {
@@ -6722,9 +6724,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(SEntMan.HasComponent<AccessEncoderProgramComponent>(idProgUid), Is.True,
                 "Ported ComputerId must run the ID Authorization & Modification program.");
 
-            // Insert target PassengerIDCard into the console's TargetIdSlot (with NO physical Privileged ID card!)
-            var idConsoleComp = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardConsoleComponent>(idConsoleHost);
-            Assert.That(itemSlotsSys.TryInsert(idConsoleHost, idConsoleComp.TargetIdSlot, targetIdCardUid, null), Is.True);
+            originalTargetName = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardComponent>(targetIdCardUid).FullName ?? string.Empty;
+
+            // ID modification requires TWO card slot hardware modules: one for the modifying ID, one for the target ID.
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            var idSlots = cardSys.GetSlotReaders(idCompUid);
+            Assert.That(idSlots, Has.Count.EqualTo(2), "ID console must have exactly two ID card slot hardware modules.");
+            Assert.That(cardSys.GetReaders(idCompUid), Has.Count.EqualTo(2));
+            Assert.That(itemSlotsSys.TryGetSlot(idSlots[0].Owner, idSlots[0].Comp.CardSlotId, out _), Is.True);
 
             // Write an Engineering + Command .acc file to /keys/chief.acc on ComputerId's hard drive
             Assert.That(fsSys.TryFindFileSystem(idCompUid, out var idDrive, out var idFs), Is.True);
@@ -6743,13 +6750,74 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 }
             };
             Assert.That(fsSys.TryWriteFile(idDrive!.Value, chiefAcc, idFs!), Is.True);
+
+            // Remove the second card slot hardware module -> with only 1/2 card slot modules, ID modification MUST be rejected!
+            removedSecondSlotModule = idSlots[1].Owner;
+            Assert.That(cardSys.TryRemoveReaderModule(idCompUid, removedSecondSlotModule, null, idConsoleHost), Is.True);
+            Assert.That(cardSys.GetSlotReaders(idCompUid), Has.Count.EqualTo(1));
+
+            var idHostCoords = SEntMan.GetComponent<TransformComponent>(idConsoleHost).Coordinates;
+            var singleSlotSwipe = new InteractUsingEvent(SPlayer, targetIdCardUid, idConsoleHost, idHostCoords);
+            SEntMan.EventBus.RaiseLocalEvent(idConsoleHost, singleSlotSwipe);
         });
         await RunTicks(6);
 
-        // Select /keys/chief.acc as the authorization source, update target ID identity, and apply .acc access codes!
         await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
         await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(idConsoleHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(idConsoleHost).ComputerEntity!.Value, SPlayer); });
         await RunTicks(10);
+
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.SelectFile, "/keys/chief.acc"), FromServer(idProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.WriteTargetIdentity, "Should Fail", "Unauthorized"), FromServer(idProgUid));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
+            AccessEncoderAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var idCard = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardComponent>(targetIdCardUid);
+            Assert.That(idCard.FullName ?? string.Empty, Is.EqualTo(originalTargetName),
+                "ID modification must be rejected when fewer than 2 ID card slot hardware modules are installed.");
+            var tags = accessSys.TryGetTags(targetIdCardUid)!.ToList();
+            Assert.That(tags, Does.Not.Contain(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("ChiefEngineer")),
+                "Applying .acc access tags must be rejected when fewer than 2 ID card slot hardware modules are installed.");
+
+            // Reinstall the 2nd card slot hardware module, eject target card from slot #1, and insert Modifying ID (#1) + Target ID (#2)!
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            var remainingSlots = cardSys.GetSlotReaders(idCompUid);
+            Assert.That(cardSys.TryEjectCard(remainingSlots[0], null, idConsoleHost), Is.True);
+            Assert.That(cardSys.TryInstallReaderModule(idCompUid, removedSecondSlotModule), Is.True);
+            Assert.That(cardSys.GetSlotReaders(idCompUid), Has.Count.EqualTo(2));
+
+            var idHostCoords = SEntMan.GetComponent<TransformComponent>(idConsoleHost).Coordinates;
+            var firstSwipe = new InteractUsingEvent(SPlayer, engIdCardUid, idConsoleHost, idHostCoords);
+            SEntMan.EventBus.RaiseLocalEvent(idConsoleHost, firstSwipe);
+            var secondSwipe = new InteractUsingEvent(SPlayer, targetIdCardUid, idConsoleHost, idHostCoords);
+            SEntMan.EventBus.RaiseLocalEvent(idConsoleHost, secondSwipe);
+            Assert.That(firstSwipe.Handled, Is.True, "Presenting an ID card on the ID console must be handled by card slot hardware.");
+            Assert.That(cardSys.TryGetSlotCard(idCompUid, 0, out var modifyingCard) && modifyingCard == engIdCardUid, Is.True,
+                "Modifying ID must be retained by the first card slot module.");
+            Assert.That(cardSys.TryGetSlotCard(idCompUid, 1, out var targetCard) && targetCard == targetIdCardUid, Is.True,
+                "Target ID must be retained by the second card slot module.");
+        });
+        await RunTicks(6);
+
+        // Test SwapSlots action swaps Modifying ID <-> Target ID and back!
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots), FromServer(idProgUid));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            Assert.That(cardSys.TryGetSlotCard(idCompUid, 0, out var slot0) && slot0 == targetIdCardUid, Is.True);
+            Assert.That(cardSys.TryGetSlotCard(idCompUid, 1, out var slot1) && slot1 == engIdCardUid, Is.True);
+        });
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots), FromServer(idProgUid));
+        await RunTicks(4);
+
+        // Select /keys/chief.acc as the authorization source, update target ID identity, and apply .acc access codes!
         await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
             AccessEncoderAction.SelectFile, "/keys/chief.acc"), FromServer(idProgUid));
         await RunTicks(4);
@@ -6774,6 +6842,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("Engineering")));
             Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("Atmospherics")));
             Assert.That(tags, Contains.Item(new ProtoId<Content.Shared.Access.AccessLevelPrototype>("ChiefEngineer")));
+
+            // Both cards can be ejected from their card slot modules again.
+            var ejectSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            var ejectSlots = ejectSys.GetSlotReaders(idCompUid);
+            Assert.That(ejectSys.TryEjectCard(ejectSlots[0], SPlayer), Is.True);
+            Assert.That(ejectSys.TryEjectCard(ejectSlots[1], SPlayer), Is.True);
+            Assert.That(ejectSys.TryGetAnyRetainedCard(idCompUid, out _), Is.False);
         });
 
         // =====================================================================
@@ -6891,13 +6966,38 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(atmosProgUid));
         await RunTicks(4);
 
+        EntityUid removedAtmosScanner = default;
         await Server.WaitAssertion(() =>
         {
             Assert.That(SEntMan.GetComponent<Content.Server.Atmos.Monitor.Components.AirAlarmComponent>(alarmBUid).CurrentMode,
                 Is.Not.EqualTo(AirAlarmMode.Panic),
                 "Remote Atmos Control must block mode changes before authorizing to that area's APC.");
 
-            // Swipe Engineering ID card on atmosConsoleHost to authorize APC Beta's Air Alarm
+            // Remove the Card Scanner hardware module from atmosConsoleHost -> swiping ID card must NOT authorize!
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            var readers = cardSys.GetReaders(atmosCompUid);
+            Assert.That(readers, Has.Count.EqualTo(1));
+            removedAtmosScanner = readers[0].Owner;
+            Assert.That(cardSys.TryRemoveReaderModule(atmosCompUid, removedAtmosScanner, null, atmosConsoleHost), Is.True);
+            Assert.That(cardSys.HasReaders(atmosCompUid), Is.False);
+
+            var noReaderSwipe = new InteractUsingEvent(SPlayer, engIdCardUid, atmosConsoleHost, baseCoords);
+            SEntMan.EventBus.RaiseLocalEvent(atmosConsoleHost, noReaderSwipe);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(atmosProgUid));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Atmos.Monitor.Components.AirAlarmComponent>(alarmBUid).CurrentMode,
+                Is.Not.EqualTo(AirAlarmMode.Panic),
+                "Swiping an ID card on a console with no Card Scanner / Card Slot hardware installed must NOT authorize.");
+
+            // Reinstall the Card Scanner hardware module and swipe Engineering ID card -> now it authorizes!
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            Assert.That(cardSys.TryInstallReaderModule(atmosCompUid, removedAtmosScanner), Is.True);
             var swipeEv = new InteractUsingEvent(SPlayer, engIdCardUid, atmosConsoleHost, baseCoords);
             SEntMan.EventBus.RaiseLocalEvent(atmosConsoleHost, swipeEv);
         });

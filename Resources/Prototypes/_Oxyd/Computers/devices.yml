@@ -132,6 +132,7 @@
       battery_slot: !type:ContainerSlot {}
       sensor_slot: !type:ContainerSlot {}
       id_slot_module: !type:ContainerSlot {}
+      id_slot_module_2: !type:ContainerSlot {}
       disk_slot_module: !type:ContainerSlot {}
   - type: ItemSlots
     slots:
@@ -164,7 +165,11 @@
         whitelist:
           components: [ ComputerSensorModule ]
       id_slot_module:
-        name: ID Module
+        name: ID Module 1
+        whitelist:
+          components: [ ComputerIdCardSlotModule ]
+      id_slot_module_2:
+        name: ID Module 2
         whitelist:
           components: [ ComputerIdCardSlotModule ]
       disk_slot_module:
@@ -174,6 +179,7 @@
   - type: ModularComputer
     maxHardDriveSlots: 1
     maxRamSlots: 2
+    maxIdModuleSlots: 2
     maxBatterySize: Small
   - type: ComputerStats
   - type: NetworkBandwidth
@@ -239,6 +245,7 @@
     - ComputerPartHardDriveWorkstation
     - ComputerPartNetworkCardHighSpeed
     - ComputerPartBatterySmall
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -274,6 +281,7 @@
     - ComputerPartHardDriveApc
     - ComputerPartNetworkCardBasic
     - ComputerPartBatterySmall
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -291,6 +299,7 @@
     - ComputerPartRamBasic
     - ComputerPartHardDriveAtmos
     - ComputerPartNetworkCardBasic
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -359,6 +368,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveCriminalRecords
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -376,6 +386,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveCameraMonitor
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -393,6 +404,8 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveIdConsole
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdSlotModule
+    - ComputerPartIdSlotModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -427,6 +440,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveAtmosConsole
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -444,6 +458,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDrivePowerConsole
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -512,6 +527,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveCommsConsole
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -1852,12 +1868,39 @@
   parent: BaseItem
   id: ComputerPartIdSlotModule
   name: modular ID card slot
+  description: Card slot hardware. Physically holds an ID card inserted into the computer until it is ejected.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: id_mod
   - type: ComputerIdCardSlotModule
     size: Small
+    mode: Slot
+  - type: ItemSlots
+    slots:
+      card_slot:
+        name: ID card
+        insertSound: /Audio/Machines/id_swipe.ogg
+        ejectSound: /Audio/Machines/id_swipe.ogg
+        whitelist:
+          components:
+          - IdCard
+  - type: ContainerContainer
+    containers:
+      card_slot: !type:ContainerSlot {}
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartIdScannerModule
+  name: modular ID card scanner
+  description: Card scanner hardware. Reads an ID card swiped on the computer without retaining it.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: id_mod
+  - type: ComputerIdCardSlotModule
+    size: Small
+    mode: Scanner
 
 - type: entity
   parent: BaseItem

@@ -244,6 +244,12 @@ public sealed partial class EmbeddedComputerHostComponent : Component
     /// </summary>
     [DataField]
     public bool? DockInViewport;
+
+    /// <summary>
+    /// Re-entrancy guard set while binding and booting the child computer entity.
+    /// </summary>
+    [ViewVariables]
+    public bool BindingInProgress;
 }
 
 /// <summary>

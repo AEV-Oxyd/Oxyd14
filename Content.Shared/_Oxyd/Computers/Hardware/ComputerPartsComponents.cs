@@ -84,11 +84,37 @@ public sealed partial class ComputerSensorModuleComponent : Component
     public HardwarePartSize Size = HardwarePartSize.Small;
 }
 
+/// <summary>
+/// How an ID card reader hardware module handles cards presented to its computer.
+/// </summary>
+public enum ComputerCardReaderMode : byte
+{
+    /// <summary>Swipe-only scanner: reads a card presented to the computer without retaining it.</summary>
+    Scanner,
+
+    /// <summary>Card slot: physically holds an inserted ID card until ejected.</summary>
+    Slot,
+}
+
+/// <summary>
+/// ID card scanner / card slot hardware part. Any system that reads ID cards on a computer
+/// (swiping, ID modification, camera / APC / atmos authorization) must go through this hardware.
+/// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ComputerIdCardSlotModuleComponent : Component
 {
+    public const string DefaultCardSlotId = "card_slot";
+
     [DataField, AutoNetworkedField]
     public HardwarePartSize Size = HardwarePartSize.Small;
+
+    /// <summary>Scanner reads cards transiently; Slot holds one card in <see cref="CardSlotId"/> on this part.</summary>
+    [DataField, AutoNetworkedField]
+    public ComputerCardReaderMode Mode = ComputerCardReaderMode.Slot;
+
+    /// <summary>Id of the item slot (on this part entity) that holds the card when <see cref="Mode"/> is Slot.</summary>
+    [DataField]
+    public string CardSlotId = DefaultCardSlotId;
 }
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]

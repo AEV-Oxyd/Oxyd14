@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text;
+using Content.Server._Oxyd.Computers.Hardware;
 using Content.Server.Access.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
@@ -10,6 +11,7 @@ using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Hands.Components;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
@@ -38,6 +40,8 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     [Dependency] private AccessSystem _accessSystem = default!;
     [Dependency] private IdCardSystem _idCard = default!;
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
+    [Dependency] private ComputerCardReaderSystem _cardReaders = default!;
+    [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private StationRecordsSystem _stationRecords = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
@@ -47,7 +51,9 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
     [Dependency] private EntityQuery<IdCardComponent> _idCardQuery = default!;
     [Dependency] private EntityQuery<AccessComponent> _accessQuery = default!;
-    [Dependency] private EntityQuery<IdCardConsoleComponent> _idConsoleQuery = default!;
+
+    private const string MissingModificationHardwareMessage =
+        "ID modification requires two ID card slot modules (one for the modifying ID, one for the target ID).";
 
     public override void Initialize()
     {
@@ -109,14 +115,28 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnRelayedInteractUsing(Entity<AccessEncoderProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
+    private void OnCardReaderChanged(Entity<AccessEncoderProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
     {
-        if (relayed.Args.Handled)
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCardScanned(Entity<AccessEncoderProgramComponent> ent, ref ProgramCardScannedEvent scanned)
+    {
+        if (scanned.Handled)
             return;
 
-        if (!TryExtractSwipedCard(relayed.Args.Used, out var cardUid))
+        // Cards retained by card slot hardware are used as the modifying / target ID, not as a swipe buffer.
+        if (scanned.Retained)
+        {
+            ent.Comp.StatusMessage = "ID card inserted into card slot.";
+            Dirty(ent);
+            scanned.Handled = true;
+            UpdateUi(ent.Owner, scanned.ComputerUid, ent.Comp);
             return;
+        }
 
+        var cardUid = scanned.Card;
         var (ownerName, jobTitle, tags) = ReadCardCredentials(cardUid);
         ent.Comp.HasScannedCard = true;
         ent.Comp.LastScannedCardUid = cardUid;
@@ -124,16 +144,15 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         ent.Comp.ScannedOwnerName = ownerName;
         ent.Comp.ScannedJobTitle = jobTitle;
         ent.Comp.ScannedAccessTags = tags;
-        ent.Comp.StatusMessage = $"Scanned {tags.Count} access code(s) from {ownerName}. You can save to /keys/*.acc or modify target ID.";
+        ent.Comp.StatusMessage = $"Scanned {tags.Count} access code(s) from {ownerName}. You can save to /keys/*.acc.";
         Dirty(ent);
 
-        _audio.PlayPvs(ent.Comp.SoundScan, relayed.Args.Target);
-        _popup.PopupEntity($"Scanned ID card ({tags.Count} access codes).", relayed.Args.Target, relayed.Args.User);
-        relayed.Args.Handled = true;
+        _audio.PlayPvs(ent.Comp.SoundScan, scanned.HostUid);
+        _popup.PopupEntity($"Scanned ID card ({tags.Count} access codes).", scanned.HostUid, scanned.User);
+        scanned.Handled = true;
 
-        UpdateUi(ent.Owner, relayed.ComputerUid, ent.Comp);
+        UpdateUi(ent.Owner, scanned.ComputerUid, ent.Comp);
     }
-
     private void OnBuiOpened(Entity<AccessEncoderProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
@@ -198,6 +217,21 @@ public sealed partial class AccessEncoderSystem : EntitySystem
                 HandleToggleHostIdSlot(ent.Comp, compUid, args.Actor, isPrivilegedSlot: false);
                 break;
 
+            case AccessEncoderAction.SwapSlots:
+                if (_cardReaders.GetSlotReaders(compUid).Count < 2)
+                {
+                    ent.Comp.StatusMessage = MissingModificationHardwareMessage;
+                }
+                else if (_cardReaders.TrySwapSlotCards(compUid, args.Actor))
+                {
+                    ent.Comp.StatusMessage = "Swapped Modifying ID slot and Target ID slot.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = "Both ID card slots are empty.";
+                }
+                break;
+
             case AccessEncoderAction.WriteTargetIdentity:
                 HandleWriteTargetIdentity(ent.Comp, compUid, args.Argument, args.SecondaryArgument, args.Actor);
                 break;
@@ -223,40 +257,48 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         UpdateUi(ent.Owner, compUid, ent.Comp);
     }
 
+    /// <summary>Slot index 0 = modifying (privileged) ID, slot index 1 = target ID.</summary>
     private void HandleToggleHostIdSlot(AccessEncoderProgramComponent comp, EntityUid compUid, EntityUid actor, bool isPrivilegedSlot)
     {
-        if (!_computerQuery.TryComp(compUid, out var cComp) ||
-            cComp.HostMachine is not { } hostUid ||
-            !_idConsoleQuery.TryComp(hostUid, out var idConsole))
+        var slots = _cardReaders.GetSlotReaders(compUid);
+        var slotLabel = isPrivilegedSlot ? "Modifying ID" : "Target ID";
+        var index = isPrivilegedSlot ? 0 : 1;
+        if (slots.Count < 2)
         {
-            comp.StatusMessage = "This device does not have dedicated dual ID console slots.";
+            comp.StatusMessage = MissingModificationHardwareMessage;
             return;
         }
 
-        var slot = isPrivilegedSlot ? idConsole.PrivilegedIdSlot : idConsole.TargetIdSlot;
-        var slotLabel = isPrivilegedSlot ? "Privileged ID" : "Target ID";
-
-        if (slot.HasItem)
+        var reader = slots[index];
+        if (_cardReaders.TryGetRetainedCard(reader, out _))
         {
-            if (_itemSlots.TryEjectToHands(hostUid, slot, actor))
-                comp.StatusMessage = $"Ejected {slotLabel} card.";
-            else if (_itemSlots.TryEject(hostUid, slot, actor, out _))
-                comp.StatusMessage = $"Ejected {slotLabel} card.";
-            else
-                comp.StatusMessage = $"Unable to eject {slotLabel} card.";
+            comp.StatusMessage = _cardReaders.TryEjectCard(reader, actor)
+                ? $"Ejected {slotLabel} card."
+                : $"Unable to eject {slotLabel} card.";
             return;
         }
 
-        if (_itemSlots.TryInsertFromHand(hostUid, slot, actor))
-        {
+        if (TryGetHeldIdCard(actor, out var held) && _cardReaders.TryInsertCard(reader, held, actor))
             comp.StatusMessage = $"Inserted {slotLabel} card.";
-        }
         else
-        {
-            comp.StatusMessage = $"Hold a valid ID card in your active hand to insert into {slotLabel} slot.";
-        }
+            comp.StatusMessage = $"Hold a valid ID card in your active hand to insert into the {slotLabel} card slot.";
     }
 
+    private bool TryGetHeldIdCard(EntityUid actor, out EntityUid card)
+    {
+        card = EntityUid.Invalid;
+        if (!_hands.TryGetActiveItem(actor, out var held) || !_idCardQuery.HasComp(held.Value))
+            return false;
+
+        card = held.Value;
+        return true;
+    }
+    private string TargetMissingMessage(EntityUid compUid, string verb)
+    {
+        return _cardReaders.GetSlotReaders(compUid).Count < 2
+            ? MissingModificationHardwareMessage
+            : $"{verb} failed: No ID card in the target card slot.";
+    }
     private void HandleWriteTargetIdentity(
         AccessEncoderProgramComponent comp,
         EntityUid compUid,
@@ -266,7 +308,7 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     {
         if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out _))
         {
-            comp.StatusMessage = "Modify failed: No target ID card inserted or scanned.";
+            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
             return;
         }
 
@@ -318,7 +360,7 @@ public sealed partial class AccessEncoderSystem : EntitySystem
 
         if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out _))
         {
-            comp.StatusMessage = "Modify failed: No target ID card inserted or scanned.";
+            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
             return;
         }
 
@@ -359,7 +401,7 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     {
         if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetLabel))
         {
-            comp.StatusMessage = "Apply failed: No target ID card inserted or scanned.";
+            comp.StatusMessage = TargetMissingMessage(compUid, "Apply");
             return;
         }
 
@@ -392,7 +434,7 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     {
         if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetLabel))
         {
-            comp.StatusMessage = "Modify failed: No target ID card inserted or scanned.";
+            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
             return;
         }
 
@@ -468,28 +510,6 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         }
     }
 
-    private bool TryExtractSwipedCard(EntityUid used, out EntityUid cardUid)
-    {
-        if (_idCardQuery.HasComp(used))
-        {
-            cardUid = used;
-            return true;
-        }
-
-        if (TryComp<PdaComponent>(used, out var pda))
-        {
-            var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
-            if (pdaCard is { Valid: true } idUid && Exists(idUid) && _idCardQuery.HasComp(idUid))
-            {
-                cardUid = idUid;
-                return true;
-            }
-        }
-
-        cardUid = EntityUid.Invalid;
-        return false;
-    }
-
     private (string OwnerName, string JobTitle, List<ProtoId<AccessLevelPrototype>> Tags) ReadCardCredentials(EntityUid cardUid)
     {
         var owner = string.Empty;
@@ -527,30 +547,25 @@ public sealed partial class AccessEncoderSystem : EntitySystem
             return true;
         }
 
-        // Check host IdCardConsole PrivilegedIdSlot or TargetIdSlot first if present
-        if (_computerQuery.TryComp(compUid, out var cComp) &&
-            cComp.HostMachine is { } hostUid &&
-            _idConsoleQuery.TryComp(hostUid, out var idConsole))
+        // Cards retained by the card slot hardware: modifying ID (slot 1) first, then target ID (slot 2).
+        if (_cardReaders.TryGetSlotCard(compUid, 0, out var privUid))
         {
-            if (idConsole.PrivilegedIdSlot.Item is { Valid: true } privUid && Exists(privUid) && _idCardQuery.HasComp(privUid))
-            {
-                var creds = ReadCardCredentials(privUid);
-                sourceLabel = $"Privileged Slot ({MetaData(privUid).EntityName})";
-                ownerName = creds.OwnerName;
-                jobTitle = creds.JobTitle;
-                tags = creds.Tags;
-                return true;
-            }
+            var creds = ReadCardCredentials(privUid);
+            sourceLabel = $"Modifying ID Slot ({MetaData(privUid).EntityName})";
+            ownerName = creds.OwnerName;
+            jobTitle = creds.JobTitle;
+            tags = creds.Tags;
+            return true;
+        }
 
-            if (idConsole.TargetIdSlot.Item is { Valid: true } targUid && Exists(targUid) && _idCardQuery.HasComp(targUid))
-            {
-                var creds = ReadCardCredentials(targUid);
-                sourceLabel = $"Target Slot ({MetaData(targUid).EntityName})";
-                ownerName = creds.OwnerName;
-                jobTitle = creds.JobTitle;
-                tags = creds.Tags;
-                return true;
-            }
+        if (_cardReaders.TryGetSlotCard(compUid, 1, out var targUid))
+        {
+            var creds = ReadCardCredentials(targUid);
+            sourceLabel = $"Target ID Slot ({MetaData(targUid).EntityName})";
+            ownerName = creds.OwnerName;
+            jobTitle = creds.JobTitle;
+            tags = creds.Tags;
+            return true;
         }
 
         if (_computer.TryGetInsertedIdCard(compUid, out var insertedCardUid))
@@ -576,42 +591,13 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         out EntityUid targetCardUid,
         out string targetLabel)
     {
-        if (_computerQuery.TryComp(compUid, out var cComp) &&
-            cComp.HostMachine is { } hostUid &&
-            _idConsoleQuery.TryComp(hostUid, out var idConsole))
+        // The target ID must sit in the second card slot hardware module.
+        if (_cardReaders.GetSlotReaders(compUid).Count >= 2 && _cardReaders.TryGetSlotCard(compUid, 1, out var slotTarget))
         {
-            if (idConsole.TargetIdSlot.Item is { Valid: true } slotTarget && Exists(slotTarget) && _idCardQuery.HasComp(slotTarget))
-            {
-                targetCardUid = slotTarget;
-                targetLabel = $"Target Slot ({MetaData(slotTarget).EntityName})";
-                return true;
-            }
-        }
-
-        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModule, out var modSlot) &&
-            modSlot.Item is { Valid: true } modId &&
-            Exists(modId) &&
-            _idCardQuery.HasComp(modId))
-        {
-            targetCardUid = modId;
-            targetLabel = $"Computer ID Slot ({MetaData(modId).EntityName})";
+            targetCardUid = slotTarget;
+            targetLabel = $"Target ID Slot ({MetaData(slotTarget).EntityName})";
             return true;
         }
-
-        if (comp.LastScannedCardUid is { Valid: true } scannedUid && Exists(scannedUid) && _idCardQuery.HasComp(scannedUid))
-        {
-            targetCardUid = scannedUid;
-            targetLabel = $"Swiped ID ({MetaData(scannedUid).EntityName})";
-            return true;
-        }
-
-        if (_computer.TryGetInsertedIdCard(compUid, out var fallbackId))
-        {
-            targetCardUid = fallbackId;
-            targetLabel = $"Inserted ID ({MetaData(fallbackId).EntityName})";
-            return true;
-        }
-
         targetCardUid = EntityUid.Invalid;
         targetLabel = "None";
         return false;
@@ -666,18 +652,22 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         out HashSet<ProtoId<AccessLevelPrototype>> allowedTags)
     {
         allowedTags = new HashSet<ProtoId<AccessLevelPrototype>>();
+        var slots = _cardReaders.GetSlotReaders(compUid);
+        if (slots.Count < 2)
+        {
+            hasAuth = false;
+            authLabel = $"Requires 2 ID Card Slot modules ({slots.Count}/2 installed)";
+            return false;
+        }
+
         var sources = new List<string>();
 
-        // 1) Host Privileged ID Slot
-        if (_computerQuery.TryComp(compUid, out var cComp) &&
-            cComp.HostMachine is { } hostUid &&
-            _idConsoleQuery.TryComp(hostUid, out var idConsole) &&
-            idConsole.PrivilegedIdSlot.Item is { Valid: true } privUid &&
-            Exists(privUid))
+        // 1) Modifying ID retained in the first card slot hardware module
+        if (_cardReaders.TryGetRetainedCard(slots[0], out var privUid))
         {
             foreach (var tag in _access.FindAccessTags(privUid))
                 allowedTags.Add(tag);
-            sources.Add($"Privileged ID ({MetaData(privUid).EntityName})");
+            sources.Add($"Modifying ID ({MetaData(privUid).EntityName})");
         }
 
         // 2) Selected or available .acc file on hard drive / disk
@@ -689,17 +679,8 @@ public sealed partial class AccessEncoderSystem : EntitySystem
             sources.Add($".acc ({accFile.FullPath})");
         }
 
-        // 3) Swiped card if it has permissions and isn't solely the unprivileged target card
-        if (comp.HasScannedCard && comp.ScannedAccessTags.Count > 0)
-        {
-            foreach (var tag in comp.ScannedAccessTags)
-                allowedTags.Add(tag);
-            if (sources.Count == 0)
-                sources.Add(string.IsNullOrWhiteSpace(comp.ScannedSourceLabel) ? "Swiped ID" : comp.ScannedSourceLabel);
-        }
-
         hasAuth = allowedTags.Count > 0;
-        authLabel = sources.Count > 0 ? string.Join(" + ", sources) : "None (Insert Privileged ID or select .acc file)";
+        authLabel = sources.Count > 0 ? string.Join(" + ", sources) : "None (Insert Modifying ID into Slot #1 or select .acc file)";
         return hasAuth;
     }
 
@@ -766,19 +747,15 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         var hasHostIdSlots = false;
         var hasPrivSlotCard = false;
         var hasTargSlotCard = false;
-        var consoleAccessLevels = comp.AccessLevels.Select(a => a.Id).ToList();
 
-        if (_computerQuery.TryComp(compUid, out var cComp) &&
-            cComp.HostMachine is { } hostUid &&
-            _idConsoleQuery.TryComp(hostUid, out var idConsole))
+        var slotReaders = _cardReaders.GetSlotReaders(compUid);
+        var hasCardScanner = _cardReaders.HasScannerReader(compUid);
+        if (slotReaders.Count >= 2)
         {
             hasHostIdSlots = true;
-            hasPrivSlotCard = idConsole.PrivilegedIdSlot.HasItem;
-            hasTargSlotCard = idConsole.TargetIdSlot.HasItem;
-            if (idConsole.AccessLevels.Count > 0)
-                consoleAccessLevels = idConsole.AccessLevels.Select(a => a.Id).ToList();
+            hasPrivSlotCard = _cardReaders.TryGetRetainedCard(slotReaders[0], out _);
+            hasTargSlotCard = _cardReaders.TryGetRetainedCard(slotReaders[1], out _);
         }
-
         ResolvePrivilegedPermissions(compUid, comp, out var hasPrivAuth, out var privAuthLabel, out var allowedTagsSet);
         var hasTargetCard = TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetCardLabel);
         var targetFullName = string.Empty;
@@ -792,14 +769,6 @@ public sealed partial class AccessEncoderSystem : EntitySystem
             if (_accessQuery.TryComp(targetCardUid, out var targetAccComp))
                 targetAccessTags = targetAccComp.Tags.Select(t => t.Id).OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
         }
-
-        // Ensure any access level present on the auth source or target card is visible in the grid.
-        foreach (var allowed in allowedTagsSet)
-        {
-            if (!consoleAccessLevels.Contains(allowed.Id))
-                consoleAccessLevels.Add(allowed.Id);
-        }
-        consoleAccessLevels.Sort(StringComparer.OrdinalIgnoreCase);
 
         var state = new AccessEncoderUiState(
             hasHdd,
@@ -821,10 +790,12 @@ public sealed partial class AccessEncoderSystem : EntitySystem
             targetFullName,
             targetJobTitle,
             targetAccessTags,
-            consoleAccessLevels,
+            comp.AccessGroup,
             hasHostIdSlots,
             hasPrivSlotCard,
-            hasTargSlotCard);
+            hasTargSlotCard,
+            slotReaders.Count,
+            hasCardScanner);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);

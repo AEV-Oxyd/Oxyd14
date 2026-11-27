@@ -2,9 +2,12 @@ using System.Linq;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Access;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
+using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 
 namespace Content.Client._Oxyd.Computers.Programs;
 
@@ -31,6 +34,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
     private readonly ContentBoxContainer _slotButtonsRow;
     private readonly ContentButton _privSlotBtn;
     private readonly ContentButton _targetSlotBtn;
+    private readonly ContentButton _swapSlotsBtn;
     private readonly ContentLabel _authSourceLabel;
     private readonly ContentLabel _targetCardLabel;
     private readonly ContentLineEdit _targetFullNameEdit;
@@ -44,9 +48,11 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
     private string _lastTargetCardLabel = string.Empty;
     private string _lastTargetName = string.Empty;
     private string _lastTargetJob = string.Empty;
+    private readonly IPrototypeManager _proto;
 
     public AccessEncoderUiControl()
     {
+        _proto = IoCManager.Resolve<IPrototypeManager>();
         HorizontalExpand = true;
         VerticalExpand = true;
 
@@ -84,7 +90,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         _privSlotBtn = new ContentButton
         {
             Name = "IdModPrivSlotBtn",
-            Text = "Insert Privileged ID",
+            Text = "Insert Modifying ID",
             MinWidth = 148
         };
         _privSlotBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.TogglePrivilegedSlot));
@@ -97,8 +103,17 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         };
         _targetSlotBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ToggleTargetSlot));
 
+        _swapSlotsBtn = new ContentButton
+        {
+            Name = "IdModSwapSlotsBtn",
+            Text = "Swap Slots",
+            MinWidth = 94
+        };
+        _swapSlotsBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots));
+
         _slotButtonsRow.AddChild(_privSlotBtn);
         _slotButtonsRow.AddChild(_targetSlotBtn);
+        _slotButtonsRow.AddChild(_swapSlotsBtn);
         root.AddChild(_slotButtonsRow);
 
         _sourceLabel = new ContentLabel
@@ -359,8 +374,9 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
             : "ID AUTHORIZATION & ACCESS ENCODER [NO HARD DRIVE]";
 
         _slotButtonsRow.Visible = state.HasHostIdSlots;
-        _privSlotBtn.Text = state.HasPrivilegedSlotCard ? "Eject Privileged ID" : "Insert Privileged ID";
+        _privSlotBtn.Text = state.HasPrivilegedSlotCard ? "Eject Modifying ID" : "Insert Modifying ID";
         _targetSlotBtn.Text = state.HasTargetSlotCard ? "Eject Target ID" : "Insert Target ID";
+        _swapSlotsBtn.Disabled = !state.HasPrivilegedSlotCard && !state.HasTargetSlotCard;
 
         _sourceTagsWrap.RemoveAllChildren();
         if (state.HasSourceCard)
@@ -408,7 +424,9 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         }
         else
         {
-            _sourceLabel.Text = "Source ID: None — Insert an ID card into your PDA/console or swipe an ID card on this computer.";
+            _sourceLabel.Text = state.InstalledCardSlotCount > 0 || state.HasCardScanner
+                ? "Source ID: None — Insert or swipe an ID card via Card Scanner / Card Slot hardware."
+                : "Source ID: None — Install a Card Scanner or Card Slot hardware module (or insert PDA ID).";
             _sourceLabel.FontColorOverride = Color.FromHex("#FFD54F");
         }
 
@@ -485,10 +503,23 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         _authSourceLabel.Text = $"Auth Source: {state.PrivilegedAuthLabel} ({state.AllowedAccessTags.Count} authorized access levels)";
         _authSourceLabel.FontColorOverride = state.HasPrivilegedAuth ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD54F");
 
-        _targetCardLabel.Text = state.HasTargetCard
-            ? $"Target ID: {state.TargetCardLabel} — {state.TargetFullName} ({state.TargetJobTitle}) [{state.TargetAccessTags.Count} active codes]"
-            : "Target ID: None (Insert ID card into Target slot / computer ID slot or swipe ID card)";
-        _targetCardLabel.FontColorOverride = state.HasTargetCard ? Color.FromHex("#88EEFF") : Color.FromHex("#8899AA");
+        if (state.InstalledCardSlotCount < 2)
+        {
+            _targetCardLabel.Text =
+                $"Hardware Required: {state.InstalledCardSlotCount}/2 ID Card Slot modules installed (needs 1 Modifying ID slot + 1 Target ID slot).";
+            _targetCardLabel.FontColorOverride = Color.FromHex("#FF8A65");
+        }
+        else if (state.HasTargetCard)
+        {
+            _targetCardLabel.Text =
+                $"Target ID: {state.TargetCardLabel} — {state.TargetFullName} ({state.TargetJobTitle}) [{state.TargetAccessTags.Count} active codes]";
+            _targetCardLabel.FontColorOverride = Color.FromHex("#88EEFF");
+        }
+        else
+        {
+            _targetCardLabel.Text = "Target ID: None (Insert target ID card into Card Slot #2)";
+            _targetCardLabel.FontColorOverride = Color.FromHex("#8899AA");
+        }
 
         var canModify = state.HasTargetCard && state.HasPrivilegedAuth;
         _targetFullNameEdit.Editable = canModify;
@@ -512,8 +543,21 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         var allowedSet = state.AllowedAccessTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var activeSet = state.TargetAccessTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var levelSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_proto.TryIndex<AccessGroupPrototype>(state.AccessGroup, out var groupProto))
+        {
+            foreach (var tag in groupProto.Tags)
+                levelSet.Add(tag.Id);
+        }
+        foreach (var tag in state.AllowedAccessTags)
+            levelSet.Add(tag);
+        foreach (var tag in state.TargetAccessTags)
+            levelSet.Add(tag);
+
+        var accessLevels = levelSet.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+
         _accessButtonsWrap.RemoveAllChildren();
-        foreach (var level in state.ConsoleAccessLevels)
+        foreach (var level in accessLevels)
         {
             var tagCopy = level;
             var hasTag = activeSet.Contains(tagCopy);

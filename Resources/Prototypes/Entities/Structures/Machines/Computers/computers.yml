@@ -656,29 +656,6 @@
   name: ID card computer
   description: Terminal for programming Nanotrasen employee ID cards to access parts of the station.
   components:
-  - type: IdCardConsole
-    privilegedIdSlot:
-      name: id-card-console-privileged-id
-      ejectSound: /Audio/Machines/id_swipe.ogg
-      insertSound: /Audio/Weapons/Guns/MagIn/batrifle_magin.ogg
-      ejectOnBreak: true
-      swap: false
-      whitelist:
-        components:
-        - IdCard
-        - Access
-        requireAll: true
-    targetIdSlot:
-      name: id-card-console-target-id
-      ejectSound: /Audio/Machines/id_swipe.ogg
-      insertSound: /Audio/Weapons/Guns/MagIn/batrifle_magin.ogg
-      ejectOnBreak: true
-      swap: false
-      whitelist:
-        components:
-        - IdCard
-        - Access
-        requireAll: true
   - type: EmbeddedComputerHost
     computerPrototype: BaseOxydIdConsoleEmbeddedController
     borderColor: "#3C88E6"
@@ -695,12 +672,8 @@
     singleUser: false
   - type: UserInterface
     interfaces:
-      enum.IdCardConsoleUiKey.Key:
-        type: IdCardConsoleBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
-  - type: CrewManifestViewer
-    ownerKey: enum.IdCardConsoleUiKey.Key
   - type: Speech
     speechVerb: Robotic
     speechSounds: Pai
@@ -719,8 +692,6 @@
       board: !type:Container
         ents: []
       computer_board: !type:ContainerSlot {}
-      IdCardConsole-privilegedId: !type:ContainerSlot
-      IdCardConsole-targetId: !type:ContainerSlot
 
 - type: entity
   parent: BaseComputerAiAccess

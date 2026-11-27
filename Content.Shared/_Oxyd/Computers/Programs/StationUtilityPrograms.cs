@@ -304,32 +304,11 @@ public sealed partial class CargoOrdersProgramComponent : Component
 }
 
 [Serializable, NetSerializable]
-public sealed class CargoProductEntryDto
-{
-    public string ProductId { get; }
-    public string Name { get; }
-    public string Description { get; }
-    public string Category { get; }
-    public int Cost { get; }
-
-    public CargoProductEntryDto(string productId, string name, string description, string category, int cost)
-    {
-        ProductId = productId;
-        Name = name;
-        Description = description;
-        Category = category;
-        Cost = cost;
-    }
-}
-
-[Serializable, NetSerializable]
 public sealed class CargoOrderEntryDto
 {
     public int OrderId { get; }
     public string ProductId { get; }
-    public string ProductName { get; }
     public int Quantity { get; }
-    public int TotalCost { get; }
     public string Requester { get; }
     public string Reason { get; }
     public string Account { get; }
@@ -339,9 +318,7 @@ public sealed class CargoOrderEntryDto
     public CargoOrderEntryDto(
         int orderId,
         string productId,
-        string productName,
         int quantity,
-        int totalCost,
         string requester,
         string reason,
         string account,
@@ -350,29 +327,12 @@ public sealed class CargoOrderEntryDto
     {
         OrderId = orderId;
         ProductId = productId;
-        ProductName = productName;
         Quantity = quantity;
-        TotalCost = totalCost;
         Requester = requester;
         Reason = reason;
         Account = account;
         Approved = approved;
         Approver = approver;
-    }
-}
-
-[Serializable, NetSerializable]
-public sealed class CargoBankAccountSummaryDto
-{
-    public string AccountProto { get; }
-    public string AccountId { get; }
-    public int Balance { get; }
-
-    public CargoBankAccountSummaryDto(string accountProto, string accountId, int balance)
-    {
-        AccountProto = accountProto;
-        AccountId = accountId;
-        Balance = balance;
     }
 }
 
@@ -435,10 +395,8 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
     public int AuthenticatedBalance { get; }
     public string SelectedCategory { get; }
     public string StatusMessage { get; }
-    public List<string> Categories { get; }
-    public List<CargoProductEntryDto> Products { get; }
+    public List<string> AllowedGroups { get; }
     public List<CargoOrderEntryDto> Orders { get; }
-    public List<CargoBankAccountSummaryDto> KnownAccounts { get; }
 
     public CargoOrdersUiState(
         bool isAuthenticated,
@@ -447,10 +405,8 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
         int authenticatedBalance,
         string selectedCategory,
         string statusMessage,
-        List<string> categories,
-        List<CargoProductEntryDto> products,
-        List<CargoOrderEntryDto> orders,
-        List<CargoBankAccountSummaryDto>? knownAccounts = null)
+        List<string> allowedGroups,
+        List<CargoOrderEntryDto> orders)
     {
         IsAuthenticated = isAuthenticated;
         AuthenticatedAccountId = authenticatedAccountId;
@@ -458,10 +414,8 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
         AuthenticatedBalance = authenticatedBalance;
         SelectedCategory = selectedCategory;
         StatusMessage = statusMessage;
-        Categories = categories;
-        Products = products;
+        AllowedGroups = allowedGroups;
         Orders = orders;
-        KnownAccounts = knownAccounts ?? new List<CargoBankAccountSummaryDto>();
     }
 }
 
@@ -514,6 +468,9 @@ public sealed class CrewMonitorRefreshMessage : BoundUserInterfaceMessage;
 [RegisterComponent, NetworkedComponent]
 public sealed partial class CommsConsoleProgramComponent : Component
 {
+    [DataField]
+    public bool AuthorizedBySwipedCard;
+
     [DataField]
     public string StatusMessage = "Ready for station broadcast.";
 }

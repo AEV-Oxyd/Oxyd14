@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access.Components;
 using Content.Shared.ActionBlocker;
@@ -115,6 +116,18 @@ public sealed partial class LockSystem : EntitySystem
 
         if (!TryGetSwipedIdCard(args.Used, out var swipedCard))
             return;
+
+        if (TryComp<EmbeddedComputerHostComponent>(uid, out var compHost))
+        {
+            if (compHost.ComputerEntity is not { } hostCompUid ||
+                !TryComp<ComputerStatsComponent>(hostCompUid, out var compStats) ||
+                !compStats.HasIdSlotModule)
+            {
+                args.Handled = true;
+                _sharedPopupSystem.PopupEntity("No ID card scanner or card slot hardware installed.", uid, args.User);
+                return;
+            }
+        }
 
         args.Handled = true;
 

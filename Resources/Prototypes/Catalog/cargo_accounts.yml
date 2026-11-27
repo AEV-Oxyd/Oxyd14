@@ -5,6 +5,8 @@
   color: "#b48b57"
   radioChannel: Supply
   acquisitionSlip: PaperAcquisitionSlipCargo
+  defaultAccountId: "CARGO-01"
+  defaultPin: "1111"
 
 - type: cargoAccount
   id: Engineering
@@ -13,6 +15,8 @@
   color: "#ff733c"
   radioChannel: Engineering
   acquisitionSlip: PaperAcquisitionSlipEngineering
+  defaultAccountId: "ENG-02"
+  defaultPin: "2222"
 
 - type: cargoAccount
   id: Medical
@@ -21,6 +25,8 @@
   color: "#57b8f0"
   radioChannel: Medical
   acquisitionSlip: PaperAcquisitionSlipMedical
+  defaultAccountId: "MED-03"
+  defaultPin: "3333"
 
 - type: cargoAccount
   id: Science
@@ -29,6 +35,8 @@
   color: "#cd7ccd"
   radioChannel: Science
   acquisitionSlip: PaperAcquisitionSlipScience
+  defaultAccountId: "SCI-04"
+  defaultPin: "4444"
 
 - type: cargoAccount
   id: Security
@@ -37,6 +45,8 @@
   color: "#ff4242"
   radioChannel: Security
   acquisitionSlip: PaperAcquisitionSlipSecurity
+  defaultAccountId: "SEC-05"
+  defaultPin: "5555"
 
 - type: cargoAccount
   id: Service
@@ -45,3 +55,5 @@
   color: "#539c00"
   radioChannel: Service
   acquisitionSlip: PaperAcquisitionSlipService
+  defaultAccountId: "SRV-06"
+  defaultPin: "6666"

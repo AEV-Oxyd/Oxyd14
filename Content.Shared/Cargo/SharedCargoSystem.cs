@@ -12,21 +12,16 @@ namespace Content.Shared.Cargo;
 public abstract partial class SharedCargoSystem : EntitySystem
 {
     [Dependency] protected IGameTiming Timing = default!;
+    [Dependency] protected IPrototypeManager ProtoMan = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<StationBankAccountComponent, MapInitEvent>(OnMapInit);
-        SubscribeLocalEvent<HijackBeaconSuccessEvent>(OnHijackSuccess);
-    }
-
+    [SubscribeLocalEvent]
     private void OnMapInit(Entity<StationBankAccountComponent> ent, ref MapInitEvent args)
     {
         ent.Comp.NextIncomeTime = Timing.CurTime + ent.Comp.IncomeDelay;
         Dirty(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnHijackSuccess(ref HijackBeaconSuccessEvent args)
     {
         var stationQuery = EntityQueryEnumerator<StationBankAccountComponent>();
@@ -248,17 +243,13 @@ public abstract partial class SharedCargoSystem : EntitySystem
 
         foreach (var (accountProto, curBalance) in station.Comp.Accounts)
         {
-            var expectedId = station.Comp.AccountIds.TryGetValue(accountProto, out var mappedId)
-                ? mappedId
-                : accountProto.Id;
+            var expectedId = GetAccountIdentifier((station.Owner, station.Comp), accountProto);
             var idMatches = string.Equals(cleanId, expectedId, StringComparison.OrdinalIgnoreCase) ||
                             string.Equals(cleanId, accountProto.Id, StringComparison.OrdinalIgnoreCase);
             if (!idMatches)
                 continue;
 
-            var expectedPin = station.Comp.AccountPins.TryGetValue(accountProto, out var mappedPin)
-                ? mappedPin
-                : "1111";
+            var expectedPin = GetAccountPin((station.Owner, station.Comp), accountProto);
             if (!string.Equals(cleanPin, expectedPin, StringComparison.Ordinal))
                 return false;
 
@@ -272,11 +263,31 @@ public abstract partial class SharedCargoSystem : EntitySystem
     }
 
     /// <summary>
-    /// Gets the public bank account id string for a cargo account.
+    /// Gets the public bank account id string for a cargo account (instance override or <see cref="CargoAccountPrototype.DefaultAccountId"/>).
     /// </summary>
     public string GetAccountIdentifier(Entity<StationBankAccountComponent> station, ProtoId<CargoAccountPrototype> account)
     {
-        return station.Comp.AccountIds.TryGetValue(account, out var mapped) ? mapped : account.Id;
+        if (station.Comp.AccountIds.TryGetValue(account, out var mapped) && !string.IsNullOrEmpty(mapped))
+            return mapped;
+
+        if (ProtoMan.TryIndex(account, out var proto) && !string.IsNullOrEmpty(proto.DefaultAccountId))
+            return proto.DefaultAccountId;
+
+        return account.Id;
+    }
+
+    /// <summary>
+    /// Gets the PIN for a cargo account (instance override or <see cref="CargoAccountPrototype.DefaultPin"/>).
+    /// </summary>
+    public string GetAccountPin(Entity<StationBankAccountComponent> station, ProtoId<CargoAccountPrototype> account)
+    {
+        if (station.Comp.AccountPins.TryGetValue(account, out var mapped) && !string.IsNullOrEmpty(mapped))
+            return mapped;
+
+        if (ProtoMan.TryIndex(account, out var proto) && !string.IsNullOrEmpty(proto.DefaultPin))
+            return proto.DefaultPin;
+
+        return "1111";
     }
 
     /// <summary>

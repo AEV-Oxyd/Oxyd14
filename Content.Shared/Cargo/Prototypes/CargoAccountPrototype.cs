@@ -42,4 +42,16 @@ public sealed partial class CargoAccountPrototype : IPrototype
     /// </summary>
     [DataField]
     public EntProtoId AcquisitionSlip;
+
+    /// <summary>
+    /// Default bank account identifier used to authenticate cargo orders and withdrawals.
+    /// </summary>
+    [DataField]
+    public string DefaultAccountId = string.Empty;
+
+    /// <summary>
+    /// Default PIN code used to authenticate cargo orders and withdrawals.
+    /// </summary>
+    [DataField]
+    public string DefaultPin = "1111";
 }

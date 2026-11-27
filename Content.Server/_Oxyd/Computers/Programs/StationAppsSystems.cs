@@ -57,6 +57,7 @@ namespace Content.Server._Oxyd.Computers.Programs;
 /// </summary>
 public sealed partial class StationAppsSystem : EntitySystem
 {
+    [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private DataServerSystem _dataServer = default!;
@@ -77,10 +78,11 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private LabelSystem _label = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private IPrototypeManager _proto = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<OxydComputerComponent> _computerQuery;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
 
     private static readonly ProtoId<AccessLevelPrototype> CommandAccess = "Command";
     private static readonly ProtoId<StackPrototype> CreditStackProto = "Credit";
@@ -89,105 +91,59 @@ public sealed partial class StationAppsSystem : EntitySystem
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _computerQuery = GetEntityQuery<OxydComputerComponent>();
-
-        // Notekeeper
-        SubscribeLocalEvent<NotekeeperProgramComponent, ProgramStartupEvent>(OnNotekeeperStartup);
-        SubscribeLocalEvent<NotekeeperProgramComponent, ProgramActivatedEvent>(OnNotekeeperActivated);
         Subs.BuiEvents<NotekeeperProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<NotekeeperActionMessage>(OnNotekeeperAction);
         });
 
-        // NanoTask (.tsk persistent file on HDD)
-        SubscribeLocalEvent<NanoTaskProgramComponent, ProgramStartupEvent>(OnNanoTaskStartup);
-        SubscribeLocalEvent<NanoTaskProgramComponent, ProgramActivatedEvent>(OnNanoTaskActivated);
-        SubscribeLocalEvent<NanoTaskProgramComponent, ProgramRelayedEvent<InteractUsingEvent>>(OnNanoTaskInteractUsing);
         Subs.BuiEvents<NanoTaskProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<NanoTaskActionMessage>(OnNanoTaskAction);
         });
 
-        // CrewManifest (network fetch -> /records/crew_manifest.db)
-        SubscribeLocalEvent<CrewManifestProgramComponent, ProgramStartupEvent>(OnCrewManifestStartup);
-        SubscribeLocalEvent<CrewManifestProgramComponent, ProgramActivatedEvent>(OnCrewManifestActivated);
         Subs.BuiEvents<CrewManifestProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<CrewManifestRefreshMessage>(OnCrewManifestRefresh);
         });
 
-        // WantedList (network fetch -> /records/wanted_list.db)
-        SubscribeLocalEvent<WantedListProgramComponent, ProgramStartupEvent>(OnWantedStartup);
-        SubscribeLocalEvent<WantedListProgramComponent, ProgramActivatedEvent>(OnWantedActivated);
-        SubscribeLocalEvent<CriminalRecordChangedEvent>(OnCriminalRecordChanged);
         Subs.BuiEvents<WantedListProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<WantedListRefreshMessage>(OnWantedRefresh);
         });
 
-        // NewsReader (network fetch -> /news/articles.db)
-        SubscribeLocalEvent<NewsReaderProgramComponent, ProgramStartupEvent>(OnNewsStartup);
-        SubscribeLocalEvent<NewsReaderProgramComponent, ProgramActivatedEvent>(OnNewsActivated);
-        SubscribeLocalEvent<NewsArticlePublishedEvent>(OnNewsPublished);
         Subs.BuiEvents<NewsReaderProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<NewsReaderActionMessage>(OnNewsAction);
         });
 
-        // NetProbe & LogProbe
-        SubscribeLocalEvent<NetProbeProgramComponent, ProgramStartupEvent>(OnNetProbeStartup);
-        SubscribeLocalEvent<NetProbeProgramComponent, ProgramActivatedEvent>(OnNetProbeActivated);
-        SubscribeLocalEvent<NetProbeProgramComponent, ProgramRelayedEvent<AfterInteractEvent>>(OnNetProbeInteract);
         Subs.BuiEvents<NetProbeProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<NetProbeClearMessage>(OnNetProbeClear);
         });
 
-        SubscribeLocalEvent<LogProbeProgramComponent, ProgramStartupEvent>(OnLogProbeStartup);
-        SubscribeLocalEvent<LogProbeProgramComponent, ProgramActivatedEvent>(OnLogProbeActivated);
-        SubscribeLocalEvent<LogProbeProgramComponent, ProgramRelayedEvent<AfterInteractEvent>>(OnLogProbeInteract);
         Subs.BuiEvents<LogProbeProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<LogProbePrintMessage>(OnLogProbePrint);
         });
 
-        // MedTek & AstroNav
-        SubscribeLocalEvent<MedTekProgramComponent, ProgramStartupEvent>(OnMedTekStartup);
-        SubscribeLocalEvent<MedTekProgramComponent, ProgramTerminatedEvent>(OnMedTekTerminated);
-        SubscribeLocalEvent<AstroNavProgramComponent, ProgramStartupEvent>(OnAstroNavStartup);
-        SubscribeLocalEvent<AstroNavProgramComponent, ProgramTerminatedEvent>(OnAstroNavTerminated);
-
-        // Cargo Orders (Bank Account ID + PIN auth & money withdrawal)
-        SubscribeLocalEvent<CargoOrdersProgramComponent, ProgramStartupEvent>(OnCargoOrdersStartup);
-        SubscribeLocalEvent<CargoOrdersProgramComponent, ProgramActivatedEvent>(OnCargoOrdersActivated);
         Subs.BuiEvents<CargoOrdersProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnCargoOrdersBuiOpened);
             subs.Event<CargoOrdersActionMessage>(OnCargoOrdersAction);
         });
 
-        // Crew Monitor
-        SubscribeLocalEvent<CrewMonitorProgramComponent, ProgramStartupEvent>(OnCrewMonitorStartup);
-        SubscribeLocalEvent<CrewMonitorProgramComponent, ProgramActivatedEvent>(OnCrewMonitorActivated);
         Subs.BuiEvents<CrewMonitorProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnCrewMonitorBuiOpened);
             subs.Event<CrewMonitorRefreshMessage>(OnCrewMonitorRefresh);
         });
 
-        // Communications Console
-        SubscribeLocalEvent<CommsConsoleProgramComponent, ProgramStartupEvent>(OnCommsStartup);
-        SubscribeLocalEvent<CommsConsoleProgramComponent, ProgramActivatedEvent>(OnCommsActivated);
         Subs.BuiEvents<CommsConsoleProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnCommsBuiOpened);
             subs.Event<CommsConsoleActionMessage>(OnCommsAction);
         });
 
-        // Solar Control Console
-        SubscribeLocalEvent<SolarControlProgramComponent, ProgramStartupEvent>(OnSolarStartup);
-        SubscribeLocalEvent<SolarControlProgramComponent, ProgramActivatedEvent>(OnSolarActivated);
         Subs.BuiEvents<SolarControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnSolarBuiOpened);
@@ -199,12 +155,14 @@ public sealed partial class StationAppsSystem : EntitySystem
     // NOTEKEEPER (.txt files on Hard Drive)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnNotekeeperStartup(Entity<NotekeeperProgramComponent> ent, ref ProgramStartupEvent args)
     {
         EnsureDefaultNote(args.ComputerUid);
         UpdateNotekeeperUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnNotekeeperActivated(Entity<NotekeeperProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateNotekeeperUi(ent.Owner, args.ComputerUid, ent.Comp);
@@ -324,16 +282,19 @@ public sealed partial class StationAppsSystem : EntitySystem
     // NANOTASK (/tasks/tasks.tsk boot-resistant file on Hard Drive)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnNanoTaskStartup(Entity<NanoTaskProgramComponent> ent, ref ProgramStartupEvent args)
     {
         UpdateNanoTaskUi(ent.Owner, args.ComputerUid);
     }
 
+    [SubscribeLocalEvent]
     private void OnNanoTaskActivated(Entity<NanoTaskProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateNanoTaskUi(ent.Owner, args.ComputerUid);
     }
 
+    [SubscribeLocalEvent]
     private void OnNanoTaskInteractUsing(Entity<NanoTaskProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
     {
         if (!TryComp<NanoTaskPrintedComponent>(relayed.Args.Used, out var printed) || printed.Task is not { } task)
@@ -461,11 +422,13 @@ public sealed partial class StationAppsSystem : EntitySystem
     // CREW MANIFEST (Network download from Server/Router local copy -> /records/crew_manifest.db)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnCrewManifestStartup(Entity<CrewManifestProgramComponent> ent, ref ProgramStartupEvent args)
     {
         SyncAndSendCrewManifest(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnCrewManifestActivated(Entity<CrewManifestProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SyncAndSendCrewManifest(ent.Owner, args.ComputerUid, ent.Comp);
@@ -602,11 +565,13 @@ public sealed partial class StationAppsSystem : EntitySystem
     // WANTED LIST (Network download from Server/Router local copy -> /records/wanted_list.db)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnWantedStartup(Entity<WantedListProgramComponent> ent, ref ProgramStartupEvent args)
     {
         SyncWantedList(ent.Owner, args.ComputerUid);
     }
 
+    [SubscribeLocalEvent]
     private void OnWantedActivated(Entity<WantedListProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SyncWantedList(ent.Owner, args.ComputerUid);
@@ -618,6 +583,7 @@ public sealed partial class StationAppsSystem : EntitySystem
             SyncWantedList(ent.Owner, compUid);
     }
 
+    [SubscribeLocalEvent]
     private void OnCriminalRecordChanged(ref CriminalRecordChangedEvent args)
     {
         var q = EntityQueryEnumerator<WantedListProgramComponent, ProgramComponent>();
@@ -748,16 +714,19 @@ public sealed partial class StationAppsSystem : EntitySystem
     // NEWS READER (Network download from Server/Router local copy -> /news/articles.db)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnNewsStartup(Entity<NewsReaderProgramComponent> ent, ref ProgramStartupEvent args)
     {
         SyncAndSendNews(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnNewsActivated(Entity<NewsReaderProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SyncAndSendNews(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnNewsPublished(ref NewsArticlePublishedEvent args)
     {
         var q = EntityQueryEnumerator<NewsReaderProgramComponent, ProgramComponent>();
@@ -965,7 +934,9 @@ public sealed partial class StationAppsSystem : EntitySystem
     // NETPROBE & LOGPROBE (/logs/*.db)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnNetProbeStartup(Entity<NetProbeProgramComponent> ent, ref ProgramStartupEvent args) => UpdateNetProbeUi(ent.Owner, args.ComputerUid);
+    [SubscribeLocalEvent]
     private void OnNetProbeActivated(Entity<NetProbeProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateNetProbeUi(ent.Owner, args.ComputerUid);
 
     private void OnNetProbeClear(Entity<NetProbeProgramComponent> ent, ref NetProbeClearMessage args)
@@ -977,6 +948,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         UpdateNetProbeUi(ent.Owner, compUid);
     }
 
+    [SubscribeLocalEvent]
     private void OnNetProbeInteract(Entity<NetProbeProgramComponent> ent, ref ProgramRelayedEvent<AfterInteractEvent> relayed)
     {
         if (relayed.Args.Handled || !relayed.Args.CanReach || relayed.Args.Target is not { } target)
@@ -1023,9 +995,12 @@ public sealed partial class StationAppsSystem : EntitySystem
             _ui.SetUiState(progUid, ProgramUiKey.Key, new NetProbeUiState(list));
     }
 
+    [SubscribeLocalEvent]
     private void OnLogProbeStartup(Entity<LogProbeProgramComponent> ent, ref ProgramStartupEvent args) => UpdateLogProbeUi(ent.Owner, args.ComputerUid, ent.Comp);
+    [SubscribeLocalEvent]
     private void OnLogProbeActivated(Entity<LogProbeProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateLogProbeUi(ent.Owner, args.ComputerUid, ent.Comp);
 
+    [SubscribeLocalEvent]
     private void OnLogProbeInteract(Entity<LogProbeProgramComponent> ent, ref ProgramRelayedEvent<AfterInteractEvent> relayed)
     {
         if (relayed.Args.Handled || !relayed.Args.CanReach || relayed.Args.Target is not { } target)
@@ -1123,6 +1098,7 @@ public sealed partial class StationAppsSystem : EntitySystem
     // MEDTEK & ASTRONAV
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnMedTekStartup(Entity<MedTekProgramComponent> ent, ref ProgramStartupEvent args)
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
@@ -1131,12 +1107,14 @@ public sealed partial class StationAppsSystem : EntitySystem
             _ui.SetUiState(ent.Owner, ProgramUiKey.Key, new UtilityProgramUiState("MedTek Scanner", "Health scanner module active on host device.", "ACTIVE"));
     }
 
+    [SubscribeLocalEvent]
     private void OnMedTekTerminated(Entity<MedTekProgramComponent> ent, ref ProgramTerminatedEvent args)
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
         RemComp<HealthAnalyzerComponent>(target);
     }
 
+    [SubscribeLocalEvent]
     private void OnAstroNavStartup(Entity<AstroNavProgramComponent> ent, ref ProgramStartupEvent args)
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
@@ -1145,6 +1123,7 @@ public sealed partial class StationAppsSystem : EntitySystem
             _ui.SetUiState(ent.Owner, ProgramUiKey.Key, new UtilityProgramUiState("AstroNav GPS", "Handheld GPS transponder active on host device.", "ACTIVE"));
     }
 
+    [SubscribeLocalEvent]
     private void OnAstroNavTerminated(Entity<AstroNavProgramComponent> ent, ref ProgramTerminatedEvent args)
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
@@ -1155,11 +1134,13 @@ public sealed partial class StationAppsSystem : EntitySystem
     // CARGO ORDERS (/bin/cargo_orders.nte) — BANK ACCOUNT ID + PIN AUTH & WITHDRAWAL
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnCargoOrdersStartup(Entity<CargoOrdersProgramComponent> ent, ref ProgramStartupEvent args)
     {
         UpdateCargoOrdersUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnCargoOrdersActivated(Entity<CargoOrdersProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateCargoOrdersUi(ent.Owner, args.ComputerUid, ent.Comp);
@@ -1608,39 +1589,15 @@ public sealed partial class StationAppsSystem : EntitySystem
                 allowedGroups.Add(g.Id);
         }
 
-        var categorySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All" };
-        var products = new List<CargoProductEntryDto>();
-        foreach (var prod in _proto.EnumeratePrototypes<CargoProductPrototype>())
-        {
-            if (!allowedGroups.Contains(prod.Group.Id))
-                continue;
-
-            var cat = string.IsNullOrWhiteSpace(prod.Category) ? "General" : Loc.GetString(prod.Category);
-            categorySet.Add(cat);
-            products.Add(new CargoProductEntryDto(
-                prod.ID,
-                prod.Name,
-                prod.Description,
-                cat,
-                prod.Cost));
-        }
-
-        products.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-        var categories = categorySet.OrderBy(c => c == "All" ? string.Empty : c, StringComparer.OrdinalIgnoreCase).ToList();
-
         var orders = new List<CargoOrderEntryDto>();
         foreach (var list in orderDb.Orders.Values)
         {
             foreach (var o in list)
             {
-                var pName = _proto.TryIndex<CargoProductPrototype>(o.Product, out var pp) ? pp.Name : o.Product.Id;
-                var pCost = _proto.TryIndex<CargoProductPrototype>(o.Product, out var pp2) ? pp2.Cost : 0;
                 orders.Add(new CargoOrderEntryDto(
                     o.OrderId,
                     o.Product.Id,
-                    pName,
                     o.OrderQuantity,
-                    pCost * o.OrderQuantity,
                     o.Requester,
                     o.Reason,
                     o.Account.Id,
@@ -1649,13 +1606,6 @@ public sealed partial class StationAppsSystem : EntitySystem
             }
         }
         orders.Sort((a, b) => b.OrderId.CompareTo(a.OrderId));
-
-        var knownAccounts = new List<CargoBankAccountSummaryDto>();
-        foreach (var (accProto, balVal) in bankComp.Accounts)
-        {
-            var accId = _cargo.GetAccountIdentifier((stationUid, bankComp), accProto);
-            knownAccounts.Add(new CargoBankAccountSummaryDto(accProto.Id, accId, balVal));
-        }
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
@@ -1666,10 +1616,8 @@ public sealed partial class StationAppsSystem : EntitySystem
                 authBalance,
                 comp.SelectedCategory,
                 comp.StatusMessage,
-                categories,
-                products,
-                orders,
-                knownAccounts));
+                allowedGroups.OrderBy(g => g, StringComparer.OrdinalIgnoreCase).ToList(),
+                orders));
         }
     }
 
@@ -1677,7 +1625,9 @@ public sealed partial class StationAppsSystem : EntitySystem
     // CREW MONITOR (/bin/crew_monitor.nte)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnCrewMonitorStartup(Entity<CrewMonitorProgramComponent> ent, ref ProgramStartupEvent args) => UpdateCrewMonitorUi(ent.Owner, args.ComputerUid);
+    [SubscribeLocalEvent]
     private void OnCrewMonitorActivated(Entity<CrewMonitorProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCrewMonitorUi(ent.Owner, args.ComputerUid);
     private void OnCrewMonitorBuiOpened(Entity<CrewMonitorProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
@@ -1699,10 +1649,12 @@ public sealed partial class StationAppsSystem : EntitySystem
         var anchorMap = Transform(anchorUid).MapID;
 
         var list = new List<CrewSensorEntryDto>();
-        var q = EntityQueryEnumerator<SuitSensorComponent, TransformComponent>();
-        while (q.MoveNext(out var sensorUid, out var sensor, out var xform))
+        var sensorsOnMap = new HashSet<Entity<SuitSensorComponent>>();
+        _lookup.GetEntitiesOnMap(anchorMap, sensorsOnMap);
+        foreach (var sensorEnt in sensorsOnMap)
         {
-            if (xform.MapID != anchorMap || sensor.Mode == SuitSensorMode.SensorOff || sensor.User is not { Valid: true } wearer || !Exists(wearer))
+            var sensor = sensorEnt.Comp;
+            if (sensor.Mode == SuitSensorMode.SensorOff || sensor.User is not { Valid: true } wearer || !Exists(wearer))
                 continue;
 
             var name = MetaData(wearer).EntityName;
@@ -1725,8 +1677,33 @@ public sealed partial class StationAppsSystem : EntitySystem
     // COMMUNICATIONS CONSOLE (/bin/comms_console.nte)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnCommsStartup(Entity<CommsConsoleProgramComponent> ent, ref ProgramStartupEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
+    [SubscribeLocalEvent]
     private void OnCommsActivated(Entity<CommsConsoleProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
+
+    [SubscribeLocalEvent]
+    private void OnCommsCardScanned(Entity<CommsConsoleProgramComponent> ent, ref ProgramCardScannedEvent scanned)
+    {
+        if (scanned.Handled)
+            return;
+
+        if (_accessReader.FindAccessTags(scanned.Card).Contains(CommandAccess))
+        {
+            ent.Comp.AuthorizedBySwipedCard = true;
+            ent.Comp.StatusMessage = $"Authorized Command broadcast via swiped ID ({MetaData(scanned.Card).EntityName}).";
+            _popup.PopupEntity("Communications console authorized.", scanned.HostUid, scanned.User);
+        }
+        else
+        {
+            ent.Comp.StatusMessage = "Access denied: Swiped ID card lacks Command clearance.";
+            _popup.PopupEntity("Access denied: Command clearance required.", scanned.HostUid, scanned.User);
+        }
+
+        scanned.Handled = true;
+        Dirty(ent);
+        UpdateCommsUi(ent.Owner, scanned.ComputerUid, ent.Comp, scanned.User);
+    }
     private void OnCommsBuiOpened(Entity<CommsConsoleProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
@@ -1738,7 +1715,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var canBroadcast = HasCommsAccess(compUid, msg.Actor);
+        var canBroadcast = HasCommsAccess(compUid, ent.Comp, msg.Actor);
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
 
         switch (msg.Action)
@@ -1778,8 +1755,14 @@ public sealed partial class StationAppsSystem : EntitySystem
         UpdateCommsUi(ent.Owner, compUid, ent.Comp, msg.Actor);
     }
 
-    private bool HasCommsAccess(EntityUid compUid, EntityUid? actor)
+    private bool HasCommsAccess(EntityUid compUid, CommsConsoleProgramComponent comp, EntityUid? actor)
     {
+        if (comp.AuthorizedBySwipedCard)
+            return true;
+
+        if (_computer.TryGetInsertedIdCard(compUid, out var insCard) && _accessReader.FindAccessTags(insCard).Contains(CommandAccess))
+            return true;
+
         if (actor is { Valid: true } user && Exists(user) && _accessReader.FindAccessTags(user).Contains(CommandAccess))
             return true;
 
@@ -1812,7 +1795,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
             _ui.SetUiState(progUid, ProgramUiKey.Key, new CommsConsoleUiState(
-                HasCommsAccess(compUid, actor),
+                HasCommsAccess(compUid, comp, actor),
                 currentLevel,
                 levels,
                 comp.StatusMessage));
@@ -1823,7 +1806,9 @@ public sealed partial class StationAppsSystem : EntitySystem
     // SOLAR CONTROL CONSOLE (/bin/solar_control.nte)
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnSolarStartup(Entity<SolarControlProgramComponent> ent, ref ProgramStartupEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+    [SubscribeLocalEvent]
     private void OnSolarActivated(Entity<SolarControlProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
     private void OnSolarBuiOpened(Entity<SolarControlProgramComponent> ent, ref BoundUIOpenedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
 

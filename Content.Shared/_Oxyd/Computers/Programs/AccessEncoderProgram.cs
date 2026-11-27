@@ -43,42 +43,12 @@ public sealed partial class AccessEncoderProgramComponent : Component
     [DataField]
     public SoundSpecifier? SoundScan = new SoundPathSpecifier("/Audio/Machines/scan_finish.ogg");
 
+    /// <summary>
+    /// Access group prototype defining the static set of access levels manageable by this program.
+    /// Avoids duplicating access tag lists across every program entity instance.
+    /// </summary>
     [DataField]
-    public List<ProtoId<AccessLevelPrototype>> AccessLevels = new()
-    {
-        "Armory",
-        "Atmospherics",
-        "Bar",
-        "Brig",
-        "Detective",
-        "Captain",
-        "Cargo",
-        "Chapel",
-        "Chemistry",
-        "ChiefEngineer",
-        "ChiefMedicalOfficer",
-        "Command",
-        "Cryogenics",
-        "Engineering",
-        "External",
-        "GenpopEnter",
-        "GenpopLeave",
-        "HeadOfPersonnel",
-        "HeadOfSecurity",
-        "Hydroponics",
-        "Janitor",
-        "Kitchen",
-        "Lawyer",
-        "Maintenance",
-        "Medical",
-        "Quartermaster",
-        "Research",
-        "ResearchDirector",
-        "Salvage",
-        "Security",
-        "Service",
-        "Theatre",
-    };
+    public ProtoId<AccessGroupPrototype> AccessGroup = "AllAccess";
 }
 
 [Serializable, NetSerializable]
@@ -129,10 +99,12 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
     public string TargetFullName { get; }
     public string TargetJobTitle { get; }
     public List<string> TargetAccessTags { get; }
-    public List<string> ConsoleAccessLevels { get; }
+    public ProtoId<AccessGroupPrototype> AccessGroup { get; }
     public bool HasHostIdSlots { get; }
     public bool HasPrivilegedSlotCard { get; }
     public bool HasTargetSlotCard { get; }
+    public int InstalledCardSlotCount { get; }
+    public bool HasCardScanner { get; }
 
     public AccessEncoderUiState(
         bool hasHardDrive,
@@ -154,10 +126,12 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         string targetFullName = "",
         string targetJobTitle = "",
         List<string>? targetAccessTags = null,
-        List<string>? consoleAccessLevels = null,
+        ProtoId<AccessGroupPrototype>? accessGroup = null,
         bool hasHostIdSlots = false,
         bool hasPrivilegedSlotCard = false,
-        bool hasTargetSlotCard = false)
+        bool hasTargetSlotCard = false,
+        int installedCardSlotCount = 0,
+        bool hasCardScanner = false)
     {
         HasHardDrive = hasHardDrive;
         HasSourceCard = hasSourceCard;
@@ -178,10 +152,12 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         TargetFullName = targetFullName;
         TargetJobTitle = targetJobTitle;
         TargetAccessTags = targetAccessTags ?? new List<string>();
-        ConsoleAccessLevels = consoleAccessLevels ?? new List<string>();
+        AccessGroup = accessGroup ?? "AllAccess";
         HasHostIdSlots = hasHostIdSlots;
         HasPrivilegedSlotCard = hasPrivilegedSlotCard;
         HasTargetSlotCard = hasTargetSlotCard;
+        InstalledCardSlotCount = installedCardSlotCount;
+        HasCardScanner = hasCardScanner;
     }
 }
 
@@ -195,6 +171,7 @@ public enum AccessEncoderAction : byte
     DeleteFile,
     TogglePrivilegedSlot,
     ToggleTargetSlot,
+    SwapSlots,
     WriteTargetIdentity,
     ToggleTargetAccessTag,
     ApplyAccFileToTarget,

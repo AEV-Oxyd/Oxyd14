@@ -15,7 +15,9 @@ using Content.Shared.Atmos;
 using Content.Shared.Atmos.Monitor;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.Interaction;
 using Content.Shared.Lathe;
 using Content.Shared.Lock;
@@ -42,49 +44,35 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     [Dependency] private AccessReaderSystem _accessReader = default!;
     [Dependency] private LockSystem _lock = default!;
     [Dependency] private ItemSlotsSystem _itemSlots = default!;
+    [Dependency] private EntityLookupSystem _lookup = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IPrototypeManager _proto = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<OxydComputerComponent> _computerQuery;
-    private EntityQuery<ApcComponent> _apcQuery;
-    private EntityQuery<AirAlarmComponent> _airAlarmQuery;
-    private EntityQuery<IdCardComponent> _idCardQuery;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
+    [Dependency] private EntityQuery<ApcComponent> _apcQuery = default!;
+    [Dependency] private EntityQuery<AirAlarmComponent> _airAlarmQuery = default!;
+    [Dependency] private EntityQuery<IdCardComponent> _idCardQuery = default!;
 
-    private static readonly SoundPathSpecifier AuthSwipeSound = new("/Audio/Machines/id_swipe.ogg");
     private static readonly ProtoId<AccessLevelPrototype> EngineeringAccess = "Engineering";
     private static readonly ProtoId<AccessLevelPrototype> AtmosphericsAccess = "Atmospherics";
     private static readonly ProtoId<AccessLevelPrototype> CommandAccess = "Command";
+    private static readonly ProtoId<SourcePortPrototype> PortComputerCommandSender = "ComputerCommandSender";
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _computerQuery = GetEntityQuery<OxydComputerComponent>();
-        _apcQuery = GetEntityQuery<ApcComponent>();
-        _airAlarmQuery = GetEntityQuery<AirAlarmComponent>();
-        _idCardQuery = GetEntityQuery<IdCardComponent>();
-
-        // APC Control
-        SubscribeLocalEvent<ApcControlProgramComponent, ProgramStartupEvent>(OnApcStartup);
-        SubscribeLocalEvent<ApcControlProgramComponent, ProgramActivatedEvent>(OnApcActivated);
-        SubscribeLocalEvent<ApcControlProgramComponent, ProgramDeviceLinkReceivedEvent>(OnApcDeviceLink);
-        SubscribeLocalEvent<ApcControlProgramComponent, ProgramRelayedEvent<InteractUsingEvent>>(OnApcInteractUsing);
         Subs.BuiEvents<ApcControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnApcBuiOpened);
             subs.Event<ApcControlActionMessage>(OnApcUiAction);
         });
 
-        // Atmos / AirAlarm Control
-        SubscribeLocalEvent<AtmosControlProgramComponent, ProgramStartupEvent>(OnAtmosStartup);
-        SubscribeLocalEvent<AtmosControlProgramComponent, ProgramActivatedEvent>(OnAtmosActivated);
-        SubscribeLocalEvent<AtmosControlProgramComponent, ProgramDeviceLinkReceivedEvent>(OnAtmosDeviceLink);
-        SubscribeLocalEvent<AtmosControlProgramComponent, ProgramRelayedEvent<InteractUsingEvent>>(OnAtmosInteractUsing);
         Subs.BuiEvents<AtmosControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnAtmosBuiOpened);
@@ -97,11 +85,6 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             subs.Event<AtmosApplyTemplateMessage>(OnAtmosApplyTemplate);
         });
 
-        // Lathe Control
-        SubscribeLocalEvent<LatheControlProgramComponent, ProgramStartupEvent>(OnLatheStartup);
-        SubscribeLocalEvent<LatheControlProgramComponent, ProgramActivatedEvent>(OnLatheActivated);
-        SubscribeLocalEvent<LatheControlProgramComponent, ProgramDeviceLinkReceivedEvent>(OnLatheDeviceLink);
-        SubscribeLocalEvent<FileSystemComponent, FileSystemChangedEvent>(OnDriveFileSystemChanged);
         Subs.BuiEvents<LatheControlProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnLatheBuiOpened);
@@ -113,12 +96,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     // APC CONTROL
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnApcStartup(Entity<ApcControlProgramComponent> ent, ref ProgramStartupEvent args)
     {
         RequestApcStatus(args.ComputerUid, ent.Comp);
         UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnApcActivated(Entity<ApcControlProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         RequestApcStatus(args.ComputerUid, ent.Comp);
@@ -134,6 +119,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateApcUi(ent.Owner, compUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnApcDeviceLink(Entity<ApcControlProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         if (args.Packet is not { PacketType: "ApcStatus" } pkt)
@@ -154,10 +140,13 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
-    private void OnApcInteractUsing(Entity<ApcControlProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
+    [SubscribeLocalEvent]
+    private void OnApcCardScanned(Entity<ApcControlProgramComponent> ent, ref ProgramCardScannedEvent relayed)
     {
-        if (relayed.Args.Handled || !TryExtractIdCard(relayed.Args.Used, out var cardUid))
+        if (relayed.Handled)
             return;
+
+        var cardUid = relayed.Card;
 
         var compUid = relayed.ComputerUid;
         GetAvailableApcTargets(compUid, ent.Comp, out var selectedApcUid, out var selectedGuid);
@@ -166,21 +155,20 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
         if (CanIdCardAuthorizeDevice(cardUid, selectedApcUid.Value, isAtmos: false))
         {
-            GrantEngineeringApcAuthorization(compUid, selectedGuid, selectedApcUid.Value, relayed.Args.User);
+            GrantEngineeringApcAuthorization(compUid, selectedGuid, selectedApcUid.Value, relayed.User);
             var cardName = MetaData(cardUid).EntityName;
             ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedApcUid.Value).EntityName} [{selectedGuid}] via swiped ID ({cardName}).";
-            _audio.PlayPvs(AuthSwipeSound, relayed.Args.Target);
-            _popup.PopupEntity($"Authorized to {MetaData(selectedApcUid.Value).EntityName}.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity($"Authorized to {MetaData(selectedApcUid.Value).EntityName}.", relayed.HostUid, relayed.User);
         }
         else
         {
             ent.Comp.StatusMessage = $"Authorization denied for {MetaData(selectedApcUid.Value).EntityName}: ID card lacks Engineering/APC access.";
-            _popup.PopupEntity("Access denied for selected APC.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity("Access denied for selected APC.", relayed.HostUid, relayed.User);
         }
 
-        relayed.Args.Handled = true;
+        relayed.Handled = true;
         Dirty(ent);
-        RequestApcStatus(compUid, ent.Comp, relayed.Args.User);
+        RequestApcStatus(compUid, ent.Comp, relayed.User);
         UpdateApcUi(ent.Owner, compUid, ent.Comp);
     }
 
@@ -325,7 +313,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             if (isAuth && cmd is not ("status" or "status_request") && _lock.IsLocked(remoteApcUid))
                 _lock.Unlock(remoteApcUid, actor);
 
-            DispatchPacketToRemoteHost(remoteApcUid, "ApcCommandSink", pkt, actor);
+            DispatchPacketToRemoteHost(compUid, remoteApcUid, "ApcCommandSink", pkt, actor);
             SyncApcTelemetryFromTarget(compUid, comp, remoteApcUid, targetGuid);
             return;
         }
@@ -385,12 +373,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     // ATMOS / AIR ALARM CONTROL
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnAtmosStartup(Entity<AtmosControlProgramComponent> ent, ref ProgramStartupEvent args)
     {
         SendAtmosDeviceLink(args.ComputerUid, ent.Comp, "status", string.Empty, null);
         UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnAtmosActivated(Entity<AtmosControlProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SendAtmosDeviceLink(args.ComputerUid, ent.Comp, "status", string.Empty, null);
@@ -406,6 +396,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnAtmosDeviceLink(Entity<AtmosControlProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         if (args.Packet is not { PacketType: "AirAlarmStatus" } pkt)
@@ -433,10 +424,13 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
-    private void OnAtmosInteractUsing(Entity<AtmosControlProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
+    [SubscribeLocalEvent]
+    private void OnAtmosCardScanned(Entity<AtmosControlProgramComponent> ent, ref ProgramCardScannedEvent relayed)
     {
-        if (relayed.Args.Handled || !TryExtractIdCard(relayed.Args.Used, out var cardUid))
+        if (relayed.Handled)
             return;
+
+        var cardUid = relayed.Card;
 
         var compUid = relayed.ComputerUid;
         GetAvailableAtmosTargets(compUid, ent.Comp, out var selectedAlarmUid, out var selectedGuid, out var selectedApcUid, out var selectedApcGuid);
@@ -447,21 +441,20 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (CanIdCardAuthorizeDevice(cardUid, checkUid, isAtmos: true) ||
             CanIdCardAuthorizeDevice(cardUid, selectedAlarmUid.Value, isAtmos: true))
         {
-            GrantEngineeringApcAuthorization(compUid, selectedApcGuid, checkUid, relayed.Args.User, selectedGuid, selectedAlarmUid.Value);
+            GrantEngineeringApcAuthorization(compUid, selectedApcGuid, checkUid, relayed.User, selectedGuid, selectedAlarmUid.Value);
             var cardName = MetaData(cardUid).EntityName;
             ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedAlarmUid.Value).EntityName} [APC {selectedApcGuid}] via swiped ID ({cardName}).";
-            _audio.PlayPvs(AuthSwipeSound, relayed.Args.Target);
-            _popup.PopupEntity($"Authorized to {MetaData(selectedAlarmUid.Value).EntityName}.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity($"Authorized to {MetaData(selectedAlarmUid.Value).EntityName}.", relayed.HostUid, relayed.User);
         }
         else
         {
             ent.Comp.StatusMessage = $"Authorization denied for {MetaData(selectedAlarmUid.Value).EntityName}: ID card lacks Atmos/Engineering access.";
-            _popup.PopupEntity("Access denied for selected APC / Air Alarm.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity("Access denied for selected APC / Air Alarm.", relayed.HostUid, relayed.User);
         }
 
-        relayed.Args.Handled = true;
+        relayed.Handled = true;
         Dirty(ent);
-        SendAtmosDeviceLink(compUid, ent.Comp, "status", string.Empty, relayed.Args.User);
+        SendAtmosDeviceLink(compUid, ent.Comp, "status", string.Empty, relayed.User);
         UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
     }
 
@@ -768,7 +761,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             if (isAuth && cmd is not ("status" or "status_request") && _lock.IsLocked(remoteAlarmUid))
                 _lock.Unlock(remoteAlarmUid, actor);
 
-            DispatchPacketToRemoteHost(remoteAlarmUid, "AirAlarmCommandSink", pkt, actor);
+            DispatchPacketToRemoteHost(compUid, remoteAlarmUid, "AirAlarmCommandSink", pkt, actor);
             SyncAtmosTelemetryFromTarget(compUid, comp, remoteAlarmUid, targetAlarmGuid, targetApcGuid);
             return;
         }
@@ -860,19 +853,19 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         var bestDistSq = float.MaxValue;
         var alarmCoords = _transform.GetMapCoordinates(alarmUid, alarmXform);
 
-        var q = EntityQueryEnumerator<ApcComponent, TransformComponent>();
-        while (q.MoveNext(out var apcUid, out _, out var apcXform))
+        var apcs = new HashSet<Entity<ApcComponent>>();
+        _lookup.GetEntitiesOnMap(alarmXform.MapID, apcs);
+        foreach (var apc in apcs)
         {
-            if (apcXform.MapID != alarmXform.MapID)
-                continue;
+            var apcXform = Transform(apc.Owner);
             if (alarmXform.GridUid != null && apcXform.GridUid != null && apcXform.GridUid != alarmXform.GridUid)
                 continue;
 
-            var dSq = (_transform.GetMapCoordinates(apcUid, apcXform).Position - alarmCoords.Position).LengthSquared();
+            var dSq = (_transform.GetMapCoordinates(apc.Owner, apcXform).Position - alarmCoords.Position).LengthSquared();
             if (dSq < bestDistSq)
             {
                 bestDistSq = dSq;
-                bestApc = apcUid;
+                bestApc = apc.Owner;
             }
         }
 
@@ -920,15 +913,15 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (cComp?.HostMachine is { } hostApc && _apcQuery.TryComp(hostApc, out var hostApcComp))
             AddApcCandidate(hostApc, hostApcComp);
 
-        var q = EntityQueryEnumerator<ApcComponent, TransformComponent>();
-        while (q.MoveNext(out var apcUid, out var apcComp, out var xform))
+        var apcsOnMap = new HashSet<Entity<ApcComponent>>();
+        _lookup.GetEntitiesOnMap(anchorXform.MapID, apcsOnMap);
+        foreach (var apc in apcsOnMap)
         {
-            if (xform.MapID != anchorXform.MapID)
-                continue;
+            var xform = Transform(apc.Owner);
             if (anchorXform.GridUid != null && xform.GridUid != null && xform.GridUid != anchorXform.GridUid)
                 continue;
 
-            AddApcCandidate(apcUid, apcComp);
+            AddApcCandidate(apc.Owner, apc.Comp);
         }
 
         if (entries.Count == 0)
@@ -1010,15 +1003,15 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (cComp?.HostMachine is { } hostAlarm && _airAlarmQuery.HasComp(hostAlarm))
             AddAlarmCandidate(hostAlarm);
 
-        var q = EntityQueryEnumerator<AirAlarmComponent, TransformComponent>();
-        while (q.MoveNext(out var alarmUid, out _, out var xform))
+        var alarmsOnMap = new HashSet<Entity<AirAlarmComponent>>();
+        _lookup.GetEntitiesOnMap(anchorXform.MapID, alarmsOnMap);
+        foreach (var alarm in alarmsOnMap)
         {
-            if (xform.MapID != anchorXform.MapID)
-                continue;
+            var xform = Transform(alarm.Owner);
             if (anchorXform.GridUid != null && xform.GridUid != null && xform.GridUid != anchorXform.GridUid)
                 continue;
 
-            AddAlarmCandidate(alarmUid);
+            AddAlarmCandidate(alarm.Owner);
         }
 
         if (entries.Count == 0)
@@ -1109,28 +1102,6 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         }
     }
 
-    private bool TryExtractIdCard(EntityUid used, out EntityUid cardUid)
-    {
-        if (_idCardQuery.HasComp(used))
-        {
-            cardUid = used;
-            return true;
-        }
-
-        if (TryComp<PdaComponent>(used, out var pda))
-        {
-            var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
-            if (pdaCard is { Valid: true } pId && Exists(pId) && _idCardQuery.HasComp(pId))
-            {
-                cardUid = pId;
-                return true;
-            }
-        }
-
-        cardUid = EntityUid.Invalid;
-        return false;
-    }
-
     private bool CanIdCardAuthorizeDevice(EntityUid cardUid, EntityUid targetDeviceUid, bool isAtmos)
     {
         if (TryComp<AccessReaderComponent>(targetDeviceUid, out var reader) && reader.AccessLists.Count > 0)
@@ -1217,7 +1188,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         return false;
     }
 
-    private void DispatchPacketToRemoteHost(EntityUid remoteHostUid, string sinkPortId, ComputerPacket packet, EntityUid? actor)
+    private void DispatchPacketToRemoteHost(EntityUid sourceCompUid, EntityUid remoteHostUid, string sinkPortId, ComputerPacket packet, EntityUid? actor)
     {
         if (TryComp<EmbeddedComputerHostComponent>(remoteHostUid, out var host))
             _computer.EnsureComputerBoundToHost((remoteHostUid, host), out _);
@@ -1225,8 +1196,10 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (actor is { Valid: true } act)
             packet.SetReference("Actor", act);
 
-        var sig = new SignalReceivedEvent<ComputerPacket>(new ProtoId<SinkPortPrototype>(sinkPortId), packet, actor);
-        RaiseLocalEvent(remoteHostUid, ref sig);
+        var sinkPort = new ProtoId<SinkPortPrototype>(sinkPortId);
+        _deviceLink.EnsureSourcePort(sourceCompUid, PortComputerCommandSender);
+        _deviceLink.EnsureSinkPort(remoteHostUid, sinkPort);
+        _deviceLink.InvokeDirect(sourceCompUid, remoteHostUid, sinkPort, packet);
     }
 
     private void SyncApcTelemetryFromTarget(EntityUid compUid, ApcControlProgramComponent comp, EntityUid targetApcUid, string targetGuid)
@@ -1267,10 +1240,8 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             _computer.EnsureComputerBoundToHost((targetAlarmUid, host), out var alarmCompUid) &&
             _computerQuery.TryComp(alarmCompUid, out var alarmComp))
         {
-            // Ensure status packet has been emitted to the alarm's embedded program
-            var statusPkt = new ComputerPacket("status");
-            var sig = new SignalReceivedEvent<ComputerPacket>(new ProtoId<SinkPortPrototype>("AirAlarmCommandSink"), statusPkt, null);
-            RaiseLocalEvent(targetAlarmUid, ref sig);
+            // Ensure status packet has been emitted to the alarm's embedded program via DeviceLinkSystem
+            DispatchPacketToRemoteHost(compUid, targetAlarmUid, "AirAlarmCommandSink", new ComputerPacket("status"), null);
 
             foreach (var pUid in alarmComp.RunningPrograms)
             {
@@ -1301,12 +1272,14 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     // AUTOLATHE CONTROL
     // =========================================================================
 
+    [SubscribeLocalEvent]
     private void OnLatheStartup(Entity<LatheControlProgramComponent> ent, ref ProgramStartupEvent args)
     {
         SendLatheDeviceLink(args.ComputerUid, ent.Comp, "status", string.Empty, null);
         UpdateLatheUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnLatheActivated(Entity<LatheControlProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SendLatheDeviceLink(args.ComputerUid, ent.Comp, "status", string.Empty, null);
@@ -1362,6 +1335,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         return false;
     }
 
+    [SubscribeLocalEvent]
     private void OnDriveFileSystemChanged(Entity<FileSystemComponent> ent, ref FileSystemChangedEvent args)
     {
         var query = EntityQueryEnumerator<LatheControlProgramComponent, ProgramComponent>();
@@ -1377,6 +1351,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnLatheDeviceLink(Entity<LatheControlProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         if (args.Packet is not { PacketType: "AutolatheStatus" } pkt)

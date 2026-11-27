@@ -82,7 +82,6 @@ public sealed partial class OxydCameraSystem : EntitySystem
     private const int MaxLiveAudioLines = 12;
 
     private static readonly SoundPathSpecifier DiskDumpSound = new("/Audio/Machines/terminal_insert_disc.ogg");
-    private static readonly SoundPathSpecifier AuthSwipeSound = new("/Audio/Machines/id_swipe.ogg");
 
     public override void Initialize()
     {
@@ -764,27 +763,27 @@ public sealed partial class OxydCameraSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnProgramInteractUsing(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramRelayedEvent<InteractUsingEvent> relayed)
+    private void OnProgramCardScanned(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramCardScannedEvent scanned)
     {
-        if (relayed.Args.Handled || !TryExtractIdCard(relayed.Args.Used, out var cardUid))
+        if (scanned.Handled)
             return;
 
-        var compUid = relayed.ComputerUid;
+        var compUid = scanned.ComputerUid;
+        var cardUid = scanned.Card;
         if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
         {
             ent.Comp.IsAuthorized = true;
             ent.Comp.AuthorizedByLabel = $"Swiped ID ({MetaData(cardUid).EntityName})";
             ent.Comp.StatusMessage = $"Authorized camera monitoring via {ent.Comp.AuthorizedByLabel}.";
-            _audio.PlayPvs(AuthSwipeSound, relayed.Args.Target);
-            _popup.PopupEntity("Camera monitor authorized.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity("Camera monitor authorized.", scanned.HostUid, scanned.User);
         }
         else
         {
             ent.Comp.StatusMessage = "Authorization denied: ID card lacks Security/Command camera monitoring clearance.";
-            _popup.PopupEntity("Access denied: insufficient camera monitoring clearance.", relayed.Args.Target, relayed.Args.User);
+            _popup.PopupEntity("Access denied: insufficient camera monitoring clearance.", scanned.HostUid, scanned.User);
         }
 
-        relayed.Args.Handled = true;
+        scanned.Handled = true;
         Dirty(ent);
         UpdateProgramUi(ent.Owner, compUid, ent.Comp);
     }
@@ -1226,28 +1225,6 @@ public sealed partial class OxydCameraSystem : EntitySystem
     // =========================================================================
     // HELPERS
     // =========================================================================
-
-    private bool TryExtractIdCard(EntityUid used, out EntityUid cardUid)
-    {
-        if (_idCardQuery.HasComp(used))
-        {
-            cardUid = used;
-            return true;
-        }
-
-        if (TryComp<PdaComponent>(used, out var pda))
-        {
-            var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
-            if (pdaCard is { Valid: true } pId && Exists(pId) && _idCardQuery.HasComp(pId))
-            {
-                cardUid = pId;
-                return true;
-            }
-        }
-
-        cardUid = EntityUid.Invalid;
-        return false;
-    }
 
     private bool CanIdCardAuthorizeCameras(SurveillanceCameraProgramComponent comp, EntityUid compUid, EntityUid cardUid)
     {

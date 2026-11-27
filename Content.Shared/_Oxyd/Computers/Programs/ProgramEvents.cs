@@ -48,3 +48,31 @@ public readonly record struct ProgramDeviceLinkReceivedEvent(
 /// </summary>
 [ByRefEvent]
 public record struct ProgramRelayedEvent<TEvent>(EntityUid ComputerUid, TEvent Args) where TEvent : notnull;
+
+
+/// <summary>
+/// Raised by an embedded computer host on its computer entity whenever any item is used on the host.
+/// The ID card reader hardware system consumes it when the item is an ID card (or a PDA carrying one),
+/// scanning it through an installed card scanner or inserting it into an installed card slot.
+/// </summary>
+[ByRefEvent]
+public record struct ComputerCardPresentedEvent(EntityUid ComputerUid, EntityUid HostUid, EntityUid Used, EntityUid User)
+{
+    public bool Handled;
+}
+
+/// <summary>
+/// Raised on the active program of a computer after an ID card was read by card scanner / card slot hardware.
+/// Programs must only act on swiped / inserted cards through this event.
+/// </summary>
+[ByRefEvent]
+public record struct ProgramCardScannedEvent(
+    EntityUid ComputerUid,
+    EntityUid HostUid,
+    EntityUid Card,
+    EntityUid User,
+    EntityUid Reader,
+    bool Retained)
+{
+    public bool Handled;
+}

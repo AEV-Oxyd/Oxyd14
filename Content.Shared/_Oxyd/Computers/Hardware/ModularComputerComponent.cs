@@ -17,6 +17,7 @@ public sealed partial class ModularComputerComponent : Component
     public const string SlotBattery = "battery_slot";
     public const string SlotSensor = "sensor_slot";
     public const string SlotIdModule = "id_slot_module";
+    public const string SlotIdModuleSecondary = "id_slot_module_2";
     public const string SlotDiskModule = "disk_slot_module";
 
     [DataField, AutoNetworkedField]
@@ -24,6 +25,9 @@ public sealed partial class ModularComputerComponent : Component
 
     [DataField, AutoNetworkedField]
     public int MaxRamSlots = 2;
+
+    [DataField, AutoNetworkedField]
+    public int MaxIdModuleSlots = 2;
 
     [DataField, AutoNetworkedField]
     public HardwarePartSize MaxHardDriveSize = HardwarePartSize.Medium;

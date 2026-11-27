@@ -68,59 +68,48 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private NetworkCoreOsSystem _netCoreOs = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
 
-    private EntityQuery<OxydComputerComponent> _computerQuery;
-    private EntityQuery<EmbeddedComputerHostComponent> _hostQuery;
-    private EntityQuery<ComputerStatsComponent> _statsQuery;
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<DeviceLinkSourceComponent> _sourceQuery;
-    private EntityQuery<DeviceLinkSinkComponent> _sinkQuery;
+    [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
+    [Dependency] private EntityQuery<EmbeddedComputerHostComponent> _hostQuery = default!;
+    [Dependency] private EntityQuery<ComputerStatsComponent> _statsQuery = default!;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<DeviceLinkSourceComponent> _sourceQuery = default!;
+    [Dependency] private EntityQuery<DeviceLinkSinkComponent> _sinkQuery = default!;
 
     private static readonly ProtoId<SourcePortPrototype> PortComputerCommandSender = "ComputerCommandSender";
     private static readonly ProtoId<SinkPortPrototype> PortComputerStatusReceiver = "ComputerStatusReceiver";
     private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
     private static readonly ProtoId<SinkPortPrototype> PortMachineCommandReceiver = "MachineCommandReceiver";
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        _computerQuery = GetEntityQuery<OxydComputerComponent>();
-        _hostQuery = GetEntityQuery<EmbeddedComputerHostComponent>();
-        _statsQuery = GetEntityQuery<ComputerStatsComponent>();
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _sourceQuery = GetEntityQuery<DeviceLinkSourceComponent>();
-        _sinkQuery = GetEntityQuery<DeviceLinkSinkComponent>();
-
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, MapInitEvent>(OnHostMapInit);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, ComponentShutdown>(OnHostShutdown);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, EmbeddedComputerHostActivatedEvent>(OnHostActivated);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, PowerChangedEvent>(OnHostPowerChanged);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, SignalReceivedEvent<ComputerPacket>>(OnHostPacketReceived);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnHostDeviceLinkPayloadReceived);
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, SignalReceivedEvent>(OnHostBoolSignalReceived);
-
-        SubscribeLocalEvent<OxydComputerComponent, MapInitEvent>(OnComputerMapInit);
-        SubscribeLocalEvent<OxydComputerComponent, ComponentShutdown>(OnComputerShutdown);
-        SubscribeLocalEvent<OxydComputerComponent, EntInsertedIntoContainerMessage>(OnHardwareOrProgramInserted);
-        SubscribeLocalEvent<OxydComputerComponent, EntRemovedFromContainerMessage>(OnHardwareOrProgramRemoved);
-        SubscribeLocalEvent<OxydComputerComponent, SignalReceivedEvent<ComputerPacket>>(OnComputerPacketReceived);
-        SubscribeLocalEvent<OxydComputerComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnComputerDeviceLinkPayloadReceived);
-        SubscribeLocalEvent<OxydComputerComponent, SignalReceivedEvent>(OnComputerBoolSignalReceived);
-        SubscribeLocalEvent<OxydComputerComponent, BoundUIClosedEvent>(OnComputerUiClosed);
-        SubscribeLocalEvent<OxydComputerComponent, ComputerRetryBootMessage>(OnRetryBootMessage);
-    }
-
+    [SubscribeLocalEvent]
     private void OnHostMapInit(Entity<EmbeddedComputerHostComponent> ent, ref MapInitEvent args)
     {
         EnsureComputerBoundToHost(ent, out _);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostShutdown(Entity<EmbeddedComputerHostComponent> ent, ref ComponentShutdown args)
     {
         if (ent.Comp.ComputerEntity is { } compUid && Exists(compUid))
+        {
+            var hostCoords = Transform(ent.Owner).Coordinates;
+            foreach (var part in GetInstalledHardwareEntities(compUid))
+            {
+                if (TryComp<ComputerIdCardSlotModuleComponent>(part, out var reader) &&
+                    reader.Mode == ComputerCardReaderMode.Slot &&
+                    _itemSlots.TryGetSlot(part, reader.CardSlotId, out var slot) &&
+                    slot.Item != null &&
+                    _itemSlots.TryEject(part, slot, null, out var ejected, excludeUserAudio: true) &&
+                    Exists(ejected.Value))
+                {
+                    Transform(ejected.Value).Coordinates = hostCoords;
+                }
+            }
+
             QueueDel(compUid);
+        }
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerMapInit(Entity<OxydComputerComponent> ent, ref MapInitEvent args)
     {
         _container.EnsureContainer<Container>(ent.Owner, ModularComputerComponent.ContainerHardware);
@@ -132,11 +121,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RefreshComputerBootState(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerShutdown(Entity<OxydComputerComponent> ent, ref ComponentShutdown args)
     {
         ShutDownComputer(ent.Owner, ent.Comp, updateUi: false);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostPowerChanged(Entity<EmbeddedComputerHostComponent> ent, ref PowerChangedEvent args)
     {
         if (ent.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
@@ -148,6 +139,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RefreshComputerBootState(compUid, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostActivated(Entity<EmbeddedComputerHostComponent> ent, ref EmbeddedComputerHostActivatedEvent args)
     {
         // Devices with a LockComponent (e.g., APCs and Air Alarms) always open their UI regardless of access,
@@ -185,6 +177,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         OpenComputerForActor(compUid, args.User, comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnRetryBootMessage(Entity<OxydComputerComponent> ent, ref ComputerRetryBootMessage args)
     {
         RecalculateHardwareStats(ent.Owner, ent.Comp);
@@ -192,6 +185,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         OpenRunningProgramUisForCurrentViewers(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerUiClosed(Entity<OxydComputerComponent> ent, ref BoundUIClosedEvent args)
     {
         var key = GetPrimaryUiKey(ent.Owner, ent.Comp);
@@ -213,6 +207,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RevokeViewerPvsOverrides(ent.Owner, args.Actor, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnHardwareOrProgramInserted(Entity<OxydComputerComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
         if (args.Container.ID == OxydComputerComponent.ContainerPrograms)
@@ -222,6 +217,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RefreshComputerBootState(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnHardwareOrProgramRemoved(Entity<OxydComputerComponent> ent, ref EntRemovedFromContainerMessage args)
     {
         if (args.Container.ID == OxydComputerComponent.ContainerPrograms)
@@ -231,34 +227,40 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RefreshComputerBootState(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostPacketReceived(Entity<EmbeddedComputerHostComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
     {
         if (ent.Comp.ComputerEntity is { } compUid)
             RelayDeviceLinkToPrograms(compUid, ent.Owner, args.Port, args.Trigger, null, args.Data, null);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostDeviceLinkPayloadReceived(Entity<EmbeddedComputerHostComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
         if (ent.Comp.ComputerEntity is { } compUid)
             RelayDeviceLinkToPrograms(compUid, ent.Owner, args.Port, args.Trigger, args.Data, null, null);
     }
 
+    [SubscribeLocalEvent]
     private void OnHostBoolSignalReceived(Entity<EmbeddedComputerHostComponent> ent, ref SignalReceivedEvent args)
     {
         if (ent.Comp.ComputerEntity is { } compUid)
             RelayDeviceLinkToPrograms(compUid, ent.Owner, args.Port, args.Trigger, null, null, true);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerPacketReceived(Entity<OxydComputerComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
     {
         RelayDeviceLinkToPrograms(ent.Owner, ent.Owner, args.Port, args.Trigger, null, args.Data, null);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerDeviceLinkPayloadReceived(Entity<OxydComputerComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
         RelayDeviceLinkToPrograms(ent.Owner, ent.Owner, args.Port, args.Trigger, args.Data, null, null);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerBoolSignalReceived(Entity<OxydComputerComponent> ent, ref SignalReceivedEvent args)
     {
         RelayDeviceLinkToPrograms(ent.Owner, ent.Owner, args.Port, args.Trigger, null, null, true);
@@ -275,8 +277,6 @@ public sealed partial class OxydComputerSystem : EntitySystem
         return _ui.HasUi(compUid, PdaUiKey.Key) ? PdaUiKey.Key : ComputerUiKey.Key;
     }
 
-    private readonly HashSet<EntityUid> _bindingHosts = new();
-
     public bool EnsureComputerBoundToHost(Entity<EmbeddedComputerHostComponent> host, out EntityUid compUid)
     {
         if (host.Comp.ComputerEntity is { } existing && Exists(existing))
@@ -285,13 +285,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
             return true;
         }
 
-        // Guard against re-entrant binding (e.g. remote APC discovery running while this host's computer boots).
-        if (!_bindingHosts.Add(host.Owner))
+        // Guard against re-entrant binding on the host component (e.g. remote APC discovery while booting).
+        if (host.Comp.BindingInProgress)
         {
             compUid = default;
             return false;
         }
 
+        host.Comp.BindingInProgress = true;
         try
         {
             var slot = _container.EnsureContainer<ContainerSlot>(host.Owner, EmbeddedComputerHostComponent.ContainerBoard);
@@ -348,7 +349,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
         finally
         {
-            _bindingHosts.Remove(host.Owner);
+            host.Comp.BindingInProgress = false;
         }
     }
 
@@ -389,13 +390,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     private void ClearHardwareParts(EntityUid compUid, OxydComputerComponent comp)
     {
-        if (_container.TryGetContainer(compUid, ModularComputerComponent.ContainerHardware, out var container))
+        foreach (var item in GetInstalledHardwareEntities(compUid))
         {
-            foreach (var item in container.ContainedEntities.ToList())
-            {
-                _container.Remove(item, container, force: true);
-                QueueDel(item);
-            }
+            if (_container.TryGetContainingContainer(compUid, item, out var containing))
+                _container.Remove(item, containing, force: true);
+            QueueDel(item);
         }
 
         if (TryComp<ModularComputerComponent>(compUid, out var mod))
@@ -413,7 +412,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     private void EnsureHardwareSlotsAndDefaults(EntityUid compUid, OxydComputerComponent comp)
     {
         var hwContainer = _container.EnsureContainer<Container>(compUid, ModularComputerComponent.ContainerHardware);
-        if (hwContainer.ContainedEntities.Count > 0)
+        if (GetInstalledHardwareEntities(compUid).Count > 0)
             return;
 
         if (comp.DefaultHardware.Count == 0)
@@ -431,7 +430,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
     }
 
-    private bool TryInsertHardwarePartIntoSlot(EntityUid compUid, EntityUid partUid)
+    public bool TryInsertHardwarePartIntoSlot(EntityUid compUid, EntityUid partUid)
     {
         string? preferredSlot = null;
         if (HasComp<ComputerCpuComponent>(partUid))
@@ -444,8 +443,6 @@ public sealed partial class OxydComputerSystem : EntitySystem
             preferredSlot = ModularComputerComponent.SlotBattery;
         else if (HasComp<ComputerSensorModuleComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotSensor;
-        else if (HasComp<ComputerIdCardSlotModuleComponent>(partUid))
-            preferredSlot = ModularComputerComponent.SlotIdModule;
         else if (HasComp<ComputerDiskSlotModuleComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotDiskModule;
 
@@ -458,6 +455,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 return _itemSlots.TryInsert(compUid, ram1, partUid, null);
             if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotRamSecondary, out var ram2) && ram2.Item == null)
                 return _itemSlots.TryInsert(compUid, ram2, partUid, null);
+        }
+
+        if (HasComp<ComputerIdCardSlotModuleComponent>(partUid))
+        {
+            if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModule, out var idSlot1) && idSlot1.Item == null)
+                return _itemSlots.TryInsert(compUid, idSlot1, partUid, null);
+            if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModuleSecondary, out var idSlot2) && idSlot2.Item == null)
+                return _itemSlots.TryInsert(compUid, idSlot2, partUid, null);
         }
 
         return false;
@@ -607,8 +612,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         var hwEv = new ComputerHardwareChangedEvent(compUid);
         RaiseLocalEvent(compUid, ref hwEv);
-        if (comp.BootProgram is { } bootUid && Exists(bootUid))
+        var notified = new HashSet<EntityUid>();
+        if (comp.BootProgram is { } bootUid && Exists(bootUid) && notified.Add(bootUid))
             RaiseLocalEvent(bootUid, ref hwEv);
+        foreach (var progUid in comp.RunningPrograms.ToList())
+        {
+            if (Exists(progUid) && notified.Add(progUid))
+                RaiseLocalEvent(progUid, ref hwEv);
+        }
     }
 
     public void RefreshComputerBootState(EntityUid compUid, OxydComputerComponent? comp = null)
@@ -1546,13 +1557,30 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
         }
 
-        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModule, out var modSlot) &&
-            modSlot.Item is { Valid: true } modId &&
-            Exists(modId) &&
-            HasComp<IdCardComponent>(modId))
+        // ID cards retained by card slot hardware modules (deterministic slot order: SlotIdModule, SlotIdModuleSecondary, then any others).
+        var orderedParts = new List<EntityUid>();
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModule, out var idMod1) && idMod1.Item is { Valid: true } p1)
+            orderedParts.Add(p1);
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotIdModuleSecondary, out var idMod2) && idMod2.Item is { Valid: true } p2)
+            orderedParts.Add(p2);
+        foreach (var extra in GetInstalledHardwareEntities(compUid).OrderBy(e => e.Id))
         {
-            idCardUid = modId;
-            return true;
+            if (!orderedParts.Contains(extra))
+                orderedParts.Add(extra);
+        }
+
+        foreach (var part in orderedParts)
+        {
+            if (TryComp<ComputerIdCardSlotModuleComponent>(part, out var reader) &&
+                reader.Mode == ComputerCardReaderMode.Slot &&
+                _itemSlots.TryGetSlot(part, reader.CardSlotId, out var cardSlot) &&
+                cardSlot.Item is { Valid: true } slotCard &&
+                Exists(slotCard) &&
+                HasComp<IdCardComponent>(slotCard))
+            {
+                idCardUid = slotCard;
+                return true;
+            }
         }
 
         return false;

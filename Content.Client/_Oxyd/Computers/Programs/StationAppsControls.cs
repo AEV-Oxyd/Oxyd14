@@ -3,9 +3,13 @@ using System.Linq;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Cargo.Prototypes;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
+using Robust.Shared.IoC;
+using Robust.Shared.Localization;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
 namespace Content.Client._Oxyd.Computers.Programs;
@@ -486,11 +490,13 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
     private readonly ContentWrapContainer _categoriesWrap;
     private readonly ContentBoxContainer _productsContainer;
     private readonly ContentBoxContainer _ordersContainer;
+    private readonly IPrototypeManager _proto;
 
     private CargoOrdersUiState? _lastState;
 
     public CargoOrdersUiControl()
     {
+        _proto = IoCManager.Resolve<IPrototypeManager>();
         HorizontalExpand = true;
         VerticalExpand = true;
 
@@ -787,10 +793,20 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         _logoutBtn.Disabled = !state.IsAuthenticated;
         _withdrawBtn.Disabled = !state.IsAuthenticated;
 
-        _categoriesWrap.RemoveAllChildren();
-        foreach (var cat in state.Categories)
+        var allowedGroups = state.AllowedGroups.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var categorySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All" };
+        foreach (var prod in _proto.EnumeratePrototypes<CargoProductPrototype>())
         {
-            var catCopy = cat;
+            if (allowedGroups.Count > 0 && !allowedGroups.Contains(prod.Group.Id))
+                continue;
+
+            var cat = string.IsNullOrWhiteSpace(prod.Category) ? "General" : Loc.GetString(prod.Category);
+            categorySet.Add(cat);
+        }
+
+        _categoriesWrap.RemoveAllChildren();
+        foreach (var catCopy in categorySet.OrderBy(c => c == "All" ? string.Empty : c, StringComparer.OrdinalIgnoreCase))
+        {
             var btn = new ContentButton
             {
                 Text = catCopy,
@@ -818,29 +834,35 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         if (_lastState == null)
             return;
 
+        var allowedGroups = _lastState.AllowedGroups.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var q = (_searchEdit.Text ?? string.Empty).Trim();
         var catFilter = _lastState.SelectedCategory;
         var shown = 0;
 
-        foreach (var prod in _lastState.Products)
+        var products = _proto.EnumeratePrototypes<CargoProductPrototype>()
+            .Where(p => allowedGroups.Count == 0 || allowedGroups.Contains(p.Group.Id))
+            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var prod in products)
         {
+            var cat = string.IsNullOrWhiteSpace(prod.Category) ? "General" : Loc.GetString(prod.Category);
             if (!string.IsNullOrEmpty(catFilter) &&
                 !catFilter.Equals("All", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(prod.Category, catFilter, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(cat, catFilter, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             if (!string.IsNullOrEmpty(q) &&
                 !prod.Name.Contains(q, StringComparison.OrdinalIgnoreCase) &&
-                !prod.ProductId.Contains(q, StringComparison.OrdinalIgnoreCase) &&
+                !prod.ID.Contains(q, StringComparison.OrdinalIgnoreCase) &&
                 !prod.Description.Contains(q, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             shown++;
-            var prodId = prod.ProductId;
+            var prodId = prod.ID;
             var row = new ContentBoxContainer
             {
                 Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
@@ -923,10 +945,12 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
                 SeparationOverride = 4
             };
 
+            var prodName = _proto.TryIndex<CargoProductPrototype>(o.ProductId, out var pp) ? pp.Name : o.ProductId;
+            var totalCost = (pp?.Cost ?? 0) * o.Quantity;
             var statusTag = o.Approved ? "[PAID]" : "[PENDING]";
             row.AddChild(new ContentLabel
             {
-                Text = $"#{o.OrderId} {statusTag} {o.Quantity}x {o.ProductName} (${o.TotalCost})",
+                Text = $"#{o.OrderId} {statusTag} {o.Quantity}x {prodName} (${totalCost})",
                 HorizontalExpand = true,
                 FontColorOverride = o.Approved ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166")
             });

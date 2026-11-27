@@ -67,20 +67,6 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         });
     }
 
-    public void RefreshRecordsForHostLock(EntityUid compUid, bool locked)
-    {
-        if (!_computerQuery.TryComp(compUid, out var comp))
-            return;
-
-        foreach (var progUid in comp.RunningPrograms)
-        {
-            if (TryComp<StationRecordsProgramComponent>(progUid, out var st))
-                SendStationRecordsFromLocalCache(progUid, compUid, st, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
-            if (TryComp<CriminalRecordsProgramComponent>(progUid, out var cr))
-                SendCriminalRecordsFromLocalCache(progUid, compUid, cr, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
-        }
-    }
-
     // =========================================================================
     // STATION RECORDS MANAGER (/bin/station_records.nte)
     // =========================================================================
@@ -101,6 +87,20 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     {
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
             SyncStationRecords(ent.Owner, compUid, ent.Comp, args.Actor);
+    }
+
+    public void RefreshRecordsForHostLock(EntityUid compUid, bool locked)
+    {
+        if (!_computerQuery.TryComp(compUid, out var comp))
+            return;
+
+        foreach (var progUid in comp.RunningPrograms)
+        {
+            if (TryComp<StationRecordsProgramComponent>(progUid, out var st))
+                SendStationRecordsFromLocalCache(progUid, compUid, st, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
+            if (TryComp<CriminalRecordsProgramComponent>(progUid, out var cr))
+                SendCriminalRecordsFromLocalCache(progUid, compUid, cr, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
+        }
     }
 
     private void OnStationRecordsAction(Entity<StationRecordsProgramComponent> ent, ref StationRecordsActionMessage msg)
