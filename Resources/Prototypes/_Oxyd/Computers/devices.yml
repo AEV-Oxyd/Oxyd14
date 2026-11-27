@@ -87,6 +87,18 @@
   name: Oxyd workstation computer
   description: A modular desktop computer running NTOS with hardware expansion slots, network tools, and remote terminal support.
 
+- type: entity
+  parent: OxydWorkstationComputer
+  id: OxydWorkstationComputerIdSlot
+  name: Oxyd workstation computer (ID slot)
+  description: A modular desktop workstation pre-equipped with an integrated ID Card Slot hardware module.
+  components:
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydWorkstationIdSlotEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS WORKSTATION"
+    subtitle: " | ID Slot Terminal"
+
 # ==============================================================================
 # Encapsulated Computer Entities (Separate from Host Devices)
 # ==============================================================================
@@ -245,6 +257,24 @@
     - ComputerPartHardDriveWorkstation
     - ComputerPartNetworkCardHighSpeed
     - ComputerPartBatterySmall
+
+- type: entity
+  parent: BaseOxydWorkstationEmbeddedController
+  id: BaseOxydWorkstationIdSlotEmbeddedController
+  name: workstation computer board (ID slot)
+  components:
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 1040, 720
+    allowRemoteControl: true
+    requirePowerToBoot: true
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveWorkstation
+    - ComputerPartNetworkCardHighSpeed
+    - ComputerPartBatterySmall
+    - ComputerPartIdSlotModule
 
 - type: entity
   parent: BaseOxydEmbeddedController

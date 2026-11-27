@@ -518,7 +518,7 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         _headerLabel = new ContentLabel
         {
             Name = "CargoOrdersHeaderLabel",
-            Text = "CARGO SUPPLY & BANK ORDER CONSOLE",
+            Text = "BANK & SUPPLY CONSOLE",
             FontColorOverride = Color.FromHex("#FFD166"),
             HorizontalExpand = true,
             VerticalAlignment = VAlignment.Center
@@ -532,9 +532,10 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         _statusLabel = new ContentLabel
         {
             Name = "CargoOrdersStatusLabel",
-            Text = "Enter Bank Account ID and PIN to authenticate and withdraw funds for orders.",
+            Text = string.Empty,
             FontColorOverride = Color.FromHex("#88CCCC"),
-            HorizontalExpand = true
+            HorizontalExpand = true,
+            Visible = false
         };
         root.AddChild(_statusLabel);
 
@@ -564,7 +565,7 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         _bankAuthStatusLabel = new ContentLabel
         {
             Name = "CargoBankStatusLabel",
-            Text = "BANK AUTH: LOCKED — Enter Account ID & PIN",
+            Text = "Account: Locked — enter Account ID & PIN",
             FontColorOverride = Color.FromHex("#FFD166"),
             HorizontalExpand = true
         };
@@ -783,11 +784,12 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
 
         _lastState = state;
         _statusLabel.Text = state.StatusMessage;
+        _statusLabel.Visible = !string.IsNullOrWhiteSpace(state.StatusMessage);
         _statusLabel.FontColorOverride = state.IsAuthenticated ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166");
 
         _bankAuthStatusLabel.Text = state.IsAuthenticated
-            ? $"BANK AUTH: {state.AuthenticatedAccountId} ({state.AuthenticatedAccountName}) — Balance: ${state.AuthenticatedBalance}"
-            : "BANK AUTH: LOCKED — Enter Bank Account ID & PIN to authorize & withdraw order funds";
+            ? $"Account: {state.AuthenticatedAccountId} ({state.AuthenticatedAccountName}) | Balance: ${state.AuthenticatedBalance}"
+            : "Account: Locked — enter Account ID & PIN";
         _bankAuthStatusLabel.FontColorOverride = state.IsAuthenticated ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166");
 
         _logoutBtn.Disabled = !state.IsAuthenticated;
@@ -994,7 +996,15 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
 public sealed class CrewMonitorUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _selectedInfoLabel;
+    private readonly ContentButton _listModeBtn;
+    private readonly ContentButton _mapModeBtn;
+    private readonly ContentScrollContainer _listScroll;
     private readonly ContentBoxContainer _listContainer;
+    private readonly OxydDeviceNavMapControl _mapSelector;
+    private CrewMonitorUiState? _lastState;
+    private bool _mapMode;
+    private string _selectedCrewName = string.Empty;
 
     public CrewMonitorUiControl()
     {
@@ -1013,30 +1023,85 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         var top = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true
+            HorizontalExpand = true,
+            SeparationOverride = 4
         };
         _headerLabel = new ContentLabel
         {
             Text = "CREW SUIT SENSOR TELEMETRY",
             FontColorOverride = Color.FromHex("#66EEAA"),
-            HorizontalExpand = true
+            HorizontalExpand = true,
+            VerticalAlignment = VAlignment.Center
         };
-        var refBtn = new ContentButton { Text = "Refresh", MinWidth = 72 };
+        _listModeBtn = new ContentButton
+        {
+            Name = "CrewViewModeListButton",
+            Text = "List Mode",
+            Pressed = true,
+            MinWidth = 84
+        };
+        _listModeBtn.OnPressed += _ => SetMapMode(false);
+
+        _mapModeBtn = new ContentButton
+        {
+            Name = "CrewViewModeToggleButton",
+            Text = "Map Mode",
+            Pressed = false,
+            MinWidth = 84
+        };
+        _mapModeBtn.OnPressed += _ => SetMapMode(true);
+
+        var refBtn = new ContentButton { Name = "CrewMonitorRefreshButton", Text = "Sync", MinWidth = 68 };
         refBtn.OnPressed += _ => SendProgramMessage(new CrewMonitorRefreshMessage());
+
         top.AddChild(_headerLabel);
+        top.AddChild(_listModeBtn);
+        top.AddChild(_mapModeBtn);
         top.AddChild(refBtn);
         root.AddChild(top);
 
-        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        _selectedInfoLabel = new ContentLabel
+        {
+            Name = "CrewMonitorSelectedLabel",
+            Text = "Auto-syncing active suit sensors (1.0s).",
+            FontColorOverride = Color.FromHex("#88D4EE"),
+            HorizontalExpand = true
+        };
+        root.AddChild(_selectedInfoLabel);
+
+        _listScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
         _listContainer = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
-            SeparationOverride = 3
+            SeparationOverride = 4
         };
-        scroll.AddChild(_listContainer);
-        root.AddChild(scroll);
+        _listScroll.AddChild(_listContainer);
+        root.AddChild(_listScroll);
+
+        _mapSelector = new OxydDeviceNavMapControl("Crew")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += key =>
+        {
+            _selectedCrewName = key;
+            if (_lastState != null)
+                UpdateProgramState(_lastState);
+        };
+        root.AddChild(_mapSelector);
         AddChild(root);
+    }
+
+    private void SetMapMode(bool mapMode)
+    {
+        _mapMode = mapMode;
+        _listModeBtn.Pressed = !mapMode;
+        _mapModeBtn.Pressed = mapMode;
+        _listScroll.Visible = !mapMode;
+        _mapSelector.Visible = mapMode;
+        if (_lastState != null)
+            UpdateProgramState(_lastState);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -1044,8 +1109,13 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         if (raw is not CrewMonitorUiState state)
             return;
 
+        _lastState = state;
         _headerLabel.Text = $"{state.StationName} — SUIT SENSORS ({state.Sensors.Count})";
+
         _listContainer.RemoveAllChildren();
+        var markers = new List<DeviceNavMapMarker>();
+        CrewSensorEntryDto? selectedEntry = null;
+
         if (state.Sensors.Count == 0)
         {
             _listContainer.AddChild(new ContentLabel
@@ -1053,18 +1123,57 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
                 Text = "No active crew suit sensors transmitting on this map.",
                 FontColorOverride = Color.FromHex("#8899AA")
             });
-            return;
+        }
+        else
+        {
+            foreach (var s in state.Sensors)
+            {
+                if (!string.IsNullOrEmpty(_selectedCrewName) &&
+                    string.Equals(s.Name, _selectedCrewName, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedEntry = s;
+                }
+
+                _listContainer.AddChild(new ContentLabel
+                {
+                    Text = $"{s.Name} ({s.JobTitle}) | {(s.IsAlive ? "ALIVE" : "DECEASED")} | Dmg: {s.TotalDamage} | Pos: {s.CoordinatesText}",
+                    FontColorOverride = !s.IsAlive
+                        ? Color.FromHex("#FF6666")
+                        : s.TotalDamage > 0
+                            ? Color.FromHex("#FFD166")
+                            : Color.FromHex("#88EECC"),
+                    HorizontalExpand = true
+                });
+
+                if (s.HasCoordinates && s.Entity is { } entNet)
+                {
+                    var isSel = selectedEntry == s;
+                    var color = isSel
+                        ? Color.FromHex("#00FFCC")
+                        : !s.IsAlive
+                            ? Color.FromHex("#FF4444")
+                            : s.TotalDamage > 0
+                                ? Color.FromHex("#FFD166")
+                                : Color.FromHex("#44E088");
+                    markers.Add(new DeviceNavMapMarker(
+                        entNet,
+                        s.Name,
+                        s.Name,
+                        s.GridEntity,
+                        s.LocalPosition,
+                        color,
+                        Selected: isSel,
+                        Active: s.IsAlive,
+                        Blinks: !s.IsAlive));
+                }
+            }
         }
 
-        foreach (var s in state.Sensors)
-        {
-            _listContainer.AddChild(new ContentLabel
-            {
-                Text = $"{s.Name} ({s.JobTitle}) | {(s.IsAlive ? "ALIVE" : "DECEASED")} | Dmg: {s.TotalDamage} | Pos: {s.CoordinatesText}",
-                FontColorOverride = s.IsAlive ? Color.FromHex("#88EECC") : Color.FromHex("#FF6666"),
-                HorizontalExpand = true
-            });
-        }
+        var summary = selectedEntry != null
+            ? $"Selected: {selectedEntry.Name} | {(selectedEntry.IsAlive ? "ALIVE" : "DECEASED")} | Dmg: {selectedEntry.TotalDamage} | Pos: {selectedEntry.CoordinatesText}"
+            : $"Auto-syncing suit sensors ({markers.Count} with coordinates).";
+        _selectedInfoLabel.Text = summary;
+        _mapSelector.SetMarkers(markers, summary);
     }
 }
 

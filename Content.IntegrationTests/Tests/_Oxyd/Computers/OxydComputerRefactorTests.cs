@@ -6653,6 +6653,16 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(cargoHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(cargoHost).ComputerEntity!.Value, SPlayer); });
         await RunTicks(10);
 
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var cargoUi = GetControlFromChildren<CargoOrdersUiControl>(_ => true, win)!;
+            var statusLbl = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "CargoOrdersStatusLabel", cargoUi)!;
+            Assert.That(statusLbl.Visible, Is.False,
+                "CargoOrdersStatusLabel should be hidden initially instead of duplicating lock instructions.");
+        });
+
         // Ordering without Bank Account ID + PIN must be rejected and not deduct funds
         await SendBui(ProgramUiKey.Key, new CargoOrdersActionMessage(
             CargoOrdersAction.PlaceAndPayOrder,
@@ -7171,6 +7181,84 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var selectedGuid = SEntMan.GetComponent<ApcControlProgramComponent>(powerProgUid).SelectedTargetGuid;
             var altApcKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, selectedGuid, StringComparison.OrdinalIgnoreCase));
             Assert.That(mapPanel.TrySelectByKey(altApcKey), Is.True);
+            win.Close();
+        });
+        await RunTicks(6);
+
+        // =====================================================================
+        // 7) WORKSTATION WITH ID SLOT PROTOTYPE & CREW MONITOR LIST/MAP + AUTO-SYNC
+        // =====================================================================
+        EntityUid wsIdHost = default;
+        EntityUid crewHost = default;
+        EntityUid crewCompUid = default;
+        EntityUid crewMob = default;
+        EntityUid sensorItem = default;
+
+        await Server.WaitPost(() =>
+        {
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            wsIdHost = SEntMan.SpawnEntity("OxydWorkstationComputerIdSlot", new EntityCoordinates(gridUid, 3.5f, 3.5f));
+            var wsIdComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsIdHost).ComputerEntity!.Value;
+            Assert.That(cardSys.GetSlotReaders(wsIdComp), Has.Count.EqualTo(1),
+                "OxydWorkstationComputerIdSlot must come pre-equipped with 1 ID Card Slot hardware module.");
+
+            crewHost = SEntMan.SpawnEntity("ComputerCrewMonitoring", new EntityCoordinates(gridUid, 2.5f, 3.5f));
+            compSys.EnsureComputerBoundToHost((crewHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(crewHost)), out crewCompUid);
+            crewMob = SEntMan.SpawnEntity("MobHuman", new EntityCoordinates(gridUid, 1.5f, 1.5f));
+            SEntMan.GetComponent<MetaDataComponent>(crewMob);
+            sensorItem = SEntMan.SpawnEntity("ClothingUniformJumpsuitColorGrey", new EntityCoordinates(gridUid, 1.5f, 1.5f));
+            SEntMan.EnsureComponent<Content.Shared.Medical.SuitSensors.SuitSensorComponent>(sensorItem);
+            Assert.That(SEntMan.System<Content.Shared.Inventory.InventorySystem>()
+                .TryEquip(crewMob, sensorItem, "jumpsuit", silent: true, force: true), Is.True);
+            SEntMan.System<Content.Server.Medical.SuitSensors.SuitSensorSystem>()
+                .SetSensor(sensorItem, Content.Shared.Medical.SuitSensors.SuitSensorMode.SensorCords);
+
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(crewHost).Coordinates);
+            compSys.OpenComputerForActor(crewCompUid, SPlayer);
+        });
+        await RunTicks(10);
+
+        Content.Client.UserInterface.Controls.ContentButton? crewMapToggle = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crewUi = GetControlFromChildren<CrewMonitorUiControl>(_ => true, win);
+            Assert.That(crewUi, Is.Not.Null);
+            var listLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(crewUi!, listLabels);
+            Assert.That(listLabels.Any(l => (l.Text ?? string.Empty).Contains("1.5")), Is.True,
+                "Crew Monitor List Mode must display active crew coordinates.");
+            crewMapToggle = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CrewViewModeToggleButton", crewUi!);
+            Assert.That(crewMapToggle, Is.Not.Null);
+        });
+        await ClickViaHitTest(crewMapToggle!);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crewUi = GetControlFromChildren<CrewMonitorUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, crewUi);
+            Assert.That(mapPanel, Is.Not.Null);
+            Assert.That(mapPanel!.Visible, Is.True);
+            Assert.That(mapPanel.MarkerCount, Is.GreaterThanOrEqualTo(1));
+        });
+
+        // Move crewMob and verify Crew Monitor auto-sync updates coordinates without manual Refresh!
+        await Server.WaitPost(() =>
+        {
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(crewMob, new EntityCoordinates(gridUid, 7.5f, 6.5f));
+        });
+        await RunTicks(45);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crewUi = GetControlFromChildren<CrewMonitorUiControl>(_ => true, win)!;
+            var allLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(crewUi, allLabels);
+            Assert.That(allLabels.Any(l => (l.Text ?? string.Empty).Contains("7.5")), Is.True,
+                "Crew Monitor must auto-sync updated crew coordinates without requiring a manual Refresh.");
             win.Close();
         });
         await RunTicks(6);

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Servers;
 using Content.Server.Cargo.Components;
@@ -46,6 +47,17 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
+
+/// <summary>
+/// Active-component marker added while a Crew Monitor UI has at least one open viewer,
+/// so periodic suit-sensor auto-sync only runs for active open monitors.
+/// </summary>
+[RegisterComponent]
+public sealed partial class ActiveCrewMonitorComponent : Component
+{
+    [ViewVariables]
+    public TimeSpan NextSync;
+}
 
 /// <summary>
 /// Consolidated server systems for migrated station &amp; PDA NTOS applications:
@@ -135,6 +147,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         Subs.BuiEvents<CrewMonitorProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnCrewMonitorBuiOpened);
+            subs.Event<BoundUIClosedEvent>(OnCrewMonitorBuiClosed);
             subs.Event<CrewMonitorRefreshMessage>(OnCrewMonitorRefresh);
         });
 
@@ -149,6 +162,29 @@ public sealed partial class StationAppsSystem : EntitySystem
             subs.Event<BoundUIOpenedEvent>(OnSolarBuiOpened);
             subs.Event<SolarControlActionMessage>(OnSolarAction);
         });
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+
+        var now = _timing.CurTime;
+        var crewQuery = EntityQueryEnumerator<ActiveCrewMonitorComponent, CrewMonitorProgramComponent, ProgramComponent>();
+        while (crewQuery.MoveNext(out var progUid, out var active, out _, out var prog))
+        {
+            if (!_ui.HasUi(progUid, ProgramUiKey.Key) || !_ui.IsUiOpen(progUid, ProgramUiKey.Key))
+            {
+                RemCompDeferred<ActiveCrewMonitorComponent>(progUid);
+                continue;
+            }
+
+            if (now < active.NextSync)
+                continue;
+
+            active.NextSync = now + TimeSpan.FromSeconds(1.0);
+            if (prog.Computer is { } compUid && Exists(compUid))
+                UpdateCrewMonitorUi(progUid, compUid);
+        }
     }
 
     // =========================================================================
@@ -1631,8 +1667,16 @@ public sealed partial class StationAppsSystem : EntitySystem
     private void OnCrewMonitorActivated(Entity<CrewMonitorProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCrewMonitorUi(ent.Owner, args.ComputerUid);
     private void OnCrewMonitorBuiOpened(Entity<CrewMonitorProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
+        var active = EnsureComp<ActiveCrewMonitorComponent>(ent.Owner);
+        active.NextSync = _timing.CurTime + TimeSpan.FromSeconds(1.0);
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
             UpdateCrewMonitorUi(ent.Owner, compUid);
+    }
+
+    private void OnCrewMonitorBuiClosed(Entity<CrewMonitorProgramComponent> ent, ref BoundUIClosedEvent args)
+    {
+        if (!_ui.HasUi(ent.Owner, ProgramUiKey.Key) || !_ui.IsUiOpen(ent.Owner, ProgramUiKey.Key))
+            RemCompDeferred<ActiveCrewMonitorComponent>(ent.Owner);
     }
 
     private void OnCrewMonitorRefresh(Entity<CrewMonitorProgramComponent> ent, ref CrewMonitorRefreshMessage args)
@@ -1649,11 +1693,12 @@ public sealed partial class StationAppsSystem : EntitySystem
         var anchorMap = Transform(anchorUid).MapID;
 
         var list = new List<CrewSensorEntryDto>();
-        var sensorsOnMap = new HashSet<Entity<SuitSensorComponent>>();
-        _lookup.GetEntitiesOnMap(anchorMap, sensorsOnMap);
-        foreach (var sensorEnt in sensorsOnMap)
+        var sensorQuery = EntityQueryEnumerator<SuitSensorComponent, TransformComponent>();
+        while (sensorQuery.MoveNext(out _, out var sensor, out var sensorXform))
         {
-            var sensor = sensorEnt.Comp;
+            if (sensorXform.MapID != anchorMap)
+                continue;
+
             if (sensor.Mode == SuitSensorMode.SensorOff || sensor.User is not { Valid: true } wearer || !Exists(wearer))
                 continue;
 
@@ -1662,10 +1707,37 @@ public sealed partial class StationAppsSystem : EntitySystem
             var dmg = sensor.Mode >= SuitSensorMode.SensorVitals && TryComp<DamageableComponent>(wearer, out var dmgComp)
                 ? (int) _damageable.GetTotalDamage((wearer, dmgComp)).Int()
                 : 0;
-            var coords = sensor.Mode == SuitSensorMode.SensorCords
-                ? $"({ _transform.GetWorldPosition(wearer):0.0})"
-                : "Hidden";
-            list.Add(new CrewSensorEntryDto(name, "Crew", alive, dmg, coords));
+
+            var hasCoords = sensor.Mode == SuitSensorMode.SensorCords;
+            var coords = "Hidden";
+            NetEntity? gridNet = null;
+            var localPos = Vector2.Zero;
+            if (hasCoords)
+            {
+                var wearerXform = Transform(wearer);
+                if (wearerXform.GridUid is { Valid: true } gUid)
+                {
+                    gridNet = GetNetEntity(gUid);
+                    localPos = Vector2.Transform(_transform.GetWorldPosition(wearerXform), _transform.GetInvWorldMatrix(gUid));
+                    coords = $"({localPos.X:0.0}, {localPos.Y:0.0})";
+                }
+                else
+                {
+                    localPos = _transform.GetWorldPosition(wearerXform);
+                    coords = $"({localPos.X:0.0}, {localPos.Y:0.0})";
+                }
+            }
+
+            list.Add(new CrewSensorEntryDto(
+                name,
+                "Crew",
+                alive,
+                dmg,
+                coords,
+                hasCoords ? GetNetEntity(wearer) : null,
+                gridNet,
+                localPos,
+                hasCoords));
         }
 
         list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));

@@ -300,7 +300,7 @@ public sealed partial class CargoOrdersProgramComponent : Component
     public string SelectedCategory = "All";
 
     [DataField]
-    public string StatusMessage = "Enter Bank Account ID and PIN to authenticate and withdraw funds for cargo orders.";
+    public string StatusMessage = string.Empty;
 }
 
 [Serializable, NetSerializable]
@@ -434,14 +434,31 @@ public sealed class CrewSensorEntryDto
     public bool IsAlive { get; }
     public int TotalDamage { get; }
     public string CoordinatesText { get; }
+    public NetEntity? Entity { get; }
+    public NetEntity? GridEntity { get; }
+    public System.Numerics.Vector2 LocalPosition { get; }
+    public bool HasCoordinates { get; }
 
-    public CrewSensorEntryDto(string name, string jobTitle, bool isAlive, int totalDamage, string coordinatesText)
+    public CrewSensorEntryDto(
+        string name,
+        string jobTitle,
+        bool isAlive,
+        int totalDamage,
+        string coordinatesText,
+        NetEntity? entity = null,
+        NetEntity? gridEntity = null,
+        System.Numerics.Vector2 localPosition = default,
+        bool hasCoordinates = false)
     {
         Name = name;
         JobTitle = jobTitle;
         IsAlive = isAlive;
         TotalDamage = totalDamage;
         CoordinatesText = coordinatesText;
+        Entity = entity;
+        GridEntity = gridEntity;
+        LocalPosition = localPosition;
+        HasCoordinates = hasCoordinates;
     }
 }
 

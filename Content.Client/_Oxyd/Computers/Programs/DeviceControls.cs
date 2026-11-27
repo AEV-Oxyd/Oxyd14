@@ -32,6 +32,7 @@ namespace Content.Client._Oxyd.Computers.Programs;
 public sealed class ApcControlUiControl : ProgramUiControl
 {
     private readonly ContentBoxContainer _remoteHeaderContainer;
+    private readonly ContentScrollContainer _bodyScroll;
     private readonly OxydDeviceNavMapControl _mapSelector;
     private readonly ContentLabel _telemetryLabel;
     private readonly ContentLabel _statusLabel;
@@ -44,14 +45,23 @@ public sealed class ApcControlUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        _mapSelector = new OxydDeviceNavMapControl("Apc");
-        _mapSelector.MarkerSelected += guid => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guid));
+        _mapSelector = new OxydDeviceNavMapControl("Apc")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += guid =>
+        {
+            _mapMode = false;
+            SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guid));
+            if (_lastState != null)
+                UpdateProgramState(_lastState);
+        };
 
-        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
         var root = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
+            VerticalExpand = true,
             Margin = new Thickness(6),
             SeparationOverride = 6
         };
@@ -65,6 +75,14 @@ public sealed class ApcControlUiControl : ProgramUiControl
             Visible = false
         };
         root.AddChild(_remoteHeaderContainer);
+
+        _bodyScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        var bodyBox = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
 
         var telemetryPanel = new ContentPanelContainer
         {
@@ -108,11 +126,13 @@ public sealed class ApcControlUiControl : ProgramUiControl
 
         AddBtn("Toggle Breaker", ApcControlAction.ToggleBreaker);
 
-        root.AddChild(telemetryPanel);
-        root.AddChild(btnRow);
-        root.AddChild(_statusLabel);
-        scroll.AddChild(root);
-        AddChild(scroll);
+        bodyBox.AddChild(telemetryPanel);
+        bodyBox.AddChild(btnRow);
+        bodyBox.AddChild(_statusLabel);
+        _bodyScroll.AddChild(bodyBox);
+        root.AddChild(_bodyScroll);
+        root.AddChild(_mapSelector);
+        AddChild(root);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -129,8 +149,12 @@ public sealed class ApcControlUiControl : ProgramUiControl
         }
         else
         {
+            _mapMode = false;
             _remoteHeaderContainer.Visible = false;
         }
+
+        _bodyScroll.Visible = !_mapMode;
+        _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
         var trippedTag = state.BreakerTripped ? " [TRIPPED]" : string.Empty;
         _telemetryLabel.Text =
@@ -217,7 +241,6 @@ public sealed class ApcControlUiControl : ProgramUiControl
             }
 
             _mapSelector.SetMarkers(markers, $"Selected APC: {state.AreaName} [{state.SelectedTargetGuid}]");
-            _remoteHeaderContainer.AddChild(_mapSelector);
         }
         else
         {
@@ -791,6 +814,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
     }
 
     private readonly ContentBoxContainer _remoteHeaderContainer;
+    private readonly ContentBoxContainer _atmosBodyContainer;
     private readonly OxydDeviceNavMapControl _mapSelector;
     private readonly StyleBoxFlat _telemetryPanelStyle;
     private readonly StyleBoxFlat _alarmBadgeStyle;
@@ -833,8 +857,17 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        _mapSelector = new OxydDeviceNavMapControl("Atmos");
-        _mapSelector.MarkerSelected += guid => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guid));
+        _mapSelector = new OxydDeviceNavMapControl("Atmos")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += guid =>
+        {
+            _mapMode = false;
+            SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guid));
+            if (_lastState != null)
+                UpdateProgramState(_lastState);
+        };
 
         var root = new ContentBoxContainer
         {
@@ -854,6 +887,15 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             Visible = false
         };
         root.AddChild(_remoteHeaderContainer);
+
+        _atmosBodyContainer = new ContentBoxContainer
+        {
+            Name = "AtmosBodyContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SeparationOverride = 5
+        };
 
         // ---------------------------------------------------------------------
         // 1. Clean Structured Air Alarm Status & Mode Strip
@@ -956,7 +998,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         statusBox.AddChild(primaryRow);
         statusBox.AddChild(_gasRow);
         telemetryPanel.AddChild(statusBox);
-        root.AddChild(telemetryPanel);
+        _atmosBodyContainer.AddChild(telemetryPanel);
 
         var modeRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         void AddModeBtn(string text, string modeKey, AtmosControlAction action)
@@ -978,12 +1020,11 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         _autoModeBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.ToggleAutoMode));
         _staticControlButtons.Add(_autoModeBtn);
         modeRow.AddChild(_autoModeBtn);
-
         _resyncBtn = new ContentButton { Text = "Resync Devices", Disabled = true, MinWidth = 104 };
         _resyncBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.ResyncDevices));
         _staticControlButtons.Add(_resyncBtn);
         modeRow.AddChild(_resyncBtn);
-        root.AddChild(modeRow);
+        _atmosBodyContainer.AddChild(modeRow);
 
         // ---------------------------------------------------------------------
         // 2. Single Active Template Bar (Always Ready to Apply When Saved)
@@ -1058,7 +1099,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         tplRow.AddChild(_clearTemplateBtn);
 
         templatePanel.AddChild(tplRow);
-        root.AddChild(templatePanel);
+        _atmosBodyContainer.AddChild(templatePanel);
 
         // ---------------------------------------------------------------------
         // 3. Strictly Categorized Device Tabs (Vents / Scrubbers / Sensors)
@@ -1090,7 +1131,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         _categoryVentsBtn = MakeCategoryBtn("AtmosCategoryVentsButton", "Vents (0)", DeviceCategory.Vents);
         _categoryScrubbersBtn = MakeCategoryBtn("AtmosCategoryScrubbersButton", "Scrubbers (0)", DeviceCategory.Scrubbers);
         _categorySensorsBtn = MakeCategoryBtn("AtmosCategorySensorsButton", "Sensors (0)", DeviceCategory.Sensors);
-        root.AddChild(categoryRow);
+        _atmosBodyContainer.AddChild(categoryRow);
 
         _statusLabel = new ContentLabel
         {
@@ -1099,7 +1140,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             FontColorOverride = Color.FromHex("#88CCCC"),
             Visible = false
         };
-        root.AddChild(_statusLabel);
+        _atmosBodyContainer.AddChild(_statusLabel);
 
         // ---------------------------------------------------------------------
         // 4. Scrollable Categorized Devices Panel (In-Place Updated Cards)
@@ -1126,8 +1167,10 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             HorizontalExpand = true
         };
         _devicesScroll.AddChild(_devicesContainer);
-        root.AddChild(_devicesScroll);
+        _atmosBodyContainer.AddChild(_devicesScroll);
 
+        root.AddChild(_atmosBodyContainer);
+        root.AddChild(_mapSelector);
         AddChild(root);
     }
 
@@ -1179,8 +1222,12 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         }
         else
         {
+            _mapMode = false;
             _remoteHeaderContainer.Visible = false;
         }
+
+        _atmosBodyContainer.Visible = !_mapMode;
+        _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
         UpdateStatusHeader(state);
 
@@ -1287,7 +1334,6 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             }
 
             _mapSelector.SetMarkers(markers, $"Selected Alarm: {state.SelectedTargetGuid} (APC {state.SelectedApcGuid})");
-            _remoteHeaderContainer.AddChild(_mapSelector);
         }
         else
         {

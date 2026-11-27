@@ -46,6 +46,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
     private readonly ContentLineEdit _searchEdit;
     private readonly ContentButton _listModeBtn;
     private readonly ContentButton _mapModeBtn;
+    private readonly Control _splitContainer;
     private readonly ContentScrollContainer _camScroll;
     private readonly ContentBoxContainer _cameraListContainer;
     private readonly OxydDeviceNavMapControl _mapSelector;
@@ -85,7 +86,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
     /// Forces the enclosing <see cref="ComputerDisplayWindow"/> into viewport focus mode (pausing normal
     /// world rendering) only when actively viewing the camera app with more than 2 cameras active.
     /// </summary>
-    public bool ShouldForceViewportFocus => VisibleInTree && _feedGrid.Visible && _orderedTiles.Count > 2;
+    public bool ShouldForceViewportFocus => VisibleInTree && !_mapMode && _feedGrid.Visible && _orderedTiles.Count > 2;
 
     public SurveillanceCameraUiControl()
     {
@@ -104,7 +105,33 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             SeparationOverride = 6
         };
 
-        // Compact conditional alert/status strip (only visible when offline or displaying an actionable notice)
+        // Persistent Top View Mode Bar (List+Feeds <-> Full Station Map) + Status Strip
+        var topModeRow = new ContentBoxContainer
+        {
+            Name = "CameraViewModeRow",
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        _listModeBtn = new ContentButton
+        {
+            Name = "CameraListModeButton",
+            Text = "Feeds & List",
+            Pressed = true,
+            MinWidth = 104,
+            MinHeight = 24
+        };
+        _listModeBtn.OnPressed += _ => SetMapMode(false);
+        _mapModeBtn = new ContentButton
+        {
+            Name = "CameraViewModeToggleButton",
+            Text = "Station Map",
+            Pressed = false,
+            MinWidth = 104,
+            MinHeight = 24
+        };
+        _mapModeBtn.OnPressed += _ => SetMapMode(true);
+
         _statusLabel = new ContentLabel
         {
             Name = "CameraAppStatusLabel",
@@ -114,9 +141,14 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             WordWrap = false,
             ClipText = true,
             MinHeight = 18f,
-            Visible = false
+            Visible = false,
+            VerticalAlignment = VAlignment.Center
         };
-        root.AddChild(_statusLabel);
+
+        topModeRow.AddChild(_listModeBtn);
+        topModeRow.AddChild(_mapModeBtn);
+        topModeRow.AddChild(_statusLabel);
+        root.AddChild(topModeRow);
 
         // Main Split: Left Directory | Right Multi-Feed Grid OR On-Demand Logs Tab
         var split = new ContentBoxContainer
@@ -127,6 +159,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             RectClipContent = true,
             SeparationOverride = 8
         };
+        _splitContainer = split;
 
         // Left: Auth bar + Zone filter + Search + Camera directory list
         var leftPane = new ContentBoxContainer
@@ -210,34 +243,6 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _searchEdit.OnTextChanged += _ => RebuildCameraList();
         leftPane.AddChild(_searchEdit);
 
-        var dirModeRow = new ContentWrapContainer
-        {
-            Name = "CameraViewModeRow",
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4
-        };
-        _listModeBtn = new ContentButton
-        {
-            Name = "CameraListModeButton",
-            Text = "List",
-            Pressed = true,
-            MinWidth = 68,
-            MinHeight = 24
-        };
-        _listModeBtn.OnPressed += _ => SetMapMode(false);
-        _mapModeBtn = new ContentButton
-        {
-            Name = "CameraViewModeToggleButton",
-            Text = "Map",
-            Pressed = false,
-            MinWidth = 68,
-            MinHeight = 24
-        };
-        _mapModeBtn.OnPressed += _ => SetMapMode(true);
-        dirModeRow.AddChild(_listModeBtn);
-        dirModeRow.AddChild(_mapModeBtn);
-        leftPane.AddChild(dirModeRow);
-
         _camScroll = new ContentScrollContainer
         {
             Name = "CameraListScroll",
@@ -255,17 +260,6 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         };
         _camScroll.AddChild(_cameraListContainer);
         leftPane.AddChild(_camScroll);
-
-        _mapSelector = new OxydDeviceNavMapControl("Camera")
-        {
-            Visible = false
-        };
-        _mapSelector.MarkerSelected += key =>
-        {
-            if (NetEntity.TryParse(key, out var camNet))
-                SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: camNet));
-        };
-        leftPane.AddChild(_mapSelector);
         split.AddChild(leftPane);
 
         // Right: Focused Camera Top Bar + Full-Height 1..6 Camera Feed Grid (or Full-Height Logs Tab on click)
@@ -502,6 +496,18 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
         split.AddChild(rightPane);
         root.AddChild(split);
+
+        _mapSelector = new OxydDeviceNavMapControl("Camera")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += key =>
+        {
+            if (NetEntity.TryParse(key, out var camNet))
+                SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: camNet));
+            SetMapMode(false);
+        };
+        root.AddChild(_mapSelector);
         AddChild(root);
     }
 
@@ -730,7 +736,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _mapMode = mapMode;
         _listModeBtn.Pressed = !mapMode;
         _mapModeBtn.Pressed = mapMode;
-        _camScroll.Visible = !mapMode;
+        _splitContainer.Visible = !mapMode;
         _mapSelector.Visible = mapMode;
     }
 
