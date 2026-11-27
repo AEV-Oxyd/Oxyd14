@@ -163,6 +163,10 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
                     _computer.CloseProgram(compUid, target);
                 }
                 break;
+
+            case NetworkCoreOsAction.ShutDown:
+                _computer.ShutDownComputer(compUid, manualShutdown: true);
+                return;
         }
 
         UpdateCoreUi(ent.Owner);

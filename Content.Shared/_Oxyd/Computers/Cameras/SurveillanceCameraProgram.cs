@@ -154,6 +154,9 @@ public sealed partial class SurveillanceCameraProgramComponent : Component
 
     [ViewVariables]
     public List<CameraAudioLineDto> LiveAudioFeed = new();
+
+    [ViewVariables]
+    public EntityUid? SuppressedSlotCard;
 }
 
 [Serializable, NetSerializable]
@@ -273,6 +276,7 @@ public enum SurveillanceCameraAction : byte
     Refresh,
     SelectZone,
     SelectCamera,
+    SelectSingleCamera,
     FocusCamera,
     DisconnectCamera,
     Disconnect,
@@ -326,6 +330,7 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
     public string AuthorizedByLabel { get; }
     public string? SelectedAccFilePath { get; }
     public List<string> AvailableAccFiles { get; }
+    public NetEntity? StationGrid { get; }
 
     public SurveillanceCameraUiState(
         bool online,
@@ -349,7 +354,8 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
         bool isAuthorized = false,
         string authorizedByLabel = "",
         string? selectedAccFilePath = null,
-        List<string>? availableAccFiles = null)
+        List<string>? availableAccFiles = null,
+        NetEntity? stationGrid = null)
     {
         Online = online;
         RouterLabel = routerLabel;
@@ -373,5 +379,6 @@ public sealed class SurveillanceCameraUiState : BoundUserInterfaceState
         AuthorizedByLabel = authorizedByLabel;
         SelectedAccFilePath = selectedAccFilePath;
         AvailableAccFiles = availableAccFiles ?? new List<string>();
+        StationGrid = stationGrid;
     }
 }

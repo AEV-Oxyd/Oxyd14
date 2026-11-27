@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using Content.Server._Oxyd.Computers.Hardware;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server.Atmos.Monitor.Components;
 using Content.Server.Power.Components;
@@ -142,6 +143,26 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
+    private void OnApcCardReaderChanged(Entity<ApcControlProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
+        GetAvailableApcTargets(compUid, ent.Comp, out var selectedApcUid, out var selectedGuid);
+        if (selectedApcUid != null)
+        {
+            var isAuth = IsApcTargetAuthorized(compUid, ent.Comp, selectedApcUid.Value, selectedGuid);
+            ent.Comp.Locked = !isAuth;
+            if (!isAuth && _computer.GetInsertedIdCards(compUid).Count == 0)
+                ent.Comp.StatusMessage = "ID card removed from slot — APC control locked.";
+            Dirty(ent);
+        }
+
+        RequestApcStatus(compUid, ent.Comp);
+        UpdateApcUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
     private void OnApcCardScanned(Entity<ApcControlProgramComponent> ent, ref ProgramCardScannedEvent relayed)
     {
         if (relayed.Handled)
@@ -156,9 +177,16 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
         if (CanIdCardAuthorizeDevice(cardUid, selectedApcUid.Value, isAtmos: false))
         {
-            GrantEngineeringApcAuthorization(compUid, selectedGuid, selectedApcUid.Value, relayed.User);
             var cardName = MetaData(cardUid).EntityName;
-            ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedApcUid.Value).EntityName} [{selectedGuid}] via swiped ID ({cardName}).";
+            if (relayed.Retained)
+            {
+                ent.Comp.StatusMessage = $"ID card in slot ({cardName}) — authorized to {MetaData(selectedApcUid.Value).EntityName} [{selectedGuid}] while inserted.";
+            }
+            else
+            {
+                GrantEngineeringApcAuthorization(compUid, selectedGuid, selectedApcUid.Value, relayed.User);
+                ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedApcUid.Value).EntityName} [{selectedGuid}] via swiped ID ({cardName}).";
+            }
             _popup.PopupEntity($"Authorized to {MetaData(selectedApcUid.Value).EntityName}.", relayed.HostUid, relayed.User);
         }
         else
@@ -244,6 +272,8 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
         GetAvailableApcTargets(compUid, ent.Comp, out var targetApcUid, out var targetGuid);
         var isAuthorized = targetApcUid != null && IsApcTargetAuthorized(compUid, ent.Comp, targetApcUid.Value, targetGuid);
+        if (isAuthorized && ent.Comp.Locked)
+            ent.Comp.Locked = false;
 
         if (!isAuthorized || ent.Comp.Locked)
         {
@@ -426,6 +456,26 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
+    private void OnAtmosCardReaderChanged(Entity<AtmosControlProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
+        GetAvailableAtmosTargets(compUid, ent.Comp, out var selectedAlarmUid, out var selectedGuid, out _, out var selectedApcGuid);
+        if (selectedAlarmUid != null)
+        {
+            var isAuth = IsAtmosTargetAuthorized(compUid, ent.Comp, selectedAlarmUid.Value, selectedGuid, selectedApcGuid);
+            ent.Comp.Locked = !isAuth;
+            if (!isAuth && _computer.GetInsertedIdCards(compUid).Count == 0)
+                ent.Comp.StatusMessage = "ID card removed from slot — Air Alarm control locked.";
+            Dirty(ent);
+        }
+
+        SendAtmosDeviceLink(compUid, ent.Comp, "status", string.Empty, null);
+        UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
     private void OnAtmosCardScanned(Entity<AtmosControlProgramComponent> ent, ref ProgramCardScannedEvent relayed)
     {
         if (relayed.Handled)
@@ -442,9 +492,16 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (CanIdCardAuthorizeDevice(cardUid, checkUid, isAtmos: true) ||
             CanIdCardAuthorizeDevice(cardUid, selectedAlarmUid.Value, isAtmos: true))
         {
-            GrantEngineeringApcAuthorization(compUid, selectedApcGuid, checkUid, relayed.User, selectedGuid, selectedAlarmUid.Value);
             var cardName = MetaData(cardUid).EntityName;
-            ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedAlarmUid.Value).EntityName} [APC {selectedApcGuid}] via swiped ID ({cardName}).";
+            if (relayed.Retained)
+            {
+                ent.Comp.StatusMessage = $"ID card in slot ({cardName}) — authorized to {MetaData(selectedAlarmUid.Value).EntityName} [APC {selectedApcGuid}] while inserted.";
+            }
+            else
+            {
+                GrantEngineeringApcAuthorization(compUid, selectedApcGuid, checkUid, relayed.User, selectedGuid, selectedAlarmUid.Value);
+                ent.Comp.StatusMessage = $"Authorized to {MetaData(selectedAlarmUid.Value).EntityName} [APC {selectedApcGuid}] via swiped ID ({cardName}).";
+            }
             _popup.PopupEntity($"Authorized to {MetaData(selectedAlarmUid.Value).EntityName}.", relayed.HostUid, relayed.User);
         }
         else
@@ -531,6 +588,8 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         GetAvailableAtmosTargets(compUid, ent.Comp, out var targetAlarmUid, out var targetAlarmGuid, out _, out var targetApcGuid);
         var isAuthorized = targetAlarmUid != null &&
                            IsAtmosTargetAuthorized(compUid, ent.Comp, targetAlarmUid.Value, targetAlarmGuid, targetApcGuid);
+        if (isAuthorized && ent.Comp.Locked)
+            ent.Comp.Locked = false;
 
         if (!isAuthorized || ent.Comp.Locked)
         {
@@ -590,9 +649,25 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
     }
 
+    private bool TryAuthorizeAtmosAction(Entity<AtmosControlProgramComponent> ent, out EntityUid compUid)
+    {
+        compUid = EntityUid.Invalid;
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } cu)
+            return false;
+
+        compUid = cu;
+        GetAvailableAtmosTargets(compUid, ent.Comp, out var targetAlarmUid, out var targetAlarmGuid, out _, out var targetApcGuid);
+        var isAuthorized = targetAlarmUid != null &&
+                           IsAtmosTargetAuthorized(compUid, ent.Comp, targetAlarmUid.Value, targetAlarmGuid, targetApcGuid);
+        if (isAuthorized && ent.Comp.Locked)
+            ent.Comp.Locked = false;
+
+        return isAuthorized && !ent.Comp.Locked;
+    }
+
     private void OnAtmosUpdateVent(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateVentMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         var dto = new AtmosVentEntryDto(
@@ -613,7 +688,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
     private void OnAtmosUpdateScrubber(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateScrubberMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         var dto = new AtmosScrubberEntryDto(
@@ -635,7 +710,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
     private void OnAtmosUpdateSensorThreshold(Entity<AtmosControlProgramComponent> ent, ref AtmosUpdateSensorThresholdMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         var cmd = args.ApplyToAll ? "set_all_thresholds" : "set_threshold";
@@ -650,7 +725,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
     private void OnAtmosSaveTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosSaveTemplateMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         var kind = args.Kind;
@@ -677,7 +752,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
     private void OnAtmosDeleteTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosDeleteTemplateMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         ent.Comp.Templates.Clear();
@@ -687,7 +762,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
     private void OnAtmosApplyTemplate(Entity<AtmosControlProgramComponent> ent, ref AtmosApplyTemplateMessage args)
     {
-        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || ent.Comp.Locked)
+        if (!TryAuthorizeAtmosAction(ent, out var compUid))
             return;
 
         var kind = args.Kind;
@@ -1061,7 +1136,16 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             return true;
         }
 
-        return !string.IsNullOrEmpty(targetGuid) && comp.AuthorizedTargetGuids.Contains(targetGuid);
+        if (!string.IsNullOrEmpty(targetGuid) && comp.AuthorizedTargetGuids.Contains(targetGuid))
+            return true;
+
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
+        {
+            if (CanIdCardAuthorizeDevice(cardUid, targetApcUid, isAtmos: false))
+                return true;
+        }
+
+        return false;
     }
 
     private bool IsAtmosTargetAuthorized(
@@ -1078,8 +1162,23 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             return true;
         }
 
-        return (!string.IsNullOrEmpty(apcGuid) && comp.AuthorizedTargetGuids.Contains(apcGuid)) ||
-               (!string.IsNullOrEmpty(targetAlarmGuid) && comp.AuthorizedTargetGuids.Contains(targetAlarmGuid));
+        if ((!string.IsNullOrEmpty(apcGuid) && comp.AuthorizedTargetGuids.Contains(apcGuid)) ||
+            (!string.IsNullOrEmpty(targetAlarmGuid) && comp.AuthorizedTargetGuids.Contains(targetAlarmGuid)))
+        {
+            return true;
+        }
+
+        var apcUid = ResolveGoverningApc(targetAlarmUid);
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
+        {
+            if (CanIdCardAuthorizeDevice(cardUid, targetAlarmUid, isAtmos: true) ||
+                (apcUid != null && CanIdCardAuthorizeDevice(cardUid, apcUid.Value, isAtmos: true)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void GrantEngineeringApcAuthorization(

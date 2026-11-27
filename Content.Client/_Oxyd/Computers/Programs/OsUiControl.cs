@@ -183,6 +183,16 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         clockBox.AddChild(_clockBadgeLabel);
         rightBar.AddChild(clockBox);
 
+        var shutDownBtn = new ContentButton
+        {
+            Name = "OsShutDownButton",
+            Text = "Shut Down",
+            SetWidth = 84,
+            VerticalAlignment = VAlignment.Center
+        };
+        shutDownBtn.OnPressed += _ => SendProgramMessage(new OsShutDownMessage());
+        rightBar.AddChild(shutDownBtn);
+
         topBarRow.AddChild(_unifiedTabBar);
         topBarRow.AddChild(rightBar);
         topBarPanel.AddChild(topBarRow);
@@ -882,7 +892,25 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _topTabBar.AddChild(_appViewBtn);
         _topTabBar.AddChild(_listViewBtn);
         _topTabBar.AddChild(_linkViewBtn);
-        barPanel.AddChild(_topTabBar);
+
+        var barRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        var shutDownBtn = new ContentButton
+        {
+            Name = "EmbeddedOsShutDownButton",
+            Text = "Shut Down",
+            SetWidth = 82,
+            VerticalAlignment = VAlignment.Top
+        };
+        shutDownBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsShutDownMessage());
+
+        barRow.AddChild(_topTabBar);
+        barRow.AddChild(shutDownBtn);
+        barPanel.AddChild(barRow);
         root.AddChild(barPanel);
 
         _childViewport = new ContentBoxContainer

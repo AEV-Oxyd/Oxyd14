@@ -15,6 +15,7 @@ using Content.Shared._Oxyd.Computers.ScreenSharing;
 using Content.Shared._Oxyd.Computers.Servers;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
+using Content.Shared.Computer;
 using Content.Shared.Containers.ItemSlots;
 using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Components;
@@ -67,6 +68,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private PdaOsSystem _pdaOs = default!;
     [Dependency] private NetworkCoreOsSystem _netCoreOs = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
+    [Dependency] private SharedAppearanceSystem _appearance = default!;
 
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
     [Dependency] private EntityQuery<EmbeddedComputerHostComponent> _hostQuery = default!;
@@ -79,6 +81,62 @@ public sealed partial class OxydComputerSystem : EntitySystem
     private static readonly ProtoId<SinkPortPrototype> PortComputerStatusReceiver = "ComputerStatusReceiver";
     private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
     private static readonly ProtoId<SinkPortPrototype> PortMachineCommandReceiver = "MachineCommandReceiver";
+
+    private static readonly Dictionary<string, string> ProgramScreenStates = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["/bin/cameras.nte"] = "cameras",
+        ["SurveillanceCameraProgram"] = "cameras",
+        ["/bin/cargo_orders.nte"] = "request",
+        ["CargoOrdersProgram"] = "request",
+        ["/bin/crew_monitor.nte"] = "crew",
+        ["CrewMonitorProgram"] = "crew",
+        ["/bin/crew_manifest.nte"] = "medcomp",
+        ["CrewManifestProgram"] = "medcomp",
+        ["/bin/station_records.nte"] = "medcomp",
+        ["StationRecordsProgram"] = "medcomp",
+        ["/bin/criminal_records.nte"] = "security",
+        ["CriminalRecordsProgram"] = "security",
+        ["/bin/wanted_list.nte"] = "security",
+        ["WantedListProgram"] = "security",
+        ["/bin/comms_console.nte"] = "comm",
+        ["CommsConsoleProgram"] = "comm",
+        ["/bin/solar_control.nte"] = "solar_screen",
+        ["SolarControlProgram"] = "solar_screen",
+        ["/bin/apc_control.nte"] = "power_monitor",
+        ["ApcControlProgram"] = "power_monitor",
+        ["/bin/atmos_control.nte"] = "area_atmos",
+        ["AtmosControlProgram"] = "area_atmos",
+        ["/bin/id_console.nte"] = "id",
+        ["IdModifierProgram"] = "id",
+        ["/bin/access_encoder.nte"] = "id",
+        ["AccessEncoderProgram"] = "id",
+        ["/bin/lathe_control.nte"] = "rdcomp",
+        ["LatheControlProgram"] = "rdcomp",
+        ["/bin/medtek.nte"] = "medcomp",
+        ["MedTekProgram"] = "medcomp",
+        ["/bin/astronav.nte"] = "helm",
+        ["AstroNavProgram"] = "helm",
+        ["/bin/news_reader.nte"] = "comm_monitor",
+        ["NewsReaderProgram"] = "comm_monitor",
+        ["/bin/terminal.nte"] = "tcboss",
+        ["TerminalProgram"] = "tcboss",
+        ["/bin/netprobe.nte"] = "tcboss",
+        ["NetProbeProgram"] = "tcboss",
+        ["/bin/logprobe.nte"] = "comm_logs",
+        ["LogProbeProgram"] = "comm_logs",
+        ["/bin/packet_sniffer.nte"] = "tcboss",
+        ["OxydPacketSnifferProgram"] = "tcboss",
+        ["/bin/router.nte"] = "tcboss",
+        ["NetworkRouterProgram"] = "tcboss",
+        ["/bin/notekeeper.nte"] = "generic",
+        ["NotekeeperProgram"] = "generic",
+        ["/bin/nanotask.nte"] = "allocate",
+        ["NanoTaskProgram"] = "allocate",
+        ["/bin/file_browser.nte"] = "generic",
+        ["OxydFileBrowserProgram"] = "generic",
+        ["/bin/downloader.nte"] = "generic",
+        ["DownloaderProgram"] = "generic"
+    };
 
     [SubscribeLocalEvent]
     private void OnHostMapInit(Entity<EmbeddedComputerHostComponent> ent, ref MapInitEvent args)
@@ -180,6 +238,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnRetryBootMessage(Entity<OxydComputerComponent> ent, ref ComputerRetryBootMessage args)
     {
+        ent.Comp.ManuallyShutDown = false;
         RecalculateHardwareStats(ent.Owner, ent.Comp);
         RefreshComputerBootState(ent.Owner, ent.Comp);
         OpenRunningProgramUisForCurrentViewers(ent.Owner, ent.Comp);
@@ -633,6 +692,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats = Comp<ComputerStatsComponent>(compUid);
         }
 
+        if (comp.ManuallyShutDown)
+        {
+            FailBoot(compUid, comp, ComputerBootState.Off, "System powered off. Click Boot to power on.");
+            return;
+        }
+
         if (comp.PowerWireCut)
         {
             FailBoot(compUid, comp, ComputerBootState.WireCut, "POST ERROR 0x01: Motherboard power bus severed.");
@@ -769,7 +834,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         UpdateComputerDisplayUi(compUid, comp);
     }
 
-    public void ShutDownComputer(EntityUid compUid, OxydComputerComponent? comp = null, bool updateUi = true)
+    public void ShutDownComputer(EntityUid compUid, OxydComputerComponent? comp = null, bool updateUi = true, bool manualShutdown = false)
     {
         if (!_computerQuery.Resolve(compUid, ref comp, false))
             return;
@@ -790,6 +855,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
         comp.ActiveProgram = null;
         comp.IsBooted = false;
         comp.BootState = ComputerBootState.Off;
+        if (manualShutdown)
+        {
+            comp.ManuallyShutDown = true;
+            comp.BootError = "System powered off. Click Boot to power on.";
+        }
         Dirty(compUid, comp);
 
         if (_statsQuery.TryComp(compUid, out var stats))
@@ -797,6 +867,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats.UsedRamMb = 0;
             stats.CurrentCpuLoadPercent = 0f;
             stats.IsBooted = false;
+            if (manualShutdown)
+                stats.BootError = comp.BootError;
             Dirty(compUid, stats);
         }
 
@@ -809,6 +881,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!_computerQuery.Resolve(compUid, ref comp, false))
             return;
 
+        comp.ManuallyShutDown = false;
         ShutDownComputer(compUid, comp, updateUi: false);
         RecalculateHardwareStats(compUid, comp);
         RefreshComputerBootState(compUid, comp);
@@ -1280,9 +1353,35 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats.HasDataPort,
             dockInViewport);
 
+        UpdateHostScreenVisuals(compUid, comp);
+
         var key = GetPrimaryUiKey(compUid, comp);
         if (_ui.HasUi(compUid, key))
             _ui.SetUiState(compUid, key, state);
+    }
+
+    private void UpdateHostScreenVisuals(EntityUid compUid, OxydComputerComponent comp)
+    {
+        if (comp.HostMachine is not { } hostUid || !Exists(hostUid))
+            return;
+
+        var desiredScreen = string.Empty;
+        if (comp.IsBooted &&
+            comp.ActiveProgram is { } activeUid &&
+            Exists(activeUid) &&
+            _programQuery.TryComp(activeUid, out var activeProg))
+        {
+            if (!string.IsNullOrWhiteSpace(activeProg.ScreenState))
+                desiredScreen = activeProg.ScreenState;
+            else if (!string.IsNullOrWhiteSpace(activeProg.ExecutablePath) &&
+                     ProgramScreenStates.TryGetValue(activeProg.ExecutablePath, out var byPath))
+                desiredScreen = byPath;
+            else if (activeProg.Prototype is { } protoId &&
+                     ProgramScreenStates.TryGetValue(protoId.Id, out var byProto))
+                desiredScreen = byProto;
+        }
+
+        _appearance.SetData(hostUid, ComputerVisuals.ScreenState, desiredScreen);
     }
 
     /// <summary>
@@ -1529,30 +1628,35 @@ public sealed partial class OxydComputerSystem : EntitySystem
     public bool TryGetInsertedIdCard(EntityUid compUid, out EntityUid idCardUid)
     {
         idCardUid = EntityUid.Invalid;
-        if (!_computerQuery.TryComp(compUid, out var comp))
+        var cards = GetInsertedIdCards(compUid);
+        if (cards.Count == 0)
             return false;
+
+        idCardUid = cards[0];
+        return true;
+    }
+
+    public List<EntityUid> GetInsertedIdCards(EntityUid compUid)
+    {
+        var results = new List<EntityUid>();
+        if (!_computerQuery.TryComp(compUid, out var comp))
+            return results;
 
         if (comp.HostMachine is { } hostUid && Exists(hostUid))
         {
             if (TryComp<PdaComponent>(hostUid, out var pda))
             {
                 var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
-                if (pdaCard is { Valid: true } pId && Exists(pId) && HasComp<IdCardComponent>(pId))
-                {
-                    idCardUid = pId;
-                    return true;
-                }
+                if (pdaCard is { Valid: true } pId && Exists(pId) && HasComp<IdCardComponent>(pId) && !results.Contains(pId))
+                    results.Add(pId);
             }
 
             if (TryComp<ItemSlotsComponent>(hostUid, out var hostSlots))
             {
                 foreach (var slot in hostSlots.Slots.Values)
                 {
-                    if (slot.Item is { Valid: true } sId && Exists(sId) && HasComp<IdCardComponent>(sId))
-                    {
-                        idCardUid = sId;
-                        return true;
-                    }
+                    if (slot.Item is { Valid: true } sId && Exists(sId) && HasComp<IdCardComponent>(sId) && !results.Contains(sId))
+                        results.Add(sId);
                 }
             }
         }
@@ -1576,14 +1680,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 _itemSlots.TryGetSlot(part, reader.CardSlotId, out var cardSlot) &&
                 cardSlot.Item is { Valid: true } slotCard &&
                 Exists(slotCard) &&
-                HasComp<IdCardComponent>(slotCard))
+                HasComp<IdCardComponent>(slotCard) &&
+                !results.Contains(slotCard))
             {
-                idCardUid = slotCard;
-                return true;
+                results.Add(slotCard);
             }
         }
 
-        return false;
+        return results;
     }
 
     private void RelayDeviceLinkToPrograms(

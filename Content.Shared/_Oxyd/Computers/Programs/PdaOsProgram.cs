@@ -167,3 +167,8 @@ public sealed class PdaOsInvokeDevicePortMessage : BoundUserInterfaceMessage
         Argument = argument;
     }
 }
+
+[Serializable, NetSerializable]
+public sealed class PdaOsShutDownMessage : BoundUserInterfaceMessage
+{
+}

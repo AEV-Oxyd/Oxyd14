@@ -431,8 +431,12 @@ public sealed class CrewSensorEntryDto
 {
     public string Name { get; }
     public string JobTitle { get; }
+    public string JobIcon { get; }
     public bool IsAlive { get; }
+    public bool IsCritical { get; }
+    public bool HasVitals { get; }
     public int TotalDamage { get; }
+    public float HealthRatio { get; }
     public string CoordinatesText { get; }
     public NetEntity? Entity { get; }
     public NetEntity? GridEntity { get; }
@@ -448,12 +452,20 @@ public sealed class CrewSensorEntryDto
         NetEntity? entity = null,
         NetEntity? gridEntity = null,
         System.Numerics.Vector2 localPosition = default,
-        bool hasCoordinates = false)
+        bool hasCoordinates = false,
+        string jobIcon = "JobIconNoId",
+        bool hasVitals = false,
+        bool isCritical = false,
+        float healthRatio = 1f)
     {
         Name = name;
         JobTitle = jobTitle;
+        JobIcon = jobIcon;
         IsAlive = isAlive;
+        IsCritical = isCritical;
+        HasVitals = hasVitals;
         TotalDamage = totalDamage;
+        HealthRatio = healthRatio;
         CoordinatesText = coordinatesText;
         Entity = entity;
         GridEntity = gridEntity;
@@ -467,11 +479,13 @@ public sealed class CrewMonitorUiState : BoundUserInterfaceState
 {
     public string StationName { get; }
     public List<CrewSensorEntryDto> Sensors { get; }
+    public NetEntity? StationGrid { get; }
 
-    public CrewMonitorUiState(string stationName, List<CrewSensorEntryDto> sensors)
+    public CrewMonitorUiState(string stationName, List<CrewSensorEntryDto> sensors, NetEntity? stationGrid = null)
     {
         StationName = stationName;
         Sensors = sensors;
+        StationGrid = stationGrid;
     }
 }
 
@@ -497,7 +511,8 @@ public enum CommsConsoleAction : byte
 {
     Refresh,
     BroadcastAnnouncement,
-    SetAlertLevel
+    SetAlertLevel,
+    RevokeAuth
 }
 
 [Serializable, NetSerializable]
@@ -517,6 +532,7 @@ public sealed class CommsConsoleActionMessage : BoundUserInterfaceMessage
 public sealed class CommsConsoleUiState : BoundUserInterfaceState
 {
     public bool CanBroadcast { get; }
+    public bool IsSwipedAuthorized { get; }
     public string CurrentAlertLevel { get; }
     public List<string> AvailableAlertLevels { get; }
     public string StatusMessage { get; }
@@ -525,9 +541,11 @@ public sealed class CommsConsoleUiState : BoundUserInterfaceState
         bool canBroadcast,
         string currentAlertLevel,
         List<string> availableAlertLevels,
-        string statusMessage)
+        string statusMessage,
+        bool isSwipedAuthorized = false)
     {
         CanBroadcast = canBroadcast;
+        IsSwipedAuthorized = isSwipedAuthorized;
         CurrentAlertLevel = currentAlertLevel;
         AvailableAlertLevels = availableAlertLevels;
         StatusMessage = statusMessage;

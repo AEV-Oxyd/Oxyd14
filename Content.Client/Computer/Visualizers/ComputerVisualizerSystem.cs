@@ -19,15 +19,32 @@ public sealed partial class ComputerVisualizerSystem : VisualizerSystem<Computer
         ComputerVisualsComponent comp,
         ref AppearanceChangeEvent args)
     {
-        if (args.Sprite == null
-            || !args.TryGetData<bool>(ComputerVisuals.Powered, out var powered))
+        if (args.Sprite == null)
+            return;
+
+        if (SpriteSystem.LayerMapTryGet((uid, args.Sprite), ComputerVisualLayers.Screen, out var screenLayer, logMissing: false))
+        {
+            args.TryGetData<string>(ComputerVisuals.ScreenState, out var dynamicScreen);
+            var desiredState = !string.IsNullOrWhiteSpace(dynamicScreen) ? dynamicScreen : comp.StateScreen;
+            var rsi = SpriteSystem.LayerGetEffectiveRsi((uid, args.Sprite), screenLayer);
+            if (desiredState != null && rsi != null && rsi.TryGetState(desiredState, out _))
+            {
+                SpriteSystem.LayerSetRsiState((uid, args.Sprite), screenLayer, desiredState);
+            }
+            else if (comp.StateScreen != null && rsi != null && rsi.TryGetState(comp.StateScreen, out _))
+            {
+                SpriteSystem.LayerSetRsiState((uid, args.Sprite), screenLayer, comp.StateScreen);
+            }
+        }
+
+        if (!args.TryGetData<bool>(ComputerVisuals.Powered, out var powered))
             return;
 
         // Need to get the index first because the mapped LayerSetShader doesn't accept null shader instances.
-        if (SpriteSystem.LayerMapTryGet((uid, args.Sprite), ComputerVisualLayers.Screen, out var screenLayer, logMissing: false))
+        if (SpriteSystem.LayerMapTryGet((uid, args.Sprite), ComputerVisualLayers.Screen, out var poweredScreenLayer, logMissing: false))
         {
-            SpriteSystem.LayerSetVisible((uid, args.Sprite), screenLayer, powered);
-            SetLayerShader(args.Sprite, screenLayer, powered);
+            SpriteSystem.LayerSetVisible((uid, args.Sprite), poweredScreenLayer, powered);
+            SetLayerShader(args.Sprite, poweredScreenLayer, powered);
         }
 
         if (SpriteSystem.LayerMapTryGet((uid, args.Sprite), ComputerVisualLayers.Keys, out var keysLayer, logMissing: false))

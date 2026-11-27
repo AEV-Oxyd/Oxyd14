@@ -1,11 +1,15 @@
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Cargo.Prototypes;
+using Content.Shared.StatusIcon;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
@@ -995,6 +999,10 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
 
 public sealed class CrewMonitorUiControl : ProgramUiControl
 {
+    [Dependency] private readonly IEntityManager _entMan = default!;
+    [Dependency] private readonly IPrototypeManager _proto = default!;
+    private readonly SpriteSystem _sprite;
+
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _selectedInfoLabel;
     private readonly ContentButton _listModeBtn;
@@ -1008,6 +1016,9 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
 
     public CrewMonitorUiControl()
     {
+        IoCManager.InjectDependencies(this);
+        _sprite = _entMan.System<SpriteSystem>();
+
         HorizontalExpand = true;
         VerticalExpand = true;
 
@@ -1074,7 +1085,7 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
-            SeparationOverride = 4
+            SeparationOverride = 5
         };
         _listScroll.AddChild(_listContainer);
         root.AddChild(_listScroll);
@@ -1100,8 +1111,38 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         _mapModeBtn.Pressed = mapMode;
         _listScroll.Visible = !mapMode;
         _mapSelector.Visible = mapMode;
+        if (mapMode)
+            _mapSelector.RequestFit();
         if (_lastState != null)
             UpdateProgramState(_lastState);
+    }
+
+    private Texture ResolveJobIconTexture(string jobIconId)
+    {
+        if (_proto.TryIndex<JobIconPrototype>(jobIconId, out var iconProto))
+            return _sprite.Frame0(iconProto.Icon);
+        if (_proto.TryIndex<JobIconPrototype>("JobIconNoId", out var fallbackProto))
+            return _sprite.Frame0(fallbackProto.Icon);
+        return _sprite.Frame0(new SpriteSpecifier.Rsi(new ResPath("Interface/Misc/job_icons.rsi"), "NoId"));
+    }
+
+    private Texture ResolveHealthRsiTexture(CrewSensorEntryDto entry)
+    {
+        string stateName;
+        if (!entry.IsAlive)
+            stateName = "dead";
+        else if (entry.IsCritical)
+            stateName = "critical";
+        else if (!entry.HasVitals)
+            stateName = "alive";
+        else
+        {
+            var dmgFrac = 1f - Math.Clamp(entry.HealthRatio, 0f, 1f);
+            var step = (int) Math.Clamp(MathF.Round(dmgFrac * 4f), 0f, 4f);
+            stateName = $"health{step}";
+        }
+
+        return _sprite.Frame0(new SpriteSpecifier.Rsi(new ResPath("Interface/Alerts/human_crew_monitoring.rsi"), stateName));
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -1128,52 +1169,147 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         {
             foreach (var s in state.Sensors)
             {
-                if (!string.IsNullOrEmpty(_selectedCrewName) &&
-                    string.Equals(s.Name, _selectedCrewName, StringComparison.OrdinalIgnoreCase))
-                {
+                var isSelected = !string.IsNullOrEmpty(_selectedCrewName) &&
+                                 string.Equals(s.Name, _selectedCrewName, StringComparison.OrdinalIgnoreCase);
+                if (isSelected)
                     selectedEntry = s;
-                }
 
-                _listContainer.AddChild(new ContentLabel
-                {
-                    Text = $"{s.Name} ({s.JobTitle}) | {(s.IsAlive ? "ALIVE" : "DECEASED")} | Dmg: {s.TotalDamage} | Pos: {s.CoordinatesText}",
-                    FontColorOverride = !s.IsAlive
-                        ? Color.FromHex("#FF6666")
-                        : s.TotalDamage > 0
+                var accent = !s.IsAlive
+                    ? Color.FromHex("#FF5555")
+                    : s.IsCritical
+                        ? Color.FromHex("#FF8844")
+                        : s.HealthRatio < 0.65f
                             ? Color.FromHex("#FFD166")
-                            : Color.FromHex("#88EECC"),
-                    HorizontalExpand = true
+                            : Color.FromHex("#44E088");
+
+                var card = new ContentPanelContainer
+                {
+                    HorizontalExpand = true,
+                    PanelOverride = new StyleBoxFlat
+                    {
+                        BackgroundColor = isSelected ? Color.FromHex("#122638") : Color.FromHex("#0D1824"),
+                        BorderColor = isSelected ? Color.FromHex("#00D4FF") : accent.WithAlpha(0.55f),
+                        BorderThickness = new Thickness(1),
+                        ContentMarginLeftOverride = 8,
+                        ContentMarginRightOverride = 8,
+                        ContentMarginTopOverride = 5,
+                        ContentMarginBottomOverride = 5
+                    }
+                };
+
+                var row = new ContentBoxContainer
+                {
+                    Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    SeparationOverride = 8
+                };
+
+                var vitalIcon = new TextureRect
+                {
+                    Texture = ResolveHealthRsiTexture(s),
+                    Stretch = TextureRect.StretchMode.KeepAspectCentered,
+                    SetSize = new Vector2(28f, 16f),
+                    VerticalAlignment = VAlignment.Center
+                };
+                row.AddChild(vitalIcon);
+
+                var jobIconRect = new TextureRect
+                {
+                    Texture = ResolveJobIconTexture(s.JobIcon),
+                    Stretch = TextureRect.StretchMode.KeepAspectCentered,
+                    SetSize = new Vector2(18f, 18f),
+                    VerticalAlignment = VAlignment.Center,
+                    ToolTip = s.JobTitle
+                };
+                row.AddChild(jobIconRect);
+
+                var identityCol = new ContentBoxContainer
+                {
+                    Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+                    HorizontalExpand = true,
+                    SizeFlagsStretchRatio = 1.2f,
+                    SeparationOverride = 1
+                };
+                identityCol.AddChild(new ContentLabel
+                {
+                    Text = s.Name,
+                    FontColorOverride = Color.FromHex("#EAF8FF"),
+                    HorizontalExpand = true,
+                    ClipText = true
                 });
+                identityCol.AddChild(new ContentLabel
+                {
+                    Text = s.JobTitle,
+                    FontColorOverride = Color.FromHex("#7CC4DE"),
+                    HorizontalExpand = true,
+                    ClipText = true
+                });
+                row.AddChild(identityCol);
+
+                var hpPct = (int) MathF.Round(Math.Clamp(s.HealthRatio, 0f, 1f) * 100f);
+                var hpText = !s.IsAlive
+                    ? "DEAD"
+                    : s.IsCritical
+                        ? $"CRIT ({s.TotalDamage} DMG)"
+                        : !s.HasVitals
+                            ? "VITALS: ON"
+                            : s.TotalDamage > 0
+                                ? $"{hpPct}% (-{s.TotalDamage})"
+                                : "100% HEALTHY";
+                var hpBar = new ContentProgressBar
+                {
+                    Value = !s.IsAlive ? 0f : (s.HasVitals ? s.HealthRatio : 1f),
+                    OverlayText = hpText,
+                    MinWidth = 132f,
+                    MinHeight = 20f,
+                    FillColor = accent.WithAlpha(0.75f),
+                    BorderColor = accent.WithAlpha(0.85f),
+                    BackgroundColor = Color.FromHex("#081018"),
+                    VerticalAlignment = VAlignment.Center
+                };
+                row.AddChild(hpBar);
+
+                var capturedName = s.Name;
+                var coordsBtn = new ContentButton
+                {
+                    Text = s.HasCoordinates ? s.CoordinatesText : "No GPS",
+                    Disabled = !s.HasCoordinates,
+                    MinWidth = 104f,
+                    ToolTip = s.HasCoordinates ? "Locate on station map" : "Suit sensor coordinates disabled"
+                };
+                coordsBtn.OnPressed += _ =>
+                {
+                    _selectedCrewName = capturedName;
+                    SetMapMode(true);
+                };
+                row.AddChild(coordsBtn);
+
+                card.AddChild(row);
+                _listContainer.AddChild(card);
 
                 if (s.HasCoordinates && s.Entity is { } entNet)
                 {
                     var isSel = selectedEntry == s;
-                    var color = isSel
-                        ? Color.FromHex("#00FFCC")
-                        : !s.IsAlive
-                            ? Color.FromHex("#FF4444")
-                            : s.TotalDamage > 0
-                                ? Color.FromHex("#FFD166")
-                                : Color.FromHex("#44E088");
+                    var markerColor = isSel ? Color.FromHex("#00FFCC") : accent;
                     markers.Add(new DeviceNavMapMarker(
                         entNet,
                         s.Name,
-                        s.Name,
+                        $"{s.Name} ({s.JobTitle})",
                         s.GridEntity,
                         s.LocalPosition,
-                        color,
+                        markerColor,
                         Selected: isSel,
                         Active: s.IsAlive,
-                        Blinks: !s.IsAlive));
+                        Blinks: !s.IsAlive || s.IsCritical));
                 }
             }
         }
 
         var summary = selectedEntry != null
-            ? $"Selected: {selectedEntry.Name} | {(selectedEntry.IsAlive ? "ALIVE" : "DECEASED")} | Dmg: {selectedEntry.TotalDamage} | Pos: {selectedEntry.CoordinatesText}"
+            ? $"Selected: {selectedEntry.Name} ({selectedEntry.JobTitle}) | {(!selectedEntry.IsAlive ? "DEAD" : selectedEntry.IsCritical ? "CRIT" : "ALIVE")} | Dmg: {selectedEntry.TotalDamage} | Pos: {selectedEntry.CoordinatesText}"
             : $"Auto-syncing suit sensors ({markers.Count} with coordinates).";
         _selectedInfoLabel.Text = summary;
-        _mapSelector.SetMarkers(markers, summary);
+        _mapSelector.SetMarkers(markers, summary, state.StationGrid);
     }
 }
 
@@ -1186,6 +1322,7 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
     private readonly ContentLabel _statusLabel;
     private readonly ContentLineEdit _announcementEdit;
     private readonly ContentButton _broadcastBtn;
+    private readonly ContentButton _revokeAuthBtn;
     private readonly ContentWrapContainer _alertLevelsWrap;
 
     public CommsConsoleUiControl()
@@ -1202,12 +1339,29 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
             SeparationOverride = 6
         };
 
-        root.AddChild(new ContentLabel
+        var headerRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        headerRow.AddChild(new ContentLabel
         {
             Text = "STATION COMMUNICATIONS & ALERT CONSOLE",
             FontColorOverride = Color.FromHex("#00D4FF"),
-            HorizontalExpand = true
+            HorizontalExpand = true,
+            VerticalAlignment = VAlignment.Center
         });
+        _revokeAuthBtn = new ContentButton
+        {
+            Name = "CommsRevokeAuthButton",
+            Text = "Deauth",
+            MinWidth = 76,
+            Visible = false
+        };
+        _revokeAuthBtn.OnPressed += _ => SendProgramMessage(new CommsConsoleActionMessage(CommsConsoleAction.RevokeAuth));
+        headerRow.AddChild(_revokeAuthBtn);
+        root.AddChild(headerRow);
 
         _statusLabel = new ContentLabel
         {
@@ -1261,6 +1415,7 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
 
         _statusLabel.Text = $"Current Alert: {state.CurrentAlertLevel.ToUpperInvariant()} | {state.StatusMessage}";
         _broadcastBtn.Disabled = !state.CanBroadcast;
+        _revokeAuthBtn.Visible = state.IsSwipedAuthorized;
 
         _alertLevelsWrap.RemoveAllChildren();
         foreach (var lvl in state.AvailableAlertLevels)

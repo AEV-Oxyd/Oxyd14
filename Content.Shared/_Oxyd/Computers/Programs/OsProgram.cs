@@ -240,3 +240,8 @@ public sealed class OsInvokeDevicePortMessage : BoundUserInterfaceMessage
         Argument = argument;
     }
 }
+
+[Serializable, NetSerializable]
+public sealed class OsShutDownMessage : BoundUserInterfaceMessage
+{
+}

@@ -52,6 +52,7 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<OsCloseProgramMessage>(OnOsCloseProgram);
             subs.Event<OsHardwareActionMessage>(OnOsHardwareAction);
             subs.Event<OsInvokeDevicePortMessage>(OnOsInvokePort);
+            subs.Event<OsShutDownMessage>(OnOsShutDown);
         });
 
         SubscribeLocalEvent<EmbeddedOsProgramComponent, ProgramStartupEvent>(OnEmbeddedStartup);
@@ -65,6 +66,7 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<EmbeddedOsSwitchProgramMessage>(OnEmbeddedSwitchProgram);
             subs.Event<EmbeddedOsCloseProgramMessage>(OnEmbeddedCloseProgram);
             subs.Event<EmbeddedOsInvokePortMessage>(OnEmbeddedInvokePort);
+            subs.Event<EmbeddedOsShutDownMessage>(OnEmbeddedShutDown);
         });
 
         SubscribeLocalEvent<OxydComputerComponent, ComputerHardwareChangedEvent>(OnComputerHardwareChanged);
@@ -184,6 +186,14 @@ public sealed partial class OsProgramSystem : EntitySystem
 
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdateOsUi(ent.Owner);
+    }
+
+    private void OnOsShutDown(Entity<OsProgramComponent> ent, ref OsShutDownMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        _computer.ShutDownComputer(compUid, manualShutdown: true);
     }
 
     [SubscribeLocalEvent]
@@ -323,6 +333,20 @@ public sealed partial class OsProgramSystem : EntitySystem
 
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdateOsUi(ent.Owner);
+    }
+
+    private void OnEmbeddedShutDown(Entity<EmbeddedOsProgramComponent> ent, ref EmbeddedOsShutDownMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (IsHostLocked(compUid))
+        {
+            UpdateOsUi(ent.Owner);
+            return;
+        }
+
+        _computer.ShutDownComputer(compUid, manualShutdown: true);
     }
 
     public void UpdateOsUi(EntityUid progUid)

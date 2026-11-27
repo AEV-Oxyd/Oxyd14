@@ -47,6 +47,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
     private readonly ContentButton _listModeBtn;
     private readonly ContentButton _mapModeBtn;
     private readonly Control _splitContainer;
+    private readonly ContentBoxContainer _leftColumn;
+    private readonly ContentBoxContainer _listPane;
     private readonly ContentScrollContainer _camScroll;
     private readonly ContentBoxContainer _cameraListContainer;
     private readonly OxydDeviceNavMapControl _mapSelector;
@@ -116,7 +118,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _listModeBtn = new ContentButton
         {
             Name = "CameraListModeButton",
-            Text = "Feeds & List",
+            Text = "List Mode",
             Pressed = true,
             MinWidth = 104,
             MinHeight = 24
@@ -125,7 +127,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _mapModeBtn = new ContentButton
         {
             Name = "CameraViewModeToggleButton",
-            Text = "Station Map",
+            Text = "Map Mode",
             Pressed = false,
             MinWidth = 104,
             MinHeight = 24
@@ -150,7 +152,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         topModeRow.AddChild(_statusLabel);
         root.AddChild(topModeRow);
 
-        // Main Split: Left Directory | Right Multi-Feed Grid OR On-Demand Logs Tab
+        // Main Split: Left Column (Auth + [List OR Map]) | Right Camera Feeds (Multi in List, Single in Map)
         var split = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
@@ -161,8 +163,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         };
         _splitContainer = split;
 
-        // Left: Auth bar + Zone filter + Search + Camera directory list
-        var leftPane = new ContentBoxContainer
+        // Left Column: Persistent Auth bar + (List Pane OR Side-by-Side Selection Map)
+        _leftColumn = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             MinWidth = 228f,
@@ -211,7 +213,17 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         authCol.AddChild(_authStatusLabel);
         authCol.AddChild(_authButtonsWrap);
         authPanel.AddChild(authCol);
-        leftPane.AddChild(authPanel);
+        _leftColumn.AddChild(authPanel);
+
+        _listPane = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            RectClipContent = true,
+            SeparationOverride = 5,
+            Visible = true
+        };
 
         var zoneScroll = new ContentScrollContainer
         {
@@ -231,7 +243,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             RectClipContent = true
         };
         zoneScroll.AddChild(_zoneBar);
-        leftPane.AddChild(zoneScroll);
+        _listPane.AddChild(zoneScroll);
 
         _searchEdit = new ContentLineEdit
         {
@@ -241,7 +253,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             MinHeight = 28f
         };
         _searchEdit.OnTextChanged += _ => RebuildCameraList();
-        leftPane.AddChild(_searchEdit);
+        _listPane.AddChild(_searchEdit);
 
         _camScroll = new ContentScrollContainer
         {
@@ -259,8 +271,20 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             SeparationOverride = 4
         };
         _camScroll.AddChild(_cameraListContainer);
-        leftPane.AddChild(_camScroll);
-        split.AddChild(leftPane);
+        _listPane.AddChild(_camScroll);
+        _leftColumn.AddChild(_listPane);
+
+        _mapSelector = new OxydDeviceNavMapControl("Camera")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += key =>
+        {
+            if (NetEntity.TryParse(key, out var camNet))
+                SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectSingleCamera, cameraEntity: camNet));
+        };
+        _leftColumn.AddChild(_mapSelector);
+        split.AddChild(_leftColumn);
 
         // Right: Focused Camera Top Bar + Full-Height 1..6 Camera Feed Grid (or Full-Height Logs Tab on click)
         var rightPane = new ContentBoxContainer
@@ -496,18 +520,6 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
         split.AddChild(rightPane);
         root.AddChild(split);
-
-        _mapSelector = new OxydDeviceNavMapControl("Camera")
-        {
-            Visible = false
-        };
-        _mapSelector.MarkerSelected += key =>
-        {
-            if (NetEntity.TryParse(key, out var camNet))
-                SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: camNet));
-            SetMapMode(false);
-        };
-        root.AddChild(_mapSelector);
         AddChild(root);
     }
 
@@ -595,7 +607,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             var lockBtn = new ContentButton
             {
                 Name = "CameraRevokeAuthButton",
-                Text = "Lock",
+                Text = "Deauth",
                 MinHeight = 22f
             };
             lockBtn.Label.Margin = new Thickness(5, 2);
@@ -736,8 +748,21 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _mapMode = mapMode;
         _listModeBtn.Pressed = !mapMode;
         _mapModeBtn.Pressed = mapMode;
-        _splitContainer.Visible = !mapMode;
+        _listPane.Visible = !mapMode;
         _mapSelector.Visible = mapMode;
+        _leftColumn.HorizontalExpand = mapMode;
+        _leftColumn.SizeFlagsStretchRatio = 1.0f;
+        _leftColumn.MinWidth = mapMode ? 280f : 228f;
+        _leftColumn.MaxWidth = mapMode ? float.PositiveInfinity : 248f;
+        if (mapMode)
+            _mapSelector.RequestFit();
+
+        if (_lastState != null)
+            SyncActiveCameraFeeds(_lastState);
+
+        NotifyParentWindowFocusState();
+        InvalidateMeasure();
+        InvalidateArrange();
     }
 
     private void RebuildCameraList()
@@ -823,7 +848,8 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
         _mapSelector.SetMarkers(
             mapMarkers,
-            _lastState.ActiveCamera != null ? $"Focused Camera: {_lastState.ActiveCameraName}" : "Select a Wi-Fi Camera");
+            _lastState.ActiveCamera != null ? $"Focused Camera: {_lastState.ActiveCameraName}" : "Select a Wi-Fi Camera",
+            _lastState.StationGrid);
     }
 
     private void SyncActiveCameraFeeds(SurveillanceCameraUiState state)
@@ -909,7 +935,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             _orderedTiles.Add(tile);
             var isFocused = focusedNet == feed.CameraEntity;
             var isSolo = _soloCamera == feed.CameraEntity;
-            tile.Visible = _soloCamera == null || isSolo;
+            tile.Visible = _mapMode ? isFocused : (_soloCamera == null || isSolo);
 
             IEye? resolvedEye = null;
             if (_entMan.TryGetEntity(feed.CameraEntity, out var camUid) &&
@@ -921,7 +947,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
             // Ensure the focused (or first) viewport always carries the canonical name for tests & tooling.
             tile.Viewport.Name = isFocused ? "OxydCameraViewport" : $"OxydCameraViewport_{feed.CameraEntity}";
-            tile.UpdateFeed(feed, resolvedEye, isFocused, isSolo, feeds.Count > 1);
+            tile.UpdateFeed(feed, resolvedEye, isFocused, isSolo, !_mapMode && feeds.Count > 1);
         }
 
         _feedGrid.UpdateEmptyState(feeds.Count == 0);
@@ -941,9 +967,10 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         }
 
         _disconnectBtn.Disabled = feeds.Count == 0;
-        _disconnectBtn.Text = feeds.Count > 1 ? $"Close All ({feeds.Count})" : "Disconnect";
+        _disconnectBtn.Text = !_mapMode && feeds.Count > 1 ? $"Close All ({feeds.Count})" : "Disconnect";
         _downloadLogsBtn.Disabled = !hasFocused;
         _clearLogsBtn.Disabled = !hasFocused;
+        _soloToggleBtn.Visible = !_mapMode;
         _soloToggleBtn.Disabled = feeds.Count <= 1;
         _soloToggleBtn.Pressed = _soloCamera != null;
         _soloToggleBtn.Text = _soloCamera != null ? "Grid" : "Solo";

@@ -124,3 +124,8 @@ public sealed class EmbeddedOsInvokePortMessage : BoundUserInterfaceMessage
         Argument = argument;
     }
 }
+
+[Serializable, NetSerializable]
+public sealed class EmbeddedOsShutDownMessage : BoundUserInterfaceMessage
+{
+}

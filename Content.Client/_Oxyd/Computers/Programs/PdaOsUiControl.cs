@@ -151,8 +151,18 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             SeparationOverride = 4
         };
 
+        var shutDownBtn = new ContentButton
+        {
+            Name = "PdaShutDownButton",
+            Text = "Shut Down",
+            SetWidth = 76,
+            VerticalAlignment = VAlignment.Top
+        };
+        shutDownBtn.OnPressed += _ => SendProgramMessage(new PdaOsShutDownMessage());
+
         topBarRow.AddChild(_unifiedTabBar);
         topBarRow.AddChild(_utilitiesBar);
+        topBarRow.AddChild(shutDownBtn);
         topBarPanel.AddChild(topBarRow);
         root.AddChild(topBarPanel);
 

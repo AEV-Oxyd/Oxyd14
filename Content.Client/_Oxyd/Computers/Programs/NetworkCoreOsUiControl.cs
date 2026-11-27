@@ -100,7 +100,25 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         };
         headerBox.AddChild(_headerLabel);
         headerBox.AddChild(_hwLabel);
-        headerPanel.AddChild(headerBox);
+
+        var headerRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        var shutDownBtn = new ContentButton
+        {
+            Name = "NetworkCoreShutDownButton",
+            Text = "Shut Down",
+            SetWidth = 84,
+            VerticalAlignment = VAlignment.Center
+        };
+        shutDownBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.ShutDown));
+
+        headerRow.AddChild(headerBox);
+        headerRow.AddChild(shutDownBtn);
+        headerPanel.AddChild(headerRow);
         root.AddChild(headerPanel);
 
         // Single Unified Navigation + Running Apps Bar

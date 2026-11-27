@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using Content.Server._Oxyd.Computers.Hardware;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server.Power.Components;
 using Content.Server.SurveillanceCamera;
@@ -52,6 +53,7 @@ namespace Content.Server._Oxyd.Computers.Cameras;
 /// </summary>
 public sealed partial class OxydCameraSystem : EntitySystem
 {
+    [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
@@ -685,7 +687,38 @@ public sealed partial class OxydCameraSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnProgramTerminated(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramTerminatedEvent args)
     {
-        DisconnectAllCameras(ent);
+        DisconnectAllCameras(ent, args.ComputerUid);
+        ent.Comp.IsAuthorized = false;
+        ent.Comp.AuthorizedByLabel = string.Empty;
+        ent.Comp.SuppressedSlotCard = null;
+        ent.Comp.StatusMessage = string.Empty;
+        Dirty(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCardReaderChanged(Entity<SurveillanceCameraProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
+        // Removing or swapping a card clears any prior explicit lock override for that removed card.
+        var inserted = _computer.GetInsertedIdCards(compUid);
+        if (ent.Comp.SuppressedSlotCard is { } sup && !inserted.Contains(sup))
+            ent.Comp.SuppressedSlotCard = null;
+
+        if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true))
+        {
+            if (ent.Comp.ActiveCameraUids.Count > 0 || ent.Comp.ActiveCameraUid != null)
+                DisconnectAllCameras(ent, compUid);
+            ent.Comp.StatusMessage = "ID card removed from slot — camera monitoring locked.";
+        }
+        else if (!ent.Comp.IsAuthorized && inserted.Count > 0)
+        {
+            ent.Comp.StatusMessage = $"Camera monitoring authorized via ID Slot ({MetaData(inserted[0]).EntityName}).";
+        }
+
+        Dirty(ent);
+        UpdateProgramUi(ent.Owner, compUid, ent.Comp);
     }
 
     [SubscribeLocalEvent]
@@ -771,7 +804,24 @@ public sealed partial class OxydCameraSystem : EntitySystem
 
         var compUid = scanned.ComputerUid;
         var cardUid = scanned.Card;
-        if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
+        ent.Comp.SuppressedSlotCard = null;
+
+        if (scanned.Retained)
+        {
+            // ID-slot authorization is only valid while the card remains physically in the slot
+            // (resolved dynamically via HasEffectiveCameraAuthorization).
+            if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
+            {
+                ent.Comp.StatusMessage = $"Authorized camera monitoring via ID Slot ({MetaData(cardUid).EntityName}).";
+                _popup.PopupEntity("Camera monitor authorized.", scanned.HostUid, scanned.User);
+            }
+            else
+            {
+                ent.Comp.StatusMessage = "Authorization denied: ID card lacks Security/Command camera monitoring clearance.";
+                _popup.PopupEntity("Access denied: insufficient camera monitoring clearance.", scanned.HostUid, scanned.User);
+            }
+        }
+        else if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
         {
             ent.Comp.IsAuthorized = true;
             ent.Comp.AuthorizedByLabel = $"Swiped ID ({MetaData(cardUid).EntityName})";
@@ -834,20 +884,36 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 break;
 
             case SurveillanceCameraAction.RevokeAuth:
-                DisconnectAllCameras(ent);
+                DisconnectAllCameras(ent, compUid);
+                HasEffectiveCameraAuthorization(ent, compUid, out _, out var activeSlotCard, allowAutoSlotAuth: true);
+                ent.Comp.SuppressedSlotCard = activeSlotCard != EntityUid.Invalid ? activeSlotCard : null;
                 ent.Comp.IsAuthorized = false;
                 ent.Comp.AuthorizedByLabel = string.Empty;
                 ent.Comp.StatusMessage = "Camera monitoring authorization locked.";
                 break;
 
             case SurveillanceCameraAction.SelectCamera:
-                if (!ent.Comp.IsAuthorized)
+                if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true))
                 {
-                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    ent.Comp.StatusMessage = "Access denied: Insert an authorized ID card, swipe on scanner, or select a .acc file.";
                     break;
                 }
                 if (msg.CameraEntity is { } camNet && TryGetEntity(camNet, out var camUid) && Exists(camUid.Value))
                     ConnectToCamera(ent, compUid, camUid.Value, msg.Actor);
+                break;
+
+            case SurveillanceCameraAction.SelectSingleCamera:
+                if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true))
+                {
+                    ent.Comp.StatusMessage = "Access denied: Insert an authorized ID card, swipe on scanner, or select a .acc file.";
+                    break;
+                }
+                if (msg.CameraEntity is { } singleCamNet && TryGetEntity(singleCamNet, out var singleCamUid) && Exists(singleCamUid.Value))
+                {
+                    if (!ent.Comp.ActiveCameraUids.Contains(singleCamUid.Value))
+                        DisconnectAllCameras(ent, compUid);
+                    ConnectToCamera(ent, compUid, singleCamUid.Value, msg.Actor);
+                }
                 break;
 
             case SurveillanceCameraAction.FocusCamera:
@@ -877,9 +943,9 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 break;
 
             case SurveillanceCameraAction.DownloadLogs:
-                if (!ent.Comp.IsAuthorized)
+                if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true))
                 {
-                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    ent.Comp.StatusMessage = "Access denied: Insert an authorized ID card, swipe on scanner, or select a .acc file.";
                     break;
                 }
                 var dlTarget = ResolveTargetCamera(ent, msg.CameraEntity);
@@ -887,9 +953,9 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 break;
 
             case SurveillanceCameraAction.ClearLogs:
-                if (!ent.Comp.IsAuthorized)
+                if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true))
                 {
-                    ent.Comp.StatusMessage = "Access denied: Authorize camera monitoring first by swiping an ID card or selecting a .acc file.";
+                    ent.Comp.StatusMessage = "Access denied: Insert an authorized ID card, swipe on scanner, or select a .acc file.";
                     break;
                 }
                 var clrTarget = ResolveTargetCamera(ent, msg.CameraEntity);
@@ -984,10 +1050,18 @@ public sealed partial class OxydCameraSystem : EntitySystem
             ent.Comp.LiveAudioFeed.AddRange(lines);
     }
 
-    private void DisconnectSingleCamera(Entity<SurveillanceCameraProgramComponent> ent, EntityUid camUid)
+    private void DisconnectSingleCamera(Entity<SurveillanceCameraProgramComponent> ent, EntityUid camUid, EntityUid? compUid = null)
     {
         if (Exists(camUid))
             _cameras.RemoveActiveViewers(camUid, new HashSet<EntityUid>(ent.Comp.ActiveViewers), ent.Owner);
+
+        var cu = compUid ?? (_programQuery.TryComp(ent.Owner, out var prog) ? prog.Computer : null);
+        if (cu is { Valid: true } validComp && Exists(validComp) && Exists(camUid))
+        {
+            var clientGuid = _router.EnsureDeviceGuid(validComp);
+            var camGuid = _router.EnsureDeviceGuid(camUid);
+            _router.UnregisterActiveConnection(validComp, $"CAM-{clientGuid}-{camGuid}");
+        }
 
         ent.Comp.ActiveCameraUids.Remove(camUid);
         ent.Comp.LiveAudioByCamera.Remove(camUid);
@@ -1002,13 +1076,22 @@ public sealed partial class OxydCameraSystem : EntitySystem
         Dirty(ent);
     }
 
-    private void DisconnectAllCameras(Entity<SurveillanceCameraProgramComponent> ent)
+    private void DisconnectAllCameras(Entity<SurveillanceCameraProgramComponent> ent, EntityUid? compUid = null)
     {
+        var cu = compUid ?? (_programQuery.TryComp(ent.Owner, out var prog) ? prog.Computer : null);
+        var clientGuid = cu is { Valid: true } validComp && Exists(validComp) ? _router.EnsureDeviceGuid(validComp) : string.Empty;
         var viewersCopy = new HashSet<EntityUid>(ent.Comp.ActiveViewers);
         foreach (var oldCam in ent.Comp.ActiveCameraUids)
         {
             if (Exists(oldCam))
+            {
                 _cameras.RemoveActiveViewers(oldCam, viewersCopy, ent.Owner);
+                if (!string.IsNullOrEmpty(clientGuid) && cu != null)
+                {
+                    var camGuid = _router.EnsureDeviceGuid(oldCam);
+                    _router.UnregisterActiveConnection(cu.Value, $"CAM-{clientGuid}-{camGuid}");
+                }
+            }
         }
 
         ent.Comp.ActiveCameraUids.Clear();
@@ -1202,6 +1285,11 @@ public sealed partial class OxydCameraSystem : EntitySystem
         }
 
         var accFiles = GetAvailableAccFilePaths(compUid, ref comp.SelectedAccFilePath);
+        var anchorUid = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        NetEntity? stationGrid = Transform(anchorUid).GridUid is { Valid: true } anchorGridUid ? GetNetEntity(anchorGridUid) : null;
+        var effectiveAuth = HasEffectiveCameraAuthorization((progUid, comp), compUid, out var effectiveAuthLabel, out _, allowAutoSlotAuth: false);
+        if (!effectiveAuth && (comp.ActiveCameraUids.Count > 0 || comp.ActiveCameraUid != null))
+            DisconnectAllCameras((progUid, comp), compUid);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
@@ -1224,16 +1312,51 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 new List<CameraAudioLineDto>(comp.LiveAudioFeed),
                 activeFeeds,
                 SurveillanceCameraProgramComponent.MaxActiveCameras,
-                comp.IsAuthorized,
-                comp.AuthorizedByLabel,
+                effectiveAuth,
+                effectiveAuthLabel,
                 comp.SelectedAccFilePath,
-                accFiles));
+                accFiles,
+                stationGrid));
         }
     }
 
     // =========================================================================
     // HELPERS
     // =========================================================================
+
+    private bool HasEffectiveCameraAuthorization(
+        Entity<SurveillanceCameraProgramComponent> ent,
+        EntityUid compUid,
+        out string authLabel,
+        out EntityUid slotCardUsed,
+        bool allowAutoSlotAuth = true)
+    {
+        if (ent.Comp.IsAuthorized)
+        {
+            authLabel = ent.Comp.AuthorizedByLabel;
+            slotCardUsed = EntityUid.Invalid;
+            return true;
+        }
+
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
+        {
+            if (!allowAutoSlotAuth && ent.Comp.SuppressedSlotCard == cardUid)
+                continue;
+
+            if (CanIdCardAuthorizeCameras(ent.Comp, compUid, cardUid))
+            {
+                if (allowAutoSlotAuth)
+                    ent.Comp.SuppressedSlotCard = null;
+                authLabel = $"ID Slot ({MetaData(cardUid).EntityName})";
+                slotCardUsed = cardUid;
+                return true;
+            }
+        }
+
+        authLabel = string.Empty;
+        slotCardUsed = EntityUid.Invalid;
+        return false;
+    }
 
     private bool CanIdCardAuthorizeCameras(SurveillanceCameraProgramComponent comp, EntityUid compUid, EntityUid cardUid)
     {

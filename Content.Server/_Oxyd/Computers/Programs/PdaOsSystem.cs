@@ -39,6 +39,7 @@ public sealed partial class PdaOsSystem : EntitySystem
             subs.Event<PdaOsCloseProgramMessage>(OnPdaOsCloseProgram);
             subs.Event<PdaOsHardwareActionMessage>(OnPdaOsHardwareAction);
             subs.Event<PdaOsInvokeDevicePortMessage>(OnPdaOsInvokePort);
+            subs.Event<PdaOsShutDownMessage>(OnPdaOsShutDown);
         });
     }
 
@@ -145,6 +146,14 @@ public sealed partial class PdaOsSystem : EntitySystem
 
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdatePdaOsUi(ent.Owner);
+    }
+
+    private void OnPdaOsShutDown(Entity<PdaOsProgramComponent> ent, ref PdaOsShutDownMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        _computer.ShutDownComputer(compUid, manualShutdown: true);
     }
 
     public void UpdatePdaOsUi(EntityUid progUid)

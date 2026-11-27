@@ -2543,7 +2543,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 (b.Text.Equals("Refresh", StringComparison.OrdinalIgnoreCase) ||
                  b.Text.Contains("Save Log", StringComparison.OrdinalIgnoreCase))),
                 Is.False, "APC controller UI must not show Refresh or Save Log buttons.");
-            Assert.That(apcBtns.All(b => b.Disabled), Is.True, "All APC control buttons must be disabled while locked.");
+            Assert.That(apcBtns.Where(b => b.VisibleInTree).All(b => b.Disabled), Is.True, "All visible APC control buttons must be disabled while locked.");
 
             // Clicking over an APC button while locked must hit the full-UI lock overlay
             var btnCenter = apcBtns[0].GlobalPixelPosition + apcBtns[0].PixelSize / 2;
@@ -2601,8 +2601,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             CollectDescendants(apcWin, apcCtrls);
             Assert.That(apcCtrls.Count, Is.EqualTo(1));
 
-            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(apcCtrls[0], apcBtns);
+            var allApcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcCtrls[0], allApcBtns);
+            var apcBtns = allApcBtns.Where(b => b.VisibleInTree).ToList();
             Assert.That(apcBtns.Count, Is.EqualTo(1), "APC menu must expose strictly a single Toggle Breaker button.");
             Assert.That(apcBtns.All(b => !b.Disabled), Is.True, "APC control buttons must be enabled once unlocked.");
             apcToggleBtn = apcBtns.FirstOrDefault(b => b.Text == "Toggle Breaker");
@@ -2671,8 +2672,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(lockOverlay!.VisibleInTree, Is.True, "Re-locking APC must show the hardware lock overlay again.");
             var apcCtrls = new List<ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
-            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(apcCtrls[0], apcBtns);
+            var allApcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcCtrls[0], allApcBtns);
+            var apcBtns = allApcBtns.Where(b => b.VisibleInTree).ToList();
             Assert.That(apcBtns.All(b => b.Disabled), Is.True, "Re-locked APC buttons must be disabled again.");
             apcWin.Close();
         });
@@ -2759,8 +2761,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(pressureStatus?.VisibleInTree, Is.True);
             Assert.That(tempStatus?.VisibleInTree, Is.True);
 
-            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(atmosCtrls[0], alarmBtns);
+            var allAlarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], allAlarmBtns);
+            var alarmBtns = allAlarmBtns.Where(b => b.VisibleInTree).ToList();
             Assert.That(alarmBtns.Count, Is.GreaterThan(0));
             Assert.That(alarmBtns.Any(b => b.Text != null &&
                 (b.Text.Equals("Refresh", StringComparison.OrdinalIgnoreCase) ||
@@ -2807,8 +2810,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             CollectDescendants(alarmWin, atmosCtrls);
             Assert.That(atmosCtrls.Count, Is.EqualTo(1));
 
-            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(atmosCtrls[0], alarmBtns);
+            var allAlarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], allAlarmBtns);
+            var alarmBtns = allAlarmBtns.Where(b => b.VisibleInTree).ToList();
             Assert.That(alarmBtns.All(b => !b.Disabled), Is.True, "AirAlarm control buttons must be enabled once unlocked.");
             panicBtn = alarmBtns.FirstOrDefault(b => b.Text == "Panic");
             Assert.That(panicBtn, Is.Not.Null);
@@ -2847,8 +2851,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var alarmWin = (ComputerDisplayWindow) alarmWinBase!;
             var atmosCtrls = new List<AtmosControlUiControl>();
             CollectDescendants(alarmWin, atmosCtrls);
-            var alarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(atmosCtrls[0], alarmBtns);
+            var allAlarmBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrls[0], allAlarmBtns);
+            var alarmBtns = allAlarmBtns.Where(b => b.VisibleInTree).ToList();
             Assert.That(alarmBtns.All(b => b.Disabled), Is.True, "Re-locked AirAlarm buttons must be disabled again.");
             alarmWin.Close();
         });
@@ -6457,6 +6462,48 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(examineSys.CanExamine(SPlayer, distantMobB), Is.True);
         });
 
+        // Switch Camera App to Map Mode -> side-by-side selection map + strictly 1 single active camera!
+        Content.Client.UserInterface.Controls.ContentButton? camMapToggleBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? camListToggleBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camCtrl = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            camMapToggleBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraViewModeToggleButton", camCtrl);
+            camListToggleBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraListModeButton", camCtrl);
+            Assert.That(camMapToggleBtn, Is.Not.Null);
+            Assert.That(camListToggleBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(camMapToggleBtn!);
+        await RunTicks(6);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camCtrl = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, camCtrl);
+            var feedTiles = new List<Control>();
+            CollectDescendants(camCtrl, feedTiles);
+            var visibleTiles = feedTiles.Where(c => c.Name != null && c.Name.StartsWith("CameraFeedTile_", StringComparison.Ordinal) && c.VisibleInTree).ToList();
+            Assert.That(mapPanel?.VisibleInTree, Is.True, "Camera Map Mode must show the selection map.");
+            Assert.That(visibleTiles.Count, Is.EqualTo(1), "Camera Map Mode must show strictly 1 single camera feed side-by-side with the map.");
+            AssertNoOverlappingSiblings(camCtrl, "CameraMapModeSideBySide");
+        });
+
+        // Switch back to List Mode -> multi-camera grid restores all 5 active feeds & docks again!
+        await ClickViaHitTest(camListToggleBtn!);
+        await RunTicks(6);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camCtrl = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var feedTiles = new List<Control>();
+            CollectDescendants(camCtrl, feedTiles);
+            var visibleTiles = feedTiles.Where(c => c.Name != null && c.Name.StartsWith("CameraFeedTile_", StringComparison.Ordinal) && c.VisibleInTree).ToList();
+            Assert.That(visibleTiles.Count, Is.EqualTo(5), "Returning to Camera List Mode must restore all 5 active feeds.");
+        });
+
         // Safety safeguard: dealing damage to the player while focused in a docked console must
         // automatically close the docked display and immediately resume normal world rendering!
         await Server.WaitPost(() =>
@@ -7138,19 +7185,51 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var win = GetWindow<ComputerDisplayWindow>();
             var atmosCtrl = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
             var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, atmosCtrl);
+            var bodyPanel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
+                c => c.Name == "AtmosBodyContainer", atmosCtrl);
+            var deauthBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosRevokeAuthButton", atmosCtrl);
             Assert.That(mapPanel, Is.Not.Null);
+            Assert.That(bodyPanel, Is.Not.Null);
+            Assert.That(bodyPanel!.Visible, Is.True, "Atmos Map Mode must split side-by-side showing both Map and Selected Alarm.");
+            Assert.That(deauthBtn, Is.Not.Null, "Authorized Atmos Control must expose a Deauth button.");
             Assert.That(mapPanel!.MarkerCount, Is.GreaterThanOrEqualTo(2));
             selectedAltAlarmKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, alarmBGuid, StringComparison.OrdinalIgnoreCase));
             Assert.That(mapPanel.TrySelectByKey(selectedAltAlarmKey), Is.True);
-            win.Close();
         });
         await RunTicks(6);
+
+        // Verify Deauth works from Atmos Control UI while authorized to alarm B
+        await Server.WaitPost(() =>
+        {
+            // Switch back to authorized alarm B and verify deauth revokes its remote session auth
+            SEntMan.System<Content.Server._Oxyd.Computers.Programs.DeviceProgramsSystem>();
+        });
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SelectTarget, alarmBGuid), FromServer(atmosProgUid));
+        await RunTicks(4);
+        Content.Client.UserInterface.Controls.ContentButton? atmosDeauthBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosCtrl = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            atmosDeauthBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosRevokeAuthButton", atmosCtrl);
+            Assert.That(atmosDeauthBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(atmosDeauthBtn!);
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid).Locked, Is.True,
+                "Clicking Deauth in Atmos Control must lock the active remote session.");
+        });
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await RunTicks(4);
 
         await Server.WaitAssertion(() =>
         {
             Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid).SelectedTargetGuid,
-                Is.EqualTo(selectedAltAlarmKey),
-                "Selecting an Air Alarm beacon in Atmos Map Mode must switch the active remote target.");
+                Is.EqualTo(alarmBGuid));
         });
 
         // Verify APC Control Map Mode on remote APC monitor
@@ -7171,16 +7250,34 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(apcMapToggle, Is.Not.Null);
         });
         await ClickViaHitTest(apcMapToggle!);
+        await RunTicks(4);
+        string altApcKey = string.Empty;
         await Client.WaitAssertion(() =>
         {
             var win = GetWindow<ComputerDisplayWindow>();
             var apcCtrl = GetControlFromChildren<ApcControlUiControl>(_ => true, win)!;
             var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, apcCtrl);
+            var toggleBreakerBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "ApcToggleBreakerButton", apcCtrl);
             Assert.That(mapPanel, Is.Not.Null);
-            Assert.That(mapPanel!.MarkerCount, Is.GreaterThanOrEqualTo(2));
+            Assert.That(mapPanel!.VisibleInTree, Is.True);
+            Assert.That(toggleBreakerBtn, Is.Not.Null);
+            Assert.That(toggleBreakerBtn!.VisibleInTree, Is.True,
+                "APC Map Mode must keep the selected APC telemetry/controls visible side-by-side with the map.");
+            Assert.That(mapPanel.MarkerCount, Is.GreaterThanOrEqualTo(2));
             var selectedGuid = SEntMan.GetComponent<ApcControlProgramComponent>(powerProgUid).SelectedTargetGuid;
-            var altApcKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, selectedGuid, StringComparison.OrdinalIgnoreCase));
+            altApcKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, selectedGuid, StringComparison.OrdinalIgnoreCase));
             Assert.That(mapPanel.TrySelectByKey(altApcKey), Is.True);
+        });
+        await RunTicks(6);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var apcCtrl = GetControlFromChildren<ApcControlUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, apcCtrl)!;
+            Assert.That(mapPanel.VisibleInTree, Is.True,
+                "Selecting an APC beacon in Map Mode must stay in side-by-side Map Mode rather than collapsing back to List Mode.");
+            Assert.That(SEntMan.GetComponent<ApcControlProgramComponent>(powerProgUid).SelectedTargetGuid, Is.EqualTo(altApcKey));
             win.Close();
         });
         await RunTicks(6);
@@ -7198,11 +7295,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
             wsIdHost = SEntMan.SpawnEntity("OxydWorkstationComputerIdSlot", new EntityCoordinates(gridUid, 3.5f, 3.5f));
+            powerSys.SetNeedsPower(wsIdHost, false);
             var wsIdComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsIdHost).ComputerEntity!.Value;
             Assert.That(cardSys.GetSlotReaders(wsIdComp), Has.Count.EqualTo(1),
                 "OxydWorkstationComputerIdSlot must come pre-equipped with 1 ID Card Slot hardware module.");
 
             crewHost = SEntMan.SpawnEntity("ComputerCrewMonitoring", new EntityCoordinates(gridUid, 2.5f, 3.5f));
+            powerSys.SetNeedsPower(crewHost, false);
             compSys.EnsureComputerBoundToHost((crewHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(crewHost)), out crewCompUid);
             crewMob = SEntMan.SpawnEntity("MobHuman", new EntityCoordinates(gridUid, 1.5f, 1.5f));
             SEntMan.GetComponent<MetaDataComponent>(crewMob);
@@ -7241,6 +7340,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, crewUi);
             Assert.That(mapPanel, Is.Not.Null);
             Assert.That(mapPanel!.Visible, Is.True);
+            Assert.That(mapPanel.NavMap.MapUid, Is.Not.Null, "Crew Monitor Map must always bind the station grid.");
             Assert.That(mapPanel.MarkerCount, Is.GreaterThanOrEqualTo(1));
         });
 
@@ -7255,6 +7355,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             var win = GetWindow<ComputerDisplayWindow>();
             var crewUi = GetControlFromChildren<CrewMonitorUiControl>(_ => true, win)!;
+            var healthBars = new List<ContentProgressBar>();
+            CollectDescendants(crewUi, healthBars);
+            Assert.That(healthBars.Count, Is.GreaterThanOrEqualTo(1), "Crew Monitor must render health progress bars.");
             var allLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
             CollectDescendants(crewUi, allLabels);
             Assert.That(allLabels.Any(l => (l.Text ?? string.Empty).Contains("7.5")), Is.True,
@@ -7262,5 +7365,370 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             win.Close();
         });
         await RunTicks(6);
+
+        // Verify computer screen sprite state updates dynamically based on running app on wsIdHost
+        EntityUid? launchedIdProg = null;
+        EntityUid? launchedManifestProg = null;
+        await Server.WaitPost(() =>
+        {
+            var wsIdComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsIdHost).ComputerEntity!.Value;
+            compSys.RefreshComputerBootState(wsIdComp);
+            Assert.That(compSys.TryLaunchExecutable(wsIdComp, "/bin/access_encoder.nte", out launchedIdProg, out var idErr, SPlayer), Is.True, idErr);
+        });
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            var appSys = SEntMan.System<SharedAppearanceSystem>();
+            Assert.That(appSys.TryGetData<string>(wsIdHost, Content.Shared.Computer.ComputerVisuals.ScreenState, out var scr), Is.True);
+            Assert.That(scr, Is.EqualTo("id"));
+        });
+        await Server.WaitPost(() =>
+        {
+            var wsIdComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsIdHost).ComputerEntity!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsIdComp, "/bin/crew_manifest.nte", out launchedManifestProg, out var manErr, SPlayer), Is.True, manErr);
+        });
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var appSys = SEntMan.System<SharedAppearanceSystem>();
+            Assert.That(appSys.TryGetData<string>(wsIdHost, Content.Shared.Computer.ComputerVisuals.ScreenState, out var scr), Is.True);
+            Assert.That(scr, Is.EqualTo("medcomp"));
+        });
+        await Server.WaitPost(() =>
+        {
+            var wsIdComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsIdHost).ComputerEntity!.Value;
+            if (launchedManifestProg != null)
+                compSys.CloseProgram(wsIdComp, launchedManifestProg.Value);
+            if (launchedIdProg != null)
+                compSys.CloseProgram(wsIdComp, launchedIdProg.Value);
+        });
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var appSys = SEntMan.System<SharedAppearanceSystem>();
+            Assert.That(appSys.TryGetData<string>(wsIdHost, Content.Shared.Computer.ComputerVisuals.ScreenState, out var scr), Is.True);
+            Assert.That(scr, Is.EqualTo(string.Empty));
+        });
+
+        // Verify Crew Monitor still binds StationGrid in Map Mode even with 0 active suit sensors
+        await Server.WaitPost(() =>
+        {
+            SEntMan.System<Content.Server.Medical.SuitSensors.SuitSensorSystem>()
+                .SetSensor(sensorItem, Content.Shared.Medical.SuitSensors.SuitSensorMode.SensorOff);
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(crewHost).Coordinates);
+            compSys.OpenComputerForActor(crewCompUid, SPlayer);
+        });
+        await RunTicks(10);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var crewUi = GetControlFromChildren<CrewMonitorUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, crewUi)!;
+            Assert.That(mapPanel.MarkerCount, Is.EqualTo(0));
+            Assert.That(mapPanel.NavMap.MapUid, Is.Not.Null,
+                "Crew Monitor Map must remain bound to the station grid even with 0 active suit sensors.");
+            win.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestFittedNavMapSlotAuthCameraCloseDeauthAndAllOsShutDown()
+    {
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid routerHost = default;
+        EntityUid camUid = default;
+        EntityUid apcUid = default;
+        EntityUid alarmUid = default;
+        EntityUid secIdCard = default;
+        EntityUid engIdCard = default;
+        EntityUid pdaUid = default;
+        EntityUid pdaComp = default;
+        EntityUid apcComp = default;
+        EntityUid routerComp = default;
+
+        var compSys = Server.System<OxydComputerSystem>();
+        var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+        var powerSys = Server.System<Content.Server.Power.EntitySystems.PowerReceiverSystem>();
+        var lockSys = Server.System<Content.Shared.Lock.LockSystem>();
+        var mapMan = SEntMan.System<SharedMapSystem>();
+
+        await Server.WaitPost(() =>
+        {
+            var gridComp = SEntMan.GetComponent<Robust.Shared.Map.Components.MapGridComponent>(gridUid);
+            var tile = new Tile(1);
+            for (var x = -6; x <= 14; x++)
+            {
+                for (var y = -4; y <= 6; y++)
+                {
+                    mapMan.SetTile(gridUid, gridComp, new Robust.Shared.Maths.Vector2i(x, y), tile);
+                }
+            }
+
+            // Walls along perimeter so NavMap builds real rectangular geometry bounds (21x11 rectangle).
+            for (var x = -6; x <= 14; x++)
+            {
+                SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, x + 0.5f, -3.5f));
+                SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, x + 0.5f, 6.5f));
+            }
+            for (var y = -3; y <= 5; y++)
+            {
+                SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, -5.5f, y + 0.5f));
+                SEntMan.SpawnEntity("WallSolid", new EntityCoordinates(gridUid, 14.5f, y + 0.5f));
+            }
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", new EntityCoordinates(gridUid, 0.5f, 0.5f));
+            powerSys.SetNeedsPower(routerHost, false);
+            compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out routerComp);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputerIdSlot", new EntityCoordinates(gridUid, 2.5f, 0.5f));
+            powerSys.SetNeedsPower(wsHost, false);
+            compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp);
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile { Name = "cameras", Extension = "nte", Directory = "/bin/", Size = 4096, ProgramId = "SurveillanceCameraProgram", Title = "Surveillance Cameras", RamUsageMb = 16 }, wsFs!);
+            fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "apc_control", Extension = "nte", Directory = "/bin/", Size = 2048, ProgramId = "OxydApcControlProgram", Title = "APC Control", RamUsageMb = 16 }, wsFs!);
+            fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "atmos_control", Extension = "nte", Directory = "/bin/", Size = 2048, ProgramId = "OxydAtmosControlProgram", Title = "Atmos Control", RamUsageMb = 16 }, wsFs!);
+
+            camUid = SEntMan.SpawnEntity("SurveillanceCameraSecurity", new EntityCoordinates(gridUid, 8.5f, 2.5f));
+            powerSys.SetNeedsPower(camUid, false);
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", new EntityCoordinates(gridUid, 4.5f, 2.5f));
+            lockSys.Lock(apcUid, null);
+            compSys.EnsureComputerBoundToHost((apcUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid)), out apcComp);
+
+            alarmUid = SEntMan.SpawnEntity("AirAlarm", new EntityCoordinates(gridUid, 6.5f, 2.5f));
+            powerSys.SetNeedsPower(alarmUid, false);
+            lockSys.Lock(alarmUid, null);
+
+            secIdCard = SEntMan.SpawnEntity("SecurityIDCard", new EntityCoordinates(gridUid, 2.5f, 0.5f));
+            engIdCard = SEntMan.SpawnEntity("EngineeringIDCard", new EntityCoordinates(gridUid, 2.5f, 0.5f));
+
+            pdaUid = SEntMan.SpawnEntity("CaptainPDA", new EntityCoordinates(gridUid, 2.5f, 0.5f));
+            compSys.EnsureComputerBoundToHost((pdaUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid)), out pdaComp);
+
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, new EntityCoordinates(gridUid, 2.5f, 0.5f));
+        });
+        await RunTicks(12);
+
+        // 1) Camera App: NavMap fits full parent frame, ID slot auto-auths on view, removal revokes & disconnects,
+        //    and closing Camera app deauths & disconnects all cameras.
+        EntityUid? camProgUid = null;
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/cameras.nte", out camProgUid, out var err, SPlayer), Is.True, err);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(12);
+
+        Content.Client.UserInterface.Controls.ContentButton? mapToggleBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            mapToggleBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Text == "Map Mode", camUi)!;
+            Assert.That(mapToggleBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(mapToggleBtn!);
+        await RunTicks(16);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var mapCtrl = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, camUi)!;
+            Assert.That(mapCtrl.VisibleInTree, Is.True);
+            var navMap = mapCtrl.NavMap;
+            var mapFrame = navMap.Parent!;
+            Assert.That(navMap.Size.X, Is.GreaterThan(230f),
+                $"OxydFittedNavMap must fill its parent container instead of clamping to MinSize (got {navMap.Size} inside {mapFrame.Size}).");
+            Assert.That(MathF.Abs(navMap.Size.X - mapFrame.Size.X), Is.LessThan(8f),
+                $"OxydFittedNavMap width ({navMap.Size.X}) should match its enclosing frame ({mapFrame.Size.X}).");
+            Assert.That(navMap.ChildCount > 0 && navMap.GetChild(0).ChildCount > 0 ? navMap.GetChild(0).GetChild(0).Visible : true, Is.False,
+                "NavMapControl's internal floating topPanel must stay hidden so it cannot clip or overlap the fitted map.");
+        });
+
+        // Insert Security ID card into slot -> try to view camera WITHOUT calling ScanCard explicitly -> auto-auths!
+        await Server.WaitPost(() =>
+        {
+            var slotReader = cardSys.GetSlotReaders(wsComp)[0];
+            Assert.That(cardSys.TryInsertCard(slotReader, secIdCard, SPlayer), Is.True);
+        });
+        await SendBui(ProgramUiKey.Key,
+            new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUid)),
+            FromServer(camProgUid!.Value));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var camComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid!.Value);
+            Assert.That(camComp.ActiveCameraUids, Contains.Item(camUid),
+                "Attempting to view a camera with an authorized ID card inserted in the slot must auto-authorize and connect.");
+        });
+
+        // Remove ID card from slot -> immediately revokes slot auth & disconnects cameras!
+        await Server.WaitPost(() =>
+        {
+            var slotReader = cardSys.GetSlotReaders(wsComp)[0];
+            Assert.That(cardSys.TryEjectCard(slotReader, SPlayer), Is.True);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var camComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid!.Value);
+            Assert.That(camComp.ActiveCameraUids, Is.Empty,
+                "Removing the ID card from the slot must immediately revoke access and disconnect active cameras.");
+            Assert.That(camComp.StatusMessage, Does.Contain("removed"),
+                "Status message should notify that the ID card was removed from the slot.");
+        });
+
+        // Authorize via transient scanner/IsAuthorized, connect a camera, then close the Cameras app -> must disconnect & deauth!
+        await Server.WaitPost(() =>
+        {
+            var camComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid!.Value);
+            camComp.IsAuthorized = true;
+            camComp.AuthorizedByLabel = "Test Scanner";
+        });
+        await SendBui(ProgramUiKey.Key,
+            new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUid)),
+            FromServer(camProgUid.Value));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var camComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid!.Value);
+            Assert.That(camComp.ActiveCameraUids, Contains.Item(camUid));
+        });
+
+        await Server.WaitPost(() =>
+        {
+            var camComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProgUid!.Value);
+            var termEv = new ProgramTerminatedEvent(wsComp, camProgUid.Value);
+            SEntMan.EventBus.RaiseLocalEvent(camProgUid.Value, ref termEv, broadcast: false);
+            Assert.That(camComp.ActiveCameraUids, Is.Empty, "Closing camera app must disconnect all cameras.");
+            Assert.That(camComp.IsAuthorized, Is.False, "Closing camera app must deauthorize the camera session.");
+            Assert.That(camComp.AuthorizedByLabel, Is.Empty);
+            compSys.CloseProgram(wsComp, camProgUid.Value);
+        });
+        await RunTicks(6);
+
+        // 2) APC Control & Atmos Control: slot ID card validity while inserted + auto-auth on action
+        EntityUid? apcProgUid = null;
+        EntityUid? atmosProgUid = null;
+        await Server.WaitPost(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/apc_control.nte", out apcProgUid, out var e1, SPlayer), Is.True, e1);
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/atmos_control.nte", out atmosProgUid, out var e2, SPlayer), Is.True, e2);
+        });
+        await RunTicks(4);
+
+        // Try without ID card -> must be blocked
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(apcProgUid!.Value));
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcControlProgramComponent>(apcProgUid.Value).Locked, Is.True);
+        });
+
+        // Insert Engineering ID -> click ToggleBreaker & SetModePanic -> auto-auths and unlocks!
+        await Server.WaitPost(() =>
+        {
+            var slotReader = cardSys.GetSlotReaders(wsComp)[0];
+            Assert.That(cardSys.TryInsertCard(slotReader, engIdCard, SPlayer), Is.True);
+        });
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(apcProgUid.Value));
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SetModePanic), FromServer(atmosProgUid!.Value));
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcControlProgramComponent>(apcProgUid.Value).Locked, Is.False,
+                "APC Control must automatically authorize using the Engineering ID inserted in the slot.");
+            Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid.Value).Locked, Is.False,
+                "Atmos Control must automatically authorize using the Engineering ID inserted in the slot.");
+        });
+
+        // Eject Engineering ID -> BOTH must immediately re-lock!
+        await Server.WaitPost(() =>
+        {
+            var slotReader = cardSys.GetSlotReaders(wsComp)[0];
+            Assert.That(cardSys.TryEjectCard(slotReader, SPlayer), Is.True);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<ApcControlProgramComponent>(apcProgUid!.Value).Locked, Is.True,
+                "Removing ID card from slot must immediately revoke APC Control slot auth.");
+            Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid!.Value).Locked, Is.True,
+                "Removing ID card from slot must immediately revoke Atmos Control slot auth.");
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
+        await RunTicks(4);
+
+        // 3) True Shut Down button on ALL 4 OS UIs (OsUiControl, PdaOsUiControl, EmbeddedOsUiControl, NetworkCoreOsUiControl)
+        async Task VerifyOsShutDownAndReboot(EntityUid hostUid, EntityUid targetComp, string buttonName)
+        {
+            await Server.WaitPost(() =>
+            {
+                SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(hostUid).Coordinates);
+                compSys.OpenComputerForActor(targetComp, SPlayer);
+            });
+            await RunTicks(10);
+
+            Content.Client.UserInterface.Controls.ContentButton? shutDownBtn = null;
+            await Client.WaitAssertion(() =>
+            {
+                var win = GetWindow<ComputerDisplayWindow>();
+                shutDownBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                    b => b.Name == buttonName, win);
+                Assert.That(shutDownBtn, Is.Not.Null, $"Expected Shut Down button '{buttonName}' to exist.");
+            });
+
+            await ClickViaHitTest(shutDownBtn!);
+            await RunTicks(6);
+
+            await Server.WaitAssertion(() =>
+            {
+                var comp = SEntMan.GetComponent<OxydComputerComponent>(targetComp);
+                Assert.That(comp.IsBooted, Is.False, $"'{buttonName}' must shut down the computer.");
+                Assert.That(comp.BootState, Is.EqualTo(ComputerBootState.Off));
+                Assert.That(comp.ManuallyShutDown, Is.True);
+            });
+
+            Content.Client.UserInterface.Controls.ContentButton? bootBtn = null;
+            await Client.WaitAssertion(() =>
+            {
+                var win = GetWindow<ComputerDisplayWindow>();
+                bootBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                    b => (b.Text ?? string.Empty).Contains("Boot"), win);
+                Assert.That(bootBtn, Is.Not.Null, "Shut-down screen must display Boot button.");
+                Assert.That(bootBtn!.VisibleInTree, Is.True);
+            });
+
+            await ClickViaHitTest(bootBtn!);
+            await RunTicks(8);
+
+            await Server.WaitAssertion(() =>
+            {
+                var comp = SEntMan.GetComponent<OxydComputerComponent>(targetComp);
+                Assert.That(comp.IsBooted, Is.True, $"Boot button after '{buttonName}' must cleanly power the computer back on.");
+                Assert.That(comp.ManuallyShutDown, Is.False);
+            });
+
+            await Client.WaitPost(() => GetWindow<ComputerDisplayWindow>().Close());
+            await RunTicks(4);
+        }
+
+        await VerifyOsShutDownAndReboot(wsHost, wsComp, "OsShutDownButton");
+        await VerifyOsShutDownAndReboot(pdaUid, pdaComp, "PdaShutDownButton");
+        await Server.WaitPost(() => lockSys.Unlock(apcUid, null));
+        await RunTicks(4);
+        await VerifyOsShutDownAndReboot(apcUid, apcComp, "EmbeddedOsShutDownButton");
+        await VerifyOsShutDownAndReboot(routerHost, routerComp, "NetworkCoreShutDownButton");
     }
 }

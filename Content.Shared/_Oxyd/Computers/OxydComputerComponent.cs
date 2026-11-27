@@ -158,6 +158,9 @@ public sealed partial class OxydComputerComponent : Component
     public bool IsBooted;
 
     [DataField, AutoNetworkedField]
+    public bool ManuallyShutDown;
+
+    [DataField, AutoNetworkedField]
     public string BootError = string.Empty;
 
     [DataField, AutoNetworkedField]

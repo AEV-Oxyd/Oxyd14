@@ -1,7 +1,9 @@
 using System.Linq;
 using System.Numerics;
+using Content.Server._Oxyd.Computers.Hardware;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Servers;
+using Content.Server.Access.Systems;
 using Content.Server.Cargo.Components;
 using Content.Server.Cargo.Systems;
 using Content.Server.Chat.Systems;
@@ -34,6 +36,7 @@ using Content.Shared.Labels.EntitySystems;
 using Content.Shared.MassMedia.Systems;
 using Content.Shared.Medical.HealthAnalyzer;
 using Content.Shared.Medical.SuitSensors;
+using Content.Shared.Mobs;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Paper;
 using Content.Shared.Popups;
@@ -43,6 +46,7 @@ using Content.Shared.StationRecords;
 using Content.Shared.StationRecords.Systems;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -82,8 +86,11 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private ChatSystem _chat = default!;
     [Dependency] private PowerSolarSystem _solar = default!;
     [Dependency] private AccessReaderSystem _accessReader = default!;
+    [Dependency] private IdCardSystem _idCard = default!;
     [Dependency] private MobStateSystem _mobState = default!;
+    [Dependency] private MobThresholdSystem _mobThreshold = default!;
     [Dependency] private Content.Shared.Damage.Systems.DamageableSystem _damageable = default!;
+    [Dependency] private StationRecordsSystem _records = default!;
     [Dependency] private PaperSystem _paper = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
@@ -1690,7 +1697,33 @@ public sealed partial class StationAppsSystem : EntitySystem
         var anchorUid = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
         var station = _station.GetOwningStation(anchorUid) ?? _station.GetStationsSet().FirstOrDefault();
         var stationName = station != EntityUid.Invalid && Exists(station) ? MetaData(station).EntityName : "Station Telemetry";
-        var anchorMap = Transform(anchorUid).MapID;
+        var anchorXform = Transform(anchorUid);
+        var anchorMap = anchorXform.MapID;
+
+        EntityUid? fallbackGridUid = anchorXform.GridUid is { Valid: true } ag ? ag : null;
+        if (fallbackGridUid == null)
+        {
+            var gridQuery = EntityQueryEnumerator<MapGridComponent, TransformComponent>();
+            while (gridQuery.MoveNext(out var gUid, out _, out var gXform))
+            {
+                if (gXform.MapID == anchorMap)
+                {
+                    fallbackGridUid = gUid;
+                    break;
+                }
+            }
+        }
+        NetEntity? stationGridNet = fallbackGridUid is { Valid: true } sg ? GetNetEntity(sg) : null;
+
+        var recordsByName = new Dictionary<string, GeneralStationRecord>(StringComparer.OrdinalIgnoreCase);
+        if (station != EntityUid.Invalid && Exists(station))
+        {
+            foreach (var (_, genRec) in _records.GetRecordsOfType<GeneralStationRecord>(station))
+            {
+                if (!string.IsNullOrWhiteSpace(genRec.Name))
+                    recordsByName[genRec.Name] = genRec;
+            }
+        }
 
         var list = new List<CrewSensorEntryDto>();
         var sensorQuery = EntityQueryEnumerator<SuitSensorComponent, TransformComponent>();
@@ -1703,10 +1736,46 @@ public sealed partial class StationAppsSystem : EntitySystem
                 continue;
 
             var name = MetaData(wearer).EntityName;
+            var jobTitle = "Crew";
+            var jobIcon = "JobIconNoId";
+
+            if (_idCard.TryFindIdCard(wearer, out var idCard))
+            {
+                if (!string.IsNullOrWhiteSpace(idCard.Comp.FullName))
+                    name = idCard.Comp.FullName;
+                if (!string.IsNullOrWhiteSpace(idCard.Comp.LocalizedJobTitle))
+                    jobTitle = idCard.Comp.LocalizedJobTitle;
+                if (!string.IsNullOrWhiteSpace(idCard.Comp.JobIcon))
+                    jobIcon = idCard.Comp.JobIcon;
+            }
+
+            if (recordsByName.TryGetValue(name, out var genRec))
+            {
+                if (!string.IsNullOrWhiteSpace(genRec.JobTitle))
+                    jobTitle = genRec.JobTitle;
+                if (!string.IsNullOrWhiteSpace(genRec.JobIcon))
+                    jobIcon = genRec.JobIcon;
+            }
+
             var alive = !_mobState.IsDead(wearer);
-            var dmg = sensor.Mode >= SuitSensorMode.SensorVitals && TryComp<DamageableComponent>(wearer, out var dmgComp)
+            var hasVitals = sensor.Mode >= SuitSensorMode.SensorVitals;
+            var isCrit = hasVitals && _mobState.IsCritical(wearer);
+            var dmg = hasVitals && TryComp<DamageableComponent>(wearer, out var dmgComp)
                 ? (int) _damageable.GetTotalDamage((wearer, dmgComp)).Int()
                 : 0;
+
+            var healthRatio = 1f;
+            if (!alive)
+            {
+                healthRatio = 0f;
+            }
+            else if (hasVitals)
+            {
+                var critLimit = 100f;
+                if (_mobThreshold.TryGetThresholdForState(wearer, MobState.Critical, out var critThresh) && critThresh.Value.Float() > 0f)
+                    critLimit = critThresh.Value.Float();
+                healthRatio = Math.Clamp(1f - dmg / critLimit, 0f, 1f);
+            }
 
             var hasCoords = sensor.Mode == SuitSensorMode.SensorCords;
             var coords = "Hidden";
@@ -1718,6 +1787,7 @@ public sealed partial class StationAppsSystem : EntitySystem
                 if (wearerXform.GridUid is { Valid: true } gUid)
                 {
                     gridNet = GetNetEntity(gUid);
+                    stationGridNet ??= gridNet;
                     localPos = Vector2.Transform(_transform.GetWorldPosition(wearerXform), _transform.GetInvWorldMatrix(gUid));
                     coords = $"({localPos.X:0.0}, {localPos.Y:0.0})";
                 }
@@ -1730,19 +1800,23 @@ public sealed partial class StationAppsSystem : EntitySystem
 
             list.Add(new CrewSensorEntryDto(
                 name,
-                "Crew",
+                jobTitle,
                 alive,
                 dmg,
                 coords,
                 hasCoords ? GetNetEntity(wearer) : null,
                 gridNet,
                 localPos,
-                hasCoords));
+                hasCoords,
+                jobIcon,
+                hasVitals,
+                isCrit,
+                healthRatio));
         }
 
         list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, list));
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, list, stationGridNet));
     }
 
     // =========================================================================
@@ -1755,6 +1829,19 @@ public sealed partial class StationAppsSystem : EntitySystem
     private void OnCommsActivated(Entity<CommsConsoleProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
 
     [SubscribeLocalEvent]
+    private void OnCommsCardReaderChanged(Entity<CommsConsoleProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
+        if (!HasCommsAccess(compUid, ent.Comp, null) && _computer.GetInsertedIdCards(compUid).Count == 0)
+            ent.Comp.StatusMessage = "ID card removed from slot — Command authorization locked.";
+
+        Dirty(ent);
+        UpdateCommsUi(ent.Owner, compUid, ent.Comp, null);
+    }
+
+    [SubscribeLocalEvent]
     private void OnCommsCardScanned(Entity<CommsConsoleProgramComponent> ent, ref ProgramCardScannedEvent scanned)
     {
         if (scanned.Handled)
@@ -1762,8 +1849,15 @@ public sealed partial class StationAppsSystem : EntitySystem
 
         if (_accessReader.FindAccessTags(scanned.Card).Contains(CommandAccess))
         {
-            ent.Comp.AuthorizedBySwipedCard = true;
-            ent.Comp.StatusMessage = $"Authorized Command broadcast via swiped ID ({MetaData(scanned.Card).EntityName}).";
+            if (scanned.Retained)
+            {
+                ent.Comp.StatusMessage = $"Authorized Command broadcast via ID Slot ({MetaData(scanned.Card).EntityName}) while inserted.";
+            }
+            else
+            {
+                ent.Comp.AuthorizedBySwipedCard = true;
+                ent.Comp.StatusMessage = $"Authorized Command broadcast via swiped ID ({MetaData(scanned.Card).EntityName}).";
+            }
             _popup.PopupEntity("Communications console authorized.", scanned.HostUid, scanned.User);
         }
         else
@@ -1821,6 +1915,11 @@ public sealed partial class StationAppsSystem : EntitySystem
                     ent.Comp.StatusMessage = $"Station alert level set to {msg.Text.Trim()}.";
                 }
                 break;
+
+            case CommsConsoleAction.RevokeAuth:
+                ent.Comp.AuthorizedBySwipedCard = false;
+                ent.Comp.StatusMessage = "Card authorization revoked.";
+                break;
         }
 
         Dirty(ent);
@@ -1832,8 +1931,11 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (comp.AuthorizedBySwipedCard)
             return true;
 
-        if (_computer.TryGetInsertedIdCard(compUid, out var insCard) && _accessReader.FindAccessTags(insCard).Contains(CommandAccess))
-            return true;
+        foreach (var insCard in _computer.GetInsertedIdCards(compUid))
+        {
+            if (_accessReader.FindAccessTags(insCard).Contains(CommandAccess))
+                return true;
+        }
 
         if (actor is { Valid: true } user && Exists(user) && _accessReader.FindAccessTags(user).Contains(CommandAccess))
             return true;
@@ -1870,7 +1972,8 @@ public sealed partial class StationAppsSystem : EntitySystem
                 HasCommsAccess(compUid, comp, actor),
                 currentLevel,
                 levels,
-                comp.StatusMessage));
+                comp.StatusMessage,
+                comp.AuthorizedBySwipedCard));
         }
     }
 

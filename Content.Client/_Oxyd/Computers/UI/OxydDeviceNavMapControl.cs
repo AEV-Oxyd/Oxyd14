@@ -4,6 +4,8 @@ using Content.Client.Resources;
 using Content.Client.UserInterface.Controls;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics.Components;
@@ -30,64 +32,167 @@ public sealed record DeviceNavMapMarker(
 public sealed class OxydFittedNavMap : NavMapControl
 {
     private readonly List<DeviceNavMapMarker> _markers = new();
+    private Control? _navTopPanel;
     private bool _needsAutoFit = true;
+    private bool _userAdjustedView;
+    private bool _wasVisibleInTree;
+    private bool _lastHadGeometry;
     private Vector2 _lastFitSize;
+    private Vector2i _lastFitPixelSize;
+    private Vector2 _lastBoundsMin;
+    private Vector2 _lastBoundsMax;
 
     public OxydFittedNavMap()
     {
-        WorldMinRange = 6f;
-        WorldMaxRange = 256f;
+        WorldMinRange = 4f;
+        WorldMaxRange = 640f;
         WorldRange = 36f;
         ActualRadarRange = 36f;
         HorizontalExpand = true;
         VerticalExpand = true;
-        SetSize = Vector2.Zero;
-        MinSize = new Vector2(260f, 220f);
+        HorizontalAlignment = HAlignment.Stretch;
+        VerticalAlignment = VAlignment.Stretch;
+        SetSize = new Vector2(float.NaN, float.NaN);
+        MinSize = new Vector2(180f, 160f);
         RectClipContent = true;
 
         TileColor = new Color(20, 44, 58);
         WallColor = new Color(72, 168, 212);
+
+        // NavMapControl's internal topPanel hardcodes SetWidth = 650f and clips over small panels.
+        // Hide it completely so the fitted map fills 100% of its parent frame edge-to-edge.
+        if (ChildCount > 0 && GetChild(0) is BoxContainer topContainer)
+        {
+            topContainer.MouseFilter = MouseFilterMode.Ignore;
+            if (topContainer.ChildCount > 0 && topContainer.GetChild(0) is Control panel)
+            {
+                _navTopPanel = panel;
+                panel.Visible = false;
+                panel.SetWidth = float.NaN;
+                panel.MinSize = Vector2.Zero;
+                panel.HorizontalExpand = true;
+            }
+        }
+    }
+
+    public bool BeaconsVisible
+    {
+        get => FindBeaconsCheckBox(_navTopPanel)?.Pressed ?? true;
+        set
+        {
+            if (FindBeaconsCheckBox(_navTopPanel) is { } cb)
+                cb.Pressed = value;
+        }
+    }
+
+    private static CheckBox? FindBeaconsCheckBox(Control? root)
+    {
+        if (root == null)
+            return null;
+
+        if (root is CheckBox cb)
+            return cb;
+
+        for (var i = 0; i < root.ChildCount; i++)
+        {
+            if (FindBeaconsCheckBox(root.GetChild(i)) is { } found)
+                return found;
+        }
+
+        return null;
     }
 
     public void UpdateMarkers(IReadOnlyList<DeviceNavMapMarker> markers)
     {
         _markers.Clear();
         _markers.AddRange(markers);
+        if (!_userAdjustedView)
+            _needsAutoFit = true;
     }
 
     public void RequestAutoFit()
     {
+        _userAdjustedView = false;
         _needsAutoFit = true;
+    }
+
+    protected override void MouseMove(GUIMouseMoveEventArgs args)
+    {
+        var prevOffset = Offset;
+        base.MouseMove(args);
+        if ((Offset - prevOffset).LengthSquared() > 0.0001f)
+            _userAdjustedView = true;
+    }
+
+    protected override void MouseWheel(GUIMouseWheelEventArgs args)
+    {
+        base.MouseWheel(args);
+        if (MathF.Abs(args.Delta.Y) > 0.001f)
+            _userAdjustedView = true;
     }
 
     protected override void Resized()
     {
         base.Resized();
-        if ((Size - _lastFitSize).LengthSquared() > 16f)
+        if ((Size - _lastFitSize).LengthSquared() > 4f ||
+            (PixelSize - _lastFitPixelSize).LengthSquared > 4)
+        {
             _needsAutoFit = true;
+        }
+    }
+
+    protected override void UpdateNavMap()
+    {
+        base.UpdateNavMap();
+
+        if (_userAdjustedView)
+            return;
+
+        if (TryComputeStationBounds(out var min, out var max, out var hasTileGeometry))
+        {
+            if (hasTileGeometry != _lastHadGeometry ||
+                (min - _lastBoundsMin).LengthSquared() > 1f ||
+                (max - _lastBoundsMax).LengthSquared() > 1f)
+            {
+                _needsAutoFit = true;
+            }
+        }
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
     {
         base.FrameUpdate(args);
 
-        if (_needsAutoFit && Size.X >= 80f && Size.Y >= 80f && MapUid != null)
+        var vis = VisibleInTree;
+        if (vis && !_wasVisibleInTree && !_userAdjustedView)
+            _needsAutoFit = true;
+        _wasVisibleInTree = vis;
+
+        if (!_userAdjustedView &&
+            (Size - _lastFitSize).LengthSquared() > 4f &&
+            Size.X >= 80f && Size.Y >= 80f)
+        {
+            _needsAutoFit = true;
+        }
+
+        if (_needsAutoFit && vis && Size.X >= 80f && Size.Y >= 80f && MapUid != null)
         {
             if (TryApplyRectangularFit())
                 _needsAutoFit = false;
         }
     }
 
-    public bool TryApplyRectangularFit()
+    private bool TryComputeStationBounds(out Vector2 min, out Vector2 max, out bool hasTileGeometry)
     {
-        if (Size.X < 40f || Size.Y < 40f || MapUid == null)
-            return false;
-
         var hasBounds = false;
+        hasTileGeometry = false;
         float minX = 0f, maxX = 0f, minY = 0f, maxY = 0f;
 
         void ExpandPoint(Vector2 p)
         {
+            if (!float.IsFinite(p.X) || !float.IsFinite(p.Y))
+                return;
+
             if (!hasBounds)
             {
                 minX = maxX = p.X;
@@ -102,33 +207,57 @@ public sealed class OxydFittedNavMap : NavMapControl
             if (p.Y > maxY) maxY = p.Y;
         }
 
-        // TilePolygons and TileRects are stored in Y-up world/grid space or Y-inverted space:
-        // TilePolygons vertices are direct grid-local coordinates (Y up).
         foreach (var (verts, _) in TilePolygons)
         {
+            hasTileGeometry = true;
             foreach (var v in verts)
                 ExpandPoint(v);
         }
 
         foreach (var (lt, rb) in TileRects)
         {
+            hasTileGeometry = true;
             ExpandPoint(new Vector2(lt.X, -lt.Y));
             ExpandPoint(new Vector2(rb.X, -rb.Y));
+        }
+
+        foreach (var (o, t) in TileLines)
+        {
+            hasTileGeometry = true;
+            ExpandPoint(new Vector2(o.X, -o.Y));
+            ExpandPoint(new Vector2(t.X, -t.Y));
         }
 
         foreach (var m in _markers)
             ExpandPoint(m.LocalPosition);
 
-        if (!hasBounds)
+        min = new Vector2(minX, minY);
+        max = new Vector2(maxX, maxY);
+        return hasBounds;
+    }
+
+    public bool TryApplyRectangularFit()
+    {
+        if (Size.X < 40f || Size.Y < 40f || MapUid == null)
             return false;
 
-        var width = MathF.Max(10f, (maxX - minX) + 6f);
-        var height = MathF.Max(10f, (maxY - minY) + 6f);
-        var stationCenter = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+        if (!TryComputeStationBounds(out var min, out var max, out var hasTileGeometry))
+            return false;
 
-        // MinimapScale = (UIDisplayRadius * UIScale) / WorldRange maps 1 grid meter to (UIDisplayRadius / WorldRange) DIPs.
-        var usableW = MathF.Max(120f, Size.X * 0.90f);
-        var usableH = MathF.Max(100f, Size.Y * 0.86f);
+        var topPanelH = _navTopPanel != null && _navTopPanel.Visible
+            ? MathF.Max(28f, _navTopPanel.Size.Y)
+            : 0f;
+        var padX = MathF.Max(14f, Size.X * 0.05f);
+        var padTop = topPanelH + MathF.Max(10f, Size.Y * 0.03f);
+        var padBottom = MathF.Max(12f, Size.Y * 0.04f);
+
+        var usableW = MathF.Max(60f, Size.X - padX * 2f);
+        var usableH = MathF.Max(60f, Size.Y - padTop - padBottom);
+
+        var width = MathF.Max(8f, (max.X - min.X) + 4f);
+        var height = MathF.Max(8f, (max.Y - min.Y) + 4f);
+        var stationCenter = (min + max) * 0.5f;
+
         var reqRangeX = width * UIDisplayRadius / usableW;
         var reqRangeY = height * UIDisplayRadius / usableH;
         var fitRange = Math.Clamp(MathF.Max(reqRangeX, reqRangeY), WorldMinRange, WorldMaxRange);
@@ -140,8 +269,10 @@ public sealed class OxydFittedNavMap : NavMapControl
             ? phys.LocalCenter
             : Vector2.Zero;
 
-        var scale = fitRange > 0f ? (UIDisplayRadius * UIScale) / fitRange : 1f;
-        var visualCenter = PixelSize * 0.5f;
+        var scale = fitRange > 0f && ScaledMinimapRadius > 0
+            ? ScaledMinimapRadius / fitRange
+            : (fitRange > 0f ? (UIDisplayRadius * UIScale) / fitRange : 1f);
+        var visualCenter = new Vector2(PixelSize.X * 0.5f, (padTop + usableH * 0.5f) * UIScale);
         var diffWorld = (visualCenter - MidPointVector) / scale;
         var fittedOffset = (stationCenter - physCenter) - new Vector2(diffWorld.X, -diffWorld.Y);
 
@@ -149,7 +280,11 @@ public sealed class OxydFittedNavMap : NavMapControl
         TargetOffset = fittedOffset;
         Recentering = false;
         _lastFitSize = Size;
-        return true;
+        _lastFitPixelSize = PixelSize;
+        _lastBoundsMin = min;
+        _lastBoundsMax = max;
+        _lastHadGeometry = hasTileGeometry;
+        return hasTileGeometry;
     }
 }
 
@@ -176,6 +311,9 @@ public sealed class OxydDeviceNavMapControl : ContentControl
 
     public int MarkerCount => _markersByKey.Count;
     public IReadOnlyCollection<string> MarkerKeys => _markersByKey.Keys;
+    public OxydFittedNavMap NavMap => _navMap;
+
+    public void RequestFit() => _navMap.RequestAutoFit();
 
     public OxydDeviceNavMapControl(string namePrefix)
     {
@@ -222,11 +360,26 @@ public sealed class OxydDeviceNavMapControl : ContentControl
         {
             Name = $"{namePrefix}FitMapButton",
             Text = "Fit Map",
-            MinWidth = 76
+            MinWidth = 72
         };
         fitBtn.OnPressed += _ => _navMap.RequestAutoFit();
 
+        var beaconsBtn = new ContentButton
+        {
+            Name = $"{namePrefix}BeaconsButton",
+            Text = "Beacons",
+            MinWidth = 72,
+            Pressed = _navMap.BeaconsVisible
+        };
+        beaconsBtn.OnPressed += _ =>
+        {
+            var next = !_navMap.BeaconsVisible;
+            _navMap.BeaconsVisible = next;
+            beaconsBtn.Pressed = next;
+        };
+
         headerRow.AddChild(_hintLabel);
+        headerRow.AddChild(beaconsBtn);
         headerRow.AddChild(fitBtn);
         root.AddChild(headerRow);
 
@@ -258,7 +411,7 @@ public sealed class OxydDeviceNavMapControl : ContentControl
             MarkerSelected?.Invoke(marker.Key);
     }
 
-    public void SetMarkers(IReadOnlyList<DeviceNavMapMarker> markers, string selectedSummary)
+    public void SetMarkers(IReadOnlyList<DeviceNavMapMarker> markers, string selectedSummary, NetEntity? fallbackGrid = null)
     {
         _hintLabel.Text = string.IsNullOrWhiteSpace(selectedSummary)
             ? $"Station Map ({markers.Count} beacons)"
@@ -289,6 +442,14 @@ public sealed class OxydDeviceNavMapControl : ContentControl
                 m.Blinks,
                 selectable: true,
                 scale: m.Selected ? 1.35f : 1.0f);
+        }
+
+        if (firstGrid == null &&
+            fallbackGrid is { } fbNet &&
+            _entMan.TryGetEntity(fbNet, out var fbUid) &&
+            _entMan.EntityExists(fbUid))
+        {
+            firstGrid = fbUid;
         }
 
         if (firstGrid != _boundGridUid)

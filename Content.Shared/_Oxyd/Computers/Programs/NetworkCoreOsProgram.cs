@@ -40,7 +40,8 @@ public enum NetworkCoreOsAction : byte
     ForceSyncAllRecords,
     LaunchProgram,
     SwitchProgram,
-    CloseProgram
+    CloseProgram,
+    ShutDown
 }
 
 [Serializable, NetSerializable]

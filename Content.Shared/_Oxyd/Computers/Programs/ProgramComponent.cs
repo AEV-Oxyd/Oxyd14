@@ -35,4 +35,7 @@ public sealed partial class ProgramComponent : Component
 
     [DataField, AutoNetworkedField]
     public string ExecutablePath = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public string? ScreenState;
 }

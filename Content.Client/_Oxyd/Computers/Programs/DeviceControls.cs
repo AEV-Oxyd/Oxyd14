@@ -47,14 +47,13 @@ public sealed class ApcControlUiControl : ProgramUiControl
 
         _mapSelector = new OxydDeviceNavMapControl("Apc")
         {
-            Visible = false
+            Visible = false,
+            MinWidth = 280f,
+            SizeFlagsStretchRatio = 1.0f
         };
         _mapSelector.MarkerSelected += guid =>
         {
-            _mapMode = false;
             SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guid));
-            if (_lastState != null)
-                UpdateProgramState(_lastState);
         };
 
         var root = new ContentBoxContainer
@@ -76,7 +75,13 @@ public sealed class ApcControlUiControl : ProgramUiControl
         };
         root.AddChild(_remoteHeaderContainer);
 
-        _bodyScroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
+        _bodyScroll = new ContentScrollContainer
+        {
+            Name = "ApcBodyScroll",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SizeFlagsStretchRatio = 1.0f
+        };
         var bodyBox = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
@@ -130,8 +135,18 @@ public sealed class ApcControlUiControl : ProgramUiControl
         bodyBox.AddChild(btnRow);
         bodyBox.AddChild(_statusLabel);
         _bodyScroll.AddChild(bodyBox);
-        root.AddChild(_bodyScroll);
-        root.AddChild(_mapSelector);
+
+        var apcWorkspace = new ContentBoxContainer
+        {
+            Name = "ApcSplitWorkspace",
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SeparationOverride = 8
+        };
+        apcWorkspace.AddChild(_mapSelector);
+        apcWorkspace.AddChild(_bodyScroll);
+        root.AddChild(apcWorkspace);
         AddChild(root);
     }
 
@@ -153,11 +168,15 @@ public sealed class ApcControlUiControl : ProgramUiControl
             _remoteHeaderContainer.Visible = false;
         }
 
-        _bodyScroll.Visible = !_mapMode;
+        _bodyScroll.Visible = true;
         _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
+        var areaPrefix = state.IsRemoteConsole && !string.IsNullOrWhiteSpace(state.AreaName)
+            ? $"APC: {state.AreaName} [{state.SelectedTargetGuid}]\n"
+            : string.Empty;
         var trippedTag = state.BreakerTripped ? " [TRIPPED]" : string.Empty;
         _telemetryLabel.Text =
+            $"{areaPrefix}" +
             $"Power: {(state.MainBreakerEnabled ? "ON" : "OFF")}{trippedTag}\n" +
             $"Battery Charge: {state.ChargePercent:0.0}%\n" +
             $"Current Load: {state.LoadWatts} W\n" +
@@ -294,13 +313,14 @@ public sealed class ApcControlUiControl : ProgramUiControl
             {
                 Name = $"ApcAuthAccBtn_{shortName}",
                 Text = $"Auth ({shortName})",
-                MinWidth = 108
+                MinWidth = 108,
+                Visible = !state.IsTargetAuthorized
             };
             authBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, pathCopy));
             authRow.AddChild(authBtn);
         }
 
-        if (state.AvailableAccFiles.Count > 0)
+        if (state.AvailableAccFiles.Count > 0 && !state.IsTargetAuthorized)
         {
             var quickAuthBtn = new ContentButton
             {
@@ -310,6 +330,18 @@ public sealed class ApcControlUiControl : ProgramUiControl
             };
             quickAuthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
             authRow.AddChild(quickAuthBtn);
+        }
+
+        if (state.IsTargetAuthorized)
+        {
+            var deauthBtn = new ContentButton
+            {
+                Name = "ApcRevokeAuthButton",
+                Text = "Deauth",
+                MinWidth = 76
+            };
+            deauthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.RevokeAuth));
+            authRow.AddChild(deauthBtn);
         }
 
         _remoteHeaderContainer.AddChild(authRow);
@@ -859,14 +891,13 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         _mapSelector = new OxydDeviceNavMapControl("Atmos")
         {
-            Visible = false
+            Visible = false,
+            MinWidth = 280f,
+            SizeFlagsStretchRatio = 1.0f
         };
         _mapSelector.MarkerSelected += guid =>
         {
-            _mapMode = false;
             SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guid));
-            if (_lastState != null)
-                UpdateProgramState(_lastState);
         };
 
         var root = new ContentBoxContainer
@@ -894,6 +925,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
             VerticalExpand = true,
+            SizeFlagsStretchRatio = 1.15f,
             SeparationOverride = 5
         };
 
@@ -1169,8 +1201,17 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         _devicesScroll.AddChild(_devicesContainer);
         _atmosBodyContainer.AddChild(_devicesScroll);
 
-        root.AddChild(_atmosBodyContainer);
-        root.AddChild(_mapSelector);
+        var atmosWorkspace = new ContentBoxContainer
+        {
+            Name = "AtmosSplitWorkspace",
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SeparationOverride = 8
+        };
+        atmosWorkspace.AddChild(_mapSelector);
+        atmosWorkspace.AddChild(_atmosBodyContainer);
+        root.AddChild(atmosWorkspace);
         AddChild(root);
     }
 
@@ -1226,7 +1267,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             _remoteHeaderContainer.Visible = false;
         }
 
-        _atmosBodyContainer.Visible = !_mapMode;
+        _atmosBodyContainer.Visible = true;
         _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
         UpdateStatusHeader(state);
@@ -1387,13 +1428,14 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             {
                 Name = $"AtmosAuthAccBtn_{shortName}",
                 Text = $"Auth ({shortName})",
-                MinWidth = 108
+                MinWidth = 108,
+                Visible = !state.IsTargetAuthorized
             };
             authBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, pathCopy));
             authRow.AddChild(authBtn);
         }
 
-        if (state.AvailableAccFiles.Count > 0)
+        if (state.AvailableAccFiles.Count > 0 && !state.IsTargetAuthorized)
         {
             var quickAuthBtn = new ContentButton
             {
@@ -1403,6 +1445,18 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             quickAuthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
             authRow.AddChild(quickAuthBtn);
+        }
+
+        if (state.IsTargetAuthorized)
+        {
+            var deauthBtn = new ContentButton
+            {
+                Name = "AtmosRevokeAuthButton",
+                Text = "Deauth",
+                MinWidth = 76
+            };
+            deauthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.RevokeAuth));
+            authRow.AddChild(deauthBtn);
         }
 
         _remoteHeaderContainer.AddChild(authRow);
