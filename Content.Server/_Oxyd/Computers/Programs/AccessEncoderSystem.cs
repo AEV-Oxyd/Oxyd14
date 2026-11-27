@@ -153,6 +153,13 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
         switch (args.Action)
         {
             case AccessEncoderAction.Refresh:
@@ -197,16 +204,19 @@ public sealed partial class AccessEncoderSystem : EntitySystem
                 break;
 
             case AccessEncoderAction.DeleteFile:
-                if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) &&
-                    _fileSystem.TryDeleteFile(driveUid.Value, args.Argument.Trim(), fs))
+                var normDel = SharedFileSystemSystem.NormalizePath(args.Argument.Trim());
+                if (normDel.StartsWith(AccessEncoderProgramComponent.DefaultDirectory, StringComparison.OrdinalIgnoreCase) &&
+                    normDel.EndsWith(".acc", StringComparison.OrdinalIgnoreCase) &&
+                    _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) &&
+                    _fileSystem.TryDeleteFile(driveUid.Value, normDel, fs))
                 {
-                    if (string.Equals(ent.Comp.SelectedFilePath, args.Argument.Trim(), StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(ent.Comp.SelectedFilePath, normDel, StringComparison.OrdinalIgnoreCase))
                         ent.Comp.SelectedFilePath = null;
-                    ent.Comp.StatusMessage = $"Deleted {args.Argument.Trim()}";
+                    ent.Comp.StatusMessage = $"Deleted {normDel}";
                 }
                 else
                 {
-                    ent.Comp.StatusMessage = $"Could not delete '{args.Argument}'.";
+                    ent.Comp.StatusMessage = $"Could not delete '{normDel}' (only /keys/*.acc files permitted).";
                 }
                 break;
         }
@@ -255,7 +265,7 @@ public sealed partial class AccessEncoderSystem : EntitySystem
             return;
         }
 
-        if (_cardReaders.TryInsertCard(slot, held.Value, actor))
+        if (_cardReaders.TryInsertCard(slot, held.Value, actor, GetDropNear(compUid)))
         {
             PopulateFromCard(comp, held.Value);
             comp.StatusMessage = $"Inserted {MetaData(held.Value).EntityName} into ID Slot ({comp.LastCardAccessTags.Count} codes).";
@@ -364,6 +374,24 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     {
         if (!_ui.HasUi(progUid, ProgramUiKey.Key))
             return;
+
+        if (_computer.IsHostLocked(compUid))
+        {
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new AccessEncoderUiState(
+                false,
+                false,
+                false,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                new List<string>(),
+                string.Empty,
+                string.Empty,
+                new List<string>(),
+                "LOCKED — Swipe authorized ID card to unlock.",
+                isLocked: true));
+            return;
+        }
 
         var slotReaders = _cardReaders.GetSlotReaders(compUid);
         var hasModularSlot = slotReaders.Count >= 1;

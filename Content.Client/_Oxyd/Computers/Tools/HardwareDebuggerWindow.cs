@@ -15,6 +15,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
 
     private readonly ContentLabel _targetLabel;
     private readonly ContentLabel _hwLabel;
+    private readonly ContentScrollContainer _portsScroll;
     private readonly ContentBoxContainer _portsContainer;
     private readonly ContentScrollContainer _scroll;
     private readonly ContentBoxContainer _historyContainer;
@@ -45,8 +46,18 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         _hwLabel = new ContentLabel { Text = "", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
         root.AddChild(_hwLabel);
 
-        _portsContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
-        root.AddChild(_portsContainer);
+        _portsScroll = new ContentScrollContainer
+        {
+            HorizontalExpand = true,
+            MaxHeight = 130f,
+            HScrollEnabled = false,
+            VScrollEnabled = true,
+            Visible = false,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        _portsContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
+        _portsScroll.AddChild(_portsContainer);
+        root.AddChild(_portsScroll);
 
         _scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
         _historyContainer = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
@@ -79,6 +90,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
         _hwLabel.Text = $"{state.HardwareSummary} | POST: {(state.IsBooted ? "BOOTED" : state.BootError)}";
 
         _portsContainer.RemoveAllChildren();
+        _portsScroll.Visible = state.Ports.Count > 0;
         foreach (var port in state.Ports)
         {
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };

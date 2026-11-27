@@ -187,8 +187,11 @@ public sealed partial class OxydComputerComponent : Component
     [DataField, AutoNetworkedField]
     public HashSet<string> LockedDeviceLinkPorts = new();
 
-    [DataField, AutoNetworkedField]
+    [DataField]
     public string SshPassword = string.Empty;
+
+    [ViewVariables]
+    public bool InitializingHardware;
 
     [DataField, AutoNetworkedField]
     public bool DisableLocalShell;

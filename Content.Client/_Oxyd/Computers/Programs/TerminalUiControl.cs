@@ -71,6 +71,22 @@ public sealed class TerminalUiControl : ProgramUiControl
         };
         screenBar.AddChild(_remoteHeaderLabel);
 
+        var popOutBtn = new ContentButton
+        {
+            Name = "TerminalRemotePopOutButton",
+            Text = "Pop Out",
+            MinWidth = 76,
+            Margin = new Thickness(0, 0, 4, 0)
+        };
+        popOutBtn.OnPressed += _ =>
+        {
+            if (_remoteScreenView == null)
+                return;
+            _remoteScreenView.TogglePopOut();
+            popOutBtn.Text = _remoteScreenView.IsPoppedOut ? "Dock View" : "Pop Out";
+        };
+        screenBar.AddChild(popOutBtn);
+
         var detachBtn = new ContentButton
         {
             Text = "Detach Screen",

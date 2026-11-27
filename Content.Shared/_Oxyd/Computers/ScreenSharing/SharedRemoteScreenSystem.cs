@@ -49,6 +49,18 @@ public sealed partial class ActiveRemoteScreenViewerComponent : Component
 {
     [DataField, AutoNetworkedField]
     public HashSet<NetEntity> AuthorizedTargets = new();
+
+    /// <summary>Server-only tracked PVS overrides owned by this viewer.</summary>
+    [ViewVariables]
+    public HashSet<EntityUid> TrackedPvs = new();
+
+    /// <summary>Server-only map of target computers that were already open locally when attached.</summary>
+    [ViewVariables]
+    public Dictionary<EntityUid, bool> AlreadyOpenOnAttach = new();
+
+    /// <summary>Server-only re-entrancy guard set while detaching specific targets.</summary>
+    [ViewVariables]
+    public HashSet<EntityUid> DetachingTargets = new();
 }
 
 public abstract partial class SharedRemoteScreenSystem : EntitySystem

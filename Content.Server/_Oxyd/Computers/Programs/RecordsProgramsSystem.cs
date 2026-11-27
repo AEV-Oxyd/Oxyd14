@@ -31,8 +31,10 @@ namespace Content.Server._Oxyd.Computers.Programs;
 /// </summary>
 public sealed partial class RecordsProgramsSystem : EntitySystem
 {
+    [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private DataServerSystem _dataServer = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private ServerStationSystem _station = default!;
@@ -42,6 +44,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     [Dependency] private LockSystem _lock = default!;
     [Dependency] private StationAppsSystem _stationApps = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
 
     [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
@@ -83,6 +86,12 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         SyncStationRecords(ent.Owner, args.ComputerUid, ent.Comp, null);
     }
 
+    [SubscribeLocalEvent]
+    private void OnStationRecordsTerminated(Entity<StationRecordsProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
+    }
+
     private void OnStationRecordsBuiOpened(Entity<StationRecordsProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
@@ -97,9 +106,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         foreach (var progUid in comp.RunningPrograms)
         {
             if (TryComp<StationRecordsProgramComponent>(progUid, out var st))
-                SendStationRecordsFromLocalCache(progUid, compUid, st, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
+                SendStationRecordsFromLocalCache(progUid, compUid, st, true, locked ? "Console locked." : "Console unlocked.", null);
             if (TryComp<CriminalRecordsProgramComponent>(progUid, out var cr))
-                SendCriminalRecordsFromLocalCache(progUid, compUid, cr, true, locked ? "Console locked (read-only)." : "Console unlocked (editing enabled).", null);
+                SendCriminalRecordsFromLocalCache(progUid, compUid, cr, true, locked ? "Console locked." : "Console unlocked.", null);
         }
     }
 
@@ -107,6 +116,22 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason, checkHostLock: false))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            Dirty(ent);
+            SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, blockReason, msg.Actor);
+            return;
+        }
+
+        if (_computer.IsHostLocked(compUid))
+        {
+            ent.Comp.StatusMessage = "Console locked. Swipe an authorized ID card to unlock.";
+            Dirty(ent);
+            SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, ent.Comp.StatusMessage, msg.Actor);
+            return;
+        }
 
         switch (msg.Action)
         {
@@ -224,26 +249,75 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 : $"Saved record for {cleanName} ({cleanJob}).";
         }
 
-        hostCopy.Size = Math.Max(128, hostCopy.Data.Count * 96);
-        if (!_dataServer.TryWriteRecordCopyToHost(compUid, "StationRecordsService", StationRecordsProgramComponent.CacheFilePath, hostCopy, out hostCompUid, out var writeErr))
+        hostCopy.Size = hostCopy.CalculateRealSize(_proto);
+        var router = _router.FindNearestRouter(compUid);
+        if (router == null)
         {
-            ent.Comp.StatusMessage = $"Write failed: {writeErr}";
+            ent.Comp.StatusMessage = "Write failed: No active Station Network Router.";
             Dirty(ent);
             SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, ent.Comp.StatusMessage, msg.Actor);
             return;
         }
 
-        // Keep Crew Manifest in sync on DataServer when a person's name/job is added, updated, or deleted.
-        SyncCrewManifestFromRecordsMutation(compUid, station, affectedName, affectedJob, msg.Action == StationRecordsAction.DeleteEntry);
-
-        // Log routed write packet and refresh local client cache.
         var pkt = BuildStationRecordsPacket(compUid, hostCompUid, hostCopy, $"WRITE: {actionSummary}");
-        _router.RecordAndValidatePacket(compUid, hostCompUid, pkt);
-        WriteLocalCache(compUid, hostCopy);
+        var progUid = ent.Owner;
+        var actor = msg.Actor;
+        var isDelete = msg.Action == StationRecordsAction.DeleteEntry;
+        var transfer = new QueuedRouterTransfer
+        {
+            Protocol = pkt.Protocol,
+            TargetPath = StationRecordsProgramComponent.CacheFilePath,
+            Description = $"Upload Station Records",
+            IsUpload = true,
+            SourceCompUid = compUid,
+            TargetCompUid = hostCompUid,
+            InitiatorProgramUid = progUid,
+            TotalBytes = Math.Max(64, hostCopy.Size),
+            AllowDebugFallback = _dataServer.IsDebugFallbackServer(hostCompUid),
+            PayloadFile = hostCopy,
+            PacketMetadata = pkt,
+            OnCompleted = _transfer =>
+            {
+                if (!Exists(progUid) || !TryComp<StationRecordsProgramComponent>(progUid, out var liveComp))
+                    return;
 
-        ent.Comp.StatusMessage = actionSummary;
-        Dirty(ent);
-        SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, actionSummary, msg.Actor);
+                if (!_dataServer.TryWriteRecordCopyToHost(compUid, "StationRecordsService", StationRecordsProgramComponent.CacheFilePath, hostCopy, out _, out var writeErr))
+                {
+                    liveComp.StatusMessage = $"Write failed: {writeErr}";
+                    Dirty(progUid, liveComp);
+                    SendStationRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+                    return;
+                }
+
+                SyncCrewManifestFromRecordsMutation(compUid, station, affectedName, affectedJob, isDelete);
+                WriteLocalCache(compUid, hostCopy);
+
+                liveComp.StatusMessage = actionSummary;
+                Dirty(progUid, liveComp);
+                SendStationRecordsFromLocalCache(progUid, compUid, liveComp, true, actionSummary, actor);
+            },
+            OnAborted = (_, reason) =>
+            {
+                if (!Exists(progUid) || !TryComp<StationRecordsProgramComponent>(progUid, out var liveComp))
+                    return;
+                liveComp.StatusMessage = $"Write aborted: {reason}";
+                Dirty(progUid, liveComp);
+                SendStationRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+            }
+        };
+
+        if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+        {
+            ent.Comp.StatusMessage = "Uploading record update...";
+            Dirty(ent);
+            SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, ent.Comp.StatusMessage, msg.Actor);
+        }
+        else
+        {
+            ent.Comp.StatusMessage = "Write failed: Network route rejected.";
+            Dirty(ent);
+            SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, ent.Comp.StatusMessage, msg.Actor);
+        }
     }
 
     private void SyncCrewManifestFromRecordsMutation(EntityUid compUid, EntityUid station, string? name, string? jobTitle, bool deleted)
@@ -302,7 +376,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
 
         if (_router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid))
         {
-            if (_dataServer.TryGetLocalRecordCopyFromHost(
+            var router = _router.FindNearestRouter(compUid);
+            if (router != null &&
+                _dataServer.TryGetLocalRecordCopyFromHost(
                     compUid,
                     "StationRecordsService",
                     StationRecordsProgramComponent.CacheFilePath,
@@ -311,22 +387,59 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                     out var serverCopy,
                     out var netErr))
             {
+                serverCopy.Size = serverCopy.CalculateRealSize(_proto);
                 var pkt = BuildStationRecordsPacket(srvCompUid, compUid, serverCopy, $"Station Records [{MetaData(srvCompUid).EntityName}]");
-                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt))
+                var serverName = MetaData(srvCompUid).EntityName;
+                var transfer = new QueuedRouterTransfer
                 {
-                    WriteLocalCache(compUid, serverCopy);
+                    Protocol = pkt.Protocol,
+                    TargetPath = StationRecordsProgramComponent.CacheFilePath,
+                    Description = "Sync Station Records",
+                    IsUpload = false,
+                    SourceCompUid = srvCompUid,
+                    TargetCompUid = compUid,
+                    InitiatorProgramUid = progUid,
+                    TotalBytes = Math.Max(64, serverCopy.Size),
+                    AllowDebugFallback = _dataServer.IsDebugFallbackServer(srvCompUid),
+                    PayloadFile = serverCopy,
+                    PacketMetadata = pkt,
+                    OnCompleted = _ =>
+                    {
+                        if (!Exists(progUid) || !TryComp<StationRecordsProgramComponent>(progUid, out var liveComp))
+                            return;
+                        WriteLocalCache(compUid, serverCopy);
+                        liveComp.StatusMessage = $"Synced from {serverName}.";
+                        Dirty(progUid, liveComp);
+                        SendStationRecordsFromLocalCache(progUid, compUid, liveComp, true, liveComp.StatusMessage, actor);
+                    },
+                    OnAborted = (_, reason) =>
+                    {
+                        if (!Exists(progUid) || !TryComp<StationRecordsProgramComponent>(progUid, out var liveComp))
+                            return;
+                        liveComp.StatusMessage = $"Sync failed ({reason}) — showing local cache.";
+                        Dirty(progUid, liveComp);
+                        SendStationRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+                    }
+                };
+
+                if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+                {
                     online = true;
-                    statusMsg = $"Synced from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {StationRecordsProgramComponent.CacheFilePath}";
+                    statusMsg = $"Syncing records from {serverName}...";
+                }
+                else
+                {
+                    statusMsg = "Network route rejected — showing local cache.";
                 }
             }
             else
             {
-                statusMsg = $"{netErr} — showing local {StationRecordsProgramComponent.CacheFilePath}.";
+                statusMsg = $"{(router == null ? "No router" : "Records server unavailable")} — showing local cache.";
             }
         }
         else
         {
-            statusMsg = $"Offline / no NIC — reading local {StationRecordsProgramComponent.CacheFilePath}.";
+            statusMsg = "Offline — showing local cache.";
         }
 
         comp.StatusMessage = statusMsg;
@@ -342,13 +455,29 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         string statusMsg,
         EntityUid? actor)
     {
+        if (_computer.IsHostLocked(compUid))
+        {
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            {
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new StationRecordsUiState(
+                    string.Empty,
+                    online,
+                    false,
+                    "LOCKED — Swipe authorized ID card to unlock.",
+                    null,
+                    string.Empty,
+                    new List<StationRecordEntryDto>(),
+                    isLocked: true));
+            }
+            return;
+        }
+
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var stationName = "Unknown Station";
         var entries = new List<StationRecordEntryDto>();
         TimeSpan? ts = null;
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        var liveProfilesByName = BuildCharacterProfileLookup(station);
 
         // Cross-reference cached criminal status by name if available on local drive.
         var crimStatusByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -379,22 +508,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 var firstCol = v.Split('\t')[0];
                 var crimStatus = crimStatusByName.TryGetValue(firstCol, out var st) ? st : "None";
                 if (RecordsDbCodec.TryDecodeStationRecordRow(k, v, crimStatus, out var dto))
-                {
-                    liveProfilesByName.TryGetValue(dto.Name, out var profile);
-                    entries.Add(new StationRecordEntryDto(
-                        dto.Key,
-                        dto.Name,
-                        dto.JobTitle,
-                        dto.JobPrototype,
-                        dto.JobIcon,
-                        dto.Age,
-                        dto.Species,
-                        dto.Gender,
-                        dto.Fingerprint,
-                        dto.Dna,
-                        dto.CriminalStatus,
-                        profile));
-                }
+                    entries.Add(dto);
             }
         }
 
@@ -402,6 +516,24 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         var selected = comp.SelectedKey;
         if (string.IsNullOrEmpty(selected) && entries.Count > 0)
             selected = entries[0].Key;
+
+        // Only serialize the CharacterProfile for the currently selected entry to avoid per-click BUI bloat.
+        if (!string.IsNullOrEmpty(selected))
+        {
+            var selIdx = entries.FindIndex(e => e.Key == selected);
+            if (selIdx >= 0)
+            {
+                var sel = entries[selIdx];
+                var liveProfilesByName = BuildCharacterProfileLookup(station);
+                if (liveProfilesByName.TryGetValue(sel.Name, out var profile))
+                {
+                    entries[selIdx] = new StationRecordEntryDto(
+                        sel.Key, sel.Name, sel.JobTitle, sel.JobPrototype, sel.JobIcon,
+                        sel.Age, sel.Species, sel.Gender, sel.Fingerprint, sel.Dna,
+                        sel.CriminalStatus, profile);
+                }
+            }
+        }
 
         var canEdit = online && CanModifyStationRecords(compUid, actor);
 
@@ -414,7 +546,8 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 statusMsg,
                 ts,
                 selected,
-                entries));
+                entries,
+                isLocked: false));
         }
     }
 
@@ -434,6 +567,12 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         SyncCriminalRecords(ent.Owner, args.ComputerUid, ent.Comp, null);
     }
 
+    [SubscribeLocalEvent]
+    private void OnCriminalRecordsTerminated(Entity<CriminalRecordsProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
+    }
+
     private void OnCriminalRecordsBuiOpened(Entity<CriminalRecordsProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
@@ -444,6 +583,22 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason, checkHostLock: false))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            Dirty(ent);
+            SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, blockReason, msg.Actor);
+            return;
+        }
+
+        if (_computer.IsHostLocked(compUid))
+        {
+            ent.Comp.StatusMessage = "Console locked. Swipe an authorized ID card to unlock.";
+            Dirty(ent);
+            SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, ent.Comp.StatusMessage, msg.Actor);
+            return;
+        }
 
         switch (msg.Action)
         {
@@ -549,30 +704,84 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
 
         hostCopy.Data[msg.Key] = RecordsDbCodec.EncodeCriminalRecordRow(
             cur.Name, cur.JobTitle, newStatus, newReason, newInitiator, newHistory);
-        hostCopy.Size = Math.Max(128, hostCopy.Data.Count * 96);
+        hostCopy.Size = hostCopy.CalculateRealSize(_proto);
 
-        if (!_dataServer.TryWriteRecordCopyToHost(compUid, "StationRecordsService", CriminalRecordsProgramComponent.CacheFilePath, hostCopy, out hostCompUid, out var writeErr))
+        var router = _router.FindNearestRouter(compUid);
+        if (router == null)
         {
-            ent.Comp.StatusMessage = $"Write failed: {writeErr}";
+            ent.Comp.StatusMessage = "Write failed: No active Station Network Router.";
             Dirty(ent);
             SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, ent.Comp.StatusMessage, msg.Actor);
             return;
         }
 
-        // Mirror active wanted/detained/suspected entries to /records/wanted_list.db on DataServer!
-        SyncWantedListDbFromCriminalDb(compUid, hostCopy);
-
-        // Sync live Security HUD icon & radio status on StationRecordsComponent if this crewmember exists in StationRecords.
-        SyncLiveCriminalRecord(station, cur.Name, msg.Action, newStatus, newReason, actorName, msg.Text, msg.HistoryIndex);
-
         var pkt = BuildCriminalRecordsPacket(compUid, hostCompUid, hostCopy, $"WRITE: {summary}");
-        _router.RecordAndValidatePacket(compUid, hostCompUid, pkt);
-        WriteLocalCache(compUid, hostCopy);
+        var progUid = ent.Owner;
+        var actor = msg.Actor;
+        var targetKey = msg.Key;
+        var msgAction = msg.Action;
+        var msgText = msg.Text;
+        var msgHistIdx = msg.HistoryIndex;
+        var targetName = cur.Name;
 
-        ent.Comp.SelectedKey = msg.Key;
-        ent.Comp.StatusMessage = summary;
-        Dirty(ent);
-        SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, summary, msg.Actor);
+        var transfer = new QueuedRouterTransfer
+        {
+            Protocol = pkt.Protocol,
+            TargetPath = CriminalRecordsProgramComponent.CacheFilePath,
+            Description = "Upload Criminal Records",
+            IsUpload = true,
+            SourceCompUid = compUid,
+            TargetCompUid = hostCompUid,
+            InitiatorProgramUid = progUid,
+            TotalBytes = Math.Max(64, hostCopy.Size),
+            AllowDebugFallback = _dataServer.IsDebugFallbackServer(hostCompUid),
+            PayloadFile = hostCopy,
+            PacketMetadata = pkt,
+            OnCompleted = _transfer =>
+            {
+                if (!Exists(progUid) || !TryComp<CriminalRecordsProgramComponent>(progUid, out var liveComp))
+                    return;
+
+                if (!_dataServer.TryWriteRecordCopyToHost(compUid, "StationRecordsService", CriminalRecordsProgramComponent.CacheFilePath, hostCopy, out _, out var writeErr))
+                {
+                    liveComp.StatusMessage = $"Write failed: {writeErr}";
+                    Dirty(progUid, liveComp);
+                    SendCriminalRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+                    return;
+                }
+
+                SyncWantedListDbFromCriminalDb(compUid, hostCopy);
+                SyncLiveCriminalRecord(station, targetName, msgAction, newStatus, newReason, actorName, msgText, msgHistIdx);
+                WriteLocalCache(compUid, hostCopy);
+
+                liveComp.SelectedKey = targetKey;
+                liveComp.StatusMessage = summary;
+                Dirty(progUid, liveComp);
+                SendCriminalRecordsFromLocalCache(progUid, compUid, liveComp, true, summary, actor);
+            },
+            OnAborted = (_, reason) =>
+            {
+                if (!Exists(progUid) || !TryComp<CriminalRecordsProgramComponent>(progUid, out var liveComp))
+                    return;
+                liveComp.StatusMessage = $"Write aborted: {reason}";
+                Dirty(progUid, liveComp);
+                SendCriminalRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+            }
+        };
+
+        if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+        {
+            ent.Comp.SelectedKey = msg.Key;
+            ent.Comp.StatusMessage = "Uploading security record update...";
+            Dirty(ent);
+            SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, ent.Comp.StatusMessage, msg.Actor);
+        }
+        else
+        {
+            ent.Comp.StatusMessage = "Write failed: Network route rejected.";
+            Dirty(ent);
+            SendCriminalRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, false, ent.Comp.StatusMessage, msg.Actor);
+        }
     }
 
     private void SyncWantedListDbFromCriminalDb(EntityUid compUid, DatabaseVirtualFile criminalDb)
@@ -647,7 +856,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
 
         if (_router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid))
         {
-            if (_dataServer.TryGetLocalRecordCopyFromHost(
+            var router = _router.FindNearestRouter(compUid);
+            if (router != null &&
+                _dataServer.TryGetLocalRecordCopyFromHost(
                     compUid,
                     "StationRecordsService",
                     CriminalRecordsProgramComponent.CacheFilePath,
@@ -656,22 +867,59 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                     out var serverCopy,
                     out var netErr))
             {
+                serverCopy.Size = serverCopy.CalculateRealSize(_proto);
                 var pkt = BuildCriminalRecordsPacket(srvCompUid, compUid, serverCopy, $"Criminal Records [{MetaData(srvCompUid).EntityName}]");
-                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt))
+                var serverName = MetaData(srvCompUid).EntityName;
+                var transfer = new QueuedRouterTransfer
                 {
-                    WriteLocalCache(compUid, serverCopy);
+                    Protocol = pkt.Protocol,
+                    TargetPath = CriminalRecordsProgramComponent.CacheFilePath,
+                    Description = "Sync Criminal Records",
+                    IsUpload = false,
+                    SourceCompUid = srvCompUid,
+                    TargetCompUid = compUid,
+                    InitiatorProgramUid = progUid,
+                    TotalBytes = Math.Max(64, serverCopy.Size),
+                    AllowDebugFallback = _dataServer.IsDebugFallbackServer(srvCompUid),
+                    PayloadFile = serverCopy,
+                    PacketMetadata = pkt,
+                    OnCompleted = _ =>
+                    {
+                        if (!Exists(progUid) || !TryComp<CriminalRecordsProgramComponent>(progUid, out var liveComp))
+                            return;
+                        WriteLocalCache(compUid, serverCopy);
+                        liveComp.StatusMessage = $"Synced from {serverName}.";
+                        Dirty(progUid, liveComp);
+                        SendCriminalRecordsFromLocalCache(progUid, compUid, liveComp, true, liveComp.StatusMessage, actor);
+                    },
+                    OnAborted = (_, reason) =>
+                    {
+                        if (!Exists(progUid) || !TryComp<CriminalRecordsProgramComponent>(progUid, out var liveComp))
+                            return;
+                        liveComp.StatusMessage = $"Sync failed ({reason}) — showing local cache.";
+                        Dirty(progUid, liveComp);
+                        SendCriminalRecordsFromLocalCache(progUid, compUid, liveComp, false, liveComp.StatusMessage, actor);
+                    }
+                };
+
+                if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+                {
                     online = true;
-                    statusMsg = $"Synced from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {CriminalRecordsProgramComponent.CacheFilePath}";
+                    statusMsg = $"Syncing security records from {serverName}...";
+                }
+                else
+                {
+                    statusMsg = "Network route rejected — showing local cache.";
                 }
             }
             else
             {
-                statusMsg = $"{netErr} — showing local {CriminalRecordsProgramComponent.CacheFilePath}.";
+                statusMsg = $"{(router == null ? "No router" : "Records server unavailable")} — showing local cache.";
             }
         }
         else
         {
-            statusMsg = $"Offline / no NIC — reading local {CriminalRecordsProgramComponent.CacheFilePath}.";
+            statusMsg = "Offline — showing local cache.";
         }
 
         comp.StatusMessage = statusMsg;
@@ -687,12 +935,27 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         string statusMsg,
         EntityUid? actor)
     {
+        if (_computer.IsHostLocked(compUid))
+        {
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            {
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new CriminalRecordsUiState(
+                    online,
+                    false,
+                    "LOCKED — Swipe Security ID card to unlock.",
+                    null,
+                    string.Empty,
+                    new List<CriminalRecordEntryDto>(),
+                    isLocked: true));
+            }
+            return;
+        }
+
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var entries = new List<CriminalRecordEntryDto>();
         TimeSpan? ts = null;
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        var liveProfilesByName = BuildCharacterProfileLookup(station);
         var bioByName = BuildStationRecordBioLookup(compUid, station, driveUid, fs);
 
         if (driveUid != null && fs != null &&
@@ -705,10 +968,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                     continue;
                 if (RecordsDbCodec.TryDecodeCriminalRecordRow(k, v, out var dto))
                 {
-                    liveProfilesByName.TryGetValue(dto.Name, out var profile);
                     var (species, gender, age) = bioByName.TryGetValue(dto.Name, out var bio)
                         ? bio
-                        : (profile?.Species.Id ?? "Human", profile?.Gender.ToString() ?? "Epicene", profile?.Age ?? 25);
+                        : ("Human", "Epicene", 25);
 
                     entries.Add(new CriminalRecordEntryDto(
                         dto.Key,
@@ -721,7 +983,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                         species,
                         gender,
                         age,
-                        profile));
+                        null));
                 }
             }
         }
@@ -730,6 +992,23 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         var selected = comp.SelectedKey;
         if (string.IsNullOrEmpty(selected) && entries.Count > 0)
             selected = entries[0].Key;
+
+        // Only serialize the CharacterProfile for the currently selected entry.
+        if (!string.IsNullOrEmpty(selected))
+        {
+            var selIdx = entries.FindIndex(e => e.Key == selected);
+            if (selIdx >= 0)
+            {
+                var sel = entries[selIdx];
+                var liveProfilesByName = BuildCharacterProfileLookup(station);
+                if (liveProfilesByName.TryGetValue(sel.Name, out var profile))
+                {
+                    entries[selIdx] = new CriminalRecordEntryDto(
+                        sel.Key, sel.Name, sel.JobTitle, sel.Status, sel.Reason,
+                        sel.Initiator, sel.History, sel.Species, sel.Gender, sel.Age, profile);
+                }
+            }
+        }
 
         var canEdit = online && CanModifyCriminalRecords(compUid, actor);
 
@@ -741,7 +1020,8 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 statusMsg,
                 ts,
                 selected,
-                entries));
+                entries,
+                isLocked: false));
         }
     }
 
@@ -838,19 +1118,19 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 return !_lock.IsLocked(hostUid);
         }
 
-        if (actor is { Valid: true } user && Exists(user))
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
         {
-            var tags = _accessReader.FindAccessTags(user);
+            var tags = _accessReader.FindAccessTags(cardUid);
             if (tags.Contains(CommandAccess) || tags.Contains(HeadOfPersonnelAccess) || tags.Contains(SecurityAccess))
                 return true;
         }
 
-        // Allow if the computer is a records console or has a /keys/*.acc file granting Command/HoP/Security.
         if (_fileSystem.TryFindFileSystem(compUid, out _, out var fs))
         {
             foreach (var f in fs.Files.Values)
             {
                 if (f is AccessCodesVirtualFile acc &&
+                    !acc.IsEncrypted &&
                     (acc.AccessTags.Contains(CommandAccess) || acc.AccessTags.Contains(HeadOfPersonnelAccess) || acc.AccessTags.Contains(SecurityAccess)))
                 {
                     return true;
@@ -858,9 +1138,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
             }
         }
 
-        // Standard unlocked Station Records consoles allow personnel viewing & editing.
-        return _computerQuery.TryComp(compUid, out var c2) &&
-               string.Equals(c2.EmbeddedDefaultAppPath, "/bin/station_records.nte", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     private bool CanModifyCriminalRecords(EntityUid compUid, EntityUid? actor)
@@ -871,9 +1149,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 return !_lock.IsLocked(hostUid);
         }
 
-        if (actor is { Valid: true } user && Exists(user))
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
         {
-            var tags = _accessReader.FindAccessTags(user);
+            var tags = _accessReader.FindAccessTags(cardUid);
             if (tags.Contains(SecurityAccess) || tags.Contains(CommandAccess))
                 return true;
         }
@@ -883,6 +1161,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
             foreach (var f in fs.Files.Values)
             {
                 if (f is AccessCodesVirtualFile acc &&
+                    !acc.IsEncrypted &&
                     (acc.AccessTags.Contains(SecurityAccess) || acc.AccessTags.Contains(CommandAccess)))
                 {
                     return true;

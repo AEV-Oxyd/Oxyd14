@@ -397,6 +397,7 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
     public string StatusMessage { get; }
     public List<string> AllowedGroups { get; }
     public List<CargoOrderEntryDto> Orders { get; }
+    public bool IsOnline { get; }
 
     public CargoOrdersUiState(
         bool isAuthenticated,
@@ -406,7 +407,8 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
         string selectedCategory,
         string statusMessage,
         List<string> allowedGroups,
-        List<CargoOrderEntryDto> orders)
+        List<CargoOrderEntryDto> orders,
+        bool isOnline = true)
     {
         IsAuthenticated = isAuthenticated;
         AuthenticatedAccountId = authenticatedAccountId;
@@ -416,6 +418,7 @@ public sealed class CargoOrdersUiState : BoundUserInterfaceState
         StatusMessage = statusMessage;
         AllowedGroups = allowedGroups;
         Orders = orders;
+        IsOnline = isOnline;
     }
 }
 
@@ -480,12 +483,14 @@ public sealed class CrewMonitorUiState : BoundUserInterfaceState
     public string StationName { get; }
     public List<CrewSensorEntryDto> Sensors { get; }
     public NetEntity? StationGrid { get; }
+    public bool IsOnline { get; }
 
-    public CrewMonitorUiState(string stationName, List<CrewSensorEntryDto> sensors, NetEntity? stationGrid = null)
+    public CrewMonitorUiState(string stationName, List<CrewSensorEntryDto> sensors, NetEntity? stationGrid = null, bool isOnline = true)
     {
         StationName = stationName;
         Sensors = sensors;
         StationGrid = stationGrid;
+        IsOnline = isOnline;
     }
 }
 
@@ -504,6 +509,9 @@ public sealed partial class CommsConsoleProgramComponent : Component
 
     [DataField]
     public string StatusMessage = "Ready for station broadcast.";
+
+    [ViewVariables]
+    public TimeSpan NextAnnouncementAllowed;
 }
 
 [Serializable, NetSerializable]
@@ -536,19 +544,22 @@ public sealed class CommsConsoleUiState : BoundUserInterfaceState
     public string CurrentAlertLevel { get; }
     public List<string> AvailableAlertLevels { get; }
     public string StatusMessage { get; }
+    public bool IsOnline { get; }
 
     public CommsConsoleUiState(
         bool canBroadcast,
         string currentAlertLevel,
         List<string> availableAlertLevels,
         string statusMessage,
-        bool isSwipedAuthorized = false)
+        bool isSwipedAuthorized = false,
+        bool isOnline = true)
     {
         CanBroadcast = canBroadcast;
         IsSwipedAuthorized = isSwipedAuthorized;
         CurrentAlertLevel = currentAlertLevel;
         AvailableAlertLevels = availableAlertLevels;
         StatusMessage = statusMessage;
+        IsOnline = isOnline;
     }
 }
 
@@ -592,18 +603,21 @@ public sealed class SolarControlUiState : BoundUserInterfaceState
     public float SunAngleDegrees { get; }
     public float TotalPowerWatts { get; }
     public string StatusMessage { get; }
+    public bool IsOnline { get; }
 
     public SolarControlUiState(
         float panelAngleDegrees,
         float angularVelocityDegreesPerMin,
         float sunAngleDegrees,
         float totalPowerWatts,
-        string statusMessage)
+        string statusMessage,
+        bool isOnline = true)
     {
         PanelAngleDegrees = panelAngleDegrees;
         AngularVelocityDegreesPerMin = angularVelocityDegreesPerMin;
         SunAngleDegrees = sunAngleDegrees;
         TotalPowerWatts = totalPowerWatts;
         StatusMessage = statusMessage;
+        IsOnline = isOnline;
     }
 }

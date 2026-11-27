@@ -51,6 +51,7 @@ public sealed class RouterUiState : BoundUserInterfaceState
     public List<string> BlacklistedGuids { get; }
     public Dictionary<string, string> DnsRecords { get; }
     public string StatusMessage { get; }
+    public bool IsLocked { get; }
 
     public RouterUiState(
         string routerGuid,
@@ -62,7 +63,8 @@ public sealed class RouterUiState : BoundUserInterfaceState
         List<NetworkDataPacket> packets,
         List<string> blacklistedGuids,
         Dictionary<string, string> dnsRecords,
-        string statusMessage)
+        string statusMessage,
+        bool isLocked = false)
     {
         RouterGuid = routerGuid;
         IsPowered = isPowered;
@@ -74,6 +76,7 @@ public sealed class RouterUiState : BoundUserInterfaceState
         BlacklistedGuids = blacklistedGuids;
         DnsRecords = dnsRecords;
         StatusMessage = statusMessage;
+        IsLocked = isLocked;
     }
 }
 

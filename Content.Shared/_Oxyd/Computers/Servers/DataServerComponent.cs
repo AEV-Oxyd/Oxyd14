@@ -16,7 +16,7 @@ public sealed partial class DataServerComponent : Component
     /// Authentication master key for this server.
     /// Can be altered mid-round by authorized station heads or engineers.
     /// </summary>
-    [DataField, AutoNetworkedField]
+    [DataField]
     public string NetworkMasterKey = "NanotrasenDefaultRoot";
 
     [DataField, AutoNetworkedField]

@@ -27,6 +27,9 @@ public sealed partial class ProgramComponent : Component
     [DataField, AutoNetworkedField]
     public int RamUsageMb = 8;
 
+    [DataField]
+    public int FileSizeBytes = 65536;
+
     [DataField, AutoNetworkedField]
     public float CpuUsagePercent = 4.0f;
 

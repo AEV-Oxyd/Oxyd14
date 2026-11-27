@@ -124,6 +124,7 @@ public sealed class StationRecordsUiState : BoundUserInterfaceState
     public TimeSpan? CacheTimestamp { get; }
     public string SelectedKey { get; }
     public List<StationRecordEntryDto> Entries { get; }
+    public bool IsLocked { get; }
 
     public StationRecordsUiState(
         string stationName,
@@ -132,7 +133,8 @@ public sealed class StationRecordsUiState : BoundUserInterfaceState
         string statusMessage,
         TimeSpan? cacheTimestamp,
         string selectedKey,
-        List<StationRecordEntryDto> entries)
+        List<StationRecordEntryDto> entries,
+        bool isLocked = false)
     {
         StationName = stationName;
         Online = online;
@@ -141,6 +143,7 @@ public sealed class StationRecordsUiState : BoundUserInterfaceState
         CacheTimestamp = cacheTimestamp;
         SelectedKey = selectedKey;
         Entries = entries;
+        IsLocked = isLocked;
     }
 }
 
@@ -262,6 +265,7 @@ public sealed class CriminalRecordsUiState : BoundUserInterfaceState
     public TimeSpan? CacheTimestamp { get; }
     public string SelectedKey { get; }
     public List<CriminalRecordEntryDto> Entries { get; }
+    public bool IsLocked { get; }
 
     public CriminalRecordsUiState(
         bool online,
@@ -269,7 +273,8 @@ public sealed class CriminalRecordsUiState : BoundUserInterfaceState
         string statusMessage,
         TimeSpan? cacheTimestamp,
         string selectedKey,
-        List<CriminalRecordEntryDto> entries)
+        List<CriminalRecordEntryDto> entries,
+        bool isLocked = false)
     {
         Online = online;
         CanEdit = canEdit;
@@ -277,6 +282,7 @@ public sealed class CriminalRecordsUiState : BoundUserInterfaceState
         CacheTimestamp = cacheTimestamp;
         SelectedKey = selectedKey;
         Entries = entries;
+        IsLocked = isLocked;
     }
 }
 

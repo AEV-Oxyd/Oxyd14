@@ -6,6 +6,7 @@ using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Input;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics.Components;
@@ -29,8 +30,20 @@ public sealed record DeviceNavMapMarker(
 /// of a rectangular station and computes an aspect-fitted WorldRange so the whole
 /// station fits neatly inside arbitrary container aspect ratios.
 /// </summary>
-public sealed class OxydFittedNavMap : NavMapControl
+public sealed class OxydFittedNavMap : NavMapControl, IInputRelayTarget
 {
+    public void RelayKeyBindDown(GUIBoundKeyEventArgs args) => KeyBindDown(args);
+    public void RelayKeyBindUp(GUIBoundKeyEventArgs args) => KeyBindUp(args);
+    public void RelayMouseMove(GUIMouseMoveEventArgs args) => MouseMove(args);
+    public void RelayMouseWheel(GUIMouseWheelEventArgs args) => MouseWheel(args);
+    public void RelayMouseEntered() => MouseEntered();
+    public void RelayMouseExited() => MouseExited();
+    public void RelayKeyHeld(GUIKeyEventArgs args) => KeyHeld(args);
+    public void RelayTextEntered(GUITextEnteredEventArgs args) => TextEntered(args);
+    public void RelayTextEditing(GUITextEditingEventArgs args) => TextEditing(args);
+    public void RelayKeyboardFocusEntered() => KeyboardFocusEntered();
+    public void RelayKeyboardFocusExited() => KeyboardFocusExited();
+    public void RelayControlFocusExited() => ControlFocusExited();
     private readonly List<DeviceNavMapMarker> _markers = new();
     private Control? _navTopPanel;
     private bool _needsAutoFit = true;
@@ -294,8 +307,8 @@ public sealed class OxydFittedNavMap : NavMapControl
 /// </summary>
 public sealed class OxydDeviceNavMapControl : ContentControl
 {
-    [Dependency] private readonly IEntityManager _entMan = default!;
-    [Dependency] private readonly IResourceCache _cache = default!;
+    [Dependency] private IEntityManager _entMan = default!;
+    [Dependency] private IResourceCache _cache = default!;
 
     private readonly OxydFittedNavMap _navMap;
     private readonly ContentLabel _hintLabel;

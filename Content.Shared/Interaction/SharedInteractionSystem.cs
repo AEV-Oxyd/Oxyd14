@@ -153,9 +153,6 @@ namespace Content.Shared.Interaction
         {
             _uiQuery.TryComp(ev.Target, out var aUiComp);
 
-            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
-                return;
-
             if (!_actionBlockerSystem.CanInteract(ev.Actor, ev.Target))
             {
                 // We permit ghosts to open uis unless explicitly blocked
@@ -167,6 +164,9 @@ namespace Content.Shared.Interaction
                     return;
                 }
             }
+
+            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+                return;
 
             var range = _ui.GetUiRange(ev.Target, ev.UiKey);
 

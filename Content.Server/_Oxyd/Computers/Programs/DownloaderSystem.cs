@@ -6,30 +6,18 @@ using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared._Oxyd.Computers.Servers;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
 
-[RegisterComponent]
-public sealed partial class ActiveNetworkTransferComponent : Component
-{
-    public bool IsUpload;
-    public EntityUid ComputerUid;
-    public EntityUid LocalDriveUid;
-    public EntityUid ServerCompUid;
-    public EntityUid ServerDriveUid;
-    public VirtualFile File = default!;
-    public string TargetPath = string.Empty;
-    public int TransferredBytes;
-    public int TotalBytes;
-}
-
 /// <summary>
-/// Active-component network file transfer manager for downloading executables (.nte), blueprints (.lathe),
-/// databases (.db), and uploading local files across the station router using physical NIC & server limits.
+/// Network file transfer application for downloading executables (.nte), blueprints (.lathe),
+/// databases (.db), and uploading local files across the station router's shared per-router transfer queue.
 /// </summary>
 public sealed partial class DownloaderSystem : EntitySystem
 {
+    [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
@@ -37,139 +25,48 @@ public sealed partial class DownloaderSystem : EntitySystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<DownloaderProgramComponent> _dlQuery;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<DataServerComponent> _dataServerQuery = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _dlQuery = GetEntityQuery<DownloaderProgramComponent>();
-
-        SubscribeLocalEvent<DownloaderProgramComponent, ProgramStartupEvent>(OnStartup);
-        SubscribeLocalEvent<DownloaderProgramComponent, ProgramActivatedEvent>(OnActivated);
         Subs.BuiEvents<DownloaderProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<DownloaderActionMessage>(OnUiAction);
         });
     }
 
-    public override void Update(float frameTime)
-    {
-        base.Update(frameTime);
-
-        var query = EntityQueryEnumerator<ActiveNetworkTransferComponent, DownloaderProgramComponent>();
-        while (query.MoveNext(out var progUid, out var xfer, out var dlComp))
-        {
-            var isDebugServer = _dataServer.IsDebugFallbackServer(xfer.ServerCompUid);
-            var blacklisted = _router.IsGuidBlacklisted(xfer.ComputerUid, _router.EnsureDeviceGuid(xfer.ComputerUid));
-            if (!_router.HasActiveNetworkCard(xfer.ComputerUid) ||
-                blacklisted ||
-                (!isDebugServer && (!_router.IsNetworkConnected(xfer.ComputerUid) || !_router.IsRouterOperational(xfer.ServerCompUid))))
-            {
-                dlComp.StatusMessage = "Transfer aborted: Network connection lost.";
-                RemCompDeferred<ActiveNetworkTransferComponent>(progUid);
-                UpdateUi(progUid, xfer.ComputerUid, dlComp);
-                continue;
-            }
-
-            var rateBps = xfer.IsUpload
-                ? _bandwidth.GetEffectiveTransferRateBps(xfer.ComputerUid, xfer.ServerCompUid)
-                : _bandwidth.GetEffectiveTransferRateBps(xfer.ServerCompUid, xfer.ComputerUid);
-
-            if (rateBps <= 0)
-            {
-                dlComp.StatusMessage = "Transfer stalled: Zero available bandwidth.";
-                RemCompDeferred<ActiveNetworkTransferComponent>(progUid);
-                UpdateUi(progUid, xfer.ComputerUid, dlComp);
-                continue;
-            }
-
-            var chunk = Math.Max(512, (int) (rateBps * frameTime));
-            var delta = Math.Min(chunk, xfer.TotalBytes - xfer.TransferredBytes);
-            xfer.TransferredBytes += delta;
-
-            _bandwidth.RecordDataTransmitted(xfer.IsUpload ? xfer.ComputerUid : xfer.ServerCompUid, delta, isUpload: true);
-            _bandwidth.RecordDataTransmitted(xfer.IsUpload ? xfer.ServerCompUid : xfer.ComputerUid, delta, isUpload: false);
-
-            var pct = xfer.TotalBytes > 0 ? xfer.TransferredBytes * 100 / xfer.TotalBytes : 100;
-            dlComp.StatusMessage = $"{(xfer.IsUpload ? "Uploading" : "Downloading")} {xfer.TargetPath}... {pct}% ({xfer.TransferredBytes}/{xfer.TotalBytes} B)";
-
-            if (xfer.TransferredBytes >= xfer.TotalBytes)
-            {
-                CommitTransfer(progUid, xfer, dlComp);
-                RemCompDeferred<ActiveNetworkTransferComponent>(progUid);
-            }
-
-            UpdateUi(progUid, xfer.ComputerUid, dlComp);
-        }
-    }
-
-    private void CommitTransfer(EntityUid progUid, ActiveNetworkTransferComponent xfer, DownloaderProgramComponent dlComp)
-    {
-        var editableEntries = new Dictionary<string, string>();
-        var isEditable = false;
-        if (xfer.File is DatabaseVirtualFile dbFile)
-        {
-            isEditable = true;
-            foreach (var (k, v) in dbFile.Data)
-            {
-                if (!k.StartsWith("__"))
-                    editableEntries[k] = v;
-            }
-        }
-        else if (xfer.File is TextVirtualFile txtFile)
-        {
-            isEditable = true;
-            editableEntries["content"] = txtFile.TextContent;
-        }
-
-        var pkt = new NetworkDataPacket
-        {
-            PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
-            SourceAddress = _router.EnsureDeviceGuid(xfer.IsUpload ? xfer.ComputerUid : xfer.ServerCompUid),
-            TargetAddress = _router.EnsureDeviceGuid(xfer.IsUpload ? xfer.ServerCompUid : xfer.ComputerUid),
-            Protocol = xfer.IsUpload ? "TCP/UPLOAD" : "TCP/DOWNLOAD",
-            PayloadSummary = $"{(xfer.IsUpload ? "PUT" : "GET")} {xfer.TargetPath} ({xfer.TotalBytes} B)",
-            IsPlayerRelevant = isEditable,
-            IsEditable = isEditable,
-            FilePath = xfer.TargetPath,
-            EditableEntries = editableEntries,
-            ByteSize = xfer.TotalBytes,
-            Timestamp = _timing.CurTime
-        };
-        _bandwidth.LogPacketToRouters(pkt, xfer.ComputerUid);
-
-        var targetDrive = xfer.IsUpload ? xfer.ServerDriveUid : xfer.LocalDriveUid;
-        if (Exists(targetDrive) && TryComp<FileSystemComponent>(targetDrive, out var fs))
-        {
-            var copy = xfer.File.Clone();
-            if (_fileSystem.TryWriteFile(targetDrive, copy, fs))
-            {
-                _fileSystem.LogSystemActivity(targetDrive, xfer.IsUpload ? "UPLOAD" : "DOWNLOAD", $"Stored {xfer.TargetPath} ({xfer.TotalBytes} B)");
-                dlComp.StatusMessage = $"{(xfer.IsUpload ? "Uploaded" : "Downloaded")} '{xfer.TargetPath}' successfully.";
-                return;
-            }
-        }
-
-        dlComp.StatusMessage = "Transfer failed: Target storage full or missing.";
-    }
-
+    [SubscribeLocalEvent]
     private void OnStartup(Entity<DownloaderProgramComponent> ent, ref ProgramStartupEvent args)
     {
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnActivated(Entity<DownloaderProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnTerminated(Entity<DownloaderProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner, "Downloader closed.");
     }
 
     private void OnUiAction(Entity<DownloaderProgramComponent> ent, ref DownloaderActionMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
 
         switch (args.Action)
         {
@@ -188,6 +85,11 @@ public sealed partial class DownloaderSystem : EntitySystem
             case DownloaderAction.UploadFile:
                 BeginTransfer(ent.Owner, compUid, ent.Comp, args.Parameter, isUpload: true);
                 break;
+
+            case DownloaderAction.CancelTransfer:
+                var cancelled = _bandwidth.CancelTransfersForProgram(ent.Owner, "Transfer cancelled by user.");
+                ent.Comp.StatusMessage = cancelled > 0 ? "Transfer cancelled." : "No active transfer to cancel.";
+                break;
         }
 
         UpdateUi(ent.Owner, compUid, ent.Comp);
@@ -195,7 +97,7 @@ public sealed partial class DownloaderSystem : EntitySystem
 
     private void BeginTransfer(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp, string path, bool isUpload)
     {
-        if (!_dataServer.TryGetFirstOnlineRepositoryServer(compUid, out _, out var srvCompUid, out var srvDriveUid, out var srvFs, out var netErr))
+        if (!_dataServer.TryGetFirstOnlineRepositoryServer(compUid, out var srvHostUid, out var srvCompUid, out var srvDriveUid, out var srvFs, out var netErr))
         {
             dlComp.StatusMessage = $"Network error: {netErr}";
             return;
@@ -207,10 +109,11 @@ public sealed partial class DownloaderSystem : EntitySystem
             return;
         }
 
+        var cleanPath = SharedFileSystemSystem.NormalizePath(path);
         var srcFs = isUpload ? localFs : srvFs;
-        if (!srcFs.Files.TryGetValue(path, out var sourceFile))
+        if (!srcFs.Files.TryGetValue(cleanPath, out var sourceFile))
         {
-            dlComp.StatusMessage = $"File '{path}' not found on {(isUpload ? "local drive" : "repository server")}.";
+            dlComp.StatusMessage = $"File '{cleanPath}' not found on {(isUpload ? "local drive" : "repository server")}.";
             return;
         }
 
@@ -220,18 +123,130 @@ public sealed partial class DownloaderSystem : EntitySystem
             return;
         }
 
-        var active = EnsureComp<ActiveNetworkTransferComponent>(progUid);
-        active.IsUpload = isUpload;
-        active.ComputerUid = compUid;
-        active.LocalDriveUid = localDriveUid.Value;
-        active.ServerCompUid = srvCompUid;
-        active.ServerDriveUid = srvDriveUid.Value;
-        active.File = sourceFile.Clone();
-        active.TargetPath = path;
-        active.TransferredBytes = 0;
-        active.TotalBytes = Math.Max(64, sourceFile.Size);
+        // Security: disallow unauthenticated overwriting of existing server system/database files via public uploads.
+        if (isUpload && srvFs.Files.TryGetValue(cleanPath, out var existingSrvFile))
+        {
+            if (existingSrvFile.IsReadOnly ||
+                existingSrvFile is ProgramVirtualFile or DatabaseVirtualFile ||
+                cleanPath.StartsWith("/bin/", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.StartsWith("/records/", StringComparison.OrdinalIgnoreCase))
+            {
+                dlComp.StatusMessage = $"Upload refused: '{cleanPath}' is protected on the repository server.";
+                return;
+            }
+        }
 
-        dlComp.StatusMessage = $"Connecting to {MetaData(srvCompUid).EntityName} for {(isUpload ? "upload" : "download")}...";
+        var isDebugServer = _dataServer.IsDebugFallbackServer(srvCompUid);
+        var router = _router.FindNearestRouter(compUid) ?? _router.FindNearestRouter(srvCompUid);
+        if (router == null)
+        {
+            dlComp.StatusMessage = "Transfer failed: no operational station router reachable.";
+            return;
+        }
+
+        // Cancel any previous in-flight transfer from this Downloader instance before enqueueing a new one.
+        _bandwidth.CancelTransfersForProgram(progUid, "Superseded by new transfer.");
+
+        var srcComp = isUpload ? compUid : srvCompUid;
+        var dstComp = isUpload ? srvCompUid : compUid;
+        var targetDrive = isUpload ? srvDriveUid!.Value : localDriveUid!.Value;
+        var totalBytes = Math.Max(64, sourceFile.Size);
+        var fileClone = sourceFile.Clone();
+
+        var editableEntries = new Dictionary<string, string>();
+        var isEditable = false;
+        if (fileClone is DatabaseVirtualFile dbFile)
+        {
+            isEditable = true;
+            foreach (var (k, v) in dbFile.Data)
+            {
+                if (!k.StartsWith("__"))
+                    editableEntries[k] = v;
+            }
+        }
+        else if (fileClone is TextVirtualFile txtFile)
+        {
+            isEditable = true;
+            editableEntries["content"] = txtFile.TextContent;
+        }
+
+        var pktMeta = new NetworkDataPacket
+        {
+            PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            SourceAddress = _router.EnsureDeviceGuid(srcComp),
+            TargetAddress = _router.EnsureDeviceGuid(dstComp),
+            Protocol = isUpload ? "TCP/UPLOAD" : "TCP/DOWNLOAD",
+            PayloadSummary = $"{(isUpload ? "PUT" : "GET")} {cleanPath} ({ComputerSizeFormat.FormatStorageQb(totalBytes)})",
+            IsPlayerRelevant = isEditable,
+            IsEditable = isEditable,
+            FilePath = cleanPath,
+            EditableEntries = editableEntries,
+            ByteSize = totalBytes,
+            Timestamp = _timing.CurTime
+        };
+
+        var xfer = new QueuedRouterTransfer
+        {
+            Protocol = pktMeta.Protocol,
+            TargetPath = cleanPath,
+            Description = $"{(isUpload ? "Upload" : "Download")} {cleanPath}",
+            IsUpload = isUpload,
+            SourceCompUid = srcComp,
+            TargetCompUid = dstComp,
+            InitiatorProgramUid = progUid,
+            TotalBytes = totalBytes,
+            AllowDebugFallback = isDebugServer,
+            PayloadFile = fileClone,
+            PacketMetadata = pktMeta,
+            OnProgress = t =>
+            {
+                if (!Exists(progUid) || !TryComp<DownloaderProgramComponent>(progUid, out var c))
+                    return;
+                var pct = t.TotalBytes > 0 ? t.TransferredBytes * 100 / t.TotalBytes : 100;
+                c.StatusMessage = $"{(t.IsUpload ? "Uploading" : "Downloading")} {t.TargetPath}... {pct}% ({ComputerSizeFormat.FormatStorageQb(t.TransferredBytes)} / {ComputerSizeFormat.FormatStorageQb(t.TotalBytes)})";
+                UpdateUi(progUid, compUid, c);
+            },
+            OnCompleted = t =>
+            {
+                if (!Exists(progUid) || !TryComp<DownloaderProgramComponent>(progUid, out var c))
+                    return;
+
+                if (Exists(targetDrive) && TryComp<FileSystemComponent>(targetDrive, out var fs) && t.PayloadFile != null)
+                {
+                    if (_fileSystem.TryWriteFile(targetDrive, t.PayloadFile.Clone(), fs))
+                    {
+                        _fileSystem.LogSystemActivity(targetDrive, t.IsUpload ? "UPLOAD" : "DOWNLOAD", $"Stored {t.TargetPath} ({ComputerSizeFormat.FormatStorageQb(t.TotalBytes)})");
+                        c.StatusMessage = $"{(t.IsUpload ? "Uploaded" : "Downloaded")} '{t.TargetPath}' successfully.";
+                    }
+                    else
+                    {
+                        c.StatusMessage = "Transfer failed: Target storage full or read-only.";
+                    }
+                }
+                else
+                {
+                    c.StatusMessage = "Transfer failed: Target storage missing.";
+                }
+
+                UpdateUi(progUid, compUid, c);
+            },
+            OnAborted = (t, reason) =>
+            {
+                if (!Exists(progUid) || !TryComp<DownloaderProgramComponent>(progUid, out var c))
+                    return;
+
+                c.StatusMessage = reason;
+                UpdateUi(progUid, compUid, c);
+            }
+        };
+
+        if (!_bandwidth.EnqueueRouterTransfer(router.Value, xfer))
+        {
+            dlComp.StatusMessage = "Transfer failed: router offline.";
+            return;
+        }
+
+        dlComp.StatusMessage = $"Queued {(isUpload ? "upload" : "download")} of {cleanPath} on router ({totalBytes} B)...";
     }
 
     public void UpdateUi(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp)
@@ -273,7 +288,7 @@ public sealed partial class DownloaderSystem : EntitySystem
                     path,
                     title,
                     cat,
-                    $"{file.Directory} | {(file.Size < 1024 ? $"{file.Size} B" : $"{file.Size / 1024} KB")}",
+                    $"{file.Directory} | {ComputerSizeFormat.FormatStorageQb(file.Size)}",
                     path,
                     file.Size,
                     downloaded,

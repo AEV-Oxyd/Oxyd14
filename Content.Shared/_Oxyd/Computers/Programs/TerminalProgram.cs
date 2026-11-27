@@ -40,6 +40,9 @@ public sealed partial class TerminalProgramComponent : Component
 
     [DataField]
     public string RemoteDirectory = "/";
+
+    [ViewVariables]
+    public HashSet<EntityUid> ActiveViewers = new();
 }
 
 [Serializable, NetSerializable]

@@ -32,6 +32,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
     public bool HasLock { get; }
     public bool IsHostLocked { get; }
     public string? DefaultAppPath { get; }
+    public bool IsDedicatedPanel { get; }
 
     public EmbeddedOsUiState(
         string title,
@@ -46,7 +47,8 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         OsHardwareSummaryDto hardware,
         bool hasLock = false,
         bool isHostLocked = false,
-        string? defaultAppPath = null)
+        string? defaultAppPath = null,
+        bool isDedicatedPanel = false)
     {
         Title = title;
         Subtitle = subtitle;
@@ -61,6 +63,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         HasLock = hasLock;
         IsHostLocked = isHostLocked;
         DefaultAppPath = defaultAppPath;
+        IsDedicatedPanel = isDedicatedPanel;
     }
 }
 

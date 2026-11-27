@@ -13,29 +13,59 @@ public partial class SharedFileSystemSystem : EntitySystem
     [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private Robust.Shared.Timing.IGameTiming _timing = default!;
     [Dependency] private IPrototypeManager _proto = default!;
+    [Dependency] private IComponentFactory _compFactory = default!;
 
     private const string DefaultLogHeader = "=== NTOS 1.4™ SYSTEM AUDIT LOG ===\n----------------------------------------";
     private const int MaxLogEntries = 148;
 
-    private readonly Dictionary<EntityUid, (string Header, Queue<string> Entries)> _logBuffers = new();
-
-    public override void Initialize()
+    [SubscribeLocalEvent]
+    private void OnStartup(Entity<FileSystemComponent> ent, ref ComponentStartup args)
     {
-        base.Initialize();
-        SubscribeLocalEvent<FileSystemComponent, ComponentStartup>(OnStartup);
-        SubscribeLocalEvent<FileSystemComponent, MapInitEvent>(OnMapInit);
-        SubscribeLocalEvent<FileSystemComponent, AfterAutoHandleStateEvent>(OnAfterState);
-        SubscribeLocalEvent<FileSystemComponent, ComponentShutdown>(OnShutdown);
+        InitializeFileTimestamps(ent.Owner, ent.Comp);
     }
 
-    private void OnStartup(EntityUid uid, FileSystemComponent comp, ref ComponentStartup args)
+    [SubscribeLocalEvent]
+    private void OnMapInit(Entity<FileSystemComponent> ent, ref MapInitEvent args)
     {
-        InitializeFileTimestamps(uid, comp);
+        InitializeFileTimestamps(ent.Owner, ent.Comp);
     }
 
-    private void OnMapInit(EntityUid uid, FileSystemComponent comp, ref MapInitEvent args)
+    [SubscribeLocalEvent]
+    private void OnAfterState(Entity<FileSystemComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        InitializeFileTimestamps(uid, comp);
+        ent.Comp.UsedStorageBytes = ent.Comp.NetworkedHeaders.Sum(h => h.Size);
+    }
+
+    public static string NormalizePath(string rawPath)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath))
+            return "/";
+
+        var cleaned = rawPath.Trim().Replace('\\', '/');
+        var segments = cleaned.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var stack = new List<string>(segments.Length);
+        foreach (var seg in segments)
+        {
+            if (seg == ".")
+                continue;
+
+            if (seg == "..")
+            {
+                if (stack.Count > 0)
+                    stack.RemoveAt(stack.Count - 1);
+                continue;
+            }
+
+            stack.Add(seg);
+        }
+
+        return stack.Count == 0 ? "/" : "/" + string.Join("/", stack);
+    }
+
+    public static string NormalizeDirectory(string rawDir)
+    {
+        var norm = NormalizePath(rawDir);
+        return norm.EndsWith('/') ? norm : norm + "/";
     }
 
     private void InitializeFileTimestamps(EntityUid uid, FileSystemComponent comp)
@@ -46,8 +76,8 @@ public partial class SharedFileSystemSystem : EntitySystem
         var curTime = _timing.CurTime;
         foreach (var file in comp.Files.Values)
         {
-            if (file is RecipeBlueprintFile bp)
-                bp.Size = bp.CalculateSize(_proto);
+            file.Directory = NormalizeDirectory(file.Directory);
+            file.Size = file.CalculateRealSize(_proto, _compFactory);
 
             if (file.LastModified == TimeSpan.Zero && curTime > TimeSpan.Zero)
                 file.LastModified = curTime;
@@ -79,28 +109,17 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (!Resolve(uid, ref comp))
             return;
 
-        if (comp.Files.TryGetValue(fullPath, out var file))
+        var normPath = NormalizePath(fullPath);
+        if (comp.Files.TryGetValue(normPath, out var file))
         {
-            if (file is RecipeBlueprintFile bp)
-                bp.Size = bp.CalculateSize(_proto);
-
+            file.Size = file.CalculateRealSize(_proto, _compFactory);
             file.LastModified = _timing.CurTime;
         }
 
         RecalculateStorageUsage(comp);
         UpdateNetworkedHeaders(uid, comp);
-        var ev = new FileSystemChangedEvent(fullPath);
+        var ev = new FileSystemChangedEvent(normPath);
         RaiseLocalEvent(uid, ref ev, broadcast: true);
-    }
-
-    private void OnShutdown(EntityUid uid, FileSystemComponent comp, ref ComponentShutdown args)
-    {
-        _logBuffers.Remove(uid);
-    }
-
-    private void OnAfterState(EntityUid uid, FileSystemComponent comp, ref AfterAutoHandleStateEvent args)
-    {
-        comp.UsedStorageBytes = comp.NetworkedHeaders.Sum(h => h.Size);
     }
 
     public void RecalculateStorageUsage(FileSystemComponent comp)
@@ -223,7 +242,8 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (!Resolve(uid, ref comp))
             return false;
 
-        if (comp.Files.TryGetValue(fullPath, out var raw) && raw is T typed)
+        var normPath = NormalizePath(fullPath);
+        if (comp.Files.TryGetValue(normPath, out var raw) && raw is T typed)
         {
             file = typed;
             return true;
@@ -249,10 +269,7 @@ public partial class SharedFileSystemSystem : EntitySystem
         var dirs = new HashSet<string> { "/" };
         foreach (var file in comp.Files.Values)
         {
-            var dir = file.Directory;
-            if (!dir.StartsWith('/')) dir = "/" + dir;
-            if (!dir.EndsWith('/')) dir += "/";
-
+            var dir = NormalizeDirectory(file.Directory);
             var parts = dir.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var accum = "/";
             foreach (var p in parts)
@@ -266,24 +283,19 @@ public partial class SharedFileSystemSystem : EntitySystem
 
     public List<FileHeader> GetHeadersInDirectory(FileSystemComponent comp, string directory)
     {
-        if (!directory.StartsWith('/')) directory = "/" + directory;
-        if (!directory.EndsWith('/')) directory += "/";
-
+        var normDir = NormalizeDirectory(directory);
         var list = new List<FileHeader>();
         foreach (var file in comp.Files.Values)
         {
-            var fileDir = file.Directory;
-            if (!fileDir.StartsWith('/')) fileDir = "/" + fileDir;
-            if (!fileDir.EndsWith('/')) fileDir += "/";
-
-            if (fileDir == directory)
+            var fileDir = NormalizeDirectory(file.Directory);
+            if (fileDir == normDir)
             {
                 list.Add(new FileHeader(
                     file.FullPath,
                     file.Name,
                     file.Extension,
                     file.Size,
-                    file.GetType().Name,
+                    file.FileTypeTag,
                     file.IsEncrypted,
                     file.IsReadOnly,
                     file.LastModified
@@ -298,19 +310,39 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (!Resolve(uid, ref comp))
             return false;
 
+        file.Directory = NormalizeDirectory(file.Directory);
+        file.Name = (file.Name ?? string.Empty).Replace('/', '_').Replace('\\', '_').Replace("..", "_").Trim();
+        file.Extension = (file.Extension ?? string.Empty).Replace('/', '_').Replace('\\', '_').Replace('.', '_').Trim();
+        if (string.IsNullOrWhiteSpace(file.Name) || string.IsNullOrWhiteSpace(file.Extension))
+            return false;
+
         if (file is RecipeBlueprintFile bp)
         {
             // Encrypted recipe files are a physical recipe-disk-only concept and cannot be stored on computer hard drives.
             if ((bp.IsEncrypted || !string.IsNullOrWhiteSpace(bp.EncryptionKeyHash)) &&
                 HasComp<ComputerHardDriveComponent>(uid))
                 return false;
-
-            bp.Size = bp.CalculateSize(_proto);
         }
 
-        var fullPath = file.FullPath;
-        if (comp.Files.TryGetValue(fullPath, out var existing) && existing.IsReadOnly)
+        file.Size = file.CalculateRealSize(_proto, _compFactory);
+
+        var fullPath = NormalizePath(file.FullPath);
+        if (comp.Files.TryGetValue(fullPath, out var existing))
+        {
+            if (existing.IsReadOnly)
+                return false;
+
+            // Never allow a text/data write to corrupt an existing executable program file.
+            if (existing is ProgramVirtualFile && file is not ProgramVirtualFile)
+                return false;
+        }
+
+        // Prevent non-program writes into /bin/*.nte.
+        if (file is not ProgramVirtualFile &&
+            file.Extension.Equals("nte", StringComparison.OrdinalIgnoreCase))
+        {
             return false;
+        }
 
         var sizeDelta = file.Size - (existing?.Size ?? 0);
         if (comp.UsedStorageBytes + sizeDelta > comp.MaxStorageBytes)
@@ -330,14 +362,15 @@ public partial class SharedFileSystemSystem : EntitySystem
         if (!Resolve(uid, ref comp))
             return false;
 
-        if (!comp.Files.TryGetValue(fullPath, out var file) || file.IsReadOnly)
+        var normPath = NormalizePath(fullPath);
+        if (!comp.Files.TryGetValue(normPath, out var file) || file.IsReadOnly)
             return false;
 
-        if (comp.Files.Remove(fullPath))
+        if (comp.Files.Remove(normPath))
         {
             RecalculateStorageUsage(comp);
             UpdateNetworkedHeaders(uid, comp);
-            var ev = new FileSystemChangedEvent(fullPath);
+            var ev = new FileSystemChangedEvent(normPath);
             RaiseLocalEvent(uid, ref ev, broadcast: true);
             return true;
         }
@@ -352,7 +385,7 @@ public partial class SharedFileSystemSystem : EntitySystem
             f.Name,
             f.Extension,
             f.Size,
-            f.GetType().Name,
+            f.FileTypeTag,
             f.IsEncrypted,
             f.IsReadOnly,
             f.LastModified
@@ -396,20 +429,20 @@ public partial class SharedFileSystemSystem : EntitySystem
                 TextContent = DefaultLogHeader,
                 IsReadOnly = false
             };
-            _logBuffers[uid] = (DefaultLogHeader, new Queue<string>(MaxLogEntries));
+            comp.LogHeader = DefaultLogHeader;
+            comp.LogEntries = new Queue<string>(MaxLogEntries);
         }
 
-        if (!_logBuffers.TryGetValue(uid, out var buffer))
+        if (comp.LogEntries == null || comp.LogHeader == null)
         {
             var text = logFile.TextContent;
             var firstNl = text.IndexOf('\n');
             var secondNl = firstNl >= 0 ? text.IndexOf('\n', firstNl + 1) : -1;
-            string header;
             var queue = new Queue<string>(MaxLogEntries);
 
             if (secondNl >= 0)
             {
-                header = text.Substring(0, secondNl);
+                comp.LogHeader = text.Substring(0, secondNl);
                 var body = text.Substring(secondNl + 1);
                 var existingLines = body.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 foreach (var line in existingLines)
@@ -421,29 +454,26 @@ public partial class SharedFileSystemSystem : EntitySystem
             }
             else
             {
-                header = DefaultLogHeader;
+                comp.LogHeader = DefaultLogHeader;
             }
 
-            buffer = (header, queue);
-            _logBuffers[uid] = buffer;
+            comp.LogEntries = queue;
         }
 
-        while (buffer.Entries.Count >= MaxLogEntries)
-        {
-            buffer.Entries.Dequeue();
-        }
-        buffer.Entries.Enqueue(logEntry);
+        while (comp.LogEntries.Count >= MaxLogEntries)
+            comp.LogEntries.Dequeue();
 
-        var sb = new StringBuilder(buffer.Header.Length + buffer.Entries.Count * 96);
-        sb.Append(buffer.Header);
-        foreach (var entry in buffer.Entries)
+        comp.LogEntries.Enqueue(logEntry);
+
+        var sb = new StringBuilder(comp.LogHeader.Length + comp.LogEntries.Count * 96);
+        sb.Append(comp.LogHeader);
+        foreach (var entry in comp.LogEntries)
         {
             sb.Append('\n');
             sb.Append(entry);
         }
 
         logFile.TextContent = sb.ToString();
-        logFile.Size = Math.Max(64, logFile.TextContent.Length);
         TryWriteFile(uid, logFile, comp);
     }
 }

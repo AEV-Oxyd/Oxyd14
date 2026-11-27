@@ -1,10 +1,13 @@
 using Content.Server._Oxyd.Computers.Network;
+using Content.Server.Atmos.Monitor.Components;
+using Content.Server.Power.Components;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access.Components;
+using Content.Shared.Lathe;
 using Content.Shared.Lock;
 using Content.Shared.PDA;
 using Content.Shared.PDA.Ringer;
@@ -26,23 +29,18 @@ public sealed partial class OsProgramSystem : EntitySystem
     [Dependency] private LockSystem _lock = default!;
     [Dependency] private RecordsProgramsSystem _recordsPrograms = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<OxydComputerComponent> _computerQuery;
-    private EntityQuery<ComputerStatsComponent> _statsQuery;
-    private EntityQuery<PdaComponent> _pdaQuery;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
+    [Dependency] private EntityQuery<ComputerStatsComponent> _statsQuery = default!;
+    [Dependency] private EntityQuery<PdaComponent> _pdaQuery = default!;
+    [Dependency] private EntityQuery<ApcComponent> _apcQuery = default!;
+    [Dependency] private EntityQuery<AirAlarmComponent> _airAlarmQuery = default!;
+    [Dependency] private EntityQuery<LatheComponent> _latheQuery = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _computerQuery = GetEntityQuery<OxydComputerComponent>();
-        _statsQuery = GetEntityQuery<ComputerStatsComponent>();
-        _pdaQuery = GetEntityQuery<PdaComponent>();
-
-        SubscribeLocalEvent<OsProgramComponent, ProgramStartupEvent>(OnOsStartup);
-        SubscribeLocalEvent<OsProgramComponent, ProgramActivatedEvent>(OnOsActivated);
-        SubscribeLocalEvent<OsProgramComponent, ProgramDeviceLinkReceivedEvent>(OnOsDeviceLinkReceived);
         Subs.BuiEvents<OsProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnOsBuiOpened);
@@ -55,9 +53,6 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<OsShutDownMessage>(OnOsShutDown);
         });
 
-        SubscribeLocalEvent<EmbeddedOsProgramComponent, ProgramStartupEvent>(OnEmbeddedStartup);
-        SubscribeLocalEvent<EmbeddedOsProgramComponent, ProgramActivatedEvent>(OnEmbeddedActivated);
-        SubscribeLocalEvent<EmbeddedOsProgramComponent, ProgramDeviceLinkReceivedEvent>(OnEmbeddedDeviceLinkReceived);
         Subs.BuiEvents<EmbeddedOsProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnEmbeddedBuiOpened);
@@ -68,27 +63,29 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<EmbeddedOsInvokePortMessage>(OnEmbeddedInvokePort);
             subs.Event<EmbeddedOsShutDownMessage>(OnEmbeddedShutDown);
         });
-
-        SubscribeLocalEvent<OxydComputerComponent, ComputerHardwareChangedEvent>(OnComputerHardwareChanged);
     }
 
+    [SubscribeLocalEvent]
     private void OnComputerHardwareChanged(Entity<OxydComputerComponent> ent, ref ComputerHardwareChangedEvent args)
     {
         if (ent.Comp.BootProgram is { } boot && Exists(boot))
             UpdateOsUi(boot);
     }
 
+    [SubscribeLocalEvent]
     private void OnOsStartup(Entity<OsProgramComponent> ent, ref ProgramStartupEvent args)
     {
         _computer.SendPacketToHost(args.ComputerUid, "MachineCommandReceiver", new ComputerPacket("status_request"));
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnOsActivated(Entity<OsProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnOsDeviceLinkReceived(Entity<OsProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         UpdateOsUi(ent.Owner);
@@ -99,6 +96,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnEmbeddedStartup(Entity<EmbeddedOsProgramComponent> ent, ref ProgramStartupEvent args)
     {
         if (!ent.Comp.DefaultAppLaunched &&
@@ -112,11 +110,13 @@ public sealed partial class OsProgramSystem : EntitySystem
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnEmbeddedActivated(Entity<EmbeddedOsProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateOsUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnEmbeddedDeviceLinkReceived(Entity<EmbeddedOsProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         UpdateOsUi(ent.Owner);
@@ -124,6 +124,9 @@ public sealed partial class OsProgramSystem : EntitySystem
 
     private void OnOsSetView(Entity<OsProgramComponent> ent, ref OsSetViewMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         // View 1 (legacy separate Apps tab) is merged into View 0 (Desktop & App Launcher).
         var view = Math.Clamp(args.ViewIndex, 0, 3);
         ent.Comp.CurrentView = view == 1 ? 0 : view;
@@ -134,6 +137,9 @@ public sealed partial class OsProgramSystem : EntitySystem
     private void OnOsLaunchProgram(Entity<OsProgramComponent> ent, ref OsLaunchProgramMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
         if (_computer.TryLaunchExecutable(compUid, args.ExecutablePath, out _, out _, args.Actor))
@@ -149,8 +155,11 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var target = GetEntity(args.ProgramEntity);
-        if (_computer.SwitchActiveProgram(compUid, target, actor: args.Actor))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        if (TryGetEntity(args.ProgramEntity, out var target) &&
+            _computer.SwitchActiveProgram(compUid, target.Value, actor: args.Actor))
         {
             ent.Comp.CurrentView = 3;
             Dirty(ent);
@@ -163,14 +172,20 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var target = GetEntity(args.ProgramEntity);
-        _computer.CloseProgram(compUid, target);
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        if (TryGetEntity(args.ProgramEntity, out var target))
+            _computer.CloseProgram(compUid, target.Value);
         UpdateOsUi(ent.Owner);
     }
 
     private void OnOsHardwareAction(Entity<OsProgramComponent> ent, ref OsHardwareActionMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
         var pkt = new ComputerPacket(args.Action);
@@ -184,6 +199,9 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdateOsUi(ent.Owner);
     }
@@ -191,6 +209,9 @@ public sealed partial class OsProgramSystem : EntitySystem
     private void OnOsShutDown(Entity<OsProgramComponent> ent, ref OsShutDownMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
         _computer.ShutDownComputer(compUid, manualShutdown: true);
@@ -249,6 +270,9 @@ public sealed partial class OsProgramSystem : EntitySystem
 
     private void OnEmbeddedSetView(Entity<EmbeddedOsProgramComponent> ent, ref EmbeddedOsSetViewMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
+            return;
+
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && IsHostLocked(compUid))
         {
             if (ent.Comp.CurrentView != 0)
@@ -270,7 +294,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        if (IsHostLocked(compUid))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
         {
             UpdateOsUi(ent.Owner);
             return;
@@ -289,14 +313,14 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        if (IsHostLocked(compUid))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
         {
             UpdateOsUi(ent.Owner);
             return;
         }
 
-        var target = GetEntity(args.ProgramEntity);
-        if (_computer.SwitchActiveProgram(compUid, target, actor: args.Actor))
+        if (TryGetEntity(args.ProgramEntity, out var target) &&
+            _computer.SwitchActiveProgram(compUid, target.Value, actor: args.Actor))
         {
             ent.Comp.CurrentView = 0;
             Dirty(ent);
@@ -309,14 +333,14 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        if (IsHostLocked(compUid))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
         {
             UpdateOsUi(ent.Owner);
             return;
         }
 
-        var target = GetEntity(args.ProgramEntity);
-        _computer.CloseProgram(compUid, target);
+        if (TryGetEntity(args.ProgramEntity, out var target))
+            _computer.CloseProgram(compUid, target.Value);
         UpdateOsUi(ent.Owner);
     }
 
@@ -325,7 +349,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        if (IsHostLocked(compUid))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
         {
             UpdateOsUi(ent.Owner);
             return;
@@ -340,7 +364,7 @@ public sealed partial class OsProgramSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        if (IsHostLocked(compUid))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
         {
             UpdateOsUi(ent.Owner);
             return;
@@ -409,6 +433,8 @@ public sealed partial class OsProgramSystem : EntitySystem
 
             var hasLock = comp.HostMachine is { } lockHost && HasComp<LockComponent>(lockHost);
             var isHostLocked = hasLock && _lock.IsLocked(comp.HostMachine!.Value);
+            var isDedicatedPanel = comp.HostMachine is { } panelHost &&
+                                   (_apcQuery.HasComp(panelHost) || _airAlarmQuery.HasComp(panelHost) || _latheQuery.HasComp(panelHost));
 
             var state = new EmbeddedOsUiState(
                 comp.HostTitle,
@@ -423,7 +449,8 @@ public sealed partial class OsProgramSystem : EntitySystem
                 hwSummary,
                 hasLock,
                 isHostLocked,
-                comp.EmbeddedDefaultAppPath);
+                comp.EmbeddedDefaultAppPath,
+                isDedicatedPanel);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);

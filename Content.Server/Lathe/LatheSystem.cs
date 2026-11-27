@@ -616,8 +616,10 @@ namespace Content.Server.Lathe
 
         private static int GetRecipeUseCost(LatheRecipePrototype recipe, int quantity)
         {
+            var clampedQty = Math.Clamp(quantity, 1, 99);
             var pointCost = recipe.pointUsage > 0 ? recipe.pointUsage : 1;
-            return pointCost * quantity;
+            var total = (long) pointCost * clampedQty;
+            return total > int.MaxValue ? int.MaxValue : (int) total;
         }
 
         private static bool TryValidateBlueprintUses(

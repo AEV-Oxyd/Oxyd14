@@ -28,13 +28,12 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private PvsOverrideSystem _pvsOverride = default!;
     [Dependency] private SharedContainerSystem _container = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<HardwareDebuggerComponent, AfterInteractEvent>(OnAfterInteract);
-        SubscribeLocalEvent<HardwareDebuggerComponent, BoundUIClosedEvent>(OnUiClosed);
         Subs.BuiEvents<HardwareDebuggerComponent>(HardwareDebuggerUiKey.Key, subs =>
         {
             subs.Event<HardwareDebuggerCommandMessage>(OnCommand);
@@ -42,6 +41,7 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnAfterInteract(Entity<HardwareDebuggerComponent> ent, ref AfterInteractEvent args)
     {
         if (args.Handled || !args.CanReach || args.Target is not { } target)
@@ -85,6 +85,7 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
         UpdateDebuggerUi(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnUiClosed(Entity<HardwareDebuggerComponent> ent, ref BoundUIClosedEvent args)
     {
         if (!HardwareDebuggerUiKey.Key.Equals(args.UiKey))
@@ -122,6 +123,25 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
         if (!TryComp<ComputerDataPortComponent>(compUid, out var dp) || !dp.Enabled)
         {
             ent.Comp.History.Add("ERROR: Data port physically disconnected or disabled.");
+            ent.Comp.ConnectedComputer = null;
+            UpdateDebuggerUi(ent.Owner, ent.Comp);
+            return;
+        }
+
+        var physicalTarget = comp.HostMachine is { Valid: true } hm && Exists(hm) ? hm : compUid;
+        if (Exists(args.Actor) && !_interaction.InRangeUnobstructed(args.Actor, physicalTarget))
+        {
+            ent.Comp.History.Add("ERROR: Out of physical cable range of target data port.");
+            ent.Comp.ConnectedComputer = null;
+            UpdateDebuggerUi(ent.Owner, ent.Comp);
+            return;
+        }
+
+        if (dp.RequireMaintenancePanelOpen &&
+            TryComp<WiresPanelComponent>(physicalTarget, out var panel) &&
+            !panel.Open)
+        {
+            ent.Comp.History.Add("ERROR: Target maintenance panel is closed.");
             ent.Comp.ConnectedComputer = null;
             UpdateDebuggerUi(ent.Owner, ent.Comp);
             return;
@@ -172,7 +192,7 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
                     if (!TryComp<ProgramComponent>(pUid, out var p))
                         continue;
                     var bootTag = p.IsBootProgram ? " [BOOT]" : string.Empty;
-                    ent.Comp.History.Add($"  PID {pUid.Id}: {p.Title} ({p.ExecutablePath}) RAM={p.RamUsageMb}MB{bootTag}");
+                    ent.Comp.History.Add($"  PID {pUid.Id}: {p.Title} ({p.ExecutablePath}) RAM={p.RamUsageMb}QB{bootTag}");
                 }
                 break;
 
@@ -209,27 +229,28 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
                     break;
                 }
                 foreach (var (fPath, vFile) in lsFs.Files)
-                    ent.Comp.History.Add($"  {fPath} ({vFile.Size} B){(vFile.IsReadOnly ? " [RO]" : "")}");
+                    ent.Comp.History.Add($"  {fPath} ({ComputerSizeFormat.FormatStorageQb(vFile.Size)}){(vFile.IsReadOnly ? " [RO]" : "")}");
                 break;
 
             case "cat" when parts.Length > 1:
-                if (!_fileSystem.TryFindFileSystem(compUid, out _, out var catFs) || !catFs.Files.TryGetValue(parts[1], out var catFile))
+                var catPath = SharedFileSystemSystem.NormalizePath(parts[1]);
+                if (!_fileSystem.TryFindFileSystem(compUid, out _, out var catFs) || !catFs.Files.TryGetValue(catPath, out var catFile))
                 {
-                    ent.Comp.History.Add($"cat: '{parts[1]}' not found.");
+                    ent.Comp.History.Add($"cat: '{catPath}' not found.");
                     break;
                 }
                 if (catFile is TextVirtualFile tf)
                     ent.Comp.History.Add(tf.TextContent);
                 else if (catFile is ProgramVirtualFile pf)
-                    ent.Comp.History.Add($"[NTE EXECUTABLE] proto={pf.ProgramId} title=\"{pf.Title}\" ram={pf.RamUsageMb}MB");
+                    ent.Comp.History.Add($"[APP] proto={pf.ProgramId} title=\"{pf.Title}\" size={ComputerSizeFormat.FormatStorageQb(pf.Size)} ram={pf.RamUsageMb}QB");
                 else
-                    ent.Comp.History.Add($"[{catFile.GetType().Name}] {catFile.Name}.{catFile.Extension} ({catFile.Size} B)");
+                    ent.Comp.History.Add($"[{catFile.FileTypeTag}] {catFile.Name}.{catFile.Extension} ({ComputerSizeFormat.FormatStorageQb(catFile.Size)})");
                 break;
 
             case "write" when parts.Length >= 3:
                 if (_fileSystem.TryFindFileSystem(compUid, out var wrDrive, out var wrFs))
                 {
-                    var p = parts[1].StartsWith('/') ? parts[1] : $"/{parts[1]}";
+                    var p = SharedFileSystemSystem.NormalizePath(parts[1]);
                     var idx = p.LastIndexOf('/');
                     var dir = idx > 0 ? p[..(idx + 1)] : "/";
                     var fname = p[(idx + 1)..];
@@ -250,9 +271,10 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
                 break;
 
             case "rm" when parts.Length > 1:
+                var rmPath = SharedFileSystemSystem.NormalizePath(parts[1]);
                 if (_fileSystem.TryFindFileSystem(compUid, out var rmDrive, out var rmFs) &&
-                    _fileSystem.TryDeleteFile(rmDrive.Value, parts[1], rmFs))
-                    ent.Comp.History.Add($"Removed '{parts[1]}'.");
+                    _fileSystem.TryDeleteFile(rmDrive.Value, rmPath, rmFs))
+                    ent.Comp.History.Add($"Removed '{rmPath}'.");
                 else
                     ent.Comp.History.Add("Delete failed (file missing, protected, or no drive).");
                 break;
@@ -279,9 +301,9 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
 
         history.Add($"POST Status: {(comp.IsBooted ? "OK (BOOTED)" : $"FAIL ({comp.BootError})")}");
         history.Add($"CPU: {(stats.HasCpu ? $"{stats.CpuFrequencyMhz} MHz (max {stats.MaxConcurrentPrograms} procs)" : "MISSING")}");
-        history.Add($"RAM: {(stats.HasRam ? $"{stats.UsedRamMb}/{stats.RamMb} MB" : "MISSING")}");
-        history.Add($"HDD: {(stats.HasHardDrive ? $"{stats.UsedStorageBytes}/{stats.StorageBytes} B ({MetaData(stats.PrimaryDriveUid!.Value).EntityName})" : "MISSING")}");
-        history.Add($"NIC: {(stats.HasNetworkCard ? $"DL={stats.NetworkBandwidthBps} B/s UL={stats.NetworkUploadBandwidthBps} B/s" : "NONE/OFFLINE")}");
+        history.Add($"RAM: {(stats.HasRam ? $"{stats.UsedRamMb}/{stats.RamMb} QB" : "MISSING")}");
+        history.Add($"HDD: {(stats.HasHardDrive ? $"{ComputerSizeFormat.FormatStorageQb(stats.UsedStorageBytes)} / {ComputerSizeFormat.FormatStorageQb(stats.StorageBytes)} ({MetaData(stats.PrimaryDriveUid!.Value).EntityName})" : "MISSING")}");
+        history.Add($"NIC: {(stats.HasNetworkCard ? $"DL={ComputerSizeFormat.FormatRateQb(stats.NetworkBandwidthBps)} UL={ComputerSizeFormat.FormatRateQb(stats.NetworkUploadBandwidthBps)}" : "NONE/OFFLINE")}");
         history.Add($"Wires: PWR={(comp.PowerWireCut ? "CUT" : "OK")} NET={(comp.NetworkWireCut ? "CUT" : "OK")} STO={(comp.StorageWireCut ? "CUT" : "OK")} DVL={(comp.DeviceLinkWireCut ? "CUT" : "OK")} REM={(comp.RemoteControlWireCut ? "CUT" : "OK")}");
     }
 
@@ -315,7 +337,7 @@ public sealed partial class HardwareDebuggerSystem : EntitySystem
         var hostName = oxydComp.HostMachine is { } hm && Exists(hm) ? MetaData(hm).EntityName : MetaData(cUid).EntityName;
 
         var hwLine = stats != null
-            ? $"CPU: {(stats.HasCpu ? $"{stats.CpuFrequencyMhz}MHz" : "NONE")} | RAM: {stats.UsedRamMb}/{stats.RamMb}MB | HDD: {(stats.HasHardDrive ? $"{stats.StorageBytes / 1024}KB" : "NONE")} | NIC: {(stats.HasNetworkCard ? "UP" : "NONE")}"
+            ? $"CPU: {(stats.HasCpu ? $"{stats.CpuFrequencyMhz}MHz" : "NONE")} | RAM: {stats.UsedRamMb}/{stats.RamMb} QB | HDD: {(stats.HasHardDrive ? ComputerSizeFormat.FormatStorageQb(stats.StorageBytes) : "NONE")} | NIC: {(stats.HasNetworkCard ? "UP" : "NONE")}"
             : "No stats";
 
         var state = new HardwareDebuggerUiState(

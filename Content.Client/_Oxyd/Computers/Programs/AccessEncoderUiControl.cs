@@ -13,6 +13,9 @@ namespace Content.Client._Oxyd.Computers.Programs;
 /// </summary>
 public sealed class AccessEncoderUiControl : ProgramUiControl
 {
+    private readonly ContentBoxContainer _mainRoot;
+    private readonly ContentPanelContainer _lockBanner;
+    private readonly ContentLabel _lockBannerLabel;
     private readonly ContentLabel _hardwareLabel;
     private readonly ContentButton _slotToggleBtn;
     private readonly ContentButton _readSlotBtn;
@@ -31,7 +34,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer
+        _mainRoot = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
@@ -39,6 +42,33 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 6
         };
+        var root = _mainRoot;
+
+        _lockBanner = new ContentPanelContainer
+        {
+            Name = "AccessEncoderLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0A1018"),
+                BorderColor = Color.FromHex("#AA3333"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockBannerLabel = new ContentLabel
+        {
+            Text = "TERMINAL LOCKED — Swipe authorized ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FF8888"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockBanner.AddChild(_lockBannerLabel);
 
         var hwPanel = new ContentPanelContainer
         {
@@ -130,18 +160,8 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         };
         _buildBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, _fileNameInput.Text));
 
-        var refreshBtn = new ContentButton
-        {
-            Name = "AccessEncoderRefreshBtn",
-            Text = "Refresh",
-            MinWidth = 76,
-            MinHeight = 28
-        };
-        refreshBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.Refresh));
-
         topRow.AddChild(_fileNameInput);
         topRow.AddChild(_buildBtn);
-        topRow.AddChild(refreshBtn);
         root.AddChild(topRow);
 
         _statusLabel = new ContentLabel
@@ -311,12 +331,26 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         root.AddChild(bodySplit);
 
         AddChild(root);
+        AddChild(_lockBanner);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
     {
         if (raw is not AccessEncoderUiState state)
             return;
+
+        if (state.IsLocked)
+        {
+            _mainRoot.Visible = false;
+            _lockBanner.Visible = true;
+            _lockBannerLabel.Text = string.IsNullOrWhiteSpace(state.StatusMessage)
+                ? "TERMINAL LOCKED — Swipe authorized ID card to unlock."
+                : state.StatusMessage;
+            return;
+        }
+
+        _mainRoot.Visible = true;
+        _lockBanner.Visible = false;
 
         _statusLabel.Text = state.StatusMessage;
 

@@ -100,7 +100,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
         if (raw is not FileBrowserUiState state)
             return;
 
-        _pathLabel.Text = $"{state.CurrentDirectory} | HDD: {state.StorageUsedBytes / 1024}/{state.StorageTotalBytes / 1024}KB";
+        _pathLabel.Text = $"{state.CurrentDirectory} | HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(state.StorageUsedBytes)} / {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(state.StorageTotalBytes)}";
         _statusLabel.Text = state.HasHardDrive ? state.StatusMessage : "NO HARD DRIVE INSTALLED";
         _ejectDiskBtn.Visible = state.HasDisk;
 
@@ -155,7 +155,7 @@ public sealed class FileBrowserUiControl : ProgramUiControl
             var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
             row.AddChild(new ContentLabel
             {
-                Text = $"{file.Name}.{file.Extension} ({file.Size}B) [{file.LastModified:hh\\:mm\\:ss}]{flags}",
+                Text = $"{file.Name}.{file.Extension} ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(file.Size)}) [{file.LastModified:hh\\:mm\\:ss}]{flags}",
                 HorizontalExpand = true
             });
 
@@ -198,6 +198,7 @@ public sealed class DownloaderUiControl : ProgramUiControl
 {
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
+    private readonly ContentButton _cancelBtn;
     private readonly ContentBoxContainer _listContainer;
 
     public DownloaderUiControl()
@@ -214,9 +215,14 @@ public sealed class DownloaderUiControl : ProgramUiControl
         };
 
         _headerLabel = new ContentLabel { Text = "NTOS Package & File Transfer", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
-        _statusLabel = new ContentLabel { Text = "Ready", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
+        var statusRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2, 0, 4), SeparationOverride = 6 };
+        _statusLabel = new ContentLabel { Text = "Ready", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066") };
+        _cancelBtn = new ContentButton { Name = "DownloaderCancelTransferBtn", Text = "Cancel Transfer", MinWidth = 110, Visible = false };
+        _cancelBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.CancelTransfer));
+        statusRow.AddChild(_statusLabel);
+        statusRow.AddChild(_cancelBtn);
         root.AddChild(_headerLabel);
-        root.AddChild(_statusLabel);
+        root.AddChild(statusRow);
 
         var catRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4, Margin = new Thickness(0, 0, 0, 4) };
         void AddCat(string c)
@@ -248,8 +254,11 @@ public sealed class DownloaderUiControl : ProgramUiControl
         if (raw is not DownloaderUiState state)
             return;
 
-        _headerLabel.Text = $"Server: {state.ServerName} [{state.ServerGuid}] | DL:{state.DownloadBps / 1024}KB/s UL:{state.UploadBps / 1024}KB/s | {(state.IsServerOnline ? "ONLINE" : "OFFLINE")}";
+        _headerLabel.Text = $"Server: {state.ServerName} | DL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.DownloadBps)} UL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.UploadBps)} | {(state.IsServerOnline ? "ONLINE" : "OFFLINE")}";
         _statusLabel.Text = state.StatusMessage;
+        _cancelBtn.Visible = state.StatusMessage.Contains("Downloading", StringComparison.OrdinalIgnoreCase) ||
+                             state.StatusMessage.Contains("Uploading", StringComparison.OrdinalIgnoreCase) ||
+                             state.StatusMessage.Contains("Queued", StringComparison.OrdinalIgnoreCase);
 
         _listContainer.RemoveAllChildren();
         _listContainer.AddChild(new ContentLabel { Text = "--- REMOTE SERVER REPOSITORY ---", FontColorOverride = Color.FromHex("#00D4FF") });
@@ -263,7 +272,7 @@ public sealed class DownloaderUiControl : ProgramUiControl
             foreach (var item in state.Items)
             {
                 var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-                row.AddChild(new ContentLabel { Text = $"{item.Name} [{item.Category}] ({item.Size}B)", HorizontalExpand = true });
+                row.AddChild(new ContentLabel { Text = $"{item.Name} [{item.Category}] ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(item.Size)})", HorizontalExpand = true });
 
                 var dlBtn = new ContentButton
                 {
@@ -282,7 +291,7 @@ public sealed class DownloaderUiControl : ProgramUiControl
             foreach (var local in state.LocalUploadables)
             {
                 var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-                row.AddChild(new ContentLabel { Text = $"{local.Path} ({local.Size}B)", HorizontalExpand = true });
+                row.AddChild(new ContentLabel { Text = $"{local.Path} ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(local.Size)})", HorizontalExpand = true });
 
                 var upBtn = new ContentButton { Text = "Upload", MinWidth = 75 };
                 upBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.UploadFile, local.Path));
@@ -299,6 +308,9 @@ public sealed class DownloaderUiControl : ProgramUiControl
 
 public sealed class RouterUiControl : ProgramUiControl
 {
+    private readonly ContentBoxContainer _mainRoot;
+    private readonly ContentPanelContainer _lockBanner;
+    private readonly ContentLabel _lockBannerLabel;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
     private readonly ContentBoxContainer _contentList;
@@ -311,13 +323,40 @@ public sealed class RouterUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer
+        _mainRoot = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
             VerticalExpand = true,
             Margin = new Thickness(4)
         };
+        var root = _mainRoot;
+
+        _lockBanner = new ContentPanelContainer
+        {
+            Name = "RouterLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0A1018"),
+                BorderColor = Color.FromHex("#AA3333"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockBannerLabel = new ContentLabel
+        {
+            Text = "ROUTER LOCKED — Swipe authorized ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FF8888"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockBanner.AddChild(_lockBannerLabel);
 
         _headerLabel = new ContentLabel { Text = "Network Router", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
         _statusLabel = new ContentLabel { Text = "Ready", HorizontalExpand = true, FontColorOverride = Color.FromHex("#FFE066"), Margin = new Thickness(0, 2, 0, 4) };
@@ -355,6 +394,7 @@ public sealed class RouterUiControl : ProgramUiControl
         root.AddChild(scroll);
 
         AddChild(root);
+        AddChild(_lockBanner);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -362,7 +402,21 @@ public sealed class RouterUiControl : ProgramUiControl
         if (raw is not RouterUiState state)
             return;
 
-        _headerLabel.Text = $"ROUTER [{state.RouterGuid}] | {(state.IsPowered ? "ONLINE" : "OFFLINE")} | DL:{state.BandwidthBps / 1024}KB/s UL:{state.UploadBps / 1024}KB/s";
+        if (state.IsLocked)
+        {
+            _mainRoot.Visible = false;
+            _lockBanner.Visible = true;
+            _lockBannerLabel.Text = string.IsNullOrWhiteSpace(state.StatusMessage)
+                ? "ROUTER LOCKED — Swipe authorized ID card to unlock."
+                : state.StatusMessage;
+            _contentList.RemoveAllChildren();
+            return;
+        }
+
+        _mainRoot.Visible = true;
+        _lockBanner.Visible = false;
+
+        _headerLabel.Text = $"ROUTER [{state.RouterGuid}] | {(state.IsPowered ? "ONLINE" : "OFFLINE")} | DL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.BandwidthBps)} UL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.UploadBps)}";
         _statusLabel.Text = state.StatusMessage;
         _contentList.RemoveAllChildren();
 

@@ -45,6 +45,7 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
     public string SelectedFilePreview { get; }
     public List<string> KeyFiles { get; }
     public string StatusMessage { get; }
+    public bool IsLocked { get; }
 
     public AccessEncoderUiState(
         bool hasIdSlotHardware,
@@ -57,7 +58,8 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         string selectedFilePath,
         string selectedFilePreview,
         List<string> keyFiles,
-        string statusMessage)
+        string statusMessage,
+        bool isLocked = false)
     {
         HasIdSlotHardware = hasIdSlotHardware;
         HasModularSlot = hasModularSlot;
@@ -70,6 +72,7 @@ public sealed class AccessEncoderUiState : BoundUserInterfaceState
         SelectedFilePreview = selectedFilePreview;
         KeyFiles = keyFiles;
         StatusMessage = statusMessage;
+        IsLocked = isLocked;
     }
 }
 

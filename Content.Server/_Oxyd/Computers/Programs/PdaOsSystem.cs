@@ -75,6 +75,9 @@ public sealed partial class PdaOsSystem : EntitySystem
 
     private void OnPdaOsSetView(Entity<PdaOsProgramComponent> ent, ref PdaOsSetViewMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 2);
         Dirty(ent);
         UpdatePdaOsUi(ent.Owner);
@@ -83,6 +86,9 @@ public sealed partial class PdaOsSystem : EntitySystem
     private void OnPdaOsLaunchProgram(Entity<PdaOsProgramComponent> ent, ref PdaOsLaunchProgramMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
         if (_computer.TryLaunchExecutable(compUid, args.ExecutablePath, out _, out _, args.Actor))
@@ -99,8 +105,11 @@ public sealed partial class PdaOsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var target = GetEntity(args.ProgramEntity);
-        if (_computer.SwitchActiveProgram(compUid, target, actor: args.Actor))
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        if (TryGetEntity(args.ProgramEntity, out var target) &&
+            _computer.SwitchActiveProgram(compUid, target.Value, actor: args.Actor))
         {
             ent.Comp.CurrentView = 2;
             Dirty(ent);
@@ -114,8 +123,11 @@ public sealed partial class PdaOsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var target = GetEntity(args.ProgramEntity);
-        _computer.CloseProgram(compUid, target);
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        if (TryGetEntity(args.ProgramEntity, out var target))
+            _computer.CloseProgram(compUid, target.Value);
 
         if (_computerQuery.TryComp(compUid, out var comp) &&
             (comp.ActiveProgram == null || comp.ActiveProgram == ent.Owner) &&
@@ -133,6 +145,9 @@ public sealed partial class PdaOsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         var pkt = new ComputerPacket(args.Action);
         pkt.Set("Argument", args.Argument);
         _computer.SendPacketToHost(compUid, "MachineCommandReceiver", pkt, args.Actor);
@@ -144,6 +159,9 @@ public sealed partial class PdaOsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         _computer.TryInvokeDeviceLinkPort(compUid, args.PortId, args.IsHostPort, args.Command, args.Argument, out _, args.Actor);
         UpdatePdaOsUi(ent.Owner);
     }
@@ -151,6 +169,9 @@ public sealed partial class PdaOsSystem : EntitySystem
     private void OnPdaOsShutDown(Entity<PdaOsProgramComponent> ent, ref PdaOsShutDownMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
         _computer.ShutDownComputer(compUid, manualShutdown: true);

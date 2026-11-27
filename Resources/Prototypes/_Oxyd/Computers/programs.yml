@@ -24,6 +24,7 @@
   - type: Program
     title: "NTOS System"
     ramUsageMb: 32
+    fileSizeBytes: 196608
     cpuUsagePercent: 5.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -43,6 +44,7 @@
   - type: Program
     title: "NTOS Pocket"
     ramUsageMb: 24
+    fileSizeBytes: 163840
     cpuUsagePercent: 4.0
     icon:
       sprite: Objects/Devices/pda.rsi
@@ -62,6 +64,7 @@
   - type: Program
     title: "Embedded Controller OS"
     ramUsageMb: 16
+    fileSizeBytes: 147456
     cpuUsagePercent: 3.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -80,7 +83,9 @@
   components:
   - type: Program
     title: "APC Control"
+    screenState: "power_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 212992
     cpuUsagePercent: 2.0
     icon:
       sprite: Structures/Power/power.rsi
@@ -99,7 +104,9 @@
   components:
   - type: Program
     title: "Lathe Control"
+    screenState: "rdcomp"
     ramUsageMb: 8
+    fileSizeBytes: 90112
     cpuUsagePercent: 2.0
     icon:
       sprite: Structures/Power/power.rsi
@@ -118,7 +125,9 @@
   components:
   - type: Program
     title: "Atmos Control"
+    screenState: "area_atmos"
     ramUsageMb: 8
+    fileSizeBytes: 229376
     cpuUsagePercent: 2.0
     icon:
       sprite: Objects/Devices/pda.rsi
@@ -137,7 +146,9 @@
   components:
   - type: Program
     title: "File Browser"
+    screenState: "comm_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 65536
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -156,7 +167,9 @@
   components:
   - type: Program
     title: "Terminal"
+    screenState: "command"
     ramUsageMb: 8
+    fileSizeBytes: 86016
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -175,7 +188,9 @@
   components:
   - type: Program
     title: "Downloader"
+    screenState: "tech"
     ramUsageMb: 8
+    fileSizeBytes: 77824
     cpuUsagePercent: 2.0
     icon:
       sprite: Structures/Machines/server.rsi
@@ -194,7 +209,9 @@
   components:
   - type: Program
     title: "Router Admin"
+    screenState: "comm_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 196608
     cpuUsagePercent: 2.0
     icon:
       sprite: Objects/Tools/network_configurator.rsi
@@ -213,7 +230,9 @@
   components:
   - type: Program
     title: "Packet Sniffer"
+    screenState: "radar"
     ramUsageMb: 8
+    fileSizeBytes: 131072
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -232,7 +251,9 @@
   components:
   - type: Program
     title: "Notekeeper"
+    screenState: "comm_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 32768
     cpuUsagePercent: 1.0
     icon:
       sprite: Objects/Misc/books.rsi
@@ -251,7 +272,9 @@
   components:
   - type: Program
     title: "Tasks"
+    screenState: "comm_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 36864
     cpuUsagePercent: 1.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
@@ -270,7 +293,9 @@
   components:
   - type: Program
     title: "Crew Manifest"
+    screenState: "medcomp"
     ramUsageMb: 8
+    fileSizeBytes: 45056
     cpuUsagePercent: 1.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
@@ -289,7 +314,9 @@
   components:
   - type: Program
     title: "News Reader"
+    screenState: "comm_monitor"
     ramUsageMb: 8
+    fileSizeBytes: 40960
     cpuUsagePercent: 1.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
@@ -308,7 +335,9 @@
   components:
   - type: Program
     title: "Wanted List"
+    screenState: "security"
     ramUsageMb: 8
+    fileSizeBytes: 49152
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -328,6 +357,7 @@
   - type: Program
     title: "NetProbe"
     ramUsageMb: 8
+    fileSizeBytes: 65536
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -347,6 +377,7 @@
   - type: Program
     title: "LogProbe"
     ramUsageMb: 8
+    fileSizeBytes: 65536
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -365,7 +396,9 @@
   components:
   - type: Program
     title: "MedTek"
+    screenState: "medcomp"
     ramUsageMb: 8
+    fileSizeBytes: 73728
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -384,7 +417,9 @@
   components:
   - type: Program
     title: "AstroNav"
+    screenState: "helm"
     ramUsageMb: 8
+    fileSizeBytes: 73728
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -403,7 +438,9 @@
   components:
   - type: Program
     title: "ID Access Encoder"
+    screenState: "id"
     ramUsageMb: 8
+    fileSizeBytes: 81920
     cpuUsagePercent: 1.5
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -422,7 +459,9 @@
   components:
   - type: Program
     title: "ID Access Modifier"
+    screenState: "id"
     ramUsageMb: 12
+    fileSizeBytes: 114688
     cpuUsagePercent: 2.0
     icon:
       sprite: Objects/Misc/module.rsi
@@ -442,6 +481,7 @@
   - type: Program
     title: "Network Core OS"
     ramUsageMb: 32
+    fileSizeBytes: 229376
     cpuUsagePercent: 5.0
     icon:
       sprite: Objects/Tools/network_configurator.rsi
@@ -460,7 +500,9 @@
   components:
   - type: Program
     title: "Station Records"
+    screenState: "medcomp"
     ramUsageMb: 12
+    fileSizeBytes: 118784
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -479,7 +521,9 @@
   components:
   - type: Program
     title: "Criminal Records"
+    screenState: "security"
     ramUsageMb: 12
+    fileSizeBytes: 122880
     cpuUsagePercent: 2.0
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -498,7 +542,9 @@
   components:
   - type: Program
     title: "Surveillance Cameras"
+    screenState: "cameras"
     ramUsageMb: 16
+    fileSizeBytes: 262144
     cpuUsagePercent: 3.0
     icon:
       sprite: Structures/Wallmounts/camera.rsi
@@ -517,7 +563,9 @@
   components:
   - type: Program
     title: "Cargo Orders"
+    screenState: "request"
     ramUsageMb: 12
+    fileSizeBytes: 106496
     cpuUsagePercent: 2.0
     icon:
       sprite: Objects/Devices/cartridge.rsi
@@ -536,7 +584,9 @@
   components:
   - type: Program
     title: "Crew Monitor"
+    screenState: "crew"
     ramUsageMb: 12
+    fileSizeBytes: 131072
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -555,7 +605,9 @@
   components:
   - type: Program
     title: "Communications"
+    screenState: "comm"
     ramUsageMb: 12
+    fileSizeBytes: 126976
     cpuUsagePercent: 2.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
@@ -574,7 +626,9 @@
   components:
   - type: Program
     title: "Solar Control"
+    screenState: "solar_screen"
     ramUsageMb: 8
+    fileSizeBytes: 98304
     cpuUsagePercent: 1.5
     icon:
       sprite: Structures/Power/power.rsi

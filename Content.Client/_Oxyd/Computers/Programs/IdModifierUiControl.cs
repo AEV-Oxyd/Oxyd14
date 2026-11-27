@@ -18,8 +18,11 @@ namespace Content.Client._Oxyd.Computers.Programs;
 /// </summary>
 public sealed class IdModifierUiControl : ProgramUiControl
 {
-    [Dependency] private readonly IPrototypeManager _proto = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
 
+    private readonly ContentBoxContainer _mainRoot;
+    private readonly ContentPanelContainer _lockBanner;
+    private readonly ContentLabel _lockBannerLabel;
     private readonly ContentLabel _hardwareLabel;
     private readonly ContentButton _privSlotBtn;
     private readonly ContentButton _targetSlotBtn;
@@ -57,7 +60,7 @@ public sealed class IdModifierUiControl : ProgramUiControl
             .Where(a => a.CanAddToIdCard)
             .OrderBy(a => a.GetAccessLevelName(), StringComparer.OrdinalIgnoreCase));
 
-        var root = new ContentBoxContainer
+        _mainRoot = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
@@ -65,6 +68,33 @@ public sealed class IdModifierUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 6
         };
+        var root = _mainRoot;
+
+        _lockBanner = new ContentPanelContainer
+        {
+            Name = "IdModLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0A1018"),
+                BorderColor = Color.FromHex("#AA3333"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockBannerLabel = new ContentLabel
+        {
+            Text = "TERMINAL LOCKED — Swipe authorized ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FF8888"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockBanner.AddChild(_lockBannerLabel);
 
         // 1. Hardware Slots Strip (Requires 2 ID Card Slot modules)
         var hwPanel = new ContentPanelContainer
@@ -126,19 +156,9 @@ public sealed class IdModifierUiControl : ProgramUiControl
         };
         _swapSlotsBtn.OnPressed += _ => SendProgramMessage(new IdModifierActionMessage(IdModifierAction.SwapSlots));
 
-        var refreshBtn = new ContentButton
-        {
-            Name = "IdModRefreshBtn",
-            Text = "Refresh",
-            MinWidth = 74,
-            MinHeight = 26
-        };
-        refreshBtn.OnPressed += _ => SendProgramMessage(new IdModifierActionMessage(IdModifierAction.Refresh));
-
         slotRow.AddChild(_privSlotBtn);
         slotRow.AddChild(_targetSlotBtn);
         slotRow.AddChild(_swapSlotsBtn);
-        slotRow.AddChild(refreshBtn);
         hwCol.AddChild(slotRow);
         hwPanel.AddChild(hwCol);
         root.AddChild(hwPanel);
@@ -321,12 +341,26 @@ public sealed class IdModifierUiControl : ProgramUiControl
         editorScroll.AddChild(editorCol);
         root.AddChild(editorScroll);
         AddChild(root);
+        AddChild(_lockBanner);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
     {
         if (raw is not IdModifierUiState state)
             return;
+
+        if (state.IsLocked)
+        {
+            _mainRoot.Visible = false;
+            _lockBanner.Visible = true;
+            _lockBannerLabel.Text = string.IsNullOrWhiteSpace(state.StatusMessage)
+                ? "TERMINAL LOCKED — Swipe authorized ID card to unlock."
+                : state.StatusMessage;
+            return;
+        }
+
+        _mainRoot.Visible = true;
+        _lockBanner.Visible = false;
 
         _statusLabel.Text = state.StatusMessage;
 
@@ -364,10 +398,12 @@ public sealed class IdModifierUiControl : ProgramUiControl
         {
             var pathCopy = accPath;
             var isSel = string.Equals(pathCopy, state.SelectedAccFilePath, StringComparison.OrdinalIgnoreCase);
+            var slashIdx = pathCopy.LastIndexOf('/');
+            var shortName = slashIdx >= 0 ? pathCopy[(slashIdx + 1)..] : pathCopy;
             var btn = new ContentButton
             {
                 Name = $"IdModSelectAccBtn_{pathCopy}",
-                Text = isSel ? $"[AUTH] {pathCopy}" : $"Use {pathCopy}",
+                Text = shortName,
                 Pressed = isSel,
                 MinHeight = 24
             };
@@ -434,7 +470,7 @@ public sealed class IdModifierUiControl : ProgramUiControl
             var btn = new ContentButton
             {
                 Name = $"IdModAccessBtn_{tagId}",
-                Text = isGranted ? $"[ON] {acc.GetAccessLevelName()}" : acc.GetAccessLevelName(),
+                Text = acc.GetAccessLevelName(),
                 Pressed = isGranted,
                 Disabled = !state.HasRequiredModificationHardware || !state.HasTargetCard || !isAllowed,
                 MinHeight = 24

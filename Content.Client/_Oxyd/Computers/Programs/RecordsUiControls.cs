@@ -293,6 +293,9 @@ public sealed class RecordSubjectPhotoControl : ContentControl
 
 public sealed class StationRecordsUiControl : ProgramUiControl
 {
+    private readonly ContentBoxContainer _mainRoot;
+    private readonly ContentPanelContainer _lockBanner;
+    private readonly ContentLabel _lockBannerLabel;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
     private readonly ContentLineEdit _searchEdit;
@@ -322,7 +325,7 @@ public sealed class StationRecordsUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer
+        _mainRoot = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
@@ -330,6 +333,33 @@ public sealed class StationRecordsUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 5
         };
+        var root = _mainRoot;
+
+        _lockBanner = new ContentPanelContainer
+        {
+            Name = "StationRecordsLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0A1018"),
+                BorderColor = Color.FromHex("#AA3333"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockBannerLabel = new ContentLabel
+        {
+            Text = "RECORDS LOCKED — Swipe authorized ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FF8888"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockBanner.AddChild(_lockBannerLabel);
 
         var topRow = new ContentBoxContainer
         {
@@ -533,6 +563,7 @@ public sealed class StationRecordsUiControl : ProgramUiControl
         root.AddChild(split);
 
         AddChild(root);
+        AddChild(_lockBanner);
     }
 
     private void SendEdit(StationRecordsAction action)
@@ -559,8 +590,23 @@ public sealed class StationRecordsUiControl : ProgramUiControl
             return;
 
         _lastState = state;
+        if (state.IsLocked)
+        {
+            _mainRoot.Visible = false;
+            _lockBanner.Visible = true;
+            _lockBannerLabel.Text = string.IsNullOrWhiteSpace(state.StatusMessage)
+                ? "RECORDS LOCKED — Swipe authorized ID card to unlock."
+                : state.StatusMessage;
+            _listContainer.RemoveAllChildren();
+            _headshotPhoto.ClearPreview();
+            return;
+        }
+
+        _mainRoot.Visible = true;
+        _lockBanner.Visible = false;
+
         var tsText = state.CacheTimestamp.HasValue
-            ? $" [File: {TimeSpan.FromSeconds(Math.Truncate(state.CacheTimestamp.Value.TotalSeconds)):hh\\:mm\\:ss}]"
+            ? $" [Updated {TimeSpan.FromSeconds(Math.Truncate(state.CacheTimestamp.Value.TotalSeconds)):hh\\:mm\\:ss}]"
             : string.Empty;
         _headerLabel.Text = $"{state.StationName} — PERSONNEL RECORDS ({state.Entries.Count}){tsText}";
         _statusLabel.Text = state.StatusMessage;
@@ -652,6 +698,9 @@ public sealed class StationRecordsUiControl : ProgramUiControl
 
 public sealed class CriminalRecordsUiControl : ProgramUiControl
 {
+    private readonly ContentBoxContainer _mainRoot;
+    private readonly ContentPanelContainer _lockBanner;
+    private readonly ContentLabel _lockBannerLabel;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _statusLabel;
     private readonly ContentLineEdit _searchEdit;
@@ -680,7 +729,7 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer
+        _mainRoot = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
@@ -688,6 +737,33 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             Margin = new Thickness(6),
             SeparationOverride = 5
         };
+        var root = _mainRoot;
+
+        _lockBanner = new ContentPanelContainer
+        {
+            Name = "CriminalRecordsLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#120A10"),
+                BorderColor = Color.FromHex("#CC3344"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockBannerLabel = new ContentLabel
+        {
+            Text = "SECURITY RECORDS LOCKED — Swipe Security ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FF8888"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockBanner.AddChild(_lockBannerLabel);
 
         var topRow = new ContentBoxContainer
         {
@@ -963,6 +1039,7 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
         root.AddChild(split);
 
         AddChild(root);
+        AddChild(_lockBanner);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -971,8 +1048,24 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
             return;
 
         _lastState = state;
+        if (state.IsLocked)
+        {
+            _mainRoot.Visible = false;
+            _lockBanner.Visible = true;
+            _lockBannerLabel.Text = string.IsNullOrWhiteSpace(state.StatusMessage)
+                ? "SECURITY RECORDS LOCKED — Swipe Security ID card to unlock."
+                : state.StatusMessage;
+            _listContainer.RemoveAllChildren();
+            _historyContainer.RemoveAllChildren();
+            _subjectPhoto.ClearPreview();
+            return;
+        }
+
+        _mainRoot.Visible = true;
+        _lockBanner.Visible = false;
+
         var tsText = state.CacheTimestamp.HasValue
-            ? $" [File: {TimeSpan.FromSeconds(Math.Truncate(state.CacheTimestamp.Value.TotalSeconds)):hh\\:mm\\:ss}]"
+            ? $" [Updated {TimeSpan.FromSeconds(Math.Truncate(state.CacheTimestamp.Value.TotalSeconds)):hh\\:mm\\:ss}]"
             : string.Empty;
         _headerLabel.Text = $"SECURITY CRIMINAL RECORDS ({state.Entries.Count}){tsText}";
         _statusLabel.Text = state.StatusMessage;

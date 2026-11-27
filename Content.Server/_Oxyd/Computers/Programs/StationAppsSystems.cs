@@ -76,6 +76,7 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private DataServerSystem _dataServer = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private IGameTiming _timing = default!;
@@ -97,6 +98,7 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private LabelSystem _label = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private IPrototypeManager _proto = default!;
 
@@ -104,7 +106,11 @@ public sealed partial class StationAppsSystem : EntitySystem
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
 
     private static readonly ProtoId<AccessLevelPrototype> CommandAccess = "Command";
+    private static readonly ProtoId<AccessLevelPrototype> EngineeringAccess = "Engineering";
     private static readonly ProtoId<StackPrototype> CreditStackProto = "Credit";
+
+    private const int MaxAnnouncementLength = 512;
+    private static readonly TimeSpan AnnouncementCooldown = TimeSpan.FromSeconds(15);
 
     public override void Initialize()
     {
@@ -216,6 +222,9 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out _))
+            return;
+
         if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
         {
             UpdateNotekeeperUi(ent.Owner, compUid, ent.Comp);
@@ -227,32 +236,44 @@ public sealed partial class StationAppsSystem : EntitySystem
             case NotekeeperUiAction.OpenFile:
                 if (!string.IsNullOrWhiteSpace(msg.Path))
                 {
-                    ent.Comp.CurrentFilePath = msg.Path;
-                    Dirty(ent);
+                    var normOpen = SharedFileSystemSystem.NormalizePath(msg.Path);
+                    if (fs.Files.TryGetValue(normOpen, out var opened) && opened is TextVirtualFile)
+                    {
+                        ent.Comp.CurrentFilePath = normOpen;
+                        Dirty(ent);
+                    }
                 }
                 break;
 
             case NotekeeperUiAction.SaveFile:
             case NotekeeperUiAction.LiveDraftUpdate:
-                var savePath = string.IsNullOrWhiteSpace(msg.Path) ? ent.Comp.CurrentFilePath : msg.Path;
-                WriteTextNote(driveUid.Value, fs, savePath, msg.Content);
+                var savePath = SharedFileSystemSystem.NormalizePath(string.IsNullOrWhiteSpace(msg.Path) ? ent.Comp.CurrentFilePath : msg.Path);
+                if (savePath.StartsWith("/notes/", StringComparison.OrdinalIgnoreCase) &&
+                    savePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteTextNote(driveUid.Value, fs, savePath, msg.Content);
+                }
                 break;
 
             case NotekeeperUiAction.CreateFile:
                 var rawName = string.IsNullOrWhiteSpace(msg.Path) ? $"note_{_timing.CurTime.Seconds:0}" : msg.Path.Trim();
                 var cleanName = rawName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ? rawName[..^4] : rawName;
-                cleanName = cleanName.Replace("/", "_").Replace(" ", "_");
-                var createPath = $"/notes/{cleanName}.txt";
+                cleanName = cleanName.Replace("/", "_").Replace("\\", "_").Replace("..", "_").Replace(" ", "_");
+                var createPath = SharedFileSystemSystem.NormalizePath($"/notes/{cleanName}.txt");
                 WriteTextNote(driveUid.Value, fs, createPath, msg.Content);
                 ent.Comp.CurrentFilePath = createPath;
                 Dirty(ent);
                 break;
 
             case NotekeeperUiAction.DeleteFile:
-                var delPath = string.IsNullOrWhiteSpace(msg.Path) ? ent.Comp.CurrentFilePath : msg.Path;
-                _fileSystem.TryDeleteFile(driveUid.Value, delPath, fs);
-                ent.Comp.CurrentFilePath = "/notes/shift_notes.txt";
-                Dirty(ent);
+                var delPath = SharedFileSystemSystem.NormalizePath(string.IsNullOrWhiteSpace(msg.Path) ? ent.Comp.CurrentFilePath : msg.Path);
+                if (delPath.StartsWith("/notes/", StringComparison.OrdinalIgnoreCase) &&
+                    delPath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    _fileSystem.TryDeleteFile(driveUid.Value, delPath, fs);
+                    ent.Comp.CurrentFilePath = "/notes/shift_notes.txt";
+                    Dirty(ent);
+                }
                 break;
         }
 
@@ -367,6 +388,9 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out _))
+            return;
+
         if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
         {
             UpdateNanoTaskUi(ent.Owner, compUid);
@@ -376,7 +400,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         var file = LoadOrCreateTasksFile(driveUid.Value, fs);
         switch (msg.Payload)
         {
-            case NanoTaskAddTask add when add.Item.Validate():
+            case NanoTaskAddTask add when add.Item != null && add.Item.Validate():
                 file.Tasks.Add(new TaskEntryData
                 {
                     Id = file.NextId++,
@@ -388,7 +412,7 @@ public sealed partial class StationAppsSystem : EntitySystem
                 _fileSystem.TryWriteFile(driveUid.Value, file, fs);
                 break;
 
-            case NanoTaskUpdateTask upd when upd.Item.Data.Validate():
+            case NanoTaskUpdateTask upd when upd.Item?.Data != null && upd.Item.Data.Validate():
                 var existing = file.Tasks.FirstOrDefault(t => t.Id == upd.Item.Id);
                 if (existing != null)
                 {
@@ -405,15 +429,17 @@ public sealed partial class StationAppsSystem : EntitySystem
                 _fileSystem.TryWriteFile(driveUid.Value, file, fs);
                 break;
 
-            case NanoTaskPrintTask print when print.Item.Validate():
+            case NanoTaskPrintTask print when print.Item != null && print.Item.Validate():
                 if (_timing.CurTime < ent.Comp.NextPrintAllowedAfter)
                     break;
                 ent.Comp.NextPrintAllowedAfter = _timing.CurTime + ent.Comp.PrintDelay;
                 Dirty(ent);
 
-                var paper = Spawn("PaperNanoTaskItem", Transform(msg.Actor).Coordinates);
-                _hands.PickupOrDrop(msg.Actor, paper);
-                _audio.PlayPvs(new SoundPathSpecifier("/Audio/Machines/printer.ogg"), ent.Owner);
+                var spawnHost = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+                var paper = Spawn("PaperNanoTaskItem", Transform(spawnHost).Coordinates);
+                if (Exists(msg.Actor) && _interaction.InRangeUnobstructed(msg.Actor, spawnHost))
+                    _hands.PickupOrDrop(msg.Actor, paper);
+                _audio.PlayPvs(new SoundPathSpecifier("/Audio/Machines/printer.ogg"), spawnHost);
 
                 var printedComp = EnsureComp<NanoTaskPrintedComponent>(paper);
                 printedComp.Task = print.Item.Clone();
@@ -477,8 +503,16 @@ public sealed partial class StationAppsSystem : EntitySystem
         SyncAndSendCrewManifest(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
+    private void OnCrewManifestTerminated(Entity<CrewManifestProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
+    }
+
     private void OnCrewManifestRefresh(Entity<CrewManifestProgramComponent> ent, ref CrewManifestRefreshMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
+            return;
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
             SyncAndSendCrewManifest(ent.Owner, compUid, ent.Comp);
     }
@@ -488,13 +522,13 @@ public sealed partial class StationAppsSystem : EntitySystem
         var online = false;
         var statusMsg = string.Empty;
 
-        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
-
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
         if (_router.HasActiveNetworkCard(compUid) &&
             _router.IsNetworkConnected(compUid))
         {
-            if (_dataServer.TryGetLocalRecordCopyFromHost(
+            var router = _router.FindNearestRouter(compUid);
+            if (router != null &&
+                _dataServer.TryGetLocalRecordCopyFromHost(
                     compUid,
                     "ManifestService",
                     CrewManifestProgramComponent.CacheFilePath,
@@ -524,14 +558,15 @@ public sealed partial class StationAppsSystem : EntitySystem
                     parameters[$"meta:{charName}"] = $"{jobProto}\t{jobIcon}";
                 }
 
-                var size = Math.Max(128, serverCopy.Size);
+                var size = serverCopy.CalculateRealSize(_proto);
+                var serverName = MetaData(srvCompUid).EntityName;
                 var pkt = new NetworkDataPacket
                 {
                     PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
                     SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
                     TargetAddress = _router.EnsureDeviceGuid(compUid),
                     Protocol = "TCP/MANIFEST",
-                    PayloadSummary = $"Crew Manifest ({editableEntries.Count} crew) [{MetaData(srvCompUid).EntityName}]",
+                    PayloadSummary = $"Crew Manifest ({editableEntries.Count} crew) [{serverName}]",
                     RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
                     IsPlayerRelevant = true,
                     IsEditable = true,
@@ -542,25 +577,59 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Timestamp = _timing.CurTime
                 };
 
-                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
+                var transfer = new QueuedRouterTransfer
                 {
-                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
-                    localFile.Data.Remove("__tampered");
-                    localFile.Data.Remove("__source_hash");
-                    localFile.Size = size;
-                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                    Protocol = pkt.Protocol,
+                    TargetPath = CrewManifestProgramComponent.CacheFilePath,
+                    Description = "Sync Crew Manifest",
+                    IsUpload = false,
+                    SourceCompUid = srvCompUid,
+                    TargetCompUid = compUid,
+                    InitiatorProgramUid = progUid,
+                    TotalBytes = Math.Max(64, size),
+                    AllowDebugFallback = _dataServer.IsDebugFallbackServer(srvCompUid),
+                    PayloadFile = serverCopy,
+                    PacketMetadata = pkt,
+                    OnCompleted = _ =>
+                    {
+                        if (!Exists(progUid))
+                            return;
+                        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
+                        {
+                            var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                            localFile.Data.Remove("__tampered");
+                            localFile.Data.Remove("__source_hash");
+                            localFile.Size = size;
+                            _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                        }
+                        SendCrewManifestFromLocalCache(progUid, compUid, true, $"Synced from {serverName}.");
+                    },
+                    OnAborted = (_, reason) =>
+                    {
+                        if (!Exists(progUid))
+                            return;
+                        SendCrewManifestFromLocalCache(progUid, compUid, false, $"Sync failed ({reason}) — showing local cache.");
+                    }
+                };
+
+                if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+                {
                     online = true;
-                    statusMsg = $"Downloaded from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {CrewManifestProgramComponent.CacheFilePath}";
+                    statusMsg = $"Syncing manifest from {serverName}...";
+                }
+                else
+                {
+                    statusMsg = "Network route rejected — showing local cache.";
                 }
             }
             else
             {
-                statusMsg = $"{netErr} — showing local {CrewManifestProgramComponent.CacheFilePath}.";
+                statusMsg = $"{(router == null ? "No router" : "Manifest server unavailable")} — showing local cache.";
             }
         }
         else
         {
-            statusMsg = $"Offline / no NIC — reading local {CrewManifestProgramComponent.CacheFilePath}.";
+            statusMsg = "Offline — showing local cache.";
         }
 
         SendCrewManifestFromLocalCache(progUid, compUid, online, statusMsg);
@@ -620,8 +689,16 @@ public sealed partial class StationAppsSystem : EntitySystem
         SyncWantedList(ent.Owner, args.ComputerUid);
     }
 
+    [SubscribeLocalEvent]
+    private void OnWantedTerminated(Entity<WantedListProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
+    }
+
     private void OnWantedRefresh(Entity<WantedListProgramComponent> ent, ref WantedListRefreshMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
+            return;
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
             SyncWantedList(ent.Owner, compUid);
     }
@@ -641,13 +718,14 @@ public sealed partial class StationAppsSystem : EntitySystem
     {
         var online = false;
         var statusMsg = string.Empty;
-        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
         if (_router.HasActiveNetworkCard(compUid) &&
             _router.IsNetworkConnected(compUid))
         {
-            if (_dataServer.TryGetLocalRecordCopyFromHost(
+            var router = _router.FindNearestRouter(compUid);
+            if (router != null &&
+                _dataServer.TryGetLocalRecordCopyFromHost(
                     compUid,
                     "StationRecordsService",
                     WantedListProgramComponent.CacheFilePath,
@@ -675,14 +753,15 @@ public sealed partial class StationAppsSystem : EntitySystem
                     parameters[$"meta:{charName}"] = $"{jobTitle}\t{initiator}";
                 }
 
-                var size = Math.Max(128, serverCopy.Size);
+                var size = serverCopy.CalculateRealSize(_proto);
+                var serverName = MetaData(srvCompUid).EntityName;
                 var pkt = new NetworkDataPacket
                 {
                     PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
                     SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
                     TargetAddress = _router.EnsureDeviceGuid(compUid),
                     Protocol = "TCP/RECORDS",
-                    PayloadSummary = $"Wanted List ({editableEntries.Count} entries) [{MetaData(srvCompUid).EntityName}]",
+                    PayloadSummary = $"Wanted List ({editableEntries.Count} entries) [{serverName}]",
                     RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
                     IsPlayerRelevant = true,
                     IsEditable = true,
@@ -693,25 +772,59 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Timestamp = _timing.CurTime
                 };
 
-                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
+                var transfer = new QueuedRouterTransfer
                 {
-                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
-                    localFile.Data.Remove("__tampered");
-                    localFile.Data.Remove("__source_hash");
-                    localFile.Size = size;
-                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                    Protocol = pkt.Protocol,
+                    TargetPath = WantedListProgramComponent.CacheFilePath,
+                    Description = "Sync Wanted List",
+                    IsUpload = false,
+                    SourceCompUid = srvCompUid,
+                    TargetCompUid = compUid,
+                    InitiatorProgramUid = progUid,
+                    TotalBytes = Math.Max(64, size),
+                    AllowDebugFallback = _dataServer.IsDebugFallbackServer(srvCompUid),
+                    PayloadFile = serverCopy,
+                    PacketMetadata = pkt,
+                    OnCompleted = _ =>
+                    {
+                        if (!Exists(progUid))
+                            return;
+                        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
+                        {
+                            var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                            localFile.Data.Remove("__tampered");
+                            localFile.Data.Remove("__source_hash");
+                            localFile.Size = size;
+                            _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                        }
+                        SendWantedListFromLocalCache(progUid, compUid, true, $"Synced from {serverName}.");
+                    },
+                    OnAborted = (_, reason) =>
+                    {
+                        if (!Exists(progUid))
+                            return;
+                        SendWantedListFromLocalCache(progUid, compUid, false, $"Sync failed ({reason}) — showing local cache.");
+                    }
+                };
+
+                if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+                {
                     online = true;
-                    statusMsg = $"Downloaded from {MetaData(srvCompUid).EntityName} [{_router.EnsureDeviceGuid(srvCompUid)}] -> {WantedListProgramComponent.CacheFilePath}";
+                    statusMsg = $"Syncing wanted list from {serverName}...";
+                }
+                else
+                {
+                    statusMsg = "Network route rejected — showing local cache.";
                 }
             }
             else
             {
-                statusMsg = $"{netErr} — reading local {WantedListProgramComponent.CacheFilePath}.";
+                statusMsg = $"{(router == null ? "No router" : "Records server unavailable")} — showing local cache.";
             }
         }
         else
         {
-            statusMsg = $"Offline / no NIC — reading local {WantedListProgramComponent.CacheFilePath}.";
+            statusMsg = "Offline — showing local cache.";
         }
 
         SendWantedListFromLocalCache(progUid, compUid, online, statusMsg);
@@ -780,9 +893,18 @@ public sealed partial class StationAppsSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
+    private void OnNewsTerminated(Entity<NewsReaderProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
+    }
+
     private void OnNewsAction(Entity<NewsReaderProgramComponent> ent, ref NewsReaderActionMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
             return;
 
         switch (args.Action)
@@ -790,19 +912,19 @@ public sealed partial class StationAppsSystem : EntitySystem
             case NewsReaderUiAction.Next:
                 ent.Comp.ArticleNumber++;
                 Dirty(ent);
-                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, "Reading cached articles.");
                 return;
 
             case NewsReaderUiAction.Prev:
                 ent.Comp.ArticleNumber--;
                 Dirty(ent);
-                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, "Reading cached articles.");
                 return;
 
             case NewsReaderUiAction.NotificationSwitch:
                 ent.Comp.NotificationOn = !ent.Comp.NotificationOn;
                 Dirty(ent);
-                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, $"Reading local {NewsReaderProgramComponent.CacheFilePath}.");
+                SendNewsFromLocalCache(ent.Owner, compUid, ent.Comp, "Reading cached articles.");
                 return;
 
             case NewsReaderUiAction.SyncNetwork:
@@ -814,13 +936,14 @@ public sealed partial class StationAppsSystem : EntitySystem
     private void SyncAndSendNews(EntityUid progUid, EntityUid compUid, NewsReaderProgramComponent comp)
     {
         var status = string.Empty;
-        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
 
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
         if (_router.HasActiveNetworkCard(compUid) &&
             _router.IsNetworkConnected(compUid))
         {
-            if (_dataServer.TryGetLocalRecordCopyFromHost(
+            var router = _router.FindNearestRouter(compUid);
+            if (router != null &&
+                _dataServer.TryGetLocalRecordCopyFromHost(
                     compUid,
                     "NewsService",
                     NewsReaderProgramComponent.CacheFilePath,
@@ -843,14 +966,15 @@ public sealed partial class StationAppsSystem : EntitySystem
                     parameters[$"meta:{cols[0]}"] = $"{cols[1]}\t{cols[2]}";
                 }
 
-                var size = Math.Max(128, serverCopy.Size);
+                var size = serverCopy.CalculateRealSize(_proto);
+                var serverName = MetaData(srvCompUid).EntityName;
                 var pkt = new NetworkDataPacket
                 {
                     PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
                     SourceAddress = _router.EnsureDeviceGuid(srvCompUid),
                     TargetAddress = _router.EnsureDeviceGuid(compUid),
                     Protocol = "TCP/NEWS",
-                    PayloadSummary = $"Station News ({editableEntries.Count} articles) [{MetaData(srvCompUid).EntityName}]",
+                    PayloadSummary = $"Station News ({editableEntries.Count} articles) [{serverName}]",
                     RawPayload = string.Join("; ", editableEntries.Select(kv => $"{kv.Key}={kv.Value}")),
                     IsPlayerRelevant = true,
                     IsEditable = true,
@@ -861,24 +985,55 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Timestamp = _timing.CurTime
                 };
 
-                if (_router.RecordAndValidatePacket(srvCompUid, compUid, pkt) && driveUid != null && fs != null)
+                var count = editableEntries.Count;
+                var transfer = new QueuedRouterTransfer
                 {
-                    var localFile = (DatabaseVirtualFile) serverCopy.Clone();
-                    localFile.Data.Remove("__tampered");
-                    localFile.Data.Remove("__source_hash");
-                    localFile.Size = size;
-                    _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
-                    status = $"Downloaded {editableEntries.Count} articles from {MetaData(srvCompUid).EntityName} -> {NewsReaderProgramComponent.CacheFilePath}";
-                }
+                    Protocol = pkt.Protocol,
+                    TargetPath = NewsReaderProgramComponent.CacheFilePath,
+                    Description = "Sync Station News",
+                    IsUpload = false,
+                    SourceCompUid = srvCompUid,
+                    TargetCompUid = compUid,
+                    InitiatorProgramUid = progUid,
+                    TotalBytes = Math.Max(64, size),
+                    AllowDebugFallback = _dataServer.IsDebugFallbackServer(srvCompUid),
+                    PayloadFile = serverCopy,
+                    PacketMetadata = pkt,
+                    OnCompleted = _ =>
+                    {
+                        if (!Exists(progUid) || !TryComp<NewsReaderProgramComponent>(progUid, out var liveComp))
+                            return;
+                        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
+                        {
+                            var localFile = (DatabaseVirtualFile) serverCopy.Clone();
+                            localFile.Data.Remove("__tampered");
+                            localFile.Data.Remove("__source_hash");
+                            localFile.Size = size;
+                            _fileSystem.TryWriteFile(driveUid.Value, localFile, fs);
+                        }
+                        SendNewsFromLocalCache(progUid, compUid, liveComp, $"Synced {count} articles from {serverName}.");
+                    },
+                    OnAborted = (_, reason) =>
+                    {
+                        if (!Exists(progUid) || !TryComp<NewsReaderProgramComponent>(progUid, out var liveComp))
+                            return;
+                        SendNewsFromLocalCache(progUid, compUid, liveComp, $"Sync failed ({reason}) — reading cached articles.");
+                    }
+                };
+
+                if (_bandwidth.EnqueueRouterTransfer(router.Value, transfer))
+                    status = $"Syncing news from {serverName}...";
+                else
+                    status = "Network route rejected — reading cached articles.";
             }
             else
             {
-                status = $"{netErr} — reading local {NewsReaderProgramComponent.CacheFilePath}.";
+                status = $"{(router == null ? "No router" : "News server unavailable")} — reading cached articles.";
             }
         }
         else
         {
-            status = $"Offline — reading cached {NewsReaderProgramComponent.CacheFilePath}.";
+            status = "Offline — reading cached articles.";
         }
 
         SendNewsFromLocalCache(progUid, compUid, comp, status);
@@ -986,6 +1141,8 @@ public sealed partial class StationAppsSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
         if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
             _fileSystem.TryDeleteFile(driveUid.Value, NetProbeProgramComponent.CacheFilePath, fs);
         UpdateNetProbeUi(ent.Owner, compUid);
@@ -1088,13 +1245,18 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
         ent.Comp.NextPrintAllowed = _timing.CurTime + ent.Comp.PrintCooldown;
         Dirty(ent);
 
-        var paper = Spawn(ent.Comp.PaperPrototype, _transform.GetMapCoordinates(args.Actor));
+        var spawnHost = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        var paper = Spawn(ent.Comp.PaperPrototype, _transform.GetMapCoordinates(spawnHost));
         _label.Label(paper, ent.Comp.EntityName);
         _audio.PlayPvs(ent.Comp.PrintSound, paper);
-        _hands.PickupOrDrop(args.Actor, paper, checkActionBlocker: false);
+        if (Exists(args.Actor) && _interaction.InRangeUnobstructed(args.Actor, spawnHost))
+            _hands.PickupOrDrop(args.Actor, paper, checkActionBlocker: false);
 
         var logs = ReadLogProbeEntries(compUid);
         var lines = new List<string> { $"Access Logs: {ent.Comp.EntityName}" };
@@ -1200,6 +1362,22 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            Dirty(ent);
+            UpdateCargoOrdersUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
+        if (!_router.HasActiveNetworkCard(compUid) || !_router.IsNetworkConnected(compUid))
+        {
+            ent.Comp.StatusMessage = "Network offline — active Station Network Router connection required for cargo banking.";
+            Dirty(ent);
+            UpdateCargoOrdersUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
         ResolveOrEnsureStationBank(compUid, out var stationUid, out var bankComp, out var orderDb);
 
         switch (msg.Action)
@@ -1259,7 +1437,7 @@ public sealed partial class StationAppsSystem : EntitySystem
                 break;
 
             case CargoOrdersAction.RemoveOrder:
-                HandleCargoRemoveOrder(ent.Comp, stationUid, orderDb, msg.OrderId);
+                HandleCargoRemoveOrder(ent.Comp, stationUid, bankComp, orderDb, msg);
                 break;
 
             case CargoOrdersAction.WithdrawCash:
@@ -1478,21 +1656,53 @@ public sealed partial class StationAppsSystem : EntitySystem
     private void HandleCargoRemoveOrder(
         CargoOrdersProgramComponent comp,
         EntityUid stationUid,
+        StationBankAccountComponent bankComp,
         StationCargoOrderDatabaseComponent orderDb,
-        int orderId)
+        CargoOrdersActionMessage msg)
     {
+        if (!TryResolveOrderBankAuth(
+                comp,
+                stationUid,
+                bankComp,
+                msg.AccountId,
+                msg.Pin,
+                out var authAccount,
+                out var resolvedAccountId,
+                out _,
+                out _))
+        {
+            comp.StatusMessage = "Removal denied: Authenticate bank account first.";
+            return;
+        }
+
         foreach (var list in orderDb.Orders.Values)
         {
-            var idx = list.FindIndex(o => o.OrderId == orderId);
+            var idx = list.FindIndex(o => o.OrderId == msg.OrderId);
             if (idx >= 0)
             {
+                var order = list[idx];
+                if (order.Approved && order.Account != authAccount)
+                {
+                    comp.StatusMessage = $"Removal denied: Approved order #{msg.OrderId} belongs to another account.";
+                    return;
+                }
+
                 list.RemoveAt(idx);
-                comp.StatusMessage = $"Removed order #{orderId}.";
+                if (order.Approved && _proto.TryIndex<CargoProductPrototype>(order.Product, out var prod))
+                {
+                    var refund = prod.Cost * order.OrderQuantity;
+                    _cargo.UpdateBankAccount((stationUid, bankComp), refund, order.Account);
+                    comp.StatusMessage = $"Cancelled order #{msg.OrderId} and refunded ${refund} to {resolvedAccountId}.";
+                }
+                else
+                {
+                    comp.StatusMessage = $"Removed order #{msg.OrderId}.";
+                }
                 return;
             }
         }
 
-        comp.StatusMessage = $"Order #{orderId} not found.";
+        comp.StatusMessage = $"Order #{msg.OrderId} not found.";
     }
 
     private void HandleCargoWithdrawCash(
@@ -1502,6 +1712,13 @@ public sealed partial class StationAppsSystem : EntitySystem
         StationBankAccountComponent bankComp,
         CargoOrdersActionMessage msg)
     {
+        var spawnTarget = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+        if (Exists(msg.Actor) && !_interaction.InRangeUnobstructed(msg.Actor, spawnTarget))
+        {
+            comp.StatusMessage = "Cash withdrawal requires physical presence at the terminal.";
+            return;
+        }
+
         if (!TryResolveOrderBankAuth(
                 comp,
                 stationUid,
@@ -1537,7 +1754,6 @@ public sealed partial class StationAppsSystem : EntitySystem
             return;
         }
 
-        var spawnTarget = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
         if (_proto.TryIndex<StackPrototype>(CreditStackProto, out var stackProto))
         {
             _stack.SpawnAtPosition(amount, stackProto, Transform(spawnTarget).Coordinates);
@@ -1598,6 +1814,25 @@ public sealed partial class StationAppsSystem : EntitySystem
 
     private void UpdateCargoOrdersUi(EntityUid progUid, EntityUid compUid, CargoOrdersProgramComponent comp)
     {
+        var isOnline = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid);
+        if (!isOnline)
+        {
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            {
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new CargoOrdersUiState(
+                    false,
+                    string.Empty,
+                    string.Empty,
+                    0,
+                    comp.SelectedCategory,
+                    "Network offline — active Station Network Router connection required.",
+                    new List<string>(),
+                    new List<CargoOrderEntryDto>(),
+                    isOnline: false));
+            }
+            return;
+        }
+
         ResolveOrEnsureStationBank(compUid, out var stationUid, out var bankComp, out var orderDb);
 
         var authBalance = 0;
@@ -1660,7 +1895,8 @@ public sealed partial class StationAppsSystem : EntitySystem
                 comp.SelectedCategory,
                 comp.StatusMessage,
                 allowedGroups.OrderBy(g => g, StringComparer.OrdinalIgnoreCase).ToList(),
-                orders));
+                orders,
+                isOnline: true));
         }
     }
 
@@ -1688,15 +1924,26 @@ public sealed partial class StationAppsSystem : EntitySystem
 
     private void OnCrewMonitorRefresh(Entity<CrewMonitorProgramComponent> ent, ref CrewMonitorRefreshMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
+            return;
         if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
             UpdateCrewMonitorUi(ent.Owner, compUid);
     }
 
     private void UpdateCrewMonitorUi(EntityUid progUid, EntityUid compUid)
     {
+        var isOnline = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid);
         var anchorUid = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
         var station = _station.GetOwningStation(anchorUid) ?? _station.GetStationsSet().FirstOrDefault();
         var stationName = station != EntityUid.Invalid && Exists(station) ? MetaData(station).EntityName : "Station Telemetry";
+
+        if (!isOnline)
+        {
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, new List<CrewSensorEntryDto>(), null, isOnline: false));
+            return;
+        }
+
         var anchorXform = Transform(anchorUid);
         var anchorMap = anchorXform.MapID;
 
@@ -1726,12 +1973,11 @@ public sealed partial class StationAppsSystem : EntitySystem
         }
 
         var list = new List<CrewSensorEntryDto>();
-        var sensorQuery = EntityQueryEnumerator<SuitSensorComponent, TransformComponent>();
-        while (sensorQuery.MoveNext(out _, out var sensor, out var sensorXform))
+        var sensorEntities = new HashSet<Entity<SuitSensorComponent>>();
+        _lookup.GetEntitiesOnMap(anchorMap, sensorEntities);
+        foreach (var sensorEnt in sensorEntities)
         {
-            if (sensorXform.MapID != anchorMap)
-                continue;
-
+            var sensor = sensorEnt.Comp;
             if (sensor.Mode == SuitSensorMode.SensorOff || sensor.User is not { Valid: true } wearer || !Exists(wearer))
                 continue;
 
@@ -1772,8 +2018,12 @@ public sealed partial class StationAppsSystem : EntitySystem
             else if (hasVitals)
             {
                 var critLimit = 100f;
-                if (_mobThreshold.TryGetThresholdForState(wearer, MobState.Critical, out var critThresh) && critThresh.Value.Float() > 0f)
-                    critLimit = critThresh.Value.Float();
+                if (_mobThreshold.TryGetThresholdForState(wearer, MobState.Critical, out var critThresh) &&
+                    critThresh is { } ct &&
+                    ct.Float() > 0f)
+                {
+                    critLimit = ct.Float();
+                }
                 healthRatio = Math.Clamp(1f - dmg / critLimit, 0f, 1f);
             }
 
@@ -1816,7 +2066,7 @@ public sealed partial class StationAppsSystem : EntitySystem
 
         list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, list, stationGridNet));
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new CrewMonitorUiState(stationName, list, stationGridNet, isOnline: true));
     }
 
     // =========================================================================
@@ -1834,7 +2084,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
             return;
 
-        if (!HasCommsAccess(compUid, ent.Comp, null) && _computer.GetInsertedIdCards(compUid).Count == 0)
+        if (!HasCommsAccess(compUid, ent.Comp) && _computer.GetInsertedIdCards(compUid).Count == 0)
             ent.Comp.StatusMessage = "ID card removed from slot — Command authorization locked.";
 
         Dirty(ent);
@@ -1881,7 +2131,23 @@ public sealed partial class StationAppsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        var canBroadcast = HasCommsAccess(compUid, ent.Comp, msg.Actor);
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            Dirty(ent);
+            UpdateCommsUi(ent.Owner, compUid, ent.Comp, msg.Actor);
+            return;
+        }
+
+        if (!_router.HasActiveNetworkCard(compUid) || !_router.IsNetworkConnected(compUid))
+        {
+            ent.Comp.StatusMessage = "Network offline — active Station Network Router connection required.";
+            Dirty(ent);
+            UpdateCommsUi(ent.Owner, compUid, ent.Comp, msg.Actor);
+            return;
+        }
+
+        var canBroadcast = HasCommsAccess(compUid, ent.Comp);
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
 
         switch (msg.Action)
@@ -1892,12 +2158,21 @@ public sealed partial class StationAppsSystem : EntitySystem
                     ent.Comp.StatusMessage = "Access denied: Command authorization required.";
                     break;
                 }
+                if (_timing.CurTime < ent.Comp.NextAnnouncementAllowed)
+                {
+                    var rem = Math.Ceiling((ent.Comp.NextAnnouncementAllowed - _timing.CurTime).TotalSeconds);
+                    ent.Comp.StatusMessage = $"Broadcast cooldown active ({rem:0}s remaining).";
+                    break;
+                }
                 var text = (msg.Text ?? string.Empty).Trim();
                 if (string.IsNullOrEmpty(text))
                 {
                     ent.Comp.StatusMessage = "Announcement message cannot be empty.";
                     break;
                 }
+                if (text.Length > MaxAnnouncementLength)
+                    text = text[..MaxAnnouncementLength];
+                ent.Comp.NextAnnouncementAllowed = _timing.CurTime + AnnouncementCooldown;
                 var sender = msg.Actor.IsValid() && Exists(msg.Actor) ? MetaData(msg.Actor).EntityName : "Command";
                 _chat.DispatchStationAnnouncement(station != EntityUid.Invalid ? station : compUid, text, sender);
                 ent.Comp.StatusMessage = $"Broadcasted announcement ({text.Length} chars).";
@@ -1926,8 +2201,11 @@ public sealed partial class StationAppsSystem : EntitySystem
         UpdateCommsUi(ent.Owner, compUid, ent.Comp, msg.Actor);
     }
 
-    private bool HasCommsAccess(EntityUid compUid, CommsConsoleProgramComponent comp, EntityUid? actor)
+    private bool HasCommsAccess(EntityUid compUid, CommsConsoleProgramComponent comp)
     {
+        if (_computer.IsHostLocked(compUid))
+            return false;
+
         if (comp.AuthorizedBySwipedCard)
             return true;
 
@@ -1936,9 +2214,6 @@ public sealed partial class StationAppsSystem : EntitySystem
             if (_accessReader.FindAccessTags(insCard).Contains(CommandAccess))
                 return true;
         }
-
-        if (actor is { Valid: true } user && Exists(user) && _accessReader.FindAccessTags(user).Contains(CommandAccess))
-            return true;
 
         if (_fileSystem.TryFindFileSystem(compUid, out _, out var fs) && fs != null)
         {
@@ -1954,26 +2229,34 @@ public sealed partial class StationAppsSystem : EntitySystem
 
     private void UpdateCommsUi(EntityUid progUid, EntityUid compUid, CommsConsoleProgramComponent comp, EntityUid? actor)
     {
+        var isOnline = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid);
+        var canBroadcast = isOnline && HasCommsAccess(compUid, comp);
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
-        var currentLevel = "green";
-        var levels = new List<string> { "green", "blue", "red" };
+        var currentLevel = string.Empty;
+        var levels = new List<string>();
 
-        if (station != EntityUid.Invalid && TryComp<AlertLevelComponent>(station, out var alertComp))
+        if (canBroadcast)
         {
-            currentLevel = alertComp.CurrentAlertLevel.Id;
-            var selectable = _alertLevel.GetSelectableAlertLevels((station, alertComp));
-            if (selectable.Count > 0)
-                levels = selectable.Select(l => l.Id).ToList();
+            currentLevel = "green";
+            levels = new List<string> { "green", "blue", "red" };
+            if (station != EntityUid.Invalid && TryComp<AlertLevelComponent>(station, out var alertComp))
+            {
+                currentLevel = alertComp.CurrentAlertLevel.Id;
+                var selectable = _alertLevel.GetSelectableAlertLevels((station, alertComp));
+                if (selectable.Count > 0)
+                    levels = selectable.Select(l => l.Id).ToList();
+            }
         }
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
             _ui.SetUiState(progUid, ProgramUiKey.Key, new CommsConsoleUiState(
-                HasCommsAccess(compUid, comp, actor),
+                canBroadcast,
                 currentLevel,
                 levels,
-                comp.StatusMessage,
-                comp.AuthorizedBySwipedCard));
+                isOnline ? comp.StatusMessage : "Network offline — active Station Network Router connection required.",
+                comp.AuthorizedBySwipedCard,
+                isOnline));
         }
     }
 
@@ -1982,13 +2265,44 @@ public sealed partial class StationAppsSystem : EntitySystem
     // =========================================================================
 
     [SubscribeLocalEvent]
-    private void OnSolarStartup(Entity<SolarControlProgramComponent> ent, ref ProgramStartupEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+    private void OnSolarStartup(Entity<SolarControlProgramComponent> ent, ref ProgramStartupEvent args) => UpdateSolarUi(ent.Owner, args.ComputerUid, ent.Comp);
     [SubscribeLocalEvent]
-    private void OnSolarActivated(Entity<SolarControlProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
-    private void OnSolarBuiOpened(Entity<SolarControlProgramComponent> ent, ref BoundUIOpenedEvent args) => UpdateSolarUi(ent.Owner, ent.Comp);
+    private void OnSolarActivated(Entity<SolarControlProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateSolarUi(ent.Owner, args.ComputerUid, ent.Comp);
+    private void OnSolarBuiOpened(Entity<SolarControlProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid)
+            UpdateSolarUi(ent.Owner, compUid, ent.Comp);
+    }
 
     private void OnSolarAction(Entity<SolarControlProgramComponent> ent, ref SolarControlActionMessage msg)
     {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            Dirty(ent);
+            UpdateSolarUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
+        if (!_router.HasActiveNetworkCard(compUid) || !_router.IsNetworkConnected(compUid))
+        {
+            ent.Comp.StatusMessage = "Network offline — active Station Network Router connection required.";
+            Dirty(ent);
+            UpdateSolarUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
+        if (msg.Action != SolarControlAction.Refresh && !HasSolarAccess(compUid))
+        {
+            ent.Comp.StatusMessage = "Access denied: Engineering or Command clearance required (insert ID or .acc key).";
+            Dirty(ent);
+            UpdateSolarUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
         switch (msg.Action)
         {
             case SolarControlAction.SetAngle:
@@ -2010,19 +2324,49 @@ public sealed partial class StationAppsSystem : EntitySystem
         }
 
         Dirty(ent);
-        UpdateSolarUi(ent.Owner, ent.Comp);
+        UpdateSolarUi(ent.Owner, compUid, ent.Comp);
     }
 
-    private void UpdateSolarUi(EntityUid progUid, SolarControlProgramComponent comp)
+    private bool HasSolarAccess(EntityUid compUid)
     {
+        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
+        {
+            var tags = _accessReader.FindAccessTags(cardUid);
+            if (tags.Contains(EngineeringAccess) || tags.Contains(CommandAccess))
+                return true;
+        }
+
+        if (_fileSystem.TryFindFileSystem(compUid, out _, out var fs))
+        {
+            foreach (var f in fs.Files.Values)
+            {
+                if (f is AccessCodesVirtualFile acc &&
+                    !acc.IsEncrypted &&
+                    (acc.AccessTags.Contains(EngineeringAccess) || acc.AccessTags.Contains(CommandAccess)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        // Dedicated unlocked solar consoles remain operable directly when unlocked.
+        return _computerQuery.TryComp(compUid, out var comp) &&
+               string.Equals(comp.EmbeddedDefaultAppPath, "/bin/solar_control.nte", StringComparison.OrdinalIgnoreCase) &&
+               !_computer.IsHostLocked(compUid);
+    }
+
+    private void UpdateSolarUi(EntityUid progUid, EntityUid compUid, SolarControlProgramComponent comp)
+    {
+        var isOnline = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid);
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
         {
             _ui.SetUiState(progUid, ProgramUiKey.Key, new SolarControlUiState(
-                (float) _solar.TargetPanelRotation.Degrees,
-                (float) _solar.TargetPanelVelocity.Degrees,
-                (float) _solar.TowardsSun.Degrees,
-                _solar.TotalPanelPower,
-                comp.StatusMessage));
+                isOnline ? (float) _solar.TargetPanelRotation.Degrees : 0f,
+                isOnline ? (float) _solar.TargetPanelVelocity.Degrees : 0f,
+                isOnline ? (float) _solar.TowardsSun.Degrees : 0f,
+                isOnline ? _solar.TotalPanelPower : 0f,
+                isOnline ? comp.StatusMessage : "Network offline — active Station Network Router connection required.",
+                isOnline));
         }
     }
 }

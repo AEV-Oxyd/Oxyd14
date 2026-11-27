@@ -57,12 +57,6 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
     {
         base.Initialize();
 
-        SubscribeLocalEvent<PlayerSpawnCompleteEvent>(OnPlayerSpawnComplete);
-
-        SubscribeLocalEvent<RecordModifiedEvent>(OnRecordModified);
-        SubscribeLocalEvent<RecordRemovedEvent>(OnRecordRemoved);
-        SubscribeLocalEvent<CriminalRecordChangedEvent>(OnCriminalRecordChanged);
-
         Subs.BuiEvents<NetworkCoreOsProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<BoundUIOpenedEvent>(OnBuiOpened);
@@ -105,6 +99,9 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out _))
+            return;
+
         switch (msg.Action)
         {
             case NetworkCoreOsAction.Refresh:
@@ -145,10 +142,9 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
                 break;
 
             case NetworkCoreOsAction.SwitchProgram:
-                if (msg.ProgramEntity is { } targetNet)
+                if (msg.ProgramEntity is { } targetNet && TryGetEntity(targetNet, out var target))
                 {
-                    var target = GetEntity(targetNet);
-                    if (_computer.SwitchActiveProgram(compUid, target, actor: msg.Actor))
+                    if (_computer.SwitchActiveProgram(compUid, target.Value, actor: msg.Actor))
                     {
                         ent.Comp.CurrentTab = 1;
                         Dirty(ent);
@@ -157,10 +153,9 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
                 break;
 
             case NetworkCoreOsAction.CloseProgram:
-                if (msg.ProgramEntity is { } closeNet)
+                if (msg.ProgramEntity is { } closeNet && TryGetEntity(closeNet, out var closeTarget))
                 {
-                    var target = GetEntity(closeNet);
-                    _computer.CloseProgram(compUid, target);
+                    _computer.CloseProgram(compUid, closeTarget.Value);
                 }
                 break;
 
@@ -172,6 +167,7 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
         UpdateCoreUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnPlayerSpawnComplete(PlayerSpawnCompleteEvent ev)
     {
         if (TerminatingOrDeleted(ev.Mob) || ev.Station == EntityUid.Invalid)
@@ -249,6 +245,7 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnRecordModified(ref RecordModifiedEvent ev)
     {
         var core = FindOperationalAutoSyncCore();
@@ -272,6 +269,7 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
         UpdateCoreUi(coreProgEnt.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnCriminalRecordChanged(ref CriminalRecordChangedEvent ev)
     {
         var core = FindOperationalAutoSyncCore();
@@ -324,6 +322,7 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
         UpdateCoreUi(coreProgEnt.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnRecordRemoved(ref RecordRemovedEvent ev)
     {
         var core = FindOperationalAutoSyncCore();

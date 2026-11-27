@@ -112,7 +112,8 @@ public enum DownloaderAction : byte
     Refresh,
     SelectCategory,
     DownloadItem,
-    UploadFile
+    UploadFile,
+    CancelTransfer
 }
 
 [Serializable, NetSerializable]

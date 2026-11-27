@@ -125,7 +125,9 @@ namespace Content.Server.PDA
                     _ringer.TryToggleRingerUi(ent.Owner, user);
                 else if (c == "show_music")
                     _instrument.ToggleInstrumentUi(ent.Owner, user);
-                else if (c == "show_uplink" && TryGetUnlockedStore(ent.Owner, out var store))
+                else if (c == "show_uplink" &&
+                         (IsHeldOrWornByUser(ent.Owner, user) || _interaction.InRangeUnobstructed(user, ent.Owner)) &&
+                         TryGetUnlockedStore(ent.Owner, out var store))
                 {
                     if (store != ent.Owner)
                     {

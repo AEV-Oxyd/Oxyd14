@@ -201,29 +201,115 @@ public sealed class NanoTaskUiControl : ProgramUiControl
 
 public sealed class CrewManifestUiControl : ProgramUiControl
 {
+    [Dependency] private IEntityManager _entMan = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
+    private readonly SpriteSystem _sprite;
+
     private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusLabel;
+    private readonly ContentLineEdit _searchInput;
     private readonly ContentBoxContainer _listing;
+    private CrewManifestUiState? _lastState;
 
     public CrewManifestUiControl()
     {
+        IoCManager.InjectDependencies(this);
+        _sprite = _entMan.System<SpriteSystem>();
+
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
-        var topRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-        _headerLabel = new ContentLabel { Text = "Crew Manifest", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
-        var refBtn = new ContentButton { Text = "Sync Net", MinWidth = 75 };
+        var root = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Margin = new Thickness(6),
+            SeparationOverride = 5
+        };
+
+        var topRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        _headerLabel = new ContentLabel
+        {
+            Name = "CrewManifestHeaderLabel",
+            Text = "CREW MANIFEST",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#66EEFF")
+        };
+        _searchInput = new ContentLineEdit
+        {
+            Name = "CrewManifestSearchInput",
+            PlaceHolder = "Filter name or job...",
+            MinWidth = 148f,
+            MinHeight = 24f,
+            VerticalAlignment = VAlignment.Center
+        };
+        _searchInput.OnTextChanged += _ => RebuildManifestList();
+        var refBtn = new ContentButton
+        {
+            Name = "CrewManifestSyncButton",
+            Text = "Sync Net",
+            MinWidth = 72,
+            MinHeight = 24f
+        };
         refBtn.OnPressed += _ => SendProgramMessage(new CrewManifestRefreshMessage());
         topRow.AddChild(_headerLabel);
+        topRow.AddChild(_searchInput);
         topRow.AddChild(refBtn);
         root.AddChild(topRow);
 
-        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _listing = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true };
+        _statusLabel = new ContentLabel
+        {
+            Name = "CrewManifestStatusLabel",
+            Text = string.Empty,
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            FontColorOverride = Color.FromHex("#88AAB8")
+        };
+        root.AddChild(_statusLabel);
+
+        var scroll = new ContentScrollContainer
+        {
+            Name = "CrewManifestScroll",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            AlwaysShowBackground = true
+        };
+        _listing = new ContentBoxContainer
+        {
+            Name = "CrewManifestListing",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4,
+            Margin = new Thickness(4)
+        };
         scroll.AddChild(_listing);
         root.AddChild(scroll);
 
         AddChild(root);
+    }
+
+    private Texture ResolveJobIconTexture(string? jobIconId)
+    {
+        if (!string.IsNullOrWhiteSpace(jobIconId) &&
+            _proto.TryIndex<JobIconPrototype>(jobIconId, out var iconProto))
+        {
+            return _sprite.Frame0(iconProto.Icon);
+        }
+
+        if (_proto.TryIndex<JobIconPrototype>("JobIconNoId", out var fallbackProto))
+            return _sprite.Frame0(fallbackProto.Icon);
+
+        return _sprite.Frame0(new SpriteSpecifier.Rsi(new ResPath("Interface/Misc/job_icons.rsi"), "NoId"));
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -231,20 +317,144 @@ public sealed class CrewManifestUiControl : ProgramUiControl
         if (raw is not CrewManifestUiState state)
             return;
 
-        var tsText = state.FileTimestamp is { } ts ? $" [File: {ts:hh\\:mm\\:ss}]" : string.Empty;
-        _headerLabel.Text = $"{state.StationName}{tsText} — {state.StatusMessage}";
+        _lastState = state;
+        var total = state.Entries?.Entries?.Length ?? 0;
+        _headerLabel.Text = $"{state.StationName} — CREW MANIFEST ({total})";
+        var tsText = state.FileTimestamp is { } ts ? $" [{ts:hh\\:mm\\:ss}]" : string.Empty;
+        _statusLabel.Text = $"{state.StatusMessage}{tsText}";
+        _statusLabel.FontColorOverride = state.IsOnlineSync ? Color.FromHex("#77D4B0") : Color.FromHex("#FFD166");
+
+        RebuildManifestList();
+    }
+
+    private void RebuildManifestList()
+    {
         _listing.RemoveAllChildren();
-        if (state.Entries?.Entries != null)
+        var entries = _lastState?.Entries?.Entries;
+        if (entries == null || entries.Length == 0)
         {
-            foreach (var entry in state.Entries.Entries)
+            _listing.AddChild(new ContentLabel
             {
-                _listing.AddChild(new ContentLabel
-                {
-                    Text = $"{entry.Name} — {entry.JobTitle}",
-                    HorizontalExpand = true,
-                    FontColorOverride = Color.FromHex("#E0F7FA")
-                });
+                Text = "No crew members registered on the station manifest.",
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#8899AA"),
+                Margin = new Thickness(4)
+            });
+            return;
+        }
+
+        var query = (_searchInput.Text ?? string.Empty).Trim();
+        var shown = 0;
+
+        foreach (var entry in entries)
+        {
+            var jobTitle = string.IsNullOrWhiteSpace(entry.JobTitle) ? "Crew" : entry.JobTitle;
+            if (!string.IsNullOrEmpty(query) &&
+                !entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                !jobTitle.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
             }
+
+            shown++;
+            var card = new ContentPanelContainer
+            {
+                Name = "CrewManifestEntryCard",
+                HorizontalExpand = true,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#0F1B28"),
+                    BorderColor = Color.FromHex("#1E4660"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 8,
+                    ContentMarginRightOverride = 8,
+                    ContentMarginTopOverride = 5,
+                    ContentMarginBottomOverride = 5
+                }
+            };
+
+            var row = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 8
+            };
+
+            var iconFrame = new ContentPanelContainer
+            {
+                MinSize = new Vector2(26, 26),
+                MaxSize = new Vector2(26, 26),
+                VerticalAlignment = VAlignment.Center,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#09111A"),
+                    BorderColor = Color.FromHex("#244E68"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 2,
+                    ContentMarginRightOverride = 2,
+                    ContentMarginTopOverride = 2,
+                    ContentMarginBottomOverride = 2
+                }
+            };
+            iconFrame.AddChild(new ContentTextureRect
+            {
+                Name = "CrewManifestJobIcon",
+                Texture = ResolveJobIconTexture(entry.JobIcon),
+                DisplaySize = new Vector2(20, 20),
+                MinSize = new Vector2(20, 20),
+                HorizontalAlignment = HAlignment.Center,
+                VerticalAlignment = VAlignment.Center
+            });
+            row.AddChild(iconFrame);
+
+            row.AddChild(new ContentLabel
+            {
+                Name = "CrewManifestNameLabel",
+                Text = entry.Name,
+                HorizontalExpand = true,
+                WordWrap = false,
+                ClipText = true,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = Color.FromHex("#EAF8FF")
+            });
+
+            var jobBadge = new ContentPanelContainer
+            {
+                VerticalAlignment = VAlignment.Center,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#132A3C"),
+                    BorderColor = Color.FromHex("#2B6280"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 8,
+                    ContentMarginRightOverride = 8,
+                    ContentMarginTopOverride = 2,
+                    ContentMarginBottomOverride = 2
+                }
+            };
+            jobBadge.AddChild(new ContentLabel
+            {
+                Name = "CrewManifestJobLabel",
+                Text = jobTitle,
+                WordWrap = false,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = Color.FromHex("#88E6FF")
+            });
+            row.AddChild(jobBadge);
+
+            card.AddChild(row);
+            _listing.AddChild(card);
+        }
+
+        if (shown == 0)
+        {
+            _listing.AddChild(new ContentLabel
+            {
+                Text = "No crew entries match your filter.",
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#8899AA"),
+                Margin = new Thickness(4)
+            });
         }
     }
 }
@@ -999,8 +1209,8 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
 
 public sealed class CrewMonitorUiControl : ProgramUiControl
 {
-    [Dependency] private readonly IEntityManager _entMan = default!;
-    [Dependency] private readonly IPrototypeManager _proto = default!;
+    [Dependency] private IEntityManager _entMan = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
     private readonly SpriteSystem _sprite;
 
     private readonly ContentLabel _headerLabel;
@@ -1062,13 +1272,9 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         };
         _mapModeBtn.OnPressed += _ => SetMapMode(true);
 
-        var refBtn = new ContentButton { Name = "CrewMonitorRefreshButton", Text = "Sync", MinWidth = 68 };
-        refBtn.OnPressed += _ => SendProgramMessage(new CrewMonitorRefreshMessage());
-
         top.AddChild(_headerLabel);
         top.AddChild(_listModeBtn);
         top.AddChild(_mapModeBtn);
-        top.AddChild(refBtn);
         root.AddChild(top);
 
         _selectedInfoLabel = new ContentLabel
@@ -1157,6 +1363,18 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         var markers = new List<DeviceNavMapMarker>();
         CrewSensorEntryDto? selectedEntry = null;
 
+        if (!state.IsOnline)
+        {
+            _listContainer.AddChild(new ContentLabel
+            {
+                Text = "Network offline — active Station Network Router connection required.",
+                FontColorOverride = Color.FromHex("#FF8877")
+            });
+            _selectedInfoLabel.Text = "Network offline.";
+            _mapSelector.SetMarkers(markers, "Network offline.", null);
+            return;
+        }
+
         if (state.Sensors.Count == 0)
         {
             _listContainer.AddChild(new ContentLabel
@@ -1204,20 +1422,18 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
                     SeparationOverride = 8
                 };
 
-                var vitalIcon = new TextureRect
+                var vitalIcon = new ContentTextureRect
                 {
                     Texture = ResolveHealthRsiTexture(s),
-                    Stretch = TextureRect.StretchMode.KeepAspectCentered,
-                    SetSize = new Vector2(28f, 16f),
+                    DisplaySize = new Vector2(28f, 16f),
                     VerticalAlignment = VAlignment.Center
                 };
                 row.AddChild(vitalIcon);
 
-                var jobIconRect = new TextureRect
+                var jobIconRect = new ContentTextureRect
                 {
                     Texture = ResolveJobIconTexture(s.JobIcon),
-                    Stretch = TextureRect.StretchMode.KeepAspectCentered,
-                    SetSize = new Vector2(18f, 18f),
+                    DisplaySize = new Vector2(18f, 18f),
                     VerticalAlignment = VAlignment.Center,
                     ToolTip = s.JobTitle
                 };
@@ -1320,6 +1536,9 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
 public sealed class CommsConsoleUiControl : ProgramUiControl
 {
     private readonly ContentLabel _statusLabel;
+    private readonly ContentBoxContainer _authorizedBody;
+    private readonly ContentPanelContainer _lockedBanner;
+    private readonly ContentLabel _lockedBannerLabel;
     private readonly ContentLineEdit _announcementEdit;
     private readonly ContentButton _broadcastBtn;
     private readonly ContentButton _revokeAuthBtn;
@@ -1372,12 +1591,47 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
         };
         root.AddChild(_statusLabel);
 
+        _lockedBanner = new ContentPanelContainer
+        {
+            Name = "CommsLockedBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1520"),
+                BorderColor = Color.FromHex("#AA5533"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _lockedBannerLabel = new ContentLabel
+        {
+            Text = "COMMAND AUTHORIZATION REQUIRED — Swipe Command ID card to unlock.",
+            FontColorOverride = Color.FromHex("#FFD166"),
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center
+        };
+        _lockedBanner.AddChild(_lockedBannerLabel);
+        root.AddChild(_lockedBanner);
+
+        _authorizedBody = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SeparationOverride = 6
+        };
+
         _announcementEdit = new ContentLineEdit
         {
             Name = "CommsAnnouncementEdit",
-            PlaceHolder = "Enter station-wide announcement...",
+            PlaceHolder = "Enter station-wide announcement (max 512 chars)...",
             HorizontalExpand = true,
-            MinHeight = 28f
+            MinHeight = 32f
         };
         _broadcastBtn = new ContentButton
         {
@@ -1391,10 +1645,10 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
             _announcementEdit.Text = string.Empty;
         };
 
-        root.AddChild(_announcementEdit);
-        root.AddChild(_broadcastBtn);
+        _authorizedBody.AddChild(_announcementEdit);
+        _authorizedBody.AddChild(_broadcastBtn);
 
-        root.AddChild(new ContentLabel
+        _authorizedBody.AddChild(new ContentLabel
         {
             Text = "STATION ALERT LEVEL:",
             FontColorOverride = Color.FromHex("#FFD166")
@@ -1404,7 +1658,8 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
             HorizontalSeparation = 6,
             VerticalSeparation = 4
         };
-        root.AddChild(_alertLevelsWrap);
+        _authorizedBody.AddChild(_alertLevelsWrap);
+        root.AddChild(_authorizedBody);
         AddChild(root);
     }
 
@@ -1413,9 +1668,24 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
         if (raw is not CommsConsoleUiState state)
             return;
 
-        _statusLabel.Text = $"Current Alert: {state.CurrentAlertLevel.ToUpperInvariant()} | {state.StatusMessage}";
-        _broadcastBtn.Disabled = !state.CanBroadcast;
         _revokeAuthBtn.Visible = state.IsSwipedAuthorized;
+
+        if (!state.IsOnline || !state.CanBroadcast)
+        {
+            _authorizedBody.Visible = false;
+            _lockedBanner.Visible = true;
+            _lockedBannerLabel.Text = !state.IsOnline
+                ? "NETWORK OFFLINE — Active Station Network Router connection required."
+                : "COMMAND AUTHORIZATION REQUIRED — Swipe Command ID card or use Command .acc key.";
+            _statusLabel.Text = state.StatusMessage;
+            _alertLevelsWrap.RemoveAllChildren();
+            return;
+        }
+
+        _authorizedBody.Visible = true;
+        _lockedBanner.Visible = false;
+        _statusLabel.Text = $"Current Alert: {state.CurrentAlertLevel.ToUpperInvariant()} | {state.StatusMessage}";
+        _broadcastBtn.Disabled = false;
 
         _alertLevelsWrap.RemoveAllChildren();
         foreach (var lvl in state.AvailableAlertLevels)

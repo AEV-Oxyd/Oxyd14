@@ -16,4 +16,10 @@ public sealed partial class FileSystemComponent : Component
 
     [ViewVariables]
     public int UsedStorageBytes = 0;
+
+    [ViewVariables]
+    public string? LogHeader;
+
+    [ViewVariables]
+    public Queue<string>? LogEntries;
 }

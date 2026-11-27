@@ -204,7 +204,7 @@
     - OutputTrigger2
     - ComputerCommandSender
   - type: DeviceLinkSink
-    invokeLimit: 0
+    invokeLimit: 64
     ports:
     - PowerTrigger
     - InternetLink
@@ -300,7 +300,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 640, 480
+    defaultScreenSize: 480, 360
     allowRemoteControl: true
     requirePowerToBoot: false
     embeddedDefaultAppPath: "/bin/apc_control.nte"
@@ -547,7 +547,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 920, 640
+    defaultScreenSize: 680, 480
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/comms_console.nte"
@@ -565,7 +565,7 @@
   components:
   - type: OxydComputer
     template: Embedded
-    defaultScreenSize: 880, 620
+    defaultScreenSize: 640, 440
     allowRemoteControl: true
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/solar_control.nte"
@@ -863,13 +863,13 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveLathe
-  name: autolathe controller drive (236 KB)
+  name: autolathe controller drive (604 QB)
   description: Compact embedded fabrication storage drive with limited space for saving additional lathe blueprints.
   components:
   - type: ComputerHardDrive
-    capacityBytes: 241664
+    capacityBytes: 618496
   - type: FileSystem
-    maxStorageBytes: 241664
+    maxStorageBytes: 618496
     files:
       "/bin/embedded_os.nte": !type:ProgramVirtualFile
         name: embedded_os
@@ -1841,30 +1841,30 @@
 - type: entity
   parent: BaseItem
   id: ComputerPartNetworkCardBasic
-  name: modular network interface card (500 KB/s)
+  name: modular network interface card (16 KB/s)
   description: Provides network routing, SSH remote connections, and Screen View transport.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: net_wired
   - type: ComputerNetworkCard
-    bandwidthBps: 500000
-    maxUploadBps: 250000
+    bandwidthBps: 16384
+    maxUploadBps: 8192
     bufferQueueLimit: 60
     size: Small
 
 - type: entity
   parent: BaseItem
   id: ComputerPartNetworkCardHighSpeed
-  name: high-speed fiber NIC (5 MB/s)
+  name: high-speed fiber NIC (64 KB/s)
   description: High-throughput fiber transceiver card for servers, routers, and workstations.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: net_wired
   - type: ComputerNetworkCard
-    bandwidthBps: 5000000
-    maxUploadBps: 5000000
+    bandwidthBps: 65536
+    maxUploadBps: 32768
     bufferQueueLimit: 300
     size: Medium
 
@@ -1954,7 +1954,7 @@
   - type: Tag
     tags: [ Oxyd, Disk ]
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/blueprints/handcuffs.lathe": !type:RecipeBlueprintFile
         name: handcuffs
@@ -1974,7 +1974,7 @@
   - type: Tag
     tags: [ Oxyd, Disk ]
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/blueprints/security_hud.lathe": !type:RecipeBlueprintFile
         name: security_hud
@@ -2007,7 +2007,7 @@
   - type: StealTarget
     stealGroup: [WantedListDisk]
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/wanted_list.nte": !type:ProgramVirtualFile
         name: wanted_list
@@ -2023,7 +2023,7 @@
   name: MedTek software disk
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/medtek.nte": !type:ProgramVirtualFile
         name: medtek
@@ -2039,7 +2039,7 @@
   name: AstroNav software disk
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/astronav.nte": !type:ProgramVirtualFile
         name: astronav
@@ -2055,7 +2055,7 @@
   name: LogProbe software disk
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/logprobe.nte": !type:ProgramVirtualFile
         name: logprobe
@@ -2071,7 +2071,7 @@
   name: NetProbe software disk
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/netprobe.nte": !type:ProgramVirtualFile
         name: netprobe
@@ -2087,7 +2087,7 @@
   name: NanoTask software disk
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/nanotask.nte": !type:ProgramVirtualFile
         name: nanotask
@@ -2104,7 +2104,7 @@
   description: Contains access_encoder.nte for encoding ID card access codes to /keys/*.acc files.
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/access_encoder.nte": !type:ProgramVirtualFile
         name: access_encoder
@@ -2121,7 +2121,7 @@
   description: Contains pda_os.nte handheld PDA operating system.
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/pda_os.nte": !type:ProgramVirtualFile
         name: pda_os
@@ -2139,7 +2139,7 @@
   description: Contains cameras.nte Wi-Fi camera monitor & witness log extractor.
   components:
   - type: FileSystem
-    maxStorageBytes: 131072
+    maxStorageBytes: 524288
     files:
       "/bin/cameras.nte": !type:ProgramVirtualFile
         name: cameras

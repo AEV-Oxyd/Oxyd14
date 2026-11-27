@@ -172,7 +172,7 @@ public sealed class ApcControlUiControl : ProgramUiControl
         _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
         var areaPrefix = state.IsRemoteConsole && !string.IsNullOrWhiteSpace(state.AreaName)
-            ? $"APC: {state.AreaName} [{state.SelectedTargetGuid}]\n"
+            ? $"APC: {state.AreaName}\n"
             : string.Empty;
         var trippedTag = state.BreakerTripped ? " [TRIPPED]" : string.Empty;
         _telemetryLabel.Text =
@@ -192,18 +192,76 @@ public sealed class ApcControlUiControl : ProgramUiControl
 
     private void BuildRemoteApcHeader(ApcControlUiState state)
     {
-        var modeRow = new ContentWrapContainer
+        var topBar = new ContentBoxContainer
         {
             Name = "ApcViewModeRow",
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 5
         };
+
+        var apcLabel = string.IsNullOrWhiteSpace(state.AreaName) ? "APC" : state.AreaName;
+        var authText = state.IsTargetAuthorized
+            ? $"{apcLabel}: AUTHORIZED"
+            : $"{apcLabel}: LOCKED (ID / .acc)";
+        topBar.AddChild(new ContentLabel
+        {
+            Name = "ApcRemoteAuthStatusLabel",
+            Text = authText,
+            ToolTip = state.IsTargetAuthorized
+                ? $"{apcLabel}: AUTHORIZED"
+                : $"{apcLabel}: LOCKED (Insert/Swipe authorized ID card or use .acc key)",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
+            VerticalAlignment = VAlignment.Center
+        });
+
+        var authActions = new ContentWrapContainer
+        {
+            Name = "ApcRemoteAuthRow",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 2,
+            VerticalAlignment = VAlignment.Center
+        };
+
+        foreach (var accPath in state.AvailableAccFiles)
+        {
+            var pathCopy = accPath;
+            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
+            var authBtn = new ContentButton
+            {
+                Name = $"ApcAuthAccBtn_{shortName}",
+                Text = $"Auth ({shortName})",
+                MinHeight = 24,
+                Visible = !state.IsTargetAuthorized
+            };
+            authBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, pathCopy));
+            authActions.AddChild(authBtn);
+        }
+
+        if (state.IsTargetAuthorized)
+        {
+            var deauthBtn = new ContentButton
+            {
+                Name = "ApcRevokeAuthButton",
+                Text = "Deauth",
+                MinWidth = 64,
+                MinHeight = 24
+            };
+            deauthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.RevokeAuth));
+            authActions.AddChild(deauthBtn);
+        }
+        topBar.AddChild(authActions);
+
         var listModeBtn = new ContentButton
         {
             Name = "ApcListModeButton",
             Text = "List Mode",
             Pressed = !_mapMode,
-            MinWidth = 88
+            MinWidth = 78,
+            MinHeight = 24
         };
         listModeBtn.OnPressed += _ =>
         {
@@ -218,7 +276,8 @@ public sealed class ApcControlUiControl : ProgramUiControl
             Name = "ApcViewModeToggleButton",
             Text = "Map Mode",
             Pressed = _mapMode,
-            MinWidth = 88
+            MinWidth = 78,
+            MinHeight = 24
         };
         mapModeBtn.OnPressed += _ =>
         {
@@ -228,9 +287,9 @@ public sealed class ApcControlUiControl : ProgramUiControl
                 UpdateProgramState(_lastState);
             }
         };
-        modeRow.AddChild(listModeBtn);
-        modeRow.AddChild(mapModeBtn);
-        _remoteHeaderContainer.AddChild(modeRow);
+        topBar.AddChild(listModeBtn);
+        topBar.AddChild(mapModeBtn);
+        _remoteHeaderContainer.AddChild(topBar);
 
         if (_mapMode)
         {
@@ -259,10 +318,18 @@ public sealed class ApcControlUiControl : ProgramUiControl
                     Active: t.MainBreakerEnabled));
             }
 
-            _mapSelector.SetMarkers(markers, $"Selected APC: {state.AreaName} [{state.SelectedTargetGuid}]");
+            _mapSelector.SetMarkers(markers, $"Selected APC: {state.AreaName}");
         }
         else
         {
+            var targetsScroll = new ContentScrollContainer
+            {
+                Name = "ApcRemoteTargetsScroll",
+                HorizontalExpand = true,
+                MaxHeight = 130f,
+                HScrollEnabled = false,
+                VScrollEnabled = true
+            };
             var targetsWrap = new ContentWrapContainer
             {
                 Name = "ApcRemoteTargetsWrap",
@@ -274,77 +341,20 @@ public sealed class ApcControlUiControl : ProgramUiControl
             {
                 var guidCopy = t.TargetGuid;
                 var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-                var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ AUTH]";
+                var authTag = t.IsAuthorized ? "[AUTH]" : "[LOCKED]";
                 var btn = new ContentButton
                 {
                     Name = $"ApcTargetBtn_{guidCopy}",
-                    Text = $"{t.AreaName} ({guidCopy}) {authTag}",
+                    Text = $"{t.AreaName} {authTag}",
                     Pressed = isSel,
                     MinWidth = 136
                 };
                 btn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guidCopy));
                 targetsWrap.AddChild(btn);
             }
-            _remoteHeaderContainer.AddChild(targetsWrap);
+            targetsScroll.AddChild(targetsWrap);
+            _remoteHeaderContainer.AddChild(targetsScroll);
         }
-
-        var authRow = new ContentWrapContainer
-        {
-            Name = "ApcRemoteAuthRow",
-            HorizontalSeparation = 6,
-            VerticalSeparation = 4
-        };
-
-        authRow.AddChild(new ContentLabel
-        {
-            Name = "ApcRemoteAuthStatusLabel",
-            Text = state.IsTargetAuthorized
-                ? $"APC [{state.SelectedTargetGuid}]: AUTHORIZED"
-                : $"APC [{state.SelectedTargetGuid}]: UNAUTHORIZED (Swipe ID card or use .acc file)",
-            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
-            VerticalAlignment = VAlignment.Center
-        });
-
-        foreach (var accPath in state.AvailableAccFiles)
-        {
-            var pathCopy = accPath;
-            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
-            var authBtn = new ContentButton
-            {
-                Name = $"ApcAuthAccBtn_{shortName}",
-                Text = $"Auth ({shortName})",
-                MinWidth = 108,
-                Visible = !state.IsTargetAuthorized
-            };
-            authBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, pathCopy));
-            authRow.AddChild(authBtn);
-        }
-
-        if (state.AvailableAccFiles.Count > 0 && !state.IsTargetAuthorized)
-        {
-            var quickAuthBtn = new ContentButton
-            {
-                Name = "ApcQuickAuthAccButton",
-                Text = "Authorize APC (.acc)",
-                MinWidth = 138
-            };
-            quickAuthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
-            authRow.AddChild(quickAuthBtn);
-        }
-
-        if (state.IsTargetAuthorized)
-        {
-            var deauthBtn = new ContentButton
-            {
-                Name = "ApcRevokeAuthButton",
-                Text = "Deauth",
-                MinWidth = 76
-            };
-            deauthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.RevokeAuth));
-            authRow.AddChild(deauthBtn);
-        }
-
-        _remoteHeaderContainer.AddChild(authRow);
     }
 }
 
@@ -1305,18 +1315,80 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
     private void BuildRemoteAtmosHeader(AtmosControlUiState state)
     {
-        var modeRow = new ContentWrapContainer
+        var topBar = new ContentBoxContainer
         {
             Name = "AtmosViewModeRow",
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 5
         };
+
+        var curTarget = state.AvailableTargets.FirstOrDefault(t =>
+            string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase));
+        var curLabel = curTarget != null && !string.IsNullOrWhiteSpace(curTarget.AreaName)
+            ? curTarget.AreaName
+            : "Air Alarm";
+        var authText = state.IsTargetAuthorized
+            ? $"{curLabel}: AUTHORIZED"
+            : $"{curLabel}: LOCKED (ID / .acc)";
+        topBar.AddChild(new ContentLabel
+        {
+            Name = "AtmosRemoteAuthStatusLabel",
+            Text = authText,
+            ToolTip = state.IsTargetAuthorized
+                ? $"{curLabel}: AUTHORIZED"
+                : $"{curLabel}: LOCKED (Insert/Swipe authorized ID card or use .acc key)",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
+            VerticalAlignment = VAlignment.Center
+        });
+
+        var authActions = new ContentWrapContainer
+        {
+            Name = "AtmosRemoteAuthRow",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 2,
+            VerticalAlignment = VAlignment.Center
+        };
+
+        foreach (var accPath in state.AvailableAccFiles)
+        {
+            var pathCopy = accPath;
+            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
+            var authBtn = new ContentButton
+            {
+                Name = $"AtmosAuthAccBtn_{shortName}",
+                Text = $"Auth ({shortName})",
+                MinHeight = 24,
+                Visible = !state.IsTargetAuthorized
+            };
+            authBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, pathCopy));
+            authActions.AddChild(authBtn);
+        }
+
+        if (state.IsTargetAuthorized)
+        {
+            var deauthBtn = new ContentButton
+            {
+                Name = "AtmosRevokeAuthButton",
+                Text = "Deauth",
+                MinWidth = 64,
+                MinHeight = 24
+            };
+            deauthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.RevokeAuth));
+            authActions.AddChild(deauthBtn);
+        }
+        topBar.AddChild(authActions);
+
         var listModeBtn = new ContentButton
         {
             Name = "AtmosListModeButton",
             Text = "List Mode",
             Pressed = !_mapMode,
-            MinWidth = 88
+            MinWidth = 78,
+            MinHeight = 24
         };
         listModeBtn.OnPressed += _ =>
         {
@@ -1331,7 +1403,8 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             Name = "AtmosViewModeToggleButton",
             Text = "Map Mode",
             Pressed = _mapMode,
-            MinWidth = 88
+            MinWidth = 78,
+            MinHeight = 24
         };
         mapModeBtn.OnPressed += _ =>
         {
@@ -1341,9 +1414,9 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                 UpdateProgramState(_lastState);
             }
         };
-        modeRow.AddChild(listModeBtn);
-        modeRow.AddChild(mapModeBtn);
-        _remoteHeaderContainer.AddChild(modeRow);
+        topBar.AddChild(listModeBtn);
+        topBar.AddChild(mapModeBtn);
+        _remoteHeaderContainer.AddChild(topBar);
 
         if (_mapMode)
         {
@@ -1374,10 +1447,18 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                     Blinks: isDanger));
             }
 
-            _mapSelector.SetMarkers(markers, $"Selected Alarm: {state.SelectedTargetGuid} (APC {state.SelectedApcGuid})");
+            _mapSelector.SetMarkers(markers, $"Selected Alarm: {curLabel}");
         }
         else
         {
+            var targetsScroll = new ContentScrollContainer
+            {
+                Name = "AtmosRemoteTargetsScroll",
+                HorizontalExpand = true,
+                MaxHeight = 130f,
+                HScrollEnabled = false,
+                VScrollEnabled = true
+            };
             var targetsWrap = new ContentWrapContainer
             {
                 Name = "AtmosRemoteTargetsWrap",
@@ -1389,77 +1470,20 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             {
                 var guidCopy = t.TargetGuid;
                 var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-                var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ APC AUTH]";
+                var authTag = t.IsAuthorized ? "[AUTH]" : "[LOCKED]";
                 var btn = new ContentButton
                 {
                     Name = $"AtmosTargetBtn_{guidCopy}",
-                    Text = $"{t.AreaName} [APC {t.ApcGuid}] {authTag}",
+                    Text = $"{t.AreaName} {authTag}",
                     Pressed = isSel,
                     MinWidth = 148
                 };
                 btn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guidCopy));
                 targetsWrap.AddChild(btn);
             }
-            _remoteHeaderContainer.AddChild(targetsWrap);
+            targetsScroll.AddChild(targetsWrap);
+            _remoteHeaderContainer.AddChild(targetsScroll);
         }
-
-        var authRow = new ContentWrapContainer
-        {
-            Name = "AtmosRemoteAuthRow",
-            HorizontalSeparation = 6,
-            VerticalSeparation = 4
-        };
-
-        authRow.AddChild(new ContentLabel
-        {
-            Name = "AtmosRemoteAuthStatusLabel",
-            Text = state.IsTargetAuthorized
-                ? $"APC [{state.SelectedApcGuid}]: AUTHORIZED"
-                : $"APC [{state.SelectedApcGuid}]: UNAUTHORIZED (Swipe ID card or use .acc file)",
-            FontColorOverride = state.IsTargetAuthorized ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166"),
-            VerticalAlignment = VAlignment.Center
-        });
-
-        foreach (var accPath in state.AvailableAccFiles)
-        {
-            var pathCopy = accPath;
-            var shortName = pathCopy.Contains('/') ? pathCopy[(pathCopy.LastIndexOf('/') + 1)..] : pathCopy;
-            var authBtn = new ContentButton
-            {
-                Name = $"AtmosAuthAccBtn_{shortName}",
-                Text = $"Auth ({shortName})",
-                MinWidth = 108,
-                Visible = !state.IsTargetAuthorized
-            };
-            authBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, pathCopy));
-            authRow.AddChild(authBtn);
-        }
-
-        if (state.AvailableAccFiles.Count > 0 && !state.IsTargetAuthorized)
-        {
-            var quickAuthBtn = new ContentButton
-            {
-                Name = "AtmosQuickAuthAccButton",
-                Text = "Authorize APC (.acc)",
-                MinWidth = 138
-            };
-            quickAuthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, state.SelectedAccFilePath ?? state.AvailableAccFiles[0]));
-            authRow.AddChild(quickAuthBtn);
-        }
-
-        if (state.IsTargetAuthorized)
-        {
-            var deauthBtn = new ContentButton
-            {
-                Name = "AtmosRevokeAuthButton",
-                Text = "Deauth",
-                MinWidth = 76
-            };
-            deauthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.RevokeAuth));
-            authRow.AddChild(deauthBtn);
-        }
-
-        _remoteHeaderContainer.AddChild(authRow);
     }
 
     private void UpdateStatusHeader(AtmosControlUiState state)
@@ -2669,6 +2693,116 @@ public sealed class ContentProgressBar : ContentControl
         }
     }
 }
+/// <summary>
+/// Compact icon + sheet count tile matching <see cref="MaterialIconTile"/> styling,
+/// used to display material costs for the currently printing recipe and available recipes.
+/// </summary>
+public sealed class MaterialNumberIcon : ContentBoxContainer
+{
+    private readonly Texture? _matIcon;
+    private readonly string _materialName;
+    private readonly string _sheetCountText;
+    private readonly bool _isAffordable;
+
+    public string MaterialId { get; }
+    public int Amount { get; }
+    public string CountText => _sheetCountText;
+    public bool IsAffordable => _isAffordable;
+
+    public MaterialNumberIcon(
+        string materialId,
+        string materialName,
+        int amount,
+        int volumePerSheet,
+        Texture? icon,
+        bool isAffordable = true,
+        int? availableAmount = null)
+    {
+        MaterialId = materialId;
+        _materialName = materialName;
+        Amount = amount;
+        _matIcon = icon;
+        _isAffordable = isAffordable;
+        var safeVolume = Math.Max(1, volumePerSheet);
+        _sheetCountText = FormatSheetCount(amount, safeVolume);
+
+        Name = $"LatheMatCostIcon_{materialId}";
+        MinSize = new Vector2(36, 34);
+        MaxSize = new Vector2(40, 34);
+
+        var tooltip = $"{_materialName}: {_sheetCountText} sheets ({Amount} u)";
+        if (availableAmount != null)
+        {
+            var availText = FormatSheetCount(availableAmount.Value, safeVolume);
+            tooltip += isAffordable
+                ? $"\nStored: {availText} sheets ({availableAmount.Value} u)"
+                : $"\nINSUFFICIENT — Stored: {availText} sheets ({availableAmount.Value} u)";
+        }
+
+        ToolTip = tooltip;
+    }
+
+    private static string FormatSheetCount(int amount, int volumePerSheet)
+    {
+        if (amount % volumePerSheet == 0)
+            return (amount / volumePerSheet).ToString();
+
+        var sheets = amount / (float) volumePerSheet;
+        return $"{sheets:0.#}";
+    }
+
+    protected override Vector2 MeasureOverride(Vector2 availableSize)
+    {
+        return new Vector2(36f, 34f);
+    }
+
+    protected override void Draw(DrawingHandleScreen handle)
+    {
+        base.Draw(handle);
+
+        var rect = PixelSizeBox;
+        var pad = 2f * UIScale;
+
+        handle.DrawRect(
+            rect,
+            _isAffordable ? new Color(0.05f, 0.10f, 0.15f, 0.85f) : new Color(0.18f, 0.06f, 0.08f, 0.90f),
+            filled: true);
+
+        var iconAreaW = MathF.Max(8f, PixelWidth - pad * 2f);
+        var iconAreaH = MathF.Max(8f, PixelHeight - pad * 2f);
+        if (_matIcon != null)
+        {
+            var iconSize = MathF.Max(8f, MathF.Min(iconAreaW, iconAreaH));
+            var ix = pad + (iconAreaW - iconSize) * 0.5f;
+            var iy = pad + (iconAreaH - iconSize) * 0.5f;
+            handle.DrawTextureRect(
+                _matIcon,
+                UIBox2.FromDimensions(new Vector2(ix, iy), new Vector2(iconSize, iconSize)),
+                _isAffordable ? Color.White : new Color(1f, 0.72f, 0.72f, 0.9f));
+        }
+
+        var font = TryGetStyleProperty<Font>("font", out var styleFont) && styleFont != null
+            ? styleFont
+            : UserInterfaceManager.ThemeDefaults.DefaultFont;
+        var textScale = UIScale * 0.82f;
+        var textHeight = font.GetHeight(textScale);
+        var tx = MathF.Floor(pad + 1f * UIScale);
+        var ty = MathF.Floor(MathF.Max(pad, PixelHeight - textHeight - pad * 0.4f));
+        handle.DrawString(
+            font,
+            new Vector2(tx, ty),
+            _sheetCountText,
+            textScale,
+            _isAffordable ? Color.White : Color.FromHex("#FF8A8A"),
+            TextOutline.Default);
+
+        handle.DrawRect(
+            rect,
+            _isAffordable ? new Color(0.16f, 0.36f, 0.48f, 0.8f) : new Color(0.75f, 0.26f, 0.26f, 0.9f),
+            filled: false);
+    }
+}
+
 
 /// <summary>
 /// Material icon tile showing the stored sheet count as a plain number in the corner of the icon,
@@ -2835,6 +2969,7 @@ public sealed class LatheControlUiControl : ProgramUiControl
     private readonly ContentLabel _printingNameLabel;
     private readonly ContentProgressBar _progressBar;
     private readonly ContentLabel _printingUsageLabel;
+    private readonly ContentWrapContainer _printingUsageContainer;
     private readonly ContentLabel _selectedRecipeLabel;
     private readonly ContentButton _cancelQueueBtn;
     private readonly ContentLabel _queueHeaderLabel;
@@ -2917,8 +3052,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
         _printingIcon = new ContentTextureRect
         {
             Name = "LatheCurrentPrintingIcon",
-            DisplaySize = new Vector2(36, 36),
-            MinSize = new Vector2(36, 36)
+            DisplaySize = new Vector2(96, 96),
+            MinSize = new Vector2(96, 96)
         };
 
         var printingInfo = new ContentBoxContainer
@@ -2943,13 +3078,32 @@ public sealed class LatheControlUiControl : ProgramUiControl
             OverlayText = "Idle"
         };
 
+        var printingUsageRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
         _printingUsageLabel = new ContentLabel
         {
             Name = "LatheCurrentUsageLabel",
             Text = "Resource usage: ---",
-            HorizontalExpand = true,
+            VerticalAlignment = VAlignment.Center,
             FontColorOverride = Color.FromHex("#9AB8C8")
         };
+
+        _printingUsageContainer = new ContentWrapContainer
+        {
+            Name = "LatheCurrentUsageIcons",
+            HorizontalExpand = true,
+            HorizontalSeparation = 4,
+            VerticalSeparation = 2,
+            Visible = false
+        };
+
+        printingUsageRow.AddChild(_printingUsageLabel);
+        printingUsageRow.AddChild(_printingUsageContainer);
 
         _selectedRecipeLabel = new ContentLabel
         {
@@ -2961,7 +3115,7 @@ public sealed class LatheControlUiControl : ProgramUiControl
 
         printingInfo.AddChild(_printingNameLabel);
         printingInfo.AddChild(_progressBar);
-        printingInfo.AddChild(_printingUsageLabel);
+        printingInfo.AddChild(printingUsageRow);
         printingInfo.AddChild(_selectedRecipeLabel);
 
         _cancelQueueBtn = new ContentButton
@@ -3251,7 +3405,9 @@ public sealed class LatheControlUiControl : ProgramUiControl
             _printingIcon.Texture = ResolveRecipeTexture(currentProto);
             _printingNameLabel.Text = $"Printing: {_lathe.GetRecipeName(currentProto)}";
             _printingNameLabel.FontColorOverride = Color.FromHex("#00FFCC");
-            _printingUsageLabel.Text = $"Uses: {FormatRecipeMaterialCosts(currentProto, state.MaterialUseMultiplier)}";
+            PopulateMaterialCostIcons(_printingUsageContainer, currentProto, state.MaterialUseMultiplier, null);
+            _printingUsageContainer.Visible = currentProto.Materials.Count > 0;
+            _printingUsageLabel.Text = currentProto.Materials.Count > 0 ? "Uses:" : "Uses: None";
 
             if (_productionStartTime != null && _productionLength != null && _productionLength.Value > TimeSpan.Zero)
             {
@@ -3272,6 +3428,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
             _printingIcon.Texture = null;
             _printingNameLabel.Text = $"Printing: {state.CurrentPrinting}";
             _printingNameLabel.FontColorOverride = Color.FromHex("#00FFCC");
+            _printingUsageContainer.RemoveAllChildren();
+            _printingUsageContainer.Visible = false;
             _printingUsageLabel.Text = "Resource usage: ---";
             _progressBar.Value = 0f;
             _progressBar.OverlayText = "Fabricating...";
@@ -3281,6 +3439,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
             _printingIcon.Texture = null;
             _printingNameLabel.Text = state.HasTelemetry ? "Standby — Not Printing" : "Awaiting Autolathe Telemetry...";
             _printingNameLabel.FontColorOverride = Color.FromHex("#88A8B8");
+            _printingUsageContainer.RemoveAllChildren();
+            _printingUsageContainer.Visible = false;
             _printingUsageLabel.Text = "Resource usage: ---";
             _progressBar.Value = 0f;
             _progressBar.OverlayText = "Idle";
@@ -3517,8 +3677,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
             row.AddChild(new ContentTextureRect
             {
                 Texture = iconTex,
-                DisplaySize = new Vector2(28, 28),
-                MinSize = new Vector2(28, 28)
+                DisplaySize = new Vector2(64, 64),
+                MinSize = new Vector2(64, 64)
             });
 
             var details = new ContentBoxContainer
@@ -3529,22 +3689,18 @@ public sealed class LatheControlUiControl : ProgramUiControl
             };
 
             var fileShort = bp.FilePath.Contains('/') ? bp.FilePath[(bp.FilePath.LastIndexOf('/') + 1)..] : bp.FilePath;
-            var metaBadges = new List<string> { bp.FromDisk ? "DISK" : "MEM" };
-            if (!string.IsNullOrEmpty(fileShort))
-                metaBadges.Add(fileShort);
-            if (bp.FileSizeBytes > 0)
-                metaBadges.Add(FormatByteSize(bp.FileSizeBytes));
-            if (bp.IsEncrypted)
-                metaBadges.Add("ENC");
+            var badgeParts = new List<string>();
+            if (bp.FromDisk)
+                badgeParts.Add("DISK");
             if (bp.RemainingUses != null)
-                metaBadges.Add(bp.PointCost > 1
-                    ? $"{bp.RemainingUses} LP ({bp.PointCost}/ea)"
-                    : $"{bp.RemainingUses} uses");
-            var badgeText = $" [{string.Join(" | ", metaBadges)}]";
+                badgeParts.Add($"{bp.RemainingUses.Value} LP");
+            var titleText = badgeParts.Count > 0
+                ? $"{displayName} [{string.Join(" · ", badgeParts)}]"
+                : displayName;
 
             details.AddChild(new ContentLabel
             {
-                Text = $"{displayName}{badgeText}",
+                Text = titleText,
                 HorizontalExpand = true,
                 FontColorOverride = bp.IsEncrypted
                     ? Color.FromHex("#FFD166")
@@ -3555,12 +3711,28 @@ public sealed class LatheControlUiControl : ProgramUiControl
                             : Color.FromHex("#99AAB5")
             });
 
-            details.AddChild(new ContentLabel
+            if (rProto != null && rProto.Materials.Count > 0)
             {
-                Text = $"Materials: {usage}",
-                HorizontalExpand = true,
-                FontColorOverride = affordable ? Color.FromHex("#88FFAA") : Color.FromHex("#FF8080")
-            });
+                var costIcons = new ContentWrapContainer
+                {
+                    Name = "LatheRecipeCostIcons",
+                    HorizontalExpand = true,
+                    HorizontalSeparation = 4,
+                    VerticalSeparation = 2,
+                    Margin = new Thickness(0, 2, 0, 2)
+                };
+                PopulateMaterialCostIcons(costIcons, rProto, _lastState.MaterialUseMultiplier, _lastState.Materials);
+                details.AddChild(costIcons);
+            }
+            else
+            {
+                details.AddChild(new ContentLabel
+                {
+                    Text = "No materials",
+                    HorizontalExpand = true,
+                    FontColorOverride = Color.FromHex("#88FFAA")
+                });
+            }
 
             if (!string.IsNullOrWhiteSpace(desc))
             {
@@ -3657,9 +3829,63 @@ public sealed class LatheControlUiControl : ProgramUiControl
 
     private static string FormatByteSize(int bytes)
     {
-        if (bytes < 1024)
-            return $"{bytes} B";
-        return $"{bytes / 1024f:0.#} KB";
+        return Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(bytes);
+    }
+
+    private void PopulateMaterialCostIcons(
+        ContentWrapContainer container,
+        LatheRecipePrototype recipe,
+        float multiplier,
+        Dictionary<string, int>? storedMaterials)
+    {
+        container.RemoveAllChildren();
+        if (recipe.Materials.Count == 0)
+            return;
+
+        var costs = new List<(string MatId, int Adjusted)>(recipe.Materials.Count);
+        foreach (var (matProtoId, rawCost) in recipe.Materials)
+        {
+            var adjusted = SharedLatheSystem.AdjustMaterial(rawCost, recipe.ApplyMaterialDiscount, multiplier);
+            if (adjusted > 0)
+                costs.Add((matProtoId.Id, adjusted));
+        }
+
+        costs.Sort((a, b) =>
+        {
+            var cmp = b.Adjusted.CompareTo(a.Adjusted);
+            return cmp != 0 ? cmp : string.Compare(a.MatId, b.MatId, StringComparison.OrdinalIgnoreCase);
+        });
+
+        foreach (var (matId, adjusted) in costs)
+        {
+            Texture? icon = null;
+            var matName = matId;
+            var volumePerSheet = 100;
+            if (_proto.TryIndex<MaterialPrototype>(matId, out var matProto))
+            {
+                matName = Loc.GetString(matProto.Name);
+                icon = _sprite.Frame0(matProto.Icon);
+                if (matProto.StackEntity is { } stackEntId &&
+                    _proto.TryIndex(stackEntId, out var stackEntProto) &&
+                    stackEntProto.TryComp<PhysicalCompositionComponent>(out var composition, _compFactory) &&
+                    composition.MaterialComposition.TryGetValue(matId, out var vol) &&
+                    vol > 0)
+                {
+                    volumePerSheet = vol;
+                }
+            }
+
+            int? avail = null;
+            var affordable = true;
+            if (storedMaterials != null)
+            {
+                var have = storedMaterials.TryGetValue(matId, out var v) ? v : 0;
+                avail = have;
+                affordable = have >= adjusted;
+            }
+
+            container.AddChild(new MaterialNumberIcon(matId, matName, adjusted, volumePerSheet, icon, affordable, avail));
+        }
     }
 
     private Texture? ResolveRecipeTexture(LatheRecipePrototype recipe)

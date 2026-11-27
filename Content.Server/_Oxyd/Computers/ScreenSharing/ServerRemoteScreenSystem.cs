@@ -24,19 +24,11 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
+    [Dependency] private OxydComputerSystem _computer = default!;
 
-    private readonly Dictionary<EntityUid, HashSet<EntityUid>> _viewerTrackedPvs = new();
-    private readonly Dictionary<(EntityUid Actor, EntityUid Target), bool> _alreadyOpenOnAttach = new();
-    private readonly HashSet<(EntityUid Actor, EntityUid Target)> _detachingTargets = new();
+    [Dependency] private EntityQuery<ActiveRemoteScreenViewerComponent> _activeViewerQuery = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-        SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, ComponentShutdown>(OnViewerShutdown);
-        SubscribeLocalEvent<ActiveRemoteScreenViewerComponent, PlayerDetachedEvent>(OnViewerDetached);
-        SubscribeNetworkEvent<RemoteScreenLocalWindowStateEvent>(OnLocalWindowState);
-    }
-
+    [SubscribeNetworkEvent]
     private void OnLocalWindowState(RemoteScreenLocalWindowStateEvent ev, EntitySessionEventArgs args)
     {
         if (args.SenderSession.AttachedEntity is not { } actor || !TryGetEntity(ev.TargetEntity, out var targetUid))
@@ -46,33 +38,38 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return;
 
         var compUid = _router.UnwrapComputerEntity(targetUid.Value);
-        _alreadyOpenOnAttach[(actor, compUid)] = ev.IsOpenOnScreen;
+        if (_activeViewerQuery.TryComp(actor, out var rem))
+            rem.AlreadyOpenOnAttach[compUid] = ev.IsOpenOnScreen;
     }
 
+    [SubscribeLocalEvent]
     private void OnViewerShutdown(Entity<ActiveRemoteScreenViewerComponent> ent, ref ComponentShutdown args)
     {
         var session = TryComp<ActorComponent>(ent.Owner, out var actor) ? actor.PlayerSession : null;
-        RevokeTrackedPvs(ent.Owner, session);
+        RevokeTrackedPvs(ent.Comp, session);
     }
 
+    [SubscribeLocalEvent]
     private void OnViewerDetached(Entity<ActiveRemoteScreenViewerComponent> ent, ref PlayerDetachedEvent args)
     {
         RevokeAllForActor(ent.Owner, args.Player);
     }
 
-    private void RevokeTrackedPvs(EntityUid actorUid, ICommonSession? session)
+    private void RevokeTrackedPvs(ActiveRemoteScreenViewerComponent comp, ICommonSession? session)
     {
-        if (!_viewerTrackedPvs.Remove(actorUid, out var tracked))
+        if (comp.TrackedPvs.Count == 0)
             return;
 
-        if (session == null)
-            return;
-
-        foreach (var ent in tracked)
+        if (session != null)
         {
-            if (Exists(ent))
-                _pvsOverride.RemoveSessionOverride(ent, session);
+            foreach (var ent in comp.TrackedPvs)
+            {
+                if (Exists(ent))
+                    _pvsOverride.RemoveSessionOverride(ent, session);
+            }
         }
+
+        comp.TrackedPvs.Clear();
     }
 
     public bool TryBuildRemoteScreenState(
@@ -99,22 +96,33 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return false;
         }
 
-        if (!_router.HasActiveNetworkCard(targetComputerUid))
+        var sourceCompUid = _router.ResolveComputerFromProgram(terminalProgUid);
+        if (sourceCompUid.IsValid() &&
+            !_router.AreEndpointsConnected(sourceCompUid, targetComputerUid, out _, out var netErr))
         {
-            error = "Target computer has no active network card installed.";
+            error = netErr;
             return false;
         }
 
-        if (depth >= 4)
+        if (_activeViewerQuery.TryComp(actor, out var actorViewer))
+        {
+            var effectiveDepth = Math.Max(depth, actorViewer.AuthorizedTargets.Count(n => TryGetEntity(n, out var e) && HasComp<OxydComputerComponent>(e)));
+            if (effectiveDepth >= 4)
+            {
+                error = "Maximum screen-sharing recursion depth reached.";
+                return false;
+            }
+            depth = effectiveDepth;
+        }
+        else if (depth >= 4)
         {
             error = "Maximum screen-sharing recursion depth reached.";
             return false;
         }
 
-        var compSys = EntityManager.System<OxydComputerSystem>();
         var guid = _router.EnsureDeviceGuid(targetComputerUid);
         var category = GetDeviceCategory(targetComputerUid, targetComp);
-        var primaryKey = compSys.GetPrimaryUiKey(targetComputerUid, targetComp);
+        var primaryKey = _computer.GetPrimaryUiKey(targetComputerUid, targetComp);
         var fgName = MetaData(targetComputerUid).EntityName;
 
         if (targetComp.ActiveProgram is { } active && Exists(active) && TryComp<ProgramComponent>(active, out var actProg))
@@ -127,7 +135,9 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             .Select(p => GetNetEntity(p))
             .ToList();
 
-        _alreadyOpenOnAttach.TryGetValue((actor, targetComputerUid), out var wasAlreadyOpen);
+        var wasAlreadyOpen = _activeViewerQuery.TryComp(actor, out var vComp) &&
+                             vComp.AlreadyOpenOnAttach.TryGetValue(targetComputerUid, out var openFlag) &&
+                             openFlag;
 
         state = new RemoteScreenState(
             GetNetEntity(targetComputerUid),
@@ -156,9 +166,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         if (!TryComp<ActorComponent>(actor, out var actorComp))
             return;
 
-        var compSys = EntityManager.System<OxydComputerSystem>();
         if (!targetComp.IsBooted && targetComp.AutoBootWhenPowered)
-            compSys.RefreshComputerBootState(targetComputerUid, targetComp);
+            _computer.RefreshComputerBootState(targetComputerUid, targetComp);
 
         var targets = new HashSet<NetEntity> { GetNetEntity(targetComputerUid) };
         var pvsEntities = new HashSet<EntityUid> { targetComputerUid };
@@ -183,22 +192,16 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             remViewer.AuthorizedTargets.Add(net);
         Dirty(actor, remViewer);
 
-        if (!_viewerTrackedPvs.TryGetValue(actor, out var tracked))
-        {
-            tracked = new HashSet<EntityUid>();
-            _viewerTrackedPvs[actor] = tracked;
-        }
-
         foreach (var pvsEnt in pvsEntities)
         {
-            if (tracked.Add(pvsEnt))
+            if (remViewer.TrackedPvs.Add(pvsEnt))
                 _pvsOverride.AddSessionOverride(pvsEnt, actorComp.PlayerSession);
         }
 
-        var key = compSys.GetPrimaryUiKey(targetComputerUid, targetComp);
-        _alreadyOpenOnAttach[(actor, targetComputerUid)] = _ui.IsUiOpen(targetComputerUid, key, actor);
+        var key = _computer.GetPrimaryUiKey(targetComputerUid, targetComp);
+        remViewer.AlreadyOpenOnAttach[targetComputerUid] = _ui.IsUiOpen(targetComputerUid, key, actor);
         _ui.OpenUi(targetComputerUid, key, actor);
-        compSys.UpdateComputerDisplayUi(targetComputerUid, targetComp);
+        _computer.UpdateComputerDisplayUi(targetComputerUid, targetComp);
 
         foreach (var progUid in targetComp.RunningPrograms)
         {
@@ -227,12 +230,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             rem.AuthorizedTargets.Add(progNet);
             Dirty(actorUid, rem);
 
-            if (!_viewerTrackedPvs.TryGetValue(actorUid, out var tracked))
-            {
-                tracked = new HashSet<EntityUid>();
-                _viewerTrackedPvs[actorUid] = tracked;
-            }
-            if (tracked.Add(newProgUid))
+            if (rem.TrackedPvs.Add(newProgUid))
                 _pvsOverride.AddSessionOverride(newProgUid, actorComp.PlayerSession);
         }
     }
@@ -272,7 +270,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
 
     public bool IsDetachingViewer(EntityUid actor, EntityUid targetCompUid)
     {
-        return _detachingTargets.Contains((actor, _router.UnwrapComputerEntity(targetCompUid)));
+        return _activeViewerQuery.TryComp(actor, out var rem) &&
+               rem.DetachingTargets.Contains(_router.UnwrapComputerEntity(targetCompUid));
     }
 
     /// <summary>
@@ -286,7 +285,8 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         if (!Exists(compUid) || !Exists(actor))
             return;
 
-        _alreadyOpenOnAttach[(actor, compUid)] = true;
+        if (_activeViewerQuery.TryComp(actor, out var rem))
+            rem.AlreadyOpenOnAttach[compUid] = true;
 
         if (!_ui.IsUiOpen(compUid, key, actor))
             _ui.OpenUi(compUid, key, actor);
@@ -320,12 +320,12 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return;
         }
 
-        _alreadyOpenOnAttach[(actor, compUid)] = false;
+        if (_activeViewerQuery.TryComp(actor, out var rem))
+            rem.AlreadyOpenOnAttach[compUid] = false;
 
-        var compSys = EntityManager.System<OxydComputerSystem>();
-        var key = compSys.GetPrimaryUiKey(compUid, comp);
+        var key = _computer.GetPrimaryUiKey(compUid, comp);
         _ui.OpenUi(compUid, key, actor);
-        compSys.UpdateComputerDisplayUi(compUid, comp);
+        _computer.UpdateComputerDisplayUi(compUid, comp);
 
         foreach (var progUid in comp.RunningPrograms)
         {
@@ -340,17 +340,16 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         ActiveRemoteScreenViewerComponent rem,
         EntityUid targetCompUid)
     {
-        var keepLocalUiOpen = _alreadyOpenOnAttach.Remove((actorUid, targetCompUid), out var openOnClient) && openOnClient;
-        _detachingTargets.Add((actorUid, targetCompUid));
+        var keepLocalUiOpen = rem.AlreadyOpenOnAttach.Remove(targetCompUid, out var openOnClient) && openOnClient;
+        rem.DetachingTargets.Add(targetCompUid);
         try
         {
-            var compSys = EntityManager.System<OxydComputerSystem>();
             var targetNet = GetNetEntity(targetCompUid);
             rem.AuthorizedTargets.Remove(targetNet);
 
             if (TryComp<OxydComputerComponent>(targetCompUid, out var comp))
             {
-                var key = compSys.GetPrimaryUiKey(targetCompUid, comp);
+                var key = _computer.GetPrimaryUiKey(targetCompUid, comp);
                 if (!keepLocalUiOpen)
                     _ui.CloseUi(targetCompUid, key, actorUid);
 
@@ -359,7 +358,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
                     rem.AuthorizedTargets.Remove(GetNetEntity(progUid));
                     if (!keepLocalUiOpen && Exists(progUid))
                         _ui.CloseUi(progUid, ProgramUiKey.Key, actorUid);
-                    if (!keepLocalUiOpen && _viewerTrackedPvs.TryGetValue(actorUid, out var tracked) && tracked.Remove(progUid))
+                    if (!keepLocalUiOpen && rem.TrackedPvs.Remove(progUid))
                         _pvsOverride.RemoveSessionOverride(progUid, session);
                 }
             }
@@ -367,13 +366,12 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             if (!keepLocalUiOpen &&
                 TryComp<ComputerStatsComponent>(targetCompUid, out var stats) &&
                 stats.PrimaryDriveUid is { } dUid &&
-                _viewerTrackedPvs.TryGetValue(actorUid, out var t2) &&
-                t2.Remove(dUid))
+                rem.TrackedPvs.Remove(dUid))
             {
                 _pvsOverride.RemoveSessionOverride(dUid, session);
             }
 
-            if (!keepLocalUiOpen && _viewerTrackedPvs.TryGetValue(actorUid, out var t3) && t3.Remove(targetCompUid))
+            if (!keepLocalUiOpen && rem.TrackedPvs.Remove(targetCompUid))
                 _pvsOverride.RemoveSessionOverride(targetCompUid, session);
 
             if (rem.AuthorizedTargets.Count == 0)
@@ -383,7 +381,7 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
         }
         finally
         {
-            _detachingTargets.Remove((actorUid, targetCompUid));
+            rem.DetachingTargets.Remove(targetCompUid);
         }
     }
 
@@ -391,7 +389,13 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
     {
         if (TryComp<ActiveRemoteScreenViewerComponent>(actorUid, out var rem))
         {
-            var targets = rem.AuthorizedTargets.Select(GetEntity).ToList();
+            var targets = new List<EntityUid>();
+            foreach (var netEnt in rem.AuthorizedTargets)
+            {
+                if (TryGetEntity(netEnt, out var resolved))
+                    targets.Add(resolved.Value);
+            }
+
             foreach (var ent in targets)
             {
                 if (Exists(ent) && HasComp<OxydComputerComponent>(ent))
@@ -402,23 +406,12 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             {
                 foreach (var netEnt in rem.AuthorizedTargets.ToList())
                 {
-                    var ent = GetEntity(netEnt);
-                    if (Exists(ent) && HasComp<ProgramComponent>(ent))
-                        _ui.CloseUi(ent, ProgramUiKey.Key, actorUid);
+                    if (TryGetEntity(netEnt, out var ent) && Exists(ent.Value) && HasComp<ProgramComponent>(ent.Value))
+                        _ui.CloseUi(ent.Value, ProgramUiKey.Key, actorUid);
                 }
+                RevokeTrackedPvs(rem, session);
+                rem.AlreadyOpenOnAttach.Clear();
                 RemComp<ActiveRemoteScreenViewerComponent>(actorUid);
-            }
-        }
-
-        foreach (var k in _alreadyOpenOnAttach.Keys.Where(k => k.Actor == actorUid).ToList())
-            _alreadyOpenOnAttach.Remove(k);
-
-        if (_viewerTrackedPvs.Remove(actorUid, out var tracked))
-        {
-            foreach (var ent in tracked)
-            {
-                if (Exists(ent))
-                    _pvsOverride.RemoveSessionOverride(ent, session);
             }
         }
     }

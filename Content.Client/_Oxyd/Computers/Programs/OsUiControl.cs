@@ -187,7 +187,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             Name = "OsShutDownButton",
             Text = "Shut Down",
-            SetWidth = 84,
+            SetWidth = 100,
             VerticalAlignment = VAlignment.Center
         };
         shutDownBtn.OnPressed += _ => SendProgramMessage(new OsShutDownMessage());
@@ -568,7 +568,9 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             });
             textCol.AddChild(new ContentLabel
             {
-                Text = exec.IsRunning ? $"ACTIVE  •  {exec.RamUsageMb} MB" : $"{exec.RamUsageMb} MB  •  .nte",
+                Text = exec.IsRunning
+                    ? $"ACTIVE  •  {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRamQb(exec.RamUsageMb)}"
+                    : Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRamQb(exec.RamUsageMb),
                 WordWrap = false,
                 ClipText = true,
                 HorizontalExpand = true,
@@ -625,7 +627,7 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             _desktopAppsGrid.AddChild(new ContentLabel
             {
-                Text = "No applications installed on hard drive (/bin/*.nte).",
+                Text = "No applications installed on hard drive.",
                 FontColorOverride = Color.FromHex("#8899AA")
             });
         }
@@ -635,12 +637,12 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
     {
         var hw = state.Hardware;
         var netStr = hw.HasNetworkCard
-            ? $"{hw.BandwidthBps / 1024} KB/s{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
+            ? $"{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(hw.BandwidthBps)}{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
             : "NONE";
         _hwDetailsLabel.Text =
             $"Host: {hw.HostName}   |   GUID: {hw.DeviceGuid}\n" +
-            $"CPU: {hw.CpuMhz} MHz (Max {hw.MaxPrograms} apps)   |   RAM: {hw.RamUsedMb} / {hw.RamTotalMb} MB\n" +
-            $"Storage: {hw.StorageUsedBytes / 1024} / {hw.StorageTotalBytes / 1024} KB   |   NIC: {netStr}\n" +
+            $"CPU: {hw.CpuMhz} MHz (Max {hw.MaxPrograms} apps)   |   RAM: {hw.RamUsedMb} / {hw.RamTotalMb} QB\n" +
+            $"Storage: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)} / {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageTotalBytes)}   |   NIC: {netStr}\n" +
             $"DataPort: {(hw.HasDataPort ? "PRESENT" : "NONE")}   |   Remote Control: {(hw.AllowRemoteControl ? "ENABLED" : "DISABLED")}   |   DeviceLink: {(hw.AllowDeviceLink ? "ENABLED" : "DISABLED")}\n" +
             $"Inserted Disk: {state.InsertedDiskName ?? "None"}";
 
@@ -903,7 +905,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             Name = "EmbeddedOsShutDownButton",
             Text = "Shut Down",
-            SetWidth = 82,
+            SetWidth = 100,
             VerticalAlignment = VAlignment.Top
         };
         shutDownBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsShutDownMessage());
@@ -987,10 +989,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 
         _activeChildNet = state.ActiveChildProgram;
         var hw = state.Hardware;
-        var isSimpleTwoTabMode =
-            string.Equals(state.DefaultAppPath, ApcAppPath, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(state.DefaultAppPath, AtmosAppPath, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(state.DefaultAppPath, LatheAppPath, StringComparison.OrdinalIgnoreCase);
+        var isSimpleTwoTabMode = state.IsDedicatedPanel;
 
         if (!string.IsNullOrWhiteSpace(state.DefaultAppPath))
             _defaultAppPath = state.DefaultAppPath;
@@ -1096,7 +1095,7 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             : "NONE";
         _sysDetailsLabel.Text =
             $"Host: {state.HostName}   |   GUID: {state.DeviceGuid}\n" +
-            $"CPU: {hw.CpuMhz} MHz   |   RAM: {hw.RamUsedMb}/{hw.RamTotalMb} MB   |   HDD: {hw.StorageUsedBytes / 1024} KB   |   NIC: {nicText}   |   DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
+            $"CPU: {hw.CpuMhz} MHz   |   RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB   |   HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)}   |   NIC: {nicText}   |   DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
 
         _appsGrid.RemoveAllChildren();
         foreach (var exec in state.InstalledExecutables)

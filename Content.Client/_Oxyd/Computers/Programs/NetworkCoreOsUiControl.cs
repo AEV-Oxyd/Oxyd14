@@ -111,7 +111,7 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         {
             Name = "NetworkCoreShutDownButton",
             Text = "Shut Down",
-            SetWidth = 84,
+            SetWidth = 100,
             VerticalAlignment = VAlignment.Center
         };
         shutDownBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.ShutDown));
@@ -196,10 +196,10 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         };
 
         var actionRow = new ContentWrapContainer { HorizontalSeparation = 6, VerticalSeparation = 4 };
-        _autoSyncToggleBtn = new ContentButton { Name = "NetCoreAutoSyncToggleBtn", Text = "Auto-Provision Joining Crew: ON", MinWidth = 210 };
+        _autoSyncToggleBtn = new ContentButton { Name = "NetCoreAutoSyncToggleBtn", Text = "Auto-Provision Personnel: ON", MinWidth = 200 };
         _autoSyncToggleBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.ToggleAutoSync));
 
-        _forceSyncBtn = new ContentButton { Name = "NetCoreForceSyncBtn", Text = "Force Resync All Station Records", MinWidth = 210 };
+        _forceSyncBtn = new ContentButton { Name = "NetCoreForceSyncBtn", Text = "Resync Station Records", MinWidth = 180 };
         _forceSyncBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.ForceSyncAllRecords));
 
         actionRow.AddChild(_autoSyncToggleBtn);
@@ -279,10 +279,11 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         var hw = state.Hardware;
 
         _headerLabel.Text = $"{state.HostName} — NETWORK CORE OS [{state.DeviceGuid}]";
-        _hwLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb}MB | HDD: {hw.StorageUsedBytes / 1024}KB | NIC: {(hw.HasNetworkCard ? "ONLINE" : "OFFLINE")}";
+        _hwLabel.Text = $"CPU: {hw.CpuMhz}MHz | RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB | HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)} | NIC: {(hw.HasNetworkCard ? "ONLINE" : "OFFLINE")}";
 
         _coreTabBtn.Pressed = state.CurrentTab == 0;
         _installedTabBtn.Pressed = state.CurrentTab == 2;
+        _refreshBtn.Visible = state.CurrentTab != 1;
 
         _coreView.Visible = state.CurrentTab == 0;
         _childViewport.Visible = state.CurrentTab == 1;
@@ -295,11 +296,11 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
 
         _statsSummaryLabel.Text =
             $"Devices: {state.ConnectedDevicesCount} | Wi-Fi Cameras: {state.ConnectedCamerasCount} | Active Sessions: {state.ActiveConnectionsCount} | Blacklisted: {state.BlacklistedCount} | Packets: {state.RecordedPacketsCount}";
-        _lastSyncLabel.Text = $"Auto-Synced Joins: {state.AutoSyncCount} | {state.LastSyncSummary}";
+        _lastSyncLabel.Text = $"Provisioned Records: {state.AutoSyncCount} | {state.LastSyncSummary}";
 
         _autoSyncToggleBtn.Text = state.AutoSyncRecords
-            ? "Auto-Provision Joining Crew: ON"
-            : "Auto-Provision Joining Crew: OFF";
+            ? "Auto-Provision Personnel: ON"
+            : "Auto-Provision Personnel: OFF";
         _autoSyncToggleBtn.Pressed = state.AutoSyncRecords;
 
         _syncLogsContainer.RemoveAllChildren();
@@ -368,7 +369,7 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
             }
             row.AddChild(new ContentLabel
             {
-                Text = $"{exec.Name} ({exec.FilePath})",
+                Text = exec.Name,
                 HorizontalExpand = true,
                 VerticalAlignment = VAlignment.Center
             });
@@ -381,7 +382,7 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
             }
             else
             {
-                var runBtn = new ContentButton { Text = "Run .nte", MinWidth = 74 };
+                var runBtn = new ContentButton { Text = "Run", MinWidth = 68 };
                 var path = exec.FilePath;
                 runBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.LaunchProgram, executablePath: path));
                 row.AddChild(runBtn);

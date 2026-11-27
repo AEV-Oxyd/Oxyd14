@@ -217,7 +217,8 @@ public sealed partial class AirAlarmSystem : EntitySystem
             return;
         }
 
-        if (_lock.IsLocked(ent.Owner))
+        var isRemoteAuthorized = packet?.ProtectedReferences.ContainsKey("RemoteAuthorizedComputer") == true;
+        if (!isRemoteAuthorized && _lock.IsLocked(ent.Owner))
         {
             EmitAirAlarmStatusPacket(ent.Owner, ent.Comp);
             return;
@@ -263,13 +264,15 @@ public sealed partial class AirAlarmSystem : EntitySystem
                 return;
 
             var src = decoded[0];
+            var extBound = float.IsFinite(src.ExternalPressureBound) ? Math.Clamp(src.ExternalPressureBound, 0f, 5000f) : 101.325f;
+            var intBound = float.IsFinite(src.InternalPressureBound) ? Math.Clamp(src.InternalPressureBound, 0f, 5000f) : 0f;
             var ventData = new GasVentPumpData
             {
                 Enabled = src.Enabled,
                 PumpDirection = src.PumpDirection,
                 PressureChecks = src.PressureChecks,
-                ExternalPressureBound = MathF.Max(0f, src.ExternalPressureBound),
-                InternalPressureBound = MathF.Max(0f, src.InternalPressureBound),
+                ExternalPressureBound = extBound,
+                InternalPressureBound = intBound,
                 Dirty = true
             };
 
@@ -316,13 +319,21 @@ public sealed partial class AirAlarmSystem : EntitySystem
             var src = decoded[0];
             var direction = ent.Comp.PanicWireCut ? ScrubberPumpDirection.Siphoning : src.PumpDirection;
 
+            var safeVol = float.IsFinite(src.VolumeRate) ? Math.Clamp(src.VolumeRate, 0f, 200f) : 200f;
+            var safeGases = new HashSet<Gas>();
+            foreach (var g in src.FilterGases)
+            {
+                if (Enum.IsDefined(typeof(Gas), g))
+                    safeGases.Add(g);
+            }
+
             GasVentScrubberData BuildScrubber() => new()
             {
                 Enabled = src.Enabled,
                 PumpDirection = direction,
-                VolumeRate = MathF.Max(0f, src.VolumeRate),
+                VolumeRate = safeVol,
                 WideNet = src.WideNet,
-                FilterGases = new HashSet<Gas>(src.FilterGases),
+                FilterGases = new HashSet<Gas>(safeGases),
                 AirAlarmPanicWireCut = ent.Comp.PanicWireCut,
                 Dirty = true
             };
@@ -357,9 +368,17 @@ public sealed partial class AirAlarmSystem : EntitySystem
         else if (cmd is "set_threshold" or "set_all_thresholds" && packet != null)
         {
             var typeInt = packet.GetInt("ThresholdType", (int) AtmosMonitorThresholdType.Pressure);
+            if (!Enum.IsDefined(typeof(AtmosMonitorThresholdType), typeInt))
+                return;
             var thresholdType = (AtmosMonitorThresholdType) typeInt;
             var gasInt = packet.GetInt("Gas", -1);
-            Gas? gas = gasInt >= 0 ? (Gas) gasInt : null;
+            Gas? gas = null;
+            if (gasInt >= 0)
+            {
+                if (!Enum.IsDefined(typeof(Gas), gasInt))
+                    return;
+                gas = (Gas) gasInt;
+            }
             var thresholdDto = AtmosControlCodec.DecodeThreshold(packet.GetString("ThresholdRaw", string.Empty) ?? string.Empty);
             var threshold = thresholdDto.ToThreshold();
 
@@ -396,7 +415,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
                 foreach (var entry in gasRaw.Split('~', StringSplitOptions.RemoveEmptyEntries))
                 {
                     var kv = entry.Split('=', 2);
-                    if (kv.Length == 2 && int.TryParse(kv[0], out var gIdx))
+                    if (kv.Length == 2 && int.TryParse(kv[0], out var gIdx) && Enum.IsDefined(typeof(Gas), gIdx))
                         gasThresholds[(Gas) gIdx] = AtmosControlCodec.DecodeThreshold(kv[1]).ToThreshold();
                 }
             }

@@ -1,8 +1,10 @@
 using System.Numerics;
+using Content.Client.UserInterface.Controls;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Graphics;
+using Robust.Shared.Input;
 using Robust.Shared.Maths;
 using Robust.Shared.Timing;
 
@@ -10,7 +12,7 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 
 /// <summary>
 /// Registry of active <see cref="PipScreenSurface"/> controls indexed by device GUID.
-/// Allows <see cref="PipMirrorViewport"/> instances to locate the live offscreen render texture
+/// Allows <see cref="RemoteScreenView"/> instances to locate the live offscreen render texture
 /// of an ancestor or open device screen without recursive widget parenting.
 /// </summary>
 public static class PipSurfaceRegistry
@@ -84,8 +86,20 @@ public static class PipSurfaceRegistry
 /// without physical widget re-parenting or recursive stack overflows.
 /// </summary>
 [Virtual]
-public partial class PipScreenSurface : BoxContainer
+public partial class PipScreenSurface : BoxContainer, IInputRelayTarget
 {
+    public virtual void RelayKeyBindDown(GUIBoundKeyEventArgs args) => KeyBindDown(args);
+    public virtual void RelayKeyBindUp(GUIBoundKeyEventArgs args) => KeyBindUp(args);
+    public virtual void RelayMouseMove(GUIMouseMoveEventArgs args) => MouseMove(args);
+    public virtual void RelayMouseWheel(GUIMouseWheelEventArgs args) => MouseWheel(args);
+    public virtual void RelayMouseEntered() => MouseEntered();
+    public virtual void RelayMouseExited() => MouseExited();
+    public virtual void RelayKeyHeld(GUIKeyEventArgs args) => KeyHeld(args);
+    public virtual void RelayTextEntered(GUITextEnteredEventArgs args) => TextEntered(args);
+    public virtual void RelayTextEditing(GUITextEditingEventArgs args) => TextEditing(args);
+    public virtual void RelayKeyboardFocusEntered() => KeyboardFocusEntered();
+    public virtual void RelayKeyboardFocusExited() => KeyboardFocusExited();
+    public virtual void RelayControlFocusExited() => ControlFocusExited();
     [Dependency] private IClyde _clyde = default!;
     [Dependency] private IEntityManager _entManager = default!;
     private ClientRemoteScreenSystem? _remoteSys;

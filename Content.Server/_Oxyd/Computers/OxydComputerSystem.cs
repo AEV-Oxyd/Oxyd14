@@ -69,6 +69,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private NetworkCoreOsSystem _netCoreOs = default!;
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
+    [Dependency] private LockSystem _lock = default!;
 
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
     [Dependency] private EntityQuery<EmbeddedComputerHostComponent> _hostQuery = default!;
@@ -81,62 +82,6 @@ public sealed partial class OxydComputerSystem : EntitySystem
     private static readonly ProtoId<SinkPortPrototype> PortComputerStatusReceiver = "ComputerStatusReceiver";
     private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
     private static readonly ProtoId<SinkPortPrototype> PortMachineCommandReceiver = "MachineCommandReceiver";
-
-    private static readonly Dictionary<string, string> ProgramScreenStates = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["/bin/cameras.nte"] = "cameras",
-        ["SurveillanceCameraProgram"] = "cameras",
-        ["/bin/cargo_orders.nte"] = "request",
-        ["CargoOrdersProgram"] = "request",
-        ["/bin/crew_monitor.nte"] = "crew",
-        ["CrewMonitorProgram"] = "crew",
-        ["/bin/crew_manifest.nte"] = "medcomp",
-        ["CrewManifestProgram"] = "medcomp",
-        ["/bin/station_records.nte"] = "medcomp",
-        ["StationRecordsProgram"] = "medcomp",
-        ["/bin/criminal_records.nte"] = "security",
-        ["CriminalRecordsProgram"] = "security",
-        ["/bin/wanted_list.nte"] = "security",
-        ["WantedListProgram"] = "security",
-        ["/bin/comms_console.nte"] = "comm",
-        ["CommsConsoleProgram"] = "comm",
-        ["/bin/solar_control.nte"] = "solar_screen",
-        ["SolarControlProgram"] = "solar_screen",
-        ["/bin/apc_control.nte"] = "power_monitor",
-        ["ApcControlProgram"] = "power_monitor",
-        ["/bin/atmos_control.nte"] = "area_atmos",
-        ["AtmosControlProgram"] = "area_atmos",
-        ["/bin/id_console.nte"] = "id",
-        ["IdModifierProgram"] = "id",
-        ["/bin/access_encoder.nte"] = "id",
-        ["AccessEncoderProgram"] = "id",
-        ["/bin/lathe_control.nte"] = "rdcomp",
-        ["LatheControlProgram"] = "rdcomp",
-        ["/bin/medtek.nte"] = "medcomp",
-        ["MedTekProgram"] = "medcomp",
-        ["/bin/astronav.nte"] = "helm",
-        ["AstroNavProgram"] = "helm",
-        ["/bin/news_reader.nte"] = "comm_monitor",
-        ["NewsReaderProgram"] = "comm_monitor",
-        ["/bin/terminal.nte"] = "tcboss",
-        ["TerminalProgram"] = "tcboss",
-        ["/bin/netprobe.nte"] = "tcboss",
-        ["NetProbeProgram"] = "tcboss",
-        ["/bin/logprobe.nte"] = "comm_logs",
-        ["LogProbeProgram"] = "comm_logs",
-        ["/bin/packet_sniffer.nte"] = "tcboss",
-        ["OxydPacketSnifferProgram"] = "tcboss",
-        ["/bin/router.nte"] = "tcboss",
-        ["NetworkRouterProgram"] = "tcboss",
-        ["/bin/notekeeper.nte"] = "generic",
-        ["NotekeeperProgram"] = "generic",
-        ["/bin/nanotask.nte"] = "allocate",
-        ["NanoTaskProgram"] = "allocate",
-        ["/bin/file_browser.nte"] = "generic",
-        ["OxydFileBrowserProgram"] = "generic",
-        ["/bin/downloader.nte"] = "generic",
-        ["DownloaderProgram"] = "generic"
-    };
 
     [SubscribeLocalEvent]
     private void OnHostMapInit(Entity<EmbeddedComputerHostComponent> ent, ref MapInitEvent args)
@@ -269,7 +214,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnHardwareOrProgramInserted(Entity<OxydComputerComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
-        if (args.Container.ID == OxydComputerComponent.ContainerPrograms)
+        if (args.Container.ID == OxydComputerComponent.ContainerPrograms || ent.Comp.InitializingHardware)
             return;
 
         RecalculateHardwareStats(ent.Owner, ent.Comp);
@@ -412,6 +357,52 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
     }
 
+    public bool IsHostLocked(EntityUid compUid, OxydComputerComponent? comp = null)
+    {
+        return _computerQuery.Resolve(compUid, ref comp, false) &&
+               comp.HostMachine is { } hm &&
+               Exists(hm) &&
+               _lock.IsLocked(hm);
+    }
+
+    /// <summary>
+    /// Central server validation guard for program BUI actions: ensures the program is still running on a booted,
+    /// powered computer with intact power bus, and optionally verifies the host machine is not hardware-locked.
+    /// </summary>
+    public bool CanExecuteProgramAction(
+        EntityUid progUid,
+        EntityUid? actor,
+        out string blockReason,
+        bool checkHostLock = true)
+    {
+        if (!_programQuery.TryComp(progUid, out var prog) || prog.Computer is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
+        {
+            blockReason = "Program is not bound to an active computer.";
+            return false;
+        }
+
+        if (!comp.IsBooted || comp.PowerWireCut || (comp.RequirePowerToBoot && !comp.IsPowered))
+        {
+            blockReason = "Computer is powered off or not booted.";
+            return false;
+        }
+
+        if (!comp.RunningPrograms.Contains(progUid))
+        {
+            blockReason = "Program is no longer running.";
+            return false;
+        }
+
+        if (checkHostLock && IsHostLocked(compUid, comp))
+        {
+            blockReason = "Access denied: Host console is hardware-locked. Swipe authorized ID to unlock.";
+            return false;
+        }
+
+        blockReason = string.Empty;
+        return true;
+    }
+
     /// <summary>
     /// Connects the computer entity to ALL source and sink ports on its represented host machine via DeviceLinkSystem.
     /// </summary>
@@ -421,12 +412,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
         _deviceLink.EnsureSinkPort(compUid, PortComputerStatusReceiver);
 
         if (_sinkQuery.TryComp(compUid, out var compSink))
-            _deviceLink.SetInvokeLimit((compUid, compSink), 0);
+            _deviceLink.SetInvokeLimit((compUid, compSink), 64);
 
         var outLinks = new List<DeviceLink>();
         if (_sinkQuery.TryComp(hostUid, out var hostSinks))
         {
-            _deviceLink.SetInvokeLimit((hostUid, hostSinks), 0);
+            _deviceLink.SetInvokeLimit((hostUid, hostSinks), 64);
             foreach (var sinkPort in hostSinks.Ports)
             {
                 outLinks.Add(new DeviceLink(PortComputerCommandSender, sinkPort));
@@ -437,9 +428,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         if (_sourceQuery.TryComp(hostUid, out var hostSources))
         {
+            var hasDedicatedStatusSource = false;
+            foreach (var srcPort in hostSources.Ports)
+            {
+                if (srcPort == "ApcStatusSource" ||
+                    srcPort == "AirAlarmStatusSource" ||
+                    srcPort == "PdaFlashlightStatusSource")
+                {
+                    hasDedicatedStatusSource = true;
+                    break;
+                }
+            }
+
             var inLinks = new List<DeviceLink>();
             foreach (var srcPort in hostSources.Ports)
             {
+                if (hasDedicatedStatusSource && srcPort == PortMachineStatusSender)
+                    continue;
+
                 inLinks.Add(new DeviceLink(srcPort, PortComputerStatusReceiver));
             }
             if (inLinks.Count > 0)
@@ -477,15 +483,23 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (comp.DefaultHardware.Count == 0)
             return;
 
-        var coords = Transform(compUid).Coordinates;
-        foreach (var protoId in comp.DefaultHardware)
+        comp.InitializingHardware = true;
+        try
         {
-            if (!_proto.HasIndex<EntityPrototype>(protoId))
-                continue;
+            var coords = Transform(compUid).Coordinates;
+            foreach (var protoId in comp.DefaultHardware)
+            {
+                if (!_proto.HasIndex<EntityPrototype>(protoId))
+                    continue;
 
-            var partUid = Spawn(protoId, coords);
-            if (!TryInsertHardwarePartIntoSlot(compUid, partUid))
-                _container.Insert(partUid, hwContainer);
+                var partUid = Spawn(protoId, coords);
+                if (!TryInsertHardwarePartIntoSlot(compUid, partUid))
+                    _container.Insert(partUid, hwContainer);
+            }
+        }
+        finally
+        {
+            comp.InitializingHardware = false;
         }
     }
 
@@ -752,7 +766,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         if (bootRam > stats.RamMb || stats.MaxConcurrentPrograms < 1)
         {
-            FailBoot(compUid, comp, ComputerBootState.NoRam, $"BOOT FAILURE: '{firstPath}' requires {bootRam} MB RAM ({stats.RamMb} MB installed).");
+            FailBoot(compUid, comp, ComputerBootState.NoRam, $"BOOT FAILURE: '{firstPath}' requires {bootRam} QB RAM ({stats.RamMb} QB installed).");
             return;
         }
 
@@ -967,7 +981,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         if (stats.UsedRamMb + ramNeeded > stats.RamMb)
         {
-            error = $"Insufficient RAM: needs {ramNeeded} MB, only {Math.Max(0, stats.RamMb - stats.UsedRamMb)} MB free.";
+            error = $"Insufficient RAM: needs {ramNeeded} QB, only {Math.Max(0, stats.RamMb - stats.UsedRamMb)} QB free.";
             return false;
         }
 
@@ -1369,16 +1383,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (comp.IsBooted &&
             comp.ActiveProgram is { } activeUid &&
             Exists(activeUid) &&
-            _programQuery.TryComp(activeUid, out var activeProg))
+            _programQuery.TryComp(activeUid, out var activeProg) &&
+            !string.IsNullOrWhiteSpace(activeProg.ScreenState))
         {
-            if (!string.IsNullOrWhiteSpace(activeProg.ScreenState))
-                desiredScreen = activeProg.ScreenState;
-            else if (!string.IsNullOrWhiteSpace(activeProg.ExecutablePath) &&
-                     ProgramScreenStates.TryGetValue(activeProg.ExecutablePath, out var byPath))
-                desiredScreen = byPath;
-            else if (activeProg.Prototype is { } protoId &&
-                     ProgramScreenStates.TryGetValue(protoId.Id, out var byProto))
-                desiredScreen = byProto;
+            desiredScreen = activeProg.ScreenState;
         }
 
         _appearance.SetData(hostUid, ComputerVisuals.ScreenState, desiredScreen);

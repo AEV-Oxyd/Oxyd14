@@ -38,6 +38,7 @@ public sealed class IdModifierUiState : BoundUserInterfaceState
     public string TargetJobPrototype { get; }
     public List<string> TargetAccessTags { get; }
     public string StatusMessage { get; }
+    public bool IsLocked { get; }
 
     public IdModifierUiState(
         int slotCount,
@@ -56,7 +57,8 @@ public sealed class IdModifierUiState : BoundUserInterfaceState
         string targetJobTitle,
         string targetJobPrototype,
         List<string> targetAccessTags,
-        string statusMessage)
+        string statusMessage,
+        bool isLocked = false)
     {
         SlotCount = slotCount;
         HasRequiredModificationHardware = hasRequiredModificationHardware;
@@ -75,6 +77,7 @@ public sealed class IdModifierUiState : BoundUserInterfaceState
         TargetJobPrototype = targetJobPrototype;
         TargetAccessTags = targetAccessTags;
         StatusMessage = statusMessage;
+        IsLocked = isLocked;
     }
 }
 

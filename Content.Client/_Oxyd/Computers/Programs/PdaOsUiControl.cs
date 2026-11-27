@@ -155,7 +155,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             Name = "PdaShutDownButton",
             Text = "Shut Down",
-            SetWidth = 76,
+            SetWidth = 100,
             VerticalAlignment = VAlignment.Top
         };
         shutDownBtn.OnPressed += _ => SendProgramMessage(new PdaOsShutDownMessage());
@@ -656,7 +656,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
 
             row.AddChild(new ContentLabel
             {
-                Text = $"{exec.Name} [{exec.FilePath}]",
+                Text = exec.Name,
                 HorizontalExpand = true,
                 FontColorOverride = exec.IsRunning ? Color.FromHex("#88EEFF") : Color.FromHex("#E0F7FA")
             });
@@ -709,13 +709,13 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
 
         var hw = state.Hardware;
         var netStr = hw.HasNetworkCard
-            ? $"{hw.BandwidthBps / 1024} KB/s{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
+            ? $"{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(hw.BandwidthBps)}{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
             : "NONE";
 
         _hwDetailsLabel.Text =
             $"Device: {hw.HostName} | GUID: {hw.DeviceGuid}\n" +
-            $"CPU: {hw.CpuMhz} MHz (max {hw.MaxPrograms} apps) | RAM: {hw.RamUsedMb}/{hw.RamTotalMb} MB\n" +
-            $"HDD: {hw.StorageUsedBytes / 1024}/{hw.StorageTotalBytes / 1024} KB | NET: {netStr}\n" +
+            $"CPU: {hw.CpuMhz} MHz (max {hw.MaxPrograms} apps) | RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB\n" +
+            $"HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)} / {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageTotalBytes)} | NET: {netStr}\n" +
             $"DataPort: {(hw.HasDataPort ? "PRESENT" : "NONE")} | RemoteCtrl: {hw.AllowRemoteControl} | DeviceLink: {hw.AllowDeviceLink} | Flashlight: {(state.FlashlightOn ? "ON" : "OFF")}";
 
         _portsContainer.RemoveAllChildren();

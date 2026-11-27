@@ -26,8 +26,20 @@ namespace Content.Client._Oxyd.Computers.ScreenSharing;
 /// (mouse clicks, hovers, scroll, keyboard typing, focus) directly to the target UI without reflection.
 /// Infinite recursive cycles (A -> B -> A or A -> A) are rendered via Picture-in-Picture (PiP) mirror textures.
 /// </summary>
-public sealed partial class RemoteScreenView : LayoutContainer
+public sealed partial class RemoteScreenView : LayoutContainer, IInputRelayTarget
 {
+    public void RelayKeyBindDown(GUIBoundKeyEventArgs args) => KeyBindDown(args);
+    public void RelayKeyBindUp(GUIBoundKeyEventArgs args) => KeyBindUp(args);
+    public void RelayMouseMove(GUIMouseMoveEventArgs args) => MouseMove(args);
+    public void RelayMouseWheel(GUIMouseWheelEventArgs args) => MouseWheel(args);
+    public void RelayMouseEntered() => MouseEntered();
+    public void RelayMouseExited() => MouseExited();
+    public void RelayKeyHeld(GUIKeyEventArgs args) => KeyHeld(args);
+    public void RelayTextEntered(GUITextEnteredEventArgs args) => TextEntered(args);
+    public void RelayTextEditing(GUITextEditingEventArgs args) => TextEditing(args);
+    public void RelayKeyboardFocusEntered() => KeyboardFocusEntered();
+    public void RelayKeyboardFocusExited() => KeyboardFocusExited();
+    public void RelayControlFocusExited() => ControlFocusExited();
     /// <summary>
     /// Dedicated offscreen container parented to WindowRoot at an unreachable negative coordinate.
     /// Allows remote target windows to maintain active layout, measurement, and style resolution
@@ -56,7 +68,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
     public event Action<string?, string?>? OnRemoteAction;
 
     private readonly PipScreenSurface _surface;
-    private readonly Label _statusLabel;
+    private readonly ContentLabel _statusLabel;
 
     private IRemoteTargetUi? _activeTargetUi;
     private string? _deviceGuid;
@@ -120,7 +132,7 @@ public sealed partial class RemoteScreenView : LayoutContainer
         CanKeyboardFocus = false;
         KeyboardFocusOnClick = false;
 
-        _statusLabel = new Label
+        _statusLabel = new ContentLabel
         {
             Text = "INITIALIZING REMOTE STREAM...",
             FontColorOverride = Color.FromHex("#00D4FF"),

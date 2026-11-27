@@ -54,9 +54,7 @@ public sealed partial class DataServerSystem : EntitySystem
     {
         base.Initialize();
 
-        SubscribeLocalEvent<DataServerComponent, DeviceNetworkPacketEvent<ServiceRequestPayload>>(OnServiceRequest);
 #if DEBUG
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundRestartCleanup);
         EntityManager.BeforeEntityFlush += OnBeforeEntityFlush;
         EntityManager.AfterEntityFlush += OnAfterEntityFlush;
 #endif
@@ -82,6 +80,7 @@ public sealed partial class DataServerSystem : EntitySystem
         _flushingEntities = false;
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundRestartCleanup(RoundRestartCleanupEvent ev)
     {
         _debugServerHost = EntityUid.Invalid;
@@ -109,6 +108,7 @@ public sealed partial class DataServerSystem : EntitySystem
     }
 #endif
 
+    [SubscribeLocalEvent]
     private void OnServiceRequest(Entity<DataServerComponent> ent, ref DeviceNetworkPacketEvent<ServiceRequestPayload> args)
     {
         if (!_router.IsRouterOperational(ent.Owner) || !_router.HasActiveNetworkCard(ent.Owner))
@@ -150,16 +150,57 @@ public sealed partial class DataServerSystem : EntitySystem
 
             if (manifestFile != null)
             {
-                _bandwidth.RecordDataTransmitted(ent.Owner, manifestFile.Size, isUpload: true);
-                var response = new FileTransferPayload
+                var content = string.Join("\n", manifestFile.Data.Select(kv => $"{kv.Key}={kv.Value}"));
+                var senderAddr = args.SenderAddress;
+                var freq = args.Frequency;
+                var authToken = args.Data.AuthToken;
+                var dir = manifestFile.Directory;
+                var name = manifestFile.Name;
+                var ext = manifestFile.Extension;
+                var size = Math.Max(64, manifestFile.Size);
+
+                var router = _router.FindNearestRouter(ent.Owner);
+                if (router != null && Exists(args.Sender))
                 {
-                    Path = manifestFile.Directory,
-                    FileName = manifestFile.Name,
-                    Extension = manifestFile.Extension,
-                    FileContent = string.Join("\n", manifestFile.Data.Select(kv => $"{kv.Key}={kv.Value}")),
-                    AuthToken = args.Data.AuthToken
-                };
-                _deviceNet.SendPacket(ent.Owner, args.SenderAddress, ref response, args.Frequency);
+                    var dstComp = _router.UnwrapComputerEntity(args.Sender);
+                    _bandwidth.EnqueueRouterTransfer(router.Value, new QueuedRouterTransfer
+                    {
+                        Protocol = "DEVNET/MANIFEST",
+                        TargetPath = manifestFile.FullPath,
+                        Description = "Manifest Sync",
+                        IsUpload = true,
+                        SourceCompUid = _router.UnwrapComputerEntity(ent.Owner),
+                        TargetCompUid = dstComp,
+                        TotalBytes = size,
+                        OnCompleted = _ =>
+                        {
+                            if (!Exists(ent.Owner))
+                                return;
+                            var response = new FileTransferPayload
+                            {
+                                Path = dir,
+                                FileName = name,
+                                Extension = ext,
+                                FileContent = content,
+                                AuthToken = authToken
+                            };
+                            _deviceNet.SendPacket(ent.Owner, senderAddr, ref response, freq);
+                        }
+                    });
+                }
+                else
+                {
+                    _bandwidth.RecordDataTransmitted(ent.Owner, size, isUpload: true);
+                    var response = new FileTransferPayload
+                    {
+                        Path = dir,
+                        FileName = name,
+                        Extension = ext,
+                        FileContent = content,
+                        AuthToken = authToken
+                    };
+                    _deviceNet.SendPacket(ent.Owner, senderAddr, ref response, freq);
+                }
             }
         }
     }

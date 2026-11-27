@@ -33,22 +33,17 @@ public sealed partial class TerminalSystem : EntitySystem
     [Dependency] private AccessReaderSystem _access = default!;
     [Dependency] private IGameTiming _timing = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
-    private EntityQuery<OxydComputerComponent> _computerQuery;
-    private readonly Dictionary<EntityUid, EntityUid> _terminalViewers = new();
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+    [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
+
+    private const int MaxPasswordLength = 64;
+
     private readonly HashSet<EntityUid> _updating = new();
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-        _computerQuery = GetEntityQuery<OxydComputerComponent>();
-
-        SubscribeLocalEvent<TerminalProgramComponent, ProgramStartupEvent>(OnStartup);
-        SubscribeLocalEvent<TerminalProgramComponent, ProgramActivatedEvent>(OnActivated);
-        SubscribeLocalEvent<TerminalProgramComponent, ProgramDeactivatedEvent>(OnDeactivated);
-        SubscribeLocalEvent<TerminalProgramComponent, ProgramTerminatedEvent>(OnTerminated);
         Subs.BuiEvents<TerminalProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<TerminalExecuteCommandMessage>(OnExecuteCommand);
@@ -58,24 +53,29 @@ public sealed partial class TerminalSystem : EntitySystem
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnStartup(Entity<TerminalProgramComponent> ent, ref ProgramStartupEvent args)
     {
         UpdateTerminalUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnActivated(Entity<TerminalProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateTerminalUi(ent.Owner);
     }
 
+    [SubscribeLocalEvent]
     private void OnDeactivated(Entity<TerminalProgramComponent> ent, ref ProgramDeactivatedEvent args)
     {
         DetachRemoteScreenSession(ent.Owner, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnTerminated(Entity<TerminalProgramComponent> ent, ref ProgramTerminatedEvent args)
     {
         DetachRemoteScreenSession(ent.Owner, ent.Comp);
+        _bandwidth.CancelTransfersForProgram(ent.Owner);
     }
 
     private void OnBuiOpened(Entity<TerminalProgramComponent> ent, ref BoundUIOpenedEvent args)
@@ -91,16 +91,26 @@ public sealed partial class TerminalSystem : EntitySystem
 
     private void DetachRemoteScreenSession(EntityUid progUid, TerminalProgramComponent comp, EntityUid? actor = null)
     {
-        var viewer = actor ?? (_terminalViewers.TryGetValue(progUid, out var recorded) ? recorded : (EntityUid?) null);
-        if (viewer != null && comp.ConnectedRemoteGuid != null && _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out var targetUid))
+        if (comp.ConnectedRemoteGuid != null && _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out var targetUid))
         {
-            _remoteScreen.DetachViewer(progUid, viewer, targetUid);
+            if (actor != null)
+            {
+                _remoteScreen.DetachViewer(progUid, actor, targetUid);
+            }
+            else
+            {
+                foreach (var v in comp.ActiveViewers)
+                    _remoteScreen.DetachViewer(progUid, v, targetUid);
+            }
         }
 
-        if (actor == null || _terminalViewers.TryGetValue(progUid, out var cur) && cur == actor)
-            _terminalViewers.Remove(progUid);
+        if (actor != null)
+            comp.ActiveViewers.Remove(actor.Value);
+        else
+            comp.ActiveViewers.Clear();
 
-        comp.IsScreenAttached = false;
+        if (comp.ActiveViewers.Count == 0)
+            comp.IsScreenAttached = false;
     }
 
     private void OnExecuteCommand(Entity<TerminalProgramComponent> ent, ref TerminalExecuteCommandMessage args)
@@ -111,16 +121,17 @@ public sealed partial class TerminalSystem : EntitySystem
         if (!_computerQuery.TryComp(compUid, out var oxydComp))
             return;
 
-        if (oxydComp.DisableLocalShell && ent.Comp.ConnectedRemoteGuid == null)
+        var isLocalExecution = ent.Comp.ConnectedRemoteGuid == null || ent.Comp.SshLocalMode;
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason, checkHostLock: isLocalExecution))
         {
-            ent.Comp.History.Add("LOCAL SHELL DISABLED ON THIS CONTROLLER.");
+            ent.Comp.History.Add(blockReason);
             UpdateTerminalUi(ent.Owner);
             return;
         }
 
-        if (oxydComp.HostMachine is { } hm && _lock.IsLocked(hm) && ent.Comp.ConnectedRemoteGuid == null)
+        if (oxydComp.DisableLocalShell && isLocalExecution)
         {
-            ent.Comp.History.Add("DEVICE LOCKED — Swipe authorized ID card to unlock.");
+            ent.Comp.History.Add("LOCAL SHELL DISABLED ON THIS CONTROLLER.");
             UpdateTerminalUi(ent.Owner);
             return;
         }
@@ -130,7 +141,7 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
 
         if (Exists(args.Actor))
-            _terminalViewers[ent.Owner] = args.Actor;
+            ent.Comp.ActiveViewers.Add(args.Actor);
 
         var comp = ent.Comp;
         var localGuid = _guid.GetGuid(compUid);
@@ -138,7 +149,7 @@ public sealed partial class TerminalSystem : EntitySystem
         if (comp.AwaitingPassword)
         {
             comp.History.Add("********");
-            HandlePasswordAuth(compUid, comp, input);
+            HandlePasswordAuth(ent.Owner, compUid, comp, input);
             UpdateTerminalUi(ent.Owner);
             return;
         }
@@ -156,6 +167,9 @@ public sealed partial class TerminalSystem : EntitySystem
 
     private void OnRemoteScreenAction(Entity<TerminalProgramComponent> ent, ref TerminalRemoteScreenActionMessage args)
     {
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
+            return;
+
         if (args.Action == "detach")
         {
             DetachRemoteScreenSession(ent.Owner, ent.Comp, args.Actor);
@@ -169,7 +183,7 @@ public sealed partial class TerminalSystem : EntitySystem
         }
     }
 
-    private void HandlePasswordAuth(EntityUid compUid, TerminalProgramComponent comp, string password)
+    private void HandlePasswordAuth(EntityUid progUid, EntityUid compUid, TerminalProgramComponent comp, string password)
     {
         comp.AwaitingPassword = false;
         var targetGuid = comp.PendingAuthGuid;
@@ -183,6 +197,12 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
+        if (!_router.AreEndpointsConnected(compUid, targetUid, out _, out var connErr))
+        {
+            comp.History.Add($"ssh: {connErr}");
+            return;
+        }
+
         if (!_computerQuery.TryComp(targetUid, out var targetOxyd) ||
             !string.Equals(targetOxyd.SshPassword, password, StringComparison.Ordinal))
         {
@@ -190,12 +210,20 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        EstablishSshSession(compUid, comp, targetUid, targetGuid, targetUser);
+        EstablishSshSession(progUid, compUid, comp, targetUid, targetGuid, targetUser);
     }
 
-    private void EstablishSshSession(EntityUid compUid, TerminalProgramComponent comp, EntityUid targetUid, string targetGuid, string user)
+    private void EstablishSshSession(EntityUid progUid, EntityUid compUid, TerminalProgramComponent comp, EntityUid targetUid, string targetGuid, string user)
     {
         var localGuid = _guid.GetGuid(compUid);
+
+        if (comp.ConnectedRemoteGuid != null && !comp.ConnectedRemoteGuid.Equals(targetGuid, StringComparison.OrdinalIgnoreCase))
+        {
+            DetachRemoteScreenSession(progUid, comp);
+            _router.UnregisterActiveConnection(compUid, $"SSH-{localGuid}-{comp.ConnectedRemoteGuid}");
+            _router.UnregisterActiveConnection(compUid, $"SCREEN-{localGuid}-{comp.ConnectedRemoteGuid}");
+        }
+
         comp.ConnectedRemoteGuid = targetGuid;
         comp.ConnectedRemoteUser = user;
         comp.SshLocalMode = false;
@@ -356,7 +384,13 @@ public sealed partial class TerminalSystem : EntitySystem
             case "passwd":
                 if (_computerQuery.TryComp(compUid, out var pwComp))
                 {
-                    pwComp.SshPassword = parts.Length > 1 ? parts[1] : string.Empty;
+                    var newPw = parts.Length > 1 ? parts[1] : string.Empty;
+                    if (newPw.Length > MaxPasswordLength)
+                    {
+                        comp.History.Add($"passwd: Password too long (max {MaxPasswordLength} chars).");
+                        break;
+                    }
+                    pwComp.SshPassword = newPw;
                     Dirty(compUid, pwComp);
                     comp.History.Add(string.IsNullOrEmpty(pwComp.SshPassword)
                         ? "SSH password cleared (public access)."
@@ -367,7 +401,7 @@ public sealed partial class TerminalSystem : EntitySystem
             case "ssh" when parts.Length > 1:
                 if (!RequireNetwork(compUid, comp))
                     break;
-                InitiateSsh(compUid, comp, parts[1], localGuid);
+                InitiateSsh(progUid, compUid, comp, parts[1], localGuid);
                 break;
 
             case "auth":
@@ -422,7 +456,7 @@ public sealed partial class TerminalSystem : EntitySystem
         }
 
         if (!_router.TryFindDeviceByGuid(targetGuid, out var targetUid) ||
-            !_router.HasActiveNetworkCard(targetUid) ||
+            !_router.AreEndpointsConnected(localCompUid, targetUid, out _, out _) ||
             !_computerQuery.TryComp(targetUid, out var targetOxyd) ||
             !targetOxyd.AllowRemoteControl || targetOxyd.RemoteControlWireCut || targetOxyd.PowerWireCut)
         {
@@ -544,12 +578,12 @@ public sealed partial class TerminalSystem : EntitySystem
 
             case "scp" when parts.Length > 1:
             case "fetch" when parts.Length > 1:
-                TransferFileAcrossNetwork(targetUid, localCompUid, ResolvePath(comp.RemoteDirectory, parts[1]), isUpload: false, comp);
+                TransferFileAcrossNetwork(progUid, targetUid, localCompUid, ResolvePath(comp.RemoteDirectory, parts[1]), isUpload: false, comp);
                 break;
 
             case "upload" when parts.Length > 1:
             case "put" when parts.Length > 1:
-                TransferFileAcrossNetwork(localCompUid, targetUid, ResolvePath(comp.CurrentDirectory, parts[1]), isUpload: true, comp);
+                TransferFileAcrossNetwork(progUid, localCompUid, targetUid, ResolvePath(comp.CurrentDirectory, parts[1]), isUpload: true, comp);
                 break;
 
             case "screen":
@@ -567,7 +601,8 @@ public sealed partial class TerminalSystem : EntitySystem
                 else
                 {
                     comp.IsScreenAttached = true;
-                    _terminalViewers[progUid] = actor;
+                    if (Exists(actor))
+                        comp.ActiveViewers.Add(actor);
                     _remoteScreen.AttachViewer(progUid, actor, targetUid);
                     _router.RegisterActiveConnection(localCompUid, localGuid, targetGuid, "SCREEN", $"Screen ({targetGuid})");
                     comp.History.Add($"Attached live Screen View to {MetaData(targetUid).EntityName} [{targetGuid}].");
@@ -589,8 +624,14 @@ public sealed partial class TerminalSystem : EntitySystem
         }
     }
 
-    private void TransferFileAcrossNetwork(EntityUid srcComp, EntityUid dstComp, string srcPath, bool isUpload, TerminalProgramComponent comp)
+    private void TransferFileAcrossNetwork(EntityUid progUid, EntityUid srcComp, EntityUid dstComp, string srcPath, bool isUpload, TerminalProgramComponent comp)
     {
+        if (!_router.AreEndpointsConnected(srcComp, dstComp, out var sharedRouter, out var connErr) || sharedRouter == null)
+        {
+            comp.History.Add($"transfer: {connErr}");
+            return;
+        }
+
         if (!_fileSystem.TryFindFileSystem(srcComp, out _, out var srcFs) || !srcFs.Files.TryGetValue(srcPath, out var file))
         {
             comp.History.Add($"transfer: source file '{srcPath}' not found on hard drive.");
@@ -603,33 +644,67 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!_fileSystem.TryFindFileSystem(dstComp, out var dstDrive, out var dstFs))
+        if (!_fileSystem.TryFindFileSystem(dstComp, out _, out _))
         {
             comp.History.Add("transfer: destination has no hard drive.");
             return;
         }
 
+        var byteSize = Math.Max(64, file.Size);
+        var cloned = file.Clone();
         var pkt = new NetworkDataPacket
         {
             PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
             SourceAddress = _guid.GetGuid(srcComp),
             TargetAddress = _guid.GetGuid(dstComp),
             Protocol = isUpload ? "SCP/PUT" : "SCP/GET",
-            PayloadSummary = $"{srcPath} ({file.Size} B)",
-            ByteSize = Math.Max(64, file.Size),
+            PayloadSummary = $"{srcPath} ({byteSize} B)",
+            ByteSize = byteSize,
             Timestamp = _timing.CurTime
         };
 
-        if (!_router.RecordAndValidatePacket(srcComp, dstComp, pkt))
+        var transfer = new QueuedRouterTransfer
         {
-            comp.History.Add("transfer: packet dropped by router or insufficient bandwidth/NIC.");
-            return;
-        }
+            Protocol = pkt.Protocol,
+            TargetPath = srcPath,
+            Description = $"{pkt.Protocol} {srcPath}",
+            IsUpload = isUpload,
+            SourceCompUid = srcComp,
+            TargetCompUid = dstComp,
+            InitiatorProgramUid = progUid,
+            TotalBytes = byteSize,
+            PayloadFile = cloned,
+            PacketMetadata = pkt,
+            OnCompleted = _ =>
+            {
+                if (!Exists(progUid) || !TryComp<TerminalProgramComponent>(progUid, out var liveComp))
+                    return;
 
-        if (_fileSystem.TryWriteFile(dstDrive.Value, file.Clone(), dstFs))
-            comp.History.Add($"Transferred '{srcPath}' ({file.Size} B) across router -> destination HDD.");
+                if (_fileSystem.TryFindFileSystem(dstComp, out var dstDrive, out var dstFs) &&
+                    _fileSystem.TryWriteFile(dstDrive.Value, cloned, dstFs))
+                {
+                    liveComp.History.Add($"Transferred '{srcPath}' ({byteSize} B) across router -> destination HDD.");
+                }
+                else
+                {
+                    liveComp.History.Add($"transfer: failed writing '{srcPath}' (destination drive missing or full).");
+                }
+
+                UpdateTerminalUi(progUid);
+            },
+            OnAborted = (_, reason) =>
+            {
+                if (!Exists(progUid) || !TryComp<TerminalProgramComponent>(progUid, out var liveComp))
+                    return;
+                liveComp.History.Add($"transfer aborted '{srcPath}': {reason}");
+                UpdateTerminalUi(progUid);
+            }
+        };
+
+        if (_bandwidth.EnqueueRouterTransfer(sharedRouter.Value, transfer))
+            comp.History.Add($"Queued {pkt.Protocol} '{srcPath}' ({byteSize} B) via station router...");
         else
-            comp.History.Add("transfer: destination hard drive full.");
+            comp.History.Add("transfer: rejected by router queue.");
     }
 
     private static void ParseAuthArgs(string[] parts, int startIndex, out string action, out string? fileArg)
@@ -677,9 +752,9 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!_router.HasActiveNetworkCard(targetUid))
+        if (!_router.AreEndpointsConnected(localCompUid, targetUid, out _, out var authConnErr))
         {
-            comp.History.Add($"auth: Host [{resolvedGuid}] unreachable (no active network card).");
+            comp.History.Add($"auth: Host [{resolvedGuid}] unreachable ({authConnErr}).");
             return;
         }
 
@@ -901,7 +976,7 @@ public sealed partial class TerminalSystem : EntitySystem
         return true;
     }
 
-    private void InitiateSsh(EntityUid localCompUid, TerminalProgramComponent comp, string rawTarget, string localGuid)
+    private void InitiateSsh(EntityUid progUid, EntityUid localCompUid, TerminalProgramComponent comp, string rawTarget, string localGuid)
     {
         var targetQuery = rawTarget.Contains('@') ? rawTarget.Split('@', 2)[1] : rawTarget;
         var targetUser = rawTarget.Contains('@') ? rawTarget.Split('@', 2)[0] : "admin";
@@ -919,9 +994,15 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!_router.HasActiveNetworkCard(targetUid))
+        if (targetUid == localCompUid)
         {
-            comp.History.Add($"ssh: host {resolvedGuid} unreachable (no active network card).");
+            comp.History.Add("ssh: Cannot open SSH session to local host.");
+            return;
+        }
+
+        if (!_router.AreEndpointsConnected(localCompUid, targetUid, out _, out var connErr))
+        {
+            comp.History.Add($"ssh: host {resolvedGuid} unreachable ({connErr}).");
             return;
         }
 
@@ -940,7 +1021,7 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        EstablishSshSession(localCompUid, comp, targetUid, resolvedGuid, targetUser);
+        EstablishSshSession(progUid, localCompUid, comp, targetUid, resolvedGuid, targetUser);
     }
 
     private void HandlePingCommand(EntityUid localCompUid, TerminalProgramComponent comp, string target)
@@ -1029,7 +1110,7 @@ public sealed partial class TerminalSystem : EntitySystem
         if (file is TextVirtualFile tf)
             comp.History.Add(tf.TextContent);
         else if (file is ProgramVirtualFile pf)
-            comp.History.Add($"[NTE] {pf.Title} -> Entity={pf.ProgramId} RAM={pf.RamUsageMb}MB");
+            comp.History.Add($"[APP] {pf.Title} -> Entity={pf.ProgramId} Size={ComputerSizeFormat.FormatStorageQb(pf.Size)} RAM={pf.RamUsageMb}QB");
         else if (file is DatabaseVirtualFile df)
         {
             foreach (var (k, v) in df.Data.Take(20))
@@ -1097,7 +1178,7 @@ public sealed partial class TerminalSystem : EntitySystem
         {
             if (!TryComp<ProgramComponent>(pUid, out var p))
                 continue;
-            comp.History.Add($"  {pUid.Id,-5} {p.Title,-20} {p.RamUsageMb,3}MB  {(p.IsBootProgram ? "[BOOT]" : "")} {p.ExecutablePath}");
+            comp.History.Add($"  {pUid.Id,-5} {p.Title,-20} {p.RamUsageMb,3}QB  {(p.IsBootProgram ? "[BOOT]" : "")} {p.ExecutablePath}");
         }
     }
 
@@ -1112,9 +1193,9 @@ public sealed partial class TerminalSystem : EntitySystem
 
         comp.History.Add($"Hardware Telemetry [{guid}]:");
         comp.History.Add($"  CPU: {(s.HasCpu ? $"{s.CpuFrequencyMhz} MHz (load {s.CurrentCpuLoadPercent:0.#}%, max {s.MaxConcurrentPrograms} procs)" : "NONE")}");
-        comp.History.Add($"  RAM: {s.UsedRamMb} / {s.RamMb} MB");
-        comp.History.Add($"  HDD: {s.UsedStorageBytes} / {s.StorageBytes} B ({(s.HasHardDrive ? "ONLINE" : "MISSING")})");
-        comp.History.Add($"  NIC: {(s.HasNetworkCard ? $"DL={s.NetworkBandwidthBps} B/s UL={s.NetworkUploadBandwidthBps} B/s" : "NONE")}");
+        comp.History.Add($"  RAM: {s.UsedRamMb} / {s.RamMb} QB");
+        comp.History.Add($"  HDD: {ComputerSizeFormat.FormatStorageQb(s.UsedStorageBytes)} / {ComputerSizeFormat.FormatStorageQb(s.StorageBytes)} ({(s.HasHardDrive ? "ONLINE" : "MISSING")})");
+        comp.History.Add($"  NIC: {(s.HasNetworkCard ? $"DL={ComputerSizeFormat.FormatRateQb(s.NetworkBandwidthBps)} UL={ComputerSizeFormat.FormatRateQb(s.NetworkUploadBandwidthBps)}" : "NONE")}");
     }
 
     private static string NormalizeDir(string current, string target)
@@ -1143,9 +1224,10 @@ public sealed partial class TerminalSystem : EntitySystem
 
     private static string ResolvePath(string currentDir, string path)
     {
-        if (path.StartsWith('/'))
-            return path;
-        return currentDir == "/" ? "/" + path : $"{currentDir.TrimEnd('/')}/{path}";
+        var combined = path.StartsWith('/')
+            ? path
+            : (currentDir == "/" ? "/" + path : $"{currentDir.TrimEnd('/')}/{path}");
+        return SharedFileSystemSystem.NormalizePath(combined);
     }
 
     private static string BuildPrompt(string localGuid, TerminalProgramComponent comp)
@@ -1177,9 +1259,10 @@ public sealed partial class TerminalSystem : EntitySystem
             var localGuid = _guid.GetGuid(compUid);
             RemoteScreenState? remoteScreen = null;
 
+            var viewer = comp.ActiveViewers.FirstOrDefault(v => Exists(v));
             if (comp.IsScreenAttached &&
                 comp.ConnectedRemoteGuid != null &&
-                _terminalViewers.TryGetValue(progUid, out var viewer) &&
+                viewer.IsValid() &&
                 _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out var targetUid))
             {
                 if (_remoteScreen.TryBuildRemoteScreenState(progUid, targetUid, viewer, out remoteScreen, out _))

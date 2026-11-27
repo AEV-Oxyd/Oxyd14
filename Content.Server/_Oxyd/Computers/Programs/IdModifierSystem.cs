@@ -46,6 +46,8 @@ public sealed partial class IdModifierSystem : EntitySystem
 
     private const string MissingDualSlotMessage =
         "Requires 2 ID Card Slot hardware modules (Modifying ID + Target ID).";
+    private const int MaxIdentityNameLength = 64;
+    private const int MaxIdentityJobLength = 48;
 
     public override void Initialize()
     {
@@ -122,6 +124,13 @@ public sealed partial class IdModifierSystem : EntitySystem
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
 
         switch (args.Action)
         {
@@ -222,7 +231,7 @@ public sealed partial class IdModifierSystem : EntitySystem
             return;
         }
 
-        if (_cardReaders.TryInsertCard(slot, held.Value, actor))
+        if (_cardReaders.TryInsertCard(slot, held.Value, actor, dropNear))
             comp.StatusMessage = $"Inserted {MetaData(held.Value).EntityName} into {slotName}.";
         else
             comp.StatusMessage = $"Failed to insert ID card into {slotName}.";
@@ -236,11 +245,23 @@ public sealed partial class IdModifierSystem : EntitySystem
         string jobTitle,
         string jobProtoId)
     {
-        if (!TryValidateModificationContext(comp, compUid, out var targetCardUid, out _, out var authName))
+        if (!TryValidateModificationContext(comp, compUid, out var targetCardUid, out var allowedTags, out var authName))
             return;
 
-        var newName = fullName.Trim();
-        var newJob = jobTitle.Trim();
+        if (!allowedTags.Contains("HeadOfPersonnel") &&
+            !allowedTags.Contains("Command") &&
+            !allowedTags.Contains("Captain"))
+        {
+            comp.StatusMessage = $"Denied: modifying authority ({authName}) requires Head of Personnel or Command clearance to rewrite ID identity.";
+            return;
+        }
+
+        var newName = (fullName ?? string.Empty).Trim();
+        if (newName.Length > MaxIdentityNameLength)
+            newName = newName[..MaxIdentityNameLength];
+        var newJob = (jobTitle ?? string.Empty).Trim();
+        if (newJob.Length > MaxIdentityJobLength)
+            newJob = newJob[..MaxIdentityJobLength];
         if (!string.IsNullOrEmpty(newName))
             _idCard.TryChangeFullName(targetCardUid, newName, player: actor);
         if (!string.IsNullOrEmpty(newJob))
@@ -330,6 +351,12 @@ public sealed partial class IdModifierSystem : EntitySystem
         if (!IdCardProgramHelpers.TryGetAccFile(compUid, path, files, _itemSlots, _fileSystem, EntityManager, out var accFile))
         {
             comp.StatusMessage = $"Access file '{path}' not found.";
+            return;
+        }
+
+        if (accFile.IsEncrypted)
+        {
+            comp.StatusMessage = $"Access file '{accFile.Name}.acc' is encrypted and cannot be applied.";
             return;
         }
 
@@ -455,7 +482,8 @@ public sealed partial class IdModifierSystem : EntitySystem
         if (!string.IsNullOrWhiteSpace(comp.SelectedAccFilePath))
         {
             IdCardProgramHelpers.CollectAccFiles(compUid, _itemSlots, _fileSystem, EntityManager, out var files, out _);
-            if (IdCardProgramHelpers.TryGetAccFile(compUid, comp.SelectedAccFilePath, files, _itemSlots, _fileSystem, EntityManager, out var accFile))
+            if (IdCardProgramHelpers.TryGetAccFile(compUid, comp.SelectedAccFilePath, files, _itemSlots, _fileSystem, EntityManager, out var accFile) &&
+                !accFile.IsEncrypted)
             {
                 sources.Add($"{accFile.OwnerName} (.acc)");
                 foreach (var t in accFile.AccessTags)
@@ -471,6 +499,30 @@ public sealed partial class IdModifierSystem : EntitySystem
     {
         if (!_ui.HasUi(progUid, ProgramUiKey.Key))
             return;
+
+        if (_computer.IsHostLocked(compUid))
+        {
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new IdModifierUiState(
+                0,
+                false,
+                false,
+                string.Empty,
+                false,
+                string.Empty,
+                string.Empty,
+                new List<string>(),
+                string.Empty,
+                new List<string>(),
+                false,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                new List<string>(),
+                "LOCKED — Swipe authorized ID card to unlock.",
+                isLocked: true));
+            return;
+        }
 
         var slotReaders = _cardReaders.GetSlotReaders(compUid);
         var slotCount = slotReaders.Count;

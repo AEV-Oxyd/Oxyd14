@@ -1,10 +1,50 @@
 using System.Linq;
+using System.Text;
+using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Content.Shared.Research.Prototypes;
 
 namespace Content.Shared._Oxyd.Computers.FileSystem;
+
+/// <summary>
+/// Canonical NTOS QuadByte (QB) formatting helpers (1 QB = 1024 bytes).
+/// </summary>
+public static class ComputerSizeFormat
+{
+    public const int BytesPerQb = 1024;
+
+    public static string FormatStorageQb(int bytes)
+    {
+        if (bytes <= 0)
+            return "0 QB";
+
+        if (bytes % BytesPerQb == 0)
+            return $"{bytes / BytesPerQb} QB";
+
+        var qb = bytes / (float) BytesPerQb;
+        return qb < 0.1f ? "0.1 QB" : $"{qb:0.#} QB";
+    }
+
+    public static string FormatRateQb(int bytesPerSec)
+    {
+        if (bytesPerSec <= 0)
+            return "0 QB/s";
+
+        if (bytesPerSec % BytesPerQb == 0)
+            return $"{bytesPerSec / BytesPerQb} QB/s";
+
+        var qbs = bytesPerSec / (float) BytesPerQb;
+        return qbs < 0.1f ? "0.1 QB/s" : $"{qbs:0.#} QB/s";
+    }
+
+    public static string FormatRamQb(int ramUnits)
+    {
+        return $"{Math.Max(0, ramUnits)} QB";
+    }
+}
 
 [Serializable, NetSerializable]
 public record struct FileHeader(
@@ -32,6 +72,10 @@ public abstract partial class VirtualFile
 
     public string FullPath => (Directory.EndsWith('/') ? Directory : Directory + "/") + Name + "." + Extension;
 
+    public virtual string FileTypeTag => "VirtualFile";
+
+    public virtual int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null) => Math.Max(16, Size);
+
     public abstract VirtualFile Clone();
 
     protected void CopyBaseFields(VirtualFile target)
@@ -57,6 +101,11 @@ public sealed partial class TextVirtualFile : VirtualFile
         Extension = "txt";
     }
 
+    public override string FileTypeTag => nameof(TextVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+        => Math.Max(16, Encoding.UTF8.GetByteCount(TextContent ?? string.Empty));
+
     public override VirtualFile Clone()
     {
         var copy = new TextVirtualFile { TextContent = TextContent };
@@ -77,6 +126,10 @@ public sealed partial class RecipeBlueprintFile : VirtualFile
     {
         Extension = "lathe";
     }
+
+    public override string FileTypeTag => nameof(RecipeBlueprintFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null) => CalculateSize(proto);
 
     public override VirtualFile Clone()
     {
@@ -135,6 +188,18 @@ public sealed partial class DatabaseVirtualFile : VirtualFile
         Extension = "db";
     }
 
+    public override string FileTypeTag => nameof(DatabaseVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+    {
+        var total = 64 + Encoding.UTF8.GetByteCount(TableName ?? string.Empty);
+        foreach (var (k, v) in Data)
+        {
+            total += Encoding.UTF8.GetByteCount(k ?? string.Empty) + Encoding.UTF8.GetByteCount(v ?? string.Empty) + 8;
+        }
+        return Math.Max(64, total);
+    }
+
     public override VirtualFile Clone()
     {
         var copy = new DatabaseVirtualFile
@@ -160,6 +225,22 @@ public sealed partial class ProgramVirtualFile : VirtualFile
         Extension = "nte";
         Directory = "/bin/";
         Size = 2048;
+    }
+
+    public override string FileTypeTag => nameof(ProgramVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+    {
+        if (compFactory != null &&
+            !string.IsNullOrEmpty(ProgramId) &&
+            proto.TryIndex<EntityPrototype>(ProgramId, out var entProto) &&
+            entProto.TryGetComponent<ProgramComponent>(out var progComp, compFactory) &&
+            progComp.FileSizeBytes > 0)
+        {
+            return progComp.FileSizeBytes;
+        }
+
+        return Math.Max(512, Size);
     }
 
     public override VirtualFile Clone()
@@ -214,6 +295,18 @@ public sealed partial class TaskListVirtualFile : VirtualFile
         Size = 512;
     }
 
+    public override string FileTypeTag => nameof(TaskListVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+    {
+        var total = 64;
+        foreach (var t in Tasks)
+        {
+            total += 24 + Encoding.UTF8.GetByteCount(t.Description ?? string.Empty) + Encoding.UTF8.GetByteCount(t.TaskIsFor ?? string.Empty);
+        }
+        return Math.Max(128, total);
+    }
+
     public override VirtualFile Clone()
     {
         var copy = new TaskListVirtualFile
@@ -248,6 +341,16 @@ public sealed partial class AccessCodesVirtualFile : VirtualFile
 
     [DataField]
     public List<ProtoId<AccessLevelPrototype>> AccessTags = new();
+
+    public override string FileTypeTag => nameof(AccessCodesVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+    {
+        var total = 64 + Encoding.UTF8.GetByteCount(OwnerName ?? string.Empty) + Encoding.UTF8.GetByteCount(JobTitle ?? string.Empty);
+        foreach (var tag in AccessTags)
+            total += Encoding.UTF8.GetByteCount(tag.Id) + 4;
+        return Math.Max(128, total);
+    }
 
     public AccessCodesVirtualFile()
     {

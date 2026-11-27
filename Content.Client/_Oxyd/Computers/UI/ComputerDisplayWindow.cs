@@ -248,11 +248,10 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
             var targetW = rootSize.X > 360f ? MathF.Min(state.ScreenSize.X, rootSize.X - 16f) : state.ScreenSize.X;
             var targetH = rootSize.Y > 320f ? MathF.Min(state.ScreenSize.Y, rootSize.Y - 24f) : state.ScreenSize.Y;
 
-            // Keep smaller subsystem controllers (Autolathe, AirAlarm) at their full minimum size so all
-            // controls stay unsmushed, while letting large workstations & camera monitors open big by default
-            // yet remain comfortably resizable down to 820x620 when floating.
-            var minW = state.ScreenSize.X > 820f ? MathF.Min(targetW, 820f) : targetW;
-            var minH = state.ScreenSize.Y > 660f ? MathF.Min(targetH, 620f) : targetH;
+            // Keep smaller subsystem controllers compact while letting large workstations & monitors open big
+            // yet remain comfortably resizable down to 680x500 when floating (fits 1366x768 & 1280x720 screens).
+            var minW = MathF.Min(targetW, 680f);
+            var minH = MathF.Min(targetH, 500f);
             _preferredFloatMinSize = new Vector2(MathF.Max(360f, minW), MathF.Max(320f, minH));
 
             if (!_appliedInitialScreenSize)
@@ -301,8 +300,8 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
             _hwStatusLabel.Text =
                 $"CPU: {(state.HasCpu ? $"{state.CpuFrequencyMhz} MHz" : "MISSING")}\n" +
-                $"RAM: {(state.HasRam ? $"{state.RamTotalMb} MB" : "MISSING")}\n" +
-                $"HDD: {(state.HasHardDrive ? $"{state.StorageTotalBytes / 1024} KB" : "MISSING")}\n" +
+                $"RAM: {(state.HasRam ? $"{state.RamTotalMb} QB" : "MISSING")}\n" +
+                $"HDD: {(state.HasHardDrive ? Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(state.StorageTotalBytes) : "MISSING")}\n" +
                 $"NIC: {(state.HasNetworkCard ? "PRESENT" : "NONE")} | DATA PORT: {(state.HasDataPort ? "PRESENT" : "NONE")}";
         }
 
@@ -469,11 +468,8 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     {
         base.FrameUpdate(args);
 
-        if (_supportsViewportDock || _isDockedInViewport)
-        {
-            RefreshCameraFocusState();
-            UpdateDockState();
-        }
+        if (_isDockedInViewport)
+            SyncDockedBounds();
     }
 
     private void CenterInsideScreen()

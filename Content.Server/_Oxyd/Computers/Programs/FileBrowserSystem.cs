@@ -21,33 +21,31 @@ public sealed partial class FileBrowserSystem : EntitySystem
     [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private SharedInteractionSystem _interaction = default!;
 
-    private EntityQuery<ProgramComponent> _programQuery;
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        _programQuery = GetEntityQuery<ProgramComponent>();
-
-        SubscribeLocalEvent<FileBrowserProgramComponent, ProgramStartupEvent>(OnStartup);
-        SubscribeLocalEvent<FileBrowserProgramComponent, ProgramActivatedEvent>(OnActivated);
-        SubscribeLocalEvent<FileBrowserProgramComponent, ProgramDeviceLinkReceivedEvent>(OnDeviceLink);
         Subs.BuiEvents<FileBrowserProgramComponent>(ProgramUiKey.Key, subs =>
         {
             subs.Event<FileBrowserActionMessage>(OnUiAction);
         });
     }
 
+    [SubscribeLocalEvent]
     private void OnStartup(Entity<FileBrowserProgramComponent> ent, ref ProgramStartupEvent args)
     {
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnActivated(Entity<FileBrowserProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
     private void OnDeviceLink(Entity<FileBrowserProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
@@ -89,17 +87,25 @@ public sealed partial class FileBrowserSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
         _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fsComp);
+        var cleanPath = SharedFileSystemSystem.NormalizePath(args.Path ?? string.Empty);
 
         switch (args.Action)
         {
             case FileBrowserAction.ChangeDirectory:
-                ent.Comp.CurrentDirectory = string.IsNullOrWhiteSpace(args.Path) ? "/" : args.Path;
+                ent.Comp.CurrentDirectory = string.IsNullOrWhiteSpace(args.Path) ? "/" : SharedFileSystemSystem.NormalizeDirectory(args.Path);
                 ent.Comp.ViewedFilePath = null;
                 break;
 
             case FileBrowserAction.ViewFile:
-                ent.Comp.ViewedFilePath = args.Path;
+                ent.Comp.ViewedFilePath = cleanPath;
                 ent.Comp.ViewedFileIsOnDisk = ent.Comp.CurrentDirectory == "/disk/";
                 break;
 
@@ -110,28 +116,28 @@ public sealed partial class FileBrowserSystem : EntitySystem
             case FileBrowserAction.DeleteFile:
                 if (ent.Comp.CurrentDirectory == "/disk/" && TryGetInsertedDisk(compUid, out var delDisk, out var delDiskFs, out _))
                 {
-                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(delDisk, args.Path, delDiskFs)
-                        ? $"Deleted disk file '{args.Path}'."
-                        : $"Cannot delete '{args.Path}'.";
+                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(delDisk, cleanPath, delDiskFs)
+                        ? $"Deleted disk file '{cleanPath}'."
+                        : $"Cannot delete '{cleanPath}'.";
                 }
                 else if (driveUid != null && fsComp != null)
                 {
-                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(driveUid.Value, args.Path, fsComp)
-                        ? $"Deleted '{args.Path}'."
-                        : $"Cannot delete '{args.Path}' (read-only or missing).";
+                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(driveUid.Value, cleanPath, fsComp)
+                        ? $"Deleted '{cleanPath}'."
+                        : $"Cannot delete '{cleanPath}' (read-only or missing).";
                 }
                 break;
 
             case FileBrowserAction.RunProgram:
-                if (_computer.TryLaunchExecutable(compUid, args.Path, out _, out var err, args.Actor))
-                    ent.Comp.StatusMessage = $"Launched '{args.Path}'.";
+                if (_computer.TryLaunchExecutable(compUid, cleanPath, out _, out var err, args.Actor))
+                    ent.Comp.StatusMessage = $"Launched '{cleanPath}'.";
                 else
                     ent.Comp.StatusMessage = err;
                 break;
 
             case FileBrowserAction.CopyToDisk:
                 if (driveUid != null && fsComp != null &&
-                    _fileSystem.TryGetFile<VirtualFile>(driveUid.Value, args.Path, out var srcFile, fsComp) &&
+                    _fileSystem.TryGetFile<VirtualFile>(driveUid.Value, cleanPath, out var srcFile, fsComp) &&
                     TryGetInsertedDisk(compUid, out var dstDisk, out var dstDiskFs, out _))
                 {
                     if (_fileSystem.IsCopyProtectedBlueprint(srcFile))
@@ -143,7 +149,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
                     var clone = srcFile.Clone();
                     clone.IsReadOnly = false;
                     ent.Comp.StatusMessage = _fileSystem.TryWriteFile(dstDisk, clone, dstDiskFs)
-                        ? $"Copied '{args.Path}' to disk."
+                        ? $"Copied '{cleanPath}' to disk."
                         : "Copy failed: Disk full or read-only.";
                 }
                 else
@@ -155,7 +161,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
             case FileBrowserAction.CopyToInternal:
                 if (driveUid != null && fsComp != null &&
                     TryGetInsertedDisk(compUid, out var srcDisk, out var srcDiskFs, out _) &&
-                    _fileSystem.TryGetFile<VirtualFile>(srcDisk, args.Path, out var diskFile, srcDiskFs))
+                    _fileSystem.TryGetFile<VirtualFile>(srcDisk, cleanPath, out var diskFile, srcDiskFs))
                 {
                     if (_fileSystem.IsCopyProtectedBlueprint(diskFile))
                     {
@@ -166,7 +172,7 @@ public sealed partial class FileBrowserSystem : EntitySystem
                     var clone = diskFile.Clone();
                     clone.IsReadOnly = false;
                     ent.Comp.StatusMessage = _fileSystem.TryWriteFile(driveUid.Value, clone, fsComp)
-                        ? $"Copied '{args.Path}' to hard drive."
+                        ? $"Copied '{cleanPath}' to hard drive."
                         : "Copy failed: Hard drive full.";
                 }
                 else
@@ -304,12 +310,12 @@ public sealed partial class FileBrowserSystem : EntitySystem
         return f switch
         {
             TextVirtualFile tf => tf.TextContent,
-            ProgramVirtualFile pf => $"NTOS Executable (.nte)\nProgram Prototype: {pf.ProgramId}\nTitle: {pf.Title}\nRAM Footprint: {pf.RamUsageMb} MB\nCPU Budget: {pf.CpuUsagePercent:0.#}%",
-            RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes ({bf.GetAllRecipes().Count()}): {string.Join(", ", bf.GetAllRecipes())}\nSize: {bf.Size} B\nCopy-Protected: {(bf.IsEncrypted ? "Yes (Encrypted Disk-Only)" : "No")}\nRemaining Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
+            ProgramVirtualFile pf => $"NTOS Application\nProgram Prototype: {pf.ProgramId}\nTitle: {pf.Title}\nSize: {ComputerSizeFormat.FormatStorageQb(pf.Size)}\nRAM Footprint: {pf.RamUsageMb} QB\nCPU Budget: {pf.CpuUsagePercent:0.#}%",
+            RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes ({bf.GetAllRecipes().Count()}): {string.Join(", ", bf.GetAllRecipes())}\nSize: {ComputerSizeFormat.FormatStorageQb(bf.Size)}\nCopy-Protected: {(bf.IsEncrypted ? "Yes (Encrypted Disk-Only)" : "No")}\nRemaining Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
             DatabaseVirtualFile df => $"Database Table: {df.TableName}\nEntries: {df.Data.Count}\n" + string.Join("\n", df.Data.Select(kv => $"  {kv.Key}: {kv.Value}")),
             TaskListVirtualFile tk => $"NanoTask Checklist ({tk.Tasks.Count} items)\n" + string.Join("\n", tk.Tasks.Select(t => $"  [{(t.IsTaskDone ? "x" : " ")}] #{t.Id} {t.Description} -> {t.TaskIsFor}")),
             AccessCodesVirtualFile acc => $"ID Access Codes (.acc)\nHolder: {acc.OwnerName}{(string.IsNullOrWhiteSpace(acc.JobTitle) ? "" : $" ({acc.JobTitle})")}\nAccess Levels ({acc.AccessTags.Count}): {(acc.AccessTags.Count > 0 ? string.Join(", ", acc.AccessTags.Select(t => t.Id)) : "(none)")}",
-            _ => $"{f.Name}.{f.Extension} ({f.Size} B)"
+            _ => $"{f.Name}.{f.Extension} ({ComputerSizeFormat.FormatStorageQb(f.Size)})"
         };
     }
 }

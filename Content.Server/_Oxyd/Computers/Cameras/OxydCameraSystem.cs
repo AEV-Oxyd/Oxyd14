@@ -55,6 +55,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
 {
     [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private NetworkRouterSystem _router = default!;
+    [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private SurveillanceCameraSystem _cameras = default!;
@@ -844,6 +845,13 @@ public sealed partial class OxydCameraSystem : EntitySystem
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        if (!_computer.CanExecuteProgramAction(ent.Owner, msg.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateProgramUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
         ent.Comp.ActiveViewers.Add(msg.Actor);
 
         switch (msg.Action)
@@ -958,9 +966,19 @@ public sealed partial class OxydCameraSystem : EntitySystem
                     ent.Comp.StatusMessage = "Access denied: Insert an authorized ID card, swipe on scanner, or select a .acc file.";
                     break;
                 }
+                if (!_router.HasActiveNetworkCard(compUid) || !_router.IsNetworkConnected(compUid))
+                {
+                    ent.Comp.StatusMessage = "Cannot clear logs: no active station network router reachable.";
+                    break;
+                }
                 var clrTarget = ResolveTargetCamera(ent, msg.CameraEntity);
                 if (clrTarget is { } clrCam && _logQuery.TryComp(clrCam, out var clrLog))
                 {
+                    if (!IsCameraOperational(clrCam) || !IsCameraReachableFromComputer(compUid, clrCam))
+                    {
+                        ent.Comp.StatusMessage = "Cannot clear logs: camera is offline or unreachable on this router.";
+                        break;
+                    }
                     clrLog.Entries.Clear();
                     clrLog.UsedMemoryBytes = 0;
                     clrLog.DroppedEntries = 0;
@@ -998,9 +1016,10 @@ public sealed partial class OxydCameraSystem : EntitySystem
 
         var camRouter = FindClosestRouterForCamera(camUid);
         var clientRouter = _router.FindNearestRouter(compUid);
-        if (camRouter == null && clientRouter != null && !_router.IsUsingDebugFallbackRouter(clientRouter.Value))
+        var isDebugFallback = clientRouter != null && _router.IsUsingDebugFallbackRouter(clientRouter.Value);
+        if (!isDebugFallback && (clientRouter == null || camRouter == null || camRouter.Value.Owner != clientRouter.Value.Owner))
         {
-            ent.Comp.StatusMessage = "Camera has no Wi-Fi link to an operational router (or is blacklisted).";
+            ent.Comp.StatusMessage = "Camera has no Wi-Fi link to this computer's operational router (or is blacklisted).";
             return;
         }
 
@@ -1111,6 +1130,19 @@ public sealed partial class OxydCameraSystem : EntitySystem
         }
     }
 
+    private bool IsCameraReachableFromComputer(EntityUid compUid, EntityUid camUid)
+    {
+        var clientRouter = _router.FindNearestRouter(compUid);
+        if (clientRouter == null)
+            return false;
+
+        if (_router.IsUsingDebugFallbackRouter(clientRouter.Value))
+            return true;
+
+        var camRouter = FindClosestRouterForCamera(camUid);
+        return camRouter != null && camRouter.Value.Owner == clientRouter.Value.Owner;
+    }
+
     private void HandleRemoteDownloadLogs(Entity<SurveillanceCameraProgramComponent> ent, EntityUid compUid, EntityUid? targetCamUid)
     {
         if (targetCamUid is not { } camUid || !_logQuery.TryComp(camUid, out var logComp))
@@ -1119,45 +1151,95 @@ public sealed partial class OxydCameraSystem : EntitySystem
             return;
         }
 
-        if (!_fileSystem.TryFindFileSystem(compUid, out var localDrive, out var localFs))
+        if (!_router.HasActiveNetworkCard(compUid) || !_router.IsNetworkConnected(compUid))
+        {
+            ent.Comp.StatusMessage = "Download failed: no active station network router reachable.";
+            return;
+        }
+
+        if (!IsCameraOperational(camUid) || !IsCameraReachableFromComputer(compUid, camUid))
+        {
+            ent.Comp.StatusMessage = "Download failed: camera is offline or unreachable on this router.";
+            return;
+        }
+
+        if (!_fileSystem.TryFindFileSystem(compUid, out var localDrive, out _))
         {
             ent.Comp.StatusMessage = "Download failed: no local hard drive installed.";
             return;
         }
 
+        var router = _router.FindNearestRouter(compUid);
+        if (router == null)
+        {
+            ent.Comp.StatusMessage = "Download failed: no operational station router.";
+            return;
+        }
+
         var camGuid = _router.EnsureDeviceGuid(camUid);
         var clientGuid = _router.EnsureDeviceGuid(compUid);
+        var byteSize = Math.Max(128, logComp.UsedMemoryBytes);
+        var camName = GetCameraDisplayName(camUid);
         var pkt = new NetworkDataPacket
         {
             PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
             SourceAddress = camGuid,
             TargetAddress = clientGuid,
             Protocol = "TCP/CAMLOG",
-            PayloadSummary = $"Camera Witness Logs ({logComp.Entries.Count} entries) [{GetCameraDisplayName(camUid)}]",
-            ByteSize = Math.Max(128, logComp.UsedMemoryBytes),
+            PayloadSummary = $"Camera Witness Logs ({logComp.Entries.Count} entries) [{camName}]",
+            ByteSize = byteSize,
             Timestamp = _timing.CurTime
         };
 
-        // Record packet on router if client is connected.
-        if (_router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid))
-        {
-            if (_router.FindNearestRouter(compUid) is { } router)
-            {
-                router.Comp.RecordedPackets.Add(pkt);
-                while (router.Comp.RecordedPackets.Count > router.Comp.MaxRecordedPackets)
-                    router.Comp.RecordedPackets.RemoveAt(0);
-                Dirty(router);
-            }
-        }
+        var progUid = ent.Owner;
+        var driveUid = localDrive.Value;
+        var routerCompUid = _router.UnwrapComputerEntity(router.Value.Owner);
 
-        if (TryDumpCameraLogsToDrive((camUid, logComp), localDrive.Value, localFs, out var savedPath))
+        _bandwidth.EnqueueRouterTransfer(router.Value, new QueuedRouterTransfer
         {
-            ent.Comp.StatusMessage = $"Downloaded {logComp.Entries.Count} log(s) -> {savedPath}";
-        }
-        else
-        {
-            ent.Comp.StatusMessage = "Download failed: local hard drive full.";
-        }
+            Protocol = "TCP/CAMLOG",
+            TargetPath = $"/logs/cam_{camGuid.ToLowerInvariant()}.txt",
+            Description = $"Camera Logs [{camName}]",
+            IsUpload = false,
+            SourceCompUid = routerCompUid,
+            TargetCompUid = compUid,
+            InitiatorProgramUid = progUid,
+            TotalBytes = byteSize,
+            AllowDebugFallback = _router.IsUsingDebugFallbackRouter(router.Value),
+            PacketMetadata = pkt,
+            OnCompleted = _ =>
+            {
+                if (!Exists(progUid) || !TryComp<SurveillanceCameraProgramComponent>(progUid, out var curProg))
+                    return;
+
+                if (!Exists(camUid) || !_logQuery.TryComp(camUid, out var curLog) ||
+                    !Exists(driveUid) || !TryComp<FileSystemComponent>(driveUid, out var curFs))
+                {
+                    curProg.StatusMessage = "Download failed: camera or local hard drive missing.";
+                    UpdateProgramUi(progUid, compUid, curProg);
+                    return;
+                }
+
+                if (TryDumpCameraLogsToDrive((camUid, curLog), driveUid, curFs, out var savedPath))
+                    curProg.StatusMessage = $"Downloaded {curLog.Entries.Count} log(s) -> {savedPath}";
+                else
+                    curProg.StatusMessage = "Download failed: local hard drive full.";
+
+                Dirty(progUid, curProg);
+                UpdateProgramUi(progUid, compUid, curProg);
+            },
+            OnAborted = (_, reason) =>
+            {
+                if (!Exists(progUid) || !TryComp<SurveillanceCameraProgramComponent>(progUid, out var curProg))
+                    return;
+
+                curProg.StatusMessage = $"Log download aborted: {reason}";
+                Dirty(progUid, curProg);
+                UpdateProgramUi(progUid, compUid, curProg);
+            }
+        });
+
+        ent.Comp.StatusMessage = $"Queued witness log download from {camName} ({byteSize} B)...";
     }
 
     public void UpdateProgramUi(EntityUid progUid, EntityUid compUid, SurveillanceCameraProgramComponent comp)

@@ -4,6 +4,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access.Components;
 using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Interaction;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
 using Content.Shared.Verbs;
@@ -38,6 +39,7 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
 
     [Dependency] private EntityQuery<ComputerIdCardSlotModuleComponent> _readerQuery = default!;
     [Dependency] private EntityQuery<IdCardComponent> _idCardQuery = default!;
@@ -138,8 +140,25 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
         return false;
     }
 
-    public bool TryInsertCard(Entity<ComputerIdCardSlotModuleComponent> reader, EntityUid card, EntityUid? user)
+    private bool IsUserPhysicallyNearReader(EntityUid readerUid, EntityUid user, EntityUid? physicalHost = null)
     {
+        var anchor = physicalHost is { Valid: true } h && Exists(h) ? h : readerUid;
+        var current = anchor;
+        while (_container.TryGetContainingContainer((current, null), out var container))
+        {
+            if (container.Owner == user)
+                return true;
+            current = container.Owner;
+        }
+
+        return _interaction.InRangeUnobstructed(user, current);
+    }
+
+    public bool TryInsertCard(Entity<ComputerIdCardSlotModuleComponent> reader, EntityUid card, EntityUid? user, EntityUid? physicalHost = null)
+    {
+        if (user is { Valid: true } actor && !IsUserPhysicallyNearReader(reader.Owner, actor, physicalHost))
+            return false;
+
         return reader.Comp.Mode == ComputerCardReaderMode.Slot &&
                _itemSlots.TryGetSlot(reader.Owner, reader.Comp.CardSlotId, out var slot) &&
                slot.Item == null &&
@@ -155,10 +174,16 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
             return false;
         }
 
-        if (user is { } actor && _itemSlots.TryEjectToHands(reader.Owner, slot, actor))
-            return true;
+        if (user is { Valid: true } actor)
+        {
+            if (!IsUserPhysicallyNearReader(reader.Owner, actor, dropNear))
+                return false;
 
-        if (!_itemSlots.TryEject(reader.Owner, slot, user, out var ejected))
+            if (_itemSlots.TryEjectToHands(reader.Owner, slot, actor))
+                return true;
+        }
+
+        if (!_itemSlots.TryEject(reader.Owner, slot, null, out var ejected))
             return false;
 
         if (dropNear is { Valid: true } host && Exists(host) && Exists(ejected.Value))

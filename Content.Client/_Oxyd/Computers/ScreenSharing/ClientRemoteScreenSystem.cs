@@ -48,12 +48,24 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
         SubscribeLocalEvent<UserInterfaceComponent, UseInHandEvent>(
             OnUseInHand,
             before: new[] { typeof(ActivatableUISystem) });
-        SubscribeLocalEvent<EmbeddedComputerHostComponent, EmbeddedComputerHostActivatedEvent>(OnHostActivated);
         SubscribeLocalEvent<UserInterfaceComponent, GetVerbsEvent<ActivationVerb>>(
             OnGetActivationVerbs,
             before: new[] { typeof(SharedInteractionSystem) });
-        SubscribeNetworkEvent<RemoteScreenBringToFrontEvent>(OnRemoteScreenBringToFront);
-        SubscribeLocalEvent<LocalPlayerDetachedEvent>(OnLocalPlayerDetached);
+    }
+
+    public override void FrameUpdate(float frameTime)
+    {
+        base.FrameUpdate(frameTime);
+        BeginPipUiFrame();
+        SyncAllTargets();
+    }
+
+    public override void Shutdown()
+    {
+        base.Shutdown();
+        ClearClientTargetTracking();
+        _pipSurfaces.Clear();
+        FlushDeferredPipDisposals();
     }
 
     public LayoutContainer? GetExistingOffscreenStash()
@@ -150,6 +162,7 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnLocalPlayerDetached(LocalPlayerDetachedEvent args)
     {
         ClearClientTargetTracking();
@@ -358,6 +371,7 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
         return false;
     }
 
+    [SubscribeNetworkEvent]
     private void OnRemoteScreenBringToFront(RemoteScreenBringToFrontEvent ev)
     {
         if (TryGetEntity(ev.TargetEntity, out var targetUid))
@@ -382,6 +396,7 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
             args.Handled = true;
     }
 
+    [SubscribeLocalEvent]
     private void OnHostActivated(Entity<EmbeddedComputerHostComponent> ent, ref EmbeddedComputerHostActivatedEvent args)
     {
         if (args.User != _player.LocalEntity)
@@ -412,20 +427,5 @@ public sealed partial class ClientRemoteScreenSystem : SharedRemoteScreenSystem
             };
             args.Verbs.Add(verb);
         }
-    }
-
-    public override void FrameUpdate(float frameTime)
-    {
-        base.FrameUpdate(frameTime);
-        BeginPipUiFrame();
-        SyncAllTargets();
-    }
-
-    public override void Shutdown()
-    {
-        base.Shutdown();
-        ClearClientTargetTracking();
-        _pipSurfaces.Clear();
-        FlushDeferredPipDisposals();
     }
 }

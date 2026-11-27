@@ -9,13 +9,13 @@ public sealed partial class NetworkBandwidthComponent : Component
     /// Maximum download/receive bytes per second this entity (or router) can forward/process.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public int MaxBps = 250000; // 250 KB/s (~244 KiB/s) default
+    public int MaxBps = 32768; // 32 KB/s default
 
     /// <summary>
     /// Maximum upload/send bytes per second this entity can transmit.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public int MaxUploadBps = 250000; // 250 KB/s default
+    public int MaxUploadBps = 16384; // 16 KB/s default
 
     /// <summary>
     /// Current download throughput utilized in the current evaluation window.
@@ -63,4 +63,13 @@ public sealed partial class NetworkBandwidthComponent : Component
     /// Timestamp for resetting the 1-second rolling rate window.
     /// </summary>
     public TimeSpan NextRateReset = TimeSpan.Zero;
+}
+
+/// <summary>
+/// Active Component marker added to entities with <see cref="NetworkBandwidthComponent"/>
+/// only while they have active traffic counters, queued packets, or saturation to drain.
+/// </summary>
+[RegisterComponent]
+public sealed partial class ActiveNetworkBandwidthComponent : Component
+{
 }

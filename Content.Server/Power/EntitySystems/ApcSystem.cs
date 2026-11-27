@@ -72,15 +72,16 @@ public sealed partial class ApcSystem : EntitySystem
     private void OnComputerPacketSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
     {
         EntityUid? actor = args.Data.ProtectedReferences.TryGetValue("Actor", out var actUid) ? actUid : args.Trigger;
-        HandleDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor);
+        var remoteAuthorized = args.Data.ProtectedReferences.ContainsKey("RemoteAuthorizedComputer");
+        HandleDeviceLinkCommand(ent, args.Data.PacketType, args.Data.GetString("Argument", string.Empty) ?? string.Empty, actor, remoteAuthorized);
     }
 
     private void OnComputerDeviceLinkSignal(Entity<ApcComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
     {
-        HandleDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger);
+        HandleDeviceLinkCommand(ent, args.Data.Command, args.Data.Argument, args.Trigger, remoteAuthorized: false);
     }
 
-    private void HandleDeviceLinkCommand(Entity<ApcComponent> ent, string? rawCmd, string rawArg, EntityUid? triggerOrActor)
+    private void HandleDeviceLinkCommand(Entity<ApcComponent> ent, string? rawCmd, string rawArg, EntityUid? triggerOrActor, bool remoteAuthorized)
     {
         var cmd = rawCmd?.Trim().ToLowerInvariant() ?? string.Empty;
         if (cmd is "status" or "status_request")
@@ -91,20 +92,20 @@ public sealed partial class ApcSystem : EntitySystem
 
         if (cmd is "apc_toggle_breaker" or "toggle_breaker" or "toggle" or "breaker")
         {
-            if (_lock.IsLocked(ent.Owner))
+            if (!remoteAuthorized && _lock.IsLocked(ent.Owner))
             {
                 EmitApcStatusPacket(ent.Owner, ent.Comp);
                 return;
             }
 
-            if (!HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
+            if (!remoteAuthorized && !HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                 return;
 
             ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);
         }
         else if (cmd is "apc_set_breaker" or "set_breaker")
         {
-            if (_lock.IsLocked(ent.Owner))
+            if (!remoteAuthorized && _lock.IsLocked(ent.Owner))
             {
                 EmitApcStatusPacket(ent.Owner, ent.Comp);
                 return;
@@ -113,7 +114,7 @@ public sealed partial class ApcSystem : EntitySystem
             var wantEnabled = rawArg is "1" or "true" or "on";
             if (ent.Comp.MainBreakerEnabled != wantEnabled)
             {
-                if (!HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
+                if (!remoteAuthorized && !HasComp<LockComponent>(ent.Owner) && !IsDeviceLinkActorAllowed(ent.Owner, triggerOrActor))
                     return;
 
                 ApcToggleBreaker(ent.Owner, ent.Comp, user: triggerOrActor);

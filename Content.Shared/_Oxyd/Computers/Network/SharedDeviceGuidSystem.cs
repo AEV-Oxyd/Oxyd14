@@ -1,8 +1,20 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameTicking;
+using Robust.Shared.Map;
 using Robust.Shared.Network;
 
 namespace Content.Shared._Oxyd.Computers.Network;
+
+/// <summary>
+/// Singleton registry mapping 8-character Device GUIDs to live entities.
+/// Keeps lookup state in an ECS singleton entity rather than an EntitySystem field.
+/// </summary>
+[RegisterComponent]
+public sealed partial class DeviceGuidRegistryComponent : Component
+{
+    [ViewVariables]
+    public Dictionary<string, EntityUid> GuidToEntity = new(StringComparer.OrdinalIgnoreCase);
+}
 
 public sealed partial class SharedDeviceGuidSystem : EntitySystem
 {
@@ -10,18 +22,23 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
 
     [Dependency] private EntityQuery<EmbeddedComputerHostComponent> _hostQuery = default!;
 
-    private readonly Dictionary<string, EntityUid> _guidToEntity = new(StringComparer.OrdinalIgnoreCase);
-
-    public override void Initialize()
+    private Dictionary<string, EntityUid> GetRegistryMap()
     {
-        base.Initialize();
+        var query = EntityQueryEnumerator<DeviceGuidRegistryComponent>();
+        if (query.MoveNext(out _, out var reg))
+            return reg.GuidToEntity;
 
-        SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundRestartCleanup);
+        var singleton = Spawn(null, MapCoordinates.Nullspace);
+        var created = EnsureComp<DeviceGuidRegistryComponent>(singleton);
+        return created.GuidToEntity;
     }
 
+    [SubscribeLocalEvent]
     private void OnRoundRestartCleanup(RoundRestartCleanupEvent ev)
     {
-        _guidToEntity.Clear();
+        var query = EntityQueryEnumerator<DeviceGuidRegistryComponent>();
+        while (query.MoveNext(out _, out var reg))
+            reg.GuidToEntity.Clear();
     }
 
     [SubscribeLocalEvent]
@@ -40,22 +57,27 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
     private void OnAfterAutoHandleState(Entity<DeviceGuidComponent> ent, ref AfterAutoHandleStateEvent args)
     {
         if (!string.IsNullOrEmpty(ent.Comp.Guid))
-            _guidToEntity[ent.Comp.Guid] = ent.Owner;
+            GetRegistryMap()[ent.Comp.Guid] = ent.Owner;
     }
 
     [SubscribeLocalEvent]
     private void OnShutdown(Entity<DeviceGuidComponent> ent, ref ComponentShutdown args)
     {
-        if (!string.IsNullOrEmpty(ent.Comp.Guid) &&
-            _guidToEntity.TryGetValue(ent.Comp.Guid, out var existing) &&
+        if (string.IsNullOrEmpty(ent.Comp.Guid))
+            return;
+
+        var query = EntityQueryEnumerator<DeviceGuidRegistryComponent>();
+        if (query.MoveNext(out _, out var reg) &&
+            reg.GuidToEntity.TryGetValue(ent.Comp.Guid, out var existing) &&
             existing == ent.Owner)
         {
-            _guidToEntity.Remove(ent.Comp.Guid);
+            reg.GuidToEntity.Remove(ent.Comp.Guid);
         }
     }
 
     public void EnsureGuid(EntityUid uid, DeviceGuidComponent comp)
     {
+        var map = GetRegistryMap();
         if (string.IsNullOrEmpty(comp.Guid))
         {
             if (!_netManager.IsServer)
@@ -65,13 +87,13 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
             do
             {
                 candidate = System.Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-            } while (_guidToEntity.ContainsKey(candidate));
+            } while (map.ContainsKey(candidate));
 
             comp.Guid = candidate;
             Dirty(uid, comp);
         }
 
-        _guidToEntity[comp.Guid] = uid;
+        map[comp.Guid] = uid;
     }
 
     public string GetGuid(EntityUid uid, DeviceGuidComponent? comp = null)
@@ -97,7 +119,11 @@ public sealed partial class SharedDeviceGuidSystem : EntitySystem
             return false;
         }
 
-        if (_guidToEntity.TryGetValue(guid.Trim(), out var uid) && Exists(uid) && !TerminatingOrDeleted(uid))
+        var query = EntityQueryEnumerator<DeviceGuidRegistryComponent>();
+        if (query.MoveNext(out _, out var reg) &&
+            reg.GuidToEntity.TryGetValue(guid.Trim(), out var uid) &&
+            Exists(uid) &&
+            !TerminatingOrDeleted(uid))
         {
             entity = uid;
             return true;
