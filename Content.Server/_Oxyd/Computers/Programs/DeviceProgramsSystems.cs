@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server.Atmos.Monitor.Components;
 using Content.Server.Power.Components;
@@ -901,13 +902,22 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
                 load = (int) MathF.Ceiling(netBat.NetworkBattery.CurrentSupply);
             }
 
+            var apcXform = Transform(apcUid);
+            NetEntity? gridNet = apcXform.GridUid is { Valid: true } gUid ? GetNetEntity(gUid) : null;
+            var localPos = apcXform.GridUid is { Valid: true } g2
+                ? Vector2.Transform(_transform.GetWorldPosition(apcXform), _transform.GetInvWorldMatrix(g2))
+                : _transform.GetWorldPosition(apcXform);
+
             entries.Add((apcUid, guid, new RemoteApcTargetDto(
                 guid,
                 MetaData(apcUid).EntityName,
                 isAuth,
                 apcComp.MainBreakerEnabled,
                 pct,
-                load)));
+                load,
+                GetNetEntity(apcUid),
+                gridNet,
+                localPos)));
         }
 
         if (cComp?.HostMachine is { } hostApc && _apcQuery.TryComp(hostApc, out var hostApcComp))
@@ -990,6 +1000,12 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
                 ? $"{MetaData(alarmUid).EntityName} ({MetaData(apcUid.Value).EntityName})"
                 : MetaData(alarmUid).EntityName;
 
+            var alarmXform = Transform(alarmUid);
+            NetEntity? gridNet = alarmXform.GridUid is { Valid: true } gUid ? GetNetEntity(gUid) : null;
+            var localPos = alarmXform.GridUid is { Valid: true } g2
+                ? Vector2.Transform(_transform.GetWorldPosition(alarmXform), _transform.GetInvWorldMatrix(g2))
+                : _transform.GetWorldPosition(alarmXform);
+
             entries.Add((alarmUid, alarmGuid, apcUid, apcGuid, new RemoteAtmosTargetDto(
                 alarmGuid,
                 apcGuid,
@@ -997,7 +1013,10 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
                 isAuth,
                 level,
                 pres,
-                temp)));
+                temp,
+                GetNetEntity(alarmUid),
+                gridNet,
+                localPos)));
         }
 
         if (cComp?.HostMachine is { } hostAlarm && _airAlarmQuery.HasComp(hostAlarm))

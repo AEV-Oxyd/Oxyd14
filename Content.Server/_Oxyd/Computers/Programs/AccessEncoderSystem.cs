@@ -1,7 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 using Content.Server._Oxyd.Computers.Hardware;
-using Content.Server.Access.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
@@ -10,14 +9,9 @@ using Content.Shared.Access;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.Containers.ItemSlots;
-using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
-using Content.Shared.Interaction;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
-using Content.Shared.StationRecords;
-using Content.Shared.StationRecords.Components;
-using Content.Shared.StationRecords.Systems;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Prototypes;
@@ -25,24 +19,18 @@ using Robust.Shared.Prototypes;
 namespace Content.Server._Oxyd.Computers.Programs;
 
 /// <summary>
-/// Server logic for the ID Access Encoder &amp; ID Modification Console app
-/// (/bin/access_encoder.nte and /bin/id_console.nte).
-/// 1) Extracts access codes from an inserted ID card (PDA/computer/console slot) or a swiped ID card
-///    and persists them as .acc files in /keys/ on the filesystem.
-/// 2) Modifies a target ID card's Full Name, Job Title, and Access Levels, authorized either by
-///    a Privileged ID card OR by a .acc file stored on the computer's filesystem.
+/// Server system for /bin/access_encoder.nte (ID Access Encoder).
+/// Reads ID card credentials strictly from an ID Card Slot hardware module (or host PDA ID slot)
+/// and encodes / deletes /keys/*.acc files. Does not modify ID cards.
 /// </summary>
 public sealed partial class AccessEncoderSystem : EntitySystem
 {
     [Dependency] private OxydComputerSystem _computer = default!;
     [Dependency] private SharedFileSystemSystem _fileSystem = default!;
     [Dependency] private AccessReaderSystem _access = default!;
-    [Dependency] private AccessSystem _accessSystem = default!;
-    [Dependency] private IdCardSystem _idCard = default!;
-    [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private ComputerCardReaderSystem _cardReaders = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
-    [Dependency] private StationRecordsSystem _stationRecords = default!;
+    [Dependency] private ItemSlotsSystem _itemSlots = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
@@ -50,10 +38,10 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
     [Dependency] private EntityQuery<IdCardComponent> _idCardQuery = default!;
-    [Dependency] private EntityQuery<AccessComponent> _accessQuery = default!;
+    [Dependency] private EntityQuery<PdaComponent> _pdaQuery = default!;
 
-    private const string MissingModificationHardwareMessage =
-        "ID modification requires two ID card slot modules (one for the modifying ID, one for the target ID).";
+    private const string MissingSlotHardwareMessage =
+        "No ID Card Slot hardware installed (0/1). Install a modular ID card slot to read IDs.";
 
     public override void Initialize()
     {
@@ -61,7 +49,6 @@ public sealed partial class AccessEncoderSystem : EntitySystem
 
         Subs.BuiEvents<AccessEncoderProgramComponent>(ProgramUiKey.Key, subs =>
         {
-            subs.Event<BoundUIOpenedEvent>(OnBuiOpened);
             subs.Event<AccessEncoderActionMessage>(OnUiAction);
         });
     }
@@ -69,19 +56,28 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnStartup(Entity<AccessEncoderProgramComponent> ent, ref ProgramStartupEvent args)
     {
+        if (TryGetEncoderSlotCard(args.ComputerUid, out var card, out _))
+            PopulateFromCard(ent.Comp, card);
+
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
     [SubscribeLocalEvent]
     private void OnActivated(Entity<AccessEncoderProgramComponent> ent, ref ProgramActivatedEvent args)
     {
+        if (TryGetEncoderSlotCard(args.ComputerUid, out var card, out _) && string.IsNullOrWhiteSpace(ent.Comp.LastCardName))
+            PopulateFromCard(ent.Comp, card);
+
         UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
     [SubscribeLocalEvent]
     private void OnDeviceLink(Entity<AccessEncoderProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
     {
-        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        UpdateUi(ent.Owner, compUid, ent.Comp);
     }
 
     [SubscribeLocalEvent]
@@ -91,72 +87,63 @@ public sealed partial class AccessEncoderSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
+    private void OnCardReaderChanged(Entity<AccessEncoderProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        if (TryGetEncoderSlotCard(args.ComputerUid, out var card, out _))
+            PopulateFromCard(ent.Comp, card);
+
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
     private void OnHostContainerInserted(Entity<EmbeddedComputerHostComponent> ent, ref EntInsertedIntoContainerMessage args)
     {
-        RefreshHostAccessPrograms(ent);
+        RefreshHostEncoderPrograms(ent, cardInserted: true);
     }
 
     [SubscribeLocalEvent]
     private void OnHostContainerRemoved(Entity<EmbeddedComputerHostComponent> ent, ref EntRemovedFromContainerMessage args)
     {
-        RefreshHostAccessPrograms(ent);
-    }
-
-    private void RefreshHostAccessPrograms(Entity<EmbeddedComputerHostComponent> host)
-    {
-        if (host.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
-            return;
-
-        foreach (var progUid in comp.RunningPrograms)
-        {
-            if (TryComp<AccessEncoderProgramComponent>(progUid, out var enc))
-                UpdateUi(progUid, compUid, enc);
-        }
-    }
-
-    [SubscribeLocalEvent]
-    private void OnCardReaderChanged(Entity<AccessEncoderProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
-    {
-        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+        RefreshHostEncoderPrograms(ent, cardInserted: false);
     }
 
     [SubscribeLocalEvent]
     private void OnCardScanned(Entity<AccessEncoderProgramComponent> ent, ref ProgramCardScannedEvent scanned)
     {
-        if (scanned.Handled)
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
-        // Cards retained by card slot hardware are used as the modifying / target ID, not as a swipe buffer.
-        if (scanned.Retained)
+        if (!HasEncoderSlotHardware(compUid))
         {
-            ent.Comp.StatusMessage = "ID card inserted into card slot.";
-            Dirty(ent);
-            scanned.Handled = true;
-            UpdateUi(ent.Owner, scanned.ComputerUid, ent.Comp);
+            ent.Comp.StatusMessage = MissingSlotHardwareMessage;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
             return;
         }
 
-        var cardUid = scanned.Card;
-        var (ownerName, jobTitle, tags) = ReadCardCredentials(cardUid);
-        ent.Comp.HasScannedCard = true;
-        ent.Comp.LastScannedCardUid = cardUid;
-        ent.Comp.ScannedSourceLabel = $"Swiped ID ({MetaData(cardUid).EntityName})";
-        ent.Comp.ScannedOwnerName = ownerName;
-        ent.Comp.ScannedJobTitle = jobTitle;
-        ent.Comp.ScannedAccessTags = tags;
-        ent.Comp.StatusMessage = $"Scanned {tags.Count} access code(s) from {ownerName}. You can save to /keys/*.acc.";
-        Dirty(ent);
+        // Reject transient swipes on workstations when only a scanner module is used; require physical ID slot retention.
+        if (!scanned.Retained && !IsHostPda(compUid))
+        {
+            ent.Comp.StatusMessage = "Insert the ID card into the ID Card Slot module to read credentials.";
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
 
-        _audio.PlayPvs(ent.Comp.SoundScan, scanned.HostUid);
-        _popup.PopupEntity($"Scanned ID card ({tags.Count} access codes).", scanned.HostUid, scanned.User);
-        scanned.Handled = true;
+        if (!_idCardQuery.HasComp(scanned.Card))
+            return;
 
-        UpdateUi(ent.Owner, scanned.ComputerUid, ent.Comp);
+        PopulateFromCard(ent.Comp, scanned.Card);
+        ent.Comp.StatusMessage = $"Read ID Slot card ({ent.Comp.LastCardName}): {ent.Comp.LastCardAccessTags.Count} access codes.";
+        UpdateUi(ent.Owner, compUid, ent.Comp);
     }
+
+    [SubscribeLocalEvent]
     private void OnBuiOpened(Entity<AccessEncoderProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
+
+        if (TryGetEncoderSlotCard(compUid, out var card, out _) && string.IsNullOrWhiteSpace(ent.Comp.LastCardName))
+            PopulateFromCard(ent.Comp, card);
 
         UpdateUi(ent.Owner, compUid, ent.Comp);
     }
@@ -169,635 +156,368 @@ public sealed partial class AccessEncoderSystem : EntitySystem
         switch (args.Action)
         {
             case AccessEncoderAction.Refresh:
-                ent.Comp.StatusMessage = "Refreshed ID slot and /keys/ filesystem.";
+                if (TryGetEncoderSlotCard(compUid, out var refreshCard, out _))
+                    PopulateFromCard(ent.Comp, refreshCard);
+                break;
+
+            case AccessEncoderAction.ToggleCardSlot:
+                HandleToggleSlot(ent.Comp, compUid, args.Actor);
+                break;
+
+            case AccessEncoderAction.ReadSlotCard:
+                if (!HasEncoderSlotHardware(compUid))
+                {
+                    ent.Comp.StatusMessage = MissingSlotHardwareMessage;
+                }
+                else if (TryGetEncoderSlotCard(compUid, out var slotCard, out _))
+                {
+                    PopulateFromCard(ent.Comp, slotCard);
+                    ent.Comp.StatusMessage = $"Read ID Slot ({ent.Comp.LastCardName}): {ent.Comp.LastCardAccessTags.Count} access codes.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = "ID slot is empty. Insert an ID card first.";
+                }
                 break;
 
             case AccessEncoderAction.ClearScanned:
-                ent.Comp.HasScannedCard = false;
-                ent.Comp.LastScannedCardUid = null;
-                ent.Comp.ScannedSourceLabel = string.Empty;
-                ent.Comp.ScannedOwnerName = string.Empty;
-                ent.Comp.ScannedJobTitle = string.Empty;
-                ent.Comp.ScannedAccessTags.Clear();
-                ent.Comp.StatusMessage = "Cleared swiped card buffer.";
-                break;
-
-            case AccessEncoderAction.SelectFile:
-                ent.Comp.SelectedFilePath = string.IsNullOrWhiteSpace(args.Argument) ? null : args.Argument;
-                if (!string.IsNullOrEmpty(ent.Comp.SelectedFilePath))
-                    ent.Comp.StatusMessage = $"Selected authorization file '{ent.Comp.SelectedFilePath}'.";
-                break;
-
-            case AccessEncoderAction.DeleteFile:
-                if (_fileSystem.TryFindFileSystem(compUid, out var delDrive, out var delFs) &&
-                    !string.IsNullOrWhiteSpace(args.Argument))
-                {
-                    if (_fileSystem.TryDeleteFile(delDrive.Value, args.Argument, delFs))
-                    {
-                        if (string.Equals(ent.Comp.SelectedFilePath, args.Argument, StringComparison.OrdinalIgnoreCase))
-                            ent.Comp.SelectedFilePath = null;
-                        ent.Comp.StatusMessage = $"Deleted '{args.Argument}'.";
-                    }
-                    else
-                    {
-                        ent.Comp.StatusMessage = $"Could not delete '{args.Argument}'.";
-                    }
-                }
+                ent.Comp.LastCardName = null;
+                ent.Comp.LastCardJobTitle = null;
+                ent.Comp.LastCardAccessTags.Clear();
+                ent.Comp.StatusMessage = "Cleared read buffer.";
                 break;
 
             case AccessEncoderAction.BuildSaveFile:
                 HandleBuildSaveFile(ent.Comp, compUid, args.Argument);
                 break;
 
-            case AccessEncoderAction.TogglePrivilegedSlot:
-                HandleToggleHostIdSlot(ent.Comp, compUid, args.Actor, isPrivilegedSlot: true);
+            case AccessEncoderAction.SelectFile:
+                ent.Comp.SelectedFilePath = args.Argument.Trim();
+                ent.Comp.StatusMessage = $"Selected {ent.Comp.SelectedFilePath}";
                 break;
 
-            case AccessEncoderAction.ToggleTargetSlot:
-                HandleToggleHostIdSlot(ent.Comp, compUid, args.Actor, isPrivilegedSlot: false);
-                break;
-
-            case AccessEncoderAction.SwapSlots:
-                if (_cardReaders.GetSlotReaders(compUid).Count < 2)
+            case AccessEncoderAction.DeleteFile:
+                if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) &&
+                    _fileSystem.TryDeleteFile(driveUid.Value, args.Argument.Trim(), fs))
                 {
-                    ent.Comp.StatusMessage = MissingModificationHardwareMessage;
-                }
-                else if (_cardReaders.TrySwapSlotCards(compUid, args.Actor))
-                {
-                    ent.Comp.StatusMessage = "Swapped Modifying ID slot and Target ID slot.";
+                    if (string.Equals(ent.Comp.SelectedFilePath, args.Argument.Trim(), StringComparison.OrdinalIgnoreCase))
+                        ent.Comp.SelectedFilePath = null;
+                    ent.Comp.StatusMessage = $"Deleted {args.Argument.Trim()}";
                 }
                 else
                 {
-                    ent.Comp.StatusMessage = "Both ID card slots are empty.";
+                    ent.Comp.StatusMessage = $"Could not delete '{args.Argument}'.";
                 }
-                break;
-
-            case AccessEncoderAction.WriteTargetIdentity:
-                HandleWriteTargetIdentity(ent.Comp, compUid, args.Argument, args.SecondaryArgument, args.Actor);
-                break;
-
-            case AccessEncoderAction.ToggleTargetAccessTag:
-                HandleToggleTargetAccessTag(ent.Comp, compUid, args.Argument);
-                break;
-
-            case AccessEncoderAction.ApplyAccFileToTarget:
-                HandleApplyAccFileToTarget(ent.Comp, compUid, args.Argument);
-                break;
-
-            case AccessEncoderAction.GrantAllAllowedAccess:
-                HandleBulkTargetAccess(ent.Comp, compUid, grant: true);
-                break;
-
-            case AccessEncoderAction.RevokeAllAllowedAccess:
-                HandleBulkTargetAccess(ent.Comp, compUid, grant: false);
                 break;
         }
 
-        Dirty(ent);
         UpdateUi(ent.Owner, compUid, ent.Comp);
     }
 
-    /// <summary>Slot index 0 = modifying (privileged) ID, slot index 1 = target ID.</summary>
-    private void HandleToggleHostIdSlot(AccessEncoderProgramComponent comp, EntityUid compUid, EntityUid actor, bool isPrivilegedSlot)
+    private void RefreshHostEncoderPrograms(Entity<EmbeddedComputerHostComponent> host, bool cardInserted)
     {
-        var slots = _cardReaders.GetSlotReaders(compUid);
-        var slotLabel = isPrivilegedSlot ? "Modifying ID" : "Target ID";
-        var index = isPrivilegedSlot ? 0 : 1;
-        if (slots.Count < 2)
-        {
-            comp.StatusMessage = MissingModificationHardwareMessage;
+        if (host.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
             return;
-        }
 
-        var reader = slots[index];
-        if (_cardReaders.TryGetRetainedCard(reader, out _))
+        foreach (var progUid in comp.RunningPrograms)
         {
-            comp.StatusMessage = _cardReaders.TryEjectCard(reader, actor)
-                ? $"Ejected {slotLabel} card."
-                : $"Unable to eject {slotLabel} card.";
-            return;
+            if (TryComp<AccessEncoderProgramComponent>(progUid, out var enc))
+            {
+                if (cardInserted && TryGetEncoderSlotCard(compUid, out var card, out _))
+                    PopulateFromCard(enc, card);
+                UpdateUi(progUid, compUid, enc);
+            }
         }
-
-        if (TryGetHeldIdCard(actor, out var held) && _cardReaders.TryInsertCard(reader, held, actor))
-            comp.StatusMessage = $"Inserted {slotLabel} card.";
-        else
-            comp.StatusMessage = $"Hold a valid ID card in your active hand to insert into the {slotLabel} card slot.";
     }
 
-    private bool TryGetHeldIdCard(EntityUid actor, out EntityUid card)
+    private void HandleToggleSlot(AccessEncoderProgramComponent comp, EntityUid compUid, EntityUid actor)
     {
-        card = EntityUid.Invalid;
+        var slotReaders = _cardReaders.GetSlotReaders(compUid);
+        if (slotReaders.Count == 0)
+        {
+            comp.StatusMessage = IsHostPda(compUid)
+                ? "Insert or remove your ID directly in the PDA's physical ID slot."
+                : MissingSlotHardwareMessage;
+            return;
+        }
+
+        var slot = slotReaders[0];
+        if (_cardReaders.TryGetSlotCard(compUid, 0, out _))
+        {
+            if (_cardReaders.TryEjectCard(slot, actor, GetDropNear(compUid)))
+                comp.StatusMessage = "Ejected ID card from slot.";
+            return;
+        }
+
         if (!_hands.TryGetActiveItem(actor, out var held) || !_idCardQuery.HasComp(held.Value))
-            return false;
-
-        card = held.Value;
-        return true;
-    }
-    private string TargetMissingMessage(EntityUid compUid, string verb)
-    {
-        return _cardReaders.GetSlotReaders(compUid).Count < 2
-            ? MissingModificationHardwareMessage
-            : $"{verb} failed: No ID card in the target card slot.";
-    }
-    private void HandleWriteTargetIdentity(
-        AccessEncoderProgramComponent comp,
-        EntityUid compUid,
-        string rawFullName,
-        string rawJobTitle,
-        EntityUid actor)
-    {
-        if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out _))
         {
-            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
+            comp.StatusMessage = "Hold an ID card in your active hand to insert it.";
             return;
         }
 
-        if (!ResolvePrivilegedPermissions(compUid, comp, out var hasAuth, out var authLabel, out _))
+        if (_cardReaders.TryInsertCard(slot, held.Value, actor))
         {
-            comp.StatusMessage = "Access denied: Insert/swipe a privileged ID card or select a .acc file in /keys/.";
-            return;
-        }
-
-        var newName = (rawFullName ?? string.Empty).Trim();
-        var newJob = (rawJobTitle ?? string.Empty).Trim();
-        if (newName.Length > 48)
-            newName = newName[..48];
-        if (newJob.Length > 48)
-            newJob = newJob[..48];
-
-        if (!string.IsNullOrEmpty(newName))
-            _idCard.TryChangeFullName(targetCardUid, newName, player: actor);
-        if (!string.IsNullOrEmpty(newJob))
-            _idCard.TryChangeJobTitle(targetCardUid, newJob, player: actor);
-
-        if (TryComp<StationRecordKeyStorageComponent>(targetCardUid, out var keyStorage) &&
-            keyStorage.Key is { } recKey &&
-            _stationRecords.TryGetRecord<GeneralStationRecord>(recKey, out var record))
-        {
-            if (!string.IsNullOrEmpty(newName))
-                record.Name = newName;
-            if (!string.IsNullOrEmpty(newJob))
-                record.JobTitle = newJob;
-            _stationRecords.Synchronize(recKey);
-        }
-
-        // If the target card was our scanned card buffer, keep its cached name/title updated too.
-        if (comp.LastScannedCardUid == targetCardUid)
-        {
-            if (!string.IsNullOrEmpty(newName))
-                comp.ScannedOwnerName = newName;
-            if (!string.IsNullOrEmpty(newJob))
-                comp.ScannedJobTitle = newJob;
-        }
-
-        comp.StatusMessage = $"Updated ID identity to '{newName}' ({newJob}) via {authLabel}.";
-    }
-
-    private void HandleToggleTargetAccessTag(AccessEncoderProgramComponent comp, EntityUid compUid, string rawTag)
-    {
-        if (string.IsNullOrWhiteSpace(rawTag))
-            return;
-
-        if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out _))
-        {
-            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
-            return;
-        }
-
-        if (!ResolvePrivilegedPermissions(compUid, comp, out _, out var authLabel, out var allowedTags))
-        {
-            comp.StatusMessage = "Access denied: Insert/swipe a privileged ID card or select a .acc file in /keys/.";
-            return;
-        }
-
-        var tagProto = new ProtoId<AccessLevelPrototype>(rawTag.Trim());
-        if (!allowedTags.Contains(tagProto))
-        {
-            comp.StatusMessage = $"Access denied: Current authorization ({authLabel}) does not grant '{tagProto.Id}'.";
-            return;
-        }
-
-        var currentTags = _accessSystem.TryGetTags(targetCardUid)?.ToList() ?? new List<ProtoId<AccessLevelPrototype>>();
-        bool added;
-        if (currentTags.Contains(tagProto))
-        {
-            currentTags.Remove(tagProto);
-            added = false;
+            PopulateFromCard(comp, held.Value);
+            comp.StatusMessage = $"Inserted {MetaData(held.Value).EntityName} into ID Slot ({comp.LastCardAccessTags.Count} codes).";
         }
         else
         {
-            currentTags.Add(tagProto);
-            added = true;
+            comp.StatusMessage = "Unable to insert ID card into slot.";
         }
-
-        _accessSystem.TrySetTags(targetCardUid, currentTags);
-        if (comp.LastScannedCardUid == targetCardUid)
-            comp.ScannedAccessTags = currentTags.OrderBy(t => t.Id, StringComparer.OrdinalIgnoreCase).ToList();
-
-        comp.StatusMessage = $"{(added ? "Granted" : "Revoked")} '{tagProto.Id}' on target ID via {authLabel}.";
-    }
-
-    private void HandleApplyAccFileToTarget(AccessEncoderProgramComponent comp, EntityUid compUid, string requestedPath)
-    {
-        if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetLabel))
-        {
-            comp.StatusMessage = TargetMissingMessage(compUid, "Apply");
-            return;
-        }
-
-        var path = !string.IsNullOrWhiteSpace(requestedPath) ? requestedPath.Trim() : comp.SelectedFilePath;
-        if (!TryGetAccFileFromComputerOrDisk(compUid, path, out var accFile))
-        {
-            comp.StatusMessage = "Apply failed: Select or save a valid .acc file in /keys/ first.";
-            return;
-        }
-
-        comp.SelectedFilePath = accFile.FullPath;
-        var currentTags = _accessSystem.TryGetTags(targetCardUid)?.ToHashSet() ?? new HashSet<ProtoId<AccessLevelPrototype>>();
-        var addedCount = 0;
-        foreach (var tag in accFile.AccessTags)
-        {
-            if (currentTags.Add(tag))
-                addedCount++;
-        }
-
-        var finalList = currentTags.OrderBy(t => t.Id, StringComparer.OrdinalIgnoreCase).ToList();
-        _accessSystem.TrySetTags(targetCardUid, finalList);
-
-        if (comp.LastScannedCardUid == targetCardUid)
-            comp.ScannedAccessTags = finalList;
-
-        comp.StatusMessage = $"Applied {accFile.FullPath} ({accFile.AccessTags.Count} codes, +{addedCount} new) to {targetLabel}.";
-    }
-
-    private void HandleBulkTargetAccess(AccessEncoderProgramComponent comp, EntityUid compUid, bool grant)
-    {
-        if (!TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetLabel))
-        {
-            comp.StatusMessage = TargetMissingMessage(compUid, "Modify");
-            return;
-        }
-
-        if (!ResolvePrivilegedPermissions(compUid, comp, out _, out var authLabel, out var allowedTags))
-        {
-            comp.StatusMessage = "Access denied: Insert/swipe a privileged ID card or select a .acc file in /keys/.";
-            return;
-        }
-
-        var currentTags = _accessSystem.TryGetTags(targetCardUid)?.ToHashSet() ?? new HashSet<ProtoId<AccessLevelPrototype>>();
-        if (grant)
-        {
-            foreach (var tag in allowedTags)
-                currentTags.Add(tag);
-        }
-        else
-        {
-            foreach (var tag in allowedTags)
-                currentTags.Remove(tag);
-        }
-
-        var finalList = currentTags.OrderBy(t => t.Id, StringComparer.OrdinalIgnoreCase).ToList();
-        _accessSystem.TrySetTags(targetCardUid, finalList);
-
-        if (comp.LastScannedCardUid == targetCardUid)
-            comp.ScannedAccessTags = finalList;
-
-        comp.StatusMessage = grant
-            ? $"Granted all {allowedTags.Count} authorized access level(s) to {targetLabel} via {authLabel}."
-            : $"Revoked authorized access level(s) from {targetLabel} via {authLabel}.";
     }
 
     private void HandleBuildSaveFile(AccessEncoderProgramComponent comp, EntityUid compUid, string requestedName)
     {
+        if (!HasEncoderSlotHardware(compUid))
+        {
+            comp.StatusMessage = MissingSlotHardwareMessage;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(comp.LastCardName))
+        {
+            if (!TryGetEncoderSlotCard(compUid, out var card, out _))
+            {
+                comp.StatusMessage = "Insert an ID card into the ID slot before encoding a .acc file.";
+                return;
+            }
+
+            PopulateFromCard(comp, card);
+        }
+
         if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
         {
-            comp.StatusMessage = "Save failed: No hard drive installed.";
+            comp.StatusMessage = "No hard drive installed to store /keys/*.acc files.";
             return;
         }
 
-        if (!TryResolveActiveSource(compUid, comp, out _, out var ownerName, out var jobTitle, out var tags))
+        var baseName = IdCardProgramHelpers.SanitizeFileName(string.IsNullOrWhiteSpace(requestedName) ? comp.LastCardName : requestedName);
+        var accFile = new AccessCodesVirtualFile
         {
-            comp.StatusMessage = "No ID card detected. Insert an ID into your PDA or swipe an ID card on this computer.";
-            return;
-        }
-
-        var safeName = SanitizeFileName(requestedName);
-        if (string.IsNullOrEmpty(safeName))
-            safeName = SanitizeFileName(!string.IsNullOrWhiteSpace(jobTitle) ? jobTitle : ownerName);
-        if (string.IsNullOrEmpty(safeName))
-            safeName = "id_access";
-
-        var file = new AccessCodesVirtualFile
-        {
-            Name = safeName,
+            Name = baseName,
             Extension = "acc",
             Directory = AccessEncoderProgramComponent.DefaultDirectory,
-            OwnerName = ownerName,
-            JobTitle = jobTitle,
-            AccessTags = new List<ProtoId<AccessLevelPrototype>>(tags),
-            Size = Math.Max(128, 128 + tags.Count * 24)
+            OwnerName = comp.LastCardName!,
+            JobTitle = comp.LastCardJobTitle ?? string.Empty,
+            AccessTags = new List<ProtoId<AccessLevelPrototype>>(comp.LastCardAccessTags),
+            Size = Math.Max(128, comp.LastCardAccessTags.Count * 32)
         };
 
-        if (_fileSystem.TryWriteFile(driveUid.Value, file, fs))
+        if (!_fileSystem.TryWriteFile(driveUid.Value, accFile, fs))
         {
-            comp.SelectedFilePath = file.FullPath;
-            comp.StatusMessage = $"Saved {tags.Count} access code(s) to {file.FullPath}.";
-            _fileSystem.LogSystemActivity(driveUid.Value, "ACCESS-ENC", $"Encoded {tags.Count} access codes -> {file.FullPath}");
+            comp.StatusMessage = "Failed to save .acc file: hard drive full or read-only.";
+            return;
         }
-        else
-        {
-            comp.StatusMessage = "Save failed: Hard drive full or target file is read-only.";
-        }
+
+        comp.SelectedFilePath = accFile.FullPath;
+        _fileSystem.LogSystemActivity(driveUid.Value, "ACCESS-ENC", $"Encoded {accFile.FullPath} ({accFile.AccessTags.Count} tags)");
+        comp.StatusMessage = $"Saved {accFile.FullPath} ({accFile.AccessTags.Count} access codes).";
     }
 
-    private (string OwnerName, string JobTitle, List<ProtoId<AccessLevelPrototype>> Tags) ReadCardCredentials(EntityUid cardUid)
+    private bool HasEncoderSlotHardware(EntityUid compUid)
     {
-        var owner = string.Empty;
-        var job = string.Empty;
-        if (_idCardQuery.TryComp(cardUid, out var idCard))
-        {
-            owner = idCard.FullName ?? string.Empty;
-            job = idCard.LocalizedJobTitle ?? string.Empty;
-        }
-
-        if (string.IsNullOrWhiteSpace(owner))
-            owner = MetaData(cardUid).EntityName;
-
-        var tags = _access.FindAccessTags(cardUid)
-            .OrderBy(t => t.Id, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return (owner, job, tags);
+        return _cardReaders.GetSlotReaders(compUid).Count >= 1 || IsHostPda(compUid);
     }
 
-    private bool TryResolveActiveSource(
-        EntityUid compUid,
-        AccessEncoderProgramComponent comp,
-        out string sourceLabel,
-        out string ownerName,
-        out string jobTitle,
-        out List<ProtoId<AccessLevelPrototype>> tags)
+    private bool IsHostPda(EntityUid compUid)
     {
-        if (comp.HasScannedCard)
+        return _computerQuery.TryComp(compUid, out var comp) &&
+               comp.HostMachine is { } hostUid &&
+               _pdaQuery.HasComp(hostUid);
+    }
+
+    private bool TryGetEncoderSlotCard(EntityUid compUid, out EntityUid cardUid, out bool isModularSlot)
+    {
+        cardUid = EntityUid.Invalid;
+        isModularSlot = false;
+
+        if (_cardReaders.TryGetSlotCard(compUid, 0, out var slotCard) && _idCardQuery.HasComp(slotCard))
         {
-            sourceLabel = string.IsNullOrWhiteSpace(comp.ScannedSourceLabel) ? "Swiped ID Card" : comp.ScannedSourceLabel;
-            ownerName = comp.ScannedOwnerName;
-            jobTitle = comp.ScannedJobTitle;
-            tags = comp.ScannedAccessTags;
+            cardUid = slotCard;
+            isModularSlot = true;
             return true;
         }
 
-        // Cards retained by the card slot hardware: modifying ID (slot 1) first, then target ID (slot 2).
-        if (_cardReaders.TryGetSlotCard(compUid, 0, out var privUid))
+        if (IsHostPda(compUid) && _computer.TryGetInsertedIdCard(compUid, out var pdaCard) && _idCardQuery.HasComp(pdaCard))
         {
-            var creds = ReadCardCredentials(privUid);
-            sourceLabel = $"Modifying ID Slot ({MetaData(privUid).EntityName})";
-            ownerName = creds.OwnerName;
-            jobTitle = creds.JobTitle;
-            tags = creds.Tags;
+            cardUid = pdaCard;
             return true;
         }
 
-        if (_cardReaders.TryGetSlotCard(compUid, 1, out var targUid))
-        {
-            var creds = ReadCardCredentials(targUid);
-            sourceLabel = $"Target ID Slot ({MetaData(targUid).EntityName})";
-            ownerName = creds.OwnerName;
-            jobTitle = creds.JobTitle;
-            tags = creds.Tags;
-            return true;
-        }
-
-        if (_computer.TryGetInsertedIdCard(compUid, out var insertedCardUid))
-        {
-            var creds = ReadCardCredentials(insertedCardUid);
-            sourceLabel = $"Inserted ID ({MetaData(insertedCardUid).EntityName})";
-            ownerName = creds.OwnerName;
-            jobTitle = creds.JobTitle;
-            tags = creds.Tags;
-            return true;
-        }
-
-        sourceLabel = "None";
-        ownerName = string.Empty;
-        jobTitle = string.Empty;
-        tags = new List<ProtoId<AccessLevelPrototype>>();
         return false;
     }
 
-    private bool TryResolveTargetIdCard(
-        EntityUid compUid,
-        AccessEncoderProgramComponent comp,
-        out EntityUid targetCardUid,
-        out string targetLabel)
+    private EntityUid? GetDropNear(EntityUid compUid)
     {
-        // The target ID must sit in the second card slot hardware module.
-        if (_cardReaders.GetSlotReaders(compUid).Count >= 2 && _cardReaders.TryGetSlotCard(compUid, 1, out var slotTarget))
-        {
-            targetCardUid = slotTarget;
-            targetLabel = $"Target ID Slot ({MetaData(slotTarget).EntityName})";
-            return true;
-        }
-        targetCardUid = EntityUid.Invalid;
-        targetLabel = "None";
-        return false;
+        return _computerQuery.TryComp(compUid, out var c) && c.HostMachine is { } h ? h : compUid;
     }
 
-    private bool TryGetAccFileFromComputerOrDisk(
-        EntityUid compUid,
-        string? requestedPath,
-        out AccessCodesVirtualFile accFile)
+    private void PopulateFromCard(AccessEncoderProgramComponent comp, EntityUid cardUid)
     {
-        var allAccFiles = new List<AccessCodesVirtualFile>();
-        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
-        {
-            allAccFiles.AddRange(_fileSystem.GetFilesByType<AccessCodesVirtualFile>(driveUid.Value, fs));
-        }
-
-        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
-            diskSlot.Item is { Valid: true } diskUid &&
-            TryComp<FileSystemComponent>(diskUid, out var diskFs))
-        {
-            allAccFiles.AddRange(_fileSystem.GetFilesByType<AccessCodesVirtualFile>(diskUid, diskFs));
-        }
-
-        if (!string.IsNullOrWhiteSpace(requestedPath))
-        {
-            var match = allAccFiles.FirstOrDefault(f =>
-                string.Equals(f.FullPath, requestedPath, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(f.Name, requestedPath, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals($"{f.Name}.{f.Extension}", requestedPath, StringComparison.OrdinalIgnoreCase));
-            if (match != null)
-            {
-                accFile = match;
-                return true;
-            }
-        }
-
-        if (allAccFiles.Count > 0)
-        {
-            accFile = allAccFiles.OrderBy(f => f.FullPath, StringComparer.OrdinalIgnoreCase).First();
-            return true;
-        }
-
-        accFile = default!;
-        return false;
-    }
-
-    private bool ResolvePrivilegedPermissions(
-        EntityUid compUid,
-        AccessEncoderProgramComponent comp,
-        out bool hasAuth,
-        out string authLabel,
-        out HashSet<ProtoId<AccessLevelPrototype>> allowedTags)
-    {
-        allowedTags = new HashSet<ProtoId<AccessLevelPrototype>>();
-        var slots = _cardReaders.GetSlotReaders(compUid);
-        if (slots.Count < 2)
-        {
-            hasAuth = false;
-            authLabel = $"Requires 2 ID Card Slot modules ({slots.Count}/2 installed)";
-            return false;
-        }
-
-        var sources = new List<string>();
-
-        // 1) Modifying ID retained in the first card slot hardware module
-        if (_cardReaders.TryGetRetainedCard(slots[0], out var privUid))
-        {
-            foreach (var tag in _access.FindAccessTags(privUid))
-                allowedTags.Add(tag);
-            sources.Add($"Modifying ID ({MetaData(privUid).EntityName})");
-        }
-
-        // 2) Selected or available .acc file on hard drive / disk
-        if (TryGetAccFileFromComputerOrDisk(compUid, comp.SelectedFilePath, out var accFile) && !accFile.IsEncrypted)
-        {
-            comp.SelectedFilePath ??= accFile.FullPath;
-            foreach (var tag in accFile.AccessTags)
-                allowedTags.Add(tag);
-            sources.Add($".acc ({accFile.FullPath})");
-        }
-
-        hasAuth = allowedTags.Count > 0;
-        authLabel = sources.Count > 0 ? string.Join(" + ", sources) : "None (Insert Modifying ID into Slot #1 or select .acc file)";
-        return hasAuth;
-    }
-
-    private static string SanitizeFileName(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        var trimmed = raw.Trim();
-        var slash = trimmed.LastIndexOf('/');
-        if (slash >= 0)
-            trimmed = trimmed[(slash + 1)..];
-        if (trimmed.EndsWith(".acc", StringComparison.OrdinalIgnoreCase))
-            trimmed = trimmed[..^4];
-
-        var sb = new StringBuilder(trimmed.Length);
-        foreach (var ch in trimmed)
-        {
-            if (char.IsLetterOrDigit(ch) || ch == '_' || ch == '-')
-                sb.Append(char.ToLowerInvariant(ch));
-            else if (ch == ' ')
-                sb.Append('_');
-        }
-
-        return sb.ToString().Trim('_');
+        var (ownerName, jobTitle, tags) = IdCardProgramHelpers.ReadCardCredentials(cardUid, _idCardQuery, _access, EntityManager);
+        comp.LastCardName = ownerName;
+        comp.LastCardJobTitle = jobTitle;
+        comp.LastCardAccessTags = tags;
     }
 
     public void UpdateUi(EntityUid progUid, EntityUid compUid, AccessEncoderProgramComponent comp)
     {
-        var hasHdd = _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs);
-        var hasSource = TryResolveActiveSource(compUid, comp, out var sourceLabel, out var ownerName, out var jobTitle, out var sourceTags);
-
-        var savedFiles = new List<AccessCodeFileEntryDto>();
-        string? selectedSummary = null;
-
-        if (hasHdd && driveUid != null && fs != null)
-        {
-            foreach (var f in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(driveUid.Value, fs).OrderBy(f => f.FullPath, StringComparer.OrdinalIgnoreCase))
-            {
-                var tagStrings = f.AccessTags.Select(t => t.Id).ToList();
-                savedFiles.Add(new AccessCodeFileEntryDto(
-                    f.FullPath,
-                    $"{f.Name}.{f.Extension}",
-                    f.OwnerName,
-                    f.JobTitle,
-                    tagStrings));
-
-                if (string.IsNullOrEmpty(comp.SelectedFilePath))
-                    comp.SelectedFilePath = f.FullPath;
-
-                if (!string.IsNullOrEmpty(comp.SelectedFilePath) &&
-                    string.Equals(f.FullPath, comp.SelectedFilePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    var tagList = tagStrings.Count > 0 ? string.Join(", ", tagStrings) : "(none)";
-                    selectedSummary =
-                        $"Active .acc Auth File: {f.FullPath}\n" +
-                        $"Holder: {f.OwnerName}{(string.IsNullOrWhiteSpace(f.JobTitle) ? "" : $" ({f.JobTitle})")}\n" +
-                        $"Access Codes ({tagStrings.Count}): {tagList}\n" +
-                        $"Terminal Usage: auth <guid> {f.FullPath}  |  In SSH: auth {f.FullPath}";
-                }
-            }
-        }
-
-        var hasHostIdSlots = false;
-        var hasPrivSlotCard = false;
-        var hasTargSlotCard = false;
+        if (!_ui.HasUi(progUid, ProgramUiKey.Key))
+            return;
 
         var slotReaders = _cardReaders.GetSlotReaders(compUid);
-        var hasCardScanner = _cardReaders.HasScannerReader(compUid);
-        if (slotReaders.Count >= 2)
-        {
-            hasHostIdSlots = true;
-            hasPrivSlotCard = _cardReaders.TryGetRetainedCard(slotReaders[0], out _);
-            hasTargSlotCard = _cardReaders.TryGetRetainedCard(slotReaders[1], out _);
-        }
-        ResolvePrivilegedPermissions(compUid, comp, out var hasPrivAuth, out var privAuthLabel, out var allowedTagsSet);
-        var hasTargetCard = TryResolveTargetIdCard(compUid, comp, out var targetCardUid, out var targetCardLabel);
-        var targetFullName = string.Empty;
-        var targetJobTitle = string.Empty;
-        var targetAccessTags = new List<string>();
+        var hasModularSlot = slotReaders.Count >= 1;
+        var hasSlotHardware = hasModularSlot || IsHostPda(compUid);
+        var slotOccupied = TryGetEncoderSlotCard(compUid, out var insertedCard, out _);
+        var slotCardLabel = slotOccupied ? MetaData(insertedCard).EntityName : string.Empty;
 
-        if (hasTargetCard && _idCardQuery.TryComp(targetCardUid, out var targetIdComp))
+        var keyFiles = IdCardProgramHelpers.CollectAccFiles(compUid, _itemSlots, _fileSystem, EntityManager, out var hddFiles, out _);
+        var selectedPath = comp.SelectedFilePath ?? string.Empty;
+        if (string.IsNullOrEmpty(selectedPath) && keyFiles.Count > 0)
         {
-            targetFullName = targetIdComp.FullName ?? string.Empty;
-            targetJobTitle = targetIdComp.LocalizedJobTitle ?? string.Empty;
-            if (_accessQuery.TryComp(targetCardUid, out var targetAccComp))
-                targetAccessTags = targetAccComp.Tags.Select(t => t.Id).OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+            selectedPath = keyFiles[0];
+            comp.SelectedFilePath = selectedPath;
+        }
+
+        var preview = string.Empty;
+        if (!string.IsNullOrEmpty(selectedPath) &&
+            IdCardProgramHelpers.TryGetAccFile(compUid, selectedPath, hddFiles, _itemSlots, _fileSystem, EntityManager, out var accFile))
+        {
+            var tagLine = accFile.AccessTags.Count > 0
+                ? string.Join(", ", accFile.AccessTags.Select(t => t.Id))
+                : "(no access codes)";
+            preview = $"File: {selectedPath}\nHolder: {accFile.OwnerName} ({accFile.JobTitle})\nCodes ({accFile.AccessTags.Count}): {tagLine}";
         }
 
         var state = new AccessEncoderUiState(
-            hasHdd,
-            hasSource,
-            comp.HasScannedCard,
-            sourceLabel,
-            ownerName,
-            jobTitle,
-            sourceTags.Select(t => t.Id).ToList(),
-            savedFiles,
-            comp.SelectedFilePath,
-            selectedSummary,
-            comp.StatusMessage,
-            hasPrivAuth,
-            privAuthLabel,
-            allowedTagsSet.Select(t => t.Id).OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList(),
-            hasTargetCard,
-            targetCardLabel,
-            targetFullName,
-            targetJobTitle,
-            targetAccessTags,
-            comp.AccessGroup,
-            hasHostIdSlots,
-            hasPrivSlotCard,
-            hasTargSlotCard,
-            slotReaders.Count,
-            hasCardScanner);
+            hasSlotHardware,
+            hasModularSlot,
+            slotOccupied,
+            slotCardLabel,
+            comp.LastCardName ?? string.Empty,
+            comp.LastCardJobTitle ?? string.Empty,
+            comp.LastCardAccessTags.Select(t => t.Id).ToList(),
+            selectedPath,
+            preview,
+            keyFiles,
+            hasSlotHardware ? comp.StatusMessage : MissingSlotHardwareMessage);
 
-        if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, state);
+        _ui.SetUiState(progUid, ProgramUiKey.Key, state);
+    }
+}
+
+/// <summary>
+/// Shared internal helpers for reading ID cards and /keys/*.acc files across
+/// Access Encoder and ID Modifier without duplicating filesystem logic.
+/// </summary>
+internal static class IdCardProgramHelpers
+{
+    public static (string OwnerName, string JobTitle, List<ProtoId<AccessLevelPrototype>> Tags) ReadCardCredentials(
+        EntityUid cardUid,
+        EntityQuery<IdCardComponent> idCardQuery,
+        AccessReaderSystem access,
+        IEntityManager entMan)
+    {
+        idCardQuery.TryComp(cardUid, out var idCard);
+        var owner = !string.IsNullOrWhiteSpace(idCard?.FullName)
+            ? idCard.FullName!
+            : entMan.GetComponent<MetaDataComponent>(cardUid).EntityName;
+        var job = idCard?.LocalizedJobTitle ?? string.Empty;
+        var tags = access.FindAccessTags(cardUid)
+            .OrderBy(t => t.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return (owner, job, tags);
+    }
+
+    public static List<string> CollectAccFiles(
+        EntityUid compUid,
+        ItemSlotsSystem itemSlots,
+        SharedFileSystemSystem fileSystem,
+        IEntityManager entMan,
+        out Dictionary<string, AccessCodesVirtualFile> filesByPath,
+        out EntityUid? hddDriveUid)
+    {
+        filesByPath = new Dictionary<string, AccessCodesVirtualFile>(StringComparer.OrdinalIgnoreCase);
+        hddDriveUid = null;
+
+        if (fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+        {
+            hddDriveUid = driveUid;
+            foreach (var acc in fileSystem.GetFilesByType<AccessCodesVirtualFile>(driveUid.Value, fs))
+                filesByPath[acc.FullPath] = acc;
+        }
+
+        if (itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            entMan.TryGetComponent<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            foreach (var acc in fileSystem.GetFilesByType<AccessCodesVirtualFile>(diskUid, diskFs))
+            {
+                if (!filesByPath.ContainsKey(acc.FullPath))
+                    filesByPath[acc.FullPath] = acc;
+            }
+        }
+
+        return filesByPath.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    public static bool TryGetAccFile(
+        EntityUid compUid,
+        string requestedPath,
+        Dictionary<string, AccessCodesVirtualFile> cachedFiles,
+        ItemSlotsSystem itemSlots,
+        SharedFileSystemSystem fileSystem,
+        IEntityManager entMan,
+        [NotNullWhen(true)] out AccessCodesVirtualFile? accFile)
+    {
+        if (cachedFiles.TryGetValue(requestedPath, out accFile))
+            return true;
+
+        var normalized = requestedPath.Trim();
+        if (!normalized.StartsWith('/'))
+            normalized = AccessEncoderProgramComponent.DefaultDirectory + normalized;
+        if (!normalized.EndsWith(".acc", StringComparison.OrdinalIgnoreCase))
+            normalized += ".acc";
+
+        if (cachedFiles.TryGetValue(normalized, out accFile))
+            return true;
+
+        if (fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) &&
+            driveUid != null &&
+            fs != null &&
+            fileSystem.TryGetFile(driveUid.Value, normalized, out accFile, fs))
+        {
+            return true;
+        }
+
+        if (itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            entMan.TryGetComponent<FileSystemComponent>(diskUid, out var diskFs) &&
+            fileSystem.TryGetFile(diskUid, normalized, out accFile, diskFs))
+        {
+            return true;
+        }
+
+        accFile = null;
+        return false;
+    }
+
+    public static string SanitizeFileName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return "id_key";
+
+        var clean = new string(raw.Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) || ch is '_' or '-' ? ch : '_')
+            .ToArray())
+            .Trim('_');
+
+        if (clean.EndsWith("_acc", StringComparison.OrdinalIgnoreCase))
+            clean = clean[..^4];
+        if (clean.EndsWith(".acc", StringComparison.OrdinalIgnoreCase))
+            clean = clean[..^4];
+
+        return string.IsNullOrWhiteSpace(clean) ? "id_key" : clean;
     }
 }

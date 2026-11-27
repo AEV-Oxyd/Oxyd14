@@ -51,6 +51,16 @@ public record struct ProgramRelayedEvent<TEvent>(EntityUid ComputerUid, TEvent A
 
 
 /// <summary>
+/// Broadcast on the server when a <see cref="ComputerPacket"/> arrives at an
+/// <see cref="EmbeddedComputerHostComponent"/> or <see cref="OxydComputerComponent"/> DeviceLink sink port.
+/// </summary>
+public readonly record struct ComputerSinkPacketReceivedEvent(
+    EntityUid ComputerUid,
+    EntityUid ReceiverUid,
+    string Port,
+    ComputerPacket Packet);
+
+/// <summary>
 /// Raised by an embedded computer host on its computer entity whenever any item is used on the host.
 /// The ID card reader hardware system consumes it when the item is an ID card (or a PDA carrying one),
 /// scanning it through an installed card scanner or inserting it into an installed card slot.

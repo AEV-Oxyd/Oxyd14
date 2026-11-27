@@ -1,367 +1,316 @@
-using System.Linq;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
-using Content.Shared.Access;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
-using Robust.Shared.IoC;
 using Robust.Shared.Maths;
-using Robust.Shared.Prototypes;
 
 namespace Content.Client._Oxyd.Computers.Programs;
 
 /// <summary>
-/// Client UI for ID Access Encoder &amp; ID Modification Console (/bin/access_encoder.nte and /bin/id_console.nte).
-/// 1) Builds .acc access code files from an inserted PDA/computer/console ID card or a swiped ID card
-///    and manages saved .acc files stored under /keys/ on the hard drive.
-/// 2) Modifies a target ID card's Full Name, Job Title, and Access Levels, authorized either by
-///    a Privileged ID card OR by a .acc file stored on the computer's filesystem.
+/// Dedicated UI for /bin/access_encoder.nte: reads a single ID card from an installed
+/// ID Card Slot module (or PDA slot) and encodes / manages /keys/*.acc access files.
 /// </summary>
 public sealed class AccessEncoderUiControl : ProgramUiControl
 {
-    private readonly ContentLabel _headerLabel;
-    private readonly ContentLabel _sourceLabel;
-    private readonly ContentWrapContainer _sourceTagsWrap;
-    private readonly ContentLabel _statusLabel;
+    private readonly ContentLabel _hardwareLabel;
+    private readonly ContentButton _slotToggleBtn;
+    private readonly ContentButton _readSlotBtn;
+    private readonly ContentButton _clearBtn;
     private readonly ContentLineEdit _fileNameInput;
     private readonly ContentButton _buildBtn;
-    private readonly ContentButton _clearScannedBtn;
-    private readonly ContentBoxContainer _filesContainer;
-    private readonly ContentLabel _detailLabel;
-
-    // ID Modification & Authorization Console controls
-    private readonly ContentBoxContainer _slotButtonsRow;
-    private readonly ContentButton _privSlotBtn;
-    private readonly ContentButton _targetSlotBtn;
-    private readonly ContentButton _swapSlotsBtn;
-    private readonly ContentLabel _authSourceLabel;
-    private readonly ContentLabel _targetCardLabel;
-    private readonly ContentLineEdit _targetFullNameEdit;
-    private readonly ContentLineEdit _targetJobTitleEdit;
-    private readonly ContentButton _saveIdentityBtn;
-    private readonly ContentButton _applyAccToTargetBtn;
-    private readonly ContentButton _grantAllBtn;
-    private readonly ContentButton _revokeAllBtn;
-    private readonly ContentWrapContainer _accessButtonsWrap;
-
-    private string _lastTargetCardLabel = string.Empty;
-    private string _lastTargetName = string.Empty;
-    private string _lastTargetJob = string.Empty;
-    private readonly IPrototypeManager _proto;
+    private readonly ContentLabel _statusLabel;
+    private readonly ContentLabel _cardOwnerLabel;
+    private readonly ContentLabel _cardJobLabel;
+    private readonly ContentWrapContainer _tagsWrap;
+    private readonly ContentBoxContainer _filesList;
+    private readonly ContentLabel _previewLabel;
 
     public AccessEncoderUiControl()
     {
-        _proto = IoCManager.Resolve<IPrototypeManager>();
         HorizontalExpand = true;
         VerticalExpand = true;
-
-        var rootScroll = new ContentScrollContainer
-        {
-            HorizontalExpand = true,
-            VerticalExpand = true
-        };
 
         var root = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
+            VerticalExpand = true,
             Margin = new Thickness(6),
+            SeparationOverride = 6
+        };
+
+        var hwPanel = new ContentPanelContainer
+        {
+            HorizontalExpand = true,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#111D29"),
+                BorderColor = Color.FromHex("#244E6B"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 8,
+                ContentMarginRightOverride = 8,
+                ContentMarginTopOverride = 5,
+                ContentMarginBottomOverride = 5
+            }
+        };
+
+        var hwCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
             SeparationOverride = 4
         };
 
-        _headerLabel = new ContentLabel
+        _hardwareLabel = new ContentLabel
         {
-            Text = "ID AUTHORIZATION & ACCESS ENCODER (/keys/*.acc)",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#00D4FF"),
-            Margin = new Thickness(0, 0, 0, 2)
+            Name = "AccessEncoderHardwareLabel",
+            Text = "ID Slot Hardware: Checking...",
+            FontColorOverride = Color.FromHex("#8AD8FF"),
+            WordWrap = true
         };
-        root.AddChild(_headerLabel);
+        hwCol.AddChild(_hardwareLabel);
 
-        // Dual physical ID slot controls when running on an ID Card Console host
-        _slotButtonsRow = new ContentBoxContainer
+        var slotActions = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
+        _slotToggleBtn = new ContentButton
         {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
-            SeparationOverride = 6,
-            Visible = false
+            Name = "AccessEncoderSlotBtn",
+            Text = "Slot #1: Empty (Insert Hand ID)",
+            MinWidth = 185,
+            MinHeight = 26
         };
-        _privSlotBtn = new ContentButton
+        _slotToggleBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ToggleCardSlot));
+
+        _readSlotBtn = new ContentButton
         {
-            Name = "IdModPrivSlotBtn",
-            Text = "Insert Modifying ID",
-            MinWidth = 148
+            Name = "AccessEncoderReadSlotBtn",
+            Text = "Read ID Slot",
+            MinWidth = 100,
+            MinHeight = 26
         };
-        _privSlotBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.TogglePrivilegedSlot));
+        _readSlotBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ReadSlotCard));
 
-        _targetSlotBtn = new ContentButton
+        _clearBtn = new ContentButton
         {
-            Name = "IdModTargetSlotBtn",
-            Text = "Insert Target ID",
-            MinWidth = 138
+            Name = "AccessEncoderClearBtn",
+            Text = "Clear Readout",
+            MinWidth = 100,
+            MinHeight = 26
         };
-        _targetSlotBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ToggleTargetSlot));
+        _clearBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ClearScanned));
 
-        _swapSlotsBtn = new ContentButton
-        {
-            Name = "IdModSwapSlotsBtn",
-            Text = "Swap Slots",
-            MinWidth = 94
-        };
-        _swapSlotsBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots));
+        slotActions.AddChild(_slotToggleBtn);
+        slotActions.AddChild(_readSlotBtn);
+        slotActions.AddChild(_clearBtn);
+        hwCol.AddChild(slotActions);
+        hwPanel.AddChild(hwCol);
+        root.AddChild(hwPanel);
 
-        _slotButtonsRow.AddChild(_privSlotBtn);
-        _slotButtonsRow.AddChild(_targetSlotBtn);
-        _slotButtonsRow.AddChild(_swapSlotsBtn);
-        root.AddChild(_slotButtonsRow);
-
-        _sourceLabel = new ContentLabel
-        {
-            Text = "Source ID: None (Insert ID into PDA/console or swipe ID card on computer)",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#FFD54F")
-        };
-        root.AddChild(_sourceLabel);
-
-        _sourceTagsWrap = new ContentWrapContainer
-        {
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-        root.AddChild(_sourceTagsWrap);
-
+        // Top encode action bar
+        var topRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         _fileNameInput = new ContentLineEdit
         {
             Name = "AccessEncoderFileNameInput",
+            PlaceHolder = "Key name (e.g. chief -> /keys/chief.acc)",
+            MinWidth = 240,
             HorizontalExpand = true,
-            PlaceHolder = "Access file name (e.g. engineering)..."
+            MinHeight = 28
         };
-
-        void SubmitBuild()
+        _fileNameInput.OnTextEntered += _ =>
         {
             SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, _fileNameInput.Text));
-            _fileNameInput.Text = string.Empty;
-        }
-
-        _fileNameInput.OnTextEntered += _ => SubmitBuild();
-        root.AddChild(_fileNameInput);
-
-        var actionsWrap = new ContentWrapContainer
-        {
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4
         };
 
         _buildBtn = new ContentButton
         {
             Name = "AccessEncoderBuildBtn",
-            Text = "Build & Save .acc",
-            MinWidth = 120,
-            Disabled = true
+            Text = "Encode ID -> .acc",
+            MinWidth = 132,
+            MinHeight = 28
         };
-        _buildBtn.OnPressed += _ => SubmitBuild();
+        _buildBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, _fileNameInput.Text));
 
         var refreshBtn = new ContentButton
         {
             Name = "AccessEncoderRefreshBtn",
             Text = "Refresh",
-            MinWidth = 68
+            MinWidth = 76,
+            MinHeight = 28
         };
         refreshBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.Refresh));
 
-        _clearScannedBtn = new ContentButton
-        {
-            Text = "Use Inserted ID",
-            MinWidth = 110,
-            Visible = false
-        };
-        _clearScannedBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ClearScanned));
-
-        actionsWrap.AddChild(_buildBtn);
-        actionsWrap.AddChild(refreshBtn);
-        actionsWrap.AddChild(_clearScannedBtn);
-        root.AddChild(actionsWrap);
+        topRow.AddChild(_fileNameInput);
+        topRow.AddChild(_buildBtn);
+        topRow.AddChild(refreshBtn);
+        root.AddChild(topRow);
 
         _statusLabel = new ContentLabel
         {
             Name = "AccessEncoderStatusLabel",
-            Text = "",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#88CCCC")
+            Text = string.Empty,
+            FontColorOverride = Color.FromHex("#88E0B8"),
+            WordWrap = true
         };
         root.AddChild(_statusLabel);
 
-        var listHeader = new ContentLabel
-        {
-            Text = "Saved Access Code Files (/keys/*.acc):",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#B0BEC5"),
-            Margin = new Thickness(0, 2, 0, 1)
-        };
-        root.AddChild(listHeader);
-
-        _filesContainer = new ContentBoxContainer
-        {
-            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
-            HorizontalExpand = true,
-            SeparationOverride = 2
-        };
-        root.AddChild(_filesContainer);
-
-        _detailLabel = new ContentLabel
-        {
-            Text = "Select a saved .acc file to authorize ID modifications or inspect encoded access levels.",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#A5D6A7"),
-            VerticalAlignment = VAlignment.Top
-        };
-        root.AddChild(_detailLabel);
-
-        // =====================================================================
-        // ID CARD MODIFICATION & AUTHORIZATION CONSOLE SECTION
-        // =====================================================================
-        var modPanel = new ContentPanelContainer
-        {
-            HorizontalExpand = true,
-            Margin = new Thickness(0, 4, 0, 0),
-            PanelOverride = new StyleBoxFlat
-            {
-                BackgroundColor = Color.FromHex("#0D1824"),
-                BorderColor = Color.FromHex("#245C7E"),
-                BorderThickness = new Thickness(1),
-                ContentMarginLeftOverride = 8,
-                ContentMarginRightOverride = 8,
-                ContentMarginTopOverride = 6,
-                ContentMarginBottomOverride = 6
-            }
-        };
-
-        var modBox = new ContentBoxContainer
-        {
-            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
-            HorizontalExpand = true,
-            SeparationOverride = 5
-        };
-
-        modBox.AddChild(new ContentLabel
-        {
-            Text = "ID CARD MODIFICATION & .ACC AUTHORIZATION",
-            FontColorOverride = Color.FromHex("#00D4FF"),
-            HorizontalExpand = true
-        });
-
-        _authSourceLabel = new ContentLabel
-        {
-            Name = "IdModAuthSourceLabel",
-            Text = "Auth Source: None",
-            FontColorOverride = Color.FromHex("#FFD54F"),
-            HorizontalExpand = true
-        };
-        modBox.AddChild(_authSourceLabel);
-
-        _targetCardLabel = new ContentLabel
-        {
-            Name = "IdModTargetCardLabel",
-            Text = "Target ID Card: None",
-            FontColorOverride = Color.FromHex("#88CCCC"),
-            HorizontalExpand = true
-        };
-        modBox.AddChild(_targetCardLabel);
-
-        var idFieldsRow = new ContentBoxContainer
+        // Split content: left = Readout of inserted ID card, right = /keys/*.acc directory + inspector
+        var bodySplit = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
             HorizontalExpand = true,
-            SeparationOverride = 6
+            VerticalExpand = true,
+            SeparationOverride = 8
         };
-        _targetFullNameEdit = new ContentLineEdit
+
+        var cardPanel = new ContentPanelContainer
         {
-            Name = "IdModFullNameEdit",
-            PlaceHolder = "Target Full Name...",
             HorizontalExpand = true,
-            MinHeight = 25f
+            VerticalExpand = true,
+            SizeFlagsStretchRatio = 1f,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0F1821"),
+                BorderColor = Color.FromHex("#274C66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 8,
+                ContentMarginRightOverride = 8,
+                ContentMarginTopOverride = 8,
+                ContentMarginBottomOverride = 8
+            }
         };
-        _targetJobTitleEdit = new ContentLineEdit
+
+        var cardCol = new ContentBoxContainer
         {
-            Name = "IdModJobTitleEdit",
-            PlaceHolder = "Target Job Title...",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
-            MinHeight = 25f
+            VerticalExpand = true,
+            SeparationOverride = 5
         };
-        _saveIdentityBtn = new ContentButton
+
+        cardCol.AddChild(new ContentLabel
         {
-            Name = "IdModSaveIdentityBtn",
-            Text = "Save Identity",
-            MinWidth = 104,
-            Disabled = true
+            Text = "READ ID CARD BUFFER",
+            FontColorOverride = Color.FromHex("#77DDFF")
+        });
+
+        _cardOwnerLabel = new ContentLabel
+        {
+            Name = "AccessEncoderCardOwnerLabel",
+            Text = "Cardholder: (none)",
+            FontColorOverride = Color.FromHex("#E6F2FA"),
+            WordWrap = true
         };
-        void SubmitIdentity()
+        _cardJobLabel = new ContentLabel
         {
-            SendProgramMessage(new AccessEncoderActionMessage(
-                AccessEncoderAction.WriteTargetIdentity,
-                _targetFullNameEdit.Text,
-                _targetJobTitleEdit.Text));
-        }
-        _targetFullNameEdit.OnTextEntered += _ => SubmitIdentity();
-        _targetJobTitleEdit.OnTextEntered += _ => SubmitIdentity();
-        _saveIdentityBtn.OnPressed += _ => SubmitIdentity();
-
-        idFieldsRow.AddChild(_targetFullNameEdit);
-        idFieldsRow.AddChild(_targetJobTitleEdit);
-        idFieldsRow.AddChild(_saveIdentityBtn);
-        modBox.AddChild(idFieldsRow);
-
-        var bulkRow = new ContentWrapContainer
-        {
-            HorizontalSeparation = 6,
-            VerticalSeparation = 4
+            Name = "AccessEncoderCardJobLabel",
+            Text = "Role: (none)",
+            FontColorOverride = Color.FromHex("#B3CEE0"),
+            WordWrap = true
         };
-        _applyAccToTargetBtn = new ContentButton
+        cardCol.AddChild(_cardOwnerLabel);
+        cardCol.AddChild(_cardJobLabel);
+
+        cardCol.AddChild(new ContentLabel
         {
-            Name = "IdModApplyAccBtn",
-            Text = "Apply .acc to Target ID",
-            MinWidth = 152,
-            Disabled = true
+            Text = "Extracted Access Codes:",
+            FontColorOverride = Color.FromHex("#99B8CC")
+        });
+
+        var tagsScroll = new ContentScrollContainer
+        {
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            HScrollEnabled = false,
+            VScrollEnabled = true
         };
-        _applyAccToTargetBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ApplyAccFileToTarget));
-
-        _grantAllBtn = new ContentButton
+        _tagsWrap = new ContentWrapContainer
         {
-            Name = "IdModGrantAllBtn",
-            Text = "Grant All Allowed",
-            MinWidth = 124,
-            Disabled = true
-        };
-        _grantAllBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.GrantAllAllowedAccess));
-
-        _revokeAllBtn = new ContentButton
-        {
-            Name = "IdModRevokeAllBtn",
-            Text = "Revoke Allowed",
-            MinWidth = 114,
-            Disabled = true
-        };
-        _revokeAllBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.RevokeAllAllowedAccess));
-
-        bulkRow.AddChild(_applyAccToTargetBtn);
-        bulkRow.AddChild(_grantAllBtn);
-        bulkRow.AddChild(_revokeAllBtn);
-        modBox.AddChild(bulkRow);
-
-        _accessButtonsWrap = new ContentWrapContainer
-        {
+            HorizontalExpand = true,
             HorizontalSeparation = 4,
             VerticalSeparation = 4
         };
-        modBox.AddChild(_accessButtonsWrap);
+        tagsScroll.AddChild(_tagsWrap);
+        cardCol.AddChild(tagsScroll);
+        cardPanel.AddChild(cardCol);
+        bodySplit.AddChild(cardPanel);
 
-        modPanel.AddChild(modBox);
-        root.AddChild(modPanel);
+        var filesPanel = new ContentPanelContainer
+        {
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SizeFlagsStretchRatio = 1.15f,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0F1821"),
+                BorderColor = Color.FromHex("#274C66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 8,
+                ContentMarginRightOverride = 8,
+                ContentMarginTopOverride = 8,
+                ContentMarginBottomOverride = 8
+            }
+        };
 
-        rootScroll.AddChild(root);
-        AddChild(rootScroll);
+        var filesCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SeparationOverride = 5
+        };
+
+        filesCol.AddChild(new ContentLabel
+        {
+            Text = "/keys/*.acc CREDENTIAL FILES",
+            FontColorOverride = Color.FromHex("#77DDFF")
+        });
+
+        var filesScroll = new ContentScrollContainer
+        {
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SizeFlagsStretchRatio = 1f,
+            HScrollEnabled = false,
+            VScrollEnabled = true
+        };
+        _filesList = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        filesScroll.AddChild(_filesList);
+        filesCol.AddChild(filesScroll);
+
+        var previewPanel = new ContentPanelContainer
+        {
+            HorizontalExpand = true,
+            MinHeight = 84,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#091119"),
+                BorderColor = Color.FromHex("#224055"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 6,
+                ContentMarginRightOverride = 6,
+                ContentMarginTopOverride = 5,
+                ContentMarginBottomOverride = 5
+            }
+        };
+        _previewLabel = new ContentLabel
+        {
+            Text = "Select a .acc file to inspect its encoded credentials.",
+            FontColorOverride = Color.FromHex("#CBE4F5"),
+            WordWrap = true
+        };
+        previewPanel.AddChild(_previewLabel);
+        filesCol.AddChild(previewPanel);
+
+        filesPanel.AddChild(filesCol);
+        bodySplit.AddChild(filesPanel);
+        root.AddChild(bodySplit);
+
+        AddChild(root);
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -369,210 +318,134 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         if (raw is not AccessEncoderUiState state)
             return;
 
-        _headerLabel.Text = state.HasHardDrive
-            ? $"ID AUTHORIZATION & ACCESS ENCODER ({state.SavedFiles.Count} .acc in /keys/)"
-            : "ID AUTHORIZATION & ACCESS ENCODER [NO HARD DRIVE]";
+        _statusLabel.Text = state.StatusMessage;
 
-        _slotButtonsRow.Visible = state.HasHostIdSlots;
-        _privSlotBtn.Text = state.HasPrivilegedSlotCard ? "Eject Modifying ID" : "Insert Modifying ID";
-        _targetSlotBtn.Text = state.HasTargetSlotCard ? "Eject Target ID" : "Insert Target ID";
-        _swapSlotsBtn.Disabled = !state.HasPrivilegedSlotCard && !state.HasTargetSlotCard;
-
-        _sourceTagsWrap.RemoveAllChildren();
-        if (state.HasSourceCard)
+        if (!state.HasIdSlotHardware)
         {
-            var jobPart = string.IsNullOrWhiteSpace(state.SourceJobTitle) ? string.Empty : $" ({state.SourceJobTitle})";
-            _sourceLabel.Text =
-                $"Source: {state.SourceLabel} | Holder: {state.SourceOwnerName}{jobPart} ({state.SourceAccessTags.Count} codes):";
-            _sourceLabel.FontColorOverride = Color.FromHex("#55FF88");
-
-            if (state.SourceAccessTags.Count == 0)
-            {
-                _sourceTagsWrap.AddChild(new ContentLabel
-                {
-                    Text = "(no access tags)",
-                    WordWrap = false,
-                    FontColorOverride = Color.FromHex("#78909C")
-                });
-            }
-            else
-            {
-                foreach (var tag in state.SourceAccessTags)
-                {
-                    var chip = new ContentPanelContainer
-                    {
-                        PanelOverride = new StyleBoxFlat
-                        {
-                            BackgroundColor = Color.FromHex("#132A38"),
-                            BorderColor = Color.FromHex("#2E6B8A"),
-                            BorderThickness = new Thickness(1),
-                            ContentMarginLeftOverride = 5,
-                            ContentMarginRightOverride = 5,
-                            ContentMarginTopOverride = 2,
-                            ContentMarginBottomOverride = 2
-                        }
-                    };
-                    chip.AddChild(new ContentLabel
-                    {
-                        Text = tag,
-                        WordWrap = false,
-                        FontColorOverride = Color.FromHex("#B3E5FC")
-                    });
-                    _sourceTagsWrap.AddChild(chip);
-                }
-            }
+            _hardwareLabel.Text = "ID Slot Hardware: MISSING (0/1). Install an ID Card Slot module to read & encode cards.";
+            _hardwareLabel.FontColorOverride = Color.FromHex("#FF8877");
+        }
+        else if (state.HasModularSlot)
+        {
+            _hardwareLabel.Text = state.SlotOccupied
+                ? $"ID Slot Hardware: READY — Inserted: {state.SlotCardLabel}"
+                : "ID Slot Hardware: READY — Slot Empty (Insert ID card)";
+            _hardwareLabel.FontColorOverride = Color.FromHex("#72E89B");
         }
         else
         {
-            _sourceLabel.Text = state.InstalledCardSlotCount > 0 || state.HasCardScanner
-                ? "Source ID: None — Insert or swipe an ID card via Card Scanner / Card Slot hardware."
-                : "Source ID: None — Install a Card Scanner or Card Slot hardware module (or insert PDA ID).";
-            _sourceLabel.FontColorOverride = Color.FromHex("#FFD54F");
+            _hardwareLabel.Text = state.SlotOccupied
+                ? $"PDA ID Slot: READY — Inserted: {state.SlotCardLabel}"
+                : "PDA ID Slot: Empty (Insert ID into PDA slot)";
+            _hardwareLabel.FontColorOverride = Color.FromHex("#72E89B");
         }
 
-        _buildBtn.Disabled = !state.HasHardDrive || !state.HasSourceCard;
-        _clearScannedBtn.Visible = state.UsingScannedCard;
-        _statusLabel.Text = state.StatusMessage;
+        _slotToggleBtn.Visible = state.HasModularSlot;
+        _slotToggleBtn.Text = state.SlotOccupied
+            ? $"Eject: {Truncate(state.SlotCardLabel, 24)}"
+            : "Insert Hand ID -> Slot";
+        _slotToggleBtn.Disabled = !state.HasModularSlot;
 
-        _filesContainer.RemoveAllChildren();
-        if (state.SavedFiles.Count == 0)
+        _readSlotBtn.Disabled = !state.HasIdSlotHardware || !state.SlotOccupied;
+        _buildBtn.Disabled = !state.HasIdSlotHardware || string.IsNullOrWhiteSpace(state.CardOwner);
+
+        _cardOwnerLabel.Text = string.IsNullOrWhiteSpace(state.CardOwner)
+            ? "Cardholder: (none)"
+            : $"Cardholder: {state.CardOwner}";
+        _cardJobLabel.Text = string.IsNullOrWhiteSpace(state.CardJob)
+            ? "Role: (none)"
+            : $"Role: {state.CardJob}";
+
+        _tagsWrap.RemoveAllChildren();
+        if (state.ScannedTags.Count == 0)
         {
-            _filesContainer.AddChild(new ContentLabel
+            _tagsWrap.AddChild(new ContentLabel
             {
-                Text = "  (No access code files saved on hard drive yet)",
-                HorizontalExpand = true,
-                FontColorOverride = Color.FromHex("#78909C")
+                Text = state.HasIdSlotHardware
+                    ? "No access tags scanned yet. Insert an ID card and click Read ID Slot."
+                    : "ID card reading unavailable until an ID Card Slot module is installed.",
+                FontColorOverride = Color.FromHex("#8899AA"),
+                WordWrap = true
             });
         }
         else
         {
-            foreach (var entry in state.SavedFiles)
+            foreach (var tag in state.ScannedTags)
             {
-                var isSelected = !string.IsNullOrEmpty(state.SelectedFilePath) &&
-                                 string.Equals(entry.FilePath, state.SelectedFilePath, StringComparison.OrdinalIgnoreCase);
+                var pill = new ContentPanelContainer
+                {
+                    PanelOverride = new StyleBoxFlat
+                    {
+                        BackgroundColor = Color.FromHex("#143547"),
+                        BorderColor = Color.FromHex("#2E86AB"),
+                        BorderThickness = new Thickness(1),
+                        ContentMarginLeftOverride = 6,
+                        ContentMarginRightOverride = 6,
+                        ContentMarginTopOverride = 2,
+                        ContentMarginBottomOverride = 2
+                    }
+                };
+                pill.AddChild(new ContentLabel
+                {
+                    Text = tag,
+                    FontColorOverride = Color.FromHex("#AEEFFF")
+                });
+                _tagsWrap.AddChild(pill);
+            }
+        }
+
+        _filesList.RemoveAllChildren();
+        if (state.KeyFiles.Count == 0)
+        {
+            _filesList.AddChild(new ContentLabel
+            {
+                Text = "No .acc files stored in /keys/.",
+                FontColorOverride = Color.FromHex("#8899AA"),
+                WordWrap = true
+            });
+        }
+        else
+        {
+            foreach (var path in state.KeyFiles)
+            {
+                var pathCopy = path;
                 var row = new ContentBoxContainer
                 {
                     Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
                     HorizontalExpand = true,
-                    Margin = new Thickness(0, 1),
                     SeparationOverride = 4
                 };
 
-                var jobSuffix = string.IsNullOrWhiteSpace(entry.JobTitle) ? string.Empty : $" - {entry.JobTitle}";
-                row.AddChild(new ContentLabel
-                {
-                    Text = $"{(isSelected ? "[ACTIVE] " : "")}{entry.FilePath} | {entry.OwnerName}{jobSuffix} [{entry.AccessTags.Count} codes]",
-                    HorizontalExpand = true,
-                    FontColorOverride = isSelected ? Color.FromHex("#66FFAA") : Color.FromHex("#E0F4FF")
-                });
-
-                var pathCopy = entry.FilePath;
                 var inspectBtn = new ContentButton
                 {
-                    Name = $"AccSelectBtn_{entry.FileName}",
-                    Text = isSelected ? "Active Auth" : "Use Auth",
-                    MinWidth = 78,
-                    Pressed = isSelected
+                    Name = $"AccessEncoderInspectBtn_{pathCopy}",
+                    Text = pathCopy,
+                    HorizontalExpand = true,
+                    Pressed = string.Equals(pathCopy, state.SelectedFilePath, StringComparison.OrdinalIgnoreCase)
                 };
                 inspectBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.SelectFile, pathCopy));
-                row.AddChild(inspectBtn);
 
-                var applyBtn = new ContentButton
+                var delBtn = new ContentButton
                 {
-                    Name = $"AccApplyBtn_{entry.FileName}",
-                    Text = "Apply to ID",
-                    MinWidth = 82,
-                    Disabled = !state.HasTargetCard
+                    Name = $"AccessEncoderDeleteBtn_{pathCopy}",
+                    Text = "Delete",
+                    MinWidth = 64
                 };
-                applyBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ApplyAccFileToTarget, pathCopy));
-                row.AddChild(applyBtn);
-
-                var delBtn = new ContentButton { Text = "Delete", MinWidth = 58 };
                 delBtn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.DeleteFile, pathCopy));
-                row.AddChild(delBtn);
 
-                _filesContainer.AddChild(row);
+                row.AddChild(inspectBtn);
+                row.AddChild(delBtn);
+                _filesList.AddChild(row);
             }
         }
 
-        _detailLabel.Text = !string.IsNullOrWhiteSpace(state.SelectedFileSummary)
-            ? state.SelectedFileSummary
-            : "Tip: Select any .acc file above to authorize ID modifications or run 'auth <guid> /keys/<file>.acc' in Terminal.";
+        _previewLabel.Text = string.IsNullOrWhiteSpace(state.SelectedFilePreview)
+            ? "Select a .acc file to inspect its encoded credentials."
+            : state.SelectedFilePreview;
+    }
 
-        // Update ID Card Modification Section
-        _authSourceLabel.Text = $"Auth Source: {state.PrivilegedAuthLabel} ({state.AllowedAccessTags.Count} authorized access levels)";
-        _authSourceLabel.FontColorOverride = state.HasPrivilegedAuth ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD54F");
-
-        if (state.InstalledCardSlotCount < 2)
-        {
-            _targetCardLabel.Text =
-                $"Hardware Required: {state.InstalledCardSlotCount}/2 ID Card Slot modules installed (needs 1 Modifying ID slot + 1 Target ID slot).";
-            _targetCardLabel.FontColorOverride = Color.FromHex("#FF8A65");
-        }
-        else if (state.HasTargetCard)
-        {
-            _targetCardLabel.Text =
-                $"Target ID: {state.TargetCardLabel} — {state.TargetFullName} ({state.TargetJobTitle}) [{state.TargetAccessTags.Count} active codes]";
-            _targetCardLabel.FontColorOverride = Color.FromHex("#88EEFF");
-        }
-        else
-        {
-            _targetCardLabel.Text = "Target ID: None (Insert target ID card into Card Slot #2)";
-            _targetCardLabel.FontColorOverride = Color.FromHex("#8899AA");
-        }
-
-        var canModify = state.HasTargetCard && state.HasPrivilegedAuth;
-        _targetFullNameEdit.Editable = canModify;
-        _targetJobTitleEdit.Editable = canModify;
-        _saveIdentityBtn.Disabled = !canModify;
-        _applyAccToTargetBtn.Disabled = !state.HasTargetCard || state.SavedFiles.Count == 0;
-        _grantAllBtn.Disabled = !canModify;
-        _revokeAllBtn.Disabled = !canModify;
-
-        if (_lastTargetCardLabel != state.TargetCardLabel ||
-            _lastTargetName != state.TargetFullName ||
-            _lastTargetJob != state.TargetJobTitle)
-        {
-            _lastTargetCardLabel = state.TargetCardLabel;
-            _lastTargetName = state.TargetFullName;
-            _lastTargetJob = state.TargetJobTitle;
-            _targetFullNameEdit.Text = state.TargetFullName;
-            _targetJobTitleEdit.Text = state.TargetJobTitle;
-        }
-
-        var allowedSet = state.AllowedAccessTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var activeSet = state.TargetAccessTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var levelSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (_proto.TryIndex<AccessGroupPrototype>(state.AccessGroup, out var groupProto))
-        {
-            foreach (var tag in groupProto.Tags)
-                levelSet.Add(tag.Id);
-        }
-        foreach (var tag in state.AllowedAccessTags)
-            levelSet.Add(tag);
-        foreach (var tag in state.TargetAccessTags)
-            levelSet.Add(tag);
-
-        var accessLevels = levelSet.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
-
-        _accessButtonsWrap.RemoveAllChildren();
-        foreach (var level in accessLevels)
-        {
-            var tagCopy = level;
-            var hasTag = activeSet.Contains(tagCopy);
-            var isAllowed = allowedSet.Contains(tagCopy);
-
-            var btn = new ContentButton
-            {
-                Name = $"IdModAccessBtn_{tagCopy}",
-                Text = hasTag ? $"[x] {tagCopy}" : $"[ ] {tagCopy}",
-                Pressed = hasTag,
-                Disabled = !state.HasTargetCard || !isAllowed,
-                MinWidth = 104
-            };
-            btn.OnPressed += _ => SendProgramMessage(new AccessEncoderActionMessage(AccessEncoderAction.ToggleTargetAccessTag, tagCopy));
-            _accessButtonsWrap.AddChild(btn);
-        }
+    private static string Truncate(string text, int maxLen)
+    {
+        return text.Length <= maxLen ? text : text[..Math.Max(1, maxLen - 2)] + "..";
     }
 }

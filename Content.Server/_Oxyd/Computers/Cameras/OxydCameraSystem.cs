@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server.Power.Components;
@@ -1099,6 +1100,12 @@ public sealed partial class OxydCameraSystem : EntitySystem
                 var hasLog = _logQuery.TryComp(cam.Owner, out var lc);
                 var hasMic = hasLog ? lc!.HasMicrophoneUpgrade : HasComp<SurveillanceCameraMicrophoneComponent>(cam.Owner);
 
+                var camXform = Transform(cam.Owner);
+                NetEntity? camGridNet = camXform.GridUid is { Valid: true } gUid ? GetNetEntity(gUid) : null;
+                var camLocalPos = camXform.GridUid is { Valid: true } g2
+                    ? Vector2.Transform(_transform.GetWorldPosition(camXform), _transform.GetInvWorldMatrix(g2))
+                    : _transform.GetWorldPosition(camXform);
+
                 dirEntries.Add(new CameraDirectoryEntryDto(
                     GetNetEntity(cam.Owner),
                     _router.EnsureDeviceGuid(cam.Owner),
@@ -1108,7 +1115,9 @@ public sealed partial class OxydCameraSystem : EntitySystem
                     hasMic,
                     hasLog ? lc!.Entries.Count : 0,
                     hasLog ? lc!.UsedMemoryBytes : 0,
-                    hasLog ? lc!.MaxMemoryBytes : 4096));
+                    hasLog ? lc!.MaxMemoryBytes : 4096,
+                    camGridNet,
+                    camLocalPos));
             }
         }
         else if (comp.ActiveCameraUids.Count > 0 || comp.ActiveCameraUid != null)

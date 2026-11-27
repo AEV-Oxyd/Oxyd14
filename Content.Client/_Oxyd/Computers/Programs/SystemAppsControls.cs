@@ -404,18 +404,22 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
     private readonly ContentButton _filterRelevantBtn;
     private readonly ContentBoxContainer _packetsContainer;
     private readonly ContentLineEdit _targetInput;
+    private readonly ContentLineEdit _sinkPortInput;
     private readonly ContentLineEdit _payloadInput;
+    private readonly ContentWrapContainer _sinkTargetsWrap;
 
     // Inline Packet Editor Panel
     private readonly ContentPanelContainer _editorPanel;
     private readonly ContentLabel _editorHeaderLabel;
     private readonly ContentLineEdit _editTargetInput;
+    private readonly ContentLineEdit _editSinkPortInput;
     private readonly ContentBoxContainer _editEntriesContainer;
     private readonly ContentLineEdit _newEntryKeyInput;
     private readonly ContentLineEdit _newEntryValInput;
 
     private PacketSnifferUiState? _lastState;
     private bool _relevantOnly = true;
+    private bool _selectedSinkIsHost = true;
     private string? _editingPacketId;
     private string _editingSourceGuid = string.Empty;
     private string _editingProtocol = string.Empty;
@@ -462,15 +466,30 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         btnBar.AddChild(clrBtn);
         root.AddChild(btnBar);
 
-        var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-        _targetInput = new ContentLineEdit { MinWidth = 90, PlaceHolder = "Target GUID" };
-        _payloadInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Raw packet payload...", Margin = new Thickness(4, 0, 0, 0) };
-        var emitBtn = new ContentButton { Text = "Emit", MinWidth = 55, Margin = new Thickness(4, 0, 0, 0) };
-        emitBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(PacketSnifferAction.EmitPacket, targetGuid: _targetInput.Text, payload: _payloadInput.Text));
+        var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, SeparationOverride = 4 };
+        _targetInput = new ContentLineEdit { Name = "SnifferEmitTargetInput", MinWidth = 96, PlaceHolder = "Target GUID (blank=local)" };
+        _sinkPortInput = new ContentLineEdit { Name = "SnifferEmitSinkPortInput", MinWidth = 148, Text = "MachineCommandReceiver", PlaceHolder = "Sink Port ID" };
+        _payloadInput = new ContentLineEdit { Name = "SnifferEmitPayloadInput", HorizontalExpand = true, PlaceHolder = "Raw packet payload..." };
+        var emitBtn = new ContentButton { Name = "SnifferEmitToSinkButton", Text = "Send to Sink Port", MinWidth = 128 };
+        emitBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(
+            PacketSnifferAction.EmitPacket,
+            targetGuid: (_targetInput.Text ?? string.Empty).Trim(),
+            payload: _payloadInput.Text ?? string.Empty,
+            sinkPortId: (_sinkPortInput.Text ?? string.Empty).Trim(),
+            isHostPort: _selectedSinkIsHost));
         emitRow.AddChild(_targetInput);
+        emitRow.AddChild(_sinkPortInput);
         emitRow.AddChild(_payloadInput);
         emitRow.AddChild(emitBtn);
         root.AddChild(emitRow);
+
+        _sinkTargetsWrap = new ContentWrapContainer
+        {
+            Name = "SnifferSinkTargetsWrap",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4
+        };
+        root.AddChild(_sinkTargetsWrap);
 
         // Inline Player-Editable Packet Modification Panel
         _editorPanel = new ContentPanelContainer
@@ -512,8 +531,11 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             SeparationOverride = 4
         };
         targetRow.AddChild(new ContentLabel { Text = "Target GUID:", WordWrap = false, FontColorOverride = Color.FromHex("#88CCCC") });
-        _editTargetInput = new ContentLineEdit { Name = "SnifferEditTargetInput", HorizontalExpand = true, PlaceHolder = "Destination GUID..." };
+        _editTargetInput = new ContentLineEdit { Name = "SnifferEditTargetInput", HorizontalExpand = true, PlaceHolder = "Machine GUID (local or remote)..." };
         targetRow.AddChild(_editTargetInput);
+        targetRow.AddChild(new ContentLabel { Text = "Sink Port:", WordWrap = false, FontColorOverride = Color.FromHex("#88CCCC") });
+        _editSinkPortInput = new ContentLineEdit { Name = "SnifferEditSinkPortInput", MinWidth = 148, Text = "MachineCommandReceiver", PlaceHolder = "Sink Port ID..." };
+        targetRow.AddChild(_editSinkPortInput);
         edRoot.AddChild(targetRow);
 
         var edScroll = new ContentScrollContainer { HorizontalExpand = true, MaxHeight = 140 };
@@ -553,17 +575,13 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         edRoot.AddChild(addRow);
 
         var edActions = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
-        var sendTargetBtn = new ContentButton { Name = "SnifferTransmitModifiedButton", Text = "Transmit to Target" };
-        sendTargetBtn.OnPressed += _ => SubmitEditedPacket(applyToSource: false);
-
-        var poisonSrvBtn = new ContentButton { Name = "SnifferPoisonServerButton", Text = "Poison Server Copy" };
-        poisonSrvBtn.OnPressed += _ => SubmitEditedPacket(applyToSource: true);
+        var sendSinkBtn = new ContentButton { Name = "SnifferTransmitModifiedButton", Text = "Send Packet to Sink Port" };
+        sendSinkBtn.OnPressed += _ => SubmitEditedPacket();
 
         var closeEdBtn = new ContentButton { Text = "Close Editor" };
         closeEdBtn.OnPressed += _ => CloseEditor();
 
-        edActions.AddChild(sendTargetBtn);
-        edActions.AddChild(poisonSrvBtn);
+        edActions.AddChild(sendSinkBtn);
         edActions.AddChild(closeEdBtn);
         edRoot.AddChild(edActions);
 
@@ -669,7 +687,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         }
     }
 
-    private void SubmitEditedPacket(bool applyToSource)
+    private void SubmitEditedPacket()
     {
         if (string.IsNullOrEmpty(_editingPacketId))
             return;
@@ -684,7 +702,8 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             payload: string.Empty,
             packetId: _editingPacketId,
             modifiedEntries: payloadDict,
-            applyToSource: applyToSource));
+            sinkPortId: (_editSinkPortInput.Text ?? string.Empty).Trim(),
+            isHostPort: _selectedSinkIsHost));
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -695,6 +714,35 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         _lastState = state;
         var relCount = state.Packets.Count(p => p.IsPlayerRelevant);
         _headerLabel.Text = $"Sniffer [{state.RouterGuid}] | {(state.HasNetworkCard ? "NIC UP" : "NO NIC")} | Relevant: {relCount}/{state.Packets.Count} | {state.StatusMessage}";
+
+        _sinkTargetsWrap.RemoveAllChildren();
+        _sinkTargetsWrap.AddChild(new ContentLabel
+        {
+            Text = "Sink Targets:",
+            FontColorOverride = Color.FromHex("#88CCCC"),
+            VerticalAlignment = VAlignment.Center
+        });
+        foreach (var sink in state.SinkTargets)
+        {
+            var targetCopy = sink;
+            var scope = targetCopy.IsLocal ? "LOCAL" : "REMOTE";
+            var btn = new ContentButton
+            {
+                Name = $"SnifferSinkTarget_{targetCopy.TargetGuid}_{targetCopy.SinkPortId}",
+                Text = $"[{scope}] {targetCopy.DeviceName} :: {targetCopy.SinkPortId}",
+                MinHeight = 22
+            };
+            btn.OnPressed += _ =>
+            {
+                _selectedSinkIsHost = targetCopy.IsHostPort;
+                _targetInput.Text = targetCopy.TargetGuid;
+                _sinkPortInput.Text = targetCopy.SinkPortId;
+                _editTargetInput.Text = targetCopy.TargetGuid;
+                _editSinkPortInput.Text = targetCopy.SinkPortId;
+            };
+            _sinkTargetsWrap.AddChild(btn);
+        }
+
         RebuildPacketList();
     }
 

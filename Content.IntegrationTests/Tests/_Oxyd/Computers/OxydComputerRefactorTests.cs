@@ -3063,10 +3063,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         });
         await RunTicks(6);
 
-        // 5) Workstation (no PDA) -> open ID Access Encoder -> swipe AtmosIDCard on Workstation -> save /keys/atmos_key.acc -> SSH + auth AirAlarm!
+        // 5) Workstation (no PDA, no ID Slot hardware by default): swiping AtmosIDCard must NOT read credentials
+        //    until a ComputerPartIdSlotModule is installed; once installed, Access Encoder reads Slot #1 & encodes /keys/atmos_key.acc!
         EntityUid wsEncUid = default;
         await Server.WaitAssertion(() =>
         {
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            Assert.That(cardSys.HasReaders(wsCompUid), Is.False,
+                "Workstation must NOT have an integrated ID reader/slot by default.");
             Assert.That(compSys.TryLaunchExecutable(wsCompUid, "/bin/access_encoder.nte", out var wEnc, out var err), Is.True, err);
             wsEncUid = wEnc!.Value;
         });
@@ -3077,11 +3081,33 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await InteractUsing("AtmosIDCard");
         await RunTicks(6);
 
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "atmos_key"), FromServer(wsEncUid));
+        await RunTicks(4);
+
         await Server.WaitAssertion(() =>
         {
             var encComp = SEntMan.GetComponent<AccessEncoderProgramComponent>(wsEncUid);
-            Assert.That(encComp.HasScannedCard, Is.True, "Swiping AtmosIDCard on Workstation running ID Access Encoder must scan the card.");
-            Assert.That(encComp.ScannedAccessTags.Any(t => t.Id == "Atmospherics"), Is.True);
+            Assert.That(encComp.LastCardAccessTags.Count, Is.EqualTo(0),
+                "Workstation without an ID Card Slot module must not read swiped ID card credentials.");
+            Assert.That(fsSys.TryFindFileSystem(wsCompUid, out var wsDriveNoSlot, out var wsFsNoSlot), Is.True);
+            Assert.That(fsSys.TryGetFile<AccessCodesVirtualFile>(wsDriveNoSlot!.Value, "/keys/atmos_key.acc", out _, wsFsNoSlot), Is.False,
+                "Workstation without ID Card Slot hardware must not encode .acc files.");
+        });
+
+        await Server.WaitPost(() =>
+        {
+            var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+            var wsSlotMod = SEntMan.SpawnEntity("ComputerPartIdSlotModule", SEntMan.GetComponent<TransformComponent>(wsUid).Coordinates);
+            Assert.That(cardSys.TryInstallReaderModule(wsCompUid, wsSlotMod), Is.True);
+        });
+        await InteractUsing("AtmosIDCard");
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var encComp = SEntMan.GetComponent<AccessEncoderProgramComponent>(wsEncUid);
+            Assert.That(encComp.LastCardAccessTags.Any(t => t.Id == "Atmospherics"), Is.True,
+                "Installing 1 ComputerPartIdSlotModule and inserting AtmosIDCard on Workstation must read access codes.");
         });
 
         await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "atmos_key"), FromServer(wsEncUid));
@@ -3780,7 +3806,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(editBtn, Is.Not.Null, "PacketSniffer UI must provide an Edit button for captured player-relevant editable packets.");
         });
 
-        // 4) Modify captured Crew Manifest packet (Alice -> Clown) and transmit directly to PDA #1!
+        // 4) Modify captured Crew Manifest packet (Alice -> Clown) and transmit via Sink Port directly to PDA #1!
         await RunTicks(5);
         await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
             PacketSnifferAction.ModifyAndTransmitPacket,
@@ -3791,7 +3817,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 ["Alice"] = "Clown",
                 ["Bob"] = "Station Engineer"
             },
-            applyToSource: false), FromServer(snifferProg));
+            sinkPortId: "MachineCommandReceiver",
+            isHostPort: true), FromServer(snifferProg));
         await RunTicks(6);
 
         await Server.WaitAssertion(() =>
@@ -3803,18 +3830,53 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(updatedManifest.LastModified, Is.GreaterThanOrEqualTo(firstDownloadTs));
         });
 
-        // 5) Poison DataServer's local copy via PacketSniffer (applyToSource: true -> Bob = Syndicate Agent) and confirm PDA #2 downloads the poisoned copy!
+        // 5) Poison DataServer's copy by targeting DataServer's DeviceLink Sink Port (MachineCommandReceiver) instead of a dedicated poison button!
+        await Client.WaitAssertion(() =>
+        {
+            var snifferCtrl = GetControlFromChildren<PacketSnifferUiControl>(_ => true, wsWin!);
+            Assert.That(snifferCtrl, Is.Not.Null);
+            var snifferBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(snifferCtrl!, snifferBtns);
+            Assert.That(snifferBtns.Any(b => b.Name == "SnifferPoisonServerButton"), Is.False,
+                "PacketSniffer must NOT have a dedicated Poison Server Copy button; poisoning uses Sink Ports.");
+            Assert.That(snifferBtns.Any(b => b.Name == "SnifferEmitToSinkButton"), Is.True,
+                "PacketSniffer must expose Send to Sink Port button.");
+        });
+
         await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
             PacketSnifferAction.ModifyAndTransmitPacket,
-            sourceGuid: guidSys.GetGuid(serverCompUid),
+            targetGuid: guidSys.GetGuid(serverCompUid),
             packetId: capturedPacketId,
             modifiedEntries: new Dictionary<string, string>
             {
                 ["Alice"] = "Captain",
                 ["Bob"] = "Syndicate Agent"
             },
-            applyToSource: true), FromServer(snifferProg));
+            sinkPortId: "MachineCommandReceiver",
+            isHostPort: true), FromServer(snifferProg));
         await RunTicks(6);
+
+        // Also verify sending a packet to a Sink Port on the LOCAL workstation machine!
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.ModifyAndTransmitPacket,
+            targetGuid: guidSys.GetGuid(wsCompUid),
+            packetId: capturedPacketId,
+            modifiedEntries: new Dictionary<string, string>
+            {
+                ["Alice"] = "Mime",
+                ["Bob"] = "Passenger"
+            },
+            sinkPortId: "MachineCommandReceiver",
+            isHostPort: true), FromServer(snifferProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsCompUid, out var wsLocalDrive, out var wsLocalFs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(wsLocalDrive!.Value, CrewManifestProgramComponent.CacheFilePath, out var localPoisoned, wsLocalFs), Is.True);
+            Assert.That(localPoisoned!.Data.Values.Any(v => v.StartsWith("Alice\tMime\t")), Is.True,
+                "Sending modified packet to the local machine's Sink Port must deliver the VFS update locally.");
+        });
 
         await Client.WaitAssertion(() =>
         {
@@ -5681,7 +5743,35 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 "Camera app must list Wi-Fi cameras connected to its closest StationNetworkRouter.");
             Assert.That(camBtns.Any(b => b.Text != null && b.Text.Contains("Engineering")), Is.False,
                 "Camera app must NOT list cameras Wi-Fi connected to a different farther router.");
+
+            var camMapToggle = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraViewModeToggleButton", camUi!);
+            Assert.That(camMapToggle, Is.Not.Null, "Camera Control must expose Map view toggle.");
         });
+
+        // Verify Camera Control Map-based selection mode shows mapped cameras & allows selecting them!
+        Content.Client.UserInterface.Controls.ContentButton? camMapBtn = null;
+        Content.Client.UserInterface.Controls.ContentButton? camListBtn = null;
+        await Client.WaitPost(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            camMapBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraViewModeToggleButton", camUi);
+            camListBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "CameraListModeButton", camUi);
+        });
+        await ClickViaHitTest(camMapBtn!);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var camUi = GetControlFromChildren<SurveillanceCameraUiControl>(_ => true, win)!;
+            var mapCtrl = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, camUi);
+            Assert.That(mapCtrl, Is.Not.Null);
+            Assert.That(mapCtrl!.Visible, Is.True);
+            Assert.That(mapCtrl.MarkerCount, Is.GreaterThanOrEqualTo(1));
+        });
+        await ClickViaHitTest(camListBtn!);
 
         // 2) Shortfall 1: Camera monitoring requires authorization by swiping ID card or .acc file!
         //    First verify connecting without authorization is rejected, then authorize via .acc file and connect!
@@ -6721,8 +6811,10 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             idCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(idConsoleHost).ComputerEntity!.Value;
             idProgUid = SEntMan.GetComponent<OxydComputerComponent>(idCompUid).ActiveProgram!.Value;
-            Assert.That(SEntMan.HasComponent<AccessEncoderProgramComponent>(idProgUid), Is.True,
-                "Ported ComputerId must run the ID Authorization & Modification program.");
+            Assert.That(SEntMan.HasComponent<IdModifierProgramComponent>(idProgUid), Is.True,
+                "Ported ComputerId must run the dedicated IdModifierProgram (separate from AccessEncoderProgram).");
+            Assert.That(SEntMan.HasComponent<AccessEncoderProgramComponent>(idProgUid), Is.False,
+                "ID Modification Console must NOT be merged with AccessEncoderProgram.");
 
             originalTargetName = SEntMan.GetComponent<Content.Shared.Access.Components.IdCardComponent>(targetIdCardUid).FullName ?? string.Empty;
 
@@ -6766,14 +6858,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Server.WaitPost(() => { SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(idConsoleHost).Coordinates); compSys.OpenComputerForActor(SEntMan.GetComponent<EmbeddedComputerHostComponent>(idConsoleHost).ComputerEntity!.Value, SPlayer); });
         await RunTicks(10);
 
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.SelectFile, "/keys/chief.acc"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.SelectAccFile, "/keys/chief.acc"), FromServer(idProgUid));
         await RunTicks(4);
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.WriteTargetIdentity, "Should Fail", "Unauthorized"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.WriteTargetIdentity, "Should Fail", "Unauthorized"), FromServer(idProgUid));
         await RunTicks(4);
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
         await RunTicks(4);
 
         await Server.WaitAssertion(() =>
@@ -6806,7 +6898,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(6);
 
         // Test SwapSlots action swaps Modifying ID <-> Target ID and back!
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(IdModifierAction.SwapSlots), FromServer(idProgUid));
         await RunTicks(4);
         await Server.WaitAssertion(() =>
         {
@@ -6814,20 +6906,20 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(cardSys.TryGetSlotCard(idCompUid, 0, out var slot0) && slot0 == targetIdCardUid, Is.True);
             Assert.That(cardSys.TryGetSlotCard(idCompUid, 1, out var slot1) && slot1 == engIdCardUid, Is.True);
         });
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.SwapSlots), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(IdModifierAction.SwapSlots), FromServer(idProgUid));
         await RunTicks(4);
 
         // Select /keys/chief.acc as the authorization source, update target ID identity, and apply .acc access codes!
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.SelectFile, "/keys/chief.acc"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.SelectAccFile, "/keys/chief.acc"), FromServer(idProgUid));
         await RunTicks(4);
 
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.WriteTargetIdentity, " Jordan Vega", "Senior Engineer"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.WriteTargetIdentity, " Jordan Vega", "Senior Engineer"), FromServer(idProgUid));
         await RunTicks(4);
 
-        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(
-            AccessEncoderAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
+        await SendBui(ProgramUiKey.Key, new IdModifierActionMessage(
+            IdModifierAction.ApplyAccFileToTarget, "/keys/chief.acc"), FromServer(idProgUid));
         await RunTicks(6);
 
         await Server.WaitAssertion(() =>
@@ -7012,5 +7104,75 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 Is.EqualTo(AirAlarmMode.Panic),
                 "After authorizing to APC Beta via ID swipe, Remote Atmos Control must switch Air Alarm Beta to Panic mode.");
         });
+
+        // =====================================================================
+        // 6) MAP-BASED SELECTION MODE (ATMOS CONTROL, APC CONTROL, CAMERA CONTROL)
+        // =====================================================================
+        // Reuse the already-open Remote Atmos Console window and verify Map Mode selection
+        await RunTicks(6);
+
+        Content.Client.UserInterface.Controls.ContentButton? atmosMapToggle = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosCtrl = GetControlFromChildren<AtmosControlUiControl>(_ => true, win);
+            Assert.That(atmosCtrl, Is.Not.Null);
+            atmosMapToggle = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "AtmosViewModeToggleButton", atmosCtrl!);
+            Assert.That(atmosMapToggle, Is.Not.Null);
+        });
+        await ClickViaHitTest(atmosMapToggle!);
+        string selectedAltAlarmKey = string.Empty;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosCtrl = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, atmosCtrl);
+            Assert.That(mapPanel, Is.Not.Null);
+            Assert.That(mapPanel!.MarkerCount, Is.GreaterThanOrEqualTo(2));
+            selectedAltAlarmKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, alarmBGuid, StringComparison.OrdinalIgnoreCase));
+            Assert.That(mapPanel.TrySelectByKey(selectedAltAlarmKey), Is.True);
+            win.Close();
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid).SelectedTargetGuid,
+                Is.EqualTo(selectedAltAlarmKey),
+                "Selecting an Air Alarm beacon in Atmos Map Mode must switch the active remote target.");
+        });
+
+        // Verify APC Control Map Mode on remote APC monitor
+        await Server.WaitPost(() =>
+        {
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(powerConsoleHost).Coordinates);
+            compSys.OpenComputerForActor(powerCompUid, SPlayer);
+        });
+        await RunTicks(10);
+        Content.Client.UserInterface.Controls.ContentButton? apcMapToggle = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var apcCtrl = GetControlFromChildren<ApcControlUiControl>(_ => true, win);
+            Assert.That(apcCtrl, Is.Not.Null);
+            apcMapToggle = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "ApcViewModeToggleButton", apcCtrl!);
+            Assert.That(apcMapToggle, Is.Not.Null);
+        });
+        await ClickViaHitTest(apcMapToggle!);
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var apcCtrl = GetControlFromChildren<ApcControlUiControl>(_ => true, win)!;
+            var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, apcCtrl);
+            Assert.That(mapPanel, Is.Not.Null);
+            Assert.That(mapPanel!.MarkerCount, Is.GreaterThanOrEqualTo(2));
+            var selectedGuid = SEntMan.GetComponent<ApcControlProgramComponent>(powerProgUid).SelectedTargetGuid;
+            var altApcKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, selectedGuid, StringComparison.OrdinalIgnoreCase));
+            Assert.That(mapPanel.TrySelectByKey(altApcKey), Is.True);
+            win.Close();
+        });
+        await RunTicks(6);
     }
 }

@@ -399,7 +399,7 @@
   parent: BaseOxydProgram
   id: AccessEncoderProgram
   name: ID access encoder
-  description: Extracts access codes from an inserted or swiped ID card and saves them as .acc files in /keys/ for remote Terminal authorization.
+  description: Extracts access codes from an ID card inserted into an ID card slot (or PDA slot) and saves them as .acc files in /keys/.
   components:
   - type: Program
     title: "ID Access Encoder"
@@ -413,6 +413,25 @@
     interfaces:
       enum.ProgramUiKey.Key:
         type: AccessEncoderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: IdModifierProgram
+  name: ID access modifier
+  description: Security & command ID card modification console requiring dual ID card slots to authorize and rewrite target ID credentials.
+  components:
+  - type: Program
+    title: "ID Access Modifier"
+    ramUsageMb: 12
+    cpuUsagePercent: 2.0
+    icon:
+      sprite: Objects/Misc/module.rsi
+      state: id_mod
+  - type: IdModifierProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: IdModifierProgramBui
 
 - type: entity
   parent: BaseOxydProgram

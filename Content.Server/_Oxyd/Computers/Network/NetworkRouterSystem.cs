@@ -7,8 +7,13 @@ using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
 using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.Servers;
+using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Events;
+using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.GameTicking;
 using Content.Shared.Power;
 using Robust.Shared.GameObjects;
@@ -37,6 +42,9 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private DeviceLinkSystem _deviceLink = default!;
+    [Dependency] private OxydComputerSystem _computer = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
 #if DEBUG
     [Dependency] private PowerReceiverSystem _power = default!;
     [Dependency] private MetaDataSystem _meta = default!;
@@ -48,6 +56,9 @@ public sealed partial class NetworkRouterSystem : EntitySystem
     private EntityQuery<ProgramComponent> _programQuery;
     private EntityQuery<NetworkRouterComponent> _routerQuery;
     private EntityQuery<DebugFallbackNetworkEntityComponent> _debugFallbackQuery;
+    private EntityQuery<DeviceLinkSinkComponent> _sinkQuery;
+
+    private static readonly ProtoId<SourcePortPrototype> PortComputerCommandSender = "ComputerCommandSender";
 
 #if DEBUG
     private static readonly EntProtoId DebugRouterPrototype = "StationNetworkRouter";
@@ -73,6 +84,7 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         _programQuery = GetEntityQuery<ProgramComponent>();
         _routerQuery = GetEntityQuery<NetworkRouterComponent>();
         _debugFallbackQuery = GetEntityQuery<DebugFallbackNetworkEntityComponent>();
+        _sinkQuery = GetEntityQuery<DeviceLinkSinkComponent>();
 
         SubscribeLocalEvent<NetworkRouterComponent, MapInitEvent>(OnRouterMapInit);
         SubscribeLocalEvent<NetworkRouterComponent, PowerChangedEvent>(OnRouterPowerChanged);
@@ -95,6 +107,55 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         {
             subs.Event<PacketSnifferActionMessage>(OnSnifferUiMessage);
         });
+    }
+
+    [SubscribeLocalEvent]
+    private void OnComputerSinkPacket(ComputerSinkPacketReceivedEvent args)
+    {
+        HandleSinkComputerPacket(args.ReceiverUid, args.Packet);
+    }
+
+    private void HandleSinkComputerPacket(EntityUid receiverUid, ComputerPacket pkt)
+    {
+        if (!pkt.PacketType.Equals("vfs_packet_write", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var filePath = pkt.GetString("file_path");
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        var destCompUid = UnwrapComputerEntity(receiverUid);
+        var entries = new Dictionary<string, string>();
+        var entryCount = pkt.GetInt("entry_count");
+        for (var i = 0; i < entryCount; i++)
+        {
+            var key = pkt.GetString($"ek_{i}");
+            if (string.IsNullOrEmpty(key))
+                continue;
+            entries[key] = pkt.GetString($"ev_{i}") ?? string.Empty;
+        }
+
+        var parameters = new Dictionary<string, string>();
+        var paramCount = pkt.GetInt("param_count");
+        for (var i = 0; i < paramCount; i++)
+        {
+            var key = pkt.GetString($"pk_{i}");
+            if (string.IsNullOrEmpty(key))
+                continue;
+            parameters[key] = pkt.GetString($"pv_{i}") ?? string.Empty;
+        }
+
+        var synthPkt = new NetworkDataPacket
+        {
+            PacketId = pkt.GetString("packet_id") ?? "SINKPKT",
+            Protocol = pkt.GetString("protocol") ?? "SINK_WRITE",
+            FilePath = filePath,
+            EditableEntries = entries,
+            Parameters = parameters
+        };
+
+        if (ApplyModifiedPacketToComputerVfs(destCompUid, synthPkt, pkt.GetBool("tampered"), out _))
+            RefreshAllPacketSniffers();
     }
 
 #if DEBUG
@@ -396,30 +457,7 @@ public sealed partial class NetworkRouterSystem : EntitySystem
                 break;
 
             case PacketSnifferAction.EmitPacket:
-                if (!HasActiveNetworkCard(compUid))
-                {
-                    ent.Comp.StatusMessage = "Cannot emit packet: no active network card installed.";
-                    break;
-                }
-
-                var srcGuid = string.IsNullOrWhiteSpace(msg.SourceGuid) ? EnsureDeviceGuid(compUid) : msg.SourceGuid.Trim().ToUpperInvariant();
-                var tgtGuid = string.IsNullOrWhiteSpace(msg.TargetGuid) ? "BROADCAST" : msg.TargetGuid.Trim().ToUpperInvariant();
-                var pkt = new NetworkDataPacket
-                {
-                    PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
-                    SourceAddress = srcGuid,
-                    TargetAddress = tgtGuid,
-                    Protocol = string.IsNullOrWhiteSpace(msg.Protocol) ? "TCP/RAW" : msg.Protocol.Trim(),
-                    PayloadSummary = msg.Payload,
-                    RawPayload = msg.Payload,
-                    ByteSize = Math.Max(64, msg.Payload.Length * 2),
-                    Timestamp = _timing.CurTime
-                };
-
-                _bandwidth.RecordDataTransmitted(compUid, pkt.ByteSize, isUpload: true);
-                _bandwidth.StorePacket(compUid, pkt);
-                _bandwidth.LogPacketToRouters(pkt, compUid);
-                ent.Comp.StatusMessage = $"Injected {pkt.Protocol} frame ({pkt.ByteSize} B) -> {tgtGuid}.";
+                HandleEmitPacketToSink(compUid, ent.Comp, msg);
                 break;
 
             case PacketSnifferAction.ModifyAndTransmitPacket:
@@ -430,14 +468,83 @@ public sealed partial class NetworkRouterSystem : EntitySystem
         UpdatePacketSnifferUi(ent.Owner);
     }
 
-    private void HandleModifyAndTransmitPacket(EntityUid compUid, PacketSnifferProgramComponent snifferComp, PacketSnifferActionMessage msg)
+    private void HandleEmitPacketToSink(EntityUid compUid, PacketSnifferProgramComponent snifferComp, PacketSnifferActionMessage msg)
     {
-        if (!HasActiveNetworkCard(compUid))
+        if (!TryResolveSinkDeliveryTarget(
+                compUid,
+                msg.TargetGuid,
+                msg.SinkPortId,
+                msg.IsHostPort,
+                out var destCompUid,
+                out var sinkOwnerUid,
+                out var sinkPortProto,
+                out var destGuid,
+                out var isLocal,
+                out var resolveErr))
         {
-            snifferComp.StatusMessage = "Cannot transmit modified packet: no active network card installed.";
+            snifferComp.StatusMessage = $"Cannot send packet to sink port: {resolveErr}";
             return;
         }
 
+        var localGuid = EnsureDeviceGuid(compUid);
+        var srcGuid = string.IsNullOrWhiteSpace(msg.SourceGuid) ? localGuid : msg.SourceGuid.Trim().ToUpperInvariant();
+        var protocol = string.IsNullOrWhiteSpace(msg.Protocol) ? "TCP/RAW" : msg.Protocol.Trim();
+        var payload = msg.Payload ?? string.Empty;
+
+        var pkt = new NetworkDataPacket
+        {
+            PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            SourceAddress = srcGuid,
+            TargetAddress = $"{destGuid}:{sinkPortProto.Id}",
+            Protocol = protocol,
+            PayloadSummary = $"[{sinkPortProto.Id}] {payload}",
+            RawPayload = payload,
+            ByteSize = Math.Max(64, payload.Length * 2 + 64),
+            Timestamp = _timing.CurTime
+        };
+
+        if (!isLocal)
+        {
+            if (!RecordAndValidatePacket(compUid, destCompUid, pkt))
+            {
+                snifferComp.StatusMessage = $"Blocked: router denied {protocol} packet to [{destGuid}]:{sinkPortProto.Id}.";
+                return;
+            }
+        }
+        else
+        {
+            _bandwidth.RecordDataTransmitted(compUid, pkt.ByteSize, isUpload: true);
+            _bandwidth.StorePacket(compUid, pkt);
+            _bandwidth.LogPacketToRouters(pkt, compUid);
+        }
+
+        var compPkt = new ComputerPacket(protocol);
+        compPkt.Set("payload", payload);
+        compPkt.Set("source_guid", srcGuid);
+        compPkt.Set("target_guid", destGuid);
+        compPkt.Set("sink_port", sinkPortProto.Id);
+        compPkt.Set("tampered", "true");
+        compPkt.Set("packet_id", pkt.PacketId);
+        if (msg.ModifiedEntries is { Count: > 0 } entries)
+        {
+            compPkt.Set("entry_count", entries.Count);
+            var idx = 0;
+            foreach (var (k, v) in entries)
+            {
+                compPkt.Set($"ek_{idx}", k);
+                compPkt.Set($"ev_{idx}", v);
+                idx++;
+            }
+        }
+
+        _deviceLink.EnsureSourcePort(compUid, PortComputerCommandSender);
+        _deviceLink.InvokeDirect(compUid, sinkOwnerUid, sinkPortProto, compPkt);
+        snifferComp.StatusMessage = $"Sent {protocol} packet -> [{destGuid}]:{sinkPortProto.Id} ({(isLocal ? "LOCAL" : "REMOTE")}).";
+        RefreshAllPacketSniffers();
+    }
+
+    private void HandleModifyAndTransmitPacket(EntityUid compUid, PacketSnifferProgramComponent snifferComp, PacketSnifferActionMessage msg)
+    {
         var router = FindNearestRouter(compUid);
         NetworkDataPacket? captured = null;
 
@@ -465,56 +572,172 @@ public sealed partial class NetworkRouterSystem : EntitySystem
             return;
         }
 
+        var targetGuidInput = !string.IsNullOrWhiteSpace(msg.TargetGuid) ? msg.TargetGuid.Trim() : captured.TargetAddress;
+        if (!TryResolveSinkDeliveryTarget(
+                compUid,
+                targetGuidInput,
+                msg.SinkPortId,
+                msg.IsHostPort,
+                out var destCompUid,
+                out var sinkOwnerUid,
+                out var sinkPortProto,
+                out var destGuid,
+                out var isLocal,
+                out var resolveErr))
+        {
+            snifferComp.StatusMessage = $"Cannot deliver packet to sink port: {resolveErr}";
+            return;
+        }
+
         var modifiedEntries = msg.ModifiedEntries != null
             ? new Dictionary<string, string>(msg.ModifiedEntries)
             : new Dictionary<string, string>(captured.EditableEntries);
-
-        var destGuid = msg.ApplyToSource
-            ? (!string.IsNullOrWhiteSpace(msg.SourceGuid) ? msg.SourceGuid.Trim().ToUpperInvariant() : captured.SourceAddress)
-            : (!string.IsNullOrWhiteSpace(msg.TargetGuid) ? msg.TargetGuid.Trim().ToUpperInvariant() : captured.TargetAddress);
-
-        if (!TryFindDeviceByGuid(destGuid, out var destCompUid))
-        {
-            snifferComp.StatusMessage = $"Destination device [{destGuid}] not found on network.";
-            return;
-        }
 
         var rawSummary = string.Join("; ", modifiedEntries.Select(kv => $"{kv.Key}={kv.Value}"));
         var modPkt = captured.Clone();
         modPkt.PacketId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         modPkt.SourceAddress = EnsureDeviceGuid(compUid);
-        modPkt.TargetAddress = destGuid;
+        modPkt.TargetAddress = $"{destGuid}:{sinkPortProto.Id}";
         modPkt.EditableEntries = modifiedEntries;
         modPkt.RawPayload = rawSummary;
-        modPkt.PayloadSummary = $"[MODIFIED] {captured.Protocol} ({modifiedEntries.Count} entries) -> {destGuid}";
+        modPkt.PayloadSummary = $"[SINK:{sinkPortProto.Id}] {captured.Protocol} ({modifiedEntries.Count} entries) -> {destGuid}";
         modPkt.ByteSize = Math.Max(128, rawSummary.Length * 2 + 64);
         modPkt.Timestamp = _timing.CurTime;
 
-        if (!RecordAndValidatePacket(compUid, destCompUid, modPkt))
+        if (!isLocal)
         {
-            snifferComp.StatusMessage = $"Blocked: router denied modified {modPkt.Protocol} transmission to [{destGuid}].";
-            return;
+            if (!RecordAndValidatePacket(compUid, destCompUid, modPkt))
+            {
+                snifferComp.StatusMessage = $"Blocked: router denied modified {modPkt.Protocol} transmission to [{destGuid}].";
+                return;
+            }
+        }
+        else
+        {
+            _bandwidth.RecordDataTransmitted(compUid, modPkt.ByteSize, isUpload: true);
+            _bandwidth.StorePacket(compUid, modPkt);
+            _bandwidth.LogPacketToRouters(modPkt, compUid);
         }
 
-        var markTampered = msg.ApplyToSource;
-        if (!markTampered &&
-            _computerQuery.TryComp(destCompUid, out var destOxyd) &&
-            destOxyd.HostMachine is { } destHost &&
-            (HasComp<DataServerComponent>(destHost) || HasComp<NetworkRouterComponent>(destHost)))
+        var compPkt = new ComputerPacket("vfs_packet_write");
+        compPkt.Set("packet_id", modPkt.PacketId);
+        compPkt.Set("protocol", modPkt.Protocol);
+        compPkt.Set("file_path", captured.FilePath);
+        compPkt.Set("source_guid", modPkt.SourceAddress);
+        compPkt.Set("target_guid", destGuid);
+        compPkt.Set("sink_port", sinkPortProto.Id);
+        compPkt.Set("tampered", "true");
+        compPkt.Set("entry_count", modifiedEntries.Count);
+
+        var eIdx = 0;
+        foreach (var (k, v) in modifiedEntries)
         {
-            markTampered = true;
+            compPkt.Set($"ek_{eIdx}", k);
+            compPkt.Set($"ev_{eIdx}", v);
+            eIdx++;
         }
 
-        if (!ApplyModifiedPacketToComputerVfs(destCompUid, modPkt, markTampered, out var applyErr))
+        compPkt.Set("param_count", captured.Parameters.Count);
+        var pIdx = 0;
+        foreach (var (k, v) in captured.Parameters)
         {
-            snifferComp.StatusMessage = $"Transmitted modified {modPkt.Protocol}, but target VFS update failed: {applyErr}";
-            return;
+            compPkt.Set($"pk_{pIdx}", k);
+            compPkt.Set($"pv_{pIdx}", v);
+            pIdx++;
         }
 
-        snifferComp.StatusMessage = markTampered
-            ? $"Poisoned server/router local copy {modPkt.FilePath} on [{destGuid}] ({modifiedEntries.Count} entries)."
-            : $"Transmitted modified {modPkt.Protocol} to [{destGuid}] ({modifiedEntries.Count} entries).";
+        _deviceLink.EnsureSourcePort(compUid, PortComputerCommandSender);
+        _deviceLink.InvokeDirect(compUid, sinkOwnerUid, sinkPortProto, compPkt);
+
+        snifferComp.StatusMessage =
+            $"Sent {modPkt.Protocol} packet -> [{destGuid}]:{sinkPortProto.Id} ({(isLocal ? "LOCAL" : "REMOTE")}, {modifiedEntries.Count} entries).";
         RefreshAllPacketSniffers();
+    }
+
+    private bool TryResolveSinkDeliveryTarget(
+        EntityUid originCompUid,
+        string requestedGuid,
+        string requestedSinkPortId,
+        bool preferHostPort,
+        out EntityUid destCompUid,
+        out EntityUid sinkOwnerUid,
+        out ProtoId<SinkPortPrototype> sinkPortProto,
+        out string destGuid,
+        out bool isLocal,
+        out string error)
+    {
+        destCompUid = EntityUid.Invalid;
+        sinkOwnerUid = EntityUid.Invalid;
+        sinkPortProto = default;
+        destGuid = string.Empty;
+        isLocal = false;
+        error = string.Empty;
+
+        var originGuid = EnsureDeviceGuid(originCompUid);
+        var cleanGuid = requestedGuid.Trim().ToUpperInvariant();
+        if (string.IsNullOrEmpty(cleanGuid) || string.Equals(cleanGuid, originGuid, StringComparison.OrdinalIgnoreCase))
+        {
+            isLocal = true;
+            destCompUid = originCompUid;
+            destGuid = originGuid;
+        }
+        else
+        {
+            if (!HasActiveNetworkCard(originCompUid))
+            {
+                error = "no active network card installed for remote machine targeting.";
+                return false;
+            }
+
+            if (!TryFindDeviceByGuid(cleanGuid, out destCompUid))
+            {
+                error = $"destination device [{cleanGuid}] not found on network.";
+                return false;
+            }
+
+            destGuid = EnsureDeviceGuid(destCompUid);
+            isLocal = destCompUid == originCompUid;
+        }
+
+        var ports = _computer.GetMirroredPorts(destCompUid).Where(p => !p.IsSource).ToList();
+        if (ports.Count == 0)
+        {
+            error = $"machine [{destGuid}] has no DeviceLink sink ports.";
+            return false;
+        }
+
+        MirroredDevicePortInfo? chosen = null;
+        if (!string.IsNullOrWhiteSpace(requestedSinkPortId))
+        {
+            var cleanPort = requestedSinkPortId.Trim();
+            chosen = ports.FirstOrDefault(p =>
+                         p.PortId.Equals(cleanPort, StringComparison.OrdinalIgnoreCase) && p.IsHostPort == preferHostPort)
+                     ?? ports.FirstOrDefault(p => p.PortId.Equals(cleanPort, StringComparison.OrdinalIgnoreCase));
+
+            if (chosen == null)
+            {
+                error = $"sink port '{cleanPort}' does not exist on [{destGuid}].";
+                return false;
+            }
+        }
+        else
+        {
+            chosen = ports.FirstOrDefault(p => p.IsHostPort == preferHostPort) ?? ports[0];
+        }
+
+        var hostUid = _computerQuery.TryComp(destCompUid, out var destOxyd) ? destOxyd.HostMachine : null;
+        sinkOwnerUid = chosen.IsHostPort && hostUid is { Valid: true } hm ? hm : destCompUid;
+        var targetPort = new ProtoId<SinkPortPrototype>(chosen.PortId);
+        sinkPortProto = targetPort;
+
+        if (!_sinkQuery.TryComp(sinkOwnerUid, out var sinkComp) ||
+            !Array.Exists(_deviceLink.GetSinkPortIds((sinkOwnerUid, sinkComp)), p => p == targetPort))
+        {
+            error = $"sink port '{chosen.PortId}' is unavailable on [{destGuid}].";
+            return false;
+        }
+
+        return true;
     }
 
     private bool ApplyModifiedPacketToComputerVfs(
@@ -1251,18 +1474,75 @@ public sealed partial class NetworkRouterSystem : EntitySystem
                 packets.AddRange(bw.StoredPackets);
         }
 
+        var localGuid = EnsureDeviceGuid(compUid);
+        var sinkTargets = CollectSnifferSinkTargets(compUid, localGuid, hasNic, router);
+
         var statusMsg = router != null && IsUsingDebugFallbackRouter(router.Value)
             ? $"{sProg.StatusMessage} [Global Net: {MetaData(router.Value.Owner).EntityName}]"
             : sProg.StatusMessage;
 
         var state = new PacketSnifferUiState(
-            router != null ? EnsureDeviceGuid(router.Value.Owner) : EnsureDeviceGuid(compUid),
+            router != null ? EnsureDeviceGuid(router.Value.Owner) : localGuid,
+            localGuid,
             hasNic,
             packets,
+            sinkTargets,
             statusMsg);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);
+    }
+
+    private List<SnifferSinkTargetDto> CollectSnifferSinkTargets(
+        EntityUid localCompUid,
+        string localGuid,
+        bool hasNic,
+        Entity<NetworkRouterComponent>? router)
+    {
+        var list = new List<SnifferSinkTargetDto>();
+        var seenMachines = new HashSet<EntityUid>();
+
+        void AddMachineSinks(EntityUid targetCompUid, string guid, bool isLocal)
+        {
+            if (!seenMachines.Add(targetCompUid))
+                return;
+
+            var displayName = _computerQuery.TryComp(targetCompUid, out var comp) && comp.HostMachine is { } hm && Exists(hm)
+                ? MetaData(hm).EntityName
+                : MetaData(targetCompUid).EntityName;
+
+            foreach (var port in _computer.GetMirroredPorts(targetCompUid))
+            {
+                if (port.IsSource)
+                    continue;
+
+                list.Add(new SnifferSinkTargetDto(
+                    guid,
+                    displayName,
+                    port.PortId,
+                    port.PortName,
+                    isLocal,
+                    port.IsHostPort));
+            }
+        }
+
+        AddMachineSinks(localCompUid, localGuid, isLocal: true);
+
+        if (hasNic && router != null)
+        {
+            RefreshRouterDevices(router.Value);
+            foreach (var guid in router.Value.Comp.ConnectedDevices)
+            {
+                if (TryFindDeviceByGuid(guid, out var dUid) && dUid != localCompUid)
+                    AddMachineSinks(dUid, guid, isLocal: false);
+            }
+
+            var routerComp = UnwrapComputerEntity(router.Value.Owner);
+            if (routerComp != localCompUid)
+                AddMachineSinks(routerComp, EnsureDeviceGuid(routerComp), isLocal: false);
+        }
+
+        return list;
     }
 
     public static string GetPacketReadableSummary(NetworkDataPacket pkt)

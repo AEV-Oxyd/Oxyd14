@@ -1601,6 +1601,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!comp.AllowDeviceLink || comp.DeviceLinkWireCut)
             return;
 
+        if (packet != null)
+            RaiseLocalEvent(new ComputerSinkPacketReceivedEvent(compUid, sourceEntity, port, packet));
+
         var ev = new ProgramDeviceLinkReceivedEvent(compUid, sourceEntity, port, trigger, payload, packet, boolSignal);
         foreach (var progUid in comp.RunningPrograms.ToList())
         {

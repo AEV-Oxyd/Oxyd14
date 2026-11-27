@@ -1,5 +1,4 @@
 using Content.Shared.Access;
-using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
@@ -7,9 +6,9 @@ using Robust.Shared.Serialization;
 namespace Content.Shared._Oxyd.Computers.Programs;
 
 /// <summary>
-/// Program that extracts access codes from an inserted ID card (PDA/computer ID slot)
-/// or an ID card swiped directly onto the host computer, and saves them as .acc files
-/// in /keys/ on the computer's filesystem.
+/// Dedicated NTOS Access Encoder program (/bin/access_encoder.nte).
+/// Reads credentials from an ID card inserted into an ID Card Slot module (or host PDA ID slot)
+/// and writes / deletes .acc credential files in /keys/. Does not modify ID cards.
 /// </summary>
 [RegisterComponent, NetworkedComponent]
 public sealed partial class AccessEncoderProgramComponent : Component
@@ -17,166 +16,73 @@ public sealed partial class AccessEncoderProgramComponent : Component
     public const string DefaultDirectory = "/keys/";
 
     [DataField]
-    public bool HasScannedCard;
+    public string? LastCardName;
 
     [DataField]
-    public string ScannedSourceLabel = string.Empty;
+    public string? LastCardJobTitle;
 
     [DataField]
-    public string ScannedOwnerName = string.Empty;
-
-    [DataField]
-    public string ScannedJobTitle = string.Empty;
-
-    [DataField]
-    public List<ProtoId<AccessLevelPrototype>> ScannedAccessTags = new();
-
-    [ViewVariables]
-    public EntityUid? LastScannedCardUid;
+    public List<ProtoId<AccessLevelPrototype>> LastCardAccessTags = new();
 
     [DataField]
     public string? SelectedFilePath;
 
     [DataField]
-    public string StatusMessage = "Insert an ID card into your PDA or swipe an ID card on this computer.";
-
-    [DataField]
-    public SoundSpecifier? SoundScan = new SoundPathSpecifier("/Audio/Machines/scan_finish.ogg");
-
-    /// <summary>
-    /// Access group prototype defining the static set of access levels manageable by this program.
-    /// Avoids duplicating access tag lists across every program entity instance.
-    /// </summary>
-    [DataField]
-    public ProtoId<AccessGroupPrototype> AccessGroup = "AllAccess";
-}
-
-[Serializable, NetSerializable]
-public sealed class AccessCodeFileEntryDto
-{
-    public string FilePath { get; }
-    public string FileName { get; }
-    public string OwnerName { get; }
-    public string JobTitle { get; }
-    public List<string> AccessTags { get; }
-
-    public AccessCodeFileEntryDto(
-        string filePath,
-        string fileName,
-        string ownerName,
-        string jobTitle,
-        List<string> accessTags)
-    {
-        FilePath = filePath;
-        FileName = fileName;
-        OwnerName = ownerName;
-        JobTitle = jobTitle;
-        AccessTags = accessTags;
-    }
+    public string StatusMessage = "Insert an ID card into an ID Card Slot module (or PDA slot) to encode .acc access files.";
 }
 
 [Serializable, NetSerializable]
 public sealed class AccessEncoderUiState : BoundUserInterfaceState
 {
-    public bool HasHardDrive { get; }
-    public bool HasSourceCard { get; }
-    public bool UsingScannedCard { get; }
-    public string SourceLabel { get; }
-    public string SourceOwnerName { get; }
-    public string SourceJobTitle { get; }
-    public List<string> SourceAccessTags { get; }
-    public List<AccessCodeFileEntryDto> SavedFiles { get; }
-    public string? SelectedFilePath { get; }
-    public string? SelectedFileSummary { get; }
+    public bool HasIdSlotHardware { get; }
+    public bool HasModularSlot { get; }
+    public bool SlotOccupied { get; }
+    public string SlotCardLabel { get; }
+    public string CardOwner { get; }
+    public string CardJob { get; }
+    public List<string> ScannedTags { get; }
+    public string SelectedFilePath { get; }
+    public string SelectedFilePreview { get; }
+    public List<string> KeyFiles { get; }
     public string StatusMessage { get; }
 
-    // ID Modification / Authorization Console fields
-    public bool HasPrivilegedAuth { get; }
-    public string PrivilegedAuthLabel { get; }
-    public List<string> AllowedAccessTags { get; }
-    public bool HasTargetCard { get; }
-    public string TargetCardLabel { get; }
-    public string TargetFullName { get; }
-    public string TargetJobTitle { get; }
-    public List<string> TargetAccessTags { get; }
-    public ProtoId<AccessGroupPrototype> AccessGroup { get; }
-    public bool HasHostIdSlots { get; }
-    public bool HasPrivilegedSlotCard { get; }
-    public bool HasTargetSlotCard { get; }
-    public int InstalledCardSlotCount { get; }
-    public bool HasCardScanner { get; }
-
     public AccessEncoderUiState(
-        bool hasHardDrive,
-        bool hasSourceCard,
-        bool usingScannedCard,
-        string sourceLabel,
-        string sourceOwnerName,
-        string sourceJobTitle,
-        List<string> sourceAccessTags,
-        List<AccessCodeFileEntryDto> savedFiles,
-        string? selectedFilePath,
-        string? selectedFileSummary,
-        string statusMessage,
-        bool hasPrivilegedAuth = false,
-        string privilegedAuthLabel = "None",
-        List<string>? allowedAccessTags = null,
-        bool hasTargetCard = false,
-        string targetCardLabel = "None",
-        string targetFullName = "",
-        string targetJobTitle = "",
-        List<string>? targetAccessTags = null,
-        ProtoId<AccessGroupPrototype>? accessGroup = null,
-        bool hasHostIdSlots = false,
-        bool hasPrivilegedSlotCard = false,
-        bool hasTargetSlotCard = false,
-        int installedCardSlotCount = 0,
-        bool hasCardScanner = false)
+        bool hasIdSlotHardware,
+        bool hasModularSlot,
+        bool slotOccupied,
+        string slotCardLabel,
+        string cardOwner,
+        string cardJob,
+        List<string> scannedTags,
+        string selectedFilePath,
+        string selectedFilePreview,
+        List<string> keyFiles,
+        string statusMessage)
     {
-        HasHardDrive = hasHardDrive;
-        HasSourceCard = hasSourceCard;
-        UsingScannedCard = usingScannedCard;
-        SourceLabel = sourceLabel;
-        SourceOwnerName = sourceOwnerName;
-        SourceJobTitle = sourceJobTitle;
-        SourceAccessTags = sourceAccessTags;
-        SavedFiles = savedFiles;
+        HasIdSlotHardware = hasIdSlotHardware;
+        HasModularSlot = hasModularSlot;
+        SlotOccupied = slotOccupied;
+        SlotCardLabel = slotCardLabel;
+        CardOwner = cardOwner;
+        CardJob = cardJob;
+        ScannedTags = scannedTags;
         SelectedFilePath = selectedFilePath;
-        SelectedFileSummary = selectedFileSummary;
+        SelectedFilePreview = selectedFilePreview;
+        KeyFiles = keyFiles;
         StatusMessage = statusMessage;
-        HasPrivilegedAuth = hasPrivilegedAuth;
-        PrivilegedAuthLabel = privilegedAuthLabel;
-        AllowedAccessTags = allowedAccessTags ?? new List<string>();
-        HasTargetCard = hasTargetCard;
-        TargetCardLabel = targetCardLabel;
-        TargetFullName = targetFullName;
-        TargetJobTitle = targetJobTitle;
-        TargetAccessTags = targetAccessTags ?? new List<string>();
-        AccessGroup = accessGroup ?? "AllAccess";
-        HasHostIdSlots = hasHostIdSlots;
-        HasPrivilegedSlotCard = hasPrivilegedSlotCard;
-        HasTargetSlotCard = hasTargetSlotCard;
-        InstalledCardSlotCount = installedCardSlotCount;
-        HasCardScanner = hasCardScanner;
     }
 }
 
 [Serializable, NetSerializable]
 public enum AccessEncoderAction : byte
 {
-    BuildSaveFile,
     Refresh,
-    ClearScanned,
+    ToggleCardSlot,
+    ReadSlotCard,
+    BuildSaveFile,
     SelectFile,
     DeleteFile,
-    TogglePrivilegedSlot,
-    ToggleTargetSlot,
-    SwapSlots,
-    WriteTargetIdentity,
-    ToggleTargetAccessTag,
-    ApplyAccFileToTarget,
-    GrantAllAllowedAccess,
-    RevokeAllAllowedAccess
+    ClearScanned
 }
 
 [Serializable, NetSerializable]
@@ -184,15 +90,10 @@ public sealed class AccessEncoderActionMessage : BoundUserInterfaceMessage
 {
     public AccessEncoderAction Action { get; }
     public string Argument { get; }
-    public string SecondaryArgument { get; }
 
-    public AccessEncoderActionMessage(
-        AccessEncoderAction action,
-        string argument = "",
-        string secondaryArgument = "")
+    public AccessEncoderActionMessage(AccessEncoderAction action, string argument = "")
     {
         Action = action;
         Argument = argument;
-        SecondaryArgument = secondaryArgument;
     }
 }

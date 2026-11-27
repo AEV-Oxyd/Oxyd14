@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using Content.Shared.Atmos;
 using Content.Shared.Atmos.Monitor;
@@ -85,6 +86,9 @@ public sealed class RemoteAtmosTargetDto
     public string AlarmLevel { get; }
     public float PressureKpa { get; }
     public float TemperatureCelsius { get; }
+    public NetEntity? DeviceEntity { get; }
+    public NetEntity? GridEntity { get; }
+    public Vector2 LocalPosition { get; }
 
     public RemoteAtmosTargetDto(
         string targetGuid,
@@ -93,7 +97,10 @@ public sealed class RemoteAtmosTargetDto
         bool isAuthorized,
         string alarmLevel,
         float pressureKpa,
-        float temperatureCelsius)
+        float temperatureCelsius,
+        NetEntity? deviceEntity = null,
+        NetEntity? gridEntity = null,
+        Vector2 localPosition = default)
     {
         TargetGuid = targetGuid;
         ApcGuid = apcGuid;
@@ -102,6 +109,9 @@ public sealed class RemoteAtmosTargetDto
         AlarmLevel = alarmLevel;
         PressureKpa = pressureKpa;
         TemperatureCelsius = temperatureCelsius;
+        DeviceEntity = deviceEntity;
+        GridEntity = gridEntity;
+        LocalPosition = localPosition;
     }
 }
 

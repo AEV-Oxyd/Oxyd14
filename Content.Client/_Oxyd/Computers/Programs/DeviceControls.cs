@@ -32,14 +32,20 @@ namespace Content.Client._Oxyd.Computers.Programs;
 public sealed class ApcControlUiControl : ProgramUiControl
 {
     private readonly ContentBoxContainer _remoteHeaderContainer;
+    private readonly OxydDeviceNavMapControl _mapSelector;
     private readonly ContentLabel _telemetryLabel;
     private readonly ContentLabel _statusLabel;
     private readonly List<ContentButton> _controlButtons = new();
+    private ApcControlUiState? _lastState;
+    private bool _mapMode;
 
     public ApcControlUiControl()
     {
         HorizontalExpand = true;
         VerticalExpand = true;
+
+        _mapSelector = new OxydDeviceNavMapControl("Apc");
+        _mapSelector.MarkerSelected += guid => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guid));
 
         var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
         var root = new ContentBoxContainer
@@ -114,6 +120,7 @@ public sealed class ApcControlUiControl : ProgramUiControl
         if (raw is not ApcControlUiState state)
             return;
 
+        _lastState = state;
         _remoteHeaderContainer.RemoveAllChildren();
         if (state.IsRemoteConsole)
         {
@@ -142,29 +149,102 @@ public sealed class ApcControlUiControl : ProgramUiControl
 
     private void BuildRemoteApcHeader(ApcControlUiState state)
     {
-        var targetsWrap = new ContentWrapContainer
+        var modeRow = new ContentWrapContainer
         {
-            Name = "ApcRemoteTargetsWrap",
+            Name = "ApcViewModeRow",
             HorizontalSeparation = 4,
             VerticalSeparation = 4
         };
-
-        foreach (var t in state.AvailableTargets)
+        var listModeBtn = new ContentButton
         {
-            var guidCopy = t.TargetGuid;
-            var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-            var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ AUTH]";
-            var btn = new ContentButton
+            Name = "ApcListModeButton",
+            Text = "List Mode",
+            Pressed = !_mapMode,
+            MinWidth = 88
+        };
+        listModeBtn.OnPressed += _ =>
+        {
+            if (_mapMode && _lastState != null)
             {
-                Name = $"ApcTargetBtn_{guidCopy}",
-                Text = $"{t.AreaName} ({guidCopy}) {authTag}",
-                Pressed = isSel,
-                MinWidth = 136
-            };
-            btn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guidCopy));
-            targetsWrap.AddChild(btn);
+                _mapMode = false;
+                UpdateProgramState(_lastState);
+            }
+        };
+        var mapModeBtn = new ContentButton
+        {
+            Name = "ApcViewModeToggleButton",
+            Text = "Map Mode",
+            Pressed = _mapMode,
+            MinWidth = 88
+        };
+        mapModeBtn.OnPressed += _ =>
+        {
+            if (!_mapMode && _lastState != null)
+            {
+                _mapMode = true;
+                UpdateProgramState(_lastState);
+            }
+        };
+        modeRow.AddChild(listModeBtn);
+        modeRow.AddChild(mapModeBtn);
+        _remoteHeaderContainer.AddChild(modeRow);
+
+        if (_mapMode)
+        {
+            var markers = new List<DeviceNavMapMarker>(state.AvailableTargets.Count);
+            foreach (var t in state.AvailableTargets)
+            {
+                if (t.DeviceEntity is not { } devNet)
+                    continue;
+
+                var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+                var color = isSel
+                    ? Color.FromHex("#00FFCC")
+                    : !t.IsAuthorized
+                        ? Color.FromHex("#FFD166")
+                        : t.MainBreakerEnabled
+                            ? Color.FromHex("#44E088")
+                            : Color.FromHex("#FF6666");
+                markers.Add(new DeviceNavMapMarker(
+                    devNet,
+                    t.TargetGuid,
+                    t.AreaName,
+                    t.GridEntity,
+                    t.LocalPosition,
+                    color,
+                    Selected: isSel,
+                    Active: t.MainBreakerEnabled));
+            }
+
+            _mapSelector.SetMarkers(markers, $"Selected APC: {state.AreaName} [{state.SelectedTargetGuid}]");
+            _remoteHeaderContainer.AddChild(_mapSelector);
         }
-        _remoteHeaderContainer.AddChild(targetsWrap);
+        else
+        {
+            var targetsWrap = new ContentWrapContainer
+            {
+                Name = "ApcRemoteTargetsWrap",
+                HorizontalSeparation = 4,
+                VerticalSeparation = 4
+            };
+
+            foreach (var t in state.AvailableTargets)
+            {
+                var guidCopy = t.TargetGuid;
+                var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+                var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ AUTH]";
+                var btn = new ContentButton
+                {
+                    Name = $"ApcTargetBtn_{guidCopy}",
+                    Text = $"{t.AreaName} ({guidCopy}) {authTag}",
+                    Pressed = isSel,
+                    MinWidth = 136
+                };
+                btn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.SelectTarget, guidCopy));
+                targetsWrap.AddChild(btn);
+            }
+            _remoteHeaderContainer.AddChild(targetsWrap);
+        }
 
         var authRow = new ContentWrapContainer
         {
@@ -711,6 +791,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
     }
 
     private readonly ContentBoxContainer _remoteHeaderContainer;
+    private readonly OxydDeviceNavMapControl _mapSelector;
     private readonly StyleBoxFlat _telemetryPanelStyle;
     private readonly StyleBoxFlat _alarmBadgeStyle;
     private readonly ContentLabel _alarmBadgeLabel;
@@ -745,11 +826,15 @@ public sealed class AtmosControlUiControl : ProgramUiControl
     private DeviceCategory? _mountedCategory;
     private readonly List<int> _mountedAddresses = new();
     private bool _userPickedCategory;
+    private bool _mapMode;
 
     public AtmosControlUiControl()
     {
         HorizontalExpand = true;
         VerticalExpand = true;
+
+        _mapSelector = new OxydDeviceNavMapControl("Atmos");
+        _mapSelector.MarkerSelected += guid => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guid));
 
         var root = new ContentBoxContainer
         {
@@ -1132,29 +1217,104 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
     private void BuildRemoteAtmosHeader(AtmosControlUiState state)
     {
-        var targetsWrap = new ContentWrapContainer
+        var modeRow = new ContentWrapContainer
         {
-            Name = "AtmosRemoteTargetsWrap",
+            Name = "AtmosViewModeRow",
             HorizontalSeparation = 4,
             VerticalSeparation = 4
         };
-
-        foreach (var t in state.AvailableTargets)
+        var listModeBtn = new ContentButton
         {
-            var guidCopy = t.TargetGuid;
-            var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-            var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ APC AUTH]";
-            var btn = new ContentButton
+            Name = "AtmosListModeButton",
+            Text = "List Mode",
+            Pressed = !_mapMode,
+            MinWidth = 88
+        };
+        listModeBtn.OnPressed += _ =>
+        {
+            if (_mapMode && _lastState != null)
             {
-                Name = $"AtmosTargetBtn_{guidCopy}",
-                Text = $"{t.AreaName} [APC {t.ApcGuid}] {authTag}",
-                Pressed = isSel,
-                MinWidth = 148
-            };
-            btn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guidCopy));
-            targetsWrap.AddChild(btn);
+                _mapMode = false;
+                UpdateProgramState(_lastState);
+            }
+        };
+        var mapModeBtn = new ContentButton
+        {
+            Name = "AtmosViewModeToggleButton",
+            Text = "Map Mode",
+            Pressed = _mapMode,
+            MinWidth = 88
+        };
+        mapModeBtn.OnPressed += _ =>
+        {
+            if (!_mapMode && _lastState != null)
+            {
+                _mapMode = true;
+                UpdateProgramState(_lastState);
+            }
+        };
+        modeRow.AddChild(listModeBtn);
+        modeRow.AddChild(mapModeBtn);
+        _remoteHeaderContainer.AddChild(modeRow);
+
+        if (_mapMode)
+        {
+            var markers = new List<DeviceNavMapMarker>(state.AvailableTargets.Count);
+            foreach (var t in state.AvailableTargets)
+            {
+                if (t.DeviceEntity is not { } devNet)
+                    continue;
+
+                var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+                var isDanger = !string.Equals(t.AlarmLevel, "Normal", StringComparison.OrdinalIgnoreCase);
+                var color = isSel
+                    ? Color.FromHex("#00FFCC")
+                    : isDanger
+                        ? Color.FromHex("#FF5555")
+                        : !t.IsAuthorized
+                            ? Color.FromHex("#FFD166")
+                            : Color.FromHex("#44E088");
+                markers.Add(new DeviceNavMapMarker(
+                    devNet,
+                    t.TargetGuid,
+                    t.AreaName,
+                    t.GridEntity,
+                    t.LocalPosition,
+                    color,
+                    Selected: isSel,
+                    Active: true,
+                    Blinks: isDanger));
+            }
+
+            _mapSelector.SetMarkers(markers, $"Selected Alarm: {state.SelectedTargetGuid} (APC {state.SelectedApcGuid})");
+            _remoteHeaderContainer.AddChild(_mapSelector);
         }
-        _remoteHeaderContainer.AddChild(targetsWrap);
+        else
+        {
+            var targetsWrap = new ContentWrapContainer
+            {
+                Name = "AtmosRemoteTargetsWrap",
+                HorizontalSeparation = 4,
+                VerticalSeparation = 4
+            };
+
+            foreach (var t in state.AvailableTargets)
+            {
+                var guidCopy = t.TargetGuid;
+                var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
+                var authTag = t.IsAuthorized ? "[AUTH]" : "[REQ APC AUTH]";
+                var btn = new ContentButton
+                {
+                    Name = $"AtmosTargetBtn_{guidCopy}",
+                    Text = $"{t.AreaName} [APC {t.ApcGuid}] {authTag}",
+                    Pressed = isSel,
+                    MinWidth = 148
+                };
+                btn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.SelectTarget, guidCopy));
+                targetsWrap.AddChild(btn);
+            }
+            _remoteHeaderContainer.AddChild(targetsWrap);
+        }
 
         var authRow = new ContentWrapContainer
         {

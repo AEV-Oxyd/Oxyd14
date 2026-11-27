@@ -1,3 +1,4 @@
+using System.Numerics;
 using Robust.Shared.GameStates;
 using Robust.Shared.Serialization;
 
@@ -55,6 +56,9 @@ public sealed class RemoteApcTargetDto
     public bool MainBreakerEnabled { get; }
     public float ChargePercent { get; }
     public int LoadWatts { get; }
+    public NetEntity? DeviceEntity { get; }
+    public NetEntity? GridEntity { get; }
+    public Vector2 LocalPosition { get; }
 
     public RemoteApcTargetDto(
         string targetGuid,
@@ -62,7 +66,10 @@ public sealed class RemoteApcTargetDto
         bool isAuthorized,
         bool mainBreakerEnabled,
         float chargePercent,
-        int loadWatts)
+        int loadWatts,
+        NetEntity? deviceEntity = null,
+        NetEntity? gridEntity = null,
+        Vector2 localPosition = default)
     {
         TargetGuid = targetGuid;
         AreaName = areaName;
@@ -70,6 +77,9 @@ public sealed class RemoteApcTargetDto
         MainBreakerEnabled = mainBreakerEnabled;
         ChargePercent = chargePercent;
         LoadWatts = loadWatts;
+        DeviceEntity = deviceEntity;
+        GridEntity = gridEntity;
+        LocalPosition = localPosition;
     }
 }
 

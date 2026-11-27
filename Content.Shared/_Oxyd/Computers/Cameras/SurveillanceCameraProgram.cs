@@ -1,3 +1,4 @@
+using System.Numerics;
 using Content.Shared.Access;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -206,6 +207,8 @@ public sealed class CameraDirectoryEntryDto
     public int LogCount { get; }
     public int UsedBytes { get; }
     public int MaxBytes { get; }
+    public NetEntity? GridEntity { get; }
+    public Vector2 LocalPosition { get; }
 
     public CameraDirectoryEntryDto(
         NetEntity cameraEntity,
@@ -216,7 +219,9 @@ public sealed class CameraDirectoryEntryDto
         bool hasMicrophone,
         int logCount,
         int usedBytes,
-        int maxBytes)
+        int maxBytes,
+        NetEntity? gridEntity = null,
+        Vector2 localPosition = default)
     {
         CameraEntity = cameraEntity;
         CameraGuid = cameraGuid;
@@ -227,6 +232,8 @@ public sealed class CameraDirectoryEntryDto
         LogCount = logCount;
         UsedBytes = usedBytes;
         MaxBytes = maxBytes;
+        GridEntity = gridEntity;
+        LocalPosition = localPosition;
     }
 }
 

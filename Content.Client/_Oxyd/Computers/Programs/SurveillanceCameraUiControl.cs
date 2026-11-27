@@ -44,7 +44,12 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
     private readonly ContentWrapContainer _authButtonsWrap;
     private readonly ContentWrapContainer _zoneBar;
     private readonly ContentLineEdit _searchEdit;
+    private readonly ContentButton _listModeBtn;
+    private readonly ContentButton _mapModeBtn;
+    private readonly ContentScrollContainer _camScroll;
     private readonly ContentBoxContainer _cameraListContainer;
+    private readonly OxydDeviceNavMapControl _mapSelector;
+    private bool _mapMode;
 
     private readonly ContentLabel _activeCamTitleLabel;
     private readonly ContentPanelContainer _audioBadgePanel;
@@ -205,7 +210,35 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _searchEdit.OnTextChanged += _ => RebuildCameraList();
         leftPane.AddChild(_searchEdit);
 
-        var camScroll = new ContentScrollContainer
+        var dirModeRow = new ContentWrapContainer
+        {
+            Name = "CameraViewModeRow",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4
+        };
+        _listModeBtn = new ContentButton
+        {
+            Name = "CameraListModeButton",
+            Text = "List",
+            Pressed = true,
+            MinWidth = 68,
+            MinHeight = 24
+        };
+        _listModeBtn.OnPressed += _ => SetMapMode(false);
+        _mapModeBtn = new ContentButton
+        {
+            Name = "CameraViewModeToggleButton",
+            Text = "Map",
+            Pressed = false,
+            MinWidth = 68,
+            MinHeight = 24
+        };
+        _mapModeBtn.OnPressed += _ => SetMapMode(true);
+        dirModeRow.AddChild(_listModeBtn);
+        dirModeRow.AddChild(_mapModeBtn);
+        leftPane.AddChild(dirModeRow);
+
+        _camScroll = new ContentScrollContainer
         {
             Name = "CameraListScroll",
             HorizontalExpand = true,
@@ -220,8 +253,19 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             RectClipContent = true,
             SeparationOverride = 4
         };
-        camScroll.AddChild(_cameraListContainer);
-        leftPane.AddChild(camScroll);
+        _camScroll.AddChild(_cameraListContainer);
+        leftPane.AddChild(_camScroll);
+
+        _mapSelector = new OxydDeviceNavMapControl("Camera")
+        {
+            Visible = false
+        };
+        _mapSelector.MarkerSelected += key =>
+        {
+            if (NetEntity.TryParse(key, out var camNet))
+                SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: camNet));
+        };
+        leftPane.AddChild(_mapSelector);
         split.AddChild(leftPane);
 
         // Right: Focused Camera Top Bar + Full-Height 1..6 Camera Feed Grid (or Full-Height Logs Tab on click)
@@ -681,6 +725,15 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         SyncActiveCameraFeeds(_lastState);
     }
 
+    private void SetMapMode(bool mapMode)
+    {
+        _mapMode = mapMode;
+        _listModeBtn.Pressed = !mapMode;
+        _mapModeBtn.Pressed = mapMode;
+        _camScroll.Visible = !mapMode;
+        _mapSelector.Visible = mapMode;
+    }
+
     private void RebuildCameraList()
     {
         _cameraListContainer.RemoveAllChildren();
@@ -693,6 +746,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
 
         var q = (_searchEdit.Text ?? string.Empty).Trim();
         var shown = 0;
+        var mapMarkers = new List<DeviceNavMapMarker>();
         foreach (var cam in _lastState.Cameras)
         {
             if (!string.Equals(_lastState.SelectedZone, "All", StringComparison.OrdinalIgnoreCase) &&
@@ -713,6 +767,23 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             var net = cam.CameraEntity;
             var isLive = activeSet.Contains(net);
             var isFocused = _lastState.ActiveCamera == net;
+            var blipColor = isFocused
+                ? Color.FromHex("#00FFCC")
+                : isLive
+                    ? Color.FromHex("#FBFF19")
+                    : cam.Active
+                        ? Color.FromHex("#CC55FF")
+                        : Color.FromHex("#888888");
+            mapMarkers.Add(new DeviceNavMapMarker(
+                net,
+                net.ToString(),
+                cam.Name,
+                cam.GridEntity,
+                cam.LocalPosition,
+                blipColor,
+                Selected: isFocused || isLive,
+                Active: cam.Active));
+
             var livePrefix = isLive ? "[LIVE] " : string.Empty;
             var micSuffix = cam.HasMicrophone ? " [MIC]" : string.Empty;
             var stateTag = cam.Active ? string.Empty : " [OFF]";
@@ -743,6 +814,10 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
                 HorizontalExpand = true
             });
         }
+
+        _mapSelector.SetMarkers(
+            mapMarkers,
+            _lastState.ActiveCamera != null ? $"Focused Camera: {_lastState.ActiveCameraName}" : "Select a Wi-Fi Camera");
     }
 
     private void SyncActiveCameraFeeds(SurveillanceCameraUiState state)

@@ -111,23 +111,59 @@ public sealed partial class PacketSnifferProgramComponent : Component
     public string StatusMessage = "Monitoring network bus";
 }
 
+/// <summary>
+/// Reachable DeviceLink sink port on the local machine or a remotely connected network machine.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed class SnifferSinkTargetDto
+{
+    public string TargetGuid { get; }
+    public string DeviceName { get; }
+    public string SinkPortId { get; }
+    public string SinkPortName { get; }
+    public bool IsLocal { get; }
+    public bool IsHostPort { get; }
+
+    public SnifferSinkTargetDto(
+        string targetGuid,
+        string deviceName,
+        string sinkPortId,
+        string sinkPortName,
+        bool isLocal,
+        bool isHostPort)
+    {
+        TargetGuid = targetGuid;
+        DeviceName = deviceName;
+        SinkPortId = sinkPortId;
+        SinkPortName = sinkPortName;
+        IsLocal = isLocal;
+        IsHostPort = isHostPort;
+    }
+}
+
 [Serializable, NetSerializable]
 public sealed class PacketSnifferUiState : BoundUserInterfaceState
 {
     public string RouterGuid { get; }
+    public string LocalGuid { get; }
     public bool HasNetworkCard { get; }
     public List<NetworkDataPacket> Packets { get; }
+    public List<SnifferSinkTargetDto> SinkTargets { get; }
     public string StatusMessage { get; }
 
     public PacketSnifferUiState(
         string routerGuid,
+        string localGuid,
         bool hasNetworkCard,
         List<NetworkDataPacket> packets,
+        List<SnifferSinkTargetDto> sinkTargets,
         string statusMessage)
     {
         RouterGuid = routerGuid;
+        LocalGuid = localGuid;
         HasNetworkCard = hasNetworkCard;
         Packets = packets;
+        SinkTargets = sinkTargets;
         StatusMessage = statusMessage;
     }
 }
@@ -152,7 +188,8 @@ public sealed class PacketSnifferActionMessage : BoundUserInterfaceMessage
     public string Payload { get; }
     public string PacketId { get; }
     public Dictionary<string, string>? ModifiedEntries { get; }
-    public bool ApplyToSource { get; }
+    public string SinkPortId { get; }
+    public bool IsHostPort { get; }
 
     public PacketSnifferActionMessage(
         PacketSnifferAction action,
@@ -162,7 +199,8 @@ public sealed class PacketSnifferActionMessage : BoundUserInterfaceMessage
         string payload = "",
         string packetId = "",
         Dictionary<string, string>? modifiedEntries = null,
-        bool applyToSource = false)
+        string sinkPortId = "",
+        bool isHostPort = true)
     {
         Action = action;
         SourceGuid = sourceGuid;
@@ -171,6 +209,7 @@ public sealed class PacketSnifferActionMessage : BoundUserInterfaceMessage
         Payload = payload;
         PacketId = packetId;
         ModifiedEntries = modifiedEntries;
-        ApplyToSource = applyToSource;
+        SinkPortId = sinkPortId;
+        IsHostPort = isHostPort;
     }
 }

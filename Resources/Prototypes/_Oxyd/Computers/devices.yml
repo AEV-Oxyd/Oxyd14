@@ -245,7 +245,6 @@
     - ComputerPartHardDriveWorkstation
     - ComputerPartNetworkCardHighSpeed
     - ComputerPartBatterySmall
-    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -1167,7 +1166,7 @@
         extension: nte
         directory: /bin/
         size: 4096
-        programId: AccessEncoderProgram
+        programId: IdModifierProgram
         title: "ID Modification Console"
       "/bin/access_encoder.nte": !type:ProgramVirtualFile
         name: access_encoder
@@ -1726,7 +1725,7 @@
         extension: nte
         directory: /bin/
         size: 4096
-        programId: AccessEncoderProgram
+        programId: IdModifierProgram
         title: "ID Modification Console"
       "/bin/cargo_orders.nte": !type:ProgramVirtualFile
         name: cargo_orders
