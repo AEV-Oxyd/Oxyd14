@@ -366,12 +366,12 @@ public sealed class IdModifierUiControl : ProgramUiControl
 
         if (!state.HasRequiredModificationHardware)
         {
-            _hardwareLabel.Text = $"Dual ID Slot Hardware: INSUFFICIENT ({state.SlotCount}/2 Card Slot modules installed). Cannot modify target IDs.";
+            _hardwareLabel.Text = $"Dual ID Slot Hardware: INSUFFICIENT ({state.SlotCount}/2)";
             _hardwareLabel.FontColorOverride = Color.FromHex("#FF8877");
         }
         else
         {
-            _hardwareLabel.Text = $"Dual ID Slot Hardware: READY ({state.SlotCount}/2 ID Card Slot modules active).";
+            _hardwareLabel.Text = $"Dual ID Slot Hardware: READY ({state.SlotCount}/2)";
             _hardwareLabel.FontColorOverride = Color.FromHex("#72E89B");
         }
 
@@ -390,7 +390,7 @@ public sealed class IdModifierUiControl : ProgramUiControl
         var hasAuth = state.PrivilegedTags.Count > 0;
         _authSummaryLabel.Text = hasAuth
             ? $"Authority: {state.PrivilegedOwner} ({state.PrivilegedTags.Count} access codes)"
-            : "Authority: None (Insert Modifying ID in Slot #1 or select a /keys/*.acc file)";
+            : "Authority: None";
         _authSummaryLabel.FontColorOverride = hasAuth ? Color.FromHex("#66EEAA") : Color.FromHex("#FFD166");
 
         _accFilesWrap.RemoveAllChildren();

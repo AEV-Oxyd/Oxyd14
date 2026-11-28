@@ -22,6 +22,7 @@ using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.Emp;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
+using Content.Shared.Labels.Components;
 using Content.Shared.Mobs.Components;
 using Content.Shared.PDA;
 using Content.Shared.Popups;
@@ -39,6 +40,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Map;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Cameras;
@@ -686,7 +688,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnProgramTerminated(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramTerminatedEvent args)
+    private void OnProgramDeactivated(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramDeactivatedEvent args)
     {
         DisconnectAllCameras(ent, args.ComputerUid);
         ent.Comp.IsAuthorized = false;
@@ -694,6 +696,72 @@ public sealed partial class OxydCameraSystem : EntitySystem
         ent.Comp.SuppressedSlotCard = null;
         ent.Comp.StatusMessage = string.Empty;
         Dirty(ent);
+        UpdateProgramUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnProgramTerminated(Entity<SurveillanceCameraProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        DisconnectAllCameras(ent, args.ComputerUid);
+        ent.Comp.ActiveViewers.Clear();
+        ent.Comp.IsAuthorized = false;
+        ent.Comp.AuthorizedByLabel = string.Empty;
+        ent.Comp.SuppressedSlotCard = null;
+        ent.Comp.StatusMessage = string.Empty;
+        Dirty(ent);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnProgramShutdown(Entity<SurveillanceCameraProgramComponent> ent, ref ComponentShutdown args)
+    {
+        var compUid = _programQuery.TryComp(ent.Owner, out var prog) ? prog.Computer : null;
+        DisconnectAllCameras(ent, compUid);
+        ent.Comp.ActiveViewers.Clear();
+    }
+
+    [SubscribeLocalEvent]
+    private void OnPlayerDetached(PlayerDetachedEvent args)
+    {
+        var uid = args.Entity;
+        var query = EntityQueryEnumerator<SurveillanceCameraProgramComponent, ProgramComponent>();
+        while (query.MoveNext(out var progUid, out var camProg, out var prog))
+        {
+            if (!camProg.ActiveViewers.Remove(uid))
+                continue;
+
+            PruneInvalidViewers(camProg);
+            var monitorToRemove = camProg.ActiveViewers.Count == 0 ? progUid : (EntityUid?) null;
+            foreach (var camUid in camProg.ActiveCameraUids.ToList())
+            {
+                if (Exists(camUid))
+                    _cameras.RemoveActiveViewerSession(camUid, args.Player, uid, monitorToRemove);
+            }
+
+            if (camProg.ActiveViewers.Count == 0)
+            {
+                DisconnectAllCameras((progUid, camProg), prog.Computer);
+                camProg.IsAuthorized = false;
+                camProg.AuthorizedByLabel = string.Empty;
+                Dirty(progUid, camProg);
+            }
+        }
+    }
+
+    [SubscribeLocalEvent]
+    private void OnOsAuthChanged(Entity<SurveillanceCameraProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
+        if (!HasEffectiveCameraAuthorization(ent, compUid, out _, out _, allowAutoSlotAuth: true) &&
+            (ent.Comp.ActiveCameraUids.Count > 0 || ent.Comp.ActiveCameraUid != null))
+        {
+            DisconnectAllCameras(ent, compUid);
+            ent.Comp.StatusMessage = "OS session logged out — camera monitoring locked.";
+        }
+
+        Dirty(ent);
+        UpdateProgramUi(ent.Owner, compUid, ent.Comp);
     }
 
     [SubscribeLocalEvent]
@@ -783,18 +851,33 @@ public sealed partial class OxydCameraSystem : EntitySystem
             UpdateProgramUi(ent.Owner, compUid, ent.Comp);
     }
 
+    private void PruneInvalidViewers(SurveillanceCameraProgramComponent comp)
+    {
+        comp.ActiveViewers.RemoveWhere(v => !Exists(v) || TerminatingOrDeleted(v) || !HasComp<ActorComponent>(v));
+    }
+
     private void OnProgramBuiClosed(Entity<SurveillanceCameraProgramComponent> ent, ref BoundUIClosedEvent args)
     {
         ent.Comp.ActiveViewers.Remove(args.Actor);
+        PruneInvalidViewers(ent.Comp);
+
         var monitorToRemove = ent.Comp.ActiveViewers.Count == 0 ? ent.Owner : (EntityUid?) null;
-        foreach (var camUid in ent.Comp.ActiveCameraUids)
+        foreach (var camUid in ent.Comp.ActiveCameraUids.ToList())
         {
             if (Exists(camUid))
                 _cameras.RemoveActiveViewer(camUid, args.Actor, monitorToRemove);
         }
 
         if (ent.Comp.ActiveViewers.Count == 0)
-            DisconnectAllCameras(ent);
+        {
+            var compUid = _programQuery.TryComp(ent.Owner, out var prog) ? prog.Computer : null;
+            DisconnectAllCameras(ent, compUid);
+            ent.Comp.IsAuthorized = false;
+            ent.Comp.AuthorizedByLabel = string.Empty;
+            Dirty(ent);
+            if (compUid != null)
+                UpdateProgramUi(ent.Owner, compUid.Value, ent.Comp);
+        }
     }
 
     [SubscribeLocalEvent]
@@ -1057,6 +1140,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
         var camGuid = _router.EnsureDeviceGuid(camUid);
         var clientGuid = _router.EnsureDeviceGuid(compUid);
         _router.RegisterActiveConnection(compUid, clientGuid, camGuid, "CAM", $"Camera feed: {GetCameraDisplayName(camUid)}");
+        _computer.SetProgramDynamicCpuBonus(ent.Owner, ent.Comp.ActiveCameraUids.Count * 25f);
         ent.Comp.StatusMessage = $"Connected to {GetCameraDisplayName(camUid)} [{camGuid}] ({ent.Comp.ActiveCameraUids.Count}/{SurveillanceCameraProgramComponent.MaxActiveCameras} active).";
     }
 
@@ -1092,6 +1176,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
             SetFocusedCamera(ent, nextFocus);
         }
 
+        _computer.SetProgramDynamicCpuBonus(ent.Owner, ent.Comp.ActiveCameraUids.Count * 25f);
         Dirty(ent);
     }
 
@@ -1117,6 +1202,7 @@ public sealed partial class OxydCameraSystem : EntitySystem
         ent.Comp.ActiveCameras.Clear();
         ent.Comp.LiveAudioByCamera.Clear();
         SetFocusedCamera(ent, null);
+        _computer.SetProgramDynamicCpuBonus(ent.Owner, 0f);
         Dirty(ent);
     }
 
@@ -1435,9 +1521,37 @@ public sealed partial class OxydCameraSystem : EntitySystem
             }
         }
 
+        if (_computerQuery.TryComp(compUid, out var osComp) &&
+            osComp.OsAuthAccessTags.Count > 0 &&
+            CanTagsAuthorizeCameras(ent.Comp, compUid, osComp.OsAuthAccessTags))
+        {
+            authLabel = !string.IsNullOrWhiteSpace(osComp.OsAuthLabel)
+                ? $"OS Auth ({osComp.OsAuthLabel})"
+                : "OS Auth";
+            slotCardUsed = EntityUid.Invalid;
+            return true;
+        }
+
         authLabel = string.Empty;
         slotCardUsed = EntityUid.Invalid;
         return false;
+    }
+
+    private bool CanTagsAuthorizeCameras(
+        SurveillanceCameraProgramComponent comp,
+        EntityUid compUid,
+        ICollection<Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype>> tags)
+    {
+        if (_computerQuery.TryComp(compUid, out var cComp) &&
+            cComp.HostMachine is { } hostUid &&
+            TryComp<AccessReaderComponent>(hostUid, out var reader) &&
+            reader.AccessLists.Count > 0)
+        {
+            if (_accessReader.IsAllowed(tags, Array.Empty<StationRecordKey>(), hostUid, reader))
+                return true;
+        }
+
+        return comp.RequiredAccess.Count == 0 || tags.Any(t => comp.RequiredAccess.Contains(t));
     }
 
     private bool CanIdCardAuthorizeCameras(SurveillanceCameraProgramComponent comp, EntityUid compUid, EntityUid cardUid)
@@ -1633,17 +1747,43 @@ public sealed partial class OxydCameraSystem : EntitySystem
 
     public string GetCameraDisplayName(EntityUid camUid)
     {
-        if (_cameraQuery.TryComp(camUid, out var cam) &&
-            !cam.UseEntityNameAsCameraId &&
-            !string.IsNullOrWhiteSpace(cam.CameraId) &&
-            (cam.NameSet ||
-             (!string.Equals(cam.CameraId, "camera", StringComparison.OrdinalIgnoreCase) &&
-              !string.Equals(cam.CameraId, "Unnamed", StringComparison.OrdinalIgnoreCase))))
+        if (TryComp<LabelComponent>(camUid, out var labelComp))
         {
-            return cam.CameraId;
+            var currentLabel = labelComp.CurrentLabel;
+            if (!string.IsNullOrWhiteSpace(currentLabel))
+                return currentLabel.Trim();
         }
 
-        return MetaData(camUid).EntityName;
+        var meta = MetaData(camUid);
+        var protoName = meta.EntityPrototype?.Name;
+
+        if (_cameraQuery.TryComp(camUid, out var cam))
+        {
+            var camId = cam.CameraId;
+            if (!cam.UseEntityNameAsCameraId &&
+                !string.IsNullOrWhiteSpace(camId) &&
+                (cam.NameSet ||
+                 (!string.Equals(camId, "camera", StringComparison.OrdinalIgnoreCase) &&
+                  !string.Equals(camId, "Unnamed", StringComparison.OrdinalIgnoreCase) &&
+                  !string.Equals(camId, "surveillance camera", StringComparison.OrdinalIgnoreCase) &&
+                  !string.Equals(camId, "security camera", StringComparison.OrdinalIgnoreCase) &&
+                  !string.Equals(camId, protoName, StringComparison.OrdinalIgnoreCase))))
+            {
+                return camId.Trim();
+            }
+        }
+
+        var entityName = meta.EntityName;
+        if (!string.IsNullOrWhiteSpace(entityName) &&
+            !string.Equals(entityName, protoName, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(entityName, "surveillance camera", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(entityName, "security camera", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(entityName, "camera", StringComparison.OrdinalIgnoreCase))
+        {
+            return entityName.Trim();
+        }
+
+        return _router.EnsureDeviceGuid(camUid);
     }
 
     public string GetCameraZone(EntityUid camUid)

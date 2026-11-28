@@ -1,4 +1,5 @@
 using System.Linq;
+using Content.Server._Oxyd.Computers.Hardware;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server._Oxyd.Computers.Servers;
 using Content.Shared._Oxyd.Computers;
@@ -7,6 +8,8 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.Servers;
+using Content.Shared.Access;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
@@ -23,6 +26,7 @@ public sealed partial class DownloaderSystem : EntitySystem
     [Dependency] private NetworkBandwidthSystem _bandwidth = default!;
     [Dependency] private DataServerSystem _dataServer = default!;
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private IPrototypeManager _proto = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
@@ -34,6 +38,7 @@ public sealed partial class DownloaderSystem : EntitySystem
 
         Subs.BuiEvents<DownloaderProgramComponent>(ProgramUiKey.Key, subs =>
         {
+            subs.Event<BoundUIOpenedEvent>(OnBuiOpened);
             subs.Event<DownloaderActionMessage>(OnUiAction);
         });
     }
@@ -41,13 +46,31 @@ public sealed partial class DownloaderSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnStartup(Entity<DownloaderProgramComponent> ent, ref ProgramStartupEvent args)
     {
-        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp, ent.Comp.LastActor);
     }
 
     [SubscribeLocalEvent]
     private void OnActivated(Entity<DownloaderProgramComponent> ent, ref ProgramActivatedEvent args)
     {
-        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp, ent.Comp.LastActor);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnHardwareChanged(Entity<DownloaderProgramComponent> ent, ref ComputerHardwareChangedEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp, ent.Comp.LastActor);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCardReaderChanged(Entity<DownloaderProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp, ent.Comp.LastActor);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnOsAuthChanged(Entity<DownloaderProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp, ent.Comp.LastActor);
     }
 
     [SubscribeLocalEvent]
@@ -56,15 +79,26 @@ public sealed partial class DownloaderSystem : EntitySystem
         _bandwidth.CancelTransfersForProgram(ent.Owner, "Downloader closed.");
     }
 
+    private void OnBuiOpened(Entity<DownloaderProgramComponent> ent, ref BoundUIOpenedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        ent.Comp.LastActor = args.Actor;
+        UpdateUi(ent.Owner, compUid, ent.Comp, args.Actor);
+    }
+
     private void OnUiAction(Entity<DownloaderProgramComponent> ent, ref DownloaderActionMessage args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
             return;
 
+        ent.Comp.LastActor = args.Actor;
+
         if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
         {
             ent.Comp.StatusMessage = blockReason;
-            UpdateUi(ent.Owner, compUid, ent.Comp);
+            UpdateUi(ent.Owner, compUid, ent.Comp, args.Actor);
             return;
         }
 
@@ -79,23 +113,51 @@ public sealed partial class DownloaderSystem : EntitySystem
                 break;
 
             case DownloaderAction.DownloadItem:
-                BeginTransfer(ent.Owner, compUid, ent.Comp, args.Parameter, isUpload: false);
+                BeginTransfer(ent.Owner, compUid, ent.Comp, args.Parameter, isUpload: false, args.Actor);
                 break;
 
             case DownloaderAction.UploadFile:
-                BeginTransfer(ent.Owner, compUid, ent.Comp, args.Parameter, isUpload: true);
+                BeginTransfer(ent.Owner, compUid, ent.Comp, args.Parameter, isUpload: true, args.Actor);
                 break;
 
             case DownloaderAction.CancelTransfer:
                 var cancelled = _bandwidth.CancelTransfersForProgram(ent.Owner, "Transfer cancelled by user.");
-                ent.Comp.StatusMessage = cancelled > 0 ? "Transfer cancelled." : "No active transfer to cancel.";
+                ent.Comp.StatusMessage = cancelled > 0 ? $"Cancelled {cancelled} transfer(s)." : "No active transfers to cancel.";
+                break;
+
+            case DownloaderAction.CancelItem:
+                var cancelledOne = _bandwidth.CancelTransferForProgramByPath(ent.Owner, args.Parameter, "Transfer cancelled by user.");
+                ent.Comp.StatusMessage = cancelledOne ? $"Cancelled '{args.Parameter}'." : "Transfer not active.";
                 break;
         }
 
-        UpdateUi(ent.Owner, compUid, ent.Comp);
+        UpdateUi(ent.Owner, compUid, ent.Comp, args.Actor);
     }
 
-    private void BeginTransfer(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp, string path, bool isUpload)
+    private bool CanDownloadFile(EntityUid compUid, EntityUid? actor, VirtualFile file, out List<string> requiredLabels)
+    {
+        requiredLabels = new List<string>();
+        if (file is not ProgramVirtualFile pvf ||
+            string.IsNullOrWhiteSpace(pvf.ProgramId) ||
+            !_proto.TryIndex<EntityPrototype>(pvf.ProgramId, out var progProto) ||
+            !progProto.TryComp<ProgramComponent>(out var defProg, EntityManager.ComponentFactory) ||
+            defProg.RequiredDownloadAccess.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var reqTag in defProg.RequiredDownloadAccess)
+        {
+            if (_proto.TryIndex(reqTag, out var accProto))
+                requiredLabels.Add(accProto.GetAccessLevelName());
+            else
+                requiredLabels.Add(reqTag.Id);
+        }
+
+        return _computer.HasAnyAccessTag(compUid, actor, defProg.RequiredDownloadAccess, out _, includeSystemAdmin: true);
+    }
+
+    private void BeginTransfer(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp, string path, bool isUpload, EntityUid? actor = null)
     {
         if (!_dataServer.TryGetFirstOnlineRepositoryServer(compUid, out var srvHostUid, out var srvCompUid, out var srvDriveUid, out var srvFs, out var netErr))
         {
@@ -123,6 +185,12 @@ public sealed partial class DownloaderSystem : EntitySystem
             return;
         }
 
+        if (!isUpload && !CanDownloadFile(compUid, actor, sourceFile, out var requiredLabels))
+        {
+            dlComp.StatusMessage = $"Download denied: requires {string.Join(" / ", requiredLabels)} access.";
+            return;
+        }
+
         // Security: disallow unauthenticated overwriting of existing server system/database files via public uploads.
         if (isUpload && srvFs.Files.TryGetValue(cleanPath, out var existingSrvFile))
         {
@@ -144,8 +212,11 @@ public sealed partial class DownloaderSystem : EntitySystem
             return;
         }
 
-        // Cancel any previous in-flight transfer from this Downloader instance before enqueueing a new one.
-        _bandwidth.CancelTransfersForProgram(progUid, "Superseded by new transfer.");
+        if (_bandwidth.HasActiveTransferForProgramPath(progUid, cleanPath, isUpload))
+        {
+            dlComp.StatusMessage = $"'{cleanPath}' is already queued.";
+            return;
+        }
 
         var srcComp = isUpload ? compUid : srvCompUid;
         var dstComp = isUpload ? srvCompUid : compUid;
@@ -204,7 +275,7 @@ public sealed partial class DownloaderSystem : EntitySystem
                     return;
                 var pct = t.TotalBytes > 0 ? t.TransferredBytes * 100 / t.TotalBytes : 100;
                 c.StatusMessage = $"{(t.IsUpload ? "Uploading" : "Downloading")} {t.TargetPath}... {pct}% ({ComputerSizeFormat.FormatStorageQb(t.TransferredBytes)} / {ComputerSizeFormat.FormatStorageQb(t.TotalBytes)})";
-                UpdateUi(progUid, compUid, c);
+                UpdateUi(progUid, compUid, c, c.LastActor);
             },
             OnCompleted = t =>
             {
@@ -228,7 +299,7 @@ public sealed partial class DownloaderSystem : EntitySystem
                     c.StatusMessage = "Transfer failed: Target storage missing.";
                 }
 
-                UpdateUi(progUid, compUid, c);
+                UpdateUi(progUid, compUid, c, c.LastActor);
             },
             OnAborted = (t, reason) =>
             {
@@ -236,7 +307,7 @@ public sealed partial class DownloaderSystem : EntitySystem
                     return;
 
                 c.StatusMessage = reason;
-                UpdateUi(progUid, compUid, c);
+                UpdateUi(progUid, compUid, c, c.LastActor);
             }
         };
 
@@ -249,8 +320,12 @@ public sealed partial class DownloaderSystem : EntitySystem
         dlComp.StatusMessage = $"Queued {(isUpload ? "upload" : "download")} of {cleanPath} on router ({totalBytes} B)...";
     }
 
-    public void UpdateUi(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp)
+    public void UpdateUi(EntityUid progUid, EntityUid compUid, DownloaderProgramComponent dlComp, EntityUid? actor = null)
     {
+        var effectiveActor = actor ?? dlComp.LastActor;
+        if (effectiveActor != null && !Exists(effectiveActor.Value))
+            effectiveActor = null;
+
         var hasNic = _router.HasActiveNetworkCard(compUid);
         var serverOnline = _dataServer.TryGetFirstOnlineRepositoryServer(compUid, out var srvUid, out var srvCompUid, out var srvDriveUid, out var srvFs, out var err);
         var routerOnline = hasNic && (_router.IsNetworkConnected(compUid) || (serverOnline && _dataServer.IsDebugFallbackServer(srvCompUid)));
@@ -283,6 +358,8 @@ public sealed partial class DownloaderSystem : EntitySystem
                 var downloaded = localFs != null && localFs.Files.ContainsKey(path);
                 var protoId = file is ProgramVirtualFile pf ? pf.ProgramId : string.Empty;
                 var title = file is ProgramVirtualFile pfTitle && !string.IsNullOrEmpty(pfTitle.Title) ? pfTitle.Title : $"{file.Name}.{file.Extension}";
+                var hasAccess = CanDownloadFile(compUid, effectiveActor, file, out var reqLabels);
+                var reqSummary = reqLabels.Count > 0 ? string.Join(" / ", reqLabels) : string.Empty;
 
                 items.Add(new RepositoryItemDto(
                     path,
@@ -292,7 +369,9 @@ public sealed partial class DownloaderSystem : EntitySystem
                     path,
                     file.Size,
                     downloaded,
-                    protoId));
+                    protoId,
+                    hasDownloadAccess: hasAccess,
+                    requiredAccessSummary: reqSummary));
             }
         }
         else if (dlComp.StatusMessage == "Ready")
@@ -313,6 +392,12 @@ public sealed partial class DownloaderSystem : EntitySystem
             }
         }
 
+        var activeTransfers = _bandwidth.GetTransfersForProgram(progUid)
+            .Select(t => new DownloaderTransferDto(t.TargetPath, t.IsUpload, t.TransferredBytes, t.TotalBytes))
+            .ToList();
+
+        _computer.SetProgramDynamicCpuBonus(progUid, activeTransfers.Count * 15f);
+
         var state = new DownloaderUiState(
             serverOnline ? MetaData(srvUid).EntityName : "OFFLINE",
             serverOnline ? _router.EnsureDeviceGuid(srvCompUid) : "---",
@@ -323,7 +408,8 @@ public sealed partial class DownloaderSystem : EntitySystem
             dlComp.StatusMessage,
             dlComp.CurrentCategory,
             items,
-            localUploadables);
+            localUploadables,
+            activeTransfers);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);

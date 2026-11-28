@@ -256,30 +256,85 @@ public sealed class DownloaderUiControl : ProgramUiControl
 
         _headerLabel.Text = $"Server: {state.ServerName} | DL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.DownloadBps)} UL:{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(state.UploadBps)} | {(state.IsServerOnline ? "ONLINE" : "OFFLINE")}";
         _statusLabel.Text = state.StatusMessage;
-        _cancelBtn.Visible = state.StatusMessage.Contains("Downloading", StringComparison.OrdinalIgnoreCase) ||
-                             state.StatusMessage.Contains("Uploading", StringComparison.OrdinalIgnoreCase) ||
-                             state.StatusMessage.Contains("Queued", StringComparison.OrdinalIgnoreCase);
+        _cancelBtn.Visible = state.ActiveTransfers.Count > 0;
+        _cancelBtn.Text = state.ActiveTransfers.Count > 1 ? $"Cancel All ({state.ActiveTransfers.Count})" : "Cancel Transfer";
+
+        var activeDownloadPaths = new HashSet<string>(
+            state.ActiveTransfers.Where(t => !t.IsUpload).Select(t => t.Path),
+            StringComparer.OrdinalIgnoreCase);
 
         _listContainer.RemoveAllChildren();
-        _listContainer.AddChild(new ContentLabel { Text = "--- REMOTE SERVER REPOSITORY ---", FontColorOverride = Color.FromHex("#00D4FF") });
+        if (state.ActiveTransfers.Count > 0)
+        {
+            _listContainer.AddChild(new ContentLabel
+            {
+                Text = $"--- TRANSFER QUEUE ({state.ActiveTransfers.Count}) ---",
+                FontColorOverride = Color.FromHex("#FFE066")
+            });
+            foreach (var xfer in state.ActiveTransfers)
+            {
+                var xferPath = xfer.Path;
+                var qRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
+                qRow.AddChild(new ContentLabel
+                {
+                    Text = $"{(xfer.IsUpload ? "UP" : "DL")} {xfer.Path} — {xfer.Percent}% ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(xfer.TransferredBytes)} / {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(xfer.TotalBytes)})",
+                    HorizontalExpand = true,
+                    FontColorOverride = Color.FromHex("#B8F2FF")
+                });
+                var cancelOneBtn = new ContentButton { Text = "Cancel", MinWidth = 68 };
+                cancelOneBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.CancelItem, xferPath));
+                qRow.AddChild(cancelOneBtn);
+                _listContainer.AddChild(qRow);
+            }
+        }
+
+        _listContainer.AddChild(new ContentLabel { Text = "--- REMOTE SERVER REPOSITORY ---", FontColorOverride = Color.FromHex("#00D4FF"), Margin = new Thickness(0, state.ActiveTransfers.Count > 0 ? 6 : 0, 0, 0) });
 
         if (!state.IsServerOnline)
         {
-            _listContainer.AddChild(new ContentLabel { Text = "(Cannot reach online data server — check NIC & router)", FontColorOverride = Color.FromHex("#FF6666") });
+            _listContainer.AddChild(new ContentLabel { Text = "Data server unreachable.", FontColorOverride = Color.FromHex("#FF6666") });
         }
         else
         {
             foreach (var item in state.Items)
             {
-                var row = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 2) };
-                row.AddChild(new ContentLabel { Text = $"{item.Name} [{item.Category}] ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(item.Size)})", HorizontalExpand = true });
+                var itemPath = item.RemotePath;
+                var isQueued = activeDownloadPaths.Contains(itemPath);
+                var reqTip = string.IsNullOrEmpty(item.RequiredAccessSummary)
+                    ? null
+                    : $"Required Access: {item.RequiredAccessSummary}";
+
+                var row = new ContentBoxContainer
+                {
+                    Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    Margin = new Thickness(0, 2),
+                    MouseFilter = MouseFilterMode.Pass,
+                    ToolTip = reqTip
+                };
+                row.AddChild(new ContentLabel
+                {
+                    Text = $"{item.Name} [{item.Category}] ({Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(item.Size)})",
+                    HorizontalExpand = true,
+                    MouseFilter = MouseFilterMode.Pass,
+                    ToolTip = reqTip,
+                    FontColorOverride = item.HasDownloadAccess ? Color.White : Color.FromHex("#9A8888")
+                });
 
                 var dlBtn = new ContentButton
                 {
-                    Text = item.IsDownloaded ? "Re-Download" : "Download",
+                    Text = !item.HasDownloadAccess
+                        ? "Locked"
+                        : isQueued
+                            ? "Queued"
+                            : item.IsDownloaded
+                                ? "Re-Download"
+                                : "Download",
+                    Disabled = !item.HasDownloadAccess || isQueued,
+                    ToolTip = reqTip,
                     MinWidth = 90
                 };
-                dlBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.DownloadItem, item.RemotePath));
+                dlBtn.OnPressed += _ => SendProgramMessage(new DownloaderActionMessage(DownloaderAction.DownloadItem, itemPath));
                 row.AddChild(dlBtn);
                 _listContainer.AddChild(row);
             }
@@ -457,6 +512,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
     private readonly ContentLabel _headerLabel;
     private readonly ContentButton _filterRelevantBtn;
     private readonly ContentBoxContainer _packetsContainer;
+    private readonly ContentLineEdit _lookupGuidInput;
     private readonly ContentLineEdit _targetInput;
     private readonly ContentLineEdit _sinkPortInput;
     private readonly ContentLineEdit _payloadInput;
@@ -520,10 +576,74 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         btnBar.AddChild(clrBtn);
         root.AddChild(btnBar);
 
+        var targetLookupRow = new ContentBoxContainer
+        {
+            Name = "SnifferTargetLookupRow",
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        targetLookupRow.AddChild(new ContentLabel
+        {
+            Text = "Target GUID:",
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#88CCCC")
+        });
+        _lookupGuidInput = new ContentLineEdit
+        {
+            Name = "SnifferTargetGuidInput",
+            HorizontalExpand = true,
+            PlaceHolder = "Target GUID or DNS..."
+        };
+        void SubmitTargetLookup()
+        {
+            SendProgramMessage(new PacketSnifferActionMessage(
+                PacketSnifferAction.SelectTargetDevice,
+                targetGuid: (_lookupGuidInput.Text ?? string.Empty).Trim()));
+        }
+        _lookupGuidInput.OnTextEntered += _ => SubmitTargetLookup();
+
+        var queryTargetBtn = new ContentButton
+        {
+            Name = "SnifferQueryTargetButton",
+            Text = "Query Ports",
+            MinWidth = 92
+        };
+        queryTargetBtn.OnPressed += _ => SubmitTargetLookup();
+
+        var useLocalBtn = new ContentButton
+        {
+            Name = "SnifferUseLocalButton",
+            Text = "Local",
+            MinWidth = 54
+        };
+        useLocalBtn.OnPressed += _ =>
+        {
+            if (_lastState != null)
+                _lookupGuidInput.Text = _lastState.LocalGuid;
+            SendProgramMessage(new PacketSnifferActionMessage(
+                PacketSnifferAction.SelectTargetDevice,
+                targetGuid: "local"));
+        };
+
+        targetLookupRow.AddChild(_lookupGuidInput);
+        targetLookupRow.AddChild(queryTargetBtn);
+        targetLookupRow.AddChild(useLocalBtn);
+        root.AddChild(targetLookupRow);
+
+        _sinkTargetsWrap = new ContentWrapContainer
+        {
+            Name = "SnifferSinkTargetsWrap",
+            HorizontalSeparation = 4,
+            VerticalSeparation = 4
+        };
+        root.AddChild(_sinkTargetsWrap);
+
         var emitRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, SeparationOverride = 4 };
-        _targetInput = new ContentLineEdit { Name = "SnifferEmitTargetInput", MinWidth = 96, PlaceHolder = "Target GUID (blank=local)" };
+        _targetInput = new ContentLineEdit { Name = "SnifferEmitTargetInput", MinWidth = 96, PlaceHolder = "Target GUID" };
         _sinkPortInput = new ContentLineEdit { Name = "SnifferEmitSinkPortInput", MinWidth = 148, Text = "MachineCommandReceiver", PlaceHolder = "Sink Port ID" };
-        _payloadInput = new ContentLineEdit { Name = "SnifferEmitPayloadInput", HorizontalExpand = true, PlaceHolder = "Raw packet payload..." };
+        _payloadInput = new ContentLineEdit { Name = "SnifferEmitPayloadInput", HorizontalExpand = true, PlaceHolder = "Command & arguments..." };
         var emitBtn = new ContentButton { Name = "SnifferEmitToSinkButton", Text = "Send to Sink Port", MinWidth = 128 };
         emitBtn.OnPressed += _ => SendProgramMessage(new PacketSnifferActionMessage(
             PacketSnifferAction.EmitPacket,
@@ -536,14 +656,6 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         emitRow.AddChild(_payloadInput);
         emitRow.AddChild(emitBtn);
         root.AddChild(emitRow);
-
-        _sinkTargetsWrap = new ContentWrapContainer
-        {
-            Name = "SnifferSinkTargetsWrap",
-            HorizontalSeparation = 4,
-            VerticalSeparation = 4
-        };
-        root.AddChild(_sinkTargetsWrap);
 
         // Inline Player-Editable Packet Modification Panel
         _editorPanel = new ContentPanelContainer
@@ -585,7 +697,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             SeparationOverride = 4
         };
         targetRow.AddChild(new ContentLabel { Text = "Target GUID:", WordWrap = false, FontColorOverride = Color.FromHex("#88CCCC") });
-        _editTargetInput = new ContentLineEdit { Name = "SnifferEditTargetInput", HorizontalExpand = true, PlaceHolder = "Machine GUID (local or remote)..." };
+        _editTargetInput = new ContentLineEdit { Name = "SnifferEditTargetInput", HorizontalExpand = true, PlaceHolder = "Target GUID..." };
         targetRow.AddChild(_editTargetInput);
         targetRow.AddChild(new ContentLabel { Text = "Sink Port:", WordWrap = false, FontColorOverride = Color.FromHex("#88CCCC") });
         _editSinkPortInput = new ContentLineEdit { Name = "SnifferEditSinkPortInput", MinWidth = 148, Text = "MachineCommandReceiver", PlaceHolder = "Sink Port ID..." };
@@ -609,8 +721,8 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             HorizontalExpand = true,
             SeparationOverride = 4
         };
-        _newEntryKeyInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Key (e.g. Name)..." };
-        _newEntryValInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Value (e.g. Job Title)..." };
+        _newEntryKeyInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Key..." };
+        _newEntryValInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Value..." };
         var addEntryBtn = new ContentButton { Text = "+ Add", MinWidth = 54 };
         addEntryBtn.OnPressed += _ =>
         {
@@ -661,13 +773,32 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         _editingSourceGuid = pkt.SourceAddress;
         _editingProtocol = pkt.Protocol;
         _editingFilePath = pkt.FilePath;
-        _editTargetInput.Text = pkt.TargetAddress;
+
+        var targetAddr = pkt.TargetAddress ?? string.Empty;
+        var colonIdx = targetAddr.IndexOf(':');
+        if (colonIdx > 0)
+        {
+            _editTargetInput.Text = targetAddr[..colonIdx];
+            _editSinkPortInput.Text = targetAddr[(colonIdx + 1)..];
+        }
+        else
+        {
+            _editTargetInput.Text = targetAddr;
+            if (pkt.Parameters.TryGetValue("SinkPort", out var sinkPort) && !string.IsNullOrWhiteSpace(sinkPort))
+                _editSinkPortInput.Text = sinkPort;
+        }
 
         _editingEntries.Clear();
         foreach (var (k, v) in pkt.EditableEntries)
+        {
+            if (k.StartsWith("__", StringComparison.Ordinal) || k.Equals("tampered", StringComparison.OrdinalIgnoreCase))
+                continue;
             _editingEntries[k] = v;
+        }
 
-        _editorHeaderLabel.Text = $"EDIT [{pkt.PacketId}] {pkt.Protocol} ({pkt.FilePath}) | Src: {pkt.SourceAddress}";
+        _editorHeaderLabel.Text = string.IsNullOrWhiteSpace(pkt.FilePath)
+            ? $"EDIT [{pkt.PacketId}] {pkt.Protocol} | Src: {pkt.SourceAddress}"
+            : $"EDIT [{pkt.PacketId}] {pkt.Protocol} ({pkt.FilePath}) | Src: {pkt.SourceAddress}";
         _editorPanel.Visible = true;
         RebuildEditorRows();
     }
@@ -696,7 +827,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         {
             _editEntriesContainer.AddChild(new ContentLabel
             {
-                Text = "(No entries — add a key/value entry below)",
+                Text = "No entries.",
                 FontColorOverride = Color.FromHex("#8899AA"),
                 HorizontalExpand = true
             });
@@ -769,21 +900,65 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
         var relCount = state.Packets.Count(p => p.IsPlayerRelevant);
         _headerLabel.Text = $"Sniffer [{state.RouterGuid}] | {(state.HasNetworkCard ? "NIC UP" : "NO NIC")} | Relevant: {relCount}/{state.Packets.Count} | {state.StatusMessage}";
 
+        if (!string.IsNullOrEmpty(state.SelectedTargetGuid))
+        {
+            if (string.IsNullOrWhiteSpace(_lookupGuidInput.Text))
+                _lookupGuidInput.Text = state.SelectedTargetGuid;
+            _targetInput.Text = state.SelectedTargetGuid;
+            if (string.IsNullOrWhiteSpace(_editTargetInput.Text))
+                _editTargetInput.Text = state.SelectedTargetGuid;
+        }
+
+        RebuildTargetPortSelector(state);
+        RebuildPacketList();
+    }
+
+    private void RebuildTargetPortSelector(PacketSnifferUiState state)
+    {
         _sinkTargetsWrap.RemoveAllChildren();
+
+        if (string.IsNullOrWhiteSpace(state.SelectedTargetGuid))
+        {
+            _sinkTargetsWrap.AddChild(new ContentLabel
+            {
+                Name = "SnifferNoTargetHintLabel",
+                Text = "No target device selected.",
+                FontColorOverride = Color.FromHex("#88AAB8"),
+                VerticalAlignment = VAlignment.Center
+            });
+            return;
+        }
+
         _sinkTargetsWrap.AddChild(new ContentLabel
         {
-            Text = "Sink Targets:",
-            FontColorOverride = Color.FromHex("#88CCCC"),
+            Name = "SnifferSelectedTargetPortsLabel",
+            Text = $"Ports on {state.SelectedTargetName} [{state.SelectedTargetGuid}]:",
+            FontColorOverride = Color.FromHex("#66EEFF"),
             VerticalAlignment = VAlignment.Center
         });
+
+        if (state.SinkTargets.Count == 0)
+        {
+            _sinkTargetsWrap.AddChild(new ContentLabel
+            {
+                Text = "No sink ports available.",
+                FontColorOverride = Color.FromHex("#8899AA"),
+                VerticalAlignment = VAlignment.Center
+            });
+            return;
+        }
+
         foreach (var sink in state.SinkTargets)
         {
             var targetCopy = sink;
-            var scope = targetCopy.IsLocal ? "LOCAL" : "REMOTE";
+            var isSelected = string.Equals(_sinkPortInput.Text?.Trim(), targetCopy.SinkPortId, StringComparison.OrdinalIgnoreCase) &&
+                             string.Equals(_targetInput.Text?.Trim(), targetCopy.TargetGuid, StringComparison.OrdinalIgnoreCase);
             var btn = new ContentButton
             {
                 Name = $"SnifferSinkTarget_{targetCopy.TargetGuid}_{targetCopy.SinkPortId}",
-                Text = $"[{scope}] {targetCopy.DeviceName} :: {targetCopy.SinkPortId}",
+                Text = targetCopy.SinkPortId,
+                ToolTip = $"{targetCopy.DeviceName} [{targetCopy.TargetGuid}] — {targetCopy.SinkPortName} ({(targetCopy.IsHostPort ? "Host Port" : "Computer Port")})",
+                Pressed = isSelected,
                 MinHeight = 22
             };
             btn.OnPressed += _ =>
@@ -793,11 +968,11 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
                 _sinkPortInput.Text = targetCopy.SinkPortId;
                 _editTargetInput.Text = targetCopy.TargetGuid;
                 _editSinkPortInput.Text = targetCopy.SinkPortId;
+                if (_lastState != null)
+                    RebuildTargetPortSelector(_lastState);
             };
             _sinkTargetsWrap.AddChild(btn);
         }
-
-        RebuildPacketList();
     }
 
     private void RebuildPacketList()
@@ -816,7 +991,7 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             _packetsContainer.AddChild(new ContentLabel
             {
                 Text = _relevantOnly
-                    ? "(No player-relevant packets captured yet — click 'Filter: Relevant Only' to inspect all traffic)"
+                    ? "No relevant packets captured."
                     : "(No network packets captured yet)",
                 HorizontalExpand = true,
                 FontColorOverride = Color.FromHex("#8899AA")
@@ -862,6 +1037,372 @@ public sealed class PacketSnifferUiControl : ProgramUiControl
             }
 
             _packetsContainer.AddChild(row);
+        }
+    }
+}
+
+// =============================================================================
+// NetNavigator Program UI (/bin/net_navigator.nte)
+// =============================================================================
+
+public sealed class NetNavigatorUiControl : ProgramUiControl
+{
+    private const float GuidColWidth = 86f;
+    private const float TypeColWidth = 96f;
+    private const float AuthColWidth = 132f;
+
+    private readonly ContentLabel _headerLabel;
+    private readonly ContentLabel _statusLabel;
+    private readonly ContentButton _probeBtn;
+    private readonly ContentButton _discoverableBtn;
+    private readonly ContentLineEdit _searchInput;
+    private readonly ContentBoxContainer _deviceListContainer;
+    private readonly Dictionary<string, ContentButton> _filterButtons = new(StringComparer.OrdinalIgnoreCase);
+
+    private NetNavigatorUiState? _lastState;
+    private string _categoryFilter = "All";
+
+    public NetNavigatorUiControl()
+    {
+        HorizontalExpand = true;
+        VerticalExpand = true;
+
+        var root = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Margin = new Thickness(6),
+            SeparationOverride = 5
+        };
+
+        var topRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
+        _headerLabel = new ContentLabel
+        {
+            Name = "NetNavigatorHeaderLabel",
+            Text = "NETNAVIGATOR — Network Discovery",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            VerticalAlignment = VAlignment.Center,
+            FontColorOverride = Color.FromHex("#66EEFF")
+        };
+
+        _discoverableBtn = new ContentButton
+        {
+            Name = "NetNavigatorDiscoverableButton",
+            Text = "Visible: ON",
+            MinWidth = 88,
+            MinHeight = 24f
+        };
+        _discoverableBtn.OnPressed += _ => SendProgramMessage(new NetNavigatorActionMessage(NetNavigatorAction.ToggleLocalDiscoverable));
+
+        _probeBtn = new ContentButton
+        {
+            Name = "NetNavigatorProbeButton",
+            Text = "Probe Network",
+            MinWidth = 104,
+            MinHeight = 24f
+        };
+        _probeBtn.OnPressed += _ => SendProgramMessage(new NetNavigatorActionMessage(NetNavigatorAction.Probe));
+
+        topRow.AddChild(_headerLabel);
+        topRow.AddChild(_discoverableBtn);
+        topRow.AddChild(_probeBtn);
+        root.AddChild(topRow);
+
+        _statusLabel = new ContentLabel
+        {
+            Name = "NetNavigatorStatusLabel",
+            Text = "Ready.",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            FontColorOverride = Color.FromHex("#88AAB8")
+        };
+        root.AddChild(_statusLabel);
+
+        var filterRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 5
+        };
+
+        _searchInput = new ContentLineEdit
+        {
+            Name = "NetNavigatorSearchInput",
+            PlaceHolder = "Filter GUID, name, type, auth, or services...",
+            HorizontalExpand = true,
+            MinHeight = 24f
+        };
+        _searchInput.OnTextChanged += _ => RebuildDeviceTable();
+        filterRow.AddChild(_searchInput);
+
+        var catWrap = new ContentWrapContainer
+        {
+            HorizontalSeparation = 3,
+            VerticalSeparation = 2,
+            VerticalAlignment = VAlignment.Center
+        };
+        foreach (var cat in new[] { "All", "Servers", "Power/Atmos", "Cameras", "Computers", "Auth Req" })
+        {
+            var captured = cat;
+            var btn = new ContentButton
+            {
+                Name = $"NetNavigatorFilter_{cat.Replace("/", "_")}",
+                Text = cat,
+                MinHeight = 24f,
+                Pressed = cat == "All"
+            };
+            btn.Label.Margin = new Thickness(5, 2);
+            btn.OnPressed += _ =>
+            {
+                _categoryFilter = captured;
+                foreach (var (k, b) in _filterButtons)
+                    b.Pressed = string.Equals(k, _categoryFilter, StringComparison.OrdinalIgnoreCase);
+                RebuildDeviceTable();
+            };
+            _filterButtons[cat] = btn;
+            catWrap.AddChild(btn);
+        }
+        filterRow.AddChild(catWrap);
+        root.AddChild(filterRow);
+
+        var colHeaderPanel = new ContentPanelContainer
+        {
+            Name = "NetNavigatorColumnHeader",
+            HorizontalExpand = true,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1B28"),
+                BorderColor = Color.FromHex("#1F4B66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 8,
+                ContentMarginRightOverride = 8,
+                ContentMarginTopOverride = 4,
+                ContentMarginBottomOverride = 4
+            }
+        };
+        var colHeaderRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 8
+        };
+        colHeaderRow.AddChild(MakeHeaderCell("GUID", GuidColWidth));
+        colHeaderRow.AddChild(MakeHeaderCell("TYPE", TypeColWidth));
+        colHeaderRow.AddChild(MakeHeaderCell("AUTH", AuthColWidth));
+        colHeaderRow.AddChild(new ContentLabel
+        {
+            Text = "DEVICE / DETAILS",
+            HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            FontColorOverride = Color.FromHex("#88CCCC")
+        });
+        colHeaderPanel.AddChild(colHeaderRow);
+        root.AddChild(colHeaderPanel);
+
+        var scroll = new ContentScrollContainer
+        {
+            Name = "NetNavigatorScroll",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            AlwaysShowBackground = true
+        };
+        _deviceListContainer = new ContentBoxContainer
+        {
+            Name = "NetNavigatorDeviceList",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4,
+            Margin = new Thickness(2)
+        };
+        scroll.AddChild(_deviceListContainer);
+        root.AddChild(scroll);
+
+        AddChild(root);
+    }
+
+    private static ContentLabel MakeHeaderCell(string text, float width) => new()
+    {
+        Text = text,
+        MinWidth = width,
+        MaxWidth = width,
+        WordWrap = false,
+        ClipText = true,
+        FontColorOverride = Color.FromHex("#88CCCC")
+    };
+
+    public override void UpdateProgramState(BoundUserInterfaceState raw)
+    {
+        if (raw is not NetNavigatorUiState state)
+            return;
+
+        _lastState = state;
+        var netStatus = state.IsOnline ? $"Router [{state.RouterGuid}]" : "OFFLINE";
+        _headerLabel.Text = $"NETNAVIGATOR — {netStatus} ({state.Devices.Count} devices)";
+        _discoverableBtn.Text = state.LocalDiscoverable ? "Visible: ON" : "Visible: OFF";
+        _discoverableBtn.Pressed = state.LocalDiscoverable;
+
+        var tsStr = state.LastProbeTime is { } ts ? $" [{ts:hh\\:mm\\:ss}]" : string.Empty;
+        _statusLabel.Text = $"{state.StatusMessage}{tsStr}";
+        _statusLabel.FontColorOverride = state.IsOnline ? Color.FromHex("#77D4B0") : Color.FromHex("#FFD166");
+
+        RebuildDeviceTable();
+    }
+
+    private bool MatchesCategory(DiscoverableNetworkDeviceDto dev)
+    {
+        return _categoryFilter switch
+        {
+            "Servers" => dev.DeviceType.Equals("Data Server", StringComparison.OrdinalIgnoreCase) ||
+                         dev.DeviceType.Equals("Router", StringComparison.OrdinalIgnoreCase),
+            "Power/Atmos" => dev.DeviceType.Equals("APC", StringComparison.OrdinalIgnoreCase) ||
+                             dev.DeviceType.Equals("Air Alarm", StringComparison.OrdinalIgnoreCase),
+            "Cameras" => dev.DeviceType.Equals("Camera", StringComparison.OrdinalIgnoreCase),
+            "Computers" => dev.DeviceType.Equals("Workstation", StringComparison.OrdinalIgnoreCase) ||
+                           dev.DeviceType.Equals("PDA", StringComparison.OrdinalIgnoreCase) ||
+                           dev.DeviceType.Equals("Autolathe", StringComparison.OrdinalIgnoreCase) ||
+                           dev.DeviceType.Equals("Embedded", StringComparison.OrdinalIgnoreCase),
+            "Auth Req" => dev.AuthRequired,
+            _ => true
+        };
+    }
+
+    private void RebuildDeviceTable()
+    {
+        _deviceListContainer.RemoveAllChildren();
+        if (_lastState == null)
+            return;
+
+        if (!_lastState.IsOnline)
+        {
+            _deviceListContainer.AddChild(new ContentLabel
+            {
+                Text = "Network offline — no router connection.",
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#FFD166"),
+                Margin = new Thickness(6)
+            });
+            return;
+        }
+
+        var query = (_searchInput.Text ?? string.Empty).Trim();
+        var shown = 0;
+
+        foreach (var dev in _lastState.Devices)
+        {
+            if (!MatchesCategory(dev))
+                continue;
+
+            if (!string.IsNullOrEmpty(query) &&
+                !dev.Guid.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                !dev.Name.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                !dev.DeviceType.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                !dev.AuthSummary.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                !dev.ExtraInfo.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            shown++;
+            var card = new ContentPanelContainer
+            {
+                Name = "NetNavigatorDeviceRow",
+                HorizontalExpand = true,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = dev.IsLocal ? Color.FromHex("#112636") : Color.FromHex("#0D1924"),
+                    BorderColor = dev.IsLocal ? Color.FromHex("#00D4FF") : Color.FromHex("#1D435C"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 8,
+                    ContentMarginRightOverride = 8,
+                    ContentMarginTopOverride = 5,
+                    ContentMarginBottomOverride = 5
+                }
+            };
+
+            var row = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 8
+            };
+
+            row.AddChild(new ContentLabel
+            {
+                Name = "NetNavigatorGuidLabel",
+                Text = dev.Guid,
+                MinWidth = GuidColWidth,
+                MaxWidth = GuidColWidth,
+                WordWrap = false,
+                ClipText = true,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = Color.FromHex("#00E5FF")
+            });
+
+            row.AddChild(new ContentLabel
+            {
+                Name = "NetNavigatorTypeLabel",
+                Text = dev.DeviceType,
+                MinWidth = TypeColWidth,
+                MaxWidth = TypeColWidth,
+                WordWrap = false,
+                ClipText = true,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = Color.FromHex("#BFEFFF")
+            });
+
+            row.AddChild(new ContentLabel
+            {
+                Name = "NetNavigatorAuthLabel",
+                Text = dev.AuthSummary,
+                MinWidth = AuthColWidth,
+                MaxWidth = AuthColWidth,
+                WordWrap = false,
+                ClipText = true,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = dev.AuthRequired ? Color.FromHex("#FFD166") : Color.FromHex("#66EEAA")
+            });
+
+            var detailText = string.IsNullOrEmpty(dev.ExtraInfo)
+                ? dev.Name
+                : $"{dev.Name}  —  {dev.ExtraInfo}";
+            row.AddChild(new ContentLabel
+            {
+                Name = "NetNavigatorDetailLabel",
+                Text = detailText,
+                ToolTip = $"{dev.Name} [{dev.Guid}] | Type: {dev.DeviceType} | Auth: {dev.AuthSummary}{(string.IsNullOrEmpty(dev.ExtraInfo) ? string.Empty : $" | {dev.ExtraInfo}")}",
+                HorizontalExpand = true,
+                WordWrap = false,
+                ClipText = true,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = Color.FromHex("#EAF8FF")
+            });
+
+            card.AddChild(row);
+            _deviceListContainer.AddChild(card);
+        }
+
+        if (shown == 0)
+        {
+            _deviceListContainer.AddChild(new ContentLabel
+            {
+                Text = _lastState.Devices.Count == 0
+                    ? "No discoverable devices responded to probe."
+                    : "No discovered devices match your filter.",
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#8899AA"),
+                Margin = new Thickness(6)
+            });
         }
     }
 }

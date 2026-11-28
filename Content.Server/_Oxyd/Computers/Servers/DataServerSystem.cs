@@ -815,6 +815,8 @@ public sealed partial class DataServerSystem : EntitySystem
             ("/bin/news_reader.nte", "news_reader", "NewsReaderProgram", "News Reader"),
             ("/bin/netprobe.nte", "netprobe", "NetProbeProgram", "NetProbe"),
             ("/bin/logprobe.nte", "logprobe", "LogProbeProgram", "LogProbe"),
+            ("/bin/net_navigator.nte", "net_navigator", "OxydNetNavigatorProgram", "NetNavigator"),
+            ("/bin/security_lock.nte", "security_lock", "OxydSecurityLockProgram", "Security Lock"),
             ("/bin/packet_sniffer.nte", "packet_sniffer", "OxydPacketSnifferProgram", "Packet Sniffer"),
             ("/bin/medtek.nte", "medtek", "MedTekProgram", "MedTek"),
             ("/bin/astronav.nte", "astronav", "AstroNavProgram", "AstroNav"),

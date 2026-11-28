@@ -13,6 +13,8 @@ public sealed class FileBrowserProgramBui(EntityUid owner, Enum uiKey) : Program
 public sealed class DownloaderProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<DownloaderUiControl>(owner, uiKey);
 public sealed class RouterProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<RouterUiControl>(owner, uiKey);
 public sealed class PacketSnifferProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<PacketSnifferUiControl>(owner, uiKey);
+public sealed class NetNavigatorProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NetNavigatorUiControl>(owner, uiKey);
+public sealed class SecurityLockProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SecurityLockUiControl>(owner, uiKey);
 public sealed class ApcControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<ApcControlUiControl>(owner, uiKey);
 public sealed class AtmosControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<AtmosControlUiControl>(owner, uiKey);
 public sealed class LatheControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<LatheControlUiControl>(owner, uiKey);

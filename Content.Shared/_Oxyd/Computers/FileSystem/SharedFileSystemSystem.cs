@@ -68,6 +68,20 @@ public partial class SharedFileSystemSystem : EntitySystem
         return norm.EndsWith('/') ? norm : norm + "/";
     }
 
+    private void SyncProgramFileMetadata(VirtualFile file)
+    {
+        if (file is ProgramVirtualFile pvf &&
+            !string.IsNullOrWhiteSpace(pvf.ProgramId) &&
+            _proto.TryIndex<EntityPrototype>(pvf.ProgramId, out var proto) &&
+            proto.TryComp<ProgramComponent>(out var progComp, _compFactory))
+        {
+            pvf.RamUsageMb = Math.Max(1, progComp.RamUsageMb);
+            pvf.CpuUsagePercent = Math.Max(0.5f, progComp.CpuUsagePercent);
+        }
+
+        file.Size = file.CalculateRealSize(_proto, _compFactory);
+    }
+
     private void InitializeFileTimestamps(EntityUid uid, FileSystemComponent comp)
     {
         if (comp.Files.Count == 0)
@@ -77,7 +91,7 @@ public partial class SharedFileSystemSystem : EntitySystem
         foreach (var file in comp.Files.Values)
         {
             file.Directory = NormalizeDirectory(file.Directory);
-            file.Size = file.CalculateRealSize(_proto, _compFactory);
+            SyncProgramFileMetadata(file);
 
             if (file.LastModified == TimeSpan.Zero && curTime > TimeSpan.Zero)
                 file.LastModified = curTime;
@@ -112,13 +126,13 @@ public partial class SharedFileSystemSystem : EntitySystem
         var normPath = NormalizePath(fullPath);
         if (comp.Files.TryGetValue(normPath, out var file))
         {
-            file.Size = file.CalculateRealSize(_proto, _compFactory);
+            SyncProgramFileMetadata(file);
             file.LastModified = _timing.CurTime;
         }
 
         RecalculateStorageUsage(comp);
         UpdateNetworkedHeaders(uid, comp);
-        var ev = new FileSystemChangedEvent(normPath);
+        var ev = new FileSystemChangedEvent(normPath, uid);
         RaiseLocalEvent(uid, ref ev, broadcast: true);
     }
 
@@ -206,9 +220,11 @@ public partial class SharedFileSystemSystem : EntitySystem
         return false;
     }
 
+    public const string BootConfigPath = "/sys/boot.cfg";
+
     /// <summary>
-    /// Returns the very first valid Nanotransen executable (.nte) file on the drive in filesystem order.
-    /// Computers always execute the first executable file on their hard drive at boot.
+    /// Returns the configured boot executable from /sys/boot.cfg if present and valid,
+    /// otherwise the very first valid Nanotransen executable (.nte) file on the drive in filesystem order.
     /// </summary>
     public bool TryGetFirstExecutable(
         EntityUid driveUid,
@@ -221,6 +237,21 @@ public partial class SharedFileSystemSystem : EntitySystem
 
         if (!Resolve(driveUid, ref fs, false))
             return false;
+
+        if (fs.Files.TryGetValue(BootConfigPath, out var cfgRaw) &&
+            cfgRaw is TextVirtualFile cfgFile &&
+            !string.IsNullOrWhiteSpace(cfgFile.TextContent))
+        {
+            var configuredPath = NormalizePath(cfgFile.TextContent.Trim().Split('\n')[0].Trim());
+            if (fs.Files.TryGetValue(configuredPath, out var cfgTarget) &&
+                cfgTarget is ProgramVirtualFile cfgProg &&
+                cfgProg.Extension.Equals("nte", StringComparison.OrdinalIgnoreCase))
+            {
+                fullPath = configuredPath;
+                execFile = cfgProg;
+                return true;
+            }
+        }
 
         foreach (var (path, file) in fs.Files)
         {
@@ -324,7 +355,7 @@ public partial class SharedFileSystemSystem : EntitySystem
                 return false;
         }
 
-        file.Size = file.CalculateRealSize(_proto, _compFactory);
+        SyncProgramFileMetadata(file);
 
         var fullPath = NormalizePath(file.FullPath);
         if (comp.Files.TryGetValue(fullPath, out var existing))
@@ -352,7 +383,7 @@ public partial class SharedFileSystemSystem : EntitySystem
         comp.Files[fullPath] = file;
         RecalculateStorageUsage(comp);
         UpdateNetworkedHeaders(uid, comp);
-        var ev = new FileSystemChangedEvent(fullPath);
+        var ev = new FileSystemChangedEvent(fullPath, uid);
         RaiseLocalEvent(uid, ref ev, broadcast: true);
         return true;
     }
@@ -479,4 +510,4 @@ public partial class SharedFileSystemSystem : EntitySystem
 }
 
 [ByRefEvent]
-public readonly record struct FileSystemChangedEvent(string Path);
+public readonly record struct FileSystemChangedEvent(string Path, EntityUid DriveUid = default);

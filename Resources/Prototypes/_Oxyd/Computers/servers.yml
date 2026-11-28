@@ -23,6 +23,14 @@
       - ManifestService
       - StationRecordsService
       - NewsService
+  - type: AccessReader
+    access: [["SystemAdmin"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
   - type: EmbeddedComputerHost
     computerPrototype: BaseOxydServerEmbeddedController
     borderColor: "#00D4FF"
@@ -108,6 +116,14 @@
     autoConnect: true
   - type: DeviceNetworkRouter
   - type: NetworkRouter
+  - type: AccessReader
+    access: [["Network"], ["SystemAdmin"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
   - type: EmbeddedComputerHost
     computerPrototype: BaseOxydRouterEmbeddedController
     borderColor: "#00D4FF"

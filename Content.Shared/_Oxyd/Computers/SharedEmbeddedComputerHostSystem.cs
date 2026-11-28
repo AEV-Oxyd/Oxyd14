@@ -116,7 +116,8 @@ public sealed partial class SharedEmbeddedComputerHostSystem : EntitySystem
             return;
         }
 
-        if (!comp.IsBooted || comp.ActiveProgram is not { } activeProg)
+        var targetProg = comp.ActiveProgram ?? comp.BootProgram;
+        if (!comp.IsBooted || targetProg is not { } activeProg)
             return;
 
         var relayed = new ProgramRelayedEvent<InteractUsingEvent>(compUid, args);

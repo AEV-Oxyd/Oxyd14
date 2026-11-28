@@ -15,6 +15,7 @@ using Content.Server.Stack;
 using Content.Server.Station.Systems;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access;
@@ -217,6 +218,12 @@ public sealed partial class StationAppsSystem : EntitySystem
         UpdateNotekeeperUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
+    private void OnNotekeeperHardwareChanged(Entity<NotekeeperProgramComponent> ent, ref ComputerHardwareChangedEvent args)
+    {
+        UpdateNotekeeperUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
     private void OnNotekeeperAction(Entity<NotekeeperProgramComponent> ent, ref NotekeeperActionMessage msg)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
@@ -230,6 +237,8 @@ public sealed partial class StationAppsSystem : EntitySystem
             UpdateNotekeeperUi(ent.Owner, compUid, ent.Comp);
             return;
         }
+
+        var statusMessage = string.Empty;
 
         switch (msg.Action)
         {
@@ -252,6 +261,8 @@ public sealed partial class StationAppsSystem : EntitySystem
                     savePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
                     WriteTextNote(driveUid.Value, fs, savePath, msg.Content);
+                    if (msg.Action == NotekeeperUiAction.SaveFile)
+                        statusMessage = "Saved.";
                 }
                 break;
 
@@ -275,9 +286,46 @@ public sealed partial class StationAppsSystem : EntitySystem
                     Dirty(ent);
                 }
                 break;
+
+            case NotekeeperUiAction.PrintFile:
+                var hasPrinter = TryComp<ComputerStatsComponent>(compUid, out var printStats) && printStats.HasPrinterModule;
+                if (!hasPrinter)
+                {
+                    statusMessage = "Paper printer module required.";
+                    break;
+                }
+
+                if (_timing.CurTime < ent.Comp.NextPrintAllowedAfter)
+                {
+                    statusMessage = "Printer busy — please wait.";
+                    break;
+                }
+
+                var printPath = SharedFileSystemSystem.NormalizePath(string.IsNullOrWhiteSpace(msg.Path) ? ent.Comp.CurrentFilePath : msg.Path);
+                var printContent = msg.Content;
+                if (string.IsNullOrEmpty(printContent) &&
+                    fs.Files.TryGetValue(printPath, out var existingNote) &&
+                    existingNote is TextVirtualFile noteVf)
+                {
+                    printContent = noteVf.TextContent;
+                }
+
+                var labelName = printPath.Contains('/') ? printPath[(printPath.LastIndexOf('/') + 1)..] : printPath;
+                ent.Comp.NextPrintAllowedAfter = _timing.CurTime + ent.Comp.PrintDelay;
+                Dirty(ent);
+
+                var spawnHost = _computerQuery.TryComp(compUid, out var cComp) && cComp.HostMachine is { } hm ? hm : compUid;
+                var paper = Spawn("Paper", Transform(spawnHost).Coordinates);
+                _label.Label(paper, labelName);
+                _paper.SetContent(paper, printContent);
+                if (Exists(msg.Actor) && _interaction.InRangeUnobstructed(msg.Actor, spawnHost))
+                    _hands.PickupOrDrop(msg.Actor, paper);
+                _audio.PlayPvs(new SoundPathSpecifier("/Audio/Machines/printer.ogg"), spawnHost);
+                statusMessage = $"Printed {labelName}.";
+                break;
         }
 
-        UpdateNotekeeperUi(ent.Owner, compUid, ent.Comp);
+        UpdateNotekeeperUi(ent.Owner, compUid, ent.Comp, statusMessage);
     }
 
     private void EnsureDefaultNote(EntityUid compUid)
@@ -306,12 +354,14 @@ public sealed partial class StationAppsSystem : EntitySystem
         }, fs);
     }
 
-    private void UpdateNotekeeperUi(EntityUid progUid, EntityUid compUid, NotekeeperProgramComponent comp)
+    private void UpdateNotekeeperUi(EntityUid progUid, EntityUid compUid, NotekeeperProgramComponent comp, string statusMessage = "")
     {
+        var hasPrinter = TryComp<ComputerStatsComponent>(compUid, out var stats) && stats.HasPrinterModule;
+
         if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
         {
             _ui.SetUiState(progUid, ProgramUiKey.Key, new NotekeeperUiState(
-                false, string.Empty, "No Drive", string.Empty, new(), true));
+                false, string.Empty, "No Drive", string.Empty, new(), true, hasPrinter, statusMessage));
             return;
         }
 
@@ -339,7 +389,7 @@ public sealed partial class StationAppsSystem : EntitySystem
             : comp.CurrentFilePath;
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, new NotekeeperUiState(true, comp.CurrentFilePath, fileName, content, files, ro));
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new NotekeeperUiState(true, comp.CurrentFilePath, fileName, content, files, ro, hasPrinter, statusMessage));
     }
 
     // =========================================================================
@@ -354,6 +404,12 @@ public sealed partial class StationAppsSystem : EntitySystem
 
     [SubscribeLocalEvent]
     private void OnNanoTaskActivated(Entity<NanoTaskProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdateNanoTaskUi(ent.Owner, args.ComputerUid);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnNanoTaskHardwareChanged(Entity<NanoTaskProgramComponent> ent, ref ComputerHardwareChangedEvent args)
     {
         UpdateNanoTaskUi(ent.Owner, args.ComputerUid);
     }
@@ -398,6 +454,7 @@ public sealed partial class StationAppsSystem : EntitySystem
         }
 
         var file = LoadOrCreateTasksFile(driveUid.Value, fs);
+        var statusMessage = string.Empty;
         switch (msg.Payload)
         {
             case NanoTaskAddTask add when add.Item != null && add.Item.Validate():
@@ -430,8 +487,19 @@ public sealed partial class StationAppsSystem : EntitySystem
                 break;
 
             case NanoTaskPrintTask print when print.Item != null && print.Item.Validate():
-                if (_timing.CurTime < ent.Comp.NextPrintAllowedAfter)
+                var hasPrinter = TryComp<ComputerStatsComponent>(compUid, out var printStats) && printStats.HasPrinterModule;
+                if (!hasPrinter)
+                {
+                    statusMessage = "Paper printer module required.";
                     break;
+                }
+
+                if (_timing.CurTime < ent.Comp.NextPrintAllowedAfter)
+                {
+                    statusMessage = "Printer busy — please wait.";
+                    break;
+                }
+
                 ent.Comp.NextPrintAllowedAfter = _timing.CurTime + ent.Comp.PrintDelay;
                 Dirty(ent);
 
@@ -446,10 +514,11 @@ public sealed partial class StationAppsSystem : EntitySystem
                 Dirty(paper, printedComp);
 
                 _paper.SetContent(paper, $"Task: {print.Item.Description}\nRequester: {print.Item.TaskIsFor}\nPriority: {print.Item.Priority}");
+                statusMessage = "Task printed.";
                 break;
         }
 
-        UpdateNanoTaskUi(ent.Owner, compUid);
+        UpdateNanoTaskUi(ent.Owner, compUid, statusMessage);
     }
 
     private TaskListVirtualFile LoadOrCreateTasksFile(EntityUid driveUid, FileSystemComponent fs)
@@ -468,12 +537,13 @@ public sealed partial class StationAppsSystem : EntitySystem
         return fresh;
     }
 
-    private void UpdateNanoTaskUi(EntityUid progUid, EntityUid compUid)
+    private void UpdateNanoTaskUi(EntityUid progUid, EntityUid compUid, string statusMessage = "")
     {
+        var hasPrinter = TryComp<ComputerStatsComponent>(compUid, out var stats) && stats.HasPrinterModule;
         if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs))
         {
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
-                _ui.SetUiState(progUid, ProgramUiKey.Key, new NanoTaskUiState(false, new()));
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new NanoTaskUiState(false, new(), hasPrinter, statusMessage));
             return;
         }
 
@@ -484,7 +554,7 @@ public sealed partial class StationAppsSystem : EntitySystem
             .ToList();
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
-            _ui.SetUiState(progUid, ProgramUiKey.Key, new NanoTaskUiState(true, items));
+            _ui.SetUiState(progUid, ProgramUiKey.Key, new NanoTaskUiState(true, items, hasPrinter, statusMessage));
     }
 
     // =========================================================================
@@ -656,9 +726,9 @@ public sealed partial class StationAppsSystem : EntitySystem
                     continue;
                 var cols = v.Split('\t');
                 if (cols.Length >= 4)
-                    loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], cols[2], cols[3]));
+                    loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], cols[3], cols[2]));
                 else if (cols.Length >= 2)
-                    loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], string.Empty, "JobIconUnknown"));
+                    loadedEntries.Add(new CrewManifestEntry(cols[0], cols[1], "JobIconUnknown", string.Empty));
             }
         }
 
@@ -1306,10 +1376,19 @@ public sealed partial class StationAppsSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnMedTekStartup(Entity<MedTekProgramComponent> ent, ref ProgramStartupEvent args)
     {
-        var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
-        EnsureComp<HealthAnalyzerComponent>(target);
-        if (_ui.HasUi(ent.Owner, ProgramUiKey.Key))
-            _ui.SetUiState(ent.Owner, ProgramUiKey.Key, new UtilityProgramUiState("MedTek Scanner", "Health scanner module active on host device.", "ACTIVE"));
+        UpdateMedTekState(ent.Owner, args.ComputerUid);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnMedTekActivated(Entity<MedTekProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdateMedTekState(ent.Owner, args.ComputerUid);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnMedTekHardwareChanged(Entity<MedTekProgramComponent> ent, ref ComputerHardwareChangedEvent args)
+    {
+        UpdateMedTekState(ent.Owner, args.ComputerUid);
     }
 
     [SubscribeLocalEvent]
@@ -1317,6 +1396,25 @@ public sealed partial class StationAppsSystem : EntitySystem
     {
         var target = _computerQuery.TryComp(args.ComputerUid, out var comp) && comp.HostMachine is { } hm ? hm : args.ComputerUid;
         RemComp<HealthAnalyzerComponent>(target);
+    }
+
+    private void UpdateMedTekState(EntityUid progUid, EntityUid compUid)
+    {
+        var target = _computerQuery.TryComp(compUid, out var comp) && comp.HostMachine is { } hm ? hm : compUid;
+        var hasScanner = TryComp<ComputerStatsComponent>(compUid, out var stats) && stats.HasHealthScannerModule;
+
+        if (hasScanner)
+        {
+            EnsureComp<HealthAnalyzerComponent>(target);
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new UtilityProgramUiState("MedTek Scanner", "Health scanner module active on host device.", "ACTIVE"));
+        }
+        else
+        {
+            RemComp<HealthAnalyzerComponent>(target);
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                _ui.SetUiState(progUid, ProgramUiKey.Key, new UtilityProgramUiState("MedTek Scanner", "Health scanner module required. Install a Health Scanner Module in the device's sensor slot.", "MISSING HARDWARE"));
+        }
     }
 
     [SubscribeLocalEvent]
@@ -2079,6 +2177,29 @@ public sealed partial class StationAppsSystem : EntitySystem
     private void OnCommsActivated(Entity<CommsConsoleProgramComponent> ent, ref ProgramActivatedEvent args) => UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
 
     [SubscribeLocalEvent]
+    private void OnCommsDeactivated(Entity<CommsConsoleProgramComponent> ent, ref ProgramDeactivatedEvent args)
+    {
+        if (ent.Comp.AuthorizedBySwipedCard || !string.IsNullOrEmpty(ent.Comp.StatusMessage))
+        {
+            ent.Comp.AuthorizedBySwipedCard = false;
+            ent.Comp.StatusMessage = string.Empty;
+            Dirty(ent);
+        }
+        UpdateCommsUi(ent.Owner, args.ComputerUid, ent.Comp, null);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCommsTerminated(Entity<CommsConsoleProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        if (ent.Comp.AuthorizedBySwipedCard || !string.IsNullOrEmpty(ent.Comp.StatusMessage))
+        {
+            ent.Comp.AuthorizedBySwipedCard = false;
+            ent.Comp.StatusMessage = string.Empty;
+            Dirty(ent);
+        }
+    }
+
+    [SubscribeLocalEvent]
     private void OnCommsCardReaderChanged(Entity<CommsConsoleProgramComponent> ent, ref ComputerCardReaderChangedEvent args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
@@ -2088,6 +2209,15 @@ public sealed partial class StationAppsSystem : EntitySystem
             ent.Comp.StatusMessage = "ID card removed from slot — Command authorization locked.";
 
         Dirty(ent);
+        UpdateCommsUi(ent.Owner, compUid, ent.Comp, null);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCommsOsAuthChanged(Entity<CommsConsoleProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid || compUid != args.ComputerUid)
+            return;
+
         UpdateCommsUi(ent.Owner, compUid, ent.Comp, null);
     }
 
@@ -2207,6 +2337,9 @@ public sealed partial class StationAppsSystem : EntitySystem
             return false;
 
         if (comp.AuthorizedBySwipedCard)
+            return true;
+
+        if (_computerQuery.TryComp(compUid, out var cComp) && cComp.OsAuthAccessTags.Contains(CommandAccess))
             return true;
 
         foreach (var insCard in _computer.GetInsertedIdCards(compUid))

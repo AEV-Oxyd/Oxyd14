@@ -4,6 +4,7 @@ using Content.Client._Oxyd.Computers.UI;
 using Content.Client.GameTicking;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Clock;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
@@ -48,16 +49,18 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
 
     private readonly ContentScrollContainer _homeScroll;
     private readonly ContentLabel _roundTimeLabel;
+    private readonly ContentLabel _batteryLabel;
     private readonly ContentLabel _stationAlertLabel;
     private readonly ContentLabel _ownerLabel;
     private readonly ContentLabel _insertedIdLabel;
-    private readonly ContentButton _homeEjectIdBtn;
     private readonly ContentBoxContainer _appsListContainer;
 
     private readonly ContentBoxContainer _deviceView;
     private readonly ContentLabel _slotsSummaryLabel;
     private readonly ContentWrapContainer _slotActionsWrap;
     private readonly ContentLabel _hwDetailsLabel;
+    private readonly ContentLabel _componentsHeaderLabel;
+    private readonly ContentBoxContainer _componentsContainer;
     private readonly ContentBoxContainer _portsContainer;
 
     private readonly ContentBoxContainer _childViewport;
@@ -93,16 +96,17 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         var topBarPanel = new ContentPanelContainer
         {
             HorizontalExpand = true,
+            MinHeight = 32f,
             Margin = new Thickness(0, 0, 0, 6),
             PanelOverride = new StyleBoxFlat
             {
                 BackgroundColor = Color.FromHex("#0D1722"),
                 BorderColor = Color.FromHex("#1F4B66"),
                 BorderThickness = new Thickness(1),
-                ContentMarginLeftOverride = 5,
-                ContentMarginRightOverride = 5,
-                ContentMarginTopOverride = 4,
-                ContentMarginBottomOverride = 4
+                ContentMarginLeftOverride = 4,
+                ContentMarginRightOverride = 4,
+                ContentMarginTopOverride = 0,
+                ContentMarginBottomOverride = 0
             }
         };
 
@@ -110,15 +114,17 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
             HorizontalExpand = true,
-            SeparationOverride = 6
+            VerticalExpand = true,
+            SeparationOverride = 4
         };
 
         _unifiedTabBar = new ContentWrapContainer
         {
             Name = "UnifiedTabBar",
             HorizontalExpand = true,
+            VerticalAlignment = VAlignment.Stretch,
             HorizontalSeparation = 4,
-            VerticalSeparation = 4
+            VerticalSeparation = 2
         };
 
         _homeTabBtn = new ContentButton
@@ -127,6 +133,8 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             Text = "Home",
             Icon = TryLoadIcon(IconHome),
             IconSize = new Vector2(14, 14),
+            VerticalAlignment = VAlignment.Stretch,
+            Margin = new Thickness(0),
             Pressed = true
         };
         _homeTabBtn.OnPressed += _ => SendProgramMessage(new PdaOsSetViewMessage(0));
@@ -136,7 +144,9 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             Name = "TabDeviceButton",
             Text = "Device",
             Icon = TryLoadIcon(IconDevice),
-            IconSize = new Vector2(14, 14)
+            IconSize = new Vector2(14, 14),
+            VerticalAlignment = VAlignment.Stretch,
+            Margin = new Thickness(0)
         };
         _deviceTabBtn.OnPressed += _ => SendProgramMessage(new PdaOsSetViewMessage(1));
 
@@ -147,16 +157,17 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             Name = "PocketUtilitiesBar",
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            VerticalAlignment = VAlignment.Top,
-            SeparationOverride = 4
+            VerticalAlignment = VAlignment.Stretch,
+            SeparationOverride = 3
         };
 
         var shutDownBtn = new ContentButton
         {
             Name = "PdaShutDownButton",
             Text = "Shut Down",
-            SetWidth = 100,
-            VerticalAlignment = VAlignment.Top
+            SetWidth = 92,
+            VerticalAlignment = VAlignment.Stretch,
+            Margin = new Thickness(0)
         };
         shutDownBtn.OnPressed += _ => SendProgramMessage(new PdaOsShutDownMessage());
 
@@ -218,13 +229,22 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         _roundTimeLabel = new ContentLabel
         {
             Name = "RoundTimeLabel",
-            Text = "Round Time: 00:00:00",
+            Text = "Station Time: 00:00:00",
             HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#00D4FF")
         };
 
+        _batteryLabel = new ContentLabel
+        {
+            Name = "PdaBatteryLabel",
+            Text = "Battery: --",
+            WordWrap = false,
+            FontColorOverride = Color.FromHex("#66EEAA")
+        };
+
         timeRow.AddChild(clockIcon);
         timeRow.AddChild(_roundTimeLabel);
+        timeRow.AddChild(_batteryLabel);
         homeHeaderCol.AddChild(timeRow);
 
         _stationAlertLabel = new ContentLabel
@@ -244,13 +264,6 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         homeHeaderCol.AddChild(_ownerLabel);
 
-        var idRow = new ContentBoxContainer
-        {
-            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-            HorizontalExpand = true,
-            SeparationOverride = 6
-        };
-
         _insertedIdLabel = new ContentLabel
         {
             Name = "InsertedIdLabel",
@@ -258,18 +271,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#B8E0E8")
         };
-
-        _homeEjectIdBtn = MakeIconButton(
-            name: "HomeEjectIdButton",
-            iconPath: IconEject,
-            fallbackText: "Eject",
-            tooltip: "Eject ID Card",
-            onPressed: () => SendProgramMessage(new PdaOsHardwareActionMessage("eject_id")));
-        _homeEjectIdBtn.Visible = false;
-
-        idRow.AddChild(_insertedIdLabel);
-        idRow.AddChild(_homeEjectIdBtn);
-        homeHeaderCol.AddChild(idRow);
+        homeHeaderCol.AddChild(_insertedIdLabel);
 
         homeHeaderPanel.AddChild(homeHeaderCol);
         homeContent.AddChild(homeHeaderPanel);
@@ -279,7 +281,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             Text = "APPLICATIONS:",
             HorizontalExpand = true,
             FontColorOverride = Color.FromHex("#00D4FF"),
-            Margin = new Thickness(0, 0, 0, 4)
+            Margin = new Thickness(0, 0, 0, 6)
         });
 
         _appsListContainer = new ContentBoxContainer
@@ -287,7 +289,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             Name = "HomeAppsList",
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
             HorizontalExpand = true,
-            SeparationOverride = 3
+            SeparationOverride = 4
         };
         homeContent.AddChild(_appsListContainer);
 
@@ -351,6 +353,26 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         deviceCol.AddChild(_hwDetailsLabel);
 
+        _componentsHeaderLabel = new ContentLabel
+        {
+            Name = "PdaInstalledComponentsHeader",
+            Text = "INSTALLED COMPONENTS (0)",
+            HorizontalExpand = true,
+            FontColorOverride = Color.FromHex("#00D4FF"),
+            Margin = new Thickness(0, 2, 0, 2)
+        };
+        deviceCol.AddChild(_componentsHeaderLabel);
+
+        _componentsContainer = new ContentBoxContainer
+        {
+            Name = "SystemInstalledComponentsContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        deviceCol.AddChild(_componentsContainer);
+
         deviceCol.AddChild(new ContentLabel
         {
             Text = "DEVICE LINK PORTS:",
@@ -392,21 +414,25 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
 
     private void UpdateRoundTimeLabel(bool force)
     {
-        var elapsed = TimeSpan.Zero;
-        if (_entMan.TrySystem<ClientGameTicker>(out var ticker))
+        var stationTime = TimeSpan.Zero;
+        if (_entMan.TrySystem<SharedClockSystem>(out var clock))
         {
-            elapsed = _timing.CurTime - ticker.RoundStartTimeSpan;
-            if (elapsed < TimeSpan.Zero)
-                elapsed = TimeSpan.Zero;
+            stationTime = clock.GetStationTime();
+        }
+        else if (_entMan.TrySystem<ClientGameTicker>(out var ticker))
+        {
+            stationTime = _timing.CurTime - ticker.RoundStartTimeSpan;
         }
 
-        var totalSeconds = (int) elapsed.TotalSeconds;
+        if (stationTime < TimeSpan.Zero)
+            stationTime = TimeSpan.Zero;
+
+        var totalSeconds = (int) stationTime.TotalSeconds;
         if (!force && totalSeconds == _lastRoundSeconds)
             return;
 
         _lastRoundSeconds = totalSeconds;
-        var hours = (int) elapsed.TotalHours;
-        _roundTimeLabel.Text = $"Round Time: {hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+        _roundTimeLabel.Text = $"Station Time: {stationTime.Hours:D2}:{stationTime.Minutes:D2}:{stationTime.Seconds:D2}";
     }
 
     private Texture? TryLoadIcon(string texturePath)
@@ -457,9 +483,27 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             Text = icon == null ? fallbackText : string.Empty,
             ToolTip = tooltip,
             Pressed = pressed,
-            Disabled = disabled
+            Disabled = disabled,
+            VerticalAlignment = VAlignment.Stretch,
+            Margin = new Thickness(0)
         };
         btn.OnPressed += _ => onPressed();
+        return btn;
+    }
+
+    private ContentButton MakeTopBarEjectButton(string name, string label, string tooltip, string action)
+    {
+        var btn = new ContentButton
+        {
+            Name = name,
+            Icon = TryLoadIcon(IconEject),
+            IconSize = new Vector2(13, 13),
+            Text = label,
+            ToolTip = tooltip,
+            VerticalAlignment = VAlignment.Stretch,
+            Margin = new Thickness(0)
+        };
+        btn.OnPressed += _ => SendProgramMessage(new PdaOsHardwareActionMessage(action));
         return btn;
     }
 
@@ -504,40 +548,50 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
                 continue;
 
             var isFocused = activeView == 2 && prog.RunningEntity == state.ActiveChildProgram;
+            var tabPill = OsUiControl.CreateRunningAppTabPill(
+                prog.Name,
+                _icons.ResolveProgramIcon(prog),
+                new Vector2(14, 14),
+                isFocused,
+                disabled: false,
+                onSelect: () => SendProgramMessage(new PdaOsSwitchProgramMessage(rEnt)),
+                onClose: () => SendProgramMessage(new PdaOsCloseProgramMessage(rEnt)));
 
-            var tabPair = new ContentBoxContainer
-            {
-                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal
-            };
-
-            var tabBtn = new ContentButton
-            {
-                Text = prog.Name,
-                Icon = _icons.ResolveProgramIcon(prog),
-                IconSize = new Vector2(14, 14),
-                IconModulate = Color.White,
-                Pressed = isFocused
-            };
-            tabBtn.OnPressed += _ => SendProgramMessage(new PdaOsSwitchProgramMessage(rEnt));
-            tabPair.AddChild(tabBtn);
-
-            var closeBtn = new ContentButton
-            {
-                Text = "x",
-                MinWidth = 22,
-                Margin = new Thickness(1, 0, 0, 0)
-            };
-            closeBtn.OnPressed += _ => SendProgramMessage(new PdaOsCloseProgramMessage(rEnt));
-            tabPair.AddChild(closeBtn);
-
-            _runningAppTabs.Add(tabPair);
-            _unifiedTabBar.AddChild(tabPair);
+            _runningAppTabs.Add(tabPill);
+            _unifiedTabBar.AddChild(tabPill);
         }
     }
 
     private void RebuildUtilitiesBar(PdaOsUiState state)
     {
         _utilitiesBar.RemoveAllChildren();
+
+        if (state.InsertedIdName != null)
+        {
+            _utilitiesBar.AddChild(MakeTopBarEjectButton(
+                "TopEjectIdButton",
+                "ID",
+                $"Eject ID Card ({state.InsertedIdName})",
+                "eject_id"));
+        }
+
+        if (state.InsertedDiskName != null)
+        {
+            _utilitiesBar.AddChild(MakeTopBarEjectButton(
+                "TopEjectDiskButton",
+                "Disk",
+                $"Eject Data Disk ({state.InsertedDiskName})",
+                "eject_disk"));
+        }
+
+        if (state.InsertedPenName != null)
+        {
+            _utilitiesBar.AddChild(MakeTopBarEjectButton(
+                "TopEjectPenButton",
+                "Pen",
+                $"Eject Pen ({state.InsertedPenName})",
+                "eject_pen"));
+        }
 
         _utilitiesBar.AddChild(MakeIconButton(
             name: "UtilityFlashlightButton",
@@ -592,6 +646,25 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
     {
         UpdateRoundTimeLabel(force: true);
 
+        var hw = state.Hardware;
+        if (hw.HasBattery)
+        {
+            var pct = hw.BatteryMaxCharge > 0f
+                ? Math.Clamp(hw.BatteryCharge / hw.BatteryMaxCharge * 100f, 0f, 100f)
+                : 0f;
+            _batteryLabel.Text = $"Battery: {pct:0}%";
+            _batteryLabel.FontColorOverride = pct >= 50f
+                ? Color.FromHex("#66EEAA")
+                : pct >= 20f
+                    ? Color.FromHex("#FFD166")
+                    : Color.FromHex("#FF6666");
+        }
+        else
+        {
+            _batteryLabel.Text = "Battery: MISSING";
+            _batteryLabel.FontColorOverride = Color.FromHex("#FF6666");
+        }
+
         var stationPart = string.IsNullOrWhiteSpace(state.StationName) ? "Unassigned" : state.StationName;
         var alertPart = string.IsNullOrWhiteSpace(state.StationAlertLevel) ? "Standard" : state.StationAlertLevel.ToUpperInvariant();
         _stationAlertLabel.Text = $"Station: {stationPart} | Alert: {alertPart}";
@@ -612,7 +685,6 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         _insertedIdLabel.Text = state.InsertedIdName != null
             ? $"Inserted ID: {state.InsertedIdName}"
             : "Inserted ID: None";
-        _homeEjectIdBtn.Visible = state.InsertedIdName != null;
 
         _appsListContainer.RemoveAllChildren();
         var anyApp = false;
@@ -641,7 +713,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             {
                 Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
                 HorizontalExpand = true,
-                SeparationOverride = 6
+                SeparationOverride = 8
             };
 
             var appIconTex = _icons.ResolveProgramIcon(exec);
@@ -649,8 +721,11 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             {
                 row.AddChild(new ContentTextureRect
                 {
+                    Name = "PdaAppTileIcon",
                     Texture = appIconTex,
-                    DisplaySize = new Vector2(18, 18)
+                    DisplaySize = new Vector2(36, 36),
+                    MinSize = new Vector2(36, 36),
+                    VerticalAlignment = VAlignment.Center
                 });
             }
 
@@ -658,23 +733,24 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             {
                 Text = exec.Name,
                 HorizontalExpand = true,
+                VerticalAlignment = VAlignment.Center,
                 FontColorOverride = exec.IsRunning ? Color.FromHex("#88EEFF") : Color.FromHex("#E0F7FA")
             });
 
             if (exec.IsRunning && exec.RunningEntity is { } runEnt)
             {
-                var focusBtn = new ContentButton { Text = "Focus", MinWidth = 56 };
+                var focusBtn = new ContentButton { Text = "Focus", MinWidth = 56, VerticalAlignment = VAlignment.Center };
                 focusBtn.OnPressed += _ => SendProgramMessage(new PdaOsSwitchProgramMessage(runEnt));
                 row.AddChild(focusBtn);
 
-                var stopBtn = new ContentButton { Text = "Stop", MinWidth = 50 };
+                var stopBtn = new ContentButton { Text = "Stop", MinWidth = 50, VerticalAlignment = VAlignment.Center };
                 stopBtn.OnPressed += _ => SendProgramMessage(new PdaOsCloseProgramMessage(runEnt));
                 row.AddChild(stopBtn);
             }
             else
             {
                 var path = exec.FilePath;
-                var runBtn = new ContentButton { Text = "Run", MinWidth = 56 };
+                var runBtn = new ContentButton { Text = "Run", MinWidth = 56, VerticalAlignment = VAlignment.Center };
                 runBtn.OnPressed += _ => SendProgramMessage(new PdaOsLaunchProgramMessage(path));
                 row.AddChild(runBtn);
             }
@@ -687,7 +763,7 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
         {
             _appsListContainer.AddChild(new ContentLabel
             {
-                Text = "No applications installed on VFS.",
+                Text = "No applications installed.",
                 HorizontalExpand = true,
                 FontColorOverride = Color.FromHex("#78909C")
             });
@@ -712,11 +788,17 @@ public sealed class PdaOsUiControl : ProgramUiControl, IOsProgramUiHost
             ? $"{Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatRateQb(hw.BandwidthBps)}{(!string.IsNullOrEmpty(hw.NetworkLabel) ? $" ({hw.NetworkLabel})" : string.Empty)}"
             : "NONE";
 
+        var batStr = hw.HasBattery
+            ? $"{(hw.BatteryMaxCharge > 0f ? Math.Clamp(hw.BatteryCharge / hw.BatteryMaxCharge * 100f, 0f, 100f) : 0f):0}%"
+            : "MISSING";
+
         _hwDetailsLabel.Text =
             $"Device: {hw.HostName} | GUID: {hw.DeviceGuid}\n" +
-            $"CPU: {hw.CpuMhz} MHz (max {hw.MaxPrograms} apps) | RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB\n" +
+            $"CPU: {hw.CpuMhz} MHz ({hw.CpuLoadPercent:0}% load) | RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB | BAT: {batStr}\n" +
             $"HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)} / {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageTotalBytes)} | NET: {netStr}\n" +
             $"DataPort: {(hw.HasDataPort ? "PRESENT" : "NONE")} | RemoteCtrl: {hw.AllowRemoteControl} | DeviceLink: {hw.AllowDeviceLink} | Flashlight: {(state.FlashlightOn ? "ON" : "OFF")}";
+
+        OsUiControl.PopulateInstalledComponents(_componentsContainer, _componentsHeaderLabel, hw.InstalledComponents);
 
         _portsContainer.RemoveAllChildren();
         foreach (var port in state.DevicePorts)

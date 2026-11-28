@@ -18,6 +18,13 @@ public sealed partial class ComputerCpuComponent : Component
     [DataField, AutoNetworkedField]
     public int MaxConcurrentPrograms = 4;
 
+    /// <summary>
+    /// Total dynamic CPU processing units this CPU can sustain at 100% load.
+    /// When &lt;= 0, derived automatically from FrequencyMhz / 4f (minimum 50).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public float CpuCapacity;
+
     [DataField, AutoNetworkedField]
     public HardwarePartSize Size = HardwarePartSize.Small;
 }
@@ -79,6 +86,26 @@ public sealed partial class ComputerBatteryModuleComponent : Component
 
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ComputerSensorModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// Biometric health scanner sensor hardware module required for MedTek diagnostics.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerHealthScannerModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// Thermal paper printer hardware module required for printing notes and tasks.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerPrinterModuleComponent : Component
 {
     [DataField, AutoNetworkedField]
     public HardwarePartSize Size = HardwarePartSize.Small;

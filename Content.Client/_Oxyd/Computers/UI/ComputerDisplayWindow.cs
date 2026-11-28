@@ -24,6 +24,9 @@ namespace Content.Client._Oxyd.Computers.UI;
 public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 {
     public event Action? OnRetryBootPressed;
+    public event Action<string>? OnUnlockWithPassword;
+    public event Action? OnUnlockWithKeyFile;
+    public event Action? OnUnlockWithId;
 
     public Control ScreenInsetControl { get; }
     public PipScreenSurface ScreenSurface { get; }
@@ -33,11 +36,20 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
     public Vector2 PreferredFloatSize => _preferredFloatSize;
 
     private readonly ContentBoxContainer _bootErrorContainer;
+    private readonly ContentBoxContainer _lockScreenContainer;
+    private readonly ContentLabel _lockMethodsLabel;
+    private readonly ContentBoxContainer _lockPasswordRow;
+    private readonly ContentLineEdit _lockPasswordInput;
+    private readonly ContentButton _lockKeyFileBtn;
+    private readonly ContentButton _lockIdBtn;
+    private readonly ContentLabel _lockStatusLabel;
     private readonly ContentLabel _titleLabel;
+    private readonly ContentLabel _guidLabel;
     private readonly ContentLabel _postHeaderLabel;
     private readonly ContentLabel _postDetailsLabel;
     private readonly ContentLabel _hwStatusLabel;
     private readonly ContentBoxContainer _bootProgramViewport;
+    private readonly HardwareLockOverlayControl _hardwareLockOverlay;
     private readonly ContentPanelContainer _bezelPanel;
     private readonly StyleBoxFlat _bezelStyle;
     private readonly StyleBoxFlat _screenBgStyle;
@@ -110,6 +122,17 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
             MouseFilter = MouseFilterMode.Ignore
         };
 
+        _guidLabel = new ContentLabel
+        {
+            Name = "ComputerDisplayGuidLabel",
+            Text = string.Empty,
+            WordWrap = false,
+            ClipText = false,
+            Margin = new Thickness(6, 0, 4, 0),
+            FontColorOverride = Color.FromHex("#9BE7FF"),
+            MouseFilter = MouseFilterMode.Ignore
+        };
+
         var closeBtn = new ContentButton
         {
             Name = "CloseButton",
@@ -119,6 +142,7 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         closeBtn.OnPressed += _ => Close();
 
         headerBar.AddChild(_titleLabel);
+        headerBar.AddChild(_guidLabel);
         headerBar.AddChild(closeBtn);
         rootBox.AddChild(headerBar);
 
@@ -186,7 +210,134 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
         _bootErrorContainer.AddChild(_hwStatusLabel);
         _bootErrorContainer.AddChild(retryBtn);
 
+        // Full-viewport software security lock screen (hides OS/apps completely until authenticated)
+        _lockScreenContainer = new ContentBoxContainer
+        {
+            Name = "ComputerSoftwareLockScreen",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center,
+            Margin = new Thickness(18),
+            Visible = false
+        };
+
+        var lockCard = new ContentPanelContainer
+        {
+            MinWidth = 340,
+            MaxWidth = 460,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1824"),
+                BorderColor = Color.FromHex("#FF5555"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 14,
+                ContentMarginBottomOverride = 14
+            }
+        };
+        var lockCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 8
+        };
+        lockCol.AddChild(new ContentLabel
+        {
+            Name = "ComputerLockTitleLabel",
+            Text = "COMPUTER LOCKED",
+            HorizontalAlignment = HAlignment.Center,
+            FontColorOverride = Color.FromHex("#FF6B6B")
+        });
+        _lockMethodsLabel = new ContentLabel
+        {
+            Name = "ComputerLockMethodsLabel",
+            Text = "Authentication required.",
+            HorizontalAlignment = HAlignment.Center,
+            FontColorOverride = Color.FromHex("#CBE8F2")
+        };
+        lockCol.AddChild(_lockMethodsLabel);
+
+        _lockPasswordRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        _lockPasswordInput = new ContentLineEdit
+        {
+            Name = "ComputerLockPasswordInput",
+            HorizontalExpand = true,
+            PlaceHolder = "Enter password or key..."
+        };
+        void SubmitLockPassword()
+        {
+            OnUnlockWithPassword?.Invoke(_lockPasswordInput.Text ?? string.Empty);
+            _lockPasswordInput.Text = string.Empty;
+        }
+        _lockPasswordInput.OnTextEntered += _ => SubmitLockPassword();
+
+        var unlockPwBtn = new ContentButton
+        {
+            Name = "ComputerLockUnlockButton",
+            Text = "Unlock",
+            MinWidth = 76
+        };
+        unlockPwBtn.OnPressed += _ => SubmitLockPassword();
+
+        _lockPasswordRow.AddChild(_lockPasswordInput);
+        _lockPasswordRow.AddChild(unlockPwBtn);
+        lockCol.AddChild(_lockPasswordRow);
+
+        var lockBtnRow = new ContentWrapContainer
+        {
+            HorizontalAlignment = HAlignment.Center,
+            HorizontalSeparation = 6,
+            VerticalSeparation = 4
+        };
+        _lockKeyFileBtn = new ContentButton
+        {
+            Name = "ComputerLockKeyFileButton",
+            Text = "Unlock with Key / .acc Disk",
+            Visible = false
+        };
+        _lockKeyFileBtn.OnPressed += _ => OnUnlockWithKeyFile?.Invoke();
+
+        _lockIdBtn = new ContentButton
+        {
+            Name = "ComputerLockIdButton",
+            Text = "Unlock with ID Card",
+            Visible = false
+        };
+        _lockIdBtn.OnPressed += _ => OnUnlockWithId?.Invoke();
+
+        lockBtnRow.AddChild(_lockKeyFileBtn);
+        lockBtnRow.AddChild(_lockIdBtn);
+        lockCol.AddChild(lockBtnRow);
+
+        _lockStatusLabel = new ContentLabel
+        {
+            Name = "ComputerLockStatusLabel",
+            Text = string.Empty,
+            HorizontalAlignment = HAlignment.Center,
+            FontColorOverride = Color.FromHex("#FFE066"),
+            Visible = false
+        };
+        lockCol.AddChild(_lockStatusLabel);
+
+        lockCard.AddChild(lockCol);
+        _lockScreenContainer.AddChild(lockCard);
+
+        _hardwareLockOverlay = new HardwareLockOverlayControl
+        {
+            Visible = false
+        };
+
         ScreenInsetControl.AddChild(_bootProgramViewport);
+        ScreenInsetControl.AddChild(_hardwareLockOverlay);
+        ScreenInsetControl.AddChild(_lockScreenContainer);
         ScreenInsetControl.AddChild(_bootErrorContainer);
         ScreenSurface.AddChild(ScreenInsetControl);
         rootBox.AddChild(ScreenSurface);
@@ -238,7 +389,8 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
 
     public void UpdateDisplayState(ComputerDisplayUiState state)
     {
-        _titleLabel.Text = $"{state.Title}{state.Subtitle} [{state.DeviceGuid}]";
+        _titleLabel.Text = $"{state.Title}{state.Subtitle}";
+        _guidLabel.Text = string.IsNullOrWhiteSpace(state.DeviceGuid) ? string.Empty : $"[{state.DeviceGuid}]";
         ScreenSurface.DeviceGuid = state.DeviceGuid;
         _supportsViewportDock = state.DockInViewport;
 
@@ -289,8 +441,38 @@ public sealed class ComputerDisplayWindow : BaseWindow, IComputerDisplayHost
             _titleLabel.FontColorOverride = borderCol;
         }
 
-        _bootProgramViewport.Visible = state.IsBooted;
+        _bootProgramViewport.Visible = state.IsBooted && !state.IsSoftwareLocked;
+        _hardwareLockOverlay.Visible = state.IsBooted && !state.IsSoftwareLocked && state.IsHostLocked;
+        if (state.IsHostLocked)
+        {
+            var deviceName = string.IsNullOrWhiteSpace(state.HostDisplayName) ? "device" : state.HostDisplayName;
+            _hardwareLockOverlay.SetSubtitle($"Swipe authorized ID card on {deviceName} to unlock");
+        }
+        _lockScreenContainer.Visible = state.IsBooted && state.IsSoftwareLocked;
         _bootErrorContainer.Visible = !state.IsBooted;
+
+        if (state.IsBooted && state.IsSoftwareLocked)
+        {
+            var hints = new List<string>();
+            if (state.HasPasswordLock)
+                hints.Add("Password");
+            if (state.HasKeyLock)
+                hints.Add($"Key: {state.LockKeyLabel}");
+            if (state.RequiredAccessLabels.Count > 0)
+            {
+                var mode = state.LockRequiresAllAccess ? "ALL" : "ANY";
+                hints.Add($"ID Access ({mode}): {string.Join(", ", state.RequiredAccessLabels)}");
+            }
+
+            _lockMethodsLabel.Text = hints.Count > 0
+                ? string.Join("\n", hints)
+                : "Authentication required.";
+            _lockPasswordRow.Visible = state.HasPasswordLock || state.HasKeyLock;
+            _lockKeyFileBtn.Visible = state.HasKeyLock || state.RequiredAccessLabels.Count > 0;
+            _lockIdBtn.Visible = state.RequiredAccessLabels.Count > 0;
+            _lockStatusLabel.Text = state.LockStatusMessage;
+            _lockStatusLabel.Visible = !string.IsNullOrWhiteSpace(state.LockStatusMessage);
+        }
 
         if (!state.IsBooted)
         {
@@ -606,6 +788,9 @@ public sealed class ComputerBoundUserInterface : RoutedBoundUserInterface
             _window.SetSupportsViewportDock(comp.DockInViewport);
         SetStateScopeRoot(_window);
         _window.OnRetryBootPressed += () => SendMessage(new ComputerRetryBootMessage());
+        _window.OnUnlockWithPassword += secret => SendMessage(new ComputerUnlockWithPasswordMessage(secret));
+        _window.OnUnlockWithKeyFile += () => SendMessage(new ComputerUnlockWithKeyFileMessage());
+        _window.OnUnlockWithId += () => SendMessage(new ComputerUnlockWithIdMessage());
         EntMan.System<ClientComputerUiSystem>().RegisterDisplayHost(Owner, _window);
     }
 

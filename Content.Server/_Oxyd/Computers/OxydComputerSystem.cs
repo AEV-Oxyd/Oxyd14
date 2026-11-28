@@ -23,6 +23,8 @@ using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Systems;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Systems;
+using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Interaction;
 using Content.Shared.Item;
 using Content.Shared.Lock;
 using Content.Shared.PDA;
@@ -31,6 +33,8 @@ using Content.Shared.Power;
 using Content.Shared.UserInterface;
 using Content.Shared.Wires;
 using Robust.Server.GameStates;
+using Robust.Shared.Audio;
+using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
@@ -43,6 +47,12 @@ namespace Content.Server._Oxyd.Computers;
 /// </summary>
 [ByRefEvent]
 public readonly record struct ComputerHardwareChangedEvent(EntityUid ComputerUid);
+
+/// <summary>
+/// Event raised locally on a computer and its running programs whenever the OS-level authenticated user session changes.
+/// </summary>
+[ByRefEvent]
+public readonly record struct ComputerOsAuthChangedEvent(EntityUid ComputerUid);
 
 /// <summary>
 /// Core server system managing encapsulated NTOS computers, physical hardware slot validation,
@@ -70,6 +80,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
     [Dependency] private ServerRemoteScreenSystem _remoteScreen = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private LockSystem _lock = default!;
+    [Dependency] private SharedHandsSystem _hands = default!;
+    [Dependency] private SharedIdCardSystem _idCard = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
+    [Dependency] private SharedAudioSystem _audio = default!;
 
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
     [Dependency] private EntityQuery<EmbeddedComputerHostComponent> _hostQuery = default!;
@@ -82,6 +96,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
     private static readonly ProtoId<SinkPortPrototype> PortComputerStatusReceiver = "ComputerStatusReceiver";
     private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
     private static readonly ProtoId<SinkPortPrototype> PortMachineCommandReceiver = "MachineCommandReceiver";
+    private static readonly SoundPathSpecifier OsSwipeSound = new("/Audio/Machines/id_swipe.ogg");
 
     [SubscribeLocalEvent]
     private void OnHostMapInit(Entity<EmbeddedComputerHostComponent> ent, ref MapInitEvent args)
@@ -136,10 +151,84 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (ent.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
             return;
 
-        comp.IsPowered = args.Powered;
+        ApplyComputerPowerChange(compUid, comp, args.Powered);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnComputerPowerChanged(Entity<OxydComputerComponent> ent, ref PowerChangedEvent args)
+    {
+        ApplyComputerPowerChange(ent.Owner, ent.Comp, args.Powered);
+    }
+
+    private bool SyncHostPowerState(EntityUid compUid, OxydComputerComponent comp)
+    {
+        if (comp.HostMachine is { Valid: true } hostUid &&
+            TryComp<Content.Server.Power.Components.ApcPowerReceiverComponent>(hostUid, out var apcRecv))
+        {
+            var powered = apcRecv.Powered || (!apcRecv.NeedsPower && !apcRecv.PowerDisabled);
+            if (comp.IsPowered != powered)
+            {
+                comp.IsPowered = powered;
+                Dirty(compUid, comp);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool IsComputerUnpowered(EntityUid compUid, OxydComputerComponent? comp = null, ComputerStatsComponent? stats = null)
+    {
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return false;
+
+        SyncHostPowerState(compUid, comp);
+        stats ??= _statsQuery.CompOrNull(compUid);
+        return comp.RequirePowerToBoot && !comp.IsPowered && (stats == null || stats.BatteryCharge <= 0f);
+    }
+
+    private void ApplyComputerPowerChange(EntityUid compUid, OxydComputerComponent comp, bool powered)
+    {
+        comp.IsPowered = powered;
         Dirty(compUid, comp);
         RecalculateHardwareStats(compUid, comp);
+
+        if (!powered && IsComputerUnpowered(compUid, comp))
+        {
+            HandlePowerLoss(compUid, comp);
+            return;
+        }
+
         RefreshComputerBootState(compUid, comp);
+    }
+
+    private void HandlePowerLoss(EntityUid compUid, OxydComputerComponent comp)
+    {
+        var viewers = GetAllComputerViewers(compUid, comp);
+
+        // Detach any remote screen viewers before shutting down and closing all computer UIs.
+        _remoteScreen.DetachViewer(EntityUid.Invalid, targetComputerUid: compUid);
+
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null)
+            _fileSystem.LogSystemActivity(driveUid.Value, "POWER", "Power lost — immediate system shutdown.", comp: fs);
+
+        ShutDownComputer(compUid, comp, updateUi: false, manualShutdown: false);
+
+        comp.BootState = ComputerBootState.NoPower;
+        comp.IsBooted = false;
+        comp.BootError = "POST ERROR 0x02: Insufficient power to boot computer.";
+        Dirty(compUid, comp);
+
+        if (_statsQuery.TryComp(compUid, out var stats))
+        {
+            stats.IsBooted = false;
+            stats.BootError = comp.BootError;
+            Dirty(compUid, stats);
+        }
+
+        _ui.CloseUis(compUid);
+        foreach (var viewer in viewers)
+            RevokeViewerPvsOverrides(compUid, viewer, comp);
     }
 
     [SubscribeLocalEvent]
@@ -160,6 +249,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         if (!_computerQuery.TryComp(compUid, out var comp))
             return;
+
+        if (IsComputerUnpowered(compUid, comp))
+        {
+            _ui.CloseUis(compUid);
+            _popup.PopupEntity("No power.", ent.Owner, args.User);
+            return;
+        }
 
         var key = GetPrimaryUiKey(compUid, comp);
         if (_ui.IsUiOpen(compUid, key, args.User))
@@ -190,6 +286,689 @@ public sealed partial class OxydComputerSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
+    private void OnUnlockWithPassword(Entity<OxydComputerComponent> ent, ref ComputerUnlockWithPasswordMessage args)
+    {
+        if (!ent.Comp.SoftwareLocked)
+            return;
+
+        var candidate = (args.Secret ?? string.Empty).Trim();
+        var matchesPassword =
+            (!string.IsNullOrEmpty(ent.Comp.LockPassword) && string.Equals(ent.Comp.LockPassword, candidate, StringComparison.Ordinal)) ||
+            (!string.IsNullOrEmpty(ent.Comp.SshPassword) && string.Equals(ent.Comp.SshPassword, candidate, StringComparison.Ordinal));
+        var matchesKey =
+            !string.IsNullOrEmpty(ent.Comp.LockKeySecret) &&
+            string.Equals(ent.Comp.LockKeySecret, candidate, StringComparison.Ordinal);
+
+        if (matchesPassword || matchesKey)
+        {
+            UnlockSoftwareLock(ent.Owner, ent.Comp, matchesKey ? "Unlocked via key secret." : "Unlocked via password.");
+            return;
+        }
+
+        ent.Comp.LockStatusMessage = "Authentication failed: invalid password or key.";
+        Dirty(ent);
+        UpdateComputerDisplayUi(ent.Owner, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnUnlockWithKeyFile(Entity<OxydComputerComponent> ent, ref ComputerUnlockWithKeyFileMessage args)
+    {
+        if (!ent.Comp.SoftwareLocked)
+            return;
+
+        if (!string.IsNullOrEmpty(ent.Comp.LockKeySecret) &&
+            TryFindMatchingKeyFile(ent.Owner, ent.Comp.LockKeySecret, includeLocalHdd: true, out var matchedPath))
+        {
+            UnlockSoftwareLock(ent.Owner, ent.Comp, $"Unlocked via key file {matchedPath}.");
+            return;
+        }
+
+        if (ent.Comp.RequiredAccessTags.Count > 0 &&
+            TryFindMatchingAccFileForLock(ent.Owner, ent.Comp, out var accPath))
+        {
+            UnlockSoftwareLock(ent.Owner, ent.Comp, $"Unlocked via access codes {accPath}.");
+            return;
+        }
+
+        ent.Comp.LockStatusMessage = "No matching .key or authorized .acc file found on inserted disk / drive.";
+        Dirty(ent);
+        UpdateComputerDisplayUi(ent.Owner, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnUnlockWithId(Entity<OxydComputerComponent> ent, ref ComputerUnlockWithIdMessage args)
+    {
+        if (!ent.Comp.SoftwareLocked)
+            return;
+
+        if (ent.Comp.RequiredAccessTags.Count == 0)
+        {
+            ent.Comp.LockStatusMessage = "This computer is not configured for ID access unlock.";
+            Dirty(ent);
+            UpdateComputerDisplayUi(ent.Owner, ent.Comp);
+            return;
+        }
+
+        var cards = GetInsertedIdCards(ent.Owner);
+        if (cards.Count == 0)
+        {
+            ent.Comp.LockStatusMessage = "No ID card inserted in computer ID slot (or swipe an ID card on a card scanner).";
+            Dirty(ent);
+            UpdateComputerDisplayUi(ent.Owner, ent.Comp);
+            return;
+        }
+
+        foreach (var cardUid in cards)
+        {
+            if (TryUnlockWithCard(ent.Owner, cardUid, out _))
+                return;
+        }
+
+        ent.Comp.LockStatusMessage = "Access denied: inserted ID card lacks required clearance.";
+        Dirty(ent);
+        UpdateComputerDisplayUi(ent.Owner, ent.Comp);
+    }
+
+    public bool TryUnlockWithCard(EntityUid compUid, EntityUid cardUid, out string message)
+    {
+        message = string.Empty;
+        if (!_computerQuery.TryComp(compUid, out var comp) || !comp.SoftwareLocked)
+            return false;
+
+        if (comp.RequiredAccessTags.Count == 0)
+        {
+            message = "This computer does not accept ID card unlock.";
+            return false;
+        }
+
+        var cardTags = _access.FindAccessTags(cardUid);
+        if (SatisfiesRequiredAccess(comp, cardTags))
+        {
+            var cardName = MetaData(cardUid).EntityName;
+            UnlockSoftwareLock(compUid, comp, $"Unlocked via ID card ({cardName}).");
+            message = $"Computer unlocked ({cardName}).";
+            return true;
+        }
+
+        comp.LockStatusMessage = "Access denied: ID card lacks required access clearance.";
+        Dirty(compUid, comp);
+        UpdateComputerDisplayUi(compUid, comp);
+        message = "Access denied: ID card lacks required clearance.";
+        return false;
+    }
+
+    public bool TryFindMatchingKeyFile(EntityUid compUid, string expectedSecret, bool includeLocalHdd, out string matchedPath)
+    {
+        matchedPath = string.Empty;
+        if (string.IsNullOrEmpty(expectedSecret))
+            return false;
+
+        // Check inserted removable disk (PDA disk slot or modular computer disk bay) first.
+        if (_computerQuery.TryComp(compUid, out var comp) &&
+            comp.HostMachine is { Valid: true } hostUid &&
+            TryComp<PdaComponent>(hostUid, out var pda))
+        {
+            var pdaDisk = pda.DiskSlot.Item ?? pda.ContainedDisk;
+            if (pdaDisk is { Valid: true } pd && Exists(pd) && TryComp<FileSystemComponent>(pd, out var pdaDiskFs))
+            {
+                foreach (var kf in _fileSystem.GetFilesByType<PasswordKeyVirtualFile>(pd, pdaDiskFs))
+                {
+                    if (string.Equals(kf.KeySecret, expectedSecret, StringComparison.Ordinal))
+                    {
+                        matchedPath = kf.FullPath;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            Exists(diskUid) &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            foreach (var kf in _fileSystem.GetFilesByType<PasswordKeyVirtualFile>(diskUid, diskFs))
+            {
+                if (string.Equals(kf.KeySecret, expectedSecret, StringComparison.Ordinal))
+                {
+                    matchedPath = kf.FullPath;
+                    return true;
+                }
+            }
+        }
+
+        if (includeLocalHdd &&
+            _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) &&
+            driveUid != null && fs != null)
+        {
+            foreach (var kf in _fileSystem.GetFilesByType<PasswordKeyVirtualFile>(driveUid.Value, fs))
+            {
+                if (string.Equals(kf.KeySecret, expectedSecret, StringComparison.Ordinal))
+                {
+                    matchedPath = kf.FullPath;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryFindMatchingAccFileForLock(EntityUid compUid, OxydComputerComponent comp, out string matchedPath)
+    {
+        matchedPath = string.Empty;
+        var drivesToCheck = new List<(EntityUid Uid, FileSystemComponent Fs)>();
+
+        if (comp.HostMachine is { Valid: true } hostUid && TryComp<PdaComponent>(hostUid, out var pda))
+        {
+            var pdaDisk = pda.DiskSlot.Item ?? pda.ContainedDisk;
+            if (pdaDisk is { Valid: true } pd && Exists(pd) && TryComp<FileSystemComponent>(pd, out var pdaDiskFs))
+                drivesToCheck.Add((pd, pdaDiskFs));
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            Exists(diskUid) &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            drivesToCheck.Add((diskUid, diskFs));
+        }
+
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+            drivesToCheck.Add((driveUid.Value, fs));
+
+        foreach (var (dUid, dFs) in drivesToCheck)
+        {
+            foreach (var acc in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(dUid, dFs))
+            {
+                if (acc.IsEncrypted)
+                    continue;
+
+                if (SatisfiesRequiredAccess(comp, acc.AccessTags))
+                {
+                    matchedPath = acc.FullPath;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static readonly ProtoId<Content.Shared.Access.AccessLevelPrototype> SystemAdminAccess = "SystemAdmin";
+
+    /// <summary>
+    /// Returns true if the computer's active BootProgram is a jailbroken OS kernel.
+    /// </summary>
+    public bool IsJailbrokenOs(EntityUid compUid, OxydComputerComponent? comp = null)
+    {
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return false;
+
+        return comp.BootProgram is { Valid: true } bootUid &&
+               _programQuery.TryComp(bootUid, out var bootProg) &&
+               bootProg.IsJailbrokenOs;
+    }
+
+    /// <summary>
+    /// Returns true if remote control (SSH / remote screen / remote commands) is permitted on this computer.
+    /// Jailbroken OS installations always disable all remote control.
+    /// </summary>
+    public bool IsRemoteControlAllowed(EntityUid compUid, OxydComputerComponent? comp = null)
+    {
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return false;
+
+        if (!comp.AllowRemoteControl || comp.RemoteControlWireCut || comp.PowerWireCut)
+            return false;
+
+        if (IsJailbrokenOs(compUid, comp))
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true if the given program prototype ID is marked as an Operating System kernel.
+    /// </summary>
+    public bool IsOperatingSystemExecutable(string programId)
+    {
+        if (string.IsNullOrWhiteSpace(programId))
+            return false;
+
+        return _proto.TryIndex<EntityPrototype>(programId, out var proto) &&
+               proto.TryComp<ProgramComponent>(out var defComp, EntityManager.ComponentFactory) &&
+               defComp.IsOperatingSystem;
+    }
+
+    /// <summary>
+    /// <summary>
+    /// Collects all available access tags from the computer's physically inserted ID cards,
+    /// active OS-level authenticated session, unencrypted /keys/*.acc files (HDD and inserted disk),
+    /// and optionally an explicitly swiped <see cref="IdCardComponent"/> entity.
+    /// Never reads worn/unauthenticated ID cards from an actor mob.
+    /// </summary>
+    public HashSet<ProtoId<Content.Shared.Access.AccessLevelPrototype>> CollectAvailableAccessTags(
+        EntityUid compUid,
+        EntityUid? actor = null,
+        OxydComputerComponent? comp = null)
+    {
+        var tags = new HashSet<ProtoId<Content.Shared.Access.AccessLevelPrototype>>();
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return tags;
+
+        foreach (var cardUid in GetInsertedIdCards(compUid))
+        {
+            foreach (var t in _access.FindAccessTags(cardUid))
+                tags.Add(t);
+        }
+
+        foreach (var t in comp.OsAuthAccessTags)
+            tags.Add(t);
+
+        if (actor is { Valid: true } cardEntity && Exists(cardEntity) && HasComp<IdCardComponent>(cardEntity))
+        {
+            foreach (var t in _access.FindAccessTags(cardEntity))
+                tags.Add(t);
+        }
+
+        var drivesToCheck = new List<(EntityUid Uid, FileSystemComponent Fs)>();
+        if (comp.HostMachine is { Valid: true } hostUid && TryComp<PdaComponent>(hostUid, out var pda))
+        {
+            var pdaDisk = pda.DiskSlot.Item ?? pda.ContainedDisk;
+            if (pdaDisk is { Valid: true } pd && Exists(pd) && TryComp<FileSystemComponent>(pd, out var pdaDiskFs))
+                drivesToCheck.Add((pd, pdaDiskFs));
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            Exists(diskUid) &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            drivesToCheck.Add((diskUid, diskFs));
+        }
+
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+            drivesToCheck.Add((driveUid.Value, fs));
+
+        foreach (var (dUid, dFs) in drivesToCheck)
+        {
+            foreach (var acc in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(dUid, dFs))
+            {
+                if (acc.IsEncrypted)
+                    continue;
+
+                foreach (var t in acc.AccessTags)
+                    tags.Add(t);
+            }
+        }
+
+        return tags;
+    }
+
+    /// <summary>
+    /// Checks whether the computer or acting user possesses ANY tag in <paramref name="requiredTags"/>
+    /// (also returning a descriptive credential source label).
+    /// </summary>
+    public bool HasAnyAccessTag(
+        EntityUid compUid,
+        EntityUid? actor,
+        IEnumerable<ProtoId<Content.Shared.Access.AccessLevelPrototype>> requiredTags,
+        out string matchedSourceLabel,
+        bool includeSystemAdmin = false,
+        OxydComputerComponent? comp = null)
+    {
+        matchedSourceLabel = string.Empty;
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return false;
+
+        var reqSet = new HashSet<ProtoId<Content.Shared.Access.AccessLevelPrototype>>(requiredTags);
+        if (includeSystemAdmin)
+            reqSet.Add(SystemAdminAccess);
+        if (reqSet.Count == 0)
+            return false;
+
+        foreach (var cardUid in GetInsertedIdCards(compUid))
+        {
+            var cardTags = _access.FindAccessTags(cardUid);
+            if (reqSet.Any(cardTags.Contains))
+            {
+                matchedSourceLabel = TryComp<IdCardComponent>(cardUid, out var idCard) && !string.IsNullOrWhiteSpace(idCard.FullName)
+                    ? idCard.FullName
+                    : MetaData(cardUid).EntityName;
+                return true;
+            }
+        }
+
+        if (comp.OsAuthAccessTags.Count > 0 && reqSet.Any(comp.OsAuthAccessTags.Contains))
+        {
+            matchedSourceLabel = !string.IsNullOrWhiteSpace(comp.OsAuthLabel)
+                ? $"OS Session ({comp.OsAuthLabel})"
+                : "OS Session";
+            return true;
+        }
+
+        if (actor is { Valid: true } cardEntity && Exists(cardEntity) && HasComp<IdCardComponent>(cardEntity))
+        {
+            var cardTags = _access.FindAccessTags(cardEntity);
+            if (reqSet.Any(cardTags.Contains))
+            {
+                matchedSourceLabel = TryComp<IdCardComponent>(cardEntity, out var idCard) && !string.IsNullOrWhiteSpace(idCard.FullName)
+                    ? idCard.FullName
+                    : MetaData(cardEntity).EntityName;
+                return true;
+            }
+        }
+
+        var drivesToCheck = new List<(EntityUid Uid, FileSystemComponent Fs)>();
+        if (comp.HostMachine is { Valid: true } hostUid && TryComp<PdaComponent>(hostUid, out var pda))
+        {
+            var pdaDisk = pda.DiskSlot.Item ?? pda.ContainedDisk;
+            if (pdaDisk is { Valid: true } pd && Exists(pd) && TryComp<FileSystemComponent>(pd, out var pdaDiskFs))
+                drivesToCheck.Add((pd, pdaDiskFs));
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var diskSlot) &&
+            diskSlot.Item is { Valid: true } diskUid &&
+            Exists(diskUid) &&
+            TryComp<FileSystemComponent>(diskUid, out var diskFs))
+        {
+            drivesToCheck.Add((diskUid, diskFs));
+        }
+
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null && fs != null)
+            drivesToCheck.Add((driveUid.Value, fs));
+
+        foreach (var (dUid, dFs) in drivesToCheck)
+        {
+            foreach (var acc in _fileSystem.GetFilesByType<AccessCodesVirtualFile>(dUid, dFs))
+            {
+                if (acc.IsEncrypted)
+                    continue;
+
+                if (reqSet.Any(acc.AccessTags.Contains))
+                {
+                    matchedSourceLabel = string.IsNullOrWhiteSpace(acc.OwnerName) ? acc.FullPath : acc.OwnerName;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Writes /sys/boot.cfg to select an installed .nte executable as the computer's boot OS
+    /// and optionally triggers a clean reboot.
+    /// </summary>
+    public bool TrySetBootExecutable(
+        EntityUid compUid,
+        string executablePathOrName,
+        out string message,
+        bool rebootNow = true,
+        OxydComputerComponent? comp = null)
+    {
+        message = string.Empty;
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+        {
+            message = "Computer unavailable.";
+            return false;
+        }
+
+        if (!_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) || driveUid == null || fs == null)
+        {
+            message = "No hard drive available.";
+            return false;
+        }
+
+        if (!TryResolveExecutable(fs, executablePathOrName, out var resolvedPath, out var execFile))
+        {
+            message = $"Executable not found: '{executablePathOrName}'.";
+            return false;
+        }
+
+        var cfgFile = new TextVirtualFile
+        {
+            Name = "boot",
+            Extension = "cfg",
+            Directory = "/sys/",
+            TextContent = resolvedPath,
+            Size = Math.Max(32, resolvedPath.Length)
+        };
+
+        if (!_fileSystem.TryWriteFile(driveUid.Value, cfgFile, fs))
+        {
+            message = "Failed to write /sys/boot.cfg (drive full or read-only).";
+            return false;
+        }
+
+        _fileSystem.LogSystemActivity(driveUid.Value, "BOOT-CFG", $"Set boot executable to {resolvedPath} ({execFile.Title})");
+        message = $"Boot executable set to '{resolvedPath}'.";
+
+        if (rebootNow)
+        {
+            comp.ManuallyShutDown = false;
+            RefreshComputerBootState(compUid, comp);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true if the computer has any software lock credential configured
+    /// (password, key-based password, or required ID access set).
+    /// </summary>
+    public static bool HasSoftwareLockConfigured(OxydComputerComponent comp)
+    {
+        return !string.IsNullOrEmpty(comp.LockPassword) ||
+               !string.IsNullOrEmpty(comp.SshPassword) ||
+               !string.IsNullOrEmpty(comp.LockKeySecret) ||
+               comp.RequiredAccessTags.Count > 0;
+    }
+
+    /// <summary>
+    /// Authenticates an OS-level user session on this computer from a swiped ID card.
+    /// Read/control apps (Cameras, APC, Atmos, Station Records, Comms, Downloader) inherit these access tags
+    /// without requiring the card to remain physically inserted in a slot.
+    /// </summary>
+    public bool AuthenticateOsSession(
+        EntityUid compUid,
+        EntityUid cardUid,
+        EntityUid? user = null,
+        OxydComputerComponent? comp = null)
+    {
+        if (!_computerQuery.Resolve(compUid, ref comp, false) || !Exists(cardUid))
+            return false;
+
+        var tags = _access.FindAccessTags(cardUid);
+        comp.OsAuthAccessTags.Clear();
+        foreach (var t in tags)
+            comp.OsAuthAccessTags.Add(t);
+
+        var fullName = string.Empty;
+        var jobTitle = string.Empty;
+        if (TryComp<IdCardComponent>(cardUid, out var idCard))
+        {
+            fullName = idCard.FullName ?? string.Empty;
+            jobTitle = idCard.LocalizedJobTitle ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(fullName))
+            fullName = MetaData(cardUid).EntityName;
+
+        comp.OsAuthUserName = fullName;
+        comp.OsAuthJobTitle = jobTitle;
+        comp.OsAuthLabel = !string.IsNullOrWhiteSpace(jobTitle) ? $"{fullName} ({jobTitle})" : fullName;
+        Dirty(compUid, comp);
+
+        RaiseOsAuthChanged(compUid, comp);
+        return true;
+    }
+
+    /// <summary>
+    /// Authenticates the OS-level session from the actor's held ID/PDA, an inserted slot ID card,
+    /// or the actor's worn ID card (when physically in range and the device has an ID reader/slot or is a PDA).
+    /// </summary>
+    public bool TryAuthenticateOsSessionFromActor(
+        EntityUid compUid,
+        EntityUid actor,
+        out string message,
+        OxydComputerComponent? comp = null)
+    {
+        message = string.Empty;
+        if (!_computerQuery.Resolve(compUid, ref comp, false) || !comp.IsBooted)
+        {
+            message = "Computer is not running.";
+            return false;
+        }
+
+        var hostUid = comp.HostMachine is { Valid: true } hm && Exists(hm) ? hm : compUid;
+        if (comp.Template == ComputerTemplate.Pda)
+        {
+            message = "PDAs use their inserted ID card.";
+            return false;
+        }
+
+        var hasReader = _statsQuery.TryComp(compUid, out var stats) && stats.HasIdSlotModule;
+        if (!hasReader)
+        {
+            message = "No ID card reader installed.";
+            _popup.PopupEntity(message, hostUid, actor);
+            return false;
+        }
+
+        var inPhysicalRange = Exists(actor) &&
+                              (comp.Template == ComputerTemplate.Pda || _interaction.InRangeUnobstructed(actor, hostUid));
+
+        EntityUid? cardUid = null;
+
+        // 1) Active held item (loose ID card or PDA containing an ID card) when in physical range.
+        if (inPhysicalRange && _hands.TryGetActiveItem(actor, out var held))
+        {
+            if (HasComp<IdCardComponent>(held.Value))
+            {
+                cardUid = held.Value;
+            }
+            else if (TryComp<PdaComponent>(held.Value, out var heldPda) &&
+                     heldPda.ContainedId is { Valid: true } pdaCard &&
+                     Exists(pdaCard))
+            {
+                cardUid = pdaCard;
+            }
+        }
+
+        // 2) Card currently inserted in this device's physical ID slot or PDA ID slot.
+        if (cardUid == null && TryGetInsertedIdCard(compUid, out var insertedCard))
+            cardUid = insertedCard;
+
+        // 3) Actor's worn/carried ID card when physically in range.
+        if (cardUid == null && inPhysicalRange && _idCard.TryFindIdCard(actor, out var foundCard))
+            cardUid = foundCard.Owner;
+
+        if (cardUid == null || !Exists(cardUid.Value))
+        {
+            message = inPhysicalRange
+                ? "Hold, wear, or insert an ID card to authenticate."
+                : "No ID card inserted in remote device.";
+            _popup.PopupEntity(message, hostUid, actor);
+            return false;
+        }
+
+        if (!AuthenticateOsSession(compUid, cardUid.Value, actor, comp))
+        {
+            message = "Unable to read ID card.";
+            return false;
+        }
+
+        _audio.PlayPvs(OsSwipeSound, hostUid);
+        message = $"Authenticated: {comp.OsAuthLabel}";
+        _popup.PopupEntity(message, hostUid, actor);
+        return true;
+    }
+
+    /// <summary>
+    /// Clears any active OS-level user authentication session on this computer.
+    /// </summary>
+    public void ClearOsSession(EntityUid compUid, OxydComputerComponent? comp = null)
+    {
+        if (!_computerQuery.Resolve(compUid, ref comp, false))
+            return;
+
+        if (string.IsNullOrEmpty(comp.OsAuthLabel) && comp.OsAuthAccessTags.Count == 0)
+            return;
+
+        comp.OsAuthUserName = string.Empty;
+        comp.OsAuthJobTitle = string.Empty;
+        comp.OsAuthLabel = string.Empty;
+        comp.OsAuthAccessTags.Clear();
+        Dirty(compUid, comp);
+
+        RaiseOsAuthChanged(compUid, comp);
+    }
+
+    private void RaiseOsAuthChanged(EntityUid compUid, OxydComputerComponent comp)
+    {
+        var ev = new ComputerOsAuthChangedEvent(compUid);
+        RaiseLocalEvent(compUid, ref ev);
+
+        var notified = new HashSet<EntityUid>();
+        if (comp.BootProgram is { Valid: true } bootUid && Exists(bootUid) && notified.Add(bootUid))
+            RaiseLocalEvent(bootUid, ref ev);
+
+        foreach (var progUid in comp.RunningPrograms.ToList())
+        {
+            if (Exists(progUid) && notified.Add(progUid))
+                RaiseLocalEvent(progUid, ref ev);
+        }
+    }
+
+    /// <summary>
+    /// Engages the computer's software lock and advances <see cref="OxydComputerComponent.LockEpoch"/>
+    /// so any previously opened remote SSH sessions must re-authenticate.
+    /// </summary>
+    public void EngageSoftwareLock(EntityUid compUid, OxydComputerComponent comp)
+    {
+        comp.SoftwareLocked = true;
+        comp.LockStatusMessage = string.Empty;
+        comp.LockEpoch++;
+        Dirty(compUid, comp);
+
+        ClearOsSession(compUid, comp);
+
+        foreach (var progUid in comp.RunningPrograms.ToList())
+        {
+            if (progUid == comp.BootProgram || !Exists(progUid))
+                continue;
+
+            var deactEv = new ProgramDeactivatedEvent(compUid, progUid);
+            RaiseLocalEvent(progUid, ref deactEv);
+        }
+    }
+
+    public static bool SatisfiesRequiredAccess(OxydComputerComponent comp, ICollection<ProtoId<Content.Shared.Access.AccessLevelPrototype>> heldTags)
+    {
+        if (comp.RequiredAccessTags.Count == 0)
+            return false;
+
+        if (comp.LockRequiresAllAccess)
+            return comp.RequiredAccessTags.All(req => heldTags.Contains(req));
+
+        return comp.RequiredAccessTags.Any(req => heldTags.Contains(req));
+    }
+
+    private void UnlockSoftwareLock(EntityUid compUid, OxydComputerComponent comp, string logReason)
+    {
+        comp.SoftwareLocked = false;
+        comp.LockStatusMessage = string.Empty;
+        Dirty(compUid, comp);
+
+        if (_fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fs) && driveUid != null)
+            _fileSystem.LogSystemActivity(driveUid.Value, "SEC-LOCK", logReason, comp: fs);
+
+        UpdateComputerDisplayUi(compUid, comp);
+    }
+
+    [SubscribeLocalEvent]
     private void OnComputerUiClosed(Entity<OxydComputerComponent> ent, ref BoundUIClosedEvent args)
     {
         var key = GetPrimaryUiKey(ent.Owner, ent.Comp);
@@ -209,6 +988,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         CloseChildProgramUisForActor(ent.Owner, args.Actor, ent.Comp);
         RevokeViewerPvsOverrides(ent.Owner, args.Actor, ent.Comp);
+
+        if (GetAllComputerViewers(ent.Owner, ent.Comp).Count == 0)
+            ClearOsSession(ent.Owner, ent.Comp);
     }
 
     [SubscribeLocalEvent]
@@ -286,6 +1068,11 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (host.Comp.ComputerEntity is { } existing && Exists(existing))
         {
             compUid = existing;
+            if (_computerQuery.TryComp(existing, out var existingComp) && SyncHostPowerState(existing, existingComp))
+            {
+                RecalculateHardwareStats(existing, existingComp);
+                RefreshComputerBootState(existing, existingComp);
+            }
             return true;
         }
 
@@ -334,7 +1121,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
             }
 
             if (TryComp<Content.Server.Power.Components.ApcPowerReceiverComponent>(host.Owner, out var apcRecv))
-                comp.IsPowered = apcRecv.Powered;
+                comp.IsPowered = apcRecv.Powered || (!apcRecv.NeedsPower && !apcRecv.PowerDisabled);
 
             Dirty(compUid, comp);
             BindHostDeviceLinks(host.Owner, compUid);
@@ -390,6 +1177,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (!comp.RunningPrograms.Contains(progUid))
         {
             blockReason = "Program is no longer running.";
+            return false;
+        }
+
+        if (comp.SoftwareLocked)
+        {
+            blockReason = "Access denied: Computer is locked. Authenticate on the lock screen to unlock.";
             return false;
         }
 
@@ -505,6 +1298,20 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
     public bool TryInsertHardwarePartIntoSlot(EntityUid compUid, EntityUid partUid)
     {
+        if (TryComp<ModularComputerComponent>(compUid, out var mod))
+        {
+            if (TryComp<ComputerCpuComponent>(partUid, out var cpu) && cpu.Size > mod.MaxCpuSize)
+                return false;
+            if (TryComp<ComputerRamComponent>(partUid, out var ram) && ram.Size > mod.MaxRamSize)
+                return false;
+            if (TryComp<ComputerHardDriveComponent>(partUid, out var hdd) && hdd.Size > mod.MaxHardDriveSize)
+                return false;
+            if (TryComp<ComputerNetworkCardComponent>(partUid, out var nic) && nic.Size > mod.MaxNetworkCardSize)
+                return false;
+            if (TryComp<ComputerBatteryModuleComponent>(partUid, out var bat) && bat.Size > mod.MaxBatterySize)
+                return false;
+        }
+
         string? preferredSlot = null;
         if (HasComp<ComputerCpuComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotCpu;
@@ -514,10 +1321,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
             preferredSlot = ModularComputerComponent.SlotNetwork;
         else if (HasComp<ComputerBatteryModuleComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotBattery;
-        else if (HasComp<ComputerSensorModuleComponent>(partUid))
+        else if (HasComp<ComputerSensorModuleComponent>(partUid) || HasComp<ComputerHealthScannerModuleComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotSensor;
         else if (HasComp<ComputerDiskSlotModuleComponent>(partUid))
             preferredSlot = ModularComputerComponent.SlotDiskModule;
+        else if (HasComp<ComputerPrinterModuleComponent>(partUid))
+            preferredSlot = ModularComputerComponent.SlotPrinter;
 
         if (preferredSlot != null && _itemSlots.TryGetSlot(compUid, preferredSlot, out var slot) && slot.Item == null)
             return _itemSlots.TryInsert(compUid, slot, partUid, null);
@@ -573,6 +1382,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
         stats.HasCpu = false;
         stats.CpuFrequencyMhz = 0;
         stats.MaxConcurrentPrograms = 0;
+        stats.CpuCapacity = 0f;
+        stats.UsedCpuUnits = 0f;
         stats.HasRam = false;
         stats.RamMb = 0;
         stats.HasHardDrive = false;
@@ -586,6 +1397,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
         stats.BatteryCharge = 0f;
         stats.BatteryMaxCharge = 0f;
         stats.HasSensorModule = false;
+        stats.HasHealthScannerModule = false;
+        stats.HasPrinterModule = false;
         stats.HasIdSlotModule = false;
         stats.HasDiskSlotModule = false;
         stats.HasDataPort = TryComp<ComputerDataPortComponent>(compUid, out var dp) && dp.Enabled;
@@ -605,6 +1418,7 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 stats.HasCpu = true;
                 stats.CpuFrequencyMhz = Math.Max(stats.CpuFrequencyMhz, cpu.FrequencyMhz);
                 stats.MaxConcurrentPrograms += Math.Max(1, cpu.MaxConcurrentPrograms);
+                stats.CpuCapacity += ComputerMetricsHelper.GetCpuCapacity(cpu);
             }
 
             if (TryComp<ComputerRamComponent>(part, out var ram))
@@ -638,6 +1452,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
             if (HasComp<ComputerSensorModuleComponent>(part))
                 stats.HasSensorModule = true;
+            if (HasComp<ComputerHealthScannerModuleComponent>(part))
+                stats.HasHealthScannerModule = true;
+            if (HasComp<ComputerPrinterModuleComponent>(part))
+                stats.HasPrinterModule = true;
             if (HasComp<ComputerIdCardSlotModuleComponent>(part))
                 stats.HasIdSlotModule = true;
             if (HasComp<ComputerDiskSlotModuleComponent>(part))
@@ -646,17 +1464,20 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         // Sync running resource footprint.
         var usedRam = 0;
-        var cpuLoad = 0f;
+        var cpuUnits = 0f;
         foreach (var progUid in comp.RunningPrograms)
         {
             if (!_programQuery.TryComp(progUid, out var prog))
                 continue;
 
             usedRam += ComputerMetricsHelper.GetProgramRamUsageMb(prog);
-            cpuLoad += ComputerMetricsHelper.GetProgramCpuUsagePercent(prog);
+            cpuUnits += ComputerMetricsHelper.GetProgramCpuUnits(prog);
         }
         stats.UsedRamMb = usedRam;
-        stats.CurrentCpuLoadPercent = cpuLoad;
+        stats.UsedCpuUnits = cpuUnits;
+        stats.CurrentCpuLoadPercent = stats.CpuCapacity > 0f
+            ? MathF.Min(999f, (cpuUnits / stats.CpuCapacity) * 100f)
+            : 0f;
 
         // Sync NetworkBandwidth & DeviceNetwork state based strictly on physical NetworkCard + NetworkWire.
         if (stats.HasNetworkCard && !comp.NetworkWireCut && comp.IsPowered)
@@ -699,6 +1520,8 @@ public sealed partial class OxydComputerSystem : EntitySystem
     {
         if (!_computerQuery.Resolve(compUid, ref comp, false))
             return;
+
+        SyncHostPowerState(compUid, comp);
 
         if (!_statsQuery.TryComp(compUid, out var stats))
         {
@@ -761,12 +1584,22 @@ public sealed partial class OxydComputerSystem : EntitySystem
         }
 
         var bootRam = execFile.RamUsageMb;
+        var bootCpuUnits = Math.Max(0.5f, execFile.CpuUsagePercent);
         if (execProto.TryComp<ProgramComponent>(out var defProg, EntityManager.ComponentFactory))
+        {
             bootRam = Math.Max(1, defProg.RamUsageMb);
+            bootCpuUnits = Math.Max(0.5f, defProg.CpuUsagePercent);
+        }
 
-        if (bootRam > stats.RamMb || stats.MaxConcurrentPrograms < 1)
+        if (bootRam > stats.RamMb)
         {
             FailBoot(compUid, comp, ComputerBootState.NoRam, $"BOOT FAILURE: '{firstPath}' requires {bootRam} QB RAM ({stats.RamMb} QB installed).");
+            return;
+        }
+
+        if (bootCpuUnits > stats.CpuCapacity)
+        {
+            FailBoot(compUid, comp, ComputerBootState.NoCpu, $"BOOT FAILURE: '{firstPath}' requires {bootCpuUnits:0} CPU units ({stats.CpuCapacity:0} available).");
             return;
         }
 
@@ -811,10 +1644,17 @@ public sealed partial class OxydComputerSystem : EntitySystem
         comp.BootState = ComputerBootState.Running;
         comp.BootError = string.Empty;
 
+        // Force re-authentication on every clean boot whenever a password/key/ID lock is configured.
+        if (HasSoftwareLockConfigured(comp))
+            EngageSoftwareLock(compUid, comp);
+
         stats.IsBooted = true;
         stats.BootError = string.Empty;
         stats.UsedRamMb = ComputerMetricsHelper.GetProgramRamUsageMb(pComp);
-        stats.CurrentCpuLoadPercent = ComputerMetricsHelper.GetProgramCpuUsagePercent(pComp);
+        stats.UsedCpuUnits = ComputerMetricsHelper.GetProgramCpuUnits(pComp);
+        stats.CurrentCpuLoadPercent = stats.CpuCapacity > 0f
+            ? MathF.Min(999f, (stats.UsedCpuUnits / stats.CpuCapacity) * 100f)
+            : 0f;
         Dirty(compUid, comp);
         Dirty(compUid, stats);
 
@@ -869,6 +1709,10 @@ public sealed partial class OxydComputerSystem : EntitySystem
         comp.ActiveProgram = null;
         comp.IsBooted = false;
         comp.BootState = ComputerBootState.Off;
+        comp.OsAuthUserName = string.Empty;
+        comp.OsAuthJobTitle = string.Empty;
+        comp.OsAuthLabel = string.Empty;
+        comp.OsAuthAccessTags.Clear();
         if (manualShutdown)
         {
             comp.ManuallyShutDown = true;
@@ -901,10 +1745,27 @@ public sealed partial class OxydComputerSystem : EntitySystem
         RefreshComputerBootState(compUid, comp);
     }
 
+    /// <summary>
+    /// Updates a running program's dynamic runtime CPU workload bonus and recalculates computer CPU load.
+    /// </summary>
+    public void SetProgramDynamicCpuBonus(EntityUid progUid, float bonus)
+    {
+        if (!_programQuery.TryComp(progUid, out var prog) || prog.Computer is not { Valid: true } compUid)
+            return;
+
+        var clamped = Math.Max(0f, bonus);
+        if (MathF.Abs(prog.DynamicCpuUsageBonus - clamped) < 0.01f)
+            return;
+
+        prog.DynamicCpuUsageBonus = clamped;
+        Dirty(progUid, prog);
+        RecalculateHardwareStats(compUid);
+    }
+
     private void TrimExcessProgramsToHardware(EntityUid compUid, OxydComputerComponent comp, ComputerStatsComponent stats)
     {
         var nonBoot = comp.RunningPrograms.Where(p => p != comp.BootProgram).ToList();
-        while (nonBoot.Count > 0 && (comp.RunningPrograms.Count > stats.MaxConcurrentPrograms || stats.UsedRamMb > stats.RamMb))
+        while (nonBoot.Count > 0 && (stats.UsedCpuUnits > stats.CpuCapacity || stats.UsedRamMb > stats.RamMb))
         {
             var victim = nonBoot[^1];
             nonBoot.RemoveAt(nonBoot.Count - 1);
@@ -966,16 +1827,27 @@ public sealed partial class OxydComputerSystem : EntitySystem
             return false;
         }
 
+        if (progProto.TryComp<ProgramComponent>(out var defComp, EntityManager.ComponentFactory) &&
+            defComp.IsOperatingSystem)
+        {
+            error = $"'{resolvedPath}' is an operating system kernel and cannot run as a child program. Use 'boot {resolvedPath}' to switch OS.";
+            return false;
+        }
+
         var ramNeeded = execFile.RamUsageMb;
-        if (progProto.TryComp<ProgramComponent>(out var defComp, EntityManager.ComponentFactory))
+        var cpuUnitsNeeded = Math.Max(0.5f, execFile.CpuUsagePercent);
+        if (defComp != null)
+        {
             ramNeeded = Math.Max(1, defComp.RamUsageMb);
+            cpuUnitsNeeded = Math.Max(0.5f, defComp.CpuUsagePercent);
+        }
 
         RecalculateHardwareStats(compUid, comp);
         var stats = Comp<ComputerStatsComponent>(compUid);
 
-        if (comp.RunningPrograms.Count >= stats.MaxConcurrentPrograms)
+        if (stats.UsedCpuUnits + cpuUnitsNeeded > stats.CpuCapacity)
         {
-            error = $"CPU limit reached ({comp.RunningPrograms.Count}/{stats.MaxConcurrentPrograms} active programs).";
+            error = $"Insufficient CPU capacity: needs {cpuUnitsNeeded:0} units, only {Math.Max(0f, stats.CpuCapacity - stats.UsedCpuUnits):0} available (CPU load {stats.CurrentCpuLoadPercent:0}%).";
             return false;
         }
 
@@ -1190,6 +2062,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats = Comp<ComputerStatsComponent>(compUid);
         }
 
+        if (IsComputerUnpowered(compUid, comp, stats))
+        {
+            _ui.CloseUis(compUid);
+            return;
+        }
+
         if (!comp.IsBooted && comp.AutoBootWhenPowered)
             RefreshComputerBootState(compUid, comp);
 
@@ -1340,6 +2218,24 @@ public sealed partial class OxydComputerSystem : EntitySystem
             Dirty(compUid, comp);
         }
 
+        var requiredAccessLabels = new List<string>();
+        foreach (var tag in comp.RequiredAccessTags)
+        {
+            if (_proto.TryIndex(tag, out var accessProto))
+                requiredAccessLabels.Add(accessProto.GetAccessLevelName());
+            else
+                requiredAccessLabels.Add(tag.Id);
+        }
+
+        var keyLabelDisplay = !string.IsNullOrEmpty(comp.LockKeySecret)
+            ? (!string.IsNullOrWhiteSpace(comp.LockKeyId) ? $"{comp.LockKeyLabel} [{comp.LockKeyId}]" : comp.LockKeyLabel)
+            : string.Empty;
+
+        var hostDisplayName = comp.HostMachine is { Valid: true } displayHost && Exists(displayHost)
+            ? MetaData(displayHost).EntityName
+            : MetaData(compUid).EntityName;
+        var isHostLocked = IsHostLocked(compUid, comp);
+
         var stats = CompOrNull<ComputerStatsComponent>(compUid) ?? EnsureComp<ComputerStatsComponent>(compUid);
         var state = new ComputerDisplayUiState(
             MetaData(compUid).EntityName,
@@ -1365,7 +2261,16 @@ public sealed partial class OxydComputerSystem : EntitySystem
             stats.HasHardDrive,
             stats.HasNetworkCard,
             stats.HasDataPort,
-            dockInViewport);
+            dockInViewport,
+            comp.SoftwareLocked,
+            !string.IsNullOrEmpty(comp.LockPassword) || !string.IsNullOrEmpty(comp.SshPassword),
+            !string.IsNullOrEmpty(comp.LockKeySecret),
+            keyLabelDisplay,
+            requiredAccessLabels,
+            comp.LockRequiresAllAccess,
+            comp.LockStatusMessage,
+            isHostLocked,
+            hostDisplayName);
 
         UpdateHostScreenVisuals(compUid, comp);
 
@@ -1380,8 +2285,9 @@ public sealed partial class OxydComputerSystem : EntitySystem
             return;
 
         var desiredScreen = string.Empty;
+        var fgUid = comp.ActiveProgram ?? comp.BootProgram;
         if (comp.IsBooted &&
-            comp.ActiveProgram is { } activeUid &&
+            fgUid is { } activeUid &&
             Exists(activeUid) &&
             _programQuery.TryComp(activeUid, out var activeProg) &&
             !string.IsNullOrWhiteSpace(activeProg.ScreenState))
@@ -1531,12 +2437,14 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 if (packet != null)
                 {
                     _deviceLink.InvokeDirect(hostUid, srcPortProto, packet);
+                    LogDeviceLinkPacketTraffic(compUid, hostUid, portId, isOutgoing: true, packet.PacketType, packet, null);
                 }
                 else
                 {
                     _deviceLink.InvokeDirect(hostUid, srcPortProto, payload);
                     if (string.IsNullOrEmpty(command))
                         _deviceLink.SendSignal(hostUid, srcPortProto, true);
+                    LogDeviceLinkPacketTraffic(compUid, hostUid, portId, isOutgoing: true, command, null, payload);
                 }
                 return true;
             }
@@ -1555,10 +2463,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
                 {
                     if (actor != null)
                         packet.SetReference("Actor", actor.Value);
+                    LogDeviceLinkPacketTraffic(compUid, hostUid, portId, isOutgoing: true, packet.PacketType, packet, null);
                     _deviceLink.InvokeDirect(compUid, hostUid, sinkPortProto, packet);
                 }
                 else
                 {
+                    LogDeviceLinkPacketTraffic(compUid, hostUid, portId, isOutgoing: true, command, null, payload);
                     _deviceLink.InvokeDirect(compUid, hostUid, sinkPortProto, payload);
                 }
                 return true;
@@ -1572,11 +2482,20 @@ public sealed partial class OxydComputerSystem : EntitySystem
         if (_sourceQuery.TryComp(compUid, out var ownSrc) && _deviceLink.GetSourcePorts((compUid, ownSrc)).Contains(srcPortProto))
         {
             if (packet != null)
+            {
+                LogDeviceLinkPacketTraffic(compUid, compUid, portId, isOutgoing: true, packet.PacketType, packet, null);
                 _deviceLink.InvokePort((compUid, ownSrc), srcPortProto, ref packet);
+            }
             else if (!string.IsNullOrEmpty(command))
+            {
+                LogDeviceLinkPacketTraffic(compUid, compUid, portId, isOutgoing: true, command, null, payload);
                 _deviceLink.InvokePort((compUid, ownSrc), srcPortProto, ref payload);
+            }
             else
+            {
+                LogDeviceLinkPacketTraffic(compUid, compUid, portId, isOutgoing: true, "signal", null, payload);
                 _deviceLink.SendSignal((compUid, ownSrc), srcPortProto, true);
+            }
 
             return true;
         }
@@ -1585,11 +2504,13 @@ public sealed partial class OxydComputerSystem : EntitySystem
         {
             if (packet != null)
             {
+                LogDeviceLinkPacketTraffic(compUid, compUid, portId, isOutgoing: true, packet.PacketType, packet, null);
                 var sigPkt = new SignalReceivedEvent<ComputerPacket>(sinkPortProto, packet, actor);
                 RaiseLocalEvent(compUid, ref sigPkt);
             }
             else
             {
+                LogDeviceLinkPacketTraffic(compUid, compUid, portId, isOutgoing: true, command, null, payload);
                 var sigPayload = new SignalReceivedEvent<ComputerDeviceLinkPayload>(sinkPortProto, payload, actor);
                 RaiseLocalEvent(compUid, ref sigPayload);
             }
@@ -1698,6 +2619,113 @@ public sealed partial class OxydComputerSystem : EntitySystem
         return results;
     }
 
+    public void LogDeviceLinkPacketTraffic(
+        EntityUid sourceCompUid,
+        EntityUid targetUid,
+        string portId,
+        bool isOutgoing,
+        string command,
+        ComputerPacket? packet = null,
+        ComputerDeviceLinkPayload? payload = null)
+    {
+        if (!Exists(sourceCompUid))
+            return;
+
+        var effectiveCmd = !string.IsNullOrWhiteSpace(packet?.PacketType)
+            ? packet.PacketType
+            : !string.IsNullOrWhiteSpace(command)
+                ? command
+                : "signal";
+
+        var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["SinkPort"] = portId,
+            ["Command"] = effectiveCmd
+        };
+        var editableEntries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var argDisplayParts = new List<string>();
+
+        if (packet != null)
+        {
+            foreach (var (k, v) in packet.Data)
+            {
+                if (k.StartsWith("__", StringComparison.Ordinal) || k.Equals("tampered", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var strVal = v?.ToString() ?? string.Empty;
+                if (string.IsNullOrEmpty(strVal))
+                    continue;
+
+                parameters[k] = strVal;
+                editableEntries[k] = strVal;
+
+                var clipped = strVal.Length > 72 ? $"{strVal[..69]}..." : strVal;
+                argDisplayParts.Add($"{k}={clipped}");
+            }
+        }
+        else if (payload != null && !string.IsNullOrWhiteSpace(payload.Argument))
+        {
+            parameters["Argument"] = payload.Argument;
+            editableEntries["Argument"] = payload.Argument;
+            argDisplayParts.Add($"Argument={payload.Argument}");
+        }
+
+        var argsText = argDisplayParts.Count > 0 ? $" [{string.Join(", ", argDisplayParts)}]" : string.Empty;
+        var summary = isOutgoing
+            ? $"Packet sent to {portId} ({effectiveCmd}){argsText}"
+            : $"Packet received on {portId} ({effectiveCmd}){argsText}";
+
+        var isStatusPolling =
+            effectiveCmd.Equals("status", StringComparison.OrdinalIgnoreCase) ||
+            effectiveCmd.Equals("status_request", StringComparison.OrdinalIgnoreCase) ||
+            effectiveCmd.EndsWith("Status", StringComparison.OrdinalIgnoreCase);
+
+        // Persist packet traffic in the computer's /sys/system.log so players can inspect device packet flow.
+        if (_fileSystem.TryFindFileSystem(sourceCompUid, out var driveUid, out var fs) && driveUid != null)
+        {
+            var shouldWriteSysLog = !isStatusPolling || !isOutgoing;
+            if (shouldWriteSysLog)
+            {
+                var tag = isOutgoing ? "PKT-OUT" : "PKT-IN";
+                var skipDuplicateStatus = isStatusPolling &&
+                                          fs.LogEntries is { Count: > 0 } entries &&
+                                          entries.Last().Contains(summary, StringComparison.Ordinal);
+                if (!skipDuplicateStatus)
+                    _fileSystem.LogSystemActivity(driveUid.Value, tag, summary, comp: fs);
+            }
+        }
+
+        var compGuid = _guid.GetGuid(sourceCompUid);
+        var targetGuid = Exists(targetUid) ? _guid.GetGuid(targetUid) : "HOST";
+        var rawKv = string.Join(";", parameters.Select(kv => $"{kv.Key}={kv.Value}"));
+
+        var netPkt = new NetworkDataPacket
+        {
+            SourceAddress = isOutgoing ? compGuid : targetGuid,
+            TargetAddress = isOutgoing ? targetGuid : compGuid,
+            Protocol = isOutgoing ? $"DEVLINK:{portId}" : $"DEVLINK-RX:{portId}",
+            PayloadSummary = summary,
+            RawPayload = rawKv,
+            ByteSize = Math.Max(64, summary.Length * 2 + 32),
+            Timestamp = _timing.CurTime,
+            IsPlayerRelevant = !isStatusPolling,
+            IsEditable = isOutgoing && !isStatusPolling,
+            Parameters = parameters,
+            EditableEntries = editableEntries
+        };
+
+        _bandwidth.StorePacket(sourceCompUid, netPkt);
+
+        if (_computerQuery.TryComp(sourceCompUid, out var comp) &&
+            _statsQuery.TryComp(sourceCompUid, out var stats) &&
+            stats.HasNetworkCard &&
+            !comp.NetworkWireCut &&
+            comp.IsPowered)
+        {
+            _bandwidth.LogPacketToRouters(netPkt, senderUid: sourceCompUid);
+        }
+    }
+
     private void RelayDeviceLinkToPrograms(
         EntityUid compUid,
         EntityUid sourceEntity,
@@ -1712,6 +2740,12 @@ public sealed partial class OxydComputerSystem : EntitySystem
 
         if (!comp.AllowDeviceLink || comp.DeviceLinkWireCut)
             return;
+
+        if (packet != null || payload != null)
+        {
+            var sender = trigger is { Valid: true } trig ? trig : sourceEntity;
+            LogDeviceLinkPacketTraffic(compUid, sender, port, isOutgoing: false, packet?.PacketType ?? payload?.Command ?? "signal", packet, payload);
+        }
 
         if (packet != null)
             RaiseLocalEvent(new ComputerSinkPacketReceivedEvent(compUid, sourceEntity, port, packet));

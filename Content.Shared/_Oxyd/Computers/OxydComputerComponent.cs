@@ -1,4 +1,5 @@
 using Content.Shared._Oxyd.Computers.Packets;
+using Content.Shared.Access;
 using Content.Shared.DeviceLinking;
 using Content.Shared.DeviceLinking.Payloads;
 using Robust.Shared.GameStates;
@@ -93,6 +94,12 @@ public sealed partial class OxydComputerComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool AllowDeviceLink = true;
+
+    /// <summary>
+    /// Whether this device advertises itself to network probe / NetNavigator discovery queries.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool NetworkDiscoverable = true;
 
     [DataField, AutoNetworkedField]
     public bool IsPowered = true;
@@ -190,6 +197,81 @@ public sealed partial class OxydComputerComponent : Component
     [DataField]
     public string SshPassword = string.Empty;
 
+    /// <summary>
+    /// When true, this computer remains locally accessible, but remote connections (SSH / remote screen)
+    /// require either a configured password/key or an access level in <see cref="RemoteAccessTags"/>
+    /// (defaulting to SystemAdmin on standard corporate NTOS computers and PDAs).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool RemoteLocked;
+
+    /// <summary>
+    /// Access levels permitted to remotely manage this device when running a non-jailbroken OS.
+    /// Defaults to SystemAdmin on standard NTOS installations.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public List<ProtoId<AccessLevelPrototype>> RemoteAccessTags = new() { "SystemAdmin" };
+
+    /// <summary>
+    /// Software security lock state configured via the Security Lock app (/bin/security_lock.nte).
+    /// When true, the computer displays a full-screen lock prompt and blocks all program actions until unlocked.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool SoftwareLocked;
+
+    /// <summary>
+    /// Server-only passphrase used to unlock this computer's software lock (and SSH).
+    /// Intentionally not networked to clients.
+    /// </summary>
+    [DataField]
+    public string LockPassword = string.Empty;
+
+    /// <summary>
+    /// Human-readable label for the bound key-based password (shown on the lock screen as a hint).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public string LockKeyLabel = string.Empty;
+
+    /// <summary>
+    /// Short public fingerprint of the bound key-based password (safe to show on UI).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public string LockKeyId = string.Empty;
+
+    /// <summary>
+    /// Server-only secret token matched against <see cref="FileSystem.PasswordKeyVirtualFile.KeySecret"/>
+    /// (or entered directly) for key-based password unlock and key-based SSH auth.
+    /// Intentionally not networked to clients.
+    /// </summary>
+    [DataField]
+    public string LockKeySecret = string.Empty;
+
+    /// <summary>
+    /// Optional set of ID card access levels allowed to unlock this computer.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public List<ProtoId<AccessLevelPrototype>> RequiredAccessTags = new();
+
+    /// <summary>
+    /// When true, an ID card / .acc file must satisfy ALL tags in <see cref="RequiredAccessTags"/>;
+    /// when false, ANY single matching tag unlocks the computer.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool LockRequiresAllAccess = true;
+
+    /// <summary>
+    /// Transient feedback displayed on the software lock screen (e.g. "Invalid password or key.").
+    /// </summary>
+    [AutoNetworkedField]
+    public string LockStatusMessage = string.Empty;
+
+    /// <summary>
+    /// Server-only monotonic counter incremented whenever this computer engages its software lock,
+    /// reboots into a locked state, or changes lock credentials. Used to invalidate unauthenticated/stale SSH sessions.
+    /// </summary>
+    [DataField]
+    public int LockEpoch;
+
     [ViewVariables]
     public bool InitializingHardware;
 
@@ -203,6 +285,26 @@ public sealed partial class OxydComputerComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public bool DockInViewport;
+
+    /// <summary>
+    /// OS-level authenticated user display name established by swiping an ID card on this computer.
+    /// Read/control applications (Cameras, APC, Atmos, Station Records, Comms) inherit this session's
+    /// access tags without requiring a physically retained ID card.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public string OsAuthUserName = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public string OsAuthJobTitle = string.Empty;
+
+    [DataField, AutoNetworkedField]
+    public string OsAuthLabel = string.Empty;
+
+    /// <summary>
+    /// Server-side set of access tags granted by the currently authenticated OS user session.
+    /// </summary>
+    [ViewVariables]
+    public HashSet<ProtoId<AccessLevelPrototype>> OsAuthAccessTags = new();
 }
 
 /// <summary>
@@ -289,6 +391,15 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
     public bool HasNetworkCard { get; }
     public bool HasDataPort { get; }
     public bool DockInViewport { get; }
+    public bool IsSoftwareLocked { get; }
+    public bool HasPasswordLock { get; }
+    public bool HasKeyLock { get; }
+    public string LockKeyLabel { get; }
+    public List<string> RequiredAccessLabels { get; }
+    public bool LockRequiresAllAccess { get; }
+    public string LockStatusMessage { get; }
+    public bool IsHostLocked { get; }
+    public string HostDisplayName { get; }
 
     public ComputerDisplayUiState(
         string computerName,
@@ -314,7 +425,16 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
         bool hasHardDrive,
         bool hasNetworkCard,
         bool hasDataPort,
-        bool dockInViewport = false)
+        bool dockInViewport = false,
+        bool isSoftwareLocked = false,
+        bool hasPasswordLock = false,
+        bool hasKeyLock = false,
+        string lockKeyLabel = "",
+        List<string>? requiredAccessLabels = null,
+        bool lockRequiresAllAccess = true,
+        string lockStatusMessage = "",
+        bool isHostLocked = false,
+        string hostDisplayName = "")
     {
         ComputerName = computerName;
         DeviceGuid = deviceGuid;
@@ -340,11 +460,37 @@ public sealed class ComputerDisplayUiState : BoundUserInterfaceState
         HasNetworkCard = hasNetworkCard;
         HasDataPort = hasDataPort;
         DockInViewport = dockInViewport;
+        IsSoftwareLocked = isSoftwareLocked;
+        HasPasswordLock = hasPasswordLock;
+        HasKeyLock = hasKeyLock;
+        LockKeyLabel = lockKeyLabel;
+        RequiredAccessLabels = requiredAccessLabels ?? new List<string>();
+        LockRequiresAllAccess = lockRequiresAllAccess;
+        LockStatusMessage = lockStatusMessage;
+        IsHostLocked = isHostLocked;
+        HostDisplayName = hostDisplayName;
     }
 }
 
 [Serializable, NetSerializable]
 public sealed class ComputerRetryBootMessage : BoundUserInterfaceMessage;
+
+[Serializable, NetSerializable]
+public sealed class ComputerUnlockWithPasswordMessage : BoundUserInterfaceMessage
+{
+    public string Secret { get; }
+
+    public ComputerUnlockWithPasswordMessage(string secret)
+    {
+        Secret = secret;
+    }
+}
+
+[Serializable, NetSerializable]
+public sealed class ComputerUnlockWithKeyFileMessage : BoundUserInterfaceMessage;
+
+[Serializable, NetSerializable]
+public sealed class ComputerUnlockWithIdMessage : BoundUserInterfaceMessage;
 
 [Serializable, NetSerializable]
 public sealed partial class ComputerDeviceLinkPayload : ISignalNetworkPayload

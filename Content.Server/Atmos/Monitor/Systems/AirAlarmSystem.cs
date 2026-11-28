@@ -323,7 +323,7 @@ public sealed partial class AirAlarmSystem : EntitySystem
             var safeGases = new HashSet<Gas>();
             foreach (var g in src.FilterGases)
             {
-                if (Enum.IsDefined(typeof(Gas), g))
+                if (Enum.IsDefined(g))
                     safeGases.Add(g);
             }
 
@@ -368,14 +368,14 @@ public sealed partial class AirAlarmSystem : EntitySystem
         else if (cmd is "set_threshold" or "set_all_thresholds" && packet != null)
         {
             var typeInt = packet.GetInt("ThresholdType", (int) AtmosMonitorThresholdType.Pressure);
-            if (!Enum.IsDefined(typeof(AtmosMonitorThresholdType), typeInt))
+            if (!Enum.IsDefined((AtmosMonitorThresholdType) typeInt))
                 return;
             var thresholdType = (AtmosMonitorThresholdType) typeInt;
             var gasInt = packet.GetInt("Gas", -1);
             Gas? gas = null;
             if (gasInt >= 0)
             {
-                if (!Enum.IsDefined(typeof(Gas), gasInt))
+                if (gasInt is < sbyte.MinValue or > sbyte.MaxValue || !Enum.IsDefined((Gas) gasInt))
                     return;
                 gas = (Gas) gasInt;
             }
@@ -415,8 +415,13 @@ public sealed partial class AirAlarmSystem : EntitySystem
                 foreach (var entry in gasRaw.Split('~', StringSplitOptions.RemoveEmptyEntries))
                 {
                     var kv = entry.Split('=', 2);
-                    if (kv.Length == 2 && int.TryParse(kv[0], out var gIdx) && Enum.IsDefined(typeof(Gas), gIdx))
+                    if (kv.Length == 2 &&
+                        int.TryParse(kv[0], out var gIdx) &&
+                        gIdx is >= sbyte.MinValue and <= sbyte.MaxValue &&
+                        Enum.IsDefined((Gas) gIdx))
+                    {
                         gasThresholds[(Gas) gIdx] = AtmosControlCodec.DecodeThreshold(kv[1]).ToThreshold();
+                    }
                 }
             }
 

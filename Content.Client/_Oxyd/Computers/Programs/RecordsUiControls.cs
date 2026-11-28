@@ -955,7 +955,7 @@ public sealed class CriminalRecordsUiControl : ProgramUiControl
         _reasonEdit = new ContentLineEdit
         {
             Name = "CriminalReasonEdit",
-            PlaceHolder = "Reason (e.g. Grand theft, assault)...",
+            PlaceHolder = "Reason...",
             HorizontalExpand = true,
             MinHeight = 26f
         };

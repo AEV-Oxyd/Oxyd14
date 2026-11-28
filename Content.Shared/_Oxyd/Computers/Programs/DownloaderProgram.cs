@@ -16,6 +16,31 @@ public sealed partial class DownloaderProgramComponent : Component
 
     [DataField]
     public string? SelectedServerGuid;
+
+    /// <summary>
+    /// Last interacting actor used to keep access visibility consistent across background transfer progress ticks.
+    /// </summary>
+    [ViewVariables]
+    public EntityUid? LastActor;
+}
+
+[Serializable, NetSerializable]
+public sealed class DownloaderTransferDto
+{
+    public string Path { get; }
+    public bool IsUpload { get; }
+    public int TransferredBytes { get; }
+    public int TotalBytes { get; }
+    public int Percent { get; }
+
+    public DownloaderTransferDto(string path, bool isUpload, int transferredBytes, int totalBytes)
+    {
+        Path = path;
+        IsUpload = isUpload;
+        TransferredBytes = transferredBytes;
+        TotalBytes = totalBytes;
+        Percent = totalBytes > 0 ? Math.Clamp(transferredBytes * 100 / totalBytes, 0, 100) : 100;
+    }
 }
 
 [Serializable, NetSerializable]
@@ -30,6 +55,8 @@ public sealed class RepositoryItemDto
     public bool IsDownloaded { get; }
     public string PrototypeId { get; }
     public List<ProtoId<LatheRecipePrototype>> Recipes { get; }
+    public bool HasDownloadAccess { get; }
+    public string RequiredAccessSummary { get; }
 
     public RepositoryItemDto(
         string id,
@@ -40,7 +67,9 @@ public sealed class RepositoryItemDto
         int size,
         bool isDownloaded,
         string prototypeId = "",
-        List<ProtoId<LatheRecipePrototype>>? recipes = null)
+        List<ProtoId<LatheRecipePrototype>>? recipes = null,
+        bool hasDownloadAccess = true,
+        string requiredAccessSummary = "")
     {
         Id = id;
         Name = name;
@@ -51,6 +80,8 @@ public sealed class RepositoryItemDto
         IsDownloaded = isDownloaded;
         PrototypeId = prototypeId;
         Recipes = recipes ?? new();
+        HasDownloadAccess = hasDownloadAccess;
+        RequiredAccessSummary = requiredAccessSummary;
     }
 }
 
@@ -80,6 +111,7 @@ public sealed class DownloaderUiState : BoundUserInterfaceState
     public string SelectedCategory { get; }
     public List<RepositoryItemDto> Items { get; }
     public List<LocalUploadCandidateDto> LocalUploadables { get; }
+    public List<DownloaderTransferDto> ActiveTransfers { get; }
 
     public DownloaderUiState(
         string serverName,
@@ -91,7 +123,8 @@ public sealed class DownloaderUiState : BoundUserInterfaceState
         string statusMessage,
         string selectedCategory,
         List<RepositoryItemDto> items,
-        List<LocalUploadCandidateDto> localUploadables)
+        List<LocalUploadCandidateDto> localUploadables,
+        List<DownloaderTransferDto>? activeTransfers = null)
     {
         ServerName = serverName;
         ServerGuid = serverGuid;
@@ -103,6 +136,7 @@ public sealed class DownloaderUiState : BoundUserInterfaceState
         SelectedCategory = selectedCategory;
         Items = items;
         LocalUploadables = localUploadables;
+        ActiveTransfers = activeTransfers ?? new();
     }
 }
 
@@ -113,7 +147,8 @@ public enum DownloaderAction : byte
     SelectCategory,
     DownloadItem,
     UploadFile,
-    CancelTransfer
+    CancelTransfer,
+    CancelItem
 }
 
 [Serializable, NetSerializable]

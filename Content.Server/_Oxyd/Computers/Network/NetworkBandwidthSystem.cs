@@ -11,6 +11,9 @@ using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Network;
 
+[ByRefEvent]
+public readonly record struct RouterPacketRecordedEvent(NetworkDataPacket Packet);
+
 /// <summary>
 /// Active-component network bandwidth manager and per-router time-based transfer queue.
 /// Only iterates entities with <see cref="ActiveNetworkBandwidthComponent"/> or
@@ -356,6 +359,74 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         return false;
     }
 
+    public bool HasActiveTransferForProgramPath(EntityUid programUid, string targetPath, bool isUpload)
+    {
+        var query = EntityQueryEnumerator<ActiveRouterTransferQueueComponent>();
+        while (query.MoveNext(out _, out var queue))
+        {
+            foreach (var xfer in queue.Transfers)
+            {
+                if (xfer.InitiatorProgramUid == programUid &&
+                    xfer.IsUpload == isUpload &&
+                    string.Equals(xfer.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public List<QueuedRouterTransfer> GetTransfersForProgram(EntityUid programUid)
+    {
+        var list = new List<QueuedRouterTransfer>();
+        var query = EntityQueryEnumerator<ActiveRouterTransferQueueComponent>();
+        while (query.MoveNext(out _, out var queue))
+        {
+            foreach (var xfer in queue.Transfers)
+            {
+                if (xfer.InitiatorProgramUid == programUid)
+                    list.Add(xfer);
+            }
+        }
+
+        return list;
+    }
+
+    public bool CancelTransferForProgramByPath(EntityUid programUid, string targetPath, string reason = "Transfer cancelled.")
+    {
+        var cancelled = false;
+        var query = EntityQueryEnumerator<ActiveRouterTransferQueueComponent, NetworkRouterComponent>();
+        while (query.MoveNext(out var routerUid, out var queue, out var router))
+        {
+            var changed = false;
+            for (var i = queue.Transfers.Count - 1; i >= 0; i--)
+            {
+                var xfer = queue.Transfers[i];
+                if (xfer.InitiatorProgramUid != programUid ||
+                    !string.Equals(xfer.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                queue.Transfers.RemoveAt(i);
+                RemoveRouterConnectionRecord(router, xfer.ConnectionId);
+                xfer.OnAborted?.Invoke(xfer, reason);
+                changed = true;
+                cancelled = true;
+            }
+
+            if (changed)
+                Dirty(routerUid, router);
+
+            if (queue.Transfers.Count == 0)
+                RemCompDeferred<ActiveRouterTransferQueueComponent>(routerUid);
+        }
+
+        return cancelled;
+    }
+
     public NetworkDataPacket StorePacket(
         EntityUid uid,
         string sourceAddr,
@@ -446,6 +517,12 @@ public sealed partial class NetworkBandwidthSystem : EntitySystem
         }
 
         Dirty(router);
+
+        if (pkt.IsPlayerRelevant)
+        {
+            var ev = new RouterPacketRecordedEvent(pkt);
+            RaiseLocalEvent(router.Owner, ref ev);
+        }
     }
 
     public void RecordDataTransmitted(EntityUid uid, int byteCount, bool isUpload = false, NetworkBandwidthComponent? comp = null)

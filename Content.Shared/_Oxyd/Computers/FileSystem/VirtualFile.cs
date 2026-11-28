@@ -371,3 +371,49 @@ public sealed partial class AccessCodesVirtualFile : VirtualFile
         return copy;
     }
 }
+
+/// <summary>
+/// Key-based password file stored under /keys/*.key.
+/// Can be bound to a computer's Security Lock and copied to removable disks or remote hosts
+/// to authenticate locally on the lock screen or over SSH without typing a passphrase.
+/// </summary>
+[Serializable, NetSerializable]
+public sealed partial class PasswordKeyVirtualFile : VirtualFile
+{
+    [DataField] public string KeyLabel = "System Key";
+    [DataField] public string KeyId = string.Empty;
+    [DataField] public string KeySecret = string.Empty;
+    [DataField] public string TargetGuid = string.Empty;
+
+    public PasswordKeyVirtualFile()
+    {
+        Extension = "key";
+        Directory = "/keys/";
+        Size = 512;
+    }
+
+    public override string FileTypeTag => nameof(PasswordKeyVirtualFile);
+
+    public override int CalculateRealSize(IPrototypeManager proto, IComponentFactory? compFactory = null)
+    {
+        var total = 128 +
+                    Encoding.UTF8.GetByteCount(KeyLabel ?? string.Empty) +
+                    Encoding.UTF8.GetByteCount(KeyId ?? string.Empty) +
+                    Encoding.UTF8.GetByteCount(KeySecret ?? string.Empty) +
+                    Encoding.UTF8.GetByteCount(TargetGuid ?? string.Empty);
+        return Math.Max(256, total);
+    }
+
+    public override VirtualFile Clone()
+    {
+        var copy = new PasswordKeyVirtualFile
+        {
+            KeyLabel = KeyLabel,
+            KeyId = KeyId,
+            KeySecret = KeySecret,
+            TargetGuid = TargetGuid
+        };
+        CopyBaseFields(copy);
+        return copy;
+    }
+}

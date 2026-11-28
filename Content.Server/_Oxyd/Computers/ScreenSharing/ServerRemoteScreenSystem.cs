@@ -90,14 +90,31 @@ public sealed partial class ServerRemoteScreenSystem : SharedRemoteScreenSystem
             return false;
         }
 
-        if (!targetComp.AllowRemoteControl || targetComp.RemoteControlWireCut || targetComp.PowerWireCut)
+        var isPhysicalLink = TryComp<TerminalProgramComponent>(terminalProgUid, out var termComp) &&
+                             termComp.IsPhysicalLink &&
+                             termComp.PhysicalTargetComputer == targetComputerUid;
+
+        if (!isPhysicalLink &&
+            (!targetComp.AllowRemoteControl ||
+             targetComp.RemoteControlWireCut ||
+             targetComp.PowerWireCut ||
+             (targetComp.BootProgram is { Valid: true } jbBootUid &&
+              TryComp<ProgramComponent>(jbBootUid, out var jbBootProg) &&
+              jbBootProg.IsJailbrokenOs)))
         {
-            error = "Remote control disabled or motherboard wire severed on target.";
+            error = "Remote control disabled on target.";
+            return false;
+        }
+
+        if (targetComp.PowerWireCut)
+        {
+            error = "Target computer power bus is severed.";
             return false;
         }
 
         var sourceCompUid = _router.ResolveComputerFromProgram(terminalProgUid);
-        if (sourceCompUid.IsValid() &&
+        if (!isPhysicalLink &&
+            sourceCompUid.IsValid() &&
             !_router.AreEndpointsConnected(sourceCompUid, targetComputerUid, out _, out var netErr))
         {
             error = netErr;

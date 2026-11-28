@@ -77,16 +77,14 @@ public sealed partial class RemoteScreenView : LayoutContainer, IInputRelayTarge
     private Control? _lastHoveredRemoteControl;
     private readonly Dictionary<BoundKeyFunction, (IInputRelayTarget relay, Control control)> _remoteHeldControls = new();
 
-    public bool IsPoppedOut => _activeTargetUi?.IsPoppedOut ?? false;
+    public bool IsPoppedOut => false;
 
     public void TogglePopOut()
     {
-        _activeTargetUi?.TogglePopOut();
     }
 
     public void SetPoppedOut(bool poppedOut)
     {
-        _activeTargetUi?.SetPoppedOut(poppedOut);
     }
 
     private Control? GetCaptureTarget()
@@ -1338,11 +1336,18 @@ public sealed partial class RemoteScreenView : LayoutContainer, IInputRelayTarge
 
         // Only close windows that were moved/kept offscreen solely for remote viewing.
         // Any target window open on the player's WindowRoot must stay open cleanly with normal controls.
+        // Always defer window.Close() so OnClose -> CloseUi never mutates SharedUserInterfaceSystem._queuedBuis
+        // while SharedUserInterfaceSystem.Update() is enumerating _queuedBuis during BUI disposal (e.g. walking away).
         if (wasStashedOffscreen && window != null && !window.Disposed)
         {
-            window.Close();
-            if (offscreenStash != null && window.Parent == offscreenStash)
-                offscreenStash.RemoveChild(window);
+            var stash = offscreenStash;
+            _uiManager.DeferAction(() =>
+            {
+                if (!window.Disposed)
+                    window.Close();
+                if (stash != null && !stash.Disposed && window.Parent == stash)
+                    stash.RemoveChild(window);
+            });
         }
 
         if (_routedBui != null)

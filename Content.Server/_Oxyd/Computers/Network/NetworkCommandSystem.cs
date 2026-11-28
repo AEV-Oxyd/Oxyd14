@@ -254,7 +254,7 @@ public sealed partial class NetworkCommandSystem : EntitySystem
 
     private bool ValidateRemotePacketAccess(EntityUid uid, OxydComputerComponent comp, string? authToken, bool requirePassword)
     {
-        if (!comp.IsBooted || comp.NetworkWireCut || comp.PowerWireCut || comp.RemoteControlWireCut || !comp.AllowRemoteControl)
+        if (!comp.IsBooted || comp.NetworkWireCut || !_computer.IsRemoteControlAllowed(uid, comp))
             return false;
 
         if (!_router.HasActiveNetworkCard(uid) || !_router.IsNetworkConnected(uid))
@@ -263,8 +263,20 @@ public sealed partial class NetworkCommandSystem : EntitySystem
         if (_computer.IsHostLocked(uid, comp))
             return false;
 
-        if (requirePassword && !string.IsNullOrEmpty(comp.SshPassword) && authToken != comp.SshPassword)
+        if (OxydComputerSystem.HasSoftwareLockConfigured(comp))
+        {
+            var tokenMatches =
+                (!string.IsNullOrEmpty(comp.SshPassword) && string.Equals(authToken, comp.SshPassword, StringComparison.Ordinal)) ||
+                (!string.IsNullOrEmpty(comp.LockPassword) && string.Equals(authToken, comp.LockPassword, StringComparison.Ordinal)) ||
+                (!string.IsNullOrEmpty(comp.LockKeySecret) && string.Equals(authToken, comp.LockKeySecret, StringComparison.Ordinal));
+
+            if (!tokenMatches)
+                return false;
+        }
+        else if (requirePassword && comp.RemoteLocked)
+        {
             return false;
+        }
 
         return true;
     }

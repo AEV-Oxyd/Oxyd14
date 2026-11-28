@@ -172,7 +172,9 @@ public sealed class ApcControlUiControl : ProgramUiControl
         _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
 
         var areaPrefix = state.IsRemoteConsole && !string.IsNullOrWhiteSpace(state.AreaName)
-            ? $"APC: {state.AreaName}\n"
+            ? (!string.IsNullOrWhiteSpace(state.SelectedTargetGuid)
+                ? $"APC: {state.AreaName} [{state.SelectedTargetGuid}]\n"
+                : $"APC: {state.AreaName}\n")
             : string.Empty;
         var trippedTag = state.BreakerTripped ? " [TRIPPED]" : string.Empty;
         _telemetryLabel.Text =
@@ -201,16 +203,16 @@ public sealed class ApcControlUiControl : ProgramUiControl
         };
 
         var apcLabel = string.IsNullOrWhiteSpace(state.AreaName) ? "APC" : state.AreaName;
-        var authText = state.IsTargetAuthorized
-            ? $"{apcLabel}: AUTHORIZED"
-            : $"{apcLabel}: LOCKED (ID / .acc)";
+        var guidText = !string.IsNullOrWhiteSpace(state.SelectedTargetGuid)
+            ? $"{apcLabel} [{state.SelectedTargetGuid}]"
+            : apcLabel;
         topBar.AddChild(new ContentLabel
         {
             Name = "ApcRemoteAuthStatusLabel",
-            Text = authText,
+            Text = guidText,
             ToolTip = state.IsTargetAuthorized
-                ? $"{apcLabel}: AUTHORIZED"
-                : $"{apcLabel}: LOCKED (Insert/Swipe authorized ID card or use .acc key)",
+                ? $"{guidText} — Authorized"
+                : $"{guidText} — Locked",
             HorizontalExpand = true,
             WordWrap = false,
             ClipText = true,
@@ -239,19 +241,6 @@ public sealed class ApcControlUiControl : ProgramUiControl
             };
             authBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.AuthorizeWithAcc, pathCopy));
             authActions.AddChild(authBtn);
-        }
-
-        if (state.IsTargetAuthorized)
-        {
-            var deauthBtn = new ContentButton
-            {
-                Name = "ApcRevokeAuthButton",
-                Text = "Deauth",
-                MinWidth = 64,
-                MinHeight = 24
-            };
-            deauthBtn.OnPressed += _ => SendProgramMessage(new ApcControlActionMessage(ApcControlAction.RevokeAuth));
-            authActions.AddChild(deauthBtn);
         }
         topBar.AddChild(authActions);
 
@@ -307,10 +296,13 @@ public sealed class ApcControlUiControl : ProgramUiControl
                         : t.MainBreakerEnabled
                             ? Color.FromHex("#44E088")
                             : Color.FromHex("#FF6666");
+                var markerLabel = !string.IsNullOrWhiteSpace(t.TargetGuid)
+                    ? $"{t.AreaName} [{t.TargetGuid}]"
+                    : t.AreaName;
                 markers.Add(new DeviceNavMapMarker(
                     devNet,
                     t.TargetGuid,
-                    t.AreaName,
+                    markerLabel,
                     t.GridEntity,
                     t.LocalPosition,
                     color,
@@ -318,7 +310,7 @@ public sealed class ApcControlUiControl : ProgramUiControl
                     Active: t.MainBreakerEnabled));
             }
 
-            _mapSelector.SetMarkers(markers, $"Selected APC: {state.AreaName}");
+            _mapSelector.SetMarkers(markers, $"Selected APC: {guidText}");
         }
         else
         {
@@ -341,11 +333,11 @@ public sealed class ApcControlUiControl : ProgramUiControl
             {
                 var guidCopy = t.TargetGuid;
                 var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-                var authTag = t.IsAuthorized ? "[AUTH]" : "[LOCKED]";
                 var btn = new ContentButton
                 {
                     Name = $"ApcTargetBtn_{guidCopy}",
-                    Text = $"{t.AreaName} {authTag}",
+                    Text = !string.IsNullOrWhiteSpace(guidCopy) ? $"{t.AreaName} [{guidCopy}]" : t.AreaName,
+                    ToolTip = $"{t.AreaName} — GUID: {guidCopy} ({(t.IsAuthorized ? "Authorized" : "Locked")})",
                     Pressed = isSel,
                     MinWidth = 136
                 };
@@ -480,10 +472,17 @@ public sealed class ScrollNumberChip : ContentControl
         UpdateTooltip();
     }
 
-    public string DisplayText =>
+    public bool ShowLabelPrefix { get; set; } = true;
+
+    public string ValueText =>
         OptionalEnabled && !BoundEnabled
-            ? $"{Label}: OFF"
-            : $"{Label}: {Value.ToString(Format, CultureInfo.InvariantCulture)}{Unit}";
+            ? "OFF"
+            : $"{Value.ToString(Format, CultureInfo.InvariantCulture)}{Unit}";
+
+    public string DisplayText =>
+        ShowLabelPrefix
+            ? $"{Label}: {ValueText}"
+            : ValueText;
 
     /// <summary>
     /// Applies a server-replicated value unless the user is actively typing, has unsent scroll notches,
@@ -624,7 +623,7 @@ public sealed class ScrollNumberChip : ContentControl
     private void UpdateTooltip()
     {
         var offNote = OptionalEnabled ? "\nRight-click or scroll below min to toggle OFF" : string.Empty;
-        ToolTip = $"{DisplayText}\nScroll wheel (±{Step.ToString(Format, CultureInfo.InvariantCulture)}{Unit}) | Click to type a number{offNote}";
+        ToolTip = $"{Label}: {ValueText}\nScroll wheel (±{Step.ToString(Format, CultureInfo.InvariantCulture)}{Unit}) | Click to type a number{offNote}";
     }
 
     public void AdjustBySteps(int deltaSteps)
@@ -778,14 +777,19 @@ public sealed class ScrollNumberChip : ContentControl
 
         if (_isEditing)
         {
-            var prefixW = MeasureLogicalTextWidth(font, $"{Label}:");
+            var prefixW = ShowLabelPrefix ? MeasureLogicalTextWidth(font, $"{Label}:") : 0f;
             _editor.Measure(new Vector2(MathF.Max(56f, availableSize.X - prefixW - 14f), baseH));
             var editW = MathF.Max(58f, _editor.DesiredSize.X);
-            return new Vector2(MathF.Max(MinWidth, prefixW + editW + 16f), MathF.Max(baseH, _editor.DesiredSize.Y + 2f));
+            var desiredEditW = MathF.Max(MinWidth, prefixW + editW + (ShowLabelPrefix ? 16f : 8f));
+            if (float.IsFinite(MaxWidth) && MaxWidth > 0f)
+                desiredEditW = MathF.Min(desiredEditW, MaxWidth);
+            return new Vector2(desiredEditW, MathF.Max(baseH, _editor.DesiredSize.Y + 2f));
         }
 
         var measuredTextW = MeasureLogicalTextWidth(font, DisplayText);
         var logicalW = MathF.Max(MinWidth, measuredTextW + 16f);
+        if (float.IsFinite(MaxWidth) && MaxWidth > 0f)
+            logicalW = MathF.Min(logicalW, MaxWidth);
         return new Vector2(logicalW, baseH);
     }
 
@@ -794,8 +798,9 @@ public sealed class ScrollNumberChip : ContentControl
         if (_isEditing)
         {
             var font = ResolveFont();
-            var prefixW = MeasureLogicalTextWidth(font, $"{Label}:");
-            var editLeft = MathF.Min(finalSize.X - 30f, prefixW + 10f);
+            var editLeft = ShowLabelPrefix
+                ? MathF.Min(finalSize.X - 30f, MeasureLogicalTextWidth(font, $"{Label}:") + 10f)
+                : 5f;
             var editRight = MathF.Max(editLeft + 24f, finalSize.X - 2f);
             _editor.Arrange(new UIBox2(editLeft, 1f, editRight, MathF.Max(18f, finalSize.Y - 1f)));
         }
@@ -833,10 +838,15 @@ public sealed class ScrollNumberChip : ContentControl
         }
         handle.DrawRect(rect, border, filled: false);
 
+        if (_isEditing && !ShowLabelPrefix)
+            return;
+
         var font = ResolveFont();
         var text = _isEditing ? $"{Label}:" : DisplayText;
         var dims = handle.GetDimensions(font, text, UIScale);
-        var tx = MathF.Floor(rect.Left + 7f * UIScale);
+        var tx = ShowLabelPrefix
+            ? MathF.Floor(rect.Left + 7f * UIScale)
+            : MathF.Floor(MathF.Max(rect.Left + 6f * UIScale, (PixelWidth - dims.X) * 0.5f));
         var ty = MathF.Floor(MathF.Max(1f, (PixelHeight - dims.Y) * 0.5f));
         handle.DrawString(font, new Vector2(tx, ty), text, UIScale, fg);
     }
@@ -857,6 +867,8 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
     private readonly ContentBoxContainer _remoteHeaderContainer;
     private readonly ContentBoxContainer _atmosBodyContainer;
+    private readonly ContentPanelContainer _remoteLockBanner;
+    private readonly ContentLabel _remoteLockLabel;
     private readonly OxydDeviceNavMapControl _mapSelector;
     private readonly StyleBoxFlat _telemetryPanelStyle;
     private readonly StyleBoxFlat _alarmBadgeStyle;
@@ -1098,7 +1110,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         _templateSummaryLabel = new ContentLabel
         {
             Name = "AtmosTemplateSummaryLabel",
-            Text = "Template: None — click 'Save Tpl' on any device.",
+            Text = "Template: None",
             HorizontalExpand = true,
             VerticalAlignment = VAlignment.Center,
             FontColorOverride = Color.FromHex("#7FA2B5")
@@ -1204,12 +1216,43 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         };
         _emptyCategoryLabel = new ContentLabel
         {
-            Text = "No linked devices in this category. Link devices with a multitool, then click Resync Devices.",
+            Text = "No linked devices.",
             FontColorOverride = Color.FromHex("#8899AA"),
             HorizontalExpand = true
         };
         _devicesScroll.AddChild(_devicesContainer);
         _atmosBodyContainer.AddChild(_devicesScroll);
+
+        _remoteLockBanner = new ContentPanelContainer
+        {
+            Name = "AtmosLockBanner",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            SizeFlagsStretchRatio = 1.15f,
+            Visible = false,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1520"),
+                BorderColor = Color.FromHex("#7A5A1E"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 16,
+                ContentMarginRightOverride = 16,
+                ContentMarginTopOverride = 16,
+                ContentMarginBottomOverride = 16
+            }
+        };
+        _remoteLockLabel = new ContentLabel
+        {
+            Name = "AtmosLockBannerLabel",
+            Text = "ACCESS LOCKED — Authorization required.",
+            HorizontalAlignment = HAlignment.Center,
+            VerticalAlignment = VAlignment.Center,
+            TextAlignment = HAlignment.Center,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            FontColorOverride = Color.FromHex("#FFD166")
+        };
+        _remoteLockBanner.AddChild(_remoteLockLabel);
 
         var atmosWorkspace = new ContentBoxContainer
         {
@@ -1221,6 +1264,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         };
         atmosWorkspace.AddChild(_mapSelector);
         atmosWorkspace.AddChild(_atmosBodyContainer);
+        atmosWorkspace.AddChild(_remoteLockBanner);
         root.AddChild(atmosWorkspace);
         AddChild(root);
     }
@@ -1277,8 +1321,28 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             _remoteHeaderContainer.Visible = false;
         }
 
-        _atmosBodyContainer.Visible = true;
+        var showRemoteLock = state.IsRemoteConsole && !state.IsTargetAuthorized;
+        _atmosBodyContainer.Visible = !showRemoteLock;
+        _remoteLockBanner.Visible = showRemoteLock;
         _mapSelector.Visible = state.IsRemoteConsole && _mapMode;
+
+        if (showRemoteLock)
+        {
+            var selTarget = state.AvailableTargets.FirstOrDefault(t =>
+                string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase));
+            var targetName = selTarget != null && !string.IsNullOrWhiteSpace(selTarget.AreaName)
+                ? selTarget.AreaName
+                : null;
+            var targetGuidSuffix = !string.IsNullOrWhiteSpace(state.SelectedTargetGuid)
+                ? $" [{state.SelectedTargetGuid}]"
+                : string.Empty;
+            _remoteLockLabel.Text = targetName != null
+                ? $"ACCESS LOCKED — {targetName}{targetGuidSuffix}\n\nAuthorization required."
+                : string.IsNullOrWhiteSpace(state.StatusMessage)
+                    ? "ACCESS LOCKED — Authorization required."
+                    : state.StatusMessage;
+            return;
+        }
 
         UpdateStatusHeader(state);
 
@@ -1328,16 +1392,16 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         var curLabel = curTarget != null && !string.IsNullOrWhiteSpace(curTarget.AreaName)
             ? curTarget.AreaName
             : "Air Alarm";
-        var authText = state.IsTargetAuthorized
-            ? $"{curLabel}: AUTHORIZED"
-            : $"{curLabel}: LOCKED (ID / .acc)";
+        var guidText = !string.IsNullOrWhiteSpace(state.SelectedTargetGuid)
+            ? $"{curLabel} [{state.SelectedTargetGuid}]"
+            : curLabel;
         topBar.AddChild(new ContentLabel
         {
             Name = "AtmosRemoteAuthStatusLabel",
-            Text = authText,
+            Text = guidText,
             ToolTip = state.IsTargetAuthorized
-                ? $"{curLabel}: AUTHORIZED"
-                : $"{curLabel}: LOCKED (Insert/Swipe authorized ID card or use .acc key)",
+                ? $"{guidText} — Authorized"
+                : $"{guidText} — Locked",
             HorizontalExpand = true,
             WordWrap = false,
             ClipText = true,
@@ -1366,19 +1430,6 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             authBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.AuthorizeWithAcc, pathCopy));
             authActions.AddChild(authBtn);
-        }
-
-        if (state.IsTargetAuthorized)
-        {
-            var deauthBtn = new ContentButton
-            {
-                Name = "AtmosRevokeAuthButton",
-                Text = "Deauth",
-                MinWidth = 64,
-                MinHeight = 24
-            };
-            deauthBtn.OnPressed += _ => SendProgramMessage(new AtmosControlActionMessage(AtmosControlAction.RevokeAuth));
-            authActions.AddChild(deauthBtn);
         }
         topBar.AddChild(authActions);
 
@@ -1427,7 +1478,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                     continue;
 
                 var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-                var isDanger = !string.Equals(t.AlarmLevel, "Normal", StringComparison.OrdinalIgnoreCase);
+                var isDanger = t.IsAuthorized && !string.Equals(t.AlarmLevel, "Normal", StringComparison.OrdinalIgnoreCase);
                 var color = isSel
                     ? Color.FromHex("#00FFCC")
                     : isDanger
@@ -1435,10 +1486,13 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                         : !t.IsAuthorized
                             ? Color.FromHex("#FFD166")
                             : Color.FromHex("#44E088");
+                var markerLabel = !string.IsNullOrWhiteSpace(t.TargetGuid)
+                    ? $"{t.AreaName} [{t.TargetGuid}]"
+                    : t.AreaName;
                 markers.Add(new DeviceNavMapMarker(
                     devNet,
                     t.TargetGuid,
-                    t.AreaName,
+                    markerLabel,
                     t.GridEntity,
                     t.LocalPosition,
                     color,
@@ -1447,7 +1501,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                     Blinks: isDanger));
             }
 
-            _mapSelector.SetMarkers(markers, $"Selected Alarm: {curLabel}");
+            _mapSelector.SetMarkers(markers, $"Selected Alarm: {guidText}");
         }
         else
         {
@@ -1470,11 +1524,11 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             {
                 var guidCopy = t.TargetGuid;
                 var isSel = string.Equals(t.TargetGuid, state.SelectedTargetGuid, StringComparison.OrdinalIgnoreCase);
-                var authTag = t.IsAuthorized ? "[AUTH]" : "[LOCKED]";
                 var btn = new ContentButton
                 {
                     Name = $"AtmosTargetBtn_{guidCopy}",
-                    Text = $"{t.AreaName} {authTag}",
+                    Text = !string.IsNullOrWhiteSpace(guidCopy) ? $"{t.AreaName} [{guidCopy}]" : t.AreaName,
+                    ToolTip = $"{t.AreaName} — GUID: {guidCopy} ({(t.IsAuthorized ? "Authorized" : "Locked")})",
                     Pressed = isSel,
                     MinWidth = 148
                 };
@@ -1608,7 +1662,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         var tpl = GetActiveTemplate();
         if (tpl == null)
         {
-            _templateSummaryLabel.Text = "Template: None — click 'Save Tpl' on any device.";
+            _templateSummaryLabel.Text = "Template: None";
             _templateSummaryLabel.FontColorOverride = Color.FromHex("#7FA2B5");
             _applyTemplateAllBtn.Visible = false;
             _clearTemplateBtn.Visible = false;
@@ -1722,7 +1776,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         if (vents.Count == 0)
         {
-            _emptyCategoryLabel.Text = "No linked vents. Link vents with a multitool, then click Resync Devices.";
+            _emptyCategoryLabel.Text = "No linked vents.";
             _devicesContainer.AddChild(_emptyCategoryLabel);
             return;
         }
@@ -1764,7 +1818,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         if (scrubbers.Count == 0)
         {
-            _emptyCategoryLabel.Text = "No linked scrubbers. Link scrubbers with a multitool, then click Resync Devices.";
+            _emptyCategoryLabel.Text = "No linked scrubbers.";
             _devicesContainer.AddChild(_emptyCategoryLabel);
             return;
         }
@@ -1806,7 +1860,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
         if (sensors.Count == 0)
         {
-            _emptyCategoryLabel.Text = "No linked air sensors. Link sensors with a multitool, then click Resync Devices.";
+            _emptyCategoryLabel.Text = "No linked air sensors.";
             _devicesContainer.AddChild(_emptyCategoryLabel);
             return;
         }
@@ -1900,23 +1954,26 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             _titleLabel = new ContentLabel
             {
                 Text = $"VENT {initial.DisplayAddress}",
+                MinWidth = 104,
+                MaxWidth = 104,
+                ClipText = true,
                 WordWrap = false,
                 VerticalAlignment = VAlignment.Center,
                 FontColorOverride = Color.FromHex("#66E6FF")
             };
             header.AddChild(_titleLabel);
 
-            _powerBtn = new ContentButton { Name = "AtmosVentPowerButton", MinWidth = 44 };
+            _powerBtn = new ContentButton { Name = "AtmosVentPowerButton", MinWidth = 44, MaxWidth = 44 };
             _powerBtn.OnPressed += _ => SendVent(enabled: !_curEnabled);
             header.AddChild(_powerBtn);
 
-            _dirBtn = new ContentButton { Name = "AtmosVentDirectionButton", MinWidth = 78 };
+            _dirBtn = new ContentButton { Name = "AtmosVentDirectionButton", MinWidth = 84, MaxWidth = 84 };
             _dirBtn.OnPressed += _ => SendVent(dir: _curDir == VentPumpDirection.Releasing
                 ? VentPumpDirection.Siphoning
                 : VentPumpDirection.Releasing);
             header.AddChild(_dirBtn);
 
-            _saveTplBtn = new ContentButton { Name = "AtmosSaveVentTemplateButton", Text = "Save Tpl", MinWidth = 64 };
+            _saveTplBtn = new ContentButton { Name = "AtmosSaveVentTemplateButton", Text = "Save Tpl", MinWidth = 68, MaxWidth = 68 };
             _saveTplBtn.OnPressed += _ =>
             {
                 FlushPending();
@@ -1925,7 +1982,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             header.AddChild(_saveTplBtn);
 
-            _applyTplBtn = new ContentButton { Name = "AtmosApplyVentTemplateButton", Text = "Apply Tpl", Visible = false };
+            _applyTplBtn = new ContentButton { Name = "AtmosApplyVentTemplateButton", Text = "Apply Tpl", MinWidth = 68, MaxWidth = 68, Visible = false };
             _applyTplBtn.OnPressed += _ =>
             {
                 if (_activeTemplate is { Kind: AtmosTemplateKind.Vent } tpl)
@@ -1936,7 +1993,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             header.AddChild(_applyTplBtn);
 
-            _copyAllBtn = new ContentButton { Name = "AtmosCopyVentAllButton", Text = "Copy All", MinWidth = 64 };
+            _copyAllBtn = new ContentButton { Name = "AtmosCopyVentAllButton", Text = "Copy All", MinWidth = 68, MaxWidth = 68 };
             _copyAllBtn.OnPressed += _ =>
             {
                 FlushPending();
@@ -1945,26 +2002,35 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             header.AddChild(_copyAllBtn);
             box.AddChild(header);
 
-            var settingsRow = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
-            _extChkBtn = new ContentButton { Name = "AtmosVentExtCheckButton" };
+            var settingsRow = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 4
+            };
+            _extChkBtn = new ContentButton { Name = "AtmosVentExtCheckButton", MinWidth = 104, MaxWidth = 104 };
             _extChkBtn.OnPressed += _ => SendVent(checks: _curChecks ^ VentPressureBound.ExternalBound);
             settingsRow.AddChild(_extChkBtn);
 
             _extChip = new ScrollNumberChip("Ext", initial.ExternalPressureBound, 0f, Atmospherics.OneAtmosphere * 50f, 5f, " kPa", "0.#")
             {
-                Name = "AtmosVentExtBoundChip"
+                Name = "AtmosVentExtBoundChip",
+                MinWidth = 114,
+                MaxWidth = 114
             };
             _extChip.OnValueChanged += (_, v) => _curExt = v;
             _extChip.OnValueCommitted += (_, v) => SendVent(extBound: v);
             settingsRow.AddChild(_extChip);
 
-            _intChkBtn = new ContentButton { Name = "AtmosVentIntCheckButton" };
+            _intChkBtn = new ContentButton { Name = "AtmosVentIntCheckButton", MinWidth = 104, MaxWidth = 104 };
             _intChkBtn.OnPressed += _ => SendVent(checks: _curChecks ^ VentPressureBound.InternalBound);
             settingsRow.AddChild(_intChkBtn);
 
             _intChip = new ScrollNumberChip("Int", initial.InternalPressureBound, 0f, Atmospherics.OneAtmosphere * 50f, 5f, " kPa", "0.#")
             {
-                Name = "AtmosVentIntBoundChip"
+                Name = "AtmosVentIntBoundChip",
+                MinWidth = 114,
+                MaxWidth = 114
             };
             _intChip.OnValueChanged += (_, v) => _curInt = v;
             _intChip.OnValueCommitted += (_, v) => SendVent(intBound: v);
@@ -2106,35 +2172,40 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             _titleLabel = new ContentLabel
             {
                 Text = $"SCRUBBER {initial.DisplayAddress}",
+                MinWidth = 116,
+                MaxWidth = 116,
+                ClipText = true,
                 WordWrap = false,
                 VerticalAlignment = VAlignment.Center,
                 FontColorOverride = Color.FromHex("#99CCFF")
             };
             header.AddChild(_titleLabel);
 
-            _powerBtn = new ContentButton { Name = "AtmosScrubberPowerButton", MinWidth = 44 };
+            _powerBtn = new ContentButton { Name = "AtmosScrubberPowerButton", MinWidth = 44, MaxWidth = 44 };
             _powerBtn.OnPressed += _ => SendScrubber(enabled: !_curEnabled);
             header.AddChild(_powerBtn);
 
-            _dirBtn = new ContentButton { Name = "AtmosScrubberDirectionButton", MinWidth = 78 };
+            _dirBtn = new ContentButton { Name = "AtmosScrubberDirectionButton", MinWidth = 84, MaxWidth = 84 };
             _dirBtn.OnPressed += _ => SendScrubber(dir: _curDir == ScrubberPumpDirection.Scrubbing
                 ? ScrubberPumpDirection.Siphoning
                 : ScrubberPumpDirection.Scrubbing);
             header.AddChild(_dirBtn);
 
-            _wideBtn = new ContentButton { Name = "AtmosScrubberWideNetButton" };
+            _wideBtn = new ContentButton { Name = "AtmosScrubberWideNetButton", MinWidth = 96, MaxWidth = 96 };
             _wideBtn.OnPressed += _ => SendScrubber(wideNet: !_curWideNet);
             header.AddChild(_wideBtn);
 
             _rateChip = new ScrollNumberChip("Rate", initial.VolumeRate, 0f, Atmospherics.MaxTransferRate, 10f, " L/s", "0")
             {
-                Name = "AtmosScrubberRateChip"
+                Name = "AtmosScrubberRateChip",
+                MinWidth = 104,
+                MaxWidth = 104
             };
             _rateChip.OnValueChanged += (_, v) => _curRate = v;
             _rateChip.OnValueCommitted += (_, v) => SendScrubber(rate: v);
             header.AddChild(_rateChip);
 
-            _saveTplBtn = new ContentButton { Name = "AtmosSaveScrubberTemplateButton", Text = "Save Tpl", MinWidth = 64 };
+            _saveTplBtn = new ContentButton { Name = "AtmosSaveScrubberTemplateButton", Text = "Save Tpl", MinWidth = 68, MaxWidth = 68 };
             _saveTplBtn.OnPressed += _ =>
             {
                 FlushPending();
@@ -2151,7 +2222,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             header.AddChild(_saveTplBtn);
 
-            _applyTplBtn = new ContentButton { Name = "AtmosApplyScrubberTemplateButton", Text = "Apply Tpl", Visible = false };
+            _applyTplBtn = new ContentButton { Name = "AtmosApplyScrubberTemplateButton", Text = "Apply Tpl", MinWidth = 68, MaxWidth = 68, Visible = false };
             _applyTplBtn.OnPressed += _ =>
             {
                 if (_activeTemplate is { Kind: AtmosTemplateKind.Scrubber } tpl)
@@ -2162,7 +2233,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             header.AddChild(_applyTplBtn);
 
-            _copyAllBtn = new ContentButton { Name = "AtmosCopyScrubberAllButton", Text = "Copy All", MinWidth = 64 };
+            _copyAllBtn = new ContentButton { Name = "AtmosCopyScrubberAllButton", Text = "Copy All", MinWidth = 68, MaxWidth = 68 };
             _copyAllBtn.OnPressed += _ =>
             {
                 FlushPending();
@@ -2180,7 +2251,8 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                 {
                     Name = $"AtmosScrubberGas_{gas}",
                     Text = FormatGasShort(gas),
-                    MinWidth = 42,
+                    MinWidth = 44,
+                    MaxWidth = 44,
                     ToolTip = $"Toggle filtering {gas}"
                 };
                 gBtn.OnPressed += _ =>
@@ -2293,7 +2365,11 @@ public sealed class AtmosControlUiControl : ProgramUiControl
 
     private sealed class ThresholdRowView
     {
-        public ContentWrapContainer Root { get; }
+        public const float MetricColumnWidth = 86f;
+        public const float ToggleColumnWidth = 42f;
+        public const float BoundColumnWidth = 84f;
+
+        public ContentBoxContainer Root { get; }
 
         private readonly ContentLabel _nameLabel;
         private readonly ContentButton _enableBtn;
@@ -2308,6 +2384,37 @@ public sealed class AtmosControlUiControl : ProgramUiControl
         private AtmosThresholdDto _cur;
 
         public AtmosThresholdDto CurrentThreshold => _cur;
+
+        public static ContentBoxContainer CreateHeaderRow()
+        {
+            var row = new ContentBoxContainer
+            {
+                Name = "AtmosThresholdHeaderRow",
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 4
+            };
+
+            ContentLabel MakeColHeader(string text, float width, Color color, HAlignment align = HAlignment.Center) => new()
+            {
+                Text = text,
+                MinWidth = width,
+                MaxWidth = width,
+                ClipText = true,
+                WordWrap = false,
+                TextAlignment = align,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = color
+            };
+
+            row.AddChild(MakeColHeader("Metric", MetricColumnWidth, Color.FromHex("#88AAB8"), HAlignment.Left));
+            row.AddChild(MakeColHeader("State", ToggleColumnWidth, Color.FromHex("#88AAB8")));
+            row.AddChild(MakeColHeader("Lo Danger", BoundColumnWidth, Color.FromHex("#FF8888")));
+            row.AddChild(MakeColHeader("Lo Warn", BoundColumnWidth, Color.FromHex("#FFD166")));
+            row.AddChild(MakeColHeader("Hi Warn", BoundColumnWidth, Color.FromHex("#FFD166")));
+            row.AddChild(MakeColHeader("Hi Danger", BoundColumnWidth, Color.FromHex("#FF8888")));
+            return row;
+        }
 
         public ThresholdRowView(
             string label,
@@ -2326,18 +2433,30 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             _fromDisplay = fromDisplay;
             _onChanged = onChanged;
 
-            Root = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 3 };
+            Root = new ContentBoxContainer
+            {
+                Name = "AtmosThresholdRow",
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 4
+            };
 
             _nameLabel = new ContentLabel
             {
                 Text = label,
-                MinWidth = 86,
+                MinWidth = MetricColumnWidth,
+                MaxWidth = MetricColumnWidth,
+                ClipText = true,
                 WordWrap = false,
                 VerticalAlignment = VAlignment.Center
             };
             Root.AddChild(_nameLabel);
 
-            _enableBtn = new ContentButton { MinWidth = 38 };
+            _enableBtn = new ContentButton
+            {
+                MinWidth = ToggleColumnWidth,
+                MaxWidth = ToggleColumnWidth
+            };
             _enableBtn.OnPressed += _ =>
             {
                 _cur = new AtmosThresholdDto(
@@ -2370,7 +2489,10 @@ public sealed class AtmosControlUiControl : ProgramUiControl
                     boundEnabled: bEnabled,
                     enableDefaultValue: dispVal > displayMin ? dispVal : Math.Clamp(displayMin + step, displayMin, displayMax))
                 {
-                    AccentColor = accent
+                    AccentColor = accent,
+                    ShowLabelPrefix = false,
+                    MinWidth = BoundColumnWidth,
+                    MaxWidth = BoundColumnWidth
                 };
                 chip.OnValueChanged += (en, dv) => _cur = apply(_cur, en, _fromDisplay(dv));
                 chip.OnValueCommitted += (en, dv) =>
@@ -2509,6 +2631,7 @@ public sealed class AtmosControlUiControl : ProgramUiControl
             };
             header.AddChild(_applyTplBtn);
             _rowsBox.AddChild(header);
+            _rowsBox.AddChild(ThresholdRowView.CreateHeaderRow());
 
             _pressureRow = new ThresholdRowView(
                 "Pressure",
@@ -2729,6 +2852,7 @@ public sealed class MaterialNumberIcon : ContentBoxContainer
         Name = $"LatheMatCostIcon_{materialId}";
         MinSize = new Vector2(36, 34);
         MaxSize = new Vector2(40, 34);
+        MouseFilter = MouseFilterMode.Pass;
 
         var tooltip = $"{_materialName}: {_sheetCountText} sheets ({Amount} u)";
         if (availableAmount != null)
@@ -2970,10 +3094,10 @@ public sealed class LatheControlUiControl : ProgramUiControl
     private readonly ContentProgressBar _progressBar;
     private readonly ContentLabel _printingUsageLabel;
     private readonly ContentWrapContainer _printingUsageContainer;
-    private readonly ContentLabel _selectedRecipeLabel;
     private readonly ContentButton _cancelQueueBtn;
     private readonly ContentLabel _queueHeaderLabel;
-    private readonly ContentWrapContainer _queueContainer;
+    private readonly ContentScrollContainer _queueScroll;
+    private readonly ContentBoxContainer _queueContainer;
 
     private readonly ContentWrapContainer _materialsContainer;
     private readonly ContentLabel _memoryLabel;
@@ -3105,18 +3229,9 @@ public sealed class LatheControlUiControl : ProgramUiControl
         printingUsageRow.AddChild(_printingUsageLabel);
         printingUsageRow.AddChild(_printingUsageContainer);
 
-        _selectedRecipeLabel = new ContentLabel
-        {
-            Name = "LatheSelectedRecipeLabel",
-            Text = "Selected: None",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#66E6FF")
-        };
-
         printingInfo.AddChild(_printingNameLabel);
         printingInfo.AddChild(_progressBar);
         printingInfo.AddChild(printingUsageRow);
-        printingInfo.AddChild(_selectedRecipeLabel);
 
         _cancelQueueBtn = new ContentButton
         {
@@ -3132,25 +3247,52 @@ public sealed class LatheControlUiControl : ProgramUiControl
         printingRow.AddChild(printingInfo);
         printingRow.AddChild(_cancelQueueBtn);
 
+        var queueRow = new ContentBoxContainer
+        {
+            Name = "LatheQueueRow",
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 6,
+            Margin = new Thickness(0, 2, 0, 0)
+        };
+
         _queueHeaderLabel = new ContentLabel
         {
             Name = "LatheQueueHeader",
             Text = "Queue: Empty",
-            HorizontalExpand = true,
-            FontColorOverride = Color.FromHex("#88CCCC"),
-            Margin = new Thickness(0, 2, 0, 0)
+            WordWrap = false,
+            VerticalAlignment = VAlignment.Center,
+            MouseFilter = MouseFilterMode.Pass,
+            FontColorOverride = Color.FromHex("#88CCCC")
         };
 
-        _queueContainer = new ContentWrapContainer
+        _queueScroll = new ContentScrollContainer
+        {
+            Name = "LatheQueueScroll",
+            HorizontalExpand = true,
+            HScrollEnabled = true,
+            VScrollEnabled = false,
+            VerticalAlignment = VAlignment.Center,
+            MouseFilter = MouseFilterMode.Pass,
+            MinHeight = 28f,
+            MaxHeight = 32f,
+            Visible = false
+        };
+        _queueContainer = new ContentBoxContainer
         {
             Name = "LatheQueueContainer",
-            HorizontalSeparation = 6,
-            VerticalSeparation = 4
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            VerticalAlignment = VAlignment.Center,
+            MouseFilter = MouseFilterMode.Pass,
+            SeparationOverride = 6
         };
+        _queueScroll.AddChild(_queueContainer);
+
+        queueRow.AddChild(_queueHeaderLabel);
+        queueRow.AddChild(_queueScroll);
 
         pqInner.AddChild(printingRow);
-        pqInner.AddChild(_queueHeaderLabel);
-        pqInner.AddChild(_queueContainer);
+        pqInner.AddChild(queueRow);
         printQueueBox.AddChild(pqInner);
         root.AddChild(printQueueBox);
 
@@ -3265,7 +3407,7 @@ public sealed class LatheControlUiControl : ProgramUiControl
             MinWidth = 220f,
             MinHeight = 26f,
             VerticalAlignment = VAlignment.Center,
-            PlaceHolder = "Filter blueprints (name, description, material)..."
+            PlaceHolder = "Filter blueprints..."
         };
         _searchInput.OnTextChanged += _ => RebuildRecipeList();
 
@@ -3450,24 +3592,26 @@ public sealed class LatheControlUiControl : ProgramUiControl
             ? state.QueueEntries
             : state.QueueRecipes.Select(id => new LatheQueueEntryDto(id, 1)).ToList();
 
-        if (!string.IsNullOrEmpty(state.SelectedRecipeId))
-        {
-            var selName = _proto.TryIndex<LatheRecipePrototype>(state.SelectedRecipeId, out var selProto)
-                ? _lathe.GetRecipeName(selProto)
-                : state.SelectedRecipeId;
-            var selSrc = state.SelectedRecipeFromDisk ? "Disk" : "Mem";
-            _selectedRecipeLabel.Text = $"Selected: {selName} ({selSrc})";
-            _selectedRecipeLabel.FontColorOverride = Color.FromHex("#66E6FF");
-        }
-        else
-        {
-            _selectedRecipeLabel.Text = "Selected: None";
-            _selectedRecipeLabel.FontColorOverride = Color.FromHex("#7790A0");
-        }
-
         var totalQueued = queueItems.Sum(q => q.Count);
         _cancelQueueBtn.Disabled = !_isPrinting && totalQueued == 0;
         _queueHeaderLabel.Text = totalQueued > 0 ? $"Queue ({totalQueued} items):" : "Queue: Empty";
+        _queueScroll.Visible = queueItems.Count > 0;
+
+        var fullQueueLines = new List<string>(queueItems.Count);
+        foreach (var entry in queueItems)
+        {
+            var qName = _proto.TryIndex<LatheRecipePrototype>(entry.RecipeId, out var qNameProto)
+                ? _lathe.GetRecipeName(qNameProto)
+                : entry.RecipeId;
+            fullQueueLines.Add($"• {qName} x{entry.Count}");
+        }
+
+        var fullQueueTooltip = queueItems.Count > 0
+            ? $"Print Queue ({totalQueued} items):\n{string.Join("\n", fullQueueLines)}"
+            : null;
+        _queueHeaderLabel.ToolTip = fullQueueTooltip;
+        _queueScroll.ToolTip = fullQueueTooltip;
+        _queueContainer.ToolTip = fullQueueTooltip;
 
         _queueContainer.RemoveAllChildren();
         foreach (var entry in queueItems)
@@ -3475,6 +3619,9 @@ public sealed class LatheControlUiControl : ProgramUiControl
             var pill = new ContentPanelContainer
             {
                 Name = "LatheQueueItem",
+                VerticalAlignment = VAlignment.Center,
+                MouseFilter = MouseFilterMode.Pass,
+                ToolTip = fullQueueTooltip,
                 PanelOverride = new StyleBoxFlat
                 {
                     BackgroundColor = Color.FromHex("#142434"),
@@ -3515,6 +3662,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
             {
                 Text = $"{displayName} x{entry.Count}",
                 WordWrap = false,
+                MouseFilter = MouseFilterMode.Pass,
+                ToolTip = fullQueueTooltip,
                 FontColorOverride = Color.FromHex("#E0F7FA")
             });
 
@@ -3537,7 +3686,7 @@ public sealed class LatheControlUiControl : ProgramUiControl
         {
             _materialsContainer.AddChild(new ContentLabel
             {
-                Text = "No materials loaded — insert sheets into the autolathe.",
+                Text = "No materials loaded.",
                 FontColorOverride = Color.FromHex("#7790A0")
             });
             return;
@@ -3692,11 +3841,12 @@ public sealed class LatheControlUiControl : ProgramUiControl
             var badgeParts = new List<string>();
             if (bp.FromDisk)
                 badgeParts.Add("DISK");
+            badgeParts.Add($"Cost {bp.PointCost} LP");
+            if (bp.IsEncrypted && !string.IsNullOrWhiteSpace(fileShort))
+                badgeParts.Add(fileShort);
             if (bp.RemainingUses != null)
-                badgeParts.Add($"{bp.RemainingUses.Value} LP");
-            var titleText = badgeParts.Count > 0
-                ? $"{displayName} [{string.Join(" · ", badgeParts)}]"
-                : displayName;
+                badgeParts.Add($"{bp.RemainingUses.Value} LP left");
+            var titleText = $"{displayName} [{string.Join(" · ", badgeParts)}]";
 
             details.AddChild(new ContentLabel
             {
@@ -3738,11 +3888,13 @@ public sealed class LatheControlUiControl : ProgramUiControl
             {
                 details.AddChild(new ContentLabel
                 {
+                    Name = "LatheRecipeDescriptionLabel",
                     Text = desc,
                     ToolTip = desc,
                     WordWrap = false,
                     ClipText = true,
                     HorizontalExpand = true,
+                    MouseFilter = MouseFilterMode.Pass,
                     FontColorOverride = Color.FromHex("#8FAAB8")
                 });
             }
@@ -3784,8 +3936,8 @@ public sealed class LatheControlUiControl : ProgramUiControl
                 Pressed = isSelected,
                 VerticalAlignment = VAlignment.Center,
                 ToolTip = isSelected
-                    ? "Selected for signal-triggered printing (click to clear)"
-                    : "Select recipe for signal-triggered printing (persists when UI closes)"
+                    ? "Selected for signal printing"
+                    : "Select for signal printing"
             };
             var selRecipeId = bp.RecipeId;
             var selFilePath = bp.FilePath;

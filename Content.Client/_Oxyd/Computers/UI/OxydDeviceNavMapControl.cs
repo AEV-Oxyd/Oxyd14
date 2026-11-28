@@ -357,7 +357,7 @@ public sealed class OxydDeviceNavMapControl : ContentControl
         _hintLabel = new ContentLabel
         {
             Name = $"{namePrefix}NavMapHint",
-            Text = "Click any beacon on the station map.",
+            Text = "Station Map",
             FontColorOverride = Color.FromHex("#88D4EE"),
             HorizontalExpand = true,
             VerticalAlignment = VAlignment.Center,

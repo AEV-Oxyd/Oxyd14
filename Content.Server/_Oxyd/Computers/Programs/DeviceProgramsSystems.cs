@@ -112,6 +112,30 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
+    private void OnApcDeactivated(Entity<ApcControlProgramComponent> ent, ref ProgramDeactivatedEvent args)
+    {
+        RevokeAllApcSessionAuth(ent);
+        UpdateApcUi(ent.Owner, args.ComputerUid, ent.Comp, skipRemoteStatusSync: true);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnApcTerminated(Entity<ApcControlProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        RevokeAllApcSessionAuth(ent);
+    }
+
+    private void RevokeAllApcSessionAuth(Entity<ApcControlProgramComponent> ent)
+    {
+        if (ent.Comp.AuthorizedTargetGuids.Count > 0 || !ent.Comp.Locked)
+        {
+            ent.Comp.AuthorizedTargetGuids.Clear();
+            ent.Comp.Locked = true;
+            ent.Comp.StatusMessage = string.Empty;
+            Dirty(ent);
+        }
+    }
+
     private void OnApcBuiOpened(Entity<ApcControlProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
@@ -219,7 +243,13 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             case ApcControlAction.SelectTarget:
                 if (!string.IsNullOrWhiteSpace(args.Argument))
                 {
-                    ent.Comp.SelectedTargetGuid = args.Argument.Trim();
+                    var nextGuid = args.Argument.Trim();
+                    if (!string.Equals(ent.Comp.SelectedTargetGuid, nextGuid, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ent.Comp.AuthorizedTargetGuids.Clear();
+                        ent.Comp.Locked = true;
+                    }
+                    ent.Comp.SelectedTargetGuid = nextGuid;
                     ent.Comp.StatusMessage = string.Empty;
                     Dirty(ent);
                 }
@@ -441,6 +471,34 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp);
     }
 
+    [SubscribeLocalEvent]
+    private void OnAtmosDeactivated(Entity<AtmosControlProgramComponent> ent, ref ProgramDeactivatedEvent args)
+    {
+        RevokeAllAtmosSessionAuth(ent);
+        UpdateAtmosUi(ent.Owner, args.ComputerUid, ent.Comp, skipRemoteStatusSync: true);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnAtmosTerminated(Entity<AtmosControlProgramComponent> ent, ref ProgramTerminatedEvent args)
+    {
+        RevokeAllAtmosSessionAuth(ent);
+    }
+
+    private void RevokeAllAtmosSessionAuth(Entity<AtmosControlProgramComponent> ent)
+    {
+        if (ent.Comp.AuthorizedTargetGuids.Count > 0 || !ent.Comp.Locked || ent.Comp.HasTelemetry)
+        {
+            ent.Comp.AuthorizedTargetGuids.Clear();
+            ent.Comp.Vents.Clear();
+            ent.Comp.Scrubbers.Clear();
+            ent.Comp.Sensors.Clear();
+            ent.Comp.Locked = true;
+            ent.Comp.HasTelemetry = false;
+            ent.Comp.StatusMessage = string.Empty;
+            Dirty(ent);
+        }
+    }
+
     private void OnAtmosBuiOpened(Entity<AtmosControlProgramComponent> ent, ref BoundUIOpenedEvent args)
     {
         if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
@@ -557,7 +615,17 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             case AtmosControlAction.SelectTarget:
                 if (!string.IsNullOrWhiteSpace(args.Argument))
                 {
-                    ent.Comp.SelectedTargetGuid = args.Argument.Trim();
+                    var nextGuid = args.Argument.Trim();
+                    if (!string.Equals(ent.Comp.SelectedTargetGuid, nextGuid, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ent.Comp.AuthorizedTargetGuids.Clear();
+                        ent.Comp.Vents.Clear();
+                        ent.Comp.Scrubbers.Clear();
+                        ent.Comp.Sensors.Clear();
+                        ent.Comp.Locked = true;
+                        ent.Comp.HasTelemetry = false;
+                    }
+                    ent.Comp.SelectedTargetGuid = nextGuid;
                     ent.Comp.StatusMessage = string.Empty;
                     Dirty(ent);
                 }
@@ -758,7 +826,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         {
             foreach (var g in args.FilterGases)
             {
-                if (Enum.IsDefined(typeof(Gas), g) && !safeGases.Contains(g))
+                if (Enum.IsDefined(g) && !safeGases.Contains(g))
                     safeGases.Add(g);
             }
         }
@@ -785,10 +853,10 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         if (!TryAuthorizeAtmosAction(ent, args.Actor, out var compUid))
             return;
 
-        if (args.Threshold == null || !Enum.IsDefined(typeof(AtmosMonitorThresholdType), args.ThresholdType))
+        if (args.Threshold == null || !Enum.IsDefined(args.ThresholdType))
             return;
 
-        if (args.Gas is { } gasVal && !Enum.IsDefined(typeof(Gas), gasVal))
+        if (args.Gas is { } gasVal && !Enum.IsDefined(gasVal))
             return;
 
         var cleanThreshold = SanitizeThresholdDto(args.Threshold);
@@ -920,7 +988,13 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             }
 
             var isAuth = IsAtmosTargetAuthorized(compUid, comp, remoteAlarmUid, targetAlarmGuid, targetApcGuid);
-            if (isAuth && cmd is not ("status" or "status_request"))
+            if (!isAuth)
+            {
+                comp.StatusMessage = "Authorization required for target Air Alarm.";
+                return;
+            }
+
+            if (cmd is not ("status" or "status_request"))
                 pkt.SetReference("RemoteAuthorizedComputer", compUid);
 
             DispatchPacketToRemoteHost(compUid, remoteAlarmUid, "AirAlarmCommandSink", pkt, actor);
@@ -945,6 +1019,62 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         var isAuthorized = selectedAlarmUid != null &&
                            IsAtmosTargetAuthorized(compUid, comp, selectedAlarmUid.Value, selectedAlarmGuid, selectedApcGuid);
 
+        if (isRemoteConsole && (!isAuthorized || selectedAlarmUid == null))
+        {
+            comp.HasTelemetry = false;
+            comp.Locked = true;
+            comp.AlarmLevel = "LOCKED";
+            comp.CurrentMode = "LOCKED";
+            comp.AutoMode = false;
+            comp.PressureKpa = 0f;
+            comp.TemperatureCelsius = 0f;
+            comp.VentCount = 0;
+            comp.ScrubberCount = 0;
+            comp.SensorCount = 0;
+            comp.GasSummary = string.Empty;
+            comp.Vents.Clear();
+            comp.Scrubbers.Clear();
+            comp.Sensors.Clear();
+            comp.Templates.Clear();
+
+            if (selectedAlarmUid == null && string.IsNullOrEmpty(comp.StatusMessage))
+            {
+                comp.StatusMessage = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid)
+                    ? "No network-connected Air Alarms reachable."
+                    : "Network offline — active Station Network Router connection required.";
+            }
+
+            var lockedState = new AtmosControlUiState(
+                false,
+                dlEnabled,
+                "LOCKED",
+                "LOCKED",
+                false,
+                true,
+                0f,
+                0f,
+                0,
+                0,
+                0,
+                string.Empty,
+                comp.StatusMessage,
+                new List<AtmosVentEntryDto>(),
+                new List<AtmosScrubberEntryDto>(),
+                new List<AtmosSensorEntryDto>(),
+                new List<AtmosTemplateEntryDto>(),
+                selectedAlarmGuid,
+                selectedApcGuid,
+                false,
+                comp.SelectedAccFilePath,
+                accFiles,
+                targets,
+                true);
+
+            if (_ui.HasUi(progUid, ProgramUiKey.Key))
+                _ui.SetUiState(progUid, ProgramUiKey.Key, lockedState);
+            return;
+        }
+
         if (selectedAlarmUid != null && !skipRemoteStatusSync && (isRemoteConsole || !comp.HasTelemetry))
         {
             SyncAtmosTelemetryFromTarget(compUid, comp, selectedAlarmUid.Value, selectedAlarmGuid, selectedApcGuid);
@@ -953,15 +1083,6 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         else if (selectedAlarmUid != null)
         {
             comp.Locked = !isAuthorized;
-        }
-        else if (isRemoteConsole)
-        {
-            comp.HasTelemetry = false;
-            comp.Locked = true;
-            if (string.IsNullOrEmpty(comp.StatusMessage))
-                comp.StatusMessage = _router.HasActiveNetworkCard(compUid) && _router.IsNetworkConnected(compUid)
-                    ? "No network-connected Air Alarms reachable."
-                    : "Network offline — active Station Network Router connection required.";
         }
 
         var state = new AtmosControlUiState(
@@ -1182,10 +1303,12 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             var apcGuid = apcUid != null ? GetDeviceOrHostGuid(apcUid.Value) : alarmGuid;
             var isAuth = IsAtmosTargetAuthorized(compUid, comp, alarmUid, alarmGuid, apcGuid);
 
-            var level = "Normal";
-            var pres = 101.3f;
-            var temp = 20f;
-            if (TryComp<EmbeddedComputerHostComponent>(alarmUid, out var host) &&
+            var isLocalHost = cComp?.HostMachine == alarmUid;
+            var level = isAuth || isLocalHost ? "Normal" : "LOCKED";
+            var pres = 0f;
+            var temp = 0f;
+            if ((isAuth || isLocalHost) &&
+                TryComp<EmbeddedComputerHostComponent>(alarmUid, out var host) &&
                 host.ComputerEntity is { } alarmCompUid &&
                 _computerQuery.TryComp(alarmCompUid, out var alarmComp))
             {
@@ -1201,9 +1324,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
                 }
             }
 
-            var areaLabel = apcUid != null
-                ? $"{MetaData(alarmUid).EntityName} ({MetaData(apcUid.Value).EntityName})"
-                : MetaData(alarmUid).EntityName;
+            var areaLabel = MetaData(alarmUid).EntityName;
 
             var alarmXform = Transform(alarmUid);
             NetEntity? gridNet = alarmXform.GridUid is { Valid: true } gUid ? GetNetEntity(gUid) : null;
@@ -1275,6 +1396,12 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
                 return true;
         }
 
+        if (cComp != null && cComp.OsAuthAccessTags.Count > 0 &&
+            CanTagsAuthorizeDevice(cComp.OsAuthAccessTags, targetApcUid, isAtmos: false))
+        {
+            return true;
+        }
+
         return false;
     }
 
@@ -1308,7 +1435,41 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
             }
         }
 
+        if (cComp != null && cComp.OsAuthAccessTags.Count > 0 &&
+            (CanTagsAuthorizeDevice(cComp.OsAuthAccessTags, targetAlarmUid, isAtmos: true) ||
+             (apcUid != null && CanTagsAuthorizeDevice(cComp.OsAuthAccessTags, apcUid.Value, isAtmos: true))))
+        {
+            return true;
+        }
+
         return false;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnApcOsAuthChanged(Entity<ApcControlProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && compUid == args.ComputerUid)
+            UpdateApcUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnAtmosOsAuthChanged(Entity<AtmosControlProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && compUid == args.ComputerUid)
+            UpdateAtmosUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private bool CanTagsAuthorizeDevice(
+        ICollection<ProtoId<Content.Shared.Access.AccessLevelPrototype>> tags,
+        EntityUid targetDeviceUid,
+        bool isAtmos)
+    {
+        if (TryComp<AccessReaderComponent>(targetDeviceUid, out var reader) && reader.AccessLists.Count > 0)
+            return _accessReader.IsAllowed(tags, Array.Empty<StationRecordKey>(), targetDeviceUid, reader);
+
+        return tags.Contains(EngineeringAccess) ||
+               tags.Contains(CommandAccess) ||
+               (isAtmos && tags.Contains(AtmosphericsAccess));
     }
 
     private void GrantEngineeringApcAuthorization(
@@ -1332,6 +1493,9 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
 
         foreach (var progUid in cComp.RunningPrograms)
         {
+            if (cComp.ActiveProgram is { Valid: true } activeProg && progUid != activeProg)
+                continue;
+
             if (TryComp<ApcControlProgramComponent>(progUid, out var apcProg))
             {
                 if (!string.IsNullOrEmpty(apcGuid))
@@ -1452,6 +1616,7 @@ public sealed partial class DeviceProgramsSystem : EntitySystem
         var sinkPort = new ProtoId<SinkPortPrototype>(sinkPortId);
         _deviceLink.EnsureSourcePort(sourceCompUid, PortComputerCommandSender);
         _deviceLink.EnsureSinkPort(remoteHostUid, sinkPort);
+        _computer.LogDeviceLinkPacketTraffic(sourceCompUid, remoteHostUid, sinkPortId, isOutgoing: true, packet.PacketType, packet);
         _deviceLink.InvokeDirect(sourceCompUid, remoteHostUid, sinkPort, packet);
     }
 

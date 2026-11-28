@@ -2,6 +2,7 @@ using System.Numerics;
 using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Clock;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -9,6 +10,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.Client._Oxyd.Computers.Programs;
 
@@ -23,6 +25,8 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
     private readonly ProgramIconResolver _icons;
     private readonly ContentLabel _headerLabel;
     private readonly ContentLabel _hwLabel;
+    private readonly ContentLabel _clockBadgeLabel;
+    private int _lastStationSeconds = -1;
     private readonly ContentWrapContainer _unifiedNavBar;
     private readonly ContentButton _coreTabBtn;
     private readonly ContentButton _installedTabBtn;
@@ -107,6 +111,14 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
             HorizontalExpand = true,
             SeparationOverride = 6
         };
+        _clockBadgeLabel = new ContentLabel
+        {
+            Name = "NetworkCoreClockLabel",
+            Text = "00:00:00",
+            WordWrap = false,
+            FontColorOverride = Color.FromHex("#88DCE8"),
+            VerticalAlignment = VAlignment.Center
+        };
         var shutDownBtn = new ContentButton
         {
             Name = "NetworkCoreShutDownButton",
@@ -117,6 +129,7 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         shutDownBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.ShutDown));
 
         headerRow.AddChild(headerBox);
+        headerRow.AddChild(_clockBadgeLabel);
         headerRow.AddChild(shutDownBtn);
         headerPanel.AddChild(headerRow);
         root.AddChild(headerPanel);
@@ -268,6 +281,29 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
         root.AddChild(_installedView);
 
         AddChild(root);
+        UpdateClockBadge(force: true);
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+        UpdateClockBadge(force: false);
+    }
+
+    private void UpdateClockBadge(bool force)
+    {
+        var stationTime = _entMan.TrySystem<SharedClockSystem>(out var clock)
+            ? clock.GetStationTime()
+            : TimeSpan.Zero;
+        if (stationTime < TimeSpan.Zero)
+            stationTime = TimeSpan.Zero;
+
+        var totalSeconds = (int) stationTime.TotalSeconds;
+        if (!force && totalSeconds == _lastStationSeconds)
+            return;
+
+        _lastStationSeconds = totalSeconds;
+        _clockBadgeLabel.Text = $"{stationTime.Hours:D2}:{stationTime.Minutes:D2}:{stationTime.Seconds:D2}";
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -326,23 +362,18 @@ public sealed partial class NetworkCoreOsUiControl : ProgramUiControl, IOsProgra
             if (rp.IsBootProgram || rp.RunningEntity is not { } rEnt)
                 continue;
 
-            var pair = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, SeparationOverride = 1 };
-            var switchBtn = new ContentButton
-            {
-                Text = rp.Name,
-                Icon = _icons.ResolveProgramIcon(rp),
-                IconSize = new Vector2(14, 14),
-                IconModulate = Color.White,
-                Pressed = state.CurrentTab == 1 && state.ActiveChildProgram == rEnt
-            };
-            switchBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.SwitchProgram, programEntity: rEnt));
-            pair.AddChild(switchBtn);
+            var isFocused = state.CurrentTab == 1 && state.ActiveChildProgram == rEnt;
+            var tabPill = OsUiControl.CreateRunningAppTabPill(
+                rp.Name,
+                _icons.ResolveProgramIcon(rp),
+                new Vector2(14, 14),
+                isFocused,
+                disabled: false,
+                onSelect: () => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.SwitchProgram, programEntity: rEnt)),
+                onClose: () => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.CloseProgram, programEntity: rEnt)));
 
-            var closeBtn = new ContentButton { Text = "x", MinWidth = 22 };
-            closeBtn.OnPressed += _ => SendProgramMessage(new NetworkCoreOsActionMessage(NetworkCoreOsAction.CloseProgram, programEntity: rEnt));
-            pair.AddChild(closeBtn);
-            _inlineRunningTabs.Add(pair);
-            _unifiedNavBar.AddChild(pair);
+            _inlineRunningTabs.Add(tabPill);
+            _unifiedNavBar.AddChild(tabPill);
         }
 
         _installedContainer.RemoveAllChildren();

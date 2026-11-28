@@ -116,11 +116,11 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(comp.BootError, Does.Contain("RAM"));
         });
 
-        // Program RAM limit enforcement: reduce physical RAM stick capacity to 36MB (barely enough for 32MB OS),
-        // re-insert it, and verify launching Terminal (8MB) is denied by hardware RAM limit!
+        // Program RAM limit enforcement: reduce physical RAM stick capacity to 132 QB (barely enough for 128 QB Desktop OS),
+        // re-insert it, and verify launching Terminal (12 QB) is denied by hardware RAM limit!
         await Server.WaitAssertion(() =>
         {
-            SEntMan.GetComponent<ComputerRamComponent>(removedRam!.Value).SizeMb = 36;
+            SEntMan.GetComponent<ComputerRamComponent>(removedRam!.Value).SizeMb = 132;
             var itemSlots = Server.System<ItemSlotsSystem>();
             Assert.That(itemSlots.TryInsert(compUid, ModularComputerComponent.SlotRam, removedRam!.Value, null), Is.True);
 
@@ -129,7 +129,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(comp.BootProgram, Is.Not.Null);
 
             var stats = SEntMan.GetComponent<ComputerStatsComponent>(compUid);
-            Assert.That(stats.RamMb, Is.EqualTo(36));
+            Assert.That(stats.RamMb, Is.EqualTo(132));
             var ok = compSys.TryLaunchExecutable(compUid, "/bin/terminal.nte", out _, out var err);
             Assert.That(ok, Is.False);
             Assert.That(err, Does.Contain("RAM"));
@@ -153,12 +153,12 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             Server.System<PowerReceiverSystem>().SetNeedsPower(hostUid, false);
             compUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(hostUid).ComputerEntity!.Value;
-            bootUid = SEntMan.GetComponent<OxydComputerComponent>(compUid).BootProgram!.Value;
         });
         await RunTicks(5);
 
         await Server.WaitAssertion(() =>
         {
+            bootUid = SEntMan.GetComponent<OxydComputerComponent>(compUid).BootProgram!.Value;
             Assert.That(SEntMan.HasComponent<OsProgramComponent>(bootUid), Is.True);
             var progComp = SEntMan.GetComponent<ProgramComponent>(bootUid);
             Assert.That(progComp.IsBootProgram, Is.True);
@@ -441,6 +441,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsTargetHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsTargetHost, false);
             wsTargetComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsTargetHost).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsTargetComp).RemoteLocked = false;
         });
         await RunTicks(5);
 
@@ -814,12 +815,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 return btn;
         }
 
-        // Also support icon-tile launcher cards (Workstation DesktopAppsGrid AppTile_*)
+        // Also support icon-tile launcher cards (Workstation DesktopAppsGrid AppTile_* and PDA PdaAppTile_*)
         var panels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
         CollectDescendants(osCtrl, panels);
         foreach (var panel in panels)
         {
-            if (!panel.VisibleInTree || panel.Name == null || !panel.Name.StartsWith("AppTile_", StringComparison.Ordinal))
+            if (!panel.VisibleInTree || panel.Name == null ||
+                (!panel.Name.StartsWith("AppTile_", StringComparison.Ordinal) &&
+                 !panel.Name.StartsWith("PdaAppTile_", StringComparison.Ordinal)))
                 continue;
 
             var labels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLabel>();
@@ -886,7 +889,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         // Verify ONLY 1 NotekeeperUiControl is mounted (no duplicate instance!) and type/click real controls
         NotekeeperUiControl? noteCtrl = null;
         Content.Client.UserInterface.Controls.ContentLineEdit? newNameInput = null;
-        Content.Client.UserInterface.Controls.ContentLineEdit? editorLine = null;
+        Robust.Client.UserInterface.Controls.TextEdit? editorBox = null;
         Content.Client.UserInterface.Controls.ContentButton? createBtn = null;
         Content.Client.UserInterface.Controls.ContentButton? saveBtn = null;
         await Client.WaitAssertion(() =>
@@ -898,9 +901,12 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             var inputs = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLineEdit>();
             CollectDescendants(noteCtrl, inputs);
-            Assert.That(inputs.Count, Is.EqualTo(2));
+            Assert.That(inputs.Count, Is.EqualTo(1));
             newNameInput = inputs[0];
-            editorLine = inputs[1];
+
+            editorBox = GetControlFromChildren<Robust.Client.UserInterface.Controls.TextEdit>(
+                t => t.Name == "NotekeeperEditor", noteCtrl);
+            Assert.That(editorBox, Is.Not.Null, "Notekeeper must expose a multiline TextEdit notepad editor.");
 
             var noteBtns = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentButton>();
             CollectDescendants(noteCtrl, noteBtns);
@@ -910,12 +916,15 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await TypeIntoLineEdit(newNameInput!, "enter_note", submit: true);
         const string longLine = "enter line with long overflow verification 12345678901234567890";
-        await TypeIntoLineEdit(editorLine!, longLine, submit: true);
+        await Client.WaitPost(() =>
+        {
+            editorBox!.TextRope = new Robust.Shared.Utility.Rope.Leaf(longLine);
+        });
+        await ClickViaHitTest(saveBtn!);
+        await RunTicks(6);
         await Client.WaitAssertion(() =>
         {
             Assert.That(newNameInput!.Text, Is.Empty);
-            Assert.That(editorLine!.Text, Is.Empty);
-            Assert.That(editorLine.HasKeyboardFocus(), Is.True, "Notekeeper editor should keep focus across Enter submit + BUI update");
             var saveCenter = new ScreenCoordinates(saveBtn!.GlobalPixelPosition + saveBtn.PixelSize / 2, saveBtn.Window?.Id ?? default);
             Assert.That(UiMan.MouseGetControl(saveCenter), Is.Not.Null, "Save button pushed out of hit-test bounds by long text");
         });
@@ -943,8 +952,12 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(newNameInput.HasKeyboardFocus(), Is.False);
         });
         await ClickViaHitTest(createBtn!);
-        await TypeIntoLineEdit(editorLine!, "SINGLE_UI_WORKS");
+        await Client.WaitPost(() =>
+        {
+            editorBox!.TextRope = new Robust.Shared.Utility.Rope.Leaf("SINGLE_UI_WORKS");
+        });
         await ClickViaHitTest(saveBtn!);
+        await RunTicks(6);
 
         await Server.WaitAssertion(() =>
         {
@@ -956,9 +969,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await Client.WaitAssertion(() =>
         {
-            var labels = new System.Collections.Generic.List<Content.Client.UserInterface.Controls.ContentLabel>();
-            CollectDescendants(noteCtrl!, labels);
-            Assert.That(labels.Any(l => l.Text != null && l.Text.Contains("SINGLE_UI_WORKS")), Is.True);
+            Assert.That(Robust.Shared.Utility.Rope.Collapse(editorBox!.TextRope), Does.Contain("SINGLE_UI_WORKS"));
         });
 
         // Switch back to merged Home tab, launch Terminal, verify ONLY 1 TerminalUiControl, type `ls` and submit
@@ -1128,6 +1139,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
             wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).RemoteLocked = false;
 
             pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
         });
@@ -1334,6 +1346,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
             wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).RemoteLocked = false;
             wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
         });
         await RunTicks(6);
@@ -1607,6 +1620,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
             wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).RemoteLocked = false;
             wsGuid = routerSys.EnsureDeviceGuid(wsCompUid);
         });
         await RunTicks(6);
@@ -2053,6 +2067,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var remoteWsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", new MapCoordinates(Vector2.Zero, secondMapId));
             power.SetNeedsPower(remoteWsUid, false);
             remoteMapWsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(remoteWsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(remoteMapWsCompUid).RemoteLocked = false;
         });
         await RunTicks(5);
 
@@ -2169,6 +2184,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
             wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).RemoteLocked = false;
             pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
         });
         await RunTicks(6);
@@ -2482,7 +2498,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(lockSys.IsLocked(apcUid), Is.True, "APC must start locked.");
             initialBreaker = SEntMan.GetComponent<ApcComponent>(apcUid).MainBreakerEnabled;
             var apcCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid).ComputerEntity!.Value;
-            apcProgUid = SEntMan.GetComponent<OxydComputerComponent>(apcCompUid).ActiveProgram!.Value;
+            var apcComp = SEntMan.GetComponent<OxydComputerComponent>(apcCompUid);
+            apcProgUid = (apcComp.ActiveProgram ?? apcComp.BootProgram)!.Value;
+            Assert.That(SEntMan.HasComponent<ApcControlProgramComponent>(apcProgUid), Is.True,
+                "APC must boot directly into ApcControlProgramComponent without EmbeddedOsProgram.");
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryFindFileSystem(apcCompUid, out _, out var apcFs), Is.True);
+            Assert.That(apcFs!.Files.ContainsKey("/bin/terminal.nte"), Is.True,
+                "APC HDD must still retain /bin/terminal.nte even though EmbeddedOsProgram is no longer booted.");
         });
 
         // Player has NO ID/access -> activating APC must STILL open the UI!
@@ -2496,27 +2519,16 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var apcWin = (ComputerDisplayWindow) apcWinBase!;
             var embList = new List<EmbeddedOsUiControl>();
             CollectDescendants(apcWin, embList);
-            Assert.That(embList.Count, Is.EqualTo(1));
-
-            // Simplified APC layout: strictly 2 tabs (Controller & Terminal) and NO hardware stats on Controller view
-            var allEmbBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(embList[0], allEmbBtns);
-            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
-                w => w.Name == "EmbeddedTabBar", embList[0]);
-            Assert.That(tabBar, Is.Not.Null);
-            var visibleTabBtns = tabBar!.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>()
-                .Where(b => b.VisibleInTree).Select(b => b.Text).ToList();
-            Assert.That(visibleTabBtns, Is.EquivalentTo(new[] { "Controller", "Terminal" }),
-                "Simplified APC UI must expose strictly 2 tabs: Controller and Terminal.");
+            Assert.That(embList.Count, Is.EqualTo(0), "APC must boot ApcControlUiControl directly without EmbeddedOsUiControl.");
 
             var allVisibleLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
-            CollectDescendants(embList[0], allVisibleLabels);
+            CollectDescendants(apcWin, allVisibleLabels);
             var visibleTexts = allVisibleLabels.Where(l => l.VisibleInTree && !string.IsNullOrEmpty(l.Text)).Select(l => l.Text!).ToList();
             Assert.That(visibleTexts.Any(t => t.Contains("CPU:", StringComparison.Ordinal) || t.Contains("RAM:", StringComparison.Ordinal)),
-                Is.False, "APC Controller tab must NOT display computer hardware stats.");
+                Is.False, "APC Controller UI must NOT display computer hardware stats.");
 
-            // Hardware lock must render as a full-UI transparent overlay with a lock icon
-            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, embList[0]);
+            // Hardware lock must render as a full-UI transparent overlay with a lock icon on ComputerDisplayWindow
+            var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, apcWin);
             Assert.That(lockOverlay, Is.Not.Null, "Locked APC must have HardwareLockOverlayControl.");
             Assert.That(lockOverlay!.VisibleInTree, Is.True, "Hardware lock overlay must be visible while APC is locked.");
             var lockIcon = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentTextureRect>(
@@ -2551,7 +2563,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(hit == lockOverlay || (hit != null && HasAncestor(hit, lockOverlay)), Is.True,
                 "Hardware lock overlay must cover and intercept clicks over the whole APC UI while locked.");
 
-            AssertAllVisibleChildrenWithinViewport(apcWin, embList[0], "APC Locked UI");
+            AssertAllVisibleChildrenWithinViewport(apcWin, apcCtrls[0], "APC Locked UI");
         });
 
         // Sending BUI action while locked must be blocked server-side!
@@ -2576,8 +2588,6 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await RunTicks(10);
 
         Content.Client.UserInterface.Controls.ContentButton? apcToggleBtn = null;
-        Content.Client.UserInterface.Controls.ContentButton? apcTerminalTabBtn = null;
-        Content.Client.UserInterface.Controls.ContentButton? apcControllerTabBtn = null;
         await Server.WaitAssertion(() =>
         {
             Assert.That(lockSys.IsLocked(apcUid), Is.False, "Authorized Engineering ID swipe must unlock APC.");
@@ -2589,13 +2599,6 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var lockOverlay = GetControlFromChildren<HardwareLockOverlayControl>(_ => true, apcWin);
             Assert.That(lockOverlay, Is.Not.Null);
             Assert.That(lockOverlay!.VisibleInTree, Is.False, "Hardware lock overlay must hide once APC is unlocked.");
-
-            apcControllerTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
-                b => b.Name == "ApcTabControllerButton", apcWin);
-            apcTerminalTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
-                b => b.Name == "ApcTabTerminalButton", apcWin);
-            Assert.That(apcControllerTabBtn, Is.Not.Null);
-            Assert.That(apcTerminalTabBtn, Is.Not.Null);
 
             var apcCtrls = new List<ApcControlUiControl>();
             CollectDescendants(apcWin, apcCtrls);
@@ -2630,30 +2633,6 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 apcCtrls[0]);
             Assert.That(telemetryLabel, Is.Not.Null, "Open APC UI must automatically update Power: ON/OFF state without Refresh.");
             Assert.That(telemetryLabel!.Text, Does.Not.Contain("(POWER ON)").And.Not.Contain("(OFF)"));
-        });
-
-        // Clicking Terminal tab launches/focuses Terminal inside APC, and Controller switches back!
-        await ClickViaHitTest(apcTerminalTabBtn!);
-        await RunTicks(10);
-        await Client.WaitAssertion(() =>
-        {
-            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
-            var apcWin = (ComputerDisplayWindow) apcWinBase!;
-            var termList = new List<TerminalUiControl>();
-            CollectDescendants(apcWin, termList);
-            Assert.That(termList.Count, Is.EqualTo(1), "Clicking APC Terminal tab must open TerminalUiControl.");
-            Assert.That(termList[0].VisibleInTree, Is.True);
-        });
-        await ClickViaHitTest(apcControllerTabBtn!);
-        await RunTicks(8);
-        await Client.WaitAssertion(() =>
-        {
-            Assert.That(TryFindWindow(typeof(ComputerDisplayWindow), out var apcWinBase), Is.True);
-            var apcWin = (ComputerDisplayWindow) apcWinBase!;
-            var apcCtrls = new List<ApcControlUiControl>();
-            CollectDescendants(apcWin, apcCtrls);
-            Assert.That(apcCtrls.Count, Is.EqualTo(1));
-            Assert.That(apcCtrls[0].VisibleInTree, Is.True, "Clicking APC Controller tab must return to ApcControlUiControl.");
         });
 
         // Swiping EngineeringIDCard again re-locks APC, restores lock overlay, and disables UI buttons again!
@@ -2699,7 +2678,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(lockSys.IsLocked(alarmUid), Is.True, "AirAlarm must start locked.");
             initialMode = SEntMan.GetComponent<AirAlarmComponent>(alarmUid).CurrentMode;
             var alarmCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmUid).ComputerEntity!.Value;
-            alarmProgUid = SEntMan.GetComponent<OxydComputerComponent>(alarmCompUid).ActiveProgram!.Value;
+            var alarmComp = SEntMan.GetComponent<OxydComputerComponent>(alarmCompUid);
+            alarmProgUid = (alarmComp.ActiveProgram ?? alarmComp.BootProgram)!.Value;
+            Assert.That(SEntMan.HasComponent<AtmosControlProgramComponent>(alarmProgUid), Is.True,
+                "AirAlarm must boot directly into AtmosControlProgramComponent without EmbeddedOsProgram.");
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryFindFileSystem(alarmCompUid, out _, out var alarmFs), Is.True);
+            Assert.That(alarmFs!.Files.ContainsKey("/bin/terminal.nte"), Is.True,
+                "AirAlarm HDD must still retain /bin/terminal.nte.");
         });
 
         // Drop EngineeringIDCard so player has NO access -> activating AirAlarm must STILL open UI!
@@ -2716,19 +2702,14 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(lockOverlay, Is.Not.Null, "Locked AirAlarm must have HardwareLockOverlayControl.");
             Assert.That(lockOverlay!.VisibleInTree, Is.True, "Hardware lock overlay must be visible while AirAlarm is locked.");
 
-            // Strictly 2 tabs: Controller & Terminal (no Programs (.nte), no DeviceLinks, no hardware stats bar)
-            var alarmTabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
-                c => c.Name == "EmbeddedTabBar", alarmWin);
-            Assert.That(alarmTabBar, Is.Not.Null);
-            var alarmTabBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(alarmTabBar!, alarmTabBtns);
-            alarmTabBtns = alarmTabBtns.Where(b => b.Visible).ToList();
-            Assert.That(alarmTabBtns.Select(b => b.Text).ToList(), Is.EqualTo(new[] { "Controller", "Terminal" }),
-                "AirAlarm embedded UI must expose strictly Controller and Terminal tabs.");
+            // Direct control boot: no EmbeddedOsUiControl / no EmbeddedTabBar / no hardware stats bar
+            var alarmEmbList = new List<EmbeddedOsUiControl>();
+            CollectDescendants(alarmWin, alarmEmbList);
+            Assert.That(alarmEmbList.Count, Is.EqualTo(0), "AirAlarm must boot AtmosControlUiControl directly without EmbeddedOsUiControl.");
             var alarmOsLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
             CollectDescendants(alarmWin, alarmOsLabels);
             Assert.That(alarmOsLabels.Any(l => l.VisibleInTree && (l.Text ?? string.Empty).Contains("CPU:")), Is.False,
-                "Simplified AirAlarm UI must hide the embedded OS hardware stats bar.");
+                "AirAlarm UI must not show a hardware stats bar.");
 
             var atmosCtrls = new List<AtmosControlUiControl>();
             CollectDescendants(alarmWin, atmosCtrls);
@@ -2903,6 +2884,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
             wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
+            SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).RemoteLocked = false;
 
             pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
 
@@ -3074,8 +3056,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         await Server.WaitAssertion(() =>
         {
             var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
-            Assert.That(cardSys.HasReaders(wsCompUid), Is.False,
-                "Workstation must NOT have an integrated ID reader/slot by default.");
+            Assert.That(cardSys.GetSlotReaders(wsCompUid), Is.Empty,
+                "Workstation must NOT have an integrated ID Card Slot module by default.");
             Assert.That(compSys.TryLaunchExecutable(wsCompUid, "/bin/access_encoder.nte", out var wEnc, out var err), Is.True, err);
             wsEncUid = wEnc!.Value;
         });
@@ -3175,13 +3157,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         EntityUid wsBootUid = default;
         EntityUid capIdUid = default;
 
+        EntityUid wsCompUid = default;
         await Server.WaitPost(() =>
         {
             var coords = SEntMan.GetCoordinates(TargetCoords);
             wsUid = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
             power.SetNeedsPower(wsUid, false);
-            var wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
-            wsBootUid = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).BootProgram!.Value;
+            wsCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsUid).ComputerEntity!.Value;
 
             pdaCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
             pdaBootUid = SEntMan.GetComponent<OxydComputerComponent>(pdaCompUid).BootProgram!.Value;
@@ -3192,6 +3174,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await Server.WaitAssertion(() =>
         {
+            wsBootUid = SEntMan.GetComponent<OxydComputerComponent>(wsCompUid).BootProgram!.Value;
             Assert.That(SEntMan.HasComponent<PdaOsProgramComponent>(pdaBootUid), Is.True, "PDA must boot PdaOsProgramComponent.");
             Assert.That(SEntMan.GetComponent<ProgramComponent>(pdaBootUid).ExecutablePath, Is.EqualTo("/bin/pda_os.nte"));
 
@@ -3245,8 +3228,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             CollectDescendants(pdaOsCtrl, visibleLabels);
             var visibleTexts = visibleLabels.Where(l => l.VisibleInTree && !string.IsNullOrEmpty(l.Text)).Select(l => l.Text!).ToList();
 
-            Assert.That(visibleTexts.Any(t => t.StartsWith("Round Time:", StringComparison.Ordinal)), Is.True,
-                "Home view must display Round Time.");
+            Assert.That(visibleTexts.Any(t => t.StartsWith("Station Time:", StringComparison.Ordinal)), Is.True,
+                "Home view must display Station Time.");
             Assert.That(visibleTexts.Any(t => t.StartsWith("Name:", StringComparison.Ordinal)), Is.True,
                 "Home view must display Owner Name.");
             Assert.That(visibleTexts.Any(t => t.StartsWith("Inserted ID:", StringComparison.Ordinal)), Is.True,
@@ -3420,9 +3403,13 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
             Assert.That(cComp.IsBooted, Is.True, "Powered Autolathe embedded computer must boot.");
             latheBootUid = cComp.BootProgram!.Value;
-            latheProgUid = cComp.ActiveProgram!.Value;
+            latheProgUid = (cComp.ActiveProgram ?? cComp.BootProgram)!.Value;
+            Assert.That(SEntMan.HasComponent<LatheControlProgramComponent>(latheProgUid), Is.True,
+                "Autolathe must boot directly into LatheControlProgramComponent without EmbeddedOsProgram.");
 
             Assert.That(fsSys.TryFindFileSystem(latheCompUid, out _, out var fs), Is.True);
+            Assert.That(fs!.Files.ContainsKey("/bin/terminal.nte"), Is.True,
+                "Autolathe HDD must still retain /bin/terminal.nte.");
             var bpFiles = fs!.Files.Values.OfType<RecipeBlueprintFile>().ToList();
             Assert.That(bpFiles.Count, Is.GreaterThan(0), "Autolathe static blueprints must be materialized into computer memory.");
 
@@ -3438,7 +3425,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(wrenchFilePath, Is.Not.Empty, "Wrench blueprint must exist in computer memory.");
         });
 
-        // 2) Open Autolathe UI and verify simplified 2-tab mode (Controller & Terminal only) + rich LatheControlUiControl!
+        // 2) Open Autolathe UI and verify direct control program boot + rich LatheControlUiControl!
         await Activate();
         await RunTicks(10);
 
@@ -3448,15 +3435,10 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             win = GetWindow<ComputerDisplayWindow>();
             Assert.That(win.IsOpen, Is.True);
 
-            // Strictly 2 tabs: Controller & Terminal (no Programs (.nte), no DeviceLinks, no hardware stats bar)
-            var tabBar = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
-                c => c.Name == "EmbeddedTabBar", win);
-            Assert.That(tabBar, Is.Not.Null);
-            var visibleTabButtons = new List<Content.Client.UserInterface.Controls.ContentButton>();
-            CollectDescendants(tabBar!, visibleTabButtons);
-            visibleTabButtons = visibleTabButtons.Where(b => b.Visible).ToList();
-            Assert.That(visibleTabButtons.Select(b => b.Text).ToList(), Is.EqualTo(new[] { "Controller", "Terminal" }),
-                "Autolathe embedded UI must expose strictly Controller and Terminal tabs.");
+            // Direct control boot (no EmbeddedOsUiControl wrapper)
+            var embList = new List<EmbeddedOsUiControl>();
+            CollectDescendants(win, embList);
+            Assert.That(embList.Count, Is.EqualTo(0), "Autolathe must boot LatheControlUiControl directly without EmbeddedOsUiControl.");
 
             // Rich LatheControlUiControl: materials as MaterialIconTile icons with overlaid counts, NOT text split by '|'
             var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
@@ -3498,8 +3480,23 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 w => w.Name == "LatheCurrentUsageIcons", latheUi!);
             var progBar = GetControlFromChildren<ContentProgressBar>(
                 p => p.Name == "LatheProgressBar", latheUi!);
-            var queueContainer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentWrapContainer>(
+            var queueRow = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
+                w => w.Name == "LatheQueueRow", latheUi!);
+            Assert.That(queueRow, Is.Not.Null);
+            Assert.That(queueRow!.Orientation, Is.EqualTo(Content.Client.UserInterface.Controls.ContentBoxContainer.LayoutOrientation.Horizontal),
+                "Autolathe queue header and items must sit on the same horizontal row.");
+            var queueHeader = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheQueueHeader", queueRow)!;
+            var queueScroll = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentScrollContainer>(
+                s => s.Name == "LatheQueueScroll", queueRow)!;
+            Assert.That(queueScroll.GlobalPixelPosition.X, Is.GreaterThanOrEqualTo(queueHeader.GlobalPixelPosition.X + queueHeader.PixelSize.X - 1f),
+                "Autolathe queue items must expand to the right of the Queue label rather than below it.");
+
+            var queueContainer = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
                 w => w.Name == "LatheQueueContainer", latheUi!);
+            Assert.That(queueContainer, Is.Not.Null);
+            Assert.That(queueContainer!.Orientation, Is.EqualTo(Content.Client.UserInterface.Controls.ContentBoxContainer.LayoutOrientation.Horizontal),
+                "Autolathe queue must be laid out horizontally.");
 
             Assert.That(nameLbl!.Text, Does.Contain("wirecutter").IgnoreCase);
             Assert.That(usageIconsWrap, Is.Not.Null);
@@ -3595,17 +3592,6 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 l => l.Name == "LatheCurrentPrintingName", latheUi!);
             Assert.That(nameLbl!.Text, Does.Contain("Standby"),
                 "Autolathe UI must update back to Standby when final queued item finishes printing.");
-        });
-
-        // 4) Switch to Terminal tab inside the 2-tab embedded OS
-        await SendBui(ProgramUiKey.Key, new EmbeddedOsLaunchProgramMessage("/bin/terminal.nte"), FromServer(latheBootUid));
-        await RunTicks(8);
-
-        await Client.WaitAssertion(() =>
-        {
-            var termCtrl = GetControlFromChildren<TerminalUiControl>(_ => true, win!);
-            Assert.That(termCtrl, Is.Not.Null);
-            Assert.That(termCtrl!.VisibleInTree, Is.True);
             win!.Close();
         });
         await RunTicks(6);
@@ -3971,9 +3957,11 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(manifestUi, Is.Not.Null);
             var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
             CollectDescendants(manifestUi!, labels);
-            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("Alice — Clown")), Is.True,
+            Assert.That(labels.Any(l => l.Name == "CrewManifestNameLabel" && l.Text == "Alice"), Is.True,
                 "Offline CrewManifest must render its local cached /records/crew_manifest.db file from memory.");
-            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("[File:")), Is.True,
+            Assert.That(labels.Any(l => l.Name == "CrewManifestJobLabel" && l.Text == "Clown"), Is.True,
+                "Offline CrewManifest must render the updated job title from local cache.");
+            Assert.That(labels.Any(l => l.Name == "CrewManifestStatusLabel" && (l.Text ?? string.Empty).Contains("[")), Is.True,
                 "CrewManifest UI must display the cached file timestamp.");
             win.Close();
         });
@@ -4050,7 +4038,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var fsSys = Server.System<SharedFileSystemSystem>();
             var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
             Assert.That(cComp.IsBooted, Is.True);
-            latheProgUid = cComp.ActiveProgram!.Value;
+            latheProgUid = (cComp.ActiveProgram ?? cComp.BootProgram)!.Value;
 
             Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out var latheFs), Is.True);
             latheDriveUid = drive!.Value;
@@ -4442,7 +4430,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var fsSys = Server.System<SharedFileSystemSystem>();
             var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
             Assert.That(cComp.IsBooted, Is.True);
-            latheProgUid = cComp.ActiveProgram!.Value;
+            latheProgUid = (cComp.ActiveProgram ?? cComp.BootProgram)!.Value;
             Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out _), Is.True);
             latheDriveUid = drive!.Value;
 
@@ -4469,9 +4457,9 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             Assert.That(recipeScroll.AlwaysShowBackground, Is.True);
             Assert.That(latheUi!.DesiredExpandedWindowHeight, Is.GreaterThanOrEqualTo(760f),
                 "Autolathe UI must request expanded height for up to 8 recipes.");
-            Assert.That(win.MinSize.X, Is.GreaterThanOrEqualTo(700f),
+            Assert.That(win.MinSize.X, Is.GreaterThanOrEqualTo(680f),
                 "Autolathe window must enforce a proper minimum width so controls are not cramped.");
-            Assert.That(win.MinSize.Y, Is.GreaterThanOrEqualTo(600f),
+            Assert.That(win.MinSize.Y, Is.GreaterThanOrEqualTo(500f),
                 "Autolathe window must enforce a proper minimum height so controls are not smushed.");
             Assert.That(win.SetWidth, Is.GreaterThanOrEqualTo(700f),
                 "Autolathe window must open at its full proper width.");
@@ -4828,7 +4816,7 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var fsSys = Server.System<SharedFileSystemSystem>();
             var cComp = SEntMan.GetComponent<OxydComputerComponent>(latheCompUid);
             Assert.That(cComp.IsBooted, Is.True);
-            latheProgUid = cComp.ActiveProgram!.Value;
+            latheProgUid = (cComp.ActiveProgram ?? cComp.BootProgram)!.Value;
             Assert.That(fsSys.TryFindFileSystem(latheCompUid, out var drive, out _), Is.True);
             latheDriveUid = drive!.Value;
 
@@ -4853,10 +4841,18 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         {
             var win = GetWindow<ComputerDisplayWindow>();
             var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win);
-            var selLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
-                l => l.Name == "LatheSelectedRecipeLabel", latheUi!);
-            Assert.That(selLabel, Is.Not.Null);
-            Assert.That(selLabel!.Text, Does.Contain("wirecutter").IgnoreCase);
+            var allLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi!, allLabels);
+            Assert.That(allLabels.Any(l => l.Name == "LatheSelectedRecipeLabel"), Is.False,
+                "Autolathe UI must not show a redundant Selected label; highlighted card selection is sufficient.");
+
+            var recipeCards = new List<Content.Client.UserInterface.Controls.ContentPanelContainer>();
+            CollectDescendants(latheUi!, recipeCards);
+            var highlightedCard = recipeCards.FirstOrDefault(c =>
+                c.Name == "LatheRecipeCard" &&
+                c.PanelOverride is Robust.Client.Graphics.StyleBoxFlat sb &&
+                sb.BorderColor == Robust.Shared.Maths.Color.FromHex("#00D4FF"));
+            Assert.That(highlightedCard, Is.Not.Null, "Selected Wirecutter recipe card must be visually highlighted.");
 
             // Close the UI -> selected recipe MUST persist!
             win.Close();
@@ -5517,8 +5513,30 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 "Network Core OS must create a criminal records entry for the joining player in /records/criminal_records.db.");
         });
 
-        // 4) Open migrated ComputerStationRecords -> verify StationRecordsUiControl renders & can create a new record persisted to DataServer + Crew Manifest!
+        // 4) Open migrated ComputerStationRecords -> verify zero data before HoP/Command auth,
+        //    then authenticate via OS-level HoP ID swipe and verify record viewing + creation!
         await Server.WaitPost(() => compSys.OpenComputerForActor(stationRecCompUid, SPlayer));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var recUi = GetControlFromChildren<StationRecordsUiControl>(_ => true, win);
+            Assert.That(recUi, Is.Not.Null, "ComputerStationRecords must render StationRecordsUiControl.");
+            var nameEdit = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLineEdit>(
+                e => e.Name == "StationRecordsNameEdit", recUi!);
+            Assert.That(nameEdit!.Text, Is.Empty,
+                "Station Records must send zero record data until authenticated with Head of Personnel or Command access.");
+        });
+
+        await Server.WaitPost(() =>
+        {
+            var hostCoords = SEntMan.GetComponent<TransformComponent>(stationRecHost).Coordinates;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, hostCoords);
+            var hopCard = SEntMan.SpawnEntity("HoPIDCard", hostCoords);
+            var swipeEv = new InteractUsingEvent(SPlayer, hopCard, stationRecHost, hostCoords);
+            SEntMan.EventBus.RaiseLocalEvent(stationRecHost, swipeEv);
+        });
         await RunTicks(8);
 
         await Client.WaitAssertion(() =>
@@ -6817,7 +6835,11 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
             stationRecCompUid = SEntMan.GetComponent<EmbeddedComputerHostComponent>(stationRecHost).ComputerEntity!.Value;
             stationRecProgUid = SEntMan.GetComponent<OxydComputerComponent>(stationRecCompUid).ActiveProgram!.Value;
-            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, SEntMan.GetComponent<TransformComponent>(stationRecHost).Coordinates); compSys.OpenComputerForActor(stationRecCompUid, SPlayer);
+            var stCoords = SEntMan.GetComponent<TransformComponent>(stationRecHost).Coordinates;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, stCoords);
+            var hopId = SEntMan.SpawnEntity("HoPIDCard", stCoords);
+            compSys.AuthenticateOsSession(stationRecCompUid, hopId, SPlayer);
+            compSys.OpenComputerForActor(stationRecCompUid, SPlayer);
         });
         await RunTicks(10);
 
@@ -7205,41 +7227,27 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var mapPanel = GetControlFromChildren<Content.Client._Oxyd.Computers.UI.OxydDeviceNavMapControl>(_ => true, atmosCtrl);
             var bodyPanel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
                 c => c.Name == "AtmosBodyContainer", atmosCtrl);
-            var deauthBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
-                b => b.Name == "AtmosRevokeAuthButton", atmosCtrl);
+            var atmosBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(atmosCtrl, atmosBtns);
+            var deauthBtn = atmosBtns.FirstOrDefault(
+                b => b.Name == "AtmosRevokeAuthButton" || string.Equals(b.Text, "Deauth", StringComparison.OrdinalIgnoreCase));
             Assert.That(mapPanel, Is.Not.Null);
             Assert.That(bodyPanel, Is.Not.Null);
             Assert.That(bodyPanel!.Visible, Is.True, "Atmos Map Mode must split side-by-side showing both Map and Selected Alarm.");
-            Assert.That(deauthBtn, Is.Not.Null, "Authorized Atmos Control must expose a Deauth button.");
+            Assert.That(deauthBtn, Is.Null, "Atmos Control must NOT expose a manual Deauth button.");
             Assert.That(mapPanel!.MarkerCount, Is.GreaterThanOrEqualTo(2));
             selectedAltAlarmKey = mapPanel.MarkerKeys.First(k => !string.Equals(k, alarmBGuid, StringComparison.OrdinalIgnoreCase));
             Assert.That(mapPanel.TrySelectByKey(selectedAltAlarmKey), Is.True);
         });
         await RunTicks(6);
 
-        // Verify Deauth works from Atmos Control UI while authorized to alarm B
-        await Server.WaitPost(() =>
-        {
-            // Switch back to authorized alarm B and verify deauth revokes its remote session auth
-            SEntMan.System<Content.Server._Oxyd.Computers.Programs.DeviceProgramsSystem>();
-        });
+        // Switching to another Air Alarm must automatically deauth the prior remote session.
         await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.SelectTarget, alarmBGuid), FromServer(atmosProgUid));
-        await RunTicks(4);
-        Content.Client.UserInterface.Controls.ContentButton? atmosDeauthBtn = null;
-        await Client.WaitAssertion(() =>
-        {
-            var win = GetWindow<ComputerDisplayWindow>();
-            var atmosCtrl = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
-            atmosDeauthBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
-                b => b.Name == "AtmosRevokeAuthButton", atmosCtrl);
-            Assert.That(atmosDeauthBtn, Is.Not.Null);
-        });
-        await ClickViaHitTest(atmosDeauthBtn!);
-        await RunTicks(4);
+        await RunTicks(6);
         await Server.WaitAssertion(() =>
         {
             Assert.That(SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProgUid).Locked, Is.True,
-                "Clicking Deauth in Atmos Control must lock the active remote session.");
+                "Switching away to another target alarm must automatically deauth the prior remote session.");
         });
         await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var staleWin)) staleWin.Close(); });
         await RunTicks(4);
@@ -7744,9 +7752,17 @@ public sealed class OxydComputerRefactorTests : InteractionTest
 
         await VerifyOsShutDownAndReboot(wsHost, wsComp, "OsShutDownButton");
         await VerifyOsShutDownAndReboot(pdaUid, pdaComp, "PdaShutDownButton");
-        await Server.WaitPost(() => lockSys.Unlock(apcUid, null));
-        await RunTicks(4);
-        await VerifyOsShutDownAndReboot(apcUid, apcComp, "EmbeddedOsShutDownButton");
+        EntityUid recordsHost = default;
+        EntityUid recordsComp = default;
+        await Server.WaitPost(() =>
+        {
+            recordsHost = SEntMan.SpawnEntity("ComputerStationRecords", new EntityCoordinates(gridUid, 3.5f, 0.5f));
+            powerSys.SetNeedsPower(recordsHost, false);
+            compSys.EnsureComputerBoundToHost((recordsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(recordsHost)), out recordsComp);
+            lockSys.Unlock(routerHost, null);
+        });
+        await RunTicks(8);
+        await VerifyOsShutDownAndReboot(recordsHost, recordsComp, "EmbeddedOsShutDownButton");
         await VerifyOsShutDownAndReboot(routerHost, routerComp, "NetworkCoreShutDownButton");
     }
 
@@ -8095,8 +8111,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             atmosProg = atP!.Value;
             Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/apc_control.nte", out var apP, out _), Is.True);
             apcProg = apP!.Value;
-            Assert.That(compSys.TryLaunchExecutable(latheComp, "/bin/lathe_control.nte", out var lP, out _), Is.True);
-            latheProg = lP!.Value;
+            var latheCComp = SEntMan.GetComponent<OxydComputerComponent>(latheComp);
+            latheProg = (latheCComp.ActiveProgram ?? latheCComp.BootProgram)!.Value;
 
             SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
         });
@@ -8238,6 +8254,8 @@ public sealed class OxydComputerRefactorTests : InteractionTest
                 }
             };
             Assert.That(fsSys.TryWriteFile(wsDrive!.Value, manifestDb, wsFs!), Is.True);
+            if (fsSys.TryFindFileSystem(serverComp, out var srvManifestDrive, out var srvManifestFs))
+                Assert.That(fsSys.TryWriteFile(srvManifestDrive!.Value, (DatabaseVirtualFile) manifestDb.Clone(), srvManifestFs!), Is.True);
 
             // Install APC/Atmos/Camera programs on workstation & verify complexity-proportional QB sizes!
             Assert.That(fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "apc_control", Extension = "nte", Directory = "/bin/", ProgramId = "OxydApcControlProgram", Title = "APC Control" }, wsFs!), Is.True);
@@ -8296,6 +8314,26 @@ public sealed class OxydComputerRefactorTests : InteractionTest
             var jobIcons = icons.Where(i => i.Name == "CrewManifestJobIcon").ToList();
             Assert.That(jobIcons.Count, Is.EqualTo(2), "Crew Manifest must render a job icon for each crewmember.");
             Assert.That(jobIcons.All(i => i.Texture != null), Is.True);
+
+            var spriteSys = Client.System<Robust.Client.GameObjects.SpriteSystem>();
+            var cProto = Client.ResolveDependency<Robust.Shared.Prototypes.IPrototypeManager>();
+            var ceIconTex = spriteSys.Frame0(cProto.Index<Content.Shared.StatusIcon.JobIconPrototype>("JobIconChiefEngineer").Icon);
+            var secIconTex = spriteSys.Frame0(cProto.Index<Content.Shared.StatusIcon.JobIconPrototype>("JobIconSecurityOfficer").Icon);
+            var noIdIconTex = spriteSys.Frame0(cProto.Index<Content.Shared.StatusIcon.JobIconPrototype>("JobIconNoId").Icon);
+            Assert.That(jobIcons.Any(i => i.Texture == ceIconTex), Is.True,
+                "Crew Manifest must render the true Chief Engineer job icon, not a fallback.");
+            Assert.That(jobIcons.Any(i => i.Texture == secIconTex), Is.True,
+                "Crew Manifest must render the true Security Officer job icon, not a fallback.");
+            Assert.That(jobIcons.All(i => i.Texture != noIdIconTex), Is.True);
+
+            // Seamless OS running-program tab pill: single bordered container with borderless app + close buttons
+            var tabPill = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentPanelContainer>(
+                p => p.Name == "OsRunningAppTabPill", win);
+            Assert.That(tabPill, Is.Not.Null, "Running OS app tab must render as one seamless pill container.");
+            var pillBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(tabPill!, pillBtns);
+            Assert.That(pillBtns.Count, Is.EqualTo(2), "Seamless OS tab pill must contain app name and close button.");
+            Assert.That(pillBtns.All(b => b.Borderless), Is.True, "Buttons inside OS tab pill must be borderless so there is no divider seam.");
 
             var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
             CollectDescendants(manUi, labels);
@@ -8373,6 +8411,2208 @@ public sealed class OxydComputerRefactorTests : InteractionTest
         });
 
         await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var win)) win.Close(); });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestRemoteAtmosZeroDataLockGasThresholdNoCrashAndAutolatheBadges()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var slotsSys = Server.System<ItemSlotsSystem>();
+        var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+        var devListSys = Server.System<Content.Shared.DeviceConfigurator.Systems.DeviceListSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid atmosProg = default;
+        EntityUid alarmUid = default;
+        EntityUid sensorUid = default;
+        EntityUid ceIdUid = default;
+        EntityUid latheUid = default;
+        EntityUid latheComp = default;
+        EntityUid encryptedDiskUid = default;
+        int sensorAddrId = 0;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            // 1) Station Network Router
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            var routerEmb = SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, routerEmb), out _), Is.True);
+
+            // 2) Air Alarm + linked Gas Sensor on the same network
+            alarmUid = SEntMan.SpawnEntity("AirAlarm", coords);
+            powerSys.SetNeedsPower(alarmUid, false);
+            var alarmEmb = SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmUid);
+            Assert.That(compSys.EnsureComputerBoundToHost((alarmUid, alarmEmb), out _), Is.True);
+
+            sensorUid = SEntMan.SpawnEntity("AirSensor", coords);
+            powerSys.SetNeedsPower(sensorUid, false);
+            SEntMan.EnsureComponent<Content.Shared.DeviceConfigurator.Components.LinkedDeviceNetworkComponent>(sensorUid);
+            var res = devListSys.UpdateDeviceList(alarmUid, new[] { sensorUid });
+            Assert.That(res, Is.EqualTo(Content.Shared.DeviceConfigurator.DeviceListUpdateResult.UpdateOk));
+
+            // 3) Workstation with ID slot running Remote Atmos Control (NO ID inserted yet -> unauthorized!)
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputerIdSlot", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp), Is.True);
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile
+            {
+                Name = "atmos_control",
+                Extension = "nte",
+                Directory = "/bin/",
+                ProgramId = "OxydAtmosControlProgram",
+                Title = "Atmos Control"
+            }, wsFs!), Is.True);
+
+            ceIdUid = SEntMan.SpawnEntity("CEIDCard", coords);
+        });
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/atmos_control.nte", out var ap, out _), Is.True);
+            atmosProg = ap!.Value;
+            compSys.SwitchActiveProgram(wsComp, atmosProg);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(12);
+
+        string expectedAlarmGuid = string.Empty;
+        // Unauthorized remote Atmos Control MUST receive ZERO telemetry/devices and show opaque AtmosLockBanner!
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProg);
+            Assert.That(progComp.HasTelemetry, Is.False, "Unauthorized remote Atmos Control must not populate telemetry.");
+            Assert.That(progComp.Vents.Count, Is.EqualTo(0));
+            Assert.That(progComp.Scrubbers.Count, Is.EqualTo(0));
+            Assert.That(progComp.Sensors.Count, Is.EqualTo(0));
+            Assert.That(progComp.AlarmLevel, Is.EqualTo("LOCKED"));
+            expectedAlarmGuid = progComp.SelectedTargetGuid;
+            Assert.That(expectedAlarmGuid, Is.Not.Empty);
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var lockBanner = GetControlFromChildren<Control>(c => c.Name == "AtmosLockBanner", atmosUi);
+            var body = GetControlFromChildren<Control>(c => c.Name == "AtmosBodyContainer", atmosUi);
+            Assert.That(lockBanner?.VisibleInTree, Is.True, "Unauthorized remote Atmos Control must display AtmosLockBanner.");
+            Assert.That(body?.VisibleInTree, Is.False, "Unauthorized remote Atmos Control must hide telemetry/device body.");
+
+            var headerLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "AtmosRemoteAuthStatusLabel", atmosUi)!;
+            Assert.That(headerLabel.Text, Does.Contain(expectedAlarmGuid),
+                "Atmos Control header must display the selected Air Alarm's device GUID.");
+            Assert.That(headerLabel.Text, Does.Not.Contain("AUTHORIZED").And.Not.Contain("LOCKED").And.Not.Contain("APC"));
+
+            var targetBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == $"AtmosTargetBtn_{expectedAlarmGuid}", atmosUi)!;
+            Assert.That(targetBtn.Text, Does.Contain(expectedAlarmGuid),
+                "Atmos Control target button must display the Air Alarm's device GUID instead of [AUTH]/[LOCKED].");
+            Assert.That(targetBtn.Text, Does.Not.Contain("[AUTH]").And.Not.Contain("[LOCKED]").And.Not.Contain("(APC)"));
+        });
+
+        // Insert Chief Engineer ID card into workstation ID slot -> authorizes target & loads sensor telemetry
+        await Server.WaitAssertion(() =>
+        {
+            var slot = cardSys.GetSlotReaders(wsComp)[0];
+            Assert.That(cardSys.TryInsertCard(slot, ceIdUid, null), Is.True);
+        });
+        await RunTicks(10);
+        await SendBui(ProgramUiKey.Key, new AtmosControlActionMessage(AtmosControlAction.ResyncDevices), FromServer(atmosProg));
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProg);
+            Assert.That(progComp.Sensors.Count, Is.GreaterThanOrEqualTo(1), "Authorized remote Atmos Control must receive sensor telemetry.");
+            sensorAddrId = progComp.Sensors[0].AddressId;
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var atmosUi = GetControlFromChildren<AtmosControlUiControl>(_ => true, win)!;
+            var lockBanner = GetControlFromChildren<Control>(c => c.Name == "AtmosLockBanner", atmosUi);
+            var body = GetControlFromChildren<Control>(c => c.Name == "AtmosBodyContainer", atmosUi);
+            Assert.That(lockBanner?.VisibleInTree, Is.False, "Authorized remote Atmos Control must hide lock banner.");
+            Assert.That(body?.VisibleInTree, Is.True, "Authorized remote Atmos Control must display telemetry/device body.");
+        });
+
+        // Regression test for sbyte Enum.IsDefined crash: updating a Gas sensor threshold remotely must NOT crash!
+        var updatedGasThreshold = new AtmosThresholdDto(
+            false,
+            true, 0.14f,
+            true, 0.18f,
+            true, 0.30f,
+            true, 0.40f);
+        await SendBui(ProgramUiKey.Key,
+            new AtmosUpdateSensorThresholdMessage(sensorAddrId, AtmosMonitorThresholdType.Gas, updatedGasThreshold, Content.Shared.Atmos.Gas.Oxygen),
+            FromServer(atmosProg));
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<AtmosControlProgramComponent>(atmosProg);
+            Assert.That(progComp.Sensors.Count, Is.GreaterThanOrEqualTo(1));
+            var sensorDto = progComp.Sensors.First(s => s.AddressId == sensorAddrId);
+            Assert.That(sensorDto.GasThresholds.ContainsKey(Content.Shared.Atmos.Gas.Oxygen), Is.True);
+            Assert.That(sensorDto.GasThresholds[Content.Shared.Atmos.Gas.Oxygen].LowerDanger, Is.EqualTo(0.14f).Within(0.01f),
+                "Remote Gas.Oxygen threshold update must succeed without sbyte Enum.IsDefined crash.");
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var win)) win.Close(); });
+        await RunTicks(4);
+
+        // 4) Autolathe UI: always show blueprint LP cost, and show attached filename ONLY for encrypted blueprints
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            latheUid = SEntMan.SpawnEntity("Autolathe", coords);
+            powerSys.SetNeedsPower(latheUid, false);
+            var latheEmb = SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid);
+            Assert.That(compSys.EnsureComputerBoundToHost((latheUid, latheEmb), out latheComp), Is.True);
+            Assert.That(fsSys.TryFindFileSystem(latheComp, out var driveUid, out var fs), Is.True);
+            fsSys.TryWriteFile(driveUid!.Value, new RecipeBlueprintFile
+            {
+                Name = "unencrypted_tools",
+                Extension = "lathe",
+                Directory = "/blueprints/",
+                Recipes = new List<Robust.Shared.Prototypes.ProtoId<Content.Shared.Research.Prototypes.LatheRecipePrototype>> { "Wirecutter" }
+            }, fs!);
+
+            encryptedDiskUid = SEntMan.SpawnEntity("BaseRecipeDisk", coords);
+            Assert.That(slotsSys.TryInsert(latheUid, SharedLatheSystem.diskSlot, encryptedDiskUid, null), Is.True);
+        });
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            compSys.OpenComputerForActor(latheComp, SPlayer);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win)!;
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(latheUi, labels);
+
+            var recipeTitles = labels
+                .Where(l => (l.Text ?? string.Empty).Contains("Cost ", StringComparison.Ordinal))
+                .Select(l => l.Text!)
+                .ToList();
+            Assert.That(recipeTitles.Count, Is.GreaterThanOrEqualTo(2),
+                "All Autolathe blueprints must display their LP cost.");
+
+            var unencryptedTitle = recipeTitles.FirstOrDefault(t =>
+                t.Contains("wirecutter", StringComparison.OrdinalIgnoreCase) && !t.Contains("DISK", StringComparison.Ordinal));
+            Assert.That(unencryptedTitle, Is.Not.Null, "Unencrypted memory blueprint must show its LP cost.");
+            Assert.That(unencryptedTitle!, Does.Not.Contain("unencrypted_tools.lathe"),
+                "Unencrypted blueprint must NOT display its attached filename.");
+
+            var encryptedTitle = recipeTitles.FirstOrDefault(t =>
+                t.Contains("DISK", StringComparison.Ordinal) && t.Contains(".lathe", StringComparison.OrdinalIgnoreCase));
+            Assert.That(encryptedTitle, Is.Not.Null,
+                "Encrypted blueprint must display both its LP cost and attached .lathe filename.");
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var win)) win.Close(); });
+        await RunTicks(4);
+
+        // 5) Dual-ID Workstation prototype (2 ID slots) & Camera GUID vs custom label display
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var dualWsHost = SEntMan.SpawnEntity("OxydWorkstationComputerDualIdSlot", coords);
+            powerSys.SetNeedsPower(dualWsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((dualWsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(dualWsHost)), out var dualComp), Is.True);
+            Assert.That(cardSys.GetSlotReaders(dualComp), Has.Count.EqualTo(2),
+                "OxydWorkstationComputerDualIdSlot must come pre-equipped with 2 ID Card Slot hardware modules.");
+
+            var camSys = Server.System<Content.Server._Oxyd.Computers.Cameras.OxydCameraSystem>();
+            var routerSys = Server.System<NetworkRouterSystem>();
+            var unlabeledCam = SEntMan.SpawnEntity("SurveillanceCameraSecurity", coords);
+            var unlabeledGuid = routerSys.EnsureDeviceGuid(unlabeledCam);
+            Assert.That(camSys.GetCameraDisplayName(unlabeledCam), Is.EqualTo(unlabeledGuid),
+                "Unlabeled surveillance camera must display its device GUID.");
+
+            var labeledCam = SEntMan.SpawnEntity("SurveillanceCameraSecurity", coords);
+            Server.System<Content.Shared.Labels.EntitySystems.LabelSystem>().Label(labeledCam, "Brig Hallway");
+            Assert.That(camSys.GetCameraDisplayName(labeledCam), Is.EqualTo("Brig Hallway"),
+                "Labeled surveillance camera must display its given label.");
+        });
+    }
+
+    [Test]
+    public async Task TestNetNavigatorNetworkProbeCommandAndTargetScopedPacketSniffer()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid hiddenWsHost = default;
+        EntityUid hiddenWsComp = default;
+        EntityUid apcHost = default;
+        EntityUid apcComp = default;
+        EntityUid alarmHost = default;
+        EntityUid serverHost = default;
+        EntityUid camUid = default;
+        EntityUid termProg = default;
+        EntityUid navProg = default;
+        EntityUid snifferProg = default;
+
+        string apcGuid = string.Empty;
+        string alarmGuid = string.Empty;
+        string serverGuid = string.Empty;
+        string camGuid = string.Empty;
+        string hiddenGuid = string.Empty;
+        string wsGuid = string.Empty;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _), Is.True);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp), Is.True);
+
+            hiddenWsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(hiddenWsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((hiddenWsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(hiddenWsHost)), out hiddenWsComp), Is.True);
+            SEntMan.GetComponent<OxydComputerComponent>(hiddenWsComp).NetworkDiscoverable = false;
+
+            apcHost = SEntMan.SpawnEntity("APCBasic", coords);
+            powerSys.SetNeedsPower(apcHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((apcHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcHost)), out apcComp), Is.True);
+
+            alarmHost = SEntMan.SpawnEntity("AirAlarm", coords);
+            powerSys.SetNeedsPower(alarmHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((alarmHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(alarmHost)), out _), Is.True);
+
+            serverHost = SEntMan.SpawnEntity("StationManifestServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((serverHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost)), out _), Is.True);
+
+            camUid = SEntMan.SpawnEntity("SurveillanceCameraSecurity", coords);
+            powerSys.SetNeedsPower(camUid, false);
+            Server.System<Content.Shared.Labels.EntitySystems.LabelSystem>().Label(camUid, "Core Corridor");
+        });
+        await RunTicks(12);
+
+        await Server.WaitAssertion(() =>
+        {
+            wsGuid = routerSys.EnsureDeviceGuid(wsComp);
+            hiddenGuid = routerSys.EnsureDeviceGuid(hiddenWsComp);
+            apcGuid = routerSys.EnsureDeviceGuid(apcComp);
+            alarmGuid = routerSys.EnsureDeviceGuid(alarmHost);
+            serverGuid = routerSys.EnsureDeviceGuid(serverHost);
+            camGuid = routerSys.EnsureDeviceGuid(camUid);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/terminal.nte", out var tProg, out var tErr), Is.True, tErr);
+            termProg = tProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, termProg);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(8);
+
+        // 1) Terminal 'netprobe' and 'netquery' commands discover visible devices + metadata and omit hidden devices!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("netprobe"), FromServer(termProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            var history = string.Join("\n", termComp.History);
+            Assert.That(history, Does.Contain(apcGuid), "netprobe must discover reachable APC GUID.");
+            Assert.That(history, Does.Contain(alarmGuid), "netprobe must discover reachable Air Alarm GUID.");
+            Assert.That(history, Does.Contain(serverGuid), "netprobe must discover reachable Data Server GUID.");
+            Assert.That(history, Does.Contain(camGuid), "netprobe must discover reachable Wi-Fi Camera GUID.");
+            Assert.That(history, Does.Contain("APC").And.Contain("Air Alarm").And.Contain("Data Server").And.Contain("Camera"));
+            Assert.That(history, Does.Contain(" ID "));
+            Assert.That(history, Does.Not.Contain("Locked"), "netprobe must use clean auth tags (ID / AUTH / KEY / OPEN / DISABLED).");
+            Assert.That(history, Does.Not.Contain(hiddenGuid), "Devices with NetworkDiscoverable=false must NOT appear in netprobe.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("netquery Camera"), FromServer(termProg));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            var tail = string.Join("\n", termComp.History.TakeLast(6));
+            Assert.That(tail, Does.Contain(camGuid).And.Contain("Core Corridor"));
+        });
+
+        // 2) NetNavigator app (/bin/net_navigator.nte) uses the network probe to display GUIDs + Type + Auth + Extra metadata!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/net_navigator.nte", out var nProg, out var nErr), Is.True, nErr);
+            navProg = nProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, navProg);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var navUi = GetControlFromChildren<NetNavigatorUiControl>(_ => true, win)!;
+            var guidLabels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(navUi, guidLabels);
+
+            var shownGuids = guidLabels.Where(l => l.Name == "NetNavigatorGuidLabel").Select(l => l.Text).ToList();
+            Assert.That(shownGuids, Does.Contain(apcGuid));
+            Assert.That(shownGuids, Does.Contain(alarmGuid));
+            Assert.That(shownGuids, Does.Contain(serverGuid));
+            Assert.That(shownGuids, Does.Contain(camGuid));
+            Assert.That(shownGuids, Does.Not.Contain(hiddenGuid),
+                "NetNavigator must only display discoverable devices.");
+
+            var types = guidLabels.Where(l => l.Name == "NetNavigatorTypeLabel").Select(l => l.Text).ToList();
+            Assert.That(types, Does.Contain("APC"));
+            Assert.That(types, Does.Contain("Air Alarm"));
+            Assert.That(types, Does.Contain("Data Server"));
+            Assert.That(types, Does.Contain("Camera"));
+
+            var auths = guidLabels.Where(l => l.Name == "NetNavigatorAuthLabel").Select(l => l.Text).ToList();
+            Assert.That(auths.Any(a => string.Equals(a, "ID", StringComparison.Ordinal)), Is.True);
+            Assert.That(auths.Any(a => (a ?? string.Empty).Contains("Locked", StringComparison.OrdinalIgnoreCase)), Is.False,
+                "NetNavigator auth labels must use clean tags (ID / AUTH / KEY / OPEN / DISABLED) instead of 'Locked(...)'.");
+        });
+
+        // 3) Packet Sniffer does NOT dump every single device's ports; takes a Target GUID and shows ONLY that device's ports!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/packet_sniffer.nte", out var sProg, out var sErr), Is.True, sErr);
+            snifferProg = sProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, snifferProg);
+        });
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var snifferUi = GetControlFromChildren<PacketSnifferUiControl>(_ => true, win)!;
+            var btns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(snifferUi, btns);
+            var portBtns = btns.Where(b => b.Name != null && b.Name.StartsWith("SnifferSinkTarget_", StringComparison.Ordinal)).ToList();
+            Assert.That(portBtns.Count, Is.EqualTo(0),
+                "PacketSniffer must NOT enumerate all ports of all devices before a target GUID is entered.");
+            var hint = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "SnifferNoTargetHintLabel", snifferUi);
+            Assert.That(hint, Is.Not.Null);
+        });
+
+        // Query ONLY the APC's GUID -> must expose ONLY that APC's sink ports (and zero ports from AirAlarm/Workstation/Server)!
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.SelectTargetDevice,
+            targetGuid: apcGuid), FromServer(snifferProg));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var snifferUi = GetControlFromChildren<PacketSnifferUiControl>(_ => true, win)!;
+            var btns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(snifferUi, btns);
+            var portBtns = btns.Where(b => b.Name != null && b.Name.StartsWith("SnifferSinkTarget_", StringComparison.Ordinal)).ToList();
+            Assert.That(portBtns.Count, Is.GreaterThan(0),
+                "Entering a valid target GUID must list that device's selectable sink ports.");
+            Assert.That(portBtns.All(b => b.Name!.StartsWith($"SnifferSinkTarget_{apcGuid}_", StringComparison.Ordinal)), Is.True,
+                "PacketSniffer must ONLY show ports belonging to the selected target device GUID.");
+            Assert.That(portBtns.Any(b => b.Name!.Contains(alarmGuid) || b.Name!.Contains(wsGuid) || b.Name!.Contains(serverGuid)), Is.False);
+        });
+
+        // 4) Terminal remote screen: no Pop Out / Dock View button, and Detach Screen ALWAYS works even with stale viewers.
+        await Server.WaitPost(() =>
+        {
+            compSys.SwitchActiveProgram(wsComp, termProg);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {apcGuid}"), FromServer(termProg));
+        await RunTicks(6);
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("screen open"), FromServer(termProg));
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(termComp.IsScreenAttached, Is.True, "Terminal screen attach command must attach remote screen.");
+            // Simulate a stale/extra viewer remaining in ActiveViewers (previous root cause of Detach Screen failing).
+            termComp.ActiveViewers.Add(apcHost);
+        });
+        await RunTicks(6);
+
+        Content.Client.UserInterface.Controls.ContentButton? detachBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var termUi = GetControlFromChildren<TerminalUiControl>(_ => true, win)!;
+            var termBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(termUi, termBtns);
+            var popOutBtn = termBtns.FirstOrDefault(
+                b => b.Name == "TerminalRemotePopOutButton" ||
+                     string.Equals(b.Text, "Pop Out", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(b.Text, "Dock View", StringComparison.OrdinalIgnoreCase));
+            Assert.That(popOutBtn, Is.Null, "Terminal remote screen must NOT expose a Pop Out / Dock View button.");
+
+            detachBtn = termBtns.FirstOrDefault(b => b.Name == "TerminalDetachScreenButton");
+            Assert.That(detachBtn, Is.Not.Null, "Terminal remote screen must expose Detach Screen button.");
+            Assert.That(detachBtn!.VisibleInTree, Is.True, "Detach Screen button must be visible while attached.");
+        });
+
+        await ClickViaHitTest(detachBtn!);
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(termComp.IsScreenAttached, Is.False,
+                "Clicking Detach Screen must always detach the remote screen even when stale viewers were present.");
+            Assert.That(termComp.ActiveViewers, Is.Empty);
+        });
+
+        // 5) Remote control programs have NO Deauth button and auto-deauth on switching programs, switching OS tab, or closing.
+        EntityUid apcProg = default;
+        EntityUid osProg = default;
+        await Server.WaitAssertion(() =>
+        {
+            osProg = SEntMan.GetComponent<OxydComputerComponent>(wsComp).BootProgram!.Value;
+            var fsSys = Server.System<SharedFileSystemSystem>();
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile { Name = "apc_control", Extension = "nte", Directory = "/bin/", Size = 2048, ProgramId = "OxydApcControlProgram", Title = "APC Control", RamUsageMb = 16 }, wsFs!);
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/apc_control.nte", out var aProg, out var aErr), Is.True, aErr);
+            apcProg = aProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, apcProg);
+            var apcProgComp = SEntMan.GetComponent<ApcControlProgramComponent>(apcProg);
+            apcProgComp.SelectedTargetGuid = apcGuid;
+            apcProgComp.AuthorizedTargetGuids.Add(apcGuid);
+            apcProgComp.Locked = false;
+            SEntMan.Dirty(apcProg, apcProgComp);
+            SEntMan.GetComponent<OsProgramComponent>(osProg).CurrentView = 3;
+            SEntMan.Dirty(osProg, SEntMan.GetComponent<OsProgramComponent>(osProg));
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var apcUi = GetControlFromChildren<ApcControlUiControl>(_ => true, win)!;
+            var apcBtns = new List<Content.Client.UserInterface.Controls.ContentButton>();
+            CollectDescendants(apcUi, apcBtns);
+            var apcDeauthBtn = apcBtns.FirstOrDefault(
+                b => b.Name == "ApcRevokeAuthButton" || string.Equals(b.Text, "Deauth", StringComparison.OrdinalIgnoreCase));
+            Assert.That(apcDeauthBtn, Is.Null, "APC Control must NOT expose a manual Deauth button.");
+        });
+
+        // Switching to another program must auto-deauth APC Control
+        await Server.WaitPost(() =>
+        {
+            compSys.SwitchActiveProgram(wsComp, termProg);
+        });
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var apcProgComp = SEntMan.GetComponent<ApcControlProgramComponent>(apcProg);
+            Assert.That(apcProgComp.AuthorizedTargetGuids, Is.Empty,
+                "Switching away from APC Control to another program must clear session authorization.");
+            Assert.That(apcProgComp.Locked, Is.True);
+        });
+
+        // Re-authorize, switch back to APC Control, then switch OS view to Home (0) -> must auto-deauth!
+        await Server.WaitPost(() =>
+        {
+            compSys.SwitchActiveProgram(wsComp, apcProg);
+            var apcProgComp = SEntMan.GetComponent<ApcControlProgramComponent>(apcProg);
+            apcProgComp.AuthorizedTargetGuids.Add(apcGuid);
+            apcProgComp.Locked = false;
+            SEntMan.Dirty(apcProg, apcProgComp);
+            SEntMan.GetComponent<OsProgramComponent>(osProg).CurrentView = 3;
+            SEntMan.Dirty(osProg, SEntMan.GetComponent<OsProgramComponent>(osProg));
+        });
+        await RunTicks(6);
+        await SendBui(ProgramUiKey.Key, new OsSetViewMessage(0), FromServer(osProg));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var apcProgComp = SEntMan.GetComponent<ApcControlProgramComponent>(apcProg);
+            Assert.That(apcProgComp.AuthorizedTargetGuids, Is.Empty,
+                "Switching OS view away from the active remote control app must auto-deauth.");
+            Assert.That(apcProgComp.Locked, Is.True);
+        });
+
+        // Re-authorize and close program -> must terminate cleanly with auth cleared
+        await Server.WaitPost(() =>
+        {
+            var apcProgComp = SEntMan.GetComponent<ApcControlProgramComponent>(apcProg);
+            apcProgComp.AuthorizedTargetGuids.Add(apcGuid);
+            apcProgComp.Locked = false;
+            SEntMan.Dirty(apcProg, apcProgComp);
+            compSys.CloseProgram(wsComp, apcProg);
+        });
+        await RunTicks(4);
+
+        await Client.WaitPost(() =>
+        {
+            while (TryFindWindow<ComputerDisplayWindow>(out var staleWin))
+                staleWin.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestPowerOffClosesUiAndShutsDownSystemComponentsTabAndAutolathePacketLogs()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var matSys = Server.System<Content.Server.Materials.MaterialStorageSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid latheHost = default;
+        EntityUid latheComp = default;
+        EntityUid latheProg = default;
+        EntityUid snifferProg = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _), Is.True);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp), Is.True);
+
+            latheHost = SEntMan.SpawnEntity("Autolathe", coords);
+            powerSys.SetNeedsPower(latheHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((latheHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheHost)), out latheComp), Is.True);
+            matSys.TryChangeMaterialAmount(latheHost, "Steel", 5000);
+            matSys.TryChangeMaterialAmount(latheHost, "Glass", 5000);
+
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(10);
+
+        // 1) System tab displays a styled list of all installed components (CPU, RAM, HDD, NIC, PORT)
+        Content.Client.UserInterface.Controls.ContentButton? sysTabBtn = null;
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            sysTabBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(
+                b => b.Name == "TabSystemButton", win);
+            Assert.That(sysTabBtn, Is.Not.Null);
+        });
+        await ClickViaHitTest(sysTabBtn!);
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var compList = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
+                c => c.Name == "SystemInstalledComponentsContainer", win);
+            Assert.That(compList, Is.Not.Null);
+
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(compList!, labels);
+            var cats = labels.Where(l => l.Name == "InstalledComponentCategoryLabel").Select(l => l.Text).ToList();
+            Assert.That(cats, Does.Contain("CPU"));
+            Assert.That(cats, Does.Contain("RAM"));
+            Assert.That(cats, Does.Contain("HDD"));
+            Assert.That(cats, Does.Contain("NIC"));
+            Assert.That(cats, Does.Contain("PORT"));
+        });
+
+        // 2) Power going off closes the computer UI AND performs a full system shutdown
+        await Server.WaitPost(() =>
+        {
+            powerSys.SetNeedsPower(wsHost, true);
+        });
+        await RunTicks(10);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.IsPowered, Is.False);
+            Assert.That(comp.IsBooted, Is.False, "Power loss must shut down the computer.");
+            Assert.That(comp.BootState, Is.EqualTo(ComputerBootState.NoPower));
+            Assert.That(comp.RunningPrograms, Is.Empty, "Power loss must terminate all running programs.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow<ComputerDisplayWindow>(out _), Is.False,
+                "Power loss must close the open ComputerDisplayWindow instead of leaving it open.");
+        });
+
+        // Trying to open an unpowered computer must keep the UI closed
+        await Server.WaitPost(() =>
+        {
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(6);
+        await Client.WaitAssertion(() =>
+        {
+            Assert.That(TryFindWindow<ComputerDisplayWindow>(out _), Is.False,
+                "Opening an unpowered computer must not open the ComputerDisplayWindow.");
+        });
+
+        // Restoring power reboots the workstation cleanly
+        await Server.WaitPost(() =>
+        {
+            powerSys.SetNeedsPower(wsHost, false);
+        });
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.IsPowered, Is.True);
+            Assert.That(comp.IsBooted, Is.True, "Restoring power must automatically reboot the computer.");
+            Assert.That(comp.BootState, Is.EqualTo(ComputerBootState.Running));
+        });
+
+        // 3) Autolathe printing dispatches a DeviceLink packet to AutolatheBlueprintSink visible in /sys/system.log AND Packet Sniffer!
+        string recipeToPrint = string.Empty;
+        string recipePath = string.Empty;
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/packet_sniffer.nte", out var sProg, out var sErr), Is.True, sErr);
+            snifferProg = sProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, snifferProg);
+
+            var lComp = SEntMan.GetComponent<OxydComputerComponent>(latheComp);
+            latheProg = (lComp.ActiveProgram ?? lComp.BootProgram)!.Value;
+            Assert.That(fsSys.TryFindFileSystem(latheComp, out var latheDrive, out var latheFs), Is.True);
+            var bpEntry = latheFs!.Files
+                .Where(kv => kv.Value is RecipeBlueprintFile bp && !bp.IsEncrypted && bp.GetAllRecipes().Any())
+                .Select(kv => (kv.Key, RecipeId: ((RecipeBlueprintFile) kv.Value).GetAllRecipes().First().Id))
+                .First();
+            recipePath = bpEntry.Key;
+            recipeToPrint = bpEntry.RecipeId;
+            compSys.OpenComputerForActor(latheComp, SPlayer);
+        });
+        await RunTicks(8);
+
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(
+            LatheControlAction.PrintRecipe,
+            recipeId: recipeToPrint,
+            amount: 1,
+            filePath: recipePath,
+            fromDisk: false), FromServer(latheProg));
+        await RunTicks(10);
+
+        await Client.WaitPost(() =>
+        {
+            if (TryFindWindow<ComputerDisplayWindow>(out var latheWin))
+                latheWin!.Close();
+        });
+        await RunTicks(4);
+
+        await Server.WaitPost(() =>
+        {
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            // Verify /sys/system.log on the Autolathe contains the outgoing packet log with sink & arguments
+            Assert.That(fsSys.TryFindFileSystem(latheComp, out var latheDrive, out var latheFs), Is.True);
+            Assert.That(fsSys.TryGetFile<TextVirtualFile>(latheDrive!.Value, "/sys/system.log", out var sysLog, latheFs!), Is.True);
+            Assert.That(sysLog!.TextContent, Does.Contain("Packet sent to AutolatheBlueprintSink (lathe_print)"),
+                $"Autolathe /sys/system.log must record outgoing print packet. Actual log:\n{sysLog.TextContent}");
+            Assert.That(sysLog.TextContent, Does.Contain($"Recipe={recipeToPrint}"));
+
+            // Verify StationNetworkRouter recorded the player-relevant DEVLINK packet for Packet Sniffer
+            var routerComp = SEntMan.GetComponent<NetworkRouterComponent>(routerHost);
+            var printPkt = routerComp.RecordedPackets.LastOrDefault(p =>
+                p.Protocol == "DEVLINK:AutolatheBlueprintSink" &&
+                p.PayloadSummary.Contains("Packet sent to AutolatheBlueprintSink (lathe_print)", StringComparison.Ordinal));
+            Assert.That(printPkt, Is.Not.Null, "Router must record Autolathe DeviceLink print packet for Packet Sniffer.");
+            Assert.That(printPkt!.IsPlayerRelevant, Is.True);
+            Assert.That(printPkt.PayloadSummary, Does.Contain($"Recipe={recipeToPrint}"));
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var snifferUi = GetControlFromChildren<PacketSnifferUiControl>(_ => true, win)!;
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(snifferUi, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("Packet sent to AutolatheBlueprintSink (lathe_print)", StringComparison.Ordinal)),
+                Is.True,
+                "Packet Sniffer UI must display the Autolathe print DeviceLink packet with sink port and arguments.");
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).Contains("tampered", StringComparison.OrdinalIgnoreCase)),
+                Is.False,
+                "Packets displayed in Packet Sniffer must NOT expose an internal 'tampered' field.");
+        });
+
+        // 4) Packet Sniffer EmitPacket can send commands (e.g. 'toggle_breaker') to a remote unlocked APC's ApcCommandSink!
+        EntityUid remoteApcHost = default;
+        string remoteApcGuid = string.Empty;
+        bool initialBreaker = false;
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            remoteApcHost = SEntMan.SpawnEntity("APCBasic", coords);
+            Assert.That(compSys.EnsureComputerBoundToHost((remoteApcHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(remoteApcHost)), out var remoteApcComp), Is.True);
+            remoteApcGuid = Server.System<NetworkRouterSystem>().EnsureDeviceGuid(remoteApcComp);
+            initialBreaker = SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(remoteApcHost).MainBreakerEnabled;
+
+            // Ensure APC is locked first -> sending toggle_breaker must be blocked by lock
+            Server.System<LockSystem>().Lock(remoteApcHost, null);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.EmitPacket,
+            targetGuid: remoteApcGuid,
+            payload: "toggle_breaker",
+            sinkPortId: "ApcCommandSink",
+            isHostPort: true), FromServer(snifferProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(remoteApcHost).MainBreakerEnabled,
+                Is.EqualTo(initialBreaker),
+                "Locked APC must ignore remote toggle_breaker packet from Packet Sniffer.");
+
+            // Unlock the APC -> now sending toggle_breaker via Packet Sniffer must toggle the breaker!
+            Server.System<LockSystem>().Unlock(remoteApcHost, null);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new PacketSnifferActionMessage(
+            PacketSnifferAction.EmitPacket,
+            targetGuid: remoteApcGuid,
+            payload: "toggle_breaker",
+            sinkPortId: "ApcCommandSink",
+            isHostPort: true), FromServer(snifferProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<Content.Server.Power.Components.ApcComponent>(remoteApcHost).MainBreakerEnabled,
+                Is.EqualTo(!initialBreaker),
+                "Sending 'toggle_breaker' to an unlocked remote APC's ApcCommandSink from Packet Sniffer must toggle its breaker.");
+
+            var routerComp = SEntMan.GetComponent<NetworkRouterComponent>(routerHost);
+            Assert.That(routerComp.RecordedPackets.Any(p =>
+                p.PayloadSummary.Contains("tampered", StringComparison.OrdinalIgnoreCase) ||
+                p.RawPayload.Contains("tampered", StringComparison.OrdinalIgnoreCase) ||
+                p.EditableEntries.Keys.Any(k => k.Contains("tampered", StringComparison.OrdinalIgnoreCase)) ||
+                p.Parameters.Keys.Any(k => k.Contains("tampered", StringComparison.OrdinalIgnoreCase))),
+                Is.False,
+                "Recorded packets must never expose an internal 'tampered' field.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            while (TryFindWindow<ComputerDisplayWindow>(out var staleWin))
+                staleWin.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestSecurityLockAppPasswordKeyAndIdAccessLocks()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var cardSys = Server.System<Content.Server._Oxyd.Computers.Hardware.ComputerCardReaderSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid remoteWsHost = default;
+        EntityUid remoteWsComp = default;
+        EntityUid secProg = default;
+        EntityUid termProg = default;
+        EntityUid engCard = default;
+        EntityUid passCard = default;
+        string wsGuid = string.Empty;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _), Is.True);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputerIdSlot", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp), Is.True);
+            wsGuid = routerSys.EnsureDeviceGuid(wsComp);
+
+            remoteWsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(remoteWsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((remoteWsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(remoteWsHost)), out remoteWsComp), Is.True);
+
+            engCard = SEntMan.SpawnEntity("EngineeringIDCard", coords);
+            passCard = SEntMan.SpawnEntity("PassengerIDCard", coords);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/security_lock.nte", out var sProg, out var sErr), Is.True, sErr);
+            secProg = sProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, secProg);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(10);
+
+        // 1) On non-jailbroken OS, Security Lock requires SystemAdmin authorization first!
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.SetPassword, "alpha123"), FromServer(secProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).LockPassword, Is.Empty,
+                "Non-jailbroken OS must block Security Lock password changes before SystemAdmin authorization.");
+        });
+
+        // Authorize Security Lock with a SystemAdmin access card/key, then configure & lock!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(wsDrive!.Value, new AccessCodesVirtualFile
+            {
+                Name = "sysadmin_key",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "Chief SysAdmin",
+                JobTitle = "System Administrator",
+                AccessTags = new List<Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "SystemAdmin" },
+                Size = 256
+            }, wsFs!), Is.True);
+        });
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.AuthorizeSystemAdmin), FromServer(secProg));
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.SetPassword, "alpha123"), FromServer(secProg));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.LockNow), FromServer(secProg));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.SoftwareLocked, Is.True);
+            Assert.That(compSys.CanExecuteProgramAction(secProg, SPlayer, out _), Is.False,
+                "Program actions must be blocked while software-locked.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var lockScreen = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentBoxContainer>(
+                c => c.Name == "ComputerSoftwareLockScreen", win);
+            Assert.That(lockScreen, Is.Not.Null);
+            Assert.That(lockScreen!.VisibleInTree, Is.True, "Software lock screen must be visible when locked.");
+        });
+
+        // Wrong password stays locked
+        await SendBui(ComputerUiKey.Key, new ComputerUnlockWithPasswordMessage("wrong"), FromServer(wsComp));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).SoftwareLocked, Is.True);
+        });
+
+        // Correct password unlocks
+        await SendBui(ComputerUiKey.Key, new ComputerUnlockWithPasswordMessage("alpha123"), FromServer(wsComp));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).SoftwareLocked, Is.False);
+        });
+
+        // 1b) Re-locking WITHOUT SystemAdmin auth must ALWAYS work once a password is configured,
+        //     while changing the password still requires SystemAdmin auth!
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.SetPassword, "hijack"), FromServer(secProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).LockPassword, Is.EqualTo("alpha123"),
+                "Changing an existing password on a normal OS must still require SystemAdmin authorization.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.LockNow), FromServer(secProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).SoftwareLocked, Is.True,
+                "Re-locking a password-protected computer must ALWAYS be allowed without SystemAdmin authorization.");
+        });
+
+        // Unlock again, then reboot -> rebooting MUST force re-authentication on boot up!
+        await SendBui(ComputerUiKey.Key, new ComputerUnlockWithPasswordMessage("alpha123"), FromServer(wsComp));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).SoftwareLocked, Is.False);
+            compSys.RebootComputer(wsComp);
+        });
+        await RunTicks(8);
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.IsBooted, Is.True);
+            Assert.That(comp.SoftwareLocked, Is.True,
+                "Rebooting a password-protected computer must automatically re-lock it and force re-authentication.");
+        });
+
+        // Unlock after reboot and re-launch Security Lock to test key-based auth & ID access lock
+        await SendBui(ComputerUiKey.Key, new ComputerUnlockWithPasswordMessage("alpha123"), FromServer(wsComp));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).SoftwareLocked, Is.False);
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/security_lock.nte", out var sProg2, out var sErr2), Is.True, sErr2);
+            secProg = sProg2!.Value;
+            compSys.SwitchActiveProgram(wsComp, secProg);
+        });
+        await RunTicks(6);
+
+        // 1c) Even with SystemAdmin access on remoteWsComp, SSH into a password-locked computer MUST require password auth first,
+        //     and re-locking / rebooting the target must immediately drop the SSH session so commands cannot run unauthenticated!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(remoteWsComp, out var remDrive, out var remFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(remDrive!.Value, new AccessCodesVirtualFile
+            {
+                Name = "sysadmin_remote",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "Remote SysAdmin",
+                AccessTags = new List<Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "SystemAdmin" },
+                Size = 256
+            }, remFs!), Is.True);
+
+            Assert.That(compSys.TryLaunchExecutable(remoteWsComp, "/bin/terminal.nte", out var tProg, out var tErr), Is.True, tErr);
+            termProg = tProg!.Value;
+            compSys.SwitchActiveProgram(remoteWsComp, termProg);
+            compSys.OpenComputerForActor(remoteWsComp, SPlayer);
+        });
+        await RunTicks(6);
+
+        // Lock wsComp first, then try SSH from remoteWsComp (which has SystemAdmin) -> must prompt for password, NOT connect!
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.LockNow), FromServer(secProg));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {wsGuid}"), FromServer(termProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.AwaitingPassword, Is.True,
+                "SSH into a password-locked computer must require password authentication even with SystemAdmin access.");
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null,
+                "Unauthenticated SSH caller must not be connected to a password-locked computer.");
+        });
+
+        // Wrong password must fail and stay disconnected
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("wrongpass"), FromServer(termProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null, "Wrong password must not establish SSH session.");
+        });
+
+        // Correct password authenticates & connects; then rebooting target must drop session so commands can't run on locked host!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {wsGuid}"), FromServer(termProg));
+        await RunTicks(2);
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("alpha123"), FromServer(termProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.EqualTo(wsGuid),
+                "Correct password must authenticate and establish the SSH session.");
+            // Re-lock wsComp externally (advancing LockEpoch)
+            compSys.EngageSoftwareLock(wsComp, SEntMan.GetComponent<OxydComputerComponent>(wsComp));
+        });
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("ls"), FromServer(termProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null,
+                "Executing a remote command after target re-locks must drop the stale SSH session and refuse execution.");
+            Assert.That(tComp.History.LastOrDefault(), Does.Contain("re-authentication required"));
+        });
+
+        // Unlock wsComp and remove the temporary sysadmin_remote.acc before Section 2 (key-based auth test)
+        await SendBui(ComputerUiKey.Key, new ComputerUnlockWithPasswordMessage("alpha123"), FromServer(wsComp));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(remoteWsComp, out var remDrive, out var remFs), Is.True);
+            fsSys.TryDeleteFile(remDrive!.Value, "/keys/sysadmin_remote.acc", remFs!);
+        });
+
+        // 2) Key-based password (.key file): re-authorize after unlock, generate key, copy to remote workstation, verify passwordless SSH key auth!
+        string generatedKeyPath = string.Empty;
+        string generatedKeySecret = string.Empty;
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.AuthorizeSystemAdmin), FromServer(secProg));
+        await RunTicks(4);
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.ClearPassword), FromServer(secProg));
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.GenerateKey, "Mainframe Key"), FromServer(secProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.LockKeySecret, Is.Not.Empty);
+            generatedKeySecret = comp.LockKeySecret;
+
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            var keyFile = fsSys.GetFilesByType<PasswordKeyVirtualFile>(wsDrive!.Value, wsFs!).FirstOrDefault();
+            Assert.That(keyFile, Is.Not.Null, "Generating a key must create a /keys/*.key PasswordKeyVirtualFile.");
+            generatedKeyPath = keyFile!.FullPath;
+
+            // Terminal on remoteWsComp is already open from Section 1c; try SSH WITHOUT the key -> must prompt for password/key
+            compSys.SwitchActiveProgram(remoteWsComp, termProg);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {wsGuid}"), FromServer(termProg));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.AwaitingPassword, Is.True, "SSH without matching .key file must require auth.");
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null);
+
+            // Reset pending prompt and copy the .key file to remoteWsComp's HDD -> SSH must authenticate automatically!
+            tComp.AwaitingPassword = false;
+            tComp.PendingAuthGuid = null;
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryGetFile<PasswordKeyVirtualFile>(wsDrive!.Value, generatedKeyPath, out var kf, wsFs!), Is.True);
+            Assert.That(fsSys.TryFindFileSystem(remoteWsComp, out var remDrive, out var remFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(remDrive!.Value, kf!.Clone(), remFs!), Is.True);
+        });
+        await RunTicks(4);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {wsGuid}"), FromServer(termProg));
+        await RunTicks(6);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(termProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.EqualTo(wsGuid),
+                "SSH with a matching PasswordKeyVirtualFile on HDD must authenticate automatically via key-based auth.");
+        });
+
+        // 3) ID access set lock: lock workstation to Engineering access, verify Passenger ID fails and Engineering ID unlocks!
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.ClearKey), FromServer(secProg));
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.ToggleAccessTag, "Engineering"), FromServer(secProg));
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.LockNow), FromServer(secProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var comp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(comp.SoftwareLocked, Is.True);
+            Assert.That(compSys.TryUnlockWithCard(wsComp, passCard, out _), Is.False,
+                "Passenger ID must NOT unlock a computer locked to Engineering access.");
+            Assert.That(comp.SoftwareLocked, Is.True);
+
+            Assert.That(compSys.TryUnlockWithCard(wsComp, engCard, out _), Is.True,
+                "Engineering ID must unlock a computer locked to Engineering access.");
+            Assert.That(comp.SoftwareLocked, Is.False);
+        });
+
+        await Client.WaitPost(() =>
+        {
+            while (TryFindWindow<ComputerDisplayWindow>(out var staleWin))
+                staleWin.Close();
+        });
+        await RunTicks(4);
+    }
+
+    /// <summary>
+    /// Verifies the Network and SystemAdmin access prototypes and their Lock + AccessReader enforcement
+    /// on StationNetworkRouter (Network OR SystemAdmin) and all Data Servers (SystemAdmin only).
+    /// </summary>
+    [Test]
+    public async Task TestNetworkAndSystemAdminAccessOnRoutersAndDataServers()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var lockSys = Server.System<Content.Shared.Lock.LockSystem>();
+        var accessReaderSys = Server.System<Content.Shared.Access.Systems.AccessReaderSystem>();
+        var accessSys = Server.System<Content.Shared.Access.Systems.SharedAccessSystem>();
+        var protoMan = Server.ResolveDependency<Robust.Shared.Prototypes.IPrototypeManager>();
+
+        Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype> networkTag = "Network";
+        Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype> sysAdminTag = "SystemAdmin";
+
+        EntityUid routerHost = default;
+        EntityUid baseServerHost = default;
+        EntityUid manifestServerHost = default;
+        EntityUid recordsServerHost = default;
+        EntityUid routerComp = default;
+        EntityUid baseServerComp = default;
+
+        EntityUid networkCard = default;
+        EntityUid sysAdminCard = default;
+        EntityUid passengerCard = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(protoMan.TryIndex(networkTag, out var netProto), Is.True,
+                "Network accessLevel prototype must exist.");
+            Assert.That(netProto!.GetAccessLevelName(), Is.EqualTo("Network"));
+
+            Assert.That(protoMan.TryIndex(sysAdminTag, out var sysProto), Is.True,
+                "SystemAdmin accessLevel prototype must exist.");
+            Assert.That(sysProto!.GetAccessLevelName(), Is.EqualTo("System Admin"));
+
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out routerComp), Is.True);
+
+            baseServerHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(baseServerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((baseServerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(baseServerHost)), out baseServerComp), Is.True);
+
+            manifestServerHost = SEntMan.SpawnEntity("StationManifestServer", coords);
+            powerSys.SetNeedsPower(manifestServerHost, false);
+
+            recordsServerHost = SEntMan.SpawnEntity("StationRecordsServer", coords);
+            powerSys.SetNeedsPower(recordsServerHost, false);
+
+            networkCard = SEntMan.SpawnEntity("PassengerIDCard", coords);
+            accessSys.TrySetTags(networkCard, new[] { networkTag });
+
+            sysAdminCard = SEntMan.SpawnEntity("PassengerIDCard", coords);
+            accessSys.TrySetTags(sysAdminCard, new[] { sysAdminTag });
+
+            passengerCard = SEntMan.SpawnEntity("PassengerIDCard", coords);
+        });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            // All routers and data servers start hardware-locked
+            Assert.That(lockSys.IsLocked(routerHost), Is.True, "StationNetworkRouter must start locked.");
+            Assert.That(lockSys.IsLocked(baseServerHost), Is.True, "BaseDataServer must start locked.");
+            Assert.That(lockSys.IsLocked(manifestServerHost), Is.True, "StationManifestServer must start locked.");
+            Assert.That(lockSys.IsLocked(recordsServerHost), Is.True, "StationRecordsServer must start locked.");
+
+            // Router allows Network OR SystemAdmin, denies Passenger
+            Assert.That(accessReaderSys.IsAllowed(networkCard, routerHost), Is.True,
+                "Network access must be allowed on StationNetworkRouter.");
+            Assert.That(accessReaderSys.IsAllowed(sysAdminCard, routerHost), Is.True,
+                "SystemAdmin access must be allowed on StationNetworkRouter.");
+            Assert.That(accessReaderSys.IsAllowed(passengerCard, routerHost), Is.False,
+                "Unrelated ID must be denied on StationNetworkRouter.");
+
+            // All Data Servers allow SystemAdmin ONLY, denying Network-only and Passenger IDs
+            foreach (var srv in new[] { baseServerHost, manifestServerHost, recordsServerHost })
+            {
+                Assert.That(accessReaderSys.IsAllowed(sysAdminCard, srv), Is.True,
+                    $"SystemAdmin access must be allowed on {SEntMan.ToPrettyString(srv)}.");
+                Assert.That(accessReaderSys.IsAllowed(networkCard, srv), Is.False,
+                    $"Network-only access must NOT be allowed on data server {SEntMan.ToPrettyString(srv)}.");
+                Assert.That(accessReaderSys.IsAllowed(passengerCard, srv), Is.False,
+                    $"Unrelated ID must be denied on data server {SEntMan.ToPrettyString(srv)}.");
+            }
+
+            // Program actions are blocked while hardware-locked and permitted once unlocked
+            var routerProg = SEntMan.GetComponent<OxydComputerComponent>(routerComp).ActiveProgram
+                             ?? SEntMan.GetComponent<OxydComputerComponent>(routerComp).BootProgram!.Value;
+            var serverProg = SEntMan.GetComponent<OxydComputerComponent>(baseServerComp).ActiveProgram
+                             ?? SEntMan.GetComponent<OxydComputerComponent>(baseServerComp).BootProgram!.Value;
+            Assert.That(compSys.CanExecuteProgramAction(routerProg, SPlayer, out _), Is.False,
+                "Locked StationNetworkRouter must block program actions.");
+            Assert.That(compSys.CanExecuteProgramAction(serverProg, SPlayer, out _), Is.False,
+                "Locked BaseDataServer must block program actions.");
+
+            lockSys.Unlock(routerHost, null);
+            lockSys.Unlock(baseServerHost, null);
+            Assert.That(compSys.CanExecuteProgramAction(routerProg, SPlayer, out _), Is.True,
+                "Unlocked StationNetworkRouter must allow program actions.");
+            Assert.That(compSys.CanExecuteProgramAction(serverProg, SPlayer, out _), Is.True,
+                "Unlocked BaseDataServer must allow program actions.");
+        });
+    }
+
+    /// <summary>
+    /// Verifies:
+    /// 1) Running another OS executable (e.g. Pocket OS) inside a running Desktop OS is blocked.
+    /// 2) Normal OS PDAs & Computers are locally usable, remote-locked to average users, and always remotely accessible with SystemAdmin access.
+    /// 3) Jailbroken OS completely refuses all remote control (even SystemAdmin) and allows Security Lock without SystemAdmin auth.
+    /// 4) Downloader enforces access-based downloads using program RequiredDownloadAccess.
+    /// </summary>
+    [Test]
+    public async Task TestJailbrokenOsSystemAdminRemoteLockOsInOsGuardAndAccessGatedDownloads()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var osSys = Server.System<OsProgramSystem>();
+
+        EntityUid routerHost = default;
+        EntityUid serverHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid targetWsHost = default;
+        EntityUid targetWsComp = default;
+        EntityUid pdaHost = default;
+        EntityUid pdaComp = default;
+        EntityUid jailbreakDisk = default;
+        EntityUid wsTermProg = default;
+        EntityUid wsDlProg = default;
+        string targetWsGuid = string.Empty;
+        string pdaGuid = string.Empty;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _), Is.True);
+
+            serverHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((serverHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost)), out _), Is.True);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp), Is.True);
+
+            targetWsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(targetWsHost, false);
+            Assert.That(compSys.EnsureComputerBoundToHost((targetWsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(targetWsHost)), out targetWsComp), Is.True);
+            targetWsGuid = routerSys.EnsureDeviceGuid(targetWsComp);
+
+            pdaHost = SEntMan.SpawnEntity("PassengerPDA", coords);
+            Assert.That(compSys.EnsureComputerBoundToHost((pdaHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaHost)), out pdaComp), Is.True);
+            pdaGuid = routerSys.EnsureDeviceGuid(pdaComp);
+
+            jailbreakDisk = SEntMan.SpawnEntity("OxydDataDiskJailbreakOs", coords);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/terminal.nte", out var tProg, out var tErr), Is.True, tErr);
+            wsTermProg = tProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, wsTermProg);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+        });
+        await RunTicks(8);
+
+        // 1) OS-in-OS guard: placing /bin/pda_os.nte on a Desktop OS drive must NOT be launchable as a child app or listed in Apps!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile
+            {
+                Name = "pda_os",
+                Extension = "nte",
+                Directory = "/bin/",
+                Size = 163840,
+                ProgramId = "OxydPdaOsProgram",
+                Title = "NTOS Pocket",
+                RamUsageMb = 24
+            }, wsFs!), Is.True);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/pda_os.nte", out _, out var osErr), Is.False,
+                "Running another OS executable inside a booted OS must be refused.");
+            Assert.That(osErr, Does.Contain("operating system"));
+
+            var (installed, _) = osSys.BuildProgramLists(wsComp, SEntMan.GetComponent<OxydComputerComponent>(wsComp));
+            Assert.That(installed.Any(p => p.FilePath == "/bin/pda_os.nte"), Is.False,
+                "Other OS kernels must not appear as launchable apps in the OS App Launcher.");
+        });
+
+        // 2) Normal OS PDAs & Workstations are locally accessible but remote-locked to average users,
+        //    and always remotely accessible with SystemAdmin access!
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {targetWsGuid}"), FromServer(wsTermProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(wsTermProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null,
+                "Average user without SystemAdmin access must NOT SSH into a default remote-locked Workstation.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {pdaGuid}"), FromServer(wsTermProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(wsTermProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null,
+                "Average user without SystemAdmin access must NOT SSH into a default remote-locked PDA.");
+        });
+
+        // Give caller SystemAdmin access via /keys/sysadmin.acc -> SSH into BOTH normal Workstation and normal PDA must succeed!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(wsDrive!.Value, new AccessCodesVirtualFile
+            {
+                Name = "sysadmin",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "System Administrator",
+                AccessTags = new List<Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "SystemAdmin" },
+                Size = 256
+            }, wsFs!), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {pdaGuid}"), FromServer(wsTermProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(wsTermProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.EqualTo(pdaGuid),
+                "SystemAdmin access must allow remote SSH access to normal-OS PDAs.");
+        });
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("exit"), FromServer(wsTermProg));
+        await RunTicks(2);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {targetWsGuid}"), FromServer(wsTermProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(wsTermProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.EqualTo(targetWsGuid),
+                "SystemAdmin access must allow remote SSH access to normal-OS Workstations.");
+        });
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("exit"), FromServer(wsTermProg));
+        await RunTicks(2);
+
+        // 3) Flash Jailbroken OS onto targetWsComp -> even SystemAdmin remote SSH is REFUSED, and Security Lock works without SystemAdmin auth!
+        EntityUid jbSecProg = default;
+        await Server.WaitAssertion(() =>
+        {
+            var diskFs = SEntMan.GetComponent<FileSystemComponent>(jailbreakDisk);
+            Assert.That(fsSys.TryGetFile<ProgramVirtualFile>(jailbreakDisk, "/bin/jailbreak_os.nte", out var jbFile, diskFs), Is.True);
+            Assert.That(fsSys.TryFindFileSystem(targetWsComp, out var tgtDrive, out var tgtFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(tgtDrive!.Value, jbFile!.Clone(), tgtFs!), Is.True);
+
+            Assert.That(compSys.TrySetBootExecutable(targetWsComp, "/bin/jailbreak_os.nte", out var bootMsg, rebootNow: true), Is.True, bootMsg);
+            Assert.That(compSys.IsJailbrokenOs(targetWsComp), Is.True, "Target workstation must boot into Jailbroken OS.");
+            Assert.That(compSys.IsRemoteControlAllowed(targetWsComp), Is.False, "Jailbroken OS must disable all remote control.");
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage($"ssh {targetWsGuid}"), FromServer(wsTermProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var tComp = SEntMan.GetComponent<TerminalProgramComponent>(wsTermProg);
+            Assert.That(tComp.ConnectedRemoteGuid, Is.Null,
+                "Jailbroken OS must refuse remote SSH even from a caller with SystemAdmin access.");
+            Assert.That(tComp.History.LastOrDefault(), Does.Contain("remote control disabled"));
+
+            // Security Lock on Jailbroken OS works freely WITHOUT SystemAdmin authorization
+            Assert.That(compSys.TryLaunchExecutable(targetWsComp, "/bin/security_lock.nte", out var sProg, out var sErr), Is.True, sErr);
+            jbSecProg = sProg!.Value;
+            compSys.SwitchActiveProgram(targetWsComp, jbSecProg);
+            compSys.OpenComputerForActor(targetWsComp, SPlayer);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new SecurityLockActionMessage(SecurityLockAction.SetPassword, "jbpass"), FromServer(jbSecProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(targetWsComp).LockPassword, Is.EqualTo("jbpass"),
+                "Security Lock on a Jailbroken OS must allow setting a password without SystemAdmin auth.");
+        });
+
+        // 4) Access-based downloads: remove SystemAdmin .acc from wsComp and verify gated vs public downloads!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryDeleteFile(wsDrive!.Value, "/keys/sysadmin.acc", wsFs!);
+            fsSys.TryDeleteFile(wsDrive.Value, "/bin/packet_sniffer.nte", wsFs);
+            fsSys.TryDeleteFile(wsDrive.Value, "/bin/criminal_records.nte", wsFs);
+            fsSys.TryDeleteFile(wsDrive.Value, "/bin/notekeeper.nte", wsFs);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/downloader.nte", out var dProg, out var dErr), Is.True, dErr);
+            wsDlProg = dProg!.Value;
+            compSys.SwitchActiveProgram(wsComp, wsDlProg);
+        });
+        await RunTicks(6);
+
+        // Unauthorized download of gated app (/bin/packet_sniffer.nte requires Network / SystemAdmin) -> DENIED!
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/packet_sniffer.nte"), FromServer(wsDlProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            var dlComp = SEntMan.GetComponent<DownloaderProgramComponent>(wsDlProg);
+            Assert.That(dlComp.StatusMessage, Does.Contain("Download denied"));
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out _, out var wsFs), Is.True);
+            Assert.That(wsFs!.Files.ContainsKey("/bin/packet_sniffer.nte"), Is.False);
+        });
+
+        // Public app (/bin/notekeeper.nte) -> ALLOWED without any access keys!
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/notekeeper.nte"), FromServer(wsDlProg));
+        await RunTicks(20);
+        await Server.WaitAssertion(() =>
+        {
+            var dlComp = SEntMan.GetComponent<DownloaderProgramComponent>(wsDlProg);
+            Assert.That(dlComp.StatusMessage, Does.Not.Contain("Download denied"));
+        });
+
+        // Grant Network access -> /bin/packet_sniffer.nte ALLOWED, while /bin/criminal_records.nte (Security/Command/SystemAdmin) still DENIED!
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryWriteFile(wsDrive!.Value, new AccessCodesVirtualFile
+            {
+                Name = "net_key",
+                Extension = "acc",
+                Directory = "/keys/",
+                OwnerName = "NetTech",
+                AccessTags = new List<Robust.Shared.Prototypes.ProtoId<Content.Shared.Access.AccessLevelPrototype>> { "Network" },
+                Size = 256
+            }, wsFs!), Is.True);
+        });
+
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/criminal_records.nte"), FromServer(wsDlProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<DownloaderProgramComponent>(wsDlProg).StatusMessage, Does.Contain("Download denied"),
+                "Network-only access must NOT download Security-gated /bin/criminal_records.nte.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/packet_sniffer.nte"), FromServer(wsDlProg));
+        await RunTicks(4);
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(SEntMan.GetComponent<DownloaderProgramComponent>(wsDlProg).StatusMessage, Does.Not.Contain("Download denied"),
+                "Network access must be permitted to download /bin/packet_sniffer.nte.");
+        });
+
+        await Client.WaitPost(() =>
+        {
+            while (TryFindWindow<ComputerDisplayWindow>(out var staleWin))
+                staleWin.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestDownloaderMultiQueueNoAccessFlickerHoverAccessAndOsHomeRefresh()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+
+        EntityUid routerHost = default;
+        EntityUid serverHost = default;
+        EntityUid serverComp = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid dlProg = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = new EntityCoordinates(gridUid, 2.5f, 2.5f);
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _);
+
+            serverHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            compSys.EnsureComputerBoundToHost((serverHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost)), out serverComp);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp);
+
+            // Remove /bin/nanotask.nte and /bin/notekeeper.nte from workstation if present, and ensure server offers both + gated /bin/packet_sniffer.nte
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryDeleteFile(wsDrive!.Value, "/bin/nanotask.nte", wsFs!);
+            fsSys.TryDeleteFile(wsDrive.Value, "/bin/notekeeper.nte", wsFs!);
+            fsSys.TryDeleteFile(wsDrive.Value, "/bin/packet_sniffer.nte", wsFs!);
+
+            Assert.That(fsSys.TryFindFileSystem(serverComp, out var srvDrive, out var srvFs), Is.True);
+            fsSys.TryWriteFile(srvDrive!.Value, new ProgramVirtualFile { Name = "nanotask", Extension = "nte", Directory = "/bin/", ProgramId = "NanoTaskProgram", Title = "NanoTask" }, srvFs!);
+            fsSys.TryWriteFile(srvDrive.Value, new ProgramVirtualFile { Name = "notekeeper", Extension = "nte", Directory = "/bin/", ProgramId = "NotekeeperProgram", Title = "Notekeeper" }, srvFs!);
+            fsSys.TryWriteFile(srvDrive.Value, new ProgramVirtualFile { Name = "packet_sniffer", Extension = "nte", Directory = "/bin/", ProgramId = "OxydPacketSnifferProgram", Title = "Packet Sniffer" }, srvFs!);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/downloader.nte", out var dlUid, out var dlErr, SPlayer), Is.True, dlErr);
+            dlProg = dlUid!.Value;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
+
+            // Give the player a CaptainIDCard in hand (NOT swiped/inserted) — Downloader must NEVER grant access from an unauthed/worn/held ID!
+            var unauthedCapCard = SEntMan.SpawnEntity("CaptainIDCard", coords);
+            Server.System<Content.Server.Hands.Systems.HandsSystem>().TryPickupAnyHand(SPlayer, unauthedCapCard);
+
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+            compSys.SwitchActiveProgram(wsComp, dlProg);
+        });
+        await RunTicks(10);
+
+        // Item 5: Required access tags appear ONLY in hover tooltip, NOT inside the displayed item name!
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var dlUi = GetControlFromChildren<DownloaderUiControl>(_ => true, win)!;
+            var rows = new List<Content.Client.UserInterface.Controls.ContentBoxContainer>();
+            CollectDescendants(dlUi, rows);
+
+            var snifferRow = rows.FirstOrDefault(r =>
+                r.Children.OfType<Content.Client.UserInterface.Controls.ContentLabel>()
+                    .Any(l => (l.Text ?? string.Empty).Contains("Packet Sniffer", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(snifferRow, Is.Not.Null, "Downloader must list Packet Sniffer.");
+
+            var snifferLabel = snifferRow!.Children.OfType<Content.Client.UserInterface.Controls.ContentLabel>().First();
+            Assert.That(snifferLabel.Text, Does.Not.Contain("Network").And.Not.Contain("SystemAdmin").And.Not.Contain("Req:"),
+                "Required access codes must not appear in the Downloader item name text.");
+            Assert.That(snifferLabel.ToolTip, Does.Contain("Network").Or.Contain("SystemAdmin"),
+                "Required access codes must appear in the hover tooltip.");
+
+            var snifferBtn = snifferRow.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>().First();
+            Assert.That(snifferBtn.Disabled, Is.True);
+            Assert.That(snifferBtn.Text, Is.EqualTo("Locked"));
+        });
+
+        // Items 1, 2, 15: Queue TWO downloads simultaneously; locked apps must NEVER flicker to available, and dynamic CPU rises!
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/nanotask.nte"), FromServer(dlProg));
+        await SendBui(ProgramUiKey.Key, new DownloaderActionMessage(DownloaderAction.DownloadItem, "/bin/notekeeper.nte"), FromServer(dlProg));
+        await RunTicks(2);
+
+        await Server.WaitAssertion(() =>
+        {
+            var progComp = SEntMan.GetComponent<ProgramComponent>(dlProg);
+            Assert.That(progComp.DynamicCpuUsageBonus, Is.GreaterThan(0f),
+                "Active downloads must increase Downloader's dynamic CPU usage bonus.");
+            var bwSys = Server.System<NetworkBandwidthSystem>();
+            Assert.That(bwSys.GetTransfersForProgram(dlProg).Count, Is.EqualTo(2),
+                "Downloader must allow queueing multiple downloads concurrently.");
+        });
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var dlUi = GetControlFromChildren<DownloaderUiControl>(_ => true, win)!;
+            var rows = new List<Content.Client.UserInterface.Controls.ContentBoxContainer>();
+            CollectDescendants(dlUi, rows);
+
+            var snifferRow = rows.FirstOrDefault(r =>
+                r.Children.OfType<Content.Client.UserInterface.Controls.ContentLabel>()
+                    .Any(l => (l.Text ?? string.Empty).Contains("Packet Sniffer", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(snifferRow, Is.Not.Null);
+            var snifferBtn = snifferRow!.Children.OfType<Content.Client.UserInterface.Controls.ContentButton>().First();
+            Assert.That(snifferBtn.Disabled, Is.True,
+                "Pressing Download on another app must NEVER briefly flicker locked apps as available.");
+            Assert.That(snifferBtn.Text, Is.EqualTo("Locked"));
+        });
+
+        // Wait for both queued downloads to complete -> BOTH files exist, dynamic CPU returns to 0,
+        // and Item 10: OsUiControl home automatically refreshes to show NanoTask & Wanted List!
+        await RunSeconds(8f);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out _, out var wsFs), Is.True);
+            Assert.That(wsFs!.Files.ContainsKey("/bin/nanotask.nte"), Is.True, "First queued download (/bin/nanotask.nte) must complete.");
+            Assert.That(wsFs.Files.ContainsKey("/bin/notekeeper.nte"), Is.True, "Second queued download (/bin/notekeeper.nte) must complete.");
+            Assert.That(SEntMan.GetComponent<ProgramComponent>(dlProg).DynamicCpuUsageBonus, Is.EqualTo(0f),
+                "Dynamic CPU usage bonus must return to 0 after downloads complete.");
+        });
+
+        await Server.WaitPost(() =>
+        {
+            compSys.CloseProgram(wsComp, dlProg);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var osUi = GetControlFromChildren<OsUiControl>(_ => true, win)!;
+            Assert.That(FindRowRunButton(osUi, "NanoTask"), Is.Not.Null,
+                "Completing an external download must automatically refresh OsUiControl app home with NanoTask.");
+            Assert.That(FindRowRunButton(osUi, "Notekeeper"), Is.Not.Null,
+                "Completing an external download must automatically refresh OsUiControl app home with Notekeeper.");
+            win.Close();
+        });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestNotekeeperNotepadPrinterGateMedtekScannerGateStationRecordsAndWantedEmpty()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+
+        EntityUid routerHost = default;
+        EntityUid serverHost = default;
+        EntityUid serverComp = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid noteProg = default;
+        EntityUid taskProg = default;
+        EntityUid medProg = default;
+        EntityUid wantedProg = default;
+        EntityUid stRecHost = default;
+        EntityUid stRecComp = default;
+        EntityUid stRecProg = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = new EntityCoordinates(gridUid, 2.5f, 2.5f);
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _);
+
+            serverHost = SEntMan.SpawnEntity("BaseDataServer", coords);
+            powerSys.SetNeedsPower(serverHost, false);
+            compSys.EnsureComputerBoundToHost((serverHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(serverHost)), out serverComp);
+
+            Assert.That(fsSys.TryFindFileSystem(serverComp, out var srvDrive, out var srvFs), Is.True);
+            var stDb = new DatabaseVirtualFile
+            {
+                Name = "station_records",
+                Extension = "db",
+                Directory = "/records/",
+                TableName = "station_records"
+            };
+            stDb.Data["__station"] = "NSS Oxyd";
+            stDb.Data["rec_1"] = RecordsDbCodec.EncodeStationRecordRow(
+                "Clara Vance", "Engineer", "StationEngineer", "JobIconStationEngineer", 28, "Human", "Female", "FP-C1", "DNA-C1");
+            fsSys.TryWriteFile(srvDrive!.Value, stDb, srvFs!);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp);
+
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile { Name = "nanotask", Extension = "nte", Directory = "/bin/", ProgramId = "NanoTaskProgram", Title = "NanoTask" }, wsFs!);
+            fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "medtek", Extension = "nte", Directory = "/bin/", ProgramId = "MedTekProgram", Title = "MedTek" }, wsFs!);
+            fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "wanted_list", Extension = "nte", Directory = "/bin/", ProgramId = "WantedListProgram", Title = "Wanted List" }, wsFs!);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/notekeeper.nte", out var nUid, out var e1), Is.True, e1);
+            noteProg = nUid!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/nanotask.nte", out var tUid, out var e2), Is.True, e2);
+            taskProg = tUid!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/medtek.nte", out var mUid, out var e3), Is.True, e3);
+            medProg = mUid!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/wanted_list.nte", out var wUid, out var e4), Is.True, e4);
+            wantedProg = wUid!.Value;
+
+            stRecHost = SEntMan.SpawnEntity("ComputerStationRecords", coords);
+            powerSys.SetNeedsPower(stRecHost, false);
+            compSys.EnsureComputerBoundToHost((stRecHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(stRecHost)), out stRecComp);
+            stRecProg = SEntMan.GetComponent<OxydComputerComponent>(stRecComp).ActiveProgram!.Value;
+
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+            compSys.SwitchActiveProgram(wsComp, noteProg);
+        });
+        await RunTicks(10);
+
+        // Items 3, 4: Notekeeper has multiline TextEdit + Print button disabled without ComputerPartPaperPrinter
+        int CountPapers()
+        {
+            var c = 0;
+            var q = SEntMan.EntityQueryEnumerator<MetaDataComponent>();
+            while (q.MoveNext(out _, out var md))
+            {
+                if (md.EntityPrototype?.ID == "Paper")
+                    c++;
+            }
+            return c;
+        }
+
+        var papersBefore = 0;
+        await Server.WaitPost(() => papersBefore = CountPapers());
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var noteUi = GetControlFromChildren<NotekeeperUiControl>(_ => true, win)!;
+            var editor = GetControlFromChildren<Robust.Client.UserInterface.Controls.TextEdit>(e => e.Name == "NotekeeperEditor", noteUi);
+            Assert.That(editor, Is.Not.Null, "Notekeeper must use multiline TextEdit notepad.");
+            var printBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(b => b.Name == "NotekeeperPrintButton", noteUi);
+            Assert.That(printBtn, Is.Not.Null, "Notekeeper must always expose a Print button.");
+            Assert.That(printBtn!.Disabled, Is.True, "Print button must be disabled when no paper printer module is installed.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new NotekeeperActionMessage(NotekeeperUiAction.PrintFile, "/notes/shift_notes.txt", "Line1\nLine2"), FromServer(noteProg));
+        await SendBui(ProgramUiKey.Key, new NanoTaskActionMessage(new NanoTaskAddTask(new NanoTaskItem("Fix solar", "CE", false, NanoTaskPriority.High))), FromServer(taskProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(CountPapers(), Is.EqualTo(papersBefore), "Printing without a printer module must not spawn Paper.");
+            Assert.That(SEntMan.HasComponent<Content.Shared.Medical.HealthAnalyzer.HealthAnalyzerComponent>(wsHost), Is.False,
+                "MedTek must NOT enable HealthAnalyzer without ComputerPartHealthScannerModule.");
+
+            // Install paper printer + health scanner hardware modules!
+            var coords = SEntMan.GetComponent<TransformComponent>(wsHost).Coordinates;
+            var printer = SEntMan.SpawnEntity("ComputerPartPaperPrinter", coords);
+            var scanner = SEntMan.SpawnEntity("ComputerPartHealthScannerModule", coords);
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(wsComp, printer), Is.True);
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(wsComp, scanner), Is.True);
+            compSys.RecalculateHardwareStats(wsComp);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var noteUi = GetControlFromChildren<NotekeeperUiControl>(_ => true, win)!;
+            var printBtn = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(b => b.Name == "NotekeeperPrintButton", noteUi);
+            Assert.That(printBtn!.Disabled, Is.False, "Print button must enable once ComputerPartPaperPrinter is installed.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new NotekeeperActionMessage(NotekeeperUiAction.PrintFile, "/notes/shift_notes.txt", "Printed note body"), FromServer(noteProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(CountPapers(), Is.EqualTo(papersBefore + 1), "Notekeeper Print must spawn Paper once printer module is installed.");
+            Assert.That(SEntMan.HasComponent<Content.Shared.Medical.HealthAnalyzer.HealthAnalyzerComponent>(wsHost), Is.True,
+                "MedTek must attach HealthAnalyzer once ComputerPartHealthScannerModule is installed.");
+        });
+
+        // Item 8: Wanted List empty-state UI when no criminals are marked
+        await Server.WaitPost(() => compSys.SwitchActiveProgram(wsComp, wantedProg));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var emptyPanel = GetControlFromChildren<Control>(c => c.Name == "WantedListEmptyPanel", win);
+            var emptyLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(l => l.Name == "WantedListEmptyLabel", win);
+            Assert.That(emptyPanel, Is.Not.Null, "Wanted List must display an empty-state panel when no criminals are marked.");
+            Assert.That(emptyLabel!.Text, Does.Contain("No criminals").IgnoreCase);
+            win.Close();
+        });
+        await RunTicks(4);
+
+        // Item 7: Station Records sends zero data until HoP/Command auth; Command can read-only, HoP can edit!
+        await Server.WaitPost(() => compSys.OpenComputerForActor(stRecComp, SPlayer));
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var nameEdit = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLineEdit>(e => e.Name == "StationRecordsNameEdit", win)!;
+            Assert.That(nameEdit.Text, Is.Empty, "Station Records must send zero data before HoP/Command auth.");
+        });
+
+        // Authenticate with HoS ID (Command, NOT HoP) -> can READ Clara Vance, CANNOT create/edit!
+        await Server.WaitPost(() =>
+        {
+            var coords = SEntMan.GetComponent<TransformComponent>(stRecHost).Coordinates;
+            var hosCard = SEntMan.SpawnEntity("HoSIDCard", coords);
+            compSys.AuthenticateOsSession(stRecComp, hosCard, SPlayer);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var nameEdit = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLineEdit>(e => e.Name == "StationRecordsNameEdit", win)!;
+            Assert.That(nameEdit.Text, Is.EqualTo("Clara Vance"), "Command access must allow viewing Station Records.");
+        });
+
+        await SendBui(ProgramUiKey.Key, new StationRecordsActionMessage(
+            StationRecordsAction.CreateEntry, name: "Blocked Command Edit", jobTitle: "Passenger", age: 25), FromServer(stRecProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(serverComp, out var srvDrive, out var srvFs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(srvDrive!.Value, StationRecordsProgramComponent.CacheFilePath, out var stDb, srvFs), Is.True);
+            Assert.That(stDb!.Data.Values.Any(v => v.StartsWith("Blocked Command Edit\t")), Is.False,
+                "Command-only auth must NOT be allowed to edit Station Records (HoP required).");
+
+            // Now authenticate with HoP ID -> editing succeeds!
+            var coords = SEntMan.GetComponent<TransformComponent>(stRecHost).Coordinates;
+            var hopCard = SEntMan.SpawnEntity("HoPIDCard", coords);
+            compSys.AuthenticateOsSession(stRecComp, hopCard, SPlayer);
+        });
+        await RunTicks(6);
+
+        await SendBui(ProgramUiKey.Key, new StationRecordsActionMessage(
+            StationRecordsAction.CreateEntry, name: "Allowed HoP Entry", jobTitle: "Assistant", age: 30), FromServer(stRecProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            Assert.That(fsSys.TryFindFileSystem(serverComp, out var srvDrive, out var srvFs), Is.True);
+            Assert.That(fsSys.TryGetFile<DatabaseVirtualFile>(srvDrive!.Value, StationRecordsProgramComponent.CacheFilePath, out var stDb, srvFs), Is.True);
+            Assert.That(stDb!.Data.Values.Any(v => v.StartsWith("Allowed HoP Entry\t")), Is.True,
+                "Head of Personnel auth must be allowed to create/edit Station Records.");
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var w)) w.Close(); });
+        await RunTicks(4);
+    }
+
+    [Test]
+    public async Task TestCameraPvsCleanupOsLevelSwipeAuthAndLiveCardOnlyModifiers()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+
+        EntityUid routerHost = default;
+        EntityUid wsHost = default;
+        EntityUid wsComp = default;
+        EntityUid camUid = default;
+        EntityUid camProg = default;
+        EntityUid apcProg = default;
+        EntityUid encProg = default;
+
+        await Server.WaitPost(() =>
+        {
+            var coords = new EntityCoordinates(gridUid, 2.5f, 2.5f);
+            routerHost = SEntMan.SpawnEntity("StationNetworkRouter", coords);
+            powerSys.SetNeedsPower(routerHost, false);
+            compSys.EnsureComputerBoundToHost((routerHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(routerHost)), out _);
+
+            wsHost = SEntMan.SpawnEntity("OxydWorkstationComputer", coords);
+            powerSys.SetNeedsPower(wsHost, false);
+            compSys.EnsureComputerBoundToHost((wsHost, SEntMan.GetComponent<EmbeddedComputerHostComponent>(wsHost)), out wsComp);
+
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            fsSys.TryWriteFile(wsDrive!.Value, new ProgramVirtualFile { Name = "cameras", Extension = "nte", Directory = "/bin/", ProgramId = "SurveillanceCameraProgram", Title = "Surveillance Cameras" }, wsFs!);
+            fsSys.TryWriteFile(wsDrive.Value, new ProgramVirtualFile { Name = "apc_control", Extension = "nte", Directory = "/bin/", ProgramId = "OxydApcControlProgram", Title = "APC Control" }, wsFs!);
+
+            camUid = SEntMan.SpawnEntity("SurveillanceCameraSecurity", new EntityCoordinates(gridUid, 18.5f, 2.5f));
+            powerSys.SetNeedsPower(camUid, false);
+
+            var remoteApc = SEntMan.SpawnEntity("APCBasic", new EntityCoordinates(gridUid, 6.5f, 2.5f));
+            compSys.EnsureComputerBoundToHost((remoteApc, SEntMan.GetComponent<EmbeddedComputerHostComponent>(remoteApc)), out _);
+
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/cameras.nte", out var cUid, out var e1), Is.True, e1);
+            camProg = cUid!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/apc_control.nte", out var aUid, out var e2), Is.True, e2);
+            apcProg = aUid!.Value;
+            Assert.That(compSys.TryLaunchExecutable(wsComp, "/bin/access_encoder.nte", out var enUid, out var e3), Is.True, e3);
+            encProg = enUid!.Value;
+
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
+            compSys.OpenComputerForActor(wsComp, SPlayer);
+            compSys.SwitchActiveProgram(wsComp, camProg);
+        });
+        await RunTicks(10);
+
+        // Item 9: Swipe CaptainIDCard at OS level on scanner workstation -> Cameras & APC Control accept OS auth,
+        // while Access Encoder STILL refuses without a live physical ID card inserted in a slot!
+        await Server.WaitPost(() =>
+        {
+            var hostCoords = SEntMan.GetComponent<TransformComponent>(wsHost).Coordinates;
+            var capCard = SEntMan.SpawnEntity("CaptainIDCard", hostCoords);
+            var swipeEv = new InteractUsingEvent(SPlayer, capCard, wsHost, hostCoords);
+            SEntMan.EventBus.RaiseLocalEvent(wsHost, swipeEv);
+        });
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var cComp = SEntMan.GetComponent<OxydComputerComponent>(wsComp);
+            Assert.That(cComp.OsAuthAccessTags, Is.Not.Empty, "Swiping ID card on workstation scanner must authenticate OS session.");
+        });
+
+        // Select camera using OS auth (no live card inserted!) -> connects and adds ActivePvsViewers!
+        await SendBui(ProgramUiKey.Key,
+            new SurveillanceCameraActionMessage(SurveillanceCameraAction.SelectCamera, cameraEntity: FromServer(camUid)),
+            FromServer(camProg));
+        await SendBui(ProgramUiKey.Key, new ApcControlActionMessage(ApcControlAction.ToggleBreaker), FromServer(apcProg));
+        await SendBui(ProgramUiKey.Key, new AccessEncoderActionMessage(AccessEncoderAction.BuildSaveFile, "should_fail_os_auth"), FromServer(encProg));
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var camProgComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProg);
+            Assert.That(camProgComp.ActiveCameraUids, Contains.Item(camUid), "Camera app must authorize using OS-level swipe session.");
+            var survComp = SEntMan.GetComponent<Content.Shared.SurveillanceCamera.Components.SurveillanceCameraComponent>(camUid);
+            Assert.That(survComp.ActivePvsViewers, Contains.Item(SPlayer), "Active camera view must register player PVS viewer.");
+
+            Assert.That(SEntMan.GetComponent<ApcControlProgramComponent>(apcProg).Locked, Is.False,
+                "APC Control must authorize using OS-level swipe session without an inserted ID card.");
+
+            Assert.That(fsSys.TryFindFileSystem(wsComp, out var wsDrive, out var wsFs), Is.True);
+            Assert.That(fsSys.TryGetFile<AccessCodesVirtualFile>(wsDrive!.Value, "/keys/should_fail_os_auth.acc", out _, wsFs), Is.False,
+                "Access Encoder must NOT accept OS-level swipe auth — it requires a live physical ID card.");
+        });
+
+        // Item 6: Closing the computer window cleanly removes camera ActivePvsViewers AND clears OS session!
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var w)) w.Close(); });
+        await RunTicks(8);
+
+        await Server.WaitAssertion(() =>
+        {
+            var camProgComp = SEntMan.GetComponent<SurveillanceCameraProgramComponent>(camProg);
+            Assert.That(camProgComp.ActiveCameraUids, Is.Empty, "Closing camera viewer must disconnect active camera feeds.");
+            var survComp = SEntMan.GetComponent<Content.Shared.SurveillanceCamera.Components.SurveillanceCameraComponent>(camUid);
+            Assert.That(survComp.ActivePvsViewers, Does.Not.Contain(SPlayer),
+                "Closing camera UI must remove player from SurveillanceCameraComponent.ActivePvsViewers (PVS override cleanup).");
+            Assert.That(SEntMan.GetComponent<OxydComputerComponent>(wsComp).OsAuthAccessTags, Is.Empty,
+                "Closing computer UI when last viewer leaves must clear OS auth session.");
+        });
+    }
+
+    [Test]
+    public async Task TestConsistentSizesPdaHardwareLimitsUiStationTimeAutolatheTooltipsAndDebugController()
+    {
+        var compSys = Server.System<OxydComputerSystem>();
+        var fsSys = Server.System<SharedFileSystemSystem>();
+        var powerSys = Server.System<PowerReceiverSystem>();
+        var routerSys = Server.System<NetworkRouterSystem>();
+        var matSys = Server.System<SharedMaterialStorageSystem>();
+        var gridUid = SEntMan.GetComponent<TransformComponent>(SPlayer).GridUid!.Value;
+
+        // -----------------------------------------------------------------
+        // 1) Items 12, 13, 14, 15, 16, 17, 18: Consistent sizes, PDA hardware limits, battery, top-bar eject, bigger icons, Station Time
+        // -----------------------------------------------------------------
+        var pdaNet = await PlaceInHands("CaptainPDA");
+        var pdaUid = ToServer(pdaNet);
+        EntityUid pdaComp = default;
+
+        await Server.WaitAssertion(() =>
+        {
+            pdaComp = SEntMan.GetComponent<EmbeddedComputerHostComponent>(pdaUid).ComputerEntity!.Value;
+            Assert.That(fsSys.TryFindFileSystem(pdaComp, out var pdaDrive, out var pdaFs), Is.True);
+
+            // Item 12: Writing a program file with an arbitrary size normalizes it to prototype metadata
+            var customNote = new ProgramVirtualFile { Name = "notekeeper_copy", Extension = "nte", Directory = "/bin/", ProgramId = "NotekeeperProgram", Title = "Notekeeper Copy", Size = 123, RamUsageMb = 1 };
+            Assert.That(fsSys.TryWriteFile(pdaDrive!.Value, customNote, pdaFs!), Is.True);
+            Assert.That(fsSys.TryGetFile<ProgramVirtualFile>(pdaDrive.Value, "/bin/notekeeper.nte", out var origNote, pdaFs), Is.True);
+            Assert.That(fsSys.TryGetFile<ProgramVirtualFile>(pdaDrive.Value, "/bin/notekeeper_copy.nte", out var syncedNote, pdaFs), Is.True);
+            Assert.That(syncedNote!.Size, Is.EqualTo(origNote!.Size), "Program file size must be consistent across files/OSes.");
+            Assert.That(syncedNote.RamUsageMb, Is.EqualTo(origNote.RamUsageMb));
+
+            // Item 13: Default PDA cannot run heavy remote apps (APC Control / Cameras) or Desktop OS, and rejects Medium workstation CPU/RAM!
+            Assert.That(fsSys.TryWriteFile(pdaDrive.Value, new ProgramVirtualFile { Name = "apc_control", Extension = "nte", Directory = "/bin/", ProgramId = "OxydApcControlProgram", Title = "APC Control" }, pdaFs), Is.True);
+            Assert.That(compSys.TryLaunchExecutable(pdaComp, "/bin/apc_control.nte", out _, out var heavyErr), Is.False,
+                "Default unmodded PDA must reject heavy APC Control due to CPU/RAM limits.");
+            Assert.That(heavyErr, Does.Contain("RAM").Or.Contain("CPU"));
+
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            var mediumCpu = SEntMan.SpawnEntity("ComputerPartCpuWorkstation", coords);
+            var mediumRam = SEntMan.SpawnEntity("ComputerPartRam1024", coords);
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(pdaComp, mediumCpu), Is.False,
+                "PDA motherboard must reject Medium-sized workstation CPU.");
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(pdaComp, mediumRam), Is.False,
+                "PDA motherboard must reject Medium-sized workstation RAM.");
+        });
+
+        await UseInHand();
+        await RunTicks(10);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var pdaOs = GetControlFromChildren<PdaOsUiControl>(_ => true, win)!;
+
+            // Item 14: Battery charge label present
+            var batLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(l => l.Name == "PdaBatteryLabel", pdaOs);
+            Assert.That(batLabel, Is.Not.Null);
+            Assert.That(batLabel!.Text, Does.Contain("Battery: 100%"));
+
+            // Item 16: Top-bar ID & Pen eject buttons stretched vertically without floating
+            var topEjectId = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(b => b.Name == "TopEjectIdButton", pdaOs);
+            var topEjectPen = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentButton>(b => b.Name == "TopEjectPenButton", pdaOs);
+            Assert.That(topEjectId, Is.Not.Null, "PDA top bar must include ID eject button.");
+            Assert.That(topEjectPen, Is.Not.Null, "PDA top bar must include Pen eject button.");
+            Assert.That(topEjectId!.VerticalAlignment, Is.EqualTo(Control.VAlignment.Stretch));
+            Assert.That(topEjectPen!.VerticalAlignment, Is.EqualTo(Control.VAlignment.Stretch));
+
+            // Item 17: Bigger PDA app icons (40x40)
+            var tileIcon = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentTextureRect>(t => t.Name == "PdaAppTileIcon", pdaOs);
+            Assert.That(tileIcon, Is.Not.Null);
+            Assert.That(tileIcon!.DisplaySize.X, Is.GreaterThanOrEqualTo(36f));
+            Assert.That(tileIcon.DisplaySize.Y, Is.GreaterThanOrEqualTo(36f));
+
+            // Item 18: Station Time displayed
+            var labels = new List<Content.Client.UserInterface.Controls.ContentLabel>();
+            CollectDescendants(pdaOs, labels);
+            Assert.That(labels.Any(l => (l.Text ?? string.Empty).StartsWith("Station Time:", StringComparison.Ordinal)), Is.True);
+        });
+
+        // Remove PDA battery -> Battery: MISSING; upgrade PDA with Small upgraded CPU + RAM -> heavy APC Control now launches!
+        await Server.WaitPost(() =>
+        {
+            var slots = Server.System<ItemSlotsSystem>();
+            Assert.That(slots.TryEject(pdaComp, ModularComputerComponent.SlotBattery, null, out _), Is.True);
+            compSys.RecalculateHardwareStats(pdaComp);
+        });
+        await RunTicks(8);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var batLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(l => l.Name == "PdaBatteryLabel", win)!;
+            Assert.That(batLabel.Text, Does.Contain("MISSING"), "PDA must display Battery: MISSING when no battery module is installed.");
+            win.Close();
+        });
+        await RunTicks(4);
+
+        await Server.WaitAssertion(() =>
+        {
+            var slots = Server.System<ItemSlotsSystem>();
+            var coords = SEntMan.GetComponent<TransformComponent>(SPlayer).Coordinates;
+            slots.TryEject(pdaComp, ModularComputerComponent.SlotCpu, null, out _);
+            slots.TryEject(pdaComp, ModularComputerComponent.SlotRam, null, out _);
+            var upCpu = SEntMan.SpawnEntity("ComputerPartCpuPdaUpgraded", coords);
+            var upRam = SEntMan.SpawnEntity("ComputerPartRamPdaUpgraded", coords);
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(pdaComp, upCpu), Is.True);
+            Assert.That(compSys.TryInsertHardwarePartIntoSlot(pdaComp, upRam), Is.True);
+            compSys.RecalculateHardwareStats(pdaComp);
+            compSys.RebootComputer(pdaComp);
+            Assert.That(compSys.TryLaunchExecutable(pdaComp, "/bin/apc_control.nte", out _, out var upErr), Is.True,
+                $"Upgraded PDA must be able to run heavy APC Control, got: {upErr}");
+        });
+
+        // -----------------------------------------------------------------
+        // 2) Items 19, 20, 21, 22: Autolathe hover tooltips (materials, descriptions, full queue) & direct control boot
+        // -----------------------------------------------------------------
+        EntityUid latheUid = default;
+        EntityUid latheComp = default;
+        EntityUid latheProg = default;
+        await Server.WaitPost(() =>
+        {
+            var coords = new EntityCoordinates(gridUid, 3.5f, 2.5f);
+            latheUid = SEntMan.SpawnEntity("Autolathe", coords);
+            powerSys.SetNeedsPower(latheUid, false);
+            compSys.EnsureComputerBoundToHost((latheUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(latheUid)), out latheComp);
+            matSys.TryChangeMaterialAmount(latheUid, "Steel", 6000);
+            matSys.TryChangeMaterialAmount(latheUid, "Plastic", 4000);
+            latheProg = SEntMan.GetComponent<OxydComputerComponent>(latheComp).BootProgram!.Value;
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
+            compSys.OpenComputerForActor(latheComp, SPlayer);
+        });
+        await RunTicks(8);
+
+        await SendBui(ProgramUiKey.Key, new LatheControlActionMessage(LatheControlAction.PrintRecipe, "Wirecutter", "/blueprints/wirecutter.lathe", 3), FromServer(latheProg));
+        await RunTicks(6);
+
+        await Client.WaitAssertion(() =>
+        {
+            var win = GetWindow<ComputerDisplayWindow>();
+            var latheUi = GetControlFromChildren<LatheControlUiControl>(_ => true, win)!;
+
+            var costIcons = new List<MaterialNumberIcon>();
+            CollectDescendants(latheUi, costIcons);
+            Assert.That(costIcons.Count, Is.GreaterThan(0));
+            Assert.That(costIcons[0].MouseFilter, Is.EqualTo(Control.MouseFilterMode.Pass),
+                "MaterialNumberIcon must accept mouse hover to show material name tooltip.");
+            Assert.That(costIcons[0].ToolTip, Is.Not.Null.And.Not.Empty);
+
+            var descLabel = GetControlFromChildren<Content.Client.UserInterface.Controls.ContentLabel>(
+                l => l.Name == "LatheRecipeDescriptionLabel" && !string.IsNullOrWhiteSpace(l.ToolTip), latheUi);
+            Assert.That(descLabel, Is.Not.Null, "Autolathe recipe description must expose full text tooltip on hover.");
+            Assert.That(descLabel!.MouseFilter, Is.EqualTo(Control.MouseFilterMode.Pass));
+
+            var queueContainer = GetControlFromChildren<Control>(c => c.Name == "LatheQueueContainer", latheUi)!;
+            Assert.That(queueContainer.ToolTip, Does.Contain("Wirecutter").IgnoreCase,
+                "Autolathe queue must expose full queue tooltip on hover.");
+            win.Close();
+        });
+        await RunTicks(4);
+
+        // -----------------------------------------------------------------
+        // 3) Item 23: Physical Debug Controller (no NIC, clicks device to link, remote terminal commands, auto-disconnect out of range)
+        // -----------------------------------------------------------------
+        EntityUid dbgUid = default;
+        EntityUid dbgComp = default;
+        EntityUid dbgTermProg = default;
+        EntityUid apcUid = default;
+        EntityUid apcComp = default;
+        string apcGuid = string.Empty;
+
+        await Server.WaitAssertion(() =>
+        {
+            var coords = new EntityCoordinates(gridUid, 4.5f, 2.5f);
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, coords);
+
+            dbgUid = SEntMan.SpawnEntity("OxydDebugController", coords);
+            compSys.EnsureComputerBoundToHost((dbgUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(dbgUid)), out dbgComp);
+            var dbgStats = SEntMan.GetComponent<ComputerStatsComponent>(dbgComp);
+            Assert.That(dbgStats.HasNetworkCard, Is.False, "Debug Controller must NOT have a network card by default.");
+
+            var dbgC = SEntMan.GetComponent<OxydComputerComponent>(dbgComp);
+            Assert.That(dbgC.IsBooted, Is.True);
+            dbgTermProg = dbgC.BootProgram!.Value;
+            Assert.That(SEntMan.HasComponent<TerminalProgramComponent>(dbgTermProg), Is.True,
+                "Debug Controller must boot directly into TerminalProgramComponent.");
+
+            apcUid = SEntMan.SpawnEntity("APCBasic", coords);
+            compSys.EnsureComputerBoundToHost((apcUid, SEntMan.GetComponent<EmbeddedComputerHostComponent>(apcUid)), out apcComp);
+            apcGuid = routerSys.EnsureDeviceGuid(apcComp);
+
+            // Click on APC with Debug Controller in hand to physically link via AfterInteract!
+            var handsSys = Server.System<Content.Server.Hands.Systems.HandsSystem>();
+            foreach (var held in handsSys.EnumerateHeld(SPlayer).ToList())
+                handsSys.TryDrop(SPlayer, held, checkActionBlocker: false);
+            Assert.That(handsSys.TryPickupAnyHand(SPlayer, dbgUid), Is.True);
+            Server.System<Content.Shared.Interaction.SharedInteractionSystem>().InteractUsing(SPlayer, dbgUid, apcUid, coords);
+
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(dbgTermProg);
+            Assert.That(termComp.PhysicalTargetComputer, Is.EqualTo(apcComp), "Clicking target with Debug Controller must physically link.");
+            Assert.That(termComp.ConnectedRemoteGuid, Is.EqualTo(apcGuid));
+        });
+        await RunTicks(8);
+
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("ls /bin"), FromServer(dbgTermProg));
+        await SendBui(ProgramUiKey.Key, new TerminalExecuteCommandMessage("hw"), FromServer(dbgTermProg));
+        await RunTicks(6);
+
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(dbgTermProg);
+            Assert.That(termComp.History.Any(h => h.Contains("apc_control.nte")), Is.True,
+                "Debug Controller terminal `ls /bin` must list files on physically linked APC without any network card.");
+            Assert.That(termComp.History.Any(h => h.Contains("terminal.nte")), Is.True);
+            Assert.That(termComp.History.Any(h => h.Contains("CPU")), Is.True);
+
+            // Move Debug Controller & player out of physical range (> 3.5 tiles) -> auto-disconnects!
+            var farCoords = new EntityCoordinates(gridUid, 25.5f, 25.5f);
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(SPlayer, farCoords);
+            SEntMan.System<SharedTransformSystem>().SetCoordinates(dbgUid, farCoords);
+        });
+        await RunSeconds(1.2f);
+
+        await Server.WaitAssertion(() =>
+        {
+            var termComp = SEntMan.GetComponent<TerminalProgramComponent>(dbgTermProg);
+            Assert.That(termComp.PhysicalTargetComputer, Is.Null,
+                "Moving out of physical cable range must automatically disconnect the Debug Controller.");
+            Assert.That(termComp.ConnectedRemoteGuid, Is.Null.Or.Empty);
+        });
+
+        await Client.WaitPost(() => { while (TryFindWindow<ComputerDisplayWindow>(out var w)) w.Close(); });
         await RunTicks(4);
     }
 }

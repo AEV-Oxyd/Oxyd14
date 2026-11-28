@@ -40,6 +40,38 @@
     title: "NTOS TABLET"
     subtitle: " | Tactical Slate"
 
+- type: entity
+  parent: BaseItem
+  id: OxydDebugController
+  name: engineering debug controller
+  description: A rugged handheld JTAG diagnostic terminal used by engineers to physically link to computers and embedded controllers without network hardware.
+  components:
+  - type: Tag
+    tags:
+    - Oxyd
+  - type: Sprite
+    sprite: Objects/Tools/network_configurator.rsi
+    state: icon
+  - type: Item
+    size: Small
+  - type: PhysicalDebugController
+    maxPhysicalRange: 3.5
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydDebugControllerBoard
+    borderColor: "#FFB347"
+    title: "JTAG DEBUG CONTROLLER"
+    subtitle: " | Direct Terminal"
+    dockInViewport: false
+  - type: ContainerContainer
+    containers:
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
+
 # ==============================================================================
 # Host Machine: Oxyd Workstation Computer
 # ==============================================================================
@@ -99,6 +131,18 @@
     title: "NTOS WORKSTATION"
     subtitle: " | ID Slot Terminal"
 
+- type: entity
+  parent: OxydWorkstationComputer
+  id: OxydWorkstationComputerDualIdSlot
+  name: Oxyd workstation computer (2 ID slots)
+  description: A modular desktop workstation pre-equipped with two integrated ID Card Slot hardware modules.
+  components:
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydWorkstationDualIdSlotEmbeddedController
+    borderColor: "#00D4FF"
+    title: "NTOS WORKSTATION"
+    subtitle: " | Dual ID Terminal"
+
 # ==============================================================================
 # Encapsulated Computer Entities (Separate from Host Devices)
 # ==============================================================================
@@ -146,6 +190,7 @@
       id_slot_module: !type:ContainerSlot {}
       id_slot_module_2: !type:ContainerSlot {}
       disk_slot_module: !type:ContainerSlot {}
+      printer_slot: !type:ContainerSlot {}
   - type: ItemSlots
     slots:
       cpu_slot:
@@ -188,6 +233,10 @@
         name: Disk Module
         whitelist:
           components: [ ComputerDiskSlotModule ]
+      printer_slot:
+        name: Paper Printer Module
+        whitelist:
+          components: [ ComputerPrinterModule ]
   - type: ModularComputer
     maxHardDriveSlots: 1
     maxRamSlots: 2
@@ -229,14 +278,26 @@
   id: BaseOxydPdaEmbeddedController
   name: PDA computer board
   components:
+  - type: ModularComputer
+    maxHardDriveSlots: 1
+    maxRamSlots: 2
+    maxIdModuleSlots: 2
+    maxCpuSize: Small
+    maxRamSize: Small
+    maxHardDriveSize: Small
+    maxNetworkCardSize: Small
+    maxBatterySize: Small
   - type: OxydComputer
     template: Pda
     defaultScreenSize: 580, 580
     allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
     requirePowerToBoot: false
     defaultHardware:
-    - ComputerPartCpuBasic
-    - ComputerPartRamBasic
+    - ComputerPartCpuPda
+    - ComputerPartRamPda
     - ComputerPartHardDrivePda
     - ComputerPartNetworkCardBasic
     - ComputerPartBatterySmall
@@ -250,13 +311,16 @@
     template: Desktop
     defaultScreenSize: 1040, 720
     allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
     requirePowerToBoot: true
     defaultHardware:
     - ComputerPartCpuWorkstation
     - ComputerPartRam1024
     - ComputerPartHardDriveWorkstation
     - ComputerPartNetworkCardHighSpeed
-    - ComputerPartBatterySmall
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydWorkstationEmbeddedController
@@ -267,13 +331,36 @@
     template: Desktop
     defaultScreenSize: 1040, 720
     allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
     requirePowerToBoot: true
     defaultHardware:
     - ComputerPartCpuWorkstation
     - ComputerPartRam1024
     - ComputerPartHardDriveWorkstation
     - ComputerPartNetworkCardHighSpeed
-    - ComputerPartBatterySmall
+    - ComputerPartIdSlotModule
+
+- type: entity
+  parent: BaseOxydWorkstationEmbeddedController
+  id: BaseOxydWorkstationDualIdSlotEmbeddedController
+  name: workstation computer board (2 ID slots)
+  components:
+  - type: OxydComputer
+    template: Desktop
+    defaultScreenSize: 1040, 720
+    allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
+    requirePowerToBoot: true
+    defaultHardware:
+    - ComputerPartCpuWorkstation
+    - ComputerPartRam1024
+    - ComputerPartHardDriveWorkstation
+    - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdSlotModule
     - ComputerPartIdSlotModule
 
 - type: entity
@@ -339,6 +426,10 @@
     template: Embedded
     defaultScreenSize: 940, 660
     allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
+    - Network
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/router.nte"
     defaultHardware:
@@ -346,6 +437,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveRouter
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -356,6 +448,9 @@
     template: Desktop
     defaultScreenSize: 980, 680
     allowRemoteControl: true
+    remoteLocked: true
+    remoteAccessTags:
+    - SystemAdmin
     requirePowerToBoot: true
     embeddedDefaultAppPath: "/bin/terminal.nte"
     defaultHardware:
@@ -363,6 +458,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveServer
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -380,6 +476,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveRecords
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -505,6 +602,7 @@
     - ComputerPartRam1024
     - ComputerPartHardDriveMedicalRecords
     - ComputerPartNetworkCardHighSpeed
+    - ComputerPartIdScannerModule
 
 - type: entity
   parent: BaseOxydEmbeddedController
@@ -575,42 +673,117 @@
     - ComputerPartHardDriveSolarConsole
     - ComputerPartNetworkCardHighSpeed
 
+- type: entity
+  parent: BaseOxydEmbeddedController
+  id: BaseOxydDebugControllerBoard
+  name: debug controller board
+  components:
+  - type: OxydComputer
+    template: Embedded
+    defaultScreenSize: 780, 560
+    allowRemoteControl: false
+    allowDeviceLink: true
+    requirePowerToBoot: false
+    defaultHardware:
+    - ComputerPartCpuBasic
+    - ComputerPartRamBasic
+    - ComputerPartHardDriveDebugController
+    - ComputerPartBatterySmall
+
 # ==============================================================================
 # Physical Hardware Item Modules
 # ==============================================================================
 
 - type: entity
   parent: BaseItem
+  id: ComputerPartCpuPda
+  name: compact mobile CPU module (400 MHz)
+  description: Low-power handheld microprocessor designed for lightweight PDA applications.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpuboard
+  - type: ComputerCpu
+    frequencyMhz: 400
+    maxConcurrentPrograms: 4
+    cpuCapacity: 100
+    size: Small
+
+- type: entity
+  parent: BaseItem
   id: ComputerPartCpuBasic
   name: standard CPU module (800 MHz)
-  description: A microprocessor module supporting up to 4 concurrent program entities.
+  description: A microprocessor module with balanced processing capacity for embedded and upgraded mobile systems.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: cpuboard
   - type: ComputerCpu
     frequencyMhz: 800
-    maxConcurrentPrograms: 4
+    maxConcurrentPrograms: 6
+    cpuCapacity: 200
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartCpuPdaUpgraded
+  name: overclocked compact CPU module (1600 MHz)
+  description: High-efficiency compact microprocessor capable of running demanding telemetry and remote control software on modded handhelds.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: cpu_engineering
+  - type: ComputerCpu
+    frequencyMhz: 1600
+    maxConcurrentPrograms: 8
+    cpuCapacity: 350
     size: Small
 
 - type: entity
   parent: BaseItem
   id: ComputerPartCpuWorkstation
   name: high-clock CPU module (3200 MHz)
-  description: An enterprise microprocessor capable of executing 12 concurrent program entities.
+  description: An enterprise full-size workstation microprocessor with high dynamic processing capacity.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: cpu_super
   - type: ComputerCpu
     frequencyMhz: 3200
-    maxConcurrentPrograms: 12
+    maxConcurrentPrograms: 16
+    cpuCapacity: 800
+    size: Medium
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartRamPda
+  name: compact mobile RAM module (64 QB)
+  description: Low-capacity mobile memory module standard on crew PDAs.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: generic
+  - type: ComputerRam
+    sizeMb: 64
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartRamPdaUpgraded
+  name: upgraded compact RAM module (256 QB)
+  description: High-density compact memory stick for modded PDAs and field devices.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: std_mod
+  - type: ComputerRam
+    sizeMb: 256
     size: Small
 
 - type: entity
   parent: BaseItem
   id: ComputerPartRamBasic
-  name: RAM module (512 MB)
+  name: RAM module (512 QB)
   description: Volatile memory required for operating system boot and concurrent program processes.
   components:
   - type: Sprite
@@ -623,20 +796,20 @@
 - type: entity
   parent: BaseItem
   id: ComputerPartRam1024
-  name: enterprise RAM module (2048 MB)
-  description: High-capacity volatile memory stick for multi-tasking workstations and servers.
+  name: enterprise RAM module (2048 QB)
+  description: High-capacity full-size volatile memory stick for multi-tasking workstations and servers.
   components:
   - type: Sprite
     sprite: Objects/Misc/module.rsi
     state: std_mod
   - type: ComputerRam
     sizeMb: 2048
-    size: Small
+    size: Medium
 
 - type: entity
   parent: BaseItem
   id: ComputerPartHardDriveBasic
-  name: NTOS hard drive (8 MB)
+  name: NTOS hard drive (8 QB)
   description: Non-volatile storage drive holding the boot .nte OS, user files, and databases.
   components:
   - type: Sprite
@@ -678,6 +851,13 @@
         size: 2048
         programId: OxydDownloaderProgram
         title: "Downloader"
+      "/bin/security_lock.nte": !type:ProgramVirtualFile
+        name: security_lock
+        extension: nte
+        directory: /bin/
+        size: 81920
+        programId: OxydSecurityLockProgram
+        title: "Security Lock"
       "/bin/crew_manifest.nte": !type:ProgramVirtualFile
         name: crew_manifest
         extension: nte
@@ -717,7 +897,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDrivePda
-  name: NTOS Pocket PDA drive (8 MB)
+  name: NTOS Pocket PDA drive (8 QB)
   description: Compact solid-state drive preloaded with NTOS Pocket PDA OS and mobile utilities.
   components:
   - type: ComputerHardDrive
@@ -756,6 +936,13 @@
         size: 2048
         programId: OxydDownloaderProgram
         title: "Downloader"
+      "/bin/security_lock.nte": !type:ProgramVirtualFile
+        name: security_lock
+        extension: nte
+        directory: /bin/
+        size: 81920
+        programId: OxydSecurityLockProgram
+        title: "Security Lock"
       "/bin/crew_manifest.nte": !type:ProgramVirtualFile
         name: crew_manifest
         extension: nte
@@ -795,7 +982,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveWorkstation
-  name: workstation hard drive (64 MB)
+  name: workstation hard drive (64 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 67108864
@@ -831,6 +1018,20 @@
         size: 2048
         programId: OxydDownloaderProgram
         title: "Downloader"
+      "/bin/net_navigator.nte": !type:ProgramVirtualFile
+        name: net_navigator
+        extension: nte
+        directory: /bin/
+        size: 114688
+        programId: OxydNetNavigatorProgram
+        title: "NetNavigator"
+      "/bin/security_lock.nte": !type:ProgramVirtualFile
+        name: security_lock
+        extension: nte
+        directory: /bin/
+        size: 81920
+        programId: OxydSecurityLockProgram
+        title: "Security Lock"
       "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
         name: packet_sniffer
         extension: nte
@@ -871,33 +1072,25 @@
   - type: FileSystem
     maxStorageBytes: 618496
     files:
-      "/bin/embedded_os.nte": !type:ProgramVirtualFile
-        name: embedded_os
-        extension: nte
-        directory: /bin/
-        size: 3072
-        programId: OxydEmbeddedOsProgram
-        title: "Embedded Controller OS"
-        ramUsageMb: 16
       "/bin/lathe_control.nte": !type:ProgramVirtualFile
         name: lathe_control
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 90112
         programId: OxydLatheControlProgram
         title: "Lathe Controller"
       "/bin/terminal.nte": !type:ProgramVirtualFile
         name: terminal
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 86016
         programId: OxydTerminalProgram
         title: "Terminal"
       "/bin/file_browser.nte": !type:ProgramVirtualFile
         name: file_browser
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 65536
         programId: OxydFileBrowserProgram
         title: "File Browser"
 
@@ -909,26 +1102,18 @@
   - type: FileSystem
     maxStorageBytes: 8388608
     files:
-      "/bin/embedded_os.nte": !type:ProgramVirtualFile
-        name: embedded_os
-        extension: nte
-        directory: /bin/
-        size: 3072
-        programId: OxydEmbeddedOsProgram
-        title: "Embedded Controller OS"
-        ramUsageMb: 16
       "/bin/apc_control.nte": !type:ProgramVirtualFile
         name: apc_control
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 212992
         programId: OxydApcControlProgram
         title: "APC Controller"
       "/bin/terminal.nte": !type:ProgramVirtualFile
         name: terminal
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 86016
         programId: OxydTerminalProgram
         title: "Terminal"
 
@@ -940,28 +1125,46 @@
   - type: FileSystem
     maxStorageBytes: 8388608
     files:
-      "/bin/embedded_os.nte": !type:ProgramVirtualFile
-        name: embedded_os
-        extension: nte
-        directory: /bin/
-        size: 3072
-        programId: OxydEmbeddedOsProgram
-        title: "Embedded Controller OS"
-        ramUsageMb: 16
       "/bin/atmos_control.nte": !type:ProgramVirtualFile
         name: atmos_control
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 229376
         programId: OxydAtmosControlProgram
         title: "Air Alarm Controller"
       "/bin/terminal.nte": !type:ProgramVirtualFile
         name: terminal
         extension: nte
         directory: /bin/
-        size: 2048
+        size: 86016
         programId: OxydTerminalProgram
         title: "Terminal"
+
+- type: entity
+  parent: ComputerPartHardDriveBasic
+  id: ComputerPartHardDriveDebugController
+  name: diagnostic debug drive (8 QB)
+  description: Compact diagnostic drive preloaded with direct-boot NTOS Terminal firmware.
+  components:
+  - type: ComputerHardDrive
+    capacityBytes: 8388608
+    size: Small
+  - type: FileSystem
+    maxStorageBytes: 8388608
+    files:
+      "/bin/terminal.nte": !type:ProgramVirtualFile
+        name: terminal
+        extension: nte
+        directory: /bin/
+        size: 86016
+        programId: OxydTerminalProgram
+        title: "Diagnostic Terminal"
+      "/notes/jtag_readme.txt": !type:TextVirtualFile
+        name: jtag_readme
+        extension: txt
+        directory: /notes/
+        size: 160
+        textContent: "Click any NTOS computer, APC, Air Alarm, Autolathe, Router, or Server to link directly over JTAG."
 
 - type: entity
   parent: ComputerPartHardDriveBasic
@@ -986,6 +1189,20 @@
         size: 2048
         programId: OxydRouterProgram
         title: "Router Admin"
+      "/bin/net_navigator.nte": !type:ProgramVirtualFile
+        name: net_navigator
+        extension: nte
+        directory: /bin/
+        size: 114688
+        programId: OxydNetNavigatorProgram
+        title: "NetNavigator"
+      "/bin/security_lock.nte": !type:ProgramVirtualFile
+        name: security_lock
+        extension: nte
+        directory: /bin/
+        size: 81920
+        programId: OxydSecurityLockProgram
+        title: "Security Lock"
       "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
         name: packet_sniffer
         extension: nte
@@ -1011,7 +1228,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveRecords
-  name: station records drive (32 MB)
+  name: station records drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1066,7 +1283,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveCriminalRecords
-  name: criminal records drive (32 MB)
+  name: criminal records drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1121,7 +1338,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveCameraMonitor
-  name: surveillance monitor drive (32 MB)
+  name: surveillance monitor drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1176,7 +1393,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveIdConsole
-  name: ID console drive (32 MB)
+  name: ID console drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1237,7 +1454,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveCargoOrders
-  name: cargo orders drive (32 MB)
+  name: cargo orders drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1277,7 +1494,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveAtmosConsole
-  name: remote atmos control drive (32 MB)
+  name: remote atmos control drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1331,7 +1548,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDrivePowerConsole
-  name: remote power monitor drive (32 MB)
+  name: remote power monitor drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1385,7 +1602,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveMedicalRecords
-  name: medical records drive (32 MB)
+  name: medical records drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1439,7 +1656,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveCrewMonitor
-  name: crew monitoring drive (32 MB)
+  name: crew monitoring drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1486,7 +1703,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveNewsConsole
-  name: news console drive (32 MB)
+  name: news console drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1533,7 +1750,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveCommsConsole
-  name: communications console drive (32 MB)
+  name: communications console drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1580,7 +1797,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveSolarConsole
-  name: solar control drive (32 MB)
+  name: solar control drive (32 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 33554432
@@ -1627,7 +1844,7 @@
 - type: entity
   parent: ComputerPartHardDriveBasic
   id: ComputerPartHardDriveServer
-  name: mainframe repository drive (128 MB)
+  name: mainframe repository drive (128 QB)
   components:
   - type: ComputerHardDrive
     capacityBytes: 134217728
@@ -1736,6 +1953,20 @@
         size: 4096
         programId: LogProbeProgram
         title: "LogProbe"
+      "/bin/net_navigator.nte": !type:ProgramVirtualFile
+        name: net_navigator
+        extension: nte
+        directory: /bin/
+        size: 114688
+        programId: OxydNetNavigatorProgram
+        title: "NetNavigator"
+      "/bin/security_lock.nte": !type:ProgramVirtualFile
+        name: security_lock
+        extension: nte
+        directory: /bin/
+        size: 81920
+        programId: OxydSecurityLockProgram
+        title: "Security Lock"
       "/bin/packet_sniffer.nte": !type:ProgramVirtualFile
         name: packet_sniffer
         extension: nte
@@ -1841,7 +2072,7 @@
 - type: entity
   parent: BaseItem
   id: ComputerPartNetworkCardBasic
-  name: modular network interface card (16 KB/s)
+  name: modular network interface card (16 QB/s)
   description: Provides network routing, SSH remote connections, and Screen View transport.
   components:
   - type: Sprite
@@ -1856,7 +2087,7 @@
 - type: entity
   parent: BaseItem
   id: ComputerPartNetworkCardHighSpeed
-  name: high-speed fiber NIC (64 KB/s)
+  name: high-speed fiber NIC (64 QB/s)
   description: High-throughput fiber transceiver card for servers, routers, and workstations.
   components:
   - type: Sprite
@@ -1891,6 +2122,32 @@
     sprite: Objects/Misc/module.rsi
     state: command
   - type: ComputerSensorModule
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartHealthScannerModule
+  name: modular biometric health scanner
+  description: Compact biometric health scanner hardware module required to run MedTek diagnostics.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: medical
+  - type: ComputerSensorModule
+    size: Small
+  - type: ComputerHealthScannerModule
+    size: Small
+
+- type: entity
+  parent: BaseItem
+  id: ComputerPartPaperPrinter
+  name: modular paper printer
+  description: Compact thermal paper printer module enabling document and task printing from NTOS applications.
+  components:
+  - type: Sprite
+    sprite: Objects/Misc/module.rsi
+    state: service
+  - type: ComputerPrinterModule
     size: Small
 
 - type: entity

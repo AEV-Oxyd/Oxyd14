@@ -103,3 +103,34 @@
           size: 48
           isReadOnly: false
           textContent: "NTOS FIELD DATA TRANSFER GUIDE:\n1. Insert disk into PDA or tablet.\n2. Access /disk/ directory via File Browser.\n3. Transfer blueprints to autolathe for manufacturing."
+
+- type: entity
+  parent: BaseRecipeDisk
+  id: OxydDataDiskJailbreakOs
+  name: jailbroken OS flash disk
+  description: An unauthorized optical disk containing jailbroken NTOS kernels that strip corporate remote management backdoors and local security restrictions.
+  components:
+    - type: Sprite
+      sprite: Oxyd/erisported/_Manual/discs.rsi
+      state: red
+    - type: FileSystem
+      maxStorageBytes: 524288
+      files:
+        "/bin/jailbreak_os.nte": !type:ProgramVirtualFile
+          name: jailbreak_os
+          extension: nte
+          directory: /bin/
+          size: 196608
+          programId: OxydJailbrokenOsProgram
+          title: "NTOS Jailbreak"
+          ramUsageMb: 32
+          cpuUsagePercent: 5.0
+        "/bin/jailbreak_pda_os.nte": !type:ProgramVirtualFile
+          name: jailbreak_pda_os
+          extension: nte
+          directory: /bin/
+          size: 163840
+          programId: OxydJailbrokenPdaOsProgram
+          title: "NTOS Pocket [JB]"
+          ramUsageMb: 24
+          cpuUsagePercent: 4.0

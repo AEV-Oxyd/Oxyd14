@@ -83,7 +83,7 @@
     accentHColor: "#ffa726"
     accentVColor: "#8a5200"
     title: "AREA POWER CONTROLLER"
-    subtitle: " | Subsystem Terminal"
+    subtitle: ""
   - type: ContainerContainer
     containers:
       computer_board: !type:ContainerSlot {}

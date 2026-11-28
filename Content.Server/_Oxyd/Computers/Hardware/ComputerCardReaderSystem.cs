@@ -367,7 +367,17 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
             return;
         }
 
-        if (!ent.Comp.IsBooted || ent.Comp.ActiveProgram is not { } activeProg || !Exists(activeProg))
+        if (ent.Comp.IsBooted && ent.Comp.SoftwareLocked && ent.Comp.RequiredAccessTags.Count > 0)
+        {
+            _computer.TryUnlockWithCard(ent.Owner, cardUid, out var unlockMsg);
+            _audio.PlayPvs(SwipeSound, args.HostUid);
+            if (!string.IsNullOrWhiteSpace(unlockMsg))
+                _popup.PopupEntity(unlockMsg, args.HostUid, args.User);
+            args.Handled = true;
+            return;
+        }
+
+        if (!ent.Comp.IsBooted)
         {
             _popup.PopupEntity("The computer is not running.", args.HostUid, args.User);
             args.Handled = true;
@@ -377,16 +387,7 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
         Entity<ComputerIdCardSlotModuleComponent>? chosen = null;
         var retained = false;
 
-        foreach (var reader in readers)
-        {
-            if (reader.Comp.Mode == ComputerCardReaderMode.Scanner)
-            {
-                chosen = reader;
-                break;
-            }
-        }
-
-        if (chosen == null && isLooseCard)
+        if (isLooseCard)
         {
             foreach (var reader in readers)
             {
@@ -398,6 +399,23 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
                 break;
             }
         }
+
+        if (chosen == null)
+        {
+            foreach (var reader in readers)
+            {
+                if (reader.Comp.Mode == ComputerCardReaderMode.Scanner)
+                {
+                    chosen = reader;
+                    break;
+                }
+            }
+        }
+
+        // Allow swiping a PDA or a loose ID card (even when all physical ID slots are occupied)
+        // to authenticate at the OS level whenever any ID reader or slot module is installed.
+        if (chosen == null && readers.Count > 0)
+            chosen = readers[0];
 
         args.Handled = true;
         if (chosen == null)
@@ -411,8 +429,19 @@ public sealed partial class ComputerCardReaderSystem : EntitySystem
 
         _audio.PlayPvs(SwipeSound, args.HostUid);
 
+        if (!retained)
+            _computer.AuthenticateOsSession(ent.Owner, cardUid, args.User, ent.Comp);
+
+        var targetProg = ent.Comp.ActiveProgram is { Valid: true } activeProg && Exists(activeProg)
+            ? activeProg
+            : ent.Comp.BootProgram;
+
         var scanned = new ProgramCardScannedEvent(ent.Owner, args.HostUid, cardUid, args.User, chosen.Value.Owner, retained);
-        RaiseLocalEvent(activeProg, ref scanned);
+        if (targetProg is { Valid: true } progUid && Exists(progUid))
+            RaiseLocalEvent(progUid, ref scanned);
+
+        if (!scanned.Handled && !retained && !string.IsNullOrWhiteSpace(ent.Comp.OsAuthLabel))
+            _popup.PopupEntity($"Authenticated: {ent.Comp.OsAuthLabel}", args.HostUid, args.User);
     }
 
     [SubscribeLocalEvent]

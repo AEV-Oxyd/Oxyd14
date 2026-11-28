@@ -113,8 +113,27 @@ public sealed partial class NetworkCoreOsSystem : EntitySystem
                 break;
 
             case NetworkCoreOsAction.SetTab:
-                ent.Comp.CurrentTab = Math.Clamp(msg.TabIndex, 0, 2);
+                var prevTab = ent.Comp.CurrentTab;
+                var nextTab = Math.Clamp(msg.TabIndex, 0, 2);
+                ent.Comp.CurrentTab = nextTab;
                 Dirty(ent);
+
+                if (_computerQuery.TryComp(compUid, out var coreComp) &&
+                    coreComp.ActiveProgram is { Valid: true } activeProg &&
+                    activeProg != ent.Owner &&
+                    Exists(activeProg))
+                {
+                    if (prevTab == 1 && nextTab != 1)
+                    {
+                        var deactEv = new ProgramDeactivatedEvent(compUid, activeProg);
+                        RaiseLocalEvent(activeProg, ref deactEv);
+                    }
+                    else if (prevTab != 1 && nextTab == 1)
+                    {
+                        var actEv = new ProgramActivatedEvent(compUid, activeProg);
+                        RaiseLocalEvent(activeProg, ref actEv);
+                    }
+                }
                 break;
 
             case NetworkCoreOsAction.ToggleAutoSync:

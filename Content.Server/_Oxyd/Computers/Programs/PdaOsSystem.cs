@@ -40,6 +40,7 @@ public sealed partial class PdaOsSystem : EntitySystem
             subs.Event<PdaOsHardwareActionMessage>(OnPdaOsHardwareAction);
             subs.Event<PdaOsInvokeDevicePortMessage>(OnPdaOsInvokePort);
             subs.Event<PdaOsShutDownMessage>(OnPdaOsShutDown);
+            subs.Event<PdaOsLogoutAuthMessage>(OnPdaOsLogoutAuth);
         });
     }
 
@@ -47,6 +48,37 @@ public sealed partial class PdaOsSystem : EntitySystem
     private void OnComputerHardwareChanged(Entity<PdaOsProgramComponent> ent, ref ComputerHardwareChangedEvent args)
     {
         UpdatePdaOsUi(ent.Owner);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnComputerOsAuthChanged(Entity<PdaOsProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        UpdatePdaOsUi(ent.Owner);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnDriveFileSystemChanged(ref Content.Shared._Oxyd.Computers.FileSystem.FileSystemChangedEvent args)
+    {
+        var toUpdate = new List<EntityUid>();
+        var query = EntityQueryEnumerator<OxydComputerComponent, ComputerStatsComponent>();
+        while (query.MoveNext(out _, out var comp, out var stats))
+        {
+            if ((args.DriveUid.IsValid() && stats.PrimaryDriveUid != args.DriveUid) ||
+                !comp.IsBooted ||
+                comp.BootProgram is not { Valid: true } bootUid)
+            {
+                continue;
+            }
+
+            if (HasComp<PdaOsProgramComponent>(bootUid))
+                toUpdate.Add(bootUid);
+        }
+
+        foreach (var bootUid in toUpdate)
+        {
+            if (Exists(bootUid))
+                UpdatePdaOsUi(bootUid);
+        }
     }
 
     [SubscribeLocalEvent]
@@ -78,8 +110,30 @@ public sealed partial class PdaOsSystem : EntitySystem
         if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
             return;
 
-        ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 2);
+        var prevView = ent.Comp.CurrentView;
+        var nextView = Math.Clamp(args.ViewIndex, 0, 2);
+        ent.Comp.CurrentView = nextView;
         Dirty(ent);
+
+        if (_programQuery.TryComp(ent.Owner, out var prog) &&
+            prog.Computer is { } compUid &&
+            _computerQuery.TryComp(compUid, out var comp) &&
+            comp.ActiveProgram is { Valid: true } activeProg &&
+            activeProg != ent.Owner &&
+            Exists(activeProg))
+        {
+            if (prevView == 2 && nextView != 2)
+            {
+                var deactEv = new ProgramDeactivatedEvent(compUid, activeProg);
+                RaiseLocalEvent(activeProg, ref deactEv);
+            }
+            else if (prevView != 2 && nextView == 2)
+            {
+                var actEv = new ProgramActivatedEvent(compUid, activeProg);
+                RaiseLocalEvent(activeProg, ref actEv);
+            }
+        }
+
         UpdatePdaOsUi(ent.Owner);
     }
 
@@ -177,6 +231,18 @@ public sealed partial class PdaOsSystem : EntitySystem
         _computer.ShutDownComputer(compUid, manualShutdown: true);
     }
 
+    private void OnPdaOsLogoutAuth(Entity<PdaOsProgramComponent> ent, ref PdaOsLogoutAuthMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        _computer.ClearOsSession(compUid);
+        UpdatePdaOsUi(ent.Owner);
+    }
+
     public void UpdatePdaOsUi(EntityUid progUid)
     {
         if (!TryComp<PdaOsProgramComponent>(progUid, out var pdaOsComp))
@@ -271,7 +337,8 @@ public sealed partial class PdaOsSystem : EntitySystem
             installed,
             running,
             ports,
-            hwSummary);
+            hwSummary,
+            string.IsNullOrWhiteSpace(comp.OsAuthLabel) ? null : comp.OsAuthLabel);
 
         if (_ui.HasUi(progUid, ProgramUiKey.Key))
             _ui.SetUiState(progUid, ProgramUiKey.Key, state);

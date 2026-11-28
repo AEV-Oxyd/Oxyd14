@@ -23,6 +23,13 @@ public sealed partial class TerminalProgramComponent : Component
     [DataField]
     public string? ConnectedRemoteUser;
 
+    /// <summary>
+    /// Snapshot of the target computer's LockEpoch at the moment this SSH session authenticated.
+    /// If the target subsequently re-locks or reboots with a new epoch, this session is invalidated.
+    /// </summary>
+    [DataField]
+    public int ConnectedRemoteLockEpoch;
+
     [DataField]
     public string? PendingAuthGuid;
 
@@ -40,6 +47,19 @@ public sealed partial class TerminalProgramComponent : Component
 
     [DataField]
     public string RemoteDirectory = "/";
+
+    /// <summary>
+    /// True when connected over a direct physical JTAG diagnostic cable (e.g. OxydDebugController)
+    /// instead of a routed network SSH session.
+    /// </summary>
+    [DataField]
+    public bool IsPhysicalLink;
+
+    [DataField]
+    public EntityUid? PhysicalTargetComputer;
+
+    [DataField]
+    public float PhysicalMaxRange = 3.5f;
 
     [ViewVariables]
     public HashSet<EntityUid> ActiveViewers = new();
@@ -59,6 +79,7 @@ public sealed class TerminalUiState : BoundUserInterfaceState
     public bool IsRouterOnline { get; }
     public RemoteScreenState? RemoteScreen { get; }
     public string? NetworkLabel { get; }
+    public bool IsPhysicalLink { get; }
 
     public TerminalUiState(
         List<string> lines,
@@ -71,7 +92,8 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         bool hasNetworkCard,
         bool isRouterOnline,
         RemoteScreenState? remoteScreen = null,
-        string? networkLabel = null)
+        string? networkLabel = null,
+        bool isPhysicalLink = false)
     {
         Lines = lines;
         Prompt = prompt;
@@ -84,6 +106,7 @@ public sealed class TerminalUiState : BoundUserInterfaceState
         IsRouterOnline = isRouterOnline;
         RemoteScreen = remoteScreen;
         NetworkLabel = networkLabel;
+        IsPhysicalLink = isPhysicalLink;
     }
 }
 

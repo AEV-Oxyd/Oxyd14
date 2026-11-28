@@ -33,6 +33,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
     public bool IsHostLocked { get; }
     public string? DefaultAppPath { get; }
     public bool IsDedicatedPanel { get; }
+    public string? OsAuthLabel { get; }
 
     public EmbeddedOsUiState(
         string title,
@@ -48,7 +49,8 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         bool hasLock = false,
         bool isHostLocked = false,
         string? defaultAppPath = null,
-        bool isDedicatedPanel = false)
+        bool isDedicatedPanel = false,
+        string? osAuthLabel = null)
     {
         Title = title;
         Subtitle = subtitle;
@@ -64,6 +66,7 @@ public sealed class EmbeddedOsUiState : BoundUserInterfaceState
         IsHostLocked = isHostLocked;
         DefaultAppPath = defaultAppPath;
         IsDedicatedPanel = isDedicatedPanel;
+        OsAuthLabel = osAuthLabel;
     }
 }
 
@@ -130,5 +133,15 @@ public sealed class EmbeddedOsInvokePortMessage : BoundUserInterfaceMessage
 
 [Serializable, NetSerializable]
 public sealed class EmbeddedOsShutDownMessage : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
+public sealed class EmbeddedOsSwipeAuthMessage : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
+public sealed class EmbeddedOsLogoutAuthMessage : BoundUserInterfaceMessage
 {
 }

@@ -58,41 +58,38 @@ public sealed class TerminalUiControl : ProgramUiControl
 
         var screenBar = new ContentBoxContainer
         {
+            Name = "TerminalRemoteScreenBar",
             Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
             HorizontalExpand = true,
+            MinHeight = 28f,
+            SeparationOverride = 6,
             Margin = new Thickness(0, 0, 0, 4)
         };
 
         _remoteHeaderLabel = new ContentLabel
         {
+            Name = "TerminalRemoteHeaderLabel",
             Text = "REMOTE DISPLAY STREAM",
             HorizontalExpand = true,
+            WordWrap = false,
+            ClipText = true,
+            VerticalAlignment = VAlignment.Center,
             FontColorOverride = Color.FromHex("#00FF88")
         };
         screenBar.AddChild(_remoteHeaderLabel);
 
-        var popOutBtn = new ContentButton
-        {
-            Name = "TerminalRemotePopOutButton",
-            Text = "Pop Out",
-            MinWidth = 76,
-            Margin = new Thickness(0, 0, 4, 0)
-        };
-        popOutBtn.OnPressed += _ =>
-        {
-            if (_remoteScreenView == null)
-                return;
-            _remoteScreenView.TogglePopOut();
-            popOutBtn.Text = _remoteScreenView.IsPoppedOut ? "Dock View" : "Pop Out";
-        };
-        screenBar.AddChild(popOutBtn);
-
         var detachBtn = new ContentButton
         {
+            Name = "TerminalDetachScreenButton",
             Text = "Detach Screen",
-            MinWidth = 110
+            MinWidth = 112,
+            MinHeight = 26f
         };
-        detachBtn.OnPressed += _ => SendProgramMessage(new TerminalRemoteScreenActionMessage("detach"));
+        detachBtn.OnPressed += _ =>
+        {
+            _remoteScreenView?.ClearScreen();
+            SendProgramMessage(new TerminalRemoteScreenActionMessage("detach"));
+        };
         screenBar.AddChild(detachBtn);
 
         _remoteScreenPanel.AddChild(screenBar);
@@ -142,7 +139,7 @@ public sealed class TerminalUiControl : ProgramUiControl
         _commandInput = new ContentLineEdit
         {
             HorizontalExpand = true,
-            PlaceHolder = "Enter command (type 'help')..."
+            PlaceHolder = "Enter command..."
         };
         _commandInput.OnTextEntered += args =>
         {

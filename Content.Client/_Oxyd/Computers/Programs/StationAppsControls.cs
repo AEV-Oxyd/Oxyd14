@@ -5,11 +5,14 @@ using Content.Client._Oxyd.Computers.UI;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Cargo.Prototypes;
+using Content.Shared.CrewManifest;
+using Content.Shared.Roles;
 using Content.Shared.StatusIcon;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Input;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
@@ -26,72 +29,158 @@ public sealed class NotekeeperUiControl : ProgramUiControl
 {
     private readonly ContentWrapContainer _fileBar;
     private readonly ContentLineEdit _newNameInput;
-    private readonly ContentLineEdit _editorLine;
-    private readonly ContentLabel _bodyPreview;
+    private readonly TextEdit _editor;
+    private readonly ContentButton _saveBtn;
+    private readonly ContentButton _printBtn;
+    private readonly ContentButton _delBtn;
     private readonly ContentLabel _statusLabel;
     private string _currentPath = "/notes/shift_notes.txt";
-    private string _currentText = string.Empty;
+    private string _loadedPath = string.Empty;
+    private string _lastServerContent = string.Empty;
+    private bool _hasUnsavedEdits;
+    private bool _suppressEditorChanged;
+    private bool _hasLoadedOnce;
 
     public NotekeeperUiControl()
     {
         HorizontalExpand = true;
         VerticalExpand = true;
 
-        var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
-        _fileBar = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4, Margin = new Thickness(0, 0, 0, 4) };
+        var root = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Margin = new Thickness(4),
+            SeparationOverride = 4
+        };
+        _fileBar = new ContentWrapContainer { HorizontalSeparation = 4, VerticalSeparation = 4 };
         root.AddChild(_fileBar);
 
-        var newRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 0, 0, 4) };
+        var toolbarRow = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
         _newNameInput = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "New file name..." };
         void SubmitCreate()
         {
             if (string.IsNullOrWhiteSpace(_newNameInput.Text))
                 return;
-            SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.CreateFile, _newNameInput.Text, ""));
+            SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.CreateFile, _newNameInput.Text, string.Empty));
             _newNameInput.Text = string.Empty;
         }
         _newNameInput.OnTextEntered += _ => SubmitCreate();
-        var createBtn = new ContentButton { Text = "Create .txt", MinWidth = 85, Margin = new Thickness(4, 0, 0, 0) };
-        createBtn.OnPressed += _ => SubmitCreate();
-        var delBtn = new ContentButton { Text = "Delete", MinWidth = 60, Margin = new Thickness(4, 0, 0, 0) };
-        delBtn.OnPressed += _ => SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.DeleteFile, _currentPath));
-        newRow.AddChild(_newNameInput);
-        newRow.AddChild(createBtn);
-        newRow.AddChild(delBtn);
-        root.AddChild(newRow);
 
-        _statusLabel = new ContentLabel { Text = "shift_notes.txt", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF"), Margin = new Thickness(0, 0, 0, 4) };
+        var createBtn = new ContentButton { Name = "NotekeeperCreateButton", Text = "Create .txt", MinWidth = 82 };
+        createBtn.OnPressed += _ => SubmitCreate();
+
+        _saveBtn = new ContentButton { Name = "NotekeeperSaveButton", Text = "Save", MinWidth = 58 };
+        _saveBtn.OnPressed += _ => SubmitSave();
+
+        _printBtn = new ContentButton
+        {
+            Name = "NotekeeperPrintButton",
+            Text = "Print",
+            MinWidth = 58,
+            MouseFilter = MouseFilterMode.Stop
+        };
+        _printBtn.OnPressed += _ => SubmitPrint();
+
+        _delBtn = new ContentButton { Name = "NotekeeperDeleteButton", Text = "Delete", MinWidth = 60 };
+        _delBtn.OnPressed += _ => SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.DeleteFile, _currentPath));
+
+        toolbarRow.AddChild(_newNameInput);
+        toolbarRow.AddChild(createBtn);
+        toolbarRow.AddChild(_saveBtn);
+        toolbarRow.AddChild(_printBtn);
+        toolbarRow.AddChild(_delBtn);
+        root.AddChild(toolbarRow);
+
+        _statusLabel = new ContentLabel
+        {
+            Name = "NotekeeperStatusLabel",
+            Text = "shift_notes.txt",
+            HorizontalExpand = true,
+            FontColorOverride = Color.FromHex("#00D4FF")
+        };
         root.AddChild(_statusLabel);
 
-        var scroll = new ContentScrollContainer { HorizontalExpand = true, VerticalExpand = true };
-        _bodyPreview = new ContentLabel { HorizontalExpand = true, FontColorOverride = Color.FromHex("#E0F7FA"), VerticalAlignment = VAlignment.Top };
-        scroll.AddChild(_bodyPreview);
-        root.AddChild(scroll);
-
-        var editRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4, 0, 0) };
-        _editorLine = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Set/edit file text or append line..." };
-        void SubmitSave()
+        var editorPanel = new ContentPanelContainer
         {
-            var nextText = string.IsNullOrEmpty(_currentText) ? _editorLine.Text : $"{_currentText}\n{_editorLine.Text}";
-            _editorLine.Text = string.Empty;
-            SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.SaveFile, _currentPath, nextText));
-        }
-        _editorLine.OnTextEntered += _ => SubmitSave();
-        var saveBtn = new ContentButton { Text = "Save", MinWidth = 58, Margin = new Thickness(4, 0, 0, 0) };
-        saveBtn.OnPressed += _ => SubmitSave();
-        var replaceBtn = new ContentButton { Text = "Overwrite", MinWidth = 76, Margin = new Thickness(4, 0, 0, 0) };
-        replaceBtn.OnPressed += _ =>
-        {
-            var text = _editorLine.Text;
-            _editorLine.Text = string.Empty;
-            SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.SaveFile, _currentPath, text));
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0A131E"),
+                BorderColor = Color.FromHex("#1F4B66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 6,
+                ContentMarginRightOverride = 6,
+                ContentMarginTopOverride = 6,
+                ContentMarginBottomOverride = 6
+            }
         };
-        editRow.AddChild(_editorLine);
-        editRow.AddChild(saveBtn);
-        editRow.AddChild(replaceBtn);
-        root.AddChild(editRow);
+
+        _editor = new TextEdit
+        {
+            Name = "NotekeeperEditor",
+            HorizontalExpand = true,
+            VerticalExpand = true,
+            Editable = true
+        };
+        _editor.OnTextChanged += _ =>
+        {
+            if (_suppressEditorChanged)
+                return;
+            _hasUnsavedEdits = true;
+            if (!_statusLabel.Text.Contains("[MODIFIED]", StringComparison.Ordinal))
+                _statusLabel.Text = $"{_currentPath} [MODIFIED]";
+        };
+        _editor.OnKeyBindDown += args =>
+        {
+            if (args.Function == EngineKeyFunctions.MultilineTextSubmit && !_saveBtn.Disabled)
+            {
+                SubmitSave();
+                args.Handle();
+            }
+        };
+
+        editorPanel.AddChild(_editor);
+        root.AddChild(editorPanel);
 
         AddChild(root);
+    }
+
+    private void SubmitSave()
+    {
+        var text = Rope.Collapse(_editor.TextRope);
+        _hasUnsavedEdits = false;
+        _lastServerContent = text;
+        SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.SaveFile, _currentPath, text));
+    }
+
+    private void SubmitPrint()
+    {
+        var text = Rope.Collapse(_editor.TextRope);
+        SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.PrintFile, _currentPath, text));
+    }
+
+    private void SetEditorText(string text)
+    {
+        _suppressEditorChanged = true;
+        try
+        {
+            _editor.TextRope = Rope.Leaf.Empty;
+            _editor.CursorPosition = new TextEdit.CursorPos();
+            if (!string.IsNullOrEmpty(text))
+                _editor.InsertAtCursor(text);
+        }
+        finally
+        {
+            _suppressEditorChanged = false;
+        }
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -99,16 +188,61 @@ public sealed class NotekeeperUiControl : ProgramUiControl
         if (raw is not NotekeeperUiState state)
             return;
 
+        var switchedFile = !_hasLoadedOnce || !string.Equals(_loadedPath, state.CurrentFilePath, StringComparison.Ordinal);
+        var serverChanged = !string.Equals(_lastServerContent, state.FileContent, StringComparison.Ordinal);
+
         _currentPath = state.CurrentFilePath;
-        _currentText = state.FileContent;
-        _statusLabel.Text = state.HasHardDrive ? $"{state.CurrentFilePath}{(state.IsReadOnly ? " [READ ONLY]" : "")}" : "No Hard Drive installed";
-        _bodyPreview.Text = state.FileContent;
+        _editor.Editable = state.HasHardDrive && !state.IsReadOnly;
+        _saveBtn.Disabled = !state.HasHardDrive || state.IsReadOnly;
+        _delBtn.Disabled = !state.HasHardDrive || state.IsReadOnly;
+
+        _printBtn.Disabled = !state.HasHardDrive || !state.HasPrinterModule;
+        _printBtn.ToolTip = !state.HasHardDrive
+            ? "No Hard Drive installed."
+            : state.HasPrinterModule
+                ? "Print current note to paper."
+                : "Paper printer module required.";
+
+        if (switchedFile || (!_hasUnsavedEdits && serverChanged))
+        {
+            SetEditorText(state.FileContent);
+            _loadedPath = state.CurrentFilePath;
+            _lastServerContent = state.FileContent;
+            _hasUnsavedEdits = false;
+            _hasLoadedOnce = true;
+        }
+        else if (serverChanged)
+        {
+            _lastServerContent = state.FileContent;
+        }
+
+        if (!state.HasHardDrive)
+        {
+            _statusLabel.Text = "No Hard Drive installed";
+        }
+        else
+        {
+            var roTag = state.IsReadOnly ? " [READ ONLY]" : _hasUnsavedEdits ? " [MODIFIED]" : string.Empty;
+            var msgSuffix = !string.IsNullOrWhiteSpace(state.StatusMessage) ? $" — {state.StatusMessage}" : string.Empty;
+            _statusLabel.Text = $"{state.CurrentFilePath}{roTag}{msgSuffix}";
+        }
 
         _fileBar.RemoveAllChildren();
         foreach (var path in state.AvailableFiles)
         {
-            var btn = new ContentButton { Text = path.Contains('/') ? path[(path.LastIndexOf('/') + 1)..] : path, Margin = new Thickness(2, 0) };
-            btn.OnPressed += _ => SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.OpenFile, path));
+            var isCurrent = string.Equals(path, state.CurrentFilePath, StringComparison.Ordinal);
+            var btn = new ContentButton
+            {
+                Text = path.Contains('/') ? path[(path.LastIndexOf('/') + 1)..] : path,
+                Margin = new Thickness(2, 0),
+                Pressed = isCurrent
+            };
+            var targetPath = path;
+            btn.OnPressed += _ =>
+            {
+                _hasUnsavedEdits = false;
+                SendProgramMessage(new NotekeeperActionMessage(NotekeeperUiAction.OpenFile, targetPath));
+            };
             _fileBar.AddChild(btn);
         }
     }
@@ -131,7 +265,7 @@ public sealed class NanoTaskUiControl : ProgramUiControl
         VerticalExpand = true;
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
-        _statusLabel = new ContentLabel { Text = "NanoTask Checklist (/tasks/tasks.tsk)", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
+        _statusLabel = new ContentLabel { Text = "NanoTask", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
         root.AddChild(_statusLabel);
 
         var addRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4) };
@@ -165,7 +299,10 @@ public sealed class NanoTaskUiControl : ProgramUiControl
         if (raw is not NanoTaskUiState state)
             return;
 
-        _statusLabel.Text = state.HasHardDrive ? $"NanoTask ({state.Tasks.Count} saved in /tasks/tasks.tsk)" : "No Hard Drive installed!";
+        var statusSuffix = !string.IsNullOrWhiteSpace(state.StatusMessage) ? $" — {state.StatusMessage}" : string.Empty;
+        _statusLabel.Text = state.HasHardDrive
+            ? $"NanoTask ({state.Tasks.Count}){statusSuffix}"
+            : "No Hard Drive installed!";
         _tasksContainer.RemoveAllChildren();
         foreach (var entry in state.Tasks)
         {
@@ -181,7 +318,16 @@ public sealed class NanoTaskUiControl : ProgramUiControl
                 entry.Id,
                 new NanoTaskItem(entry.Data.Description, entry.Data.TaskIsFor, !entry.Data.IsTaskDone, entry.Data.Priority)))));
 
-            var printBtn = new ContentButton { Text = "Print", MinWidth = 52, Margin = new Thickness(1, 0) };
+            var printBtn = new ContentButton
+            {
+                Name = $"NanoTaskPrintButton_{entry.Id}",
+                Text = "Print",
+                MinWidth = 52,
+                Margin = new Thickness(1, 0),
+                Disabled = !state.HasPrinterModule,
+                MouseFilter = MouseFilterMode.Stop,
+                ToolTip = state.HasPrinterModule ? "Print task slip." : "Paper printer module required."
+            };
             printBtn.OnPressed += _ => SendProgramMessage(new NanoTaskActionMessage(new NanoTaskPrintTask(entry.Data)));
 
             var delBtn = new ContentButton { Text = "Del", MinWidth = 42 };
@@ -298,12 +444,39 @@ public sealed class CrewManifestUiControl : ProgramUiControl
         AddChild(root);
     }
 
-    private Texture ResolveJobIconTexture(string? jobIconId)
+    private Texture ResolveJobIconTexture(CrewManifestEntry entry)
     {
-        if (!string.IsNullOrWhiteSpace(jobIconId) &&
-            _proto.TryIndex<JobIconPrototype>(jobIconId, out var iconProto))
+        if (!string.IsNullOrWhiteSpace(entry.JobIcon) &&
+            !string.Equals(entry.JobIcon, "JobIconUnknown", StringComparison.OrdinalIgnoreCase) &&
+            _proto.TryIndex<JobIconPrototype>(entry.JobIcon, out var iconProto))
         {
             return _sprite.Frame0(iconProto.Icon);
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.JobPrototype) &&
+            _proto.TryIndex<JobPrototype>(entry.JobPrototype, out var jobProto) &&
+            _proto.TryIndex<JobIconPrototype>(jobProto.Icon, out var fromJobProto))
+        {
+            return _sprite.Frame0(fromJobProto.Icon);
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.JobTitle))
+        {
+            foreach (var job in _proto.EnumeratePrototypes<JobPrototype>())
+            {
+                if ((string.Equals(job.LocalizedName, entry.JobTitle, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(job.ID, entry.JobTitle, StringComparison.OrdinalIgnoreCase)) &&
+                    _proto.TryIndex<JobIconPrototype>(job.Icon, out var byTitleIcon))
+                {
+                    return _sprite.Frame0(byTitleIcon.Icon);
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.JobIcon) &&
+            _proto.TryIndex<JobIconPrototype>(entry.JobIcon, out var unknownProto))
+        {
+            return _sprite.Frame0(unknownProto.Icon);
         }
 
         if (_proto.TryIndex<JobIconPrototype>("JobIconNoId", out var fallbackProto))
@@ -399,7 +572,7 @@ public sealed class CrewManifestUiControl : ProgramUiControl
             iconFrame.AddChild(new ContentTextureRect
             {
                 Name = "CrewManifestJobIcon",
-                Texture = ResolveJobIconTexture(entry.JobIcon),
+                Texture = ResolveJobIconTexture(entry),
                 DisplaySize = new Vector2(20, 20),
                 MinSize = new Vector2(20, 20),
                 HorizontalAlignment = HAlignment.Center,
@@ -559,6 +732,35 @@ public sealed class WantedListUiControl : ProgramUiControl
         var tsText = state.FileTimestamp is { } ts ? $" [File: {ts:hh\\:mm\\:ss}]" : string.Empty;
         _headerLabel.Text = $"Wanted List ({state.Records.Count}){tsText} | {state.StatusMessage}";
         _listContainer.RemoveAllChildren();
+        if (state.Records.Count == 0)
+        {
+            var emptyCard = new ContentPanelContainer
+            {
+                Name = "WantedListEmptyPanel",
+                HorizontalExpand = true,
+                Margin = new Thickness(0, 8, 0, 0),
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#0D1824"),
+                    BorderColor = Color.FromHex("#244257"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 12,
+                    ContentMarginRightOverride = 12,
+                    ContentMarginTopOverride = 14,
+                    ContentMarginBottomOverride = 14
+                }
+            };
+            emptyCard.AddChild(new ContentLabel
+            {
+                Name = "WantedListEmptyLabel",
+                Text = "No criminals currently marked.",
+                HorizontalAlignment = HAlignment.Center,
+                FontColorOverride = Color.FromHex("#88B8CC")
+            });
+            _listContainer.AddChild(emptyCard);
+            return;
+        }
+
         foreach (var rec in state.Records)
         {
             _listContainer.AddChild(new ContentLabel
@@ -586,7 +788,7 @@ public sealed class NetProbeUiControl : ProgramUiControl
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
         var top = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-        top.AddChild(new ContentLabel { Text = "NetProbe Scanner (/logs/netprobe.db)", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") });
+        top.AddChild(new ContentLabel { Text = "NetProbe Scanner", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") });
         var clrBtn = new ContentButton { Text = "Clear", MinWidth = 60 };
         clrBtn.OnPressed += _ => SendProgramMessage(new NetProbeClearMessage());
         top.AddChild(clrBtn);
@@ -623,7 +825,7 @@ public sealed class LogProbeUiControl : ProgramUiControl
 
         var root = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Vertical, HorizontalExpand = true, VerticalExpand = true, Margin = new Thickness(4) };
         var top = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true };
-        _entityLabel = new ContentLabel { Text = "LogProbe (/logs/logprobe.db)", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
+        _entityLabel = new ContentLabel { Text = "LogProbe", HorizontalExpand = true, FontColorOverride = Color.FromHex("#00D4FF") };
         var printBtn = new ContentButton { Text = "Print", MinWidth = 60 };
         printBtn.OnPressed += _ => SendProgramMessage(new LogProbePrintMessage());
         top.AddChild(_entityLabel);
@@ -643,7 +845,7 @@ public sealed class LogProbeUiControl : ProgramUiControl
         if (raw is not LogProbeUiState state)
             return;
 
-        _entityLabel.Text = string.IsNullOrEmpty(state.EntityName) ? "Scan an AccessReader in world..." : $"Logs: {state.EntityName}";
+        _entityLabel.Text = string.IsNullOrEmpty(state.EntityName) ? "No access log loaded." : $"Logs: {state.EntityName}";
         _list.RemoveAllChildren();
         var n = 1;
         foreach (var l in state.PulledLogs)
@@ -793,14 +995,14 @@ public sealed class CargoOrdersUiControl : ProgramUiControl
         _accountIdEdit = new ContentLineEdit
         {
             Name = "CargoBankAccountIdEdit",
-            PlaceHolder = "Account ID (e.g. CARGO-01)...",
+            PlaceHolder = "Account ID...",
             MinWidth = 175f,
             MinHeight = 25f
         };
         _pinEdit = new ContentLineEdit
         {
             Name = "CargoBankPinEdit",
-            PlaceHolder = "PIN (e.g. 1111)...",
+            PlaceHolder = "PIN...",
             MinWidth = 115f,
             MinHeight = 25f
         };
@@ -1280,7 +1482,7 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         _selectedInfoLabel = new ContentLabel
         {
             Name = "CrewMonitorSelectedLabel",
-            Text = "Auto-syncing active suit sensors (1.0s).",
+            Text = "Syncing suit sensors...",
             FontColorOverride = Color.FromHex("#88D4EE"),
             HorizontalExpand = true
         };
@@ -1379,7 +1581,7 @@ public sealed class CrewMonitorUiControl : ProgramUiControl
         {
             _listContainer.AddChild(new ContentLabel
             {
-                Text = "No active crew suit sensors transmitting on this map.",
+                Text = "No active suit sensors detected.",
                 FontColorOverride = Color.FromHex("#8899AA")
             });
         }
@@ -1541,7 +1743,6 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
     private readonly ContentLabel _lockedBannerLabel;
     private readonly ContentLineEdit _announcementEdit;
     private readonly ContentButton _broadcastBtn;
-    private readonly ContentButton _revokeAuthBtn;
     private readonly ContentWrapContainer _alertLevelsWrap;
 
     public CommsConsoleUiControl()
@@ -1571,15 +1772,6 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
             HorizontalExpand = true,
             VerticalAlignment = VAlignment.Center
         });
-        _revokeAuthBtn = new ContentButton
-        {
-            Name = "CommsRevokeAuthButton",
-            Text = "Deauth",
-            MinWidth = 76,
-            Visible = false
-        };
-        _revokeAuthBtn.OnPressed += _ => SendProgramMessage(new CommsConsoleActionMessage(CommsConsoleAction.RevokeAuth));
-        headerRow.AddChild(_revokeAuthBtn);
         root.AddChild(headerRow);
 
         _statusLabel = new ContentLabel
@@ -1629,7 +1821,7 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
         _announcementEdit = new ContentLineEdit
         {
             Name = "CommsAnnouncementEdit",
-            PlaceHolder = "Enter station-wide announcement (max 512 chars)...",
+            PlaceHolder = "Enter station-wide announcement...",
             HorizontalExpand = true,
             MinHeight = 32f
         };
@@ -1668,15 +1860,13 @@ public sealed class CommsConsoleUiControl : ProgramUiControl
         if (raw is not CommsConsoleUiState state)
             return;
 
-        _revokeAuthBtn.Visible = state.IsSwipedAuthorized;
-
         if (!state.IsOnline || !state.CanBroadcast)
         {
             _authorizedBody.Visible = false;
             _lockedBanner.Visible = true;
             _lockedBannerLabel.Text = !state.IsOnline
                 ? "NETWORK OFFLINE — Active Station Network Router connection required."
-                : "COMMAND AUTHORIZATION REQUIRED — Swipe Command ID card or use Command .acc key.";
+                : "COMMAND AUTHORIZATION REQUIRED — Swipe Command ID card to unlock.";
             _statusLabel.Text = state.StatusMessage;
             _alertLevelsWrap.RemoveAllChildren();
             return;

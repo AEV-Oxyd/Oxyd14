@@ -59,7 +59,7 @@
     accentHColor: "#33b5e5"
     accentVColor: "#005577"
     title: "AIR ALARM"
-    subtitle: " | Atmospheric Monitor"
+    subtitle: ""
   - type: AtmosAlertsDevice
     group: AirAlarm
   - type: Clickable

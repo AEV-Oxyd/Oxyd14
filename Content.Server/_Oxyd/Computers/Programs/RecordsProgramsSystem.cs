@@ -14,6 +14,7 @@ using Content.Shared.Access.Systems;
 using Content.Shared.CriminalRecords;
 using Content.Shared.Lock;
 using Content.Shared.Preferences;
+using Content.Shared.Roles;
 using Content.Shared.Security;
 using Content.Shared.StationRecords;
 using Content.Shared.StationRecords.Systems;
@@ -84,6 +85,20 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     private void OnStationRecordsActivated(Entity<StationRecordsProgramComponent> ent, ref ProgramActivatedEvent args)
     {
         SyncStationRecords(ent.Owner, args.ComputerUid, ent.Comp, null);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnStationRecordsOsAuthChanged(Entity<StationRecordsProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && compUid == args.ComputerUid)
+            SyncStationRecords(ent.Owner, compUid, ent.Comp, null);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnCriminalRecordsOsAuthChanged(Entity<CriminalRecordsProgramComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && compUid == args.ComputerUid)
+            SyncCriminalRecords(ent.Owner, compUid, ent.Comp, null);
     }
 
     [SubscribeLocalEvent]
@@ -160,7 +175,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
     {
         if (!CanModifyStationRecords(compUid, msg.Actor))
         {
-            ent.Comp.StatusMessage = "Access denied: requires Command/HoP/Security access or an unlocked records console.";
+            ent.Comp.StatusMessage = "Access denied: Head of Personnel authorization required to edit records.";
             Dirty(ent);
             SendStationRecordsFromLocalCache(ent.Owner, compUid, ent.Comp, true, ent.Comp.StatusMessage, msg.Actor);
             return;
@@ -360,6 +375,20 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                 if (cols.Length > 3) icon = cols[3];
             }
 
+            if (string.IsNullOrWhiteSpace(proto) || string.Equals(icon, "JobIconUnknown", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var jobProto in _proto.EnumeratePrototypes<JobPrototype>())
+                {
+                    if (string.Equals(jobProto.LocalizedName, job, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(jobProto.ID, job, StringComparison.OrdinalIgnoreCase))
+                    {
+                        proto = jobProto.ID;
+                        icon = jobProto.Icon.Id;
+                        break;
+                    }
+                }
+            }
+
             var writeKey = matchKey ?? $"row_{FindNextKey(manifestCopy.Data, "row_")}";
             manifestCopy.Data[writeKey] = $"{RecordsDbCodec.SanitizeField(name)}\t{RecordsDbCodec.SanitizeField(job)}\t{proto}\t{icon}";
         }
@@ -370,6 +399,12 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
 
     private void SyncStationRecords(EntityUid progUid, EntityUid compUid, StationRecordsProgramComponent comp, EntityUid? actor)
     {
+        if (_computer.IsHostLocked(compUid) || !CanViewStationRecords(compUid, actor))
+        {
+            SendStationRecordsFromLocalCache(progUid, compUid, comp, false, "Authorization required (Head of Personnel / Command).", actor);
+            return;
+        }
+
         var online = false;
         var statusMsg = string.Empty;
         var station = _station.GetOwningStation(compUid) ?? _station.GetStationsSet().FirstOrDefault();
@@ -455,7 +490,7 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         string statusMsg,
         EntityUid? actor)
     {
-        if (_computer.IsHostLocked(compUid))
+        if (_computer.IsHostLocked(compUid) || !CanViewStationRecords(compUid, actor))
         {
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
             {
@@ -463,7 +498,9 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
                     string.Empty,
                     online,
                     false,
-                    "LOCKED — Swipe authorized ID card to unlock.",
+                    _computer.IsHostLocked(compUid)
+                        ? "LOCKED — Swipe authorized ID card to unlock."
+                        : "ACCESS DENIED — Head of Personnel or Command authorization required.",
                     null,
                     string.Empty,
                     new List<StationRecordEntryDto>(),
@@ -1110,35 +1147,34 @@ public sealed partial class RecordsProgramsSystem : EntitySystem
         return map;
     }
 
+    private bool CanViewStationRecords(EntityUid compUid, EntityUid? actor)
+    {
+        var tags = _computer.CollectAvailableAccessTags(compUid, actor: null);
+        return tags.Contains(HeadOfPersonnelAccess) || tags.Contains(CommandAccess);
+    }
+
     private bool CanModifyStationRecords(EntityUid compUid, EntityUid? actor)
     {
-        if (_computerQuery.TryComp(compUid, out var comp) && comp.HostMachine is { } hostUid)
-        {
-            if (HasComp<LockComponent>(hostUid))
-                return !_lock.IsLocked(hostUid);
-        }
+        var tags = _computer.CollectAvailableAccessTags(compUid, actor: null);
+        return tags.Contains(HeadOfPersonnelAccess);
+    }
 
-        foreach (var cardUid in _computer.GetInsertedIdCards(compUid))
-        {
-            var tags = _accessReader.FindAccessTags(cardUid);
-            if (tags.Contains(CommandAccess) || tags.Contains(HeadOfPersonnelAccess) || tags.Contains(SecurityAccess))
-                return true;
-        }
+    [SubscribeLocalEvent]
+    private void OnStationRecordsCardScanned(Entity<StationRecordsProgramComponent> ent, ref ProgramCardScannedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
 
-        if (_fileSystem.TryFindFileSystem(compUid, out _, out var fs))
-        {
-            foreach (var f in fs.Files.Values)
-            {
-                if (f is AccessCodesVirtualFile acc &&
-                    !acc.IsEncrypted &&
-                    (acc.AccessTags.Contains(CommandAccess) || acc.AccessTags.Contains(HeadOfPersonnelAccess) || acc.AccessTags.Contains(SecurityAccess)))
-                {
-                    return true;
-                }
-            }
-        }
+        SyncStationRecords(ent.Owner, compUid, ent.Comp, args.User);
+    }
 
-        return false;
+    [SubscribeLocalEvent]
+    private void OnCriminalRecordsCardScanned(Entity<CriminalRecordsProgramComponent> ent, ref ProgramCardScannedEvent args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        SyncCriminalRecords(ent.Owner, compUid, ent.Comp, args.User);
     }
 
     private bool CanModifyCriminalRecords(EntityUid compUid, EntityUid? actor)

@@ -141,7 +141,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         _fileNameInput = new ContentLineEdit
         {
             Name = "AccessEncoderFileNameInput",
-            PlaceHolder = "Key name (e.g. chief -> /keys/chief.acc)",
+            PlaceHolder = "Key name...",
             MinWidth = 240,
             HorizontalExpand = true,
             MinHeight = 28
@@ -319,7 +319,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         };
         _previewLabel = new ContentLabel
         {
-            Text = "Select a .acc file to inspect its encoded credentials.",
+            Text = "No file selected.",
             FontColorOverride = Color.FromHex("#CBE4F5"),
             WordWrap = true
         };
@@ -356,21 +356,21 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
 
         if (!state.HasIdSlotHardware)
         {
-            _hardwareLabel.Text = "ID Slot Hardware: MISSING (0/1). Install an ID Card Slot module to read & encode cards.";
+            _hardwareLabel.Text = "ID Slot Hardware: MISSING (0/1)";
             _hardwareLabel.FontColorOverride = Color.FromHex("#FF8877");
         }
         else if (state.HasModularSlot)
         {
             _hardwareLabel.Text = state.SlotOccupied
                 ? $"ID Slot Hardware: READY — Inserted: {state.SlotCardLabel}"
-                : "ID Slot Hardware: READY — Slot Empty (Insert ID card)";
+                : "ID Slot Hardware: READY — Empty";
             _hardwareLabel.FontColorOverride = Color.FromHex("#72E89B");
         }
         else
         {
             _hardwareLabel.Text = state.SlotOccupied
                 ? $"PDA ID Slot: READY — Inserted: {state.SlotCardLabel}"
-                : "PDA ID Slot: Empty (Insert ID into PDA slot)";
+                : "PDA ID Slot: Empty";
             _hardwareLabel.FontColorOverride = Color.FromHex("#72E89B");
         }
 
@@ -396,8 +396,8 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
             _tagsWrap.AddChild(new ContentLabel
             {
                 Text = state.HasIdSlotHardware
-                    ? "No access tags scanned yet. Insert an ID card and click Read ID Slot."
-                    : "ID card reading unavailable until an ID Card Slot module is installed.",
+                    ? "No access tags read."
+                    : "ID Card Slot required.",
                 FontColorOverride = Color.FromHex("#8899AA"),
                 WordWrap = true
             });
@@ -474,7 +474,7 @@ public sealed class AccessEncoderUiControl : ProgramUiControl
         }
 
         _previewLabel.Text = string.IsNullOrWhiteSpace(state.SelectedFilePreview)
-            ? "Select a .acc file to inspect its encoded credentials."
+            ? "No file selected."
             : state.SelectedFilePreview;
     }
 

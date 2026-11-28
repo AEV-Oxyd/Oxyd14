@@ -66,7 +66,7 @@ public sealed class HardwareDebuggerWindow : DefaultWindow
 
         var inRow = new ContentBoxContainer { Orientation = ContentBoxContainer.LayoutOrientation.Horizontal, HorizontalExpand = true, Margin = new Thickness(0, 4, 0, 0) };
         _promptLabel = new ContentLabel { Text = "jtag> ", WordWrap = false, FontColorOverride = Color.FromHex("#00FF88"), Margin = new Thickness(0, 0, 4, 0) };
-        _input = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Enter data port command (hw, devlink list, ls, boot)..." };
+        _input = new ContentLineEdit { HorizontalExpand = true, PlaceHolder = "Enter command..." };
         _input.OnTextEntered += args =>
         {
             if (string.IsNullOrWhiteSpace(args.Text))

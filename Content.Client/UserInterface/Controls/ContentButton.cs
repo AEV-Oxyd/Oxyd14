@@ -112,6 +112,17 @@ public class ContentButton : ContentControl
 
     public bool ToggleMode { get; set; }
 
+    /// <summary>
+    /// When true, renders without an outer border or default opaque fill so the button can sit
+    /// seamlessly inside a shared container pill (e.g., an OS tab with inline close button).
+    /// </summary>
+    public bool Borderless { get; set; }
+
+    /// <summary>
+    /// Optional hover/press tint override when <see cref="Borderless"/> is enabled.
+    /// </summary>
+    public Color? HoverColorOverride { get; set; }
+
     public bool Pressed
     {
         get => _pressed;
@@ -261,35 +272,71 @@ public class ContentButton : ContentControl
         Color borderColor;
         Color fgColor;
 
-        if (Disabled)
+        if (Borderless)
         {
-            bgColor = Color.FromHex("#1A1D24");
-            borderColor = Color.FromHex("#2C3240");
-            fgColor = Color.FromHex("#5A6270");
-        }
-        else if (_pressed || (_isPressing && _isBeingHovered))
-        {
-            bgColor = Color.FromHex("#00D4FF44");
-            borderColor = Color.FromHex("#00D4FF");
-            fgColor = Color.White;
-        }
-        else if (_isBeingHovered)
-        {
-            bgColor = Color.FromHex("#00D4FF22");
-            borderColor = Color.FromHex("#00B8DE");
-            fgColor = Color.FromHex("#E0F7FA");
+            if (Disabled)
+            {
+                bgColor = Color.Transparent;
+                fgColor = Color.FromHex("#5A6270");
+            }
+            else if (_isPressing && _isBeingHovered)
+            {
+                bgColor = HoverColorOverride ?? Color.FromHex("#00D4FF38");
+                fgColor = Color.White;
+            }
+            else if (_isBeingHovered)
+            {
+                bgColor = HoverColorOverride ?? Color.FromHex("#00D4FF22");
+                fgColor = Color.White;
+            }
+            else if (_pressed)
+            {
+                bgColor = Color.Transparent;
+                fgColor = Color.White;
+            }
+            else
+            {
+                bgColor = Color.Transparent;
+                fgColor = Color.FromHex("#C8D6E5");
+            }
+
+            _label.FontColorOverride = fgColor;
+
+            if (bgColor.A > 0f)
+                handle.DrawRect(box, bgColor, filled: true);
         }
         else
         {
-            bgColor = Color.FromHex("#151D28");
-            borderColor = Color.FromHex("#2C3A4D");
-            fgColor = Color.FromHex("#C8D6E5");
+            if (Disabled)
+            {
+                bgColor = Color.FromHex("#1A1D24");
+                borderColor = Color.FromHex("#2C3240");
+                fgColor = Color.FromHex("#5A6270");
+            }
+            else if (_pressed || (_isPressing && _isBeingHovered))
+            {
+                bgColor = Color.FromHex("#00D4FF44");
+                borderColor = Color.FromHex("#00D4FF");
+                fgColor = Color.White;
+            }
+            else if (_isBeingHovered)
+            {
+                bgColor = Color.FromHex("#00D4FF22");
+                borderColor = Color.FromHex("#00B8DE");
+                fgColor = Color.FromHex("#E0F7FA");
+            }
+            else
+            {
+                bgColor = Color.FromHex("#151D28");
+                borderColor = Color.FromHex("#2C3A4D");
+                fgColor = Color.FromHex("#C8D6E5");
+            }
+
+            _label.FontColorOverride = fgColor;
+
+            handle.DrawRect(box, bgColor, filled: true);
+            handle.DrawRect(box, borderColor, filled: false);
         }
-
-        _label.FontColorOverride = fgColor;
-
-        handle.DrawRect(box, bgColor, filled: true);
-        handle.DrawRect(box, borderColor, filled: false);
 
         if (_icon != null)
         {

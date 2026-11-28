@@ -51,6 +51,33 @@ public sealed class OsProgramEntryDto
 }
 
 [Serializable, NetSerializable]
+public sealed class OsHardwareComponentDto
+{
+    public string SlotName { get; }
+    public string Category { get; }
+    public string Name { get; }
+    public string Details { get; }
+    public string Status { get; }
+    public bool IsHealthy { get; }
+
+    public OsHardwareComponentDto(
+        string slotName,
+        string category,
+        string name,
+        string details,
+        string status,
+        bool isHealthy = true)
+    {
+        SlotName = slotName;
+        Category = category;
+        Name = name;
+        Details = details;
+        Status = status;
+        IsHealthy = isHealthy;
+    }
+}
+
+[Serializable, NetSerializable]
 public sealed class OsHardwareSummaryDto
 {
     public int CpuMhz { get; }
@@ -73,6 +100,11 @@ public sealed class OsHardwareSummaryDto
     public string HostName { get; }
     public string StatusMessage { get; }
     public string? NetworkLabel { get; }
+    public List<OsHardwareComponentDto> InstalledComponents { get; }
+    public bool HasBattery { get; }
+    public float BatteryCharge { get; }
+    public float BatteryMaxCharge { get; }
+    public bool HasInsertedIdCard { get; }
 
     public OsHardwareSummaryDto(
         int cpuMhz,
@@ -94,7 +126,12 @@ public sealed class OsHardwareSummaryDto
         string deviceGuid,
         string hostName,
         string statusMessage,
-        string? networkLabel = null)
+        string? networkLabel = null,
+        List<OsHardwareComponentDto>? installedComponents = null,
+        bool hasBattery = false,
+        float batteryCharge = 0f,
+        float batteryMaxCharge = 0f,
+        bool hasInsertedIdCard = false)
     {
         CpuMhz = cpuMhz;
         CpuLoadPercent = cpuLoadPercent;
@@ -116,6 +153,11 @@ public sealed class OsHardwareSummaryDto
         HostName = hostName;
         StatusMessage = statusMessage;
         NetworkLabel = networkLabel;
+        InstalledComponents = installedComponents ?? new List<OsHardwareComponentDto>();
+        HasBattery = hasBattery;
+        BatteryCharge = batteryCharge;
+        BatteryMaxCharge = batteryMaxCharge;
+        HasInsertedIdCard = hasInsertedIdCard;
     }
 }
 
@@ -135,6 +177,7 @@ public sealed class OsUiState : BoundUserInterfaceState
     public List<OsProgramEntryDto> RunningPrograms { get; }
     public List<MirroredDevicePortInfo> DevicePorts { get; }
     public OsHardwareSummaryDto Hardware { get; }
+    public string? OsAuthLabel { get; }
 
     public OsUiState(
         string hostTitle,
@@ -149,7 +192,8 @@ public sealed class OsUiState : BoundUserInterfaceState
         List<OsProgramEntryDto> installedExecutables,
         List<OsProgramEntryDto> runningPrograms,
         List<MirroredDevicePortInfo> devicePorts,
-        OsHardwareSummaryDto hardware)
+        OsHardwareSummaryDto hardware,
+        string? osAuthLabel = null)
     {
         HostTitle = hostTitle;
         HostSubtitle = hostSubtitle;
@@ -164,6 +208,7 @@ public sealed class OsUiState : BoundUserInterfaceState
         RunningPrograms = runningPrograms;
         DevicePorts = devicePorts;
         Hardware = hardware;
+        OsAuthLabel = osAuthLabel;
     }
 }
 
@@ -243,5 +288,15 @@ public sealed class OsInvokeDevicePortMessage : BoundUserInterfaceMessage
 
 [Serializable, NetSerializable]
 public sealed class OsShutDownMessage : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
+public sealed class OsLogoutAuthMessage : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
+public sealed class OsSwipeAuthMessage : BoundUserInterfaceMessage
 {
 }

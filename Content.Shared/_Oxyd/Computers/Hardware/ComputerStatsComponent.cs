@@ -19,6 +19,12 @@ public sealed partial class ComputerStatsComponent : Component
     public int MaxConcurrentPrograms;
 
     [DataField, AutoNetworkedField]
+    public float CpuCapacity;
+
+    [DataField, AutoNetworkedField]
+    public float UsedCpuUnits;
+
+    [DataField, AutoNetworkedField]
     public bool HasRam;
 
     [DataField, AutoNetworkedField]
@@ -62,6 +68,12 @@ public sealed partial class ComputerStatsComponent : Component
 
     [DataField, AutoNetworkedField]
     public bool HasSensorModule;
+
+    [DataField, AutoNetworkedField]
+    public bool HasHealthScannerModule;
+
+    [DataField, AutoNetworkedField]
+    public bool HasPrinterModule;
 
     [DataField, AutoNetworkedField]
     public bool HasIdSlotModule;

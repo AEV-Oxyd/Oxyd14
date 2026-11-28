@@ -23,9 +23,12 @@
   components:
   - type: Program
     title: "NTOS System"
-    ramUsageMb: 32
+    isOperatingSystem: true
+    ramUsageMb: 128
     fileSizeBytes: 196608
-    cpuUsagePercent: 5.0
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: ai_core
@@ -36,6 +39,25 @@
         type: OsProgramBui
 
 - type: entity
+  parent: OxydOsProgram
+  id: OxydJailbrokenOsProgram
+  name: NTOS Jailbreak
+  description: Modified operating system kernel with corporate remote management stripped out and local security restrictions removed.
+  components:
+  - type: Program
+    title: "NTOS Jailbreak"
+    isOperatingSystem: true
+    isJailbrokenOs: true
+    ramUsageMb: 128
+    fileSizeBytes: 196608
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+
+- type: entity
   parent: BaseOxydProgram
   id: OxydPdaOsProgram
   name: NTOS Pocket (PDA OS)
@@ -43,9 +65,12 @@
   components:
   - type: Program
     title: "NTOS Pocket"
-    ramUsageMb: 24
+    isOperatingSystem: true
+    ramUsageMb: 20
     fileSizeBytes: 163840
-    cpuUsagePercent: 4.0
+    cpuUsagePercent: 20.0
+    requiredDownloadAccess:
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/pda.rsi
       state: pda
@@ -56,6 +81,25 @@
         type: PdaOsProgramBui
 
 - type: entity
+  parent: OxydPdaOsProgram
+  id: OxydJailbrokenPdaOsProgram
+  name: NTOS Pocket [JB]
+  description: Jailbroken handheld PDA operating system with all remote control interfaces disabled and unrestricted local security controls.
+  components:
+  - type: Program
+    title: "NTOS Pocket [JB]"
+    isOperatingSystem: true
+    isJailbrokenOs: true
+    ramUsageMb: 20
+    fileSizeBytes: 163840
+    cpuUsagePercent: 20.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda
+
+- type: entity
   parent: BaseOxydProgram
   id: OxydEmbeddedOsProgram
   name: embedded system controller
@@ -63,9 +107,12 @@
   components:
   - type: Program
     title: "Embedded Controller OS"
-    ramUsageMb: 16
+    isOperatingSystem: true
+    ramUsageMb: 64
     fileSizeBytes: 147456
-    cpuUsagePercent: 3.0
+    cpuUsagePercent: 40.0
+    requiredDownloadAccess:
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: ai_core
@@ -84,9 +131,12 @@
   - type: Program
     title: "APC Control"
     screenState: "power_monitor"
-    ramUsageMb: 8
+    ramUsageMb: 64
     fileSizeBytes: 212992
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Engineering
+    - SystemAdmin
     icon:
       sprite: Structures/Power/power.rsi
       state: storage
@@ -105,9 +155,9 @@
   - type: Program
     title: "Lathe Control"
     screenState: "rdcomp"
-    ramUsageMb: 8
+    ramUsageMb: 48
     fileSizeBytes: 90112
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 60.0
     icon:
       sprite: Structures/Power/power.rsi
       state: wiredmachine
@@ -126,9 +176,13 @@
   - type: Program
     title: "Atmos Control"
     screenState: "area_atmos"
-    ramUsageMb: 8
+    ramUsageMb: 64
     fileSizeBytes: 229376
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Atmospherics
+    - Engineering
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/pda.rsi
       state: pda-atmos
@@ -147,9 +201,9 @@
   - type: Program
     title: "File Browser"
     screenState: "comm_monitor"
-    ramUsageMb: 8
+    ramUsageMb: 10
     fileSizeBytes: 65536
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 15.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: station_records
@@ -168,9 +222,9 @@
   - type: Program
     title: "Terminal"
     screenState: "command"
-    ramUsageMb: 8
+    ramUsageMb: 12
     fileSizeBytes: 86016
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 20.0
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: comms_console
@@ -189,9 +243,9 @@
   - type: Program
     title: "Downloader"
     screenState: "tech"
-    ramUsageMb: 8
+    ramUsageMb: 12
     fileSizeBytes: 77824
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 15.0
     icon:
       sprite: Structures/Machines/server.rsi
       state: server
@@ -210,9 +264,12 @@
   - type: Program
     title: "Router Admin"
     screenState: "comm_monitor"
-    ramUsageMb: 8
+    ramUsageMb: 64
     fileSizeBytes: 196608
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 90.0
+    requiredDownloadAccess:
+    - Network
+    - SystemAdmin
     icon:
       sprite: Objects/Tools/network_configurator.rsi
       state: icon
@@ -231,9 +288,12 @@
   - type: Program
     title: "Packet Sniffer"
     screenState: "radar"
-    ramUsageMb: 8
+    ramUsageMb: 64
     fileSizeBytes: 131072
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Network
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: mass_scanner
@@ -242,6 +302,50 @@
     interfaces:
       enum.ProgramUiKey.Key:
         type: PacketSnifferProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydNetNavigatorProgram
+  name: net navigator program
+  description: Probes the station network to discover reachable devices, GUIDs, types, auth requirements, and services.
+  components:
+  - type: Program
+    title: "NetNavigator"
+    screenState: "radar"
+    ramUsageMb: 16
+    fileSizeBytes: 114688
+    cpuUsagePercent: 25.0
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: NetNavigatorProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetNavigatorProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydSecurityLockProgram
+  name: security lock program
+  description: Locks a computer behind a password, key-based password (.key file), and/or required ID card access levels.
+  components:
+  - type: Program
+    title: "Security Lock"
+    screenState: "comm_monitor"
+    ramUsageMb: 8
+    fileSizeBytes: 81920
+    cpuUsagePercent: 10.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: SecurityLockProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SecurityLockProgramBui
 
 - type: entity
   parent: BaseOxydProgram
@@ -254,7 +358,7 @@
     screenState: "comm_monitor"
     ramUsageMb: 8
     fileSizeBytes: 32768
-    cpuUsagePercent: 1.0
+    cpuUsagePercent: 10.0
     icon:
       sprite: Objects/Misc/books.rsi
       state: book_icon
@@ -275,7 +379,7 @@
     screenState: "comm_monitor"
     ramUsageMb: 8
     fileSizeBytes: 36864
-    cpuUsagePercent: 1.0
+    cpuUsagePercent: 10.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
       state: nano_task
@@ -296,7 +400,7 @@
     screenState: "medcomp"
     ramUsageMb: 8
     fileSizeBytes: 45056
-    cpuUsagePercent: 1.0
+    cpuUsagePercent: 12.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
       state: crew_manifest
@@ -317,7 +421,7 @@
     screenState: "comm_monitor"
     ramUsageMb: 8
     fileSizeBytes: 40960
-    cpuUsagePercent: 1.0
+    cpuUsagePercent: 10.0
     icon:
       sprite: Interface/Misc/program_icons.rsi
       state: news_read
@@ -336,9 +440,13 @@
   - type: Program
     title: "Wanted List"
     screenState: "security"
-    ramUsageMb: 8
+    ramUsageMb: 10
     fileSizeBytes: 49152
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 15.0
+    requiredDownloadAccess:
+    - Security
+    - Command
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-sec
@@ -356,9 +464,9 @@
   components:
   - type: Program
     title: "NetProbe"
-    ramUsageMb: 8
+    ramUsageMb: 10
     fileSizeBytes: 65536
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 15.0
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-y
@@ -376,9 +484,9 @@
   components:
   - type: Program
     title: "LogProbe"
-    ramUsageMb: 8
+    ramUsageMb: 10
     fileSizeBytes: 65536
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 15.0
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-log
@@ -397,9 +505,12 @@
   - type: Program
     title: "MedTek"
     screenState: "medcomp"
-    ramUsageMb: 8
+    ramUsageMb: 12
     fileSizeBytes: 73728
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 18.0
+    requiredDownloadAccess:
+    - Medical
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-med
@@ -418,9 +529,9 @@
   - type: Program
     title: "AstroNav"
     screenState: "helm"
-    ramUsageMb: 8
+    ramUsageMb: 10
     fileSizeBytes: 73728
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 15.0
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-nav
@@ -439,9 +550,13 @@
   - type: Program
     title: "ID Access Encoder"
     screenState: "id"
-    ramUsageMb: 8
+    ramUsageMb: 12
     fileSizeBytes: 81920
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 18.0
+    requiredDownloadAccess:
+    - Command
+    - Security
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-sec
@@ -460,9 +575,13 @@
   - type: Program
     title: "ID Access Modifier"
     screenState: "id"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 114688
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - HeadOfPersonnel
+    - Command
+    - SystemAdmin
     icon:
       sprite: Objects/Misc/module.rsi
       state: id_mod
@@ -480,9 +599,12 @@
   components:
   - type: Program
     title: "Network Core OS"
-    ramUsageMb: 32
+    isOperatingSystem: true
+    ramUsageMb: 128
     fileSizeBytes: 229376
-    cpuUsagePercent: 5.0
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
     icon:
       sprite: Objects/Tools/network_configurator.rsi
       state: icon
@@ -501,9 +623,14 @@
   - type: Program
     title: "Station Records"
     screenState: "medcomp"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 118784
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - HeadOfPersonnel
+    - Security
+    - Command
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: station_records
@@ -522,9 +649,13 @@
   - type: Program
     title: "Criminal Records"
     screenState: "security"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 122880
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Security
+    - Command
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-sec
@@ -543,9 +674,14 @@
   - type: Program
     title: "Surveillance Cameras"
     screenState: "cameras"
-    ramUsageMb: 16
+    ramUsageMb: 96
     fileSizeBytes: 262144
-    cpuUsagePercent: 3.0
+    cpuUsagePercent: 100.0
+    requiredDownloadAccess:
+    - Security
+    - Engineering
+    - Command
+    - SystemAdmin
     icon:
       sprite: Structures/Wallmounts/camera.rsi
       state: camera
@@ -564,9 +700,14 @@
   - type: Program
     title: "Cargo Orders"
     screenState: "request"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 106496
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Cargo
+    - Quartermaster
+    - Command
+    - SystemAdmin
     icon:
       sprite: Objects/Devices/cartridge.rsi
       state: cart-y
@@ -585,9 +726,13 @@
   - type: Program
     title: "Crew Monitor"
     screenState: "crew"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 131072
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 90.0
+    requiredDownloadAccess:
+    - Medical
+    - Command
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: crew_monitor
@@ -606,9 +751,12 @@
   - type: Program
     title: "Communications"
     screenState: "comm"
-    ramUsageMb: 12
+    ramUsageMb: 64
     fileSizeBytes: 126976
-    cpuUsagePercent: 2.0
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Command
+    - SystemAdmin
     icon:
       sprite: Interface/Actions/actions_ai.rsi
       state: comms_console
@@ -627,9 +775,12 @@
   - type: Program
     title: "Solar Control"
     screenState: "solar_screen"
-    ramUsageMb: 8
+    ramUsageMb: 64
     fileSizeBytes: 98304
-    cpuUsagePercent: 1.5
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Engineering
+    - SystemAdmin
     icon:
       sprite: Structures/Power/power.rsi
       state: storage

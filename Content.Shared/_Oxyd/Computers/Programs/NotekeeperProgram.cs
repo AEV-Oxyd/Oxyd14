@@ -3,11 +3,17 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared._Oxyd.Computers.Programs;
 
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentPause, AutoGenerateComponentState]
 public sealed partial class NotekeeperProgramComponent : Component
 {
     [DataField, AutoNetworkedField]
     public string CurrentFilePath = "/notes/shift_notes.txt";
+
+    [DataField, AutoNetworkedField, AutoPausedField]
+    public TimeSpan NextPrintAllowedAfter = TimeSpan.Zero;
+
+    [DataField]
+    public TimeSpan PrintDelay = TimeSpan.FromSeconds(5);
 }
 
 [Serializable, NetSerializable]
@@ -19,6 +25,8 @@ public sealed class NotekeeperUiState : BoundUserInterfaceState
     public string FileContent { get; }
     public List<string> AvailableFiles { get; }
     public bool IsReadOnly { get; }
+    public bool HasPrinterModule { get; }
+    public string StatusMessage { get; }
 
     public NotekeeperUiState(
         bool hasHardDrive,
@@ -26,7 +34,9 @@ public sealed class NotekeeperUiState : BoundUserInterfaceState
         string currentFileName,
         string fileContent,
         List<string> availableFiles,
-        bool isReadOnly)
+        bool isReadOnly,
+        bool hasPrinterModule = false,
+        string statusMessage = "")
     {
         HasHardDrive = hasHardDrive;
         CurrentFilePath = currentFilePath;
@@ -34,6 +44,8 @@ public sealed class NotekeeperUiState : BoundUserInterfaceState
         FileContent = fileContent;
         AvailableFiles = availableFiles;
         IsReadOnly = isReadOnly;
+        HasPrinterModule = hasPrinterModule;
+        StatusMessage = statusMessage;
     }
 }
 
@@ -44,7 +56,8 @@ public enum NotekeeperUiAction : byte
     SaveFile,
     CreateFile,
     DeleteFile,
-    LiveDraftUpdate
+    LiveDraftUpdate,
+    PrintFile
 }
 
 [Serializable, NetSerializable]

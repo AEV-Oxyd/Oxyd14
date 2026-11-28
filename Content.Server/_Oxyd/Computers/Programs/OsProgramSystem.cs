@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Server._Oxyd.Computers.Network;
 using Content.Server.Atmos.Monitor.Components;
 using Content.Server.Power.Components;
@@ -7,6 +8,7 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared.Access.Components;
+using Content.Shared.Containers.ItemSlots;
 using Content.Shared.Lathe;
 using Content.Shared.Lock;
 using Content.Shared.PDA;
@@ -28,6 +30,7 @@ public sealed partial class OsProgramSystem : EntitySystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private LockSystem _lock = default!;
     [Dependency] private RecordsProgramsSystem _recordsPrograms = default!;
+    [Dependency] private ItemSlotsSystem _itemSlots = default!;
 
     [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
     [Dependency] private EntityQuery<OxydComputerComponent> _computerQuery = default!;
@@ -51,6 +54,8 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<OsHardwareActionMessage>(OnOsHardwareAction);
             subs.Event<OsInvokeDevicePortMessage>(OnOsInvokePort);
             subs.Event<OsShutDownMessage>(OnOsShutDown);
+            subs.Event<OsLogoutAuthMessage>(OnOsLogoutAuth);
+            subs.Event<OsSwipeAuthMessage>(OnOsSwipeAuth);
         });
 
         Subs.BuiEvents<EmbeddedOsProgramComponent>(ProgramUiKey.Key, subs =>
@@ -62,6 +67,8 @@ public sealed partial class OsProgramSystem : EntitySystem
             subs.Event<EmbeddedOsCloseProgramMessage>(OnEmbeddedCloseProgram);
             subs.Event<EmbeddedOsInvokePortMessage>(OnEmbeddedInvokePort);
             subs.Event<EmbeddedOsShutDownMessage>(OnEmbeddedShutDown);
+            subs.Event<EmbeddedOsSwipeAuthMessage>(OnEmbeddedSwipeAuth);
+            subs.Event<EmbeddedOsLogoutAuthMessage>(OnEmbeddedLogoutAuth);
         });
     }
 
@@ -70,6 +77,38 @@ public sealed partial class OsProgramSystem : EntitySystem
     {
         if (ent.Comp.BootProgram is { } boot && Exists(boot))
             UpdateOsUi(boot);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnComputerOsAuthChanged(Entity<OxydComputerComponent> ent, ref ComputerOsAuthChangedEvent args)
+    {
+        if (ent.Comp.BootProgram is { } boot && Exists(boot))
+            UpdateOsUi(boot);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnDriveFileSystemChanged(ref FileSystemChangedEvent args)
+    {
+        var toUpdate = new List<EntityUid>();
+        var query = EntityQueryEnumerator<OxydComputerComponent, ComputerStatsComponent>();
+        while (query.MoveNext(out var compUid, out var comp, out var stats))
+        {
+            if ((args.DriveUid.IsValid() && stats.PrimaryDriveUid != args.DriveUid) ||
+                !comp.IsBooted ||
+                comp.BootProgram is not { Valid: true } bootUid)
+            {
+                continue;
+            }
+
+            if (HasComp<OsProgramComponent>(bootUid) || HasComp<EmbeddedOsProgramComponent>(bootUid))
+                toUpdate.Add(bootUid);
+        }
+
+        foreach (var bootUid in toUpdate)
+        {
+            if (Exists(bootUid))
+                UpdateOsUi(bootUid);
+        }
     }
 
     [SubscribeLocalEvent]
@@ -128,9 +167,31 @@ public sealed partial class OsProgramSystem : EntitySystem
             return;
 
         // View 1 (legacy separate Apps tab) is merged into View 0 (Desktop & App Launcher).
+        var prevView = ent.Comp.CurrentView;
         var view = Math.Clamp(args.ViewIndex, 0, 3);
-        ent.Comp.CurrentView = view == 1 ? 0 : view;
+        var nextView = view == 1 ? 0 : view;
+        ent.Comp.CurrentView = nextView;
         Dirty(ent);
+
+        if (_programQuery.TryComp(ent.Owner, out var prog) &&
+            prog.Computer is { } compUid &&
+            _computerQuery.TryComp(compUid, out var comp) &&
+            comp.ActiveProgram is { Valid: true } activeProg &&
+            activeProg != ent.Owner &&
+            Exists(activeProg))
+        {
+            if (prevView == 3 && nextView != 3)
+            {
+                var deactEv = new ProgramDeactivatedEvent(compUid, activeProg);
+                RaiseLocalEvent(activeProg, ref deactEv);
+            }
+            else if (prevView != 3 && nextView == 3)
+            {
+                var actEv = new ProgramActivatedEvent(compUid, activeProg);
+                RaiseLocalEvent(activeProg, ref actEv);
+            }
+        }
+
         UpdateOsUi(ent.Owner);
     }
 
@@ -217,11 +278,74 @@ public sealed partial class OsProgramSystem : EntitySystem
         _computer.ShutDownComputer(compUid, manualShutdown: true);
     }
 
+    private void OnOsLogoutAuth(Entity<OsProgramComponent> ent, ref OsLogoutAuthMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        _computer.ClearOsSession(compUid);
+        UpdateOsUi(ent.Owner);
+    }
+
+    private void OnOsSwipeAuth(Entity<OsProgramComponent> ent, ref OsSwipeAuthMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        _computer.TryAuthenticateOsSessionFromActor(compUid, args.Actor, out _);
+        UpdateOsUi(ent.Owner);
+    }
+
+    private void OnEmbeddedSwipeAuth(Entity<EmbeddedOsProgramComponent> ent, ref EmbeddedOsSwipeAuthMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        _computer.TryAuthenticateOsSessionFromActor(compUid, args.Actor, out _);
+        UpdateOsUi(ent.Owner);
+    }
+
+    private void OnEmbeddedLogoutAuth(Entity<EmbeddedOsProgramComponent> ent, ref EmbeddedOsLogoutAuthMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _))
+            return;
+
+        _computer.ClearOsSession(compUid);
+        UpdateOsUi(ent.Owner);
+    }
+
     [SubscribeLocalEvent]
     private void OnHostLockToggled(Entity<EmbeddedComputerHostComponent> ent, ref LockToggledEvent args)
     {
         if (ent.Comp.ComputerEntity is not { } compUid || !_computerQuery.TryComp(compUid, out var comp))
             return;
+
+        if (args.Locked)
+        {
+            _computer.ClearOsSession(compUid, comp);
+            foreach (var progUid in comp.RunningPrograms.ToList())
+            {
+                if (progUid == comp.BootProgram || !Exists(progUid))
+                    continue;
+
+                var deactEv = new ProgramDeactivatedEvent(compUid, progUid);
+                RaiseLocalEvent(progUid, ref deactEv);
+            }
+        }
+
+        _computer.UpdateComputerDisplayUi(compUid, comp);
 
         if (comp.BootProgram is not { } bootUid || !Exists(bootUid))
             return;
@@ -284,8 +408,30 @@ public sealed partial class OsProgramSystem : EntitySystem
             return;
         }
 
-        ent.Comp.CurrentView = Math.Clamp(args.ViewIndex, 0, 3);
+        var prevView = ent.Comp.CurrentView;
+        var nextView = Math.Clamp(args.ViewIndex, 0, 3);
+        ent.Comp.CurrentView = nextView;
         Dirty(ent);
+
+        if (_programQuery.TryComp(ent.Owner, out var embProg) &&
+            embProg.Computer is { } embCompUid &&
+            _computerQuery.TryComp(embCompUid, out var embComp) &&
+            embComp.ActiveProgram is { Valid: true } activeProg &&
+            activeProg != ent.Owner &&
+            Exists(activeProg))
+        {
+            if (prevView == 0 && nextView != 0)
+            {
+                var deactEv = new ProgramDeactivatedEvent(embCompUid, activeProg);
+                RaiseLocalEvent(activeProg, ref deactEv);
+            }
+            else if (prevView != 0 && nextView == 0)
+            {
+                var actEv = new ProgramActivatedEvent(embCompUid, activeProg);
+                RaiseLocalEvent(activeProg, ref actEv);
+            }
+        }
+
         UpdateOsUi(ent.Owner);
     }
 
@@ -420,7 +566,8 @@ public sealed partial class OsProgramSystem : EntitySystem
                 installed,
                 running,
                 ports,
-                hwSummary);
+                hwSummary,
+                string.IsNullOrWhiteSpace(comp.OsAuthLabel) ? null : comp.OsAuthLabel);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);
@@ -450,7 +597,8 @@ public sealed partial class OsProgramSystem : EntitySystem
                 hasLock,
                 isHostLocked,
                 comp.EmbeddedDefaultAppPath,
-                isDedicatedPanel);
+                isDedicatedPanel,
+                string.IsNullOrWhiteSpace(comp.OsAuthLabel) ? null : comp.OsAuthLabel);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);
@@ -491,6 +639,12 @@ public sealed partial class OsProgramSystem : EntitySystem
                     continue;
 
                 runningByPath.TryGetValue(path, out var activeEnt);
+                var isBoot = comp.BootProgram == activeEnt && activeEnt.IsValid();
+
+                // Never offer other OS kernels as launchable child apps inside a running OS.
+                if (!isBoot && _computer.IsOperatingSystemExecutable(pvf.ProgramId))
+                    continue;
+
                 installed.Add(new OsProgramEntryDto(
                     activeEnt.IsValid() ? GetNetEntity(activeEnt) : null,
                     path,
@@ -500,7 +654,7 @@ public sealed partial class OsProgramSystem : EntitySystem
                     pvf.RamUsageMb,
                     pvf.CpuUsagePercent,
                     activeEnt.IsValid(),
-                    comp.BootProgram == activeEnt && activeEnt.IsValid()));
+                    isBoot));
             }
         }
 
@@ -512,6 +666,9 @@ public sealed partial class OsProgramSystem : EntitySystem
         var hostName = comp.HostMachine is { } hm && Exists(hm)
             ? MetaData(hm).EntityName
             : MetaData(compUid).EntityName;
+
+        var networkLabel = _router.GetConnectedNetworkLabel(compUid);
+        var installedComponents = BuildInstalledComponentsList(compUid, comp, networkLabel);
 
         return new OsHardwareSummaryDto(
             stats.CpuFrequencyMhz,
@@ -528,11 +685,219 @@ public sealed partial class OsProgramSystem : EntitySystem
             stats.HasDiskSlotModule || comp.Template == ComputerTemplate.Pda,
             stats.HasIdSlotModule || comp.Template == ComputerTemplate.Pda,
             comp.IsPowered,
-            comp.AllowRemoteControl && !comp.RemoteControlWireCut,
+            _computer.IsRemoteControlAllowed(compUid, comp),
             comp.AllowDeviceLink && !comp.DeviceLinkWireCut,
             _router.EnsureDeviceGuid(compUid),
             hostName,
             comp.IsBooted ? "SYSTEM ONLINE" : comp.BootError,
-            _router.GetConnectedNetworkLabel(compUid));
+            networkLabel,
+            installedComponents,
+            stats.HasBattery,
+            stats.BatteryCharge,
+            stats.BatteryMaxCharge,
+            _computer.TryGetInsertedIdCard(compUid, out _));
+    }
+
+    private List<OsHardwareComponentDto> BuildInstalledComponentsList(
+        EntityUid compUid,
+        OxydComputerComponent comp,
+        string? networkLabel)
+    {
+        var list = new List<OsHardwareComponentDto>();
+        var visited = new HashSet<EntityUid>();
+
+        var orderedSlots = new (string SlotId, string SlotLabel)[]
+        {
+            (ModularComputerComponent.SlotCpu, "CPU Slot"),
+            (ModularComputerComponent.SlotRam, "RAM Slot 1"),
+            (ModularComputerComponent.SlotRamSecondary, "RAM Slot 2"),
+            (ModularComputerComponent.SlotStorage, "Storage Bay"),
+            (ModularComputerComponent.SlotNetwork, "Network Bay"),
+            (ModularComputerComponent.SlotBattery, "Battery Bay"),
+            (ModularComputerComponent.SlotSensor, "Sensor Bay"),
+            (ModularComputerComponent.SlotIdModule, "ID Module 1"),
+            (ModularComputerComponent.SlotIdModuleSecondary, "ID Module 2"),
+            (ModularComputerComponent.SlotDiskModule, "Disk Module"),
+            (ModularComputerComponent.SlotPrinter, "Printer Bay")
+        };
+
+        foreach (var (slotId, slotLabel) in orderedSlots)
+        {
+            if (_itemSlots.TryGetSlot(compUid, slotId, out var slot) &&
+                slot.Item is { Valid: true } partUid &&
+                Exists(partUid) &&
+                !TerminatingOrDeleted(partUid) &&
+                visited.Add(partUid))
+            {
+                list.Add(DescribeHardwareComponent(partUid, slotLabel, comp, networkLabel));
+            }
+        }
+
+        foreach (var partUid in _computer.GetInstalledHardwareEntities(compUid))
+        {
+            if (visited.Add(partUid))
+                list.Add(DescribeHardwareComponent(partUid, "Expansion", comp, networkLabel));
+        }
+
+        if (TryComp<ComputerDataPortComponent>(compUid, out var dataPort))
+        {
+            list.Add(new OsHardwareComponentDto(
+                "Motherboard",
+                "PORT",
+                $"Diagnostic Data Port ({dataPort.PortLabel})",
+                dataPort.RequireMaintenancePanelOpen ? "Local JTAG interface (panel access required)" : "Local JTAG diagnostic interface",
+                dataPort.Enabled ? "ENABLED" : "DISABLED",
+                dataPort.Enabled));
+        }
+
+        return list;
+    }
+
+    private OsHardwareComponentDto DescribeHardwareComponent(
+        EntityUid partUid,
+        string slotLabel,
+        OxydComputerComponent comp,
+        string? networkLabel)
+    {
+        var partName = MetaData(partUid).EntityName;
+
+        if (TryComp<ComputerCpuComponent>(partUid, out var cpu))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "CPU",
+                partName,
+                $"{cpu.FrequencyMhz} MHz  •  {ComputerMetricsHelper.GetCpuCapacity(cpu):0} CPU capacity",
+                "OK",
+                true);
+        }
+
+        if (TryComp<ComputerRamComponent>(partUid, out var ram))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "RAM",
+                partName,
+                $"{ComputerSizeFormat.FormatRamQb(ram.SizeMb)} system memory",
+                "OK",
+                true);
+        }
+
+        if (TryComp<ComputerHardDriveComponent>(partUid, out var hdd))
+        {
+            var details = TryComp<FileSystemComponent>(partUid, out var fs)
+                ? $"{ComputerSizeFormat.FormatStorageQb(fs.UsedStorageBytes)} / {ComputerSizeFormat.FormatStorageQb(fs.MaxStorageBytes)} used ({fs.Files.Count} files)"
+                : $"{ComputerSizeFormat.FormatStorageQb(hdd.CapacityBytes)} capacity";
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "HDD",
+                partName,
+                details,
+                comp.StorageWireCut ? "WIRE CUT" : "OK",
+                !comp.StorageWireCut);
+        }
+
+        if (TryComp<ComputerNetworkCardComponent>(partUid, out var nic))
+        {
+            var mode = nic.SupportsWired && nic.SupportsWireless
+                ? "Wired / Wireless"
+                : nic.SupportsWireless ? "Wireless" : "Wired";
+            var netSuffix = !string.IsNullOrWhiteSpace(networkLabel) ? $"  •  {networkLabel}" : string.Empty;
+            var details = $"Down {ComputerSizeFormat.FormatRateQb(nic.BandwidthBps)}  •  Up {ComputerSizeFormat.FormatRateQb(nic.MaxUploadBps)}  •  {mode}{netSuffix}";
+            var status = comp.NetworkWireCut ? "WIRE CUT" : !string.IsNullOrWhiteSpace(networkLabel) ? "ONLINE" : "READY";
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "NIC",
+                partName,
+                details,
+                status,
+                !comp.NetworkWireCut);
+        }
+
+        if (TryComp<ComputerBatteryModuleComponent>(partUid, out var bat))
+        {
+            var pct = bat.MaxCharge > 0f ? Math.Clamp(bat.CurrentCharge / bat.MaxCharge * 100f, 0f, 100f) : 0f;
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "BAT",
+                partName,
+                $"{bat.CurrentCharge:0}/{bat.MaxCharge:0} charge ({pct:0}%)",
+                bat.CurrentCharge > 0f ? "OK" : "EMPTY",
+                bat.CurrentCharge > 0f);
+        }
+
+        if (TryComp<ComputerIdCardSlotModuleComponent>(partUid, out var reader))
+        {
+            string details;
+            string status;
+            if (reader.Mode == ComputerCardReaderMode.Slot)
+            {
+                if (_itemSlots.TryGetSlot(partUid, reader.CardSlotId, out var cardSlot) &&
+                    cardSlot.Item is { Valid: true } cardUid &&
+                    Exists(cardUid))
+                {
+                    details = $"Retaining ID Slot  •  Inserted: {MetaData(cardUid).EntityName}";
+                    status = "CARD IN";
+                }
+                else
+                {
+                    details = "Retaining ID Slot  •  Empty";
+                    status = "READY";
+                }
+            }
+            else
+            {
+                details = "Transient Swipe Scanner";
+                status = "READY";
+            }
+
+            return new OsHardwareComponentDto(slotLabel, "ID", partName, details, status, true);
+        }
+
+        if (HasComp<ComputerDiskSlotModuleComponent>(partUid))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "DISK",
+                partName,
+                "Removable data disk drive bay",
+                "READY",
+                true);
+        }
+
+        if (HasComp<ComputerPrinterModuleComponent>(partUid))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "PRN",
+                partName,
+                "Thermal paper printer module",
+                "READY",
+                true);
+        }
+
+        if (HasComp<ComputerHealthScannerModuleComponent>(partUid))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "MED",
+                partName,
+                "Biometric health scanner sensor array",
+                "OK",
+                true);
+        }
+
+        if (HasComp<ComputerSensorModuleComponent>(partUid))
+        {
+            return new OsHardwareComponentDto(
+                slotLabel,
+                "SENS",
+                partName,
+                "Hardware telemetry & sensor interface",
+                "OK",
+                true);
+        }
+
+        return new OsHardwareComponentDto(slotLabel, "HW", partName, "Installed hardware module", "OK", true);
     }
 }

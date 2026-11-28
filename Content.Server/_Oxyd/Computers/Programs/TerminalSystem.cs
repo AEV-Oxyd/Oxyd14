@@ -7,10 +7,12 @@ using Content.Shared._Oxyd.Computers.Hardware;
 using Content.Shared._Oxyd.Computers.Network;
 using Content.Shared._Oxyd.Computers.Programs;
 using Content.Shared._Oxyd.Computers.ScreenSharing;
+using Content.Shared.Access;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.Lock;
 using Content.Shared.StationRecords;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server._Oxyd.Computers.Programs;
@@ -31,6 +33,7 @@ public sealed partial class TerminalSystem : EntitySystem
     [Dependency] private SharedUserInterfaceSystem _ui = default!;
     [Dependency] private LockSystem _lock = default!;
     [Dependency] private AccessReaderSystem _access = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
@@ -89,28 +92,215 @@ public sealed partial class TerminalSystem : EntitySystem
         UpdateTerminalUi(ent.Owner);
     }
 
-    private void DetachRemoteScreenSession(EntityUid progUid, TerminalProgramComponent comp, EntityUid? actor = null)
+    private void DetachRemoteScreenSession(
+        EntityUid progUid,
+        TerminalProgramComponent comp,
+        EntityUid? actor = null,
+        bool forceDetachAll = false)
     {
-        if (comp.ConnectedRemoteGuid != null && _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out var targetUid))
+        comp.ActiveViewers.RemoveWhere(v => !Exists(v) || TerminatingOrDeleted(v));
+
+        EntityUid targetUid = default;
+        var hasTarget = comp.IsPhysicalLink && comp.PhysicalTargetComputer is { Valid: true } physTarget && Exists(physTarget);
+        if (hasTarget)
         {
-            if (actor != null)
+            targetUid = comp.PhysicalTargetComputer!.Value;
+        }
+        else if (comp.ConnectedRemoteGuid != null && _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out targetUid))
+        {
+            hasTarget = true;
+        }
+
+        if (forceDetachAll || actor == null)
+        {
+            if (hasTarget)
             {
-                _remoteScreen.DetachViewer(progUid, actor, targetUid);
-            }
-            else
-            {
+                if (actor != null)
+                    _remoteScreen.DetachViewer(progUid, actor, targetUid);
+
                 foreach (var v in comp.ActiveViewers)
                     _remoteScreen.DetachViewer(progUid, v, targetUid);
+
+                _remoteScreen.DetachViewer(progUid, null, targetUid);
+            }
+
+            comp.ActiveViewers.Clear();
+            comp.IsScreenAttached = false;
+            _computer.SetProgramDynamicCpuBonus(progUid, 0f);
+            return;
+        }
+
+        if (hasTarget)
+            _remoteScreen.DetachViewer(progUid, actor, targetUid);
+
+        comp.ActiveViewers.Remove(actor.Value);
+        if (comp.ActiveViewers.Count == 0)
+        {
+            comp.IsScreenAttached = false;
+            _computer.SetProgramDynamicCpuBonus(progUid, 0f);
+        }
+    }
+
+    /// <summary>
+    /// Attaches a Terminal directly to a target computer over a physical diagnostic JTAG link
+    /// (no Network Card or Station Network Router required).
+    /// </summary>
+    public bool ConnectPhysicalTarget(
+        EntityUid progUid,
+        EntityUid localCompUid,
+        EntityUid targetCompUid,
+        EntityUid user,
+        float maxRange,
+        out string message)
+    {
+        message = string.Empty;
+        if (!TryComp<TerminalProgramComponent>(progUid, out var comp) ||
+            !_computerQuery.TryComp(targetCompUid, out var targetOxyd))
+        {
+            message = "Target does not contain a compatible computer controller.";
+            return false;
+        }
+
+        if (TryComp<ComputerDataPortComponent>(targetCompUid, out var port) && !port.Enabled)
+        {
+            message = "Target diagnostic data port is disabled.";
+            return false;
+        }
+
+        if (targetOxyd.PowerWireCut)
+        {
+            message = "Target computer power bus is severed.";
+            return false;
+        }
+
+        DetachRemoteScreenSession(progUid, comp, forceDetachAll: true);
+
+        var targetGuid = _guid.GetGuid(targetCompUid);
+        var targetName = targetOxyd.HostMachine is { Valid: true } hm && Exists(hm)
+            ? MetaData(hm).EntityName
+            : MetaData(targetCompUid).EntityName;
+
+        comp.IsPhysicalLink = true;
+        comp.PhysicalTargetComputer = targetCompUid;
+        comp.PhysicalMaxRange = Math.Max(1.5f, maxRange);
+        comp.SshLocalMode = false;
+        comp.RemoteDirectory = "/";
+
+        if (Exists(user))
+            comp.ActiveViewers.Add(user);
+
+        // Respect explicit software lock on target (prompt for password unless unlocked via ID/key).
+        if (targetOxyd.SoftwareLocked)
+        {
+            var hasKey = !string.IsNullOrEmpty(targetOxyd.LockKeySecret) &&
+                         _computer.TryFindMatchingKeyFile(localCompUid, targetOxyd.LockKeySecret, includeLocalHdd: true, out _);
+            var hasId = targetOxyd.RequiredAccessTags.Count > 0 &&
+                        OxydComputerSystem.SatisfiesRequiredAccess(targetOxyd, _computer.CollectAvailableAccessTags(localCompUid, user));
+
+            if (!hasKey && !hasId)
+            {
+                if (!string.IsNullOrEmpty(targetOxyd.LockPassword) ||
+                    !string.IsNullOrEmpty(targetOxyd.SshPassword) ||
+                    !string.IsNullOrEmpty(targetOxyd.LockKeySecret))
+                {
+                    comp.ConnectedRemoteGuid = null;
+                    comp.PendingAuthGuid = targetGuid;
+                    comp.PendingAuthUser = "diag";
+                    comp.AwaitingPassword = true;
+                    comp.History.Add($"=== JTAG LINK: {targetName} [{targetGuid}] ===");
+                    comp.History.Add($"diag@{targetGuid}'s password:");
+                    UpdateTerminalUi(progUid);
+                    message = $"Linked to {targetName} (authentication required).";
+                    return true;
+                }
+
+                comp.IsPhysicalLink = false;
+                comp.PhysicalTargetComputer = null;
+                comp.ConnectedRemoteGuid = null;
+                comp.History.Add($"jtag: {targetName} [{targetGuid}] is software-locked (required ID clearance missing).");
+                UpdateTerminalUi(progUid);
+                message = $"{targetName} is locked — insufficient clearance.";
+                return false;
             }
         }
 
-        if (actor != null)
-            comp.ActiveViewers.Remove(actor.Value);
-        else
-            comp.ActiveViewers.Clear();
+        comp.AwaitingPassword = false;
+        comp.PendingAuthGuid = null;
+        comp.PendingAuthUser = null;
+        comp.ConnectedRemoteGuid = targetGuid;
+        comp.ConnectedRemoteUser = "diag";
+        comp.ConnectedRemoteLockEpoch = targetOxyd.LockEpoch;
 
-        if (comp.ActiveViewers.Count == 0)
-            comp.IsScreenAttached = false;
+        if (_fileSystem.TryFindFileSystem(targetCompUid, out var remDrive, out _))
+            _fileSystem.LogSystemActivity(remDrive.Value, "JTAG-IN", $"Physical diagnostic link opened by {_guid.GetGuid(localCompUid)}");
+
+        comp.History.Add($"=== PHYSICAL DIAGNOSTIC LINK ESTABLISHED ===");
+        comp.History.Add($"Connected via JTAG data port to {targetName} [{targetGuid}].");
+        comp.History.Add("Type 'help' for commands, 'screen open' for live display, or 'exit' to disconnect.");
+        UpdateTerminalUi(progUid);
+
+        message = $"Linked diagnostic terminal to {targetName} [{targetGuid}].";
+        return true;
+    }
+
+    private EntityUid ResolvePhysicalAnchor(EntityUid compUid)
+    {
+        if (_computerQuery.TryComp(compUid, out var comp) &&
+            comp.HostMachine is { Valid: true } hm &&
+            Exists(hm))
+        {
+            return hm;
+        }
+
+        return compUid;
+    }
+
+    private bool IsPhysicalLinkActive(
+        EntityUid localCompUid,
+        TerminalProgramComponent comp,
+        out EntityUid targetUid,
+        out string error)
+    {
+        targetUid = default;
+        error = string.Empty;
+
+        if (!comp.IsPhysicalLink || comp.PhysicalTargetComputer is not { Valid: true } phys || !Exists(phys))
+        {
+            error = "Physical link inactive or target lost.";
+            return false;
+        }
+
+        if (!_computerQuery.TryComp(phys, out var targetOxyd))
+        {
+            error = "Target computer unavailable.";
+            return false;
+        }
+
+        if (TryComp<ComputerDataPortComponent>(phys, out var port) && !port.Enabled)
+        {
+            error = "Target diagnostic data port disabled.";
+            return false;
+        }
+
+        if (targetOxyd.PowerWireCut)
+        {
+            error = "Target computer power bus severed.";
+            return false;
+        }
+
+        var localAnchor = ResolvePhysicalAnchor(localCompUid);
+        var targetAnchor = ResolvePhysicalAnchor(phys);
+        var localCoords = _transform.GetMapCoordinates(localAnchor);
+        var targetCoords = _transform.GetMapCoordinates(targetAnchor);
+        if (localCoords.MapId != targetCoords.MapId ||
+            (localCoords.Position - targetCoords.Position).Length() > comp.PhysicalMaxRange)
+        {
+            error = "Physical cable link disconnected (moved out of range).";
+            return false;
+        }
+
+        targetUid = phys;
+        return true;
     }
 
     private void OnExecuteCommand(Entity<TerminalProgramComponent> ent, ref TerminalExecuteCommandMessage args)
@@ -167,12 +357,9 @@ public sealed partial class TerminalSystem : EntitySystem
 
     private void OnRemoteScreenAction(Entity<TerminalProgramComponent> ent, ref TerminalRemoteScreenActionMessage args)
     {
-        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out _, checkHostLock: false))
-            return;
-
         if (args.Action == "detach")
         {
-            DetachRemoteScreenSession(ent.Owner, ent.Comp, args.Actor);
+            DetachRemoteScreenSession(ent.Owner, ent.Comp, args.Actor, forceDetachAll: true);
             if (_programQuery.TryComp(ent.Owner, out var prog) && prog.Computer is { } compUid && ent.Comp.ConnectedRemoteGuid != null)
             {
                 var localGuid = _guid.GetGuid(compUid);
@@ -191,26 +378,68 @@ public sealed partial class TerminalSystem : EntitySystem
         comp.PendingAuthGuid = null;
         comp.PendingAuthUser = null;
 
-        if (string.IsNullOrEmpty(targetGuid) || !_router.TryFindDeviceByGuid(targetGuid, out var targetUid))
+        EntityUid targetUid;
+        if (comp.IsPhysicalLink)
         {
-            comp.History.Add("ssh: Host lost during authentication.");
-            return;
+            if (!IsPhysicalLinkActive(compUid, comp, out targetUid, out var physErr))
+            {
+                comp.IsPhysicalLink = false;
+                comp.PhysicalTargetComputer = null;
+                comp.History.Add($"jtag: {physErr}");
+                return;
+            }
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(targetGuid) || !_router.TryFindDeviceByGuid(targetGuid, out targetUid))
+            {
+                comp.History.Add("ssh: Host lost during authentication.");
+                return;
+            }
+
+            if (!_router.AreEndpointsConnected(compUid, targetUid, out _, out var connErr))
+            {
+                comp.History.Add($"ssh: {connErr}");
+                return;
+            }
         }
 
-        if (!_router.AreEndpointsConnected(compUid, targetUid, out _, out var connErr))
-        {
-            comp.History.Add($"ssh: {connErr}");
-            return;
-        }
-
-        if (!_computerQuery.TryComp(targetUid, out var targetOxyd) ||
-            !string.Equals(targetOxyd.SshPassword, password, StringComparison.Ordinal))
+        if (!_computerQuery.TryComp(targetUid, out var targetOxyd))
         {
             comp.History.Add("Permission denied, please try again.");
             return;
         }
 
-        EstablishSshSession(progUid, compUid, comp, targetUid, targetGuid, targetUser);
+        if (!comp.IsPhysicalLink && !_computer.IsRemoteControlAllowed(targetUid, targetOxyd))
+        {
+            comp.History.Add($"ssh: connect to {targetGuid} refused (remote control disabled).");
+            return;
+        }
+
+        var validPassword =
+            (!string.IsNullOrEmpty(targetOxyd.SshPassword) && string.Equals(targetOxyd.SshPassword, password, StringComparison.Ordinal)) ||
+            (!string.IsNullOrEmpty(targetOxyd.LockPassword) && string.Equals(targetOxyd.LockPassword, password, StringComparison.Ordinal)) ||
+            (!string.IsNullOrEmpty(targetOxyd.LockKeySecret) && string.Equals(targetOxyd.LockKeySecret, password, StringComparison.Ordinal));
+
+        if (!validPassword)
+        {
+            comp.History.Add("Permission denied, please try again.");
+            return;
+        }
+
+        if (comp.IsPhysicalLink)
+        {
+            comp.ConnectedRemoteGuid = targetGuid;
+            comp.ConnectedRemoteUser = targetUser;
+            comp.ConnectedRemoteLockEpoch = targetOxyd.LockEpoch;
+            comp.SshLocalMode = false;
+            comp.RemoteDirectory = "/";
+            comp.History.Add($"Physical diagnostic link authenticated to {MetaData(targetUid).EntityName} [{targetGuid}].");
+            comp.History.Add("Type 'help' for commands or 'screen open' to stream live display.");
+            return;
+        }
+
+        EstablishSshSession(progUid, compUid, comp, targetUid, targetGuid!, targetUser);
     }
 
     private void EstablishSshSession(EntityUid progUid, EntityUid compUid, TerminalProgramComponent comp, EntityUid targetUid, string targetGuid, string user)
@@ -224,8 +453,13 @@ public sealed partial class TerminalSystem : EntitySystem
             _router.UnregisterActiveConnection(compUid, $"SCREEN-{localGuid}-{comp.ConnectedRemoteGuid}");
         }
 
+        comp.IsPhysicalLink = false;
+        comp.PhysicalTargetComputer = null;
         comp.ConnectedRemoteGuid = targetGuid;
         comp.ConnectedRemoteUser = user;
+        comp.ConnectedRemoteLockEpoch = _computerQuery.TryComp(targetUid, out var targetOxydComp)
+            ? targetOxydComp.LockEpoch
+            : 0;
         comp.SshLocalMode = false;
         comp.RemoteDirectory = "/";
 
@@ -275,6 +509,8 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.History.Add("  devlink [list|trigger|send]     - Manage mirrored DeviceLink ports");
                 comp.History.Add("  apc | atmos | lathe [...]       - Quick DeviceLink machine commands");
                 comp.History.Add("  ifconfig | ping <guid> | scan   - Network diagnostics (NIC required)");
+                comp.History.Add("  netprobe / netquery [filter]    - Probe discoverable devices & metadata");
+                comp.History.Add("  discoverable [on|off]           - Toggle local network discoverability");
                 comp.History.Add("  ssh <guid> | scp / upload       - Connect & transfer files over router");
                 comp.History.Add("  auth <guid> [unlock|lock] [acc] - Remotely authorize ID (PDA ID or .acc)");
                 comp.History.Add("  passwd [pass] | keygen          - Configure local SSH password/keys");
@@ -352,6 +588,22 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.History.Add("System rebooted.");
                 break;
 
+            case "lock":
+                if (_computerQuery.TryComp(compUid, out var lockComp))
+                {
+                    if (!OxydComputerSystem.HasSoftwareLockConfigured(lockComp))
+                    {
+                        comp.History.Add("lock: No password, key, or ID access lock configured.");
+                    }
+                    else
+                    {
+                        _computer.EngageSoftwareLock(compUid, lockComp);
+                        _computer.UpdateComputerDisplayUi(compUid, lockComp);
+                        comp.History.Add("Computer locked.");
+                    }
+                }
+                break;
+
             case "hw":
             case "top":
             case "stat":
@@ -381,9 +633,27 @@ public sealed partial class TerminalSystem : EntitySystem
                 AppendNetworkScan(compUid, comp);
                 break;
 
+            case "netprobe":
+            case "netquery":
+                if (!RequireNetwork(compUid, comp))
+                    break;
+                AppendNetworkProbeQuery(compUid, comp, parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : null);
+                break;
+
+            case "discoverable":
+                HandleDiscoverableCommand(compUid, comp, parts.Length > 1 ? parts[1] : null);
+                break;
+
             case "passwd":
                 if (_computerQuery.TryComp(compUid, out var pwComp))
                 {
+                    if (!_computer.IsJailbrokenOs(compUid, pwComp) &&
+                        !_computer.HasAnyAccessTag(compUid, actor, new[] { new ProtoId<AccessLevelPrototype>("SystemAdmin") }, out _, comp: pwComp))
+                    {
+                        comp.History.Add("passwd: System Admin authorization required.");
+                        break;
+                    }
+
                     var newPw = parts.Length > 1 ? parts[1] : string.Empty;
                     if (newPw.Length > MaxPasswordLength)
                     {
@@ -391,17 +661,73 @@ public sealed partial class TerminalSystem : EntitySystem
                         break;
                     }
                     pwComp.SshPassword = newPw;
+                    pwComp.LockPassword = newPw;
                     Dirty(compUid, pwComp);
                     comp.History.Add(string.IsNullOrEmpty(pwComp.SshPassword)
-                        ? "SSH password cleared (public access)."
-                        : "SSH password updated.");
+                        ? "Password cleared."
+                        : "Password updated.");
                 }
+                break;
+
+            case "keygen":
+                if (_computerQuery.TryComp(compUid, out var keyComp))
+                {
+                    if (!_computer.IsJailbrokenOs(compUid, keyComp) &&
+                        !_computer.HasAnyAccessTag(compUid, actor, new[] { new ProtoId<AccessLevelPrototype>("SystemAdmin") }, out _, comp: keyComp))
+                    {
+                        comp.History.Add("keygen: System Admin authorization required.");
+                        break;
+                    }
+
+                    if (!_fileSystem.TryFindFileSystem(compUid, out var kDriveUid, out var kFs) || kDriveUid == null || kFs == null)
+                    {
+                        comp.History.Add("keygen: No hard drive installed.");
+                        break;
+                    }
+
+                    var keyLabel = parts.Length > 1 ? string.Join(" ", parts.Skip(1)).Trim() : $"{MetaData(compUid).EntityName} Key";
+                    var slug = SecurityLockSystem.SanitizeKeyFileName(keyLabel);
+                    var keyId = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+                    var keySecret = Guid.NewGuid().ToString("N")[..24].ToUpperInvariant();
+
+                    var keyFile = new PasswordKeyVirtualFile
+                    {
+                        Name = slug,
+                        Extension = "key",
+                        Directory = "/keys/",
+                        KeyLabel = keyLabel,
+                        KeyId = keyId,
+                        KeySecret = keySecret,
+                        TargetGuid = localGuid,
+                        Size = 512
+                    };
+
+                    if (_fileSystem.TryWriteFile(kDriveUid.Value, keyFile, kFs))
+                    {
+                        keyComp.LockKeyLabel = keyLabel;
+                        keyComp.LockKeyId = keyId;
+                        keyComp.LockKeySecret = keySecret;
+                        Dirty(compUid, keyComp);
+                        comp.History.Add($"Generated key: {keyFile.FullPath} [{keyId}]");
+                    }
+                    else
+                    {
+                        comp.History.Add("keygen: Failed to write key file (insufficient disk space).");
+                    }
+                }
+                break;
+
+            case "boot" when parts.Length > 1:
+                if (_computer.TrySetBootExecutable(compUid, parts[1], out var bootMsg, rebootNow: true))
+                    comp.History.Add(bootMsg);
+                else
+                    comp.History.Add($"boot: {bootMsg}");
                 break;
 
             case "ssh" when parts.Length > 1:
                 if (!RequireNetwork(compUid, comp))
                     break;
-                InitiateSsh(progUid, compUid, comp, parts[1], localGuid);
+                InitiateSsh(progUid, compUid, comp, parts[1], localGuid, actor);
                 break;
 
             case "auth":
@@ -445,29 +771,68 @@ public sealed partial class TerminalSystem : EntitySystem
         var targetGuid = comp.ConnectedRemoteGuid!;
         var localGuid = _guid.GetGuid(localCompUid);
 
-        if (!RequireNetwork(localCompUid, comp) ||
-            _router.IsGuidBlacklisted(localCompUid, localGuid) ||
-            _router.IsGuidBlacklisted(localCompUid, targetGuid))
-        {
-            comp.History.Add($"ssh: Session to {targetGuid} dropped by network/firewall.");
-            DetachRemoteScreenSession(progUid, comp, actor);
-            comp.ConnectedRemoteGuid = null;
-            return;
-        }
+        EntityUid targetUid;
+        OxydComputerComponent? targetOxyd;
 
-        if (!_router.TryFindDeviceByGuid(targetGuid, out var targetUid) ||
-            !_router.AreEndpointsConnected(localCompUid, targetUid, out _, out _) ||
-            !_computerQuery.TryComp(targetUid, out var targetOxyd) ||
-            !targetOxyd.AllowRemoteControl || targetOxyd.RemoteControlWireCut || targetOxyd.PowerWireCut)
+        if (comp.IsPhysicalLink)
         {
-            comp.History.Add($"ssh: Connection reset by peer {targetGuid}.");
-            DetachRemoteScreenSession(progUid, comp, actor);
-            comp.ConnectedRemoteGuid = null;
-            return;
+            if (!IsPhysicalLinkActive(localCompUid, comp, out targetUid, out var physErr) ||
+                !_computerQuery.TryComp(targetUid, out targetOxyd))
+            {
+                comp.History.Add($"jtag: {physErr}");
+                DetachRemoteScreenSession(progUid, comp, actor, forceDetachAll: true);
+                comp.ConnectedRemoteGuid = null;
+                comp.IsPhysicalLink = false;
+                comp.PhysicalTargetComputer = null;
+                return;
+            }
+        }
+        else
+        {
+            if (!RequireNetwork(localCompUid, comp) ||
+                _router.IsGuidBlacklisted(localCompUid, localGuid) ||
+                _router.IsGuidBlacklisted(localCompUid, targetGuid))
+            {
+                comp.History.Add($"ssh: Session to {targetGuid} dropped by network/firewall.");
+                DetachRemoteScreenSession(progUid, comp, actor);
+                comp.ConnectedRemoteGuid = null;
+                return;
+            }
+
+            if (!_router.TryFindDeviceByGuid(targetGuid, out targetUid) ||
+                !_router.AreEndpointsConnected(localCompUid, targetUid, out _, out _) ||
+                !_computerQuery.TryComp(targetUid, out targetOxyd) ||
+                !_computer.IsRemoteControlAllowed(targetUid, targetOxyd))
+            {
+                comp.History.Add($"ssh: Connection reset by peer {targetGuid}.");
+                DetachRemoteScreenSession(progUid, comp, actor);
+                comp.ConnectedRemoteGuid = null;
+                return;
+            }
         }
 
         var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var cmd = parts[0].ToLowerInvariant();
+
+        // If the remote host was locked or rebooted into a locked state after this session authenticated,
+        // immediately drop the session and refuse all remote commands until re-authenticated!
+        if (cmd is not ("exit" or "quit" or "logout" or "local" or "switch") &&
+            targetOxyd.SoftwareLocked &&
+            comp.ConnectedRemoteLockEpoch != targetOxyd.LockEpoch)
+        {
+            DetachRemoteScreenSession(progUid, comp, actor, forceDetachAll: true);
+            if (!comp.IsPhysicalLink)
+            {
+                _router.UnregisterActiveConnection(localCompUid, $"SSH-{localGuid}-{targetGuid}");
+                _router.UnregisterActiveConnection(localCompUid, $"SCREEN-{localGuid}-{targetGuid}");
+            }
+            comp.ConnectedRemoteGuid = null;
+            comp.IsPhysicalLink = false;
+            comp.PhysicalTargetComputer = null;
+            comp.SshLocalMode = false;
+            comp.History.Add($"Remote host [{targetGuid}] is locked — re-authentication required.");
+            return;
+        }
 
         switch (cmd)
         {
@@ -475,10 +840,17 @@ public sealed partial class TerminalSystem : EntitySystem
             case "quit":
             case "logout":
                 DetachRemoteScreenSession(progUid, comp, actor);
-                _router.UnregisterActiveConnection(localCompUid, $"SSH-{localGuid}-{targetGuid}");
-                _router.UnregisterActiveConnection(localCompUid, $"SCREEN-{localGuid}-{targetGuid}");
-                comp.History.Add($"Connection to {targetGuid} closed.");
+                if (!comp.IsPhysicalLink)
+                {
+                    _router.UnregisterActiveConnection(localCompUid, $"SSH-{localGuid}-{targetGuid}");
+                    _router.UnregisterActiveConnection(localCompUid, $"SCREEN-{localGuid}-{targetGuid}");
+                }
+                comp.History.Add(comp.IsPhysicalLink
+                    ? $"Physical diagnostic link to {targetGuid} closed."
+                    : $"Connection to {targetGuid} closed.");
                 comp.ConnectedRemoteGuid = null;
+                comp.IsPhysicalLink = false;
+                comp.PhysicalTargetComputer = null;
                 comp.SshLocalMode = false;
                 break;
 
@@ -558,6 +930,15 @@ public sealed partial class TerminalSystem : EntitySystem
                 AppendHardwareMetrics(targetUid, comp, targetGuid);
                 break;
 
+            case "netprobe":
+            case "netquery":
+                AppendNetworkProbeQuery(targetUid, comp, parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : null);
+                break;
+
+            case "discoverable":
+                HandleDiscoverableCommand(targetUid, comp, parts.Length > 1 ? parts[1] : null);
+                break;
+
             case "packets":
             case "tcpdump":
                 if (TryComp<NetworkBandwidthComponent>(targetUid, out var remBw) && remBw.StoredPackets.Count > 0)
@@ -573,7 +954,19 @@ public sealed partial class TerminalSystem : EntitySystem
 
             case "reboot":
                 _computer.RebootComputer(targetUid, targetOxyd);
-                comp.History.Add($"Remote computer [{targetGuid}] rebooted.");
+                if (targetOxyd.SoftwareLocked)
+                {
+                    DetachRemoteScreenSession(progUid, comp, actor, forceDetachAll: true);
+                    _router.UnregisterActiveConnection(localCompUid, $"SSH-{localGuid}-{targetGuid}");
+                    _router.UnregisterActiveConnection(localCompUid, $"SCREEN-{localGuid}-{targetGuid}");
+                    comp.ConnectedRemoteGuid = null;
+                    comp.SshLocalMode = false;
+                    comp.History.Add($"Remote computer [{targetGuid}] rebooted. Session closed (re-authentication required).");
+                }
+                else
+                {
+                    comp.History.Add($"Remote computer [{targetGuid}] rebooted.");
+                }
                 break;
 
             case "scp" when parts.Length > 1:
@@ -590,7 +983,7 @@ public sealed partial class TerminalSystem : EntitySystem
                 var sub = parts.Length > 1 ? parts[1].ToLowerInvariant() : "open";
                 if (sub is "close" or "off" or "detach")
                 {
-                    DetachRemoteScreenSession(progUid, comp, actor);
+                    DetachRemoteScreenSession(progUid, comp, actor, forceDetachAll: true);
                     _router.UnregisterActiveConnection(localCompUid, $"SCREEN-{localGuid}-{targetGuid}");
                     comp.History.Add($"Closed remote display stream for [{targetGuid}].");
                 }
@@ -604,7 +997,9 @@ public sealed partial class TerminalSystem : EntitySystem
                     if (Exists(actor))
                         comp.ActiveViewers.Add(actor);
                     _remoteScreen.AttachViewer(progUid, actor, targetUid);
-                    _router.RegisterActiveConnection(localCompUid, localGuid, targetGuid, "SCREEN", $"Screen ({targetGuid})");
+                    _computer.SetProgramDynamicCpuBonus(progUid, 20f);
+                    if (!comp.IsPhysicalLink)
+                        _router.RegisterActiveConnection(localCompUid, localGuid, targetGuid, "SCREEN", $"Screen ({targetGuid})");
                     comp.History.Add($"Attached live Screen View to {MetaData(targetUid).EntityName} [{targetGuid}].");
                 }
                 break;
@@ -626,12 +1021,6 @@ public sealed partial class TerminalSystem : EntitySystem
 
     private void TransferFileAcrossNetwork(EntityUid progUid, EntityUid srcComp, EntityUid dstComp, string srcPath, bool isUpload, TerminalProgramComponent comp)
     {
-        if (!_router.AreEndpointsConnected(srcComp, dstComp, out var sharedRouter, out var connErr) || sharedRouter == null)
-        {
-            comp.History.Add($"transfer: {connErr}");
-            return;
-        }
-
         if (!_fileSystem.TryFindFileSystem(srcComp, out _, out var srcFs) || !srcFs.Files.TryGetValue(srcPath, out var file))
         {
             comp.History.Add($"transfer: source file '{srcPath}' not found on hard drive.");
@@ -644,9 +1033,26 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!_fileSystem.TryFindFileSystem(dstComp, out _, out _))
+        if (!_fileSystem.TryFindFileSystem(dstComp, out var dstDriveUid, out var dstFs))
         {
             comp.History.Add("transfer: destination has no hard drive.");
+            return;
+        }
+
+        if (comp.IsPhysicalLink)
+        {
+            var directClone = file.Clone();
+            var directBytes = Math.Max(64, file.Size);
+            if (_fileSystem.TryWriteFile(dstDriveUid.Value, directClone, dstFs))
+                comp.History.Add($"Transferred '{srcPath}' ({directBytes} B) over JTAG cable -> destination HDD.");
+            else
+                comp.History.Add($"transfer: failed writing '{srcPath}' (destination drive missing or full).");
+            return;
+        }
+
+        if (!_router.AreEndpointsConnected(srcComp, dstComp, out var sharedRouter, out var connErr) || sharedRouter == null)
+        {
+            comp.History.Add($"transfer: {connErr}");
             return;
         }
 
@@ -758,7 +1164,7 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!targetComp.AllowRemoteControl || targetComp.RemoteControlWireCut || targetComp.PowerWireCut)
+        if (!_computer.IsRemoteControlAllowed(targetUid, targetComp))
         {
             comp.History.Add($"auth: Connection to [{resolvedGuid}] refused (remote control disabled).");
             return;
@@ -976,7 +1382,7 @@ public sealed partial class TerminalSystem : EntitySystem
         return true;
     }
 
-    private void InitiateSsh(EntityUid progUid, EntityUid localCompUid, TerminalProgramComponent comp, string rawTarget, string localGuid)
+    private void InitiateSsh(EntityUid progUid, EntityUid localCompUid, TerminalProgramComponent comp, string rawTarget, string localGuid, EntityUid actor)
     {
         var targetQuery = rawTarget.Contains('@') ? rawTarget.Split('@', 2)[1] : rawTarget;
         var targetUser = rawTarget.Contains('@') ? rawTarget.Split('@', 2)[0] : "admin";
@@ -996,7 +1402,7 @@ public sealed partial class TerminalSystem : EntitySystem
 
         if (targetUid == localCompUid)
         {
-            comp.History.Add("ssh: Cannot open SSH session to local host.");
+            comp.History.Add("ssh: cannot connect to local host.");
             return;
         }
 
@@ -1006,18 +1412,65 @@ public sealed partial class TerminalSystem : EntitySystem
             return;
         }
 
-        if (!targetComp.AllowRemoteControl || targetComp.RemoteControlWireCut || targetComp.PowerWireCut)
+        if (!_computer.IsRemoteControlAllowed(targetUid, targetComp))
         {
             comp.History.Add($"ssh: connect to {resolvedGuid} refused (remote control disabled).");
             return;
         }
 
-        if (!string.IsNullOrEmpty(targetComp.SshPassword))
+        // If the target computer has a password, key-based password, or ID access lock configured,
+        // ALWAYS require satisfying that lock BEFORE establishing an SSH session (never bypass a password lock!).
+        if (OxydComputerSystem.HasSoftwareLockConfigured(targetComp))
         {
-            comp.AwaitingPassword = true;
-            comp.PendingAuthGuid = resolvedGuid;
-            comp.PendingAuthUser = targetUser;
-            comp.History.Add($"{targetUser}@{resolvedGuid}'s password:");
+            if (!string.IsNullOrEmpty(targetComp.LockKeySecret) &&
+                _computer.TryFindMatchingKeyFile(localCompUid, targetComp.LockKeySecret, includeLocalHdd: true, out var matchedKeyPath))
+            {
+                comp.History.Add($"Authenticated to [{resolvedGuid}] via key file '{matchedKeyPath}'.");
+                EstablishSshSession(progUid, localCompUid, comp, targetUid, resolvedGuid, targetUser);
+                return;
+            }
+
+            if (targetComp.RequiredAccessTags.Count > 0)
+            {
+                var availableTags = _computer.CollectAvailableAccessTags(localCompUid, actor);
+                if (OxydComputerSystem.SatisfiesRequiredAccess(targetComp, availableTags))
+                {
+                    comp.History.Add($"Authenticated to [{resolvedGuid}] via authorized ID access.");
+                    EstablishSshSession(progUid, localCompUid, comp, targetUid, resolvedGuid, targetUser);
+                    return;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(targetComp.SshPassword) ||
+                !string.IsNullOrEmpty(targetComp.LockPassword) ||
+                !string.IsNullOrEmpty(targetComp.LockKeySecret))
+            {
+                comp.AwaitingPassword = true;
+                comp.PendingAuthGuid = resolvedGuid;
+                comp.PendingAuthUser = targetUser;
+                comp.History.Add(!string.IsNullOrEmpty(targetComp.LockKeySecret)
+                    ? $"{targetUser}@{resolvedGuid}'s password or key:"
+                    : $"{targetUser}@{resolvedGuid}'s password:");
+                return;
+            }
+
+            comp.History.Add($"ssh: Permission denied ({resolvedGuid} requires authorized ID access).");
+            return;
+        }
+
+        // Standard (non-jailbroken) operating systems without a software lock permit remote management
+        // by authorized remote access holders (default: SystemAdmin).
+        if (!_computer.IsJailbrokenOs(targetUid, targetComp) &&
+            _computer.HasAnyAccessTag(localCompUid, actor, targetComp.RemoteAccessTags, out var matchedAdminSource, includeSystemAdmin: true))
+        {
+            comp.History.Add($"Authenticated to [{resolvedGuid}] via {matchedAdminSource}.");
+            EstablishSshSession(progUid, localCompUid, comp, targetUid, resolvedGuid, targetUser);
+            return;
+        }
+
+        if (targetComp.RemoteLocked)
+        {
+            comp.History.Add($"ssh: Permission denied ({resolvedGuid} requires remote authorization).");
             return;
         }
 
@@ -1074,6 +1527,61 @@ public sealed partial class TerminalSystem : EntitySystem
                 comp.History.Add($"  {dGuid}  {MetaData(dUid).EntityName}{blocked}");
             }
         }
+    }
+
+    private void AppendNetworkProbeQuery(EntityUid originCompUid, TerminalProgramComponent comp, string? filter)
+    {
+        var devices = _router.QueryDiscoverableDevices(originCompUid, out var routerGuid, out var err, filter);
+        if (!string.IsNullOrEmpty(err))
+        {
+            comp.History.Add($"netprobe: {err}");
+            return;
+        }
+
+        var filterSuffix = string.IsNullOrWhiteSpace(filter) ? string.Empty : $" (filter: '{filter.Trim()}')";
+        comp.History.Add($"NETPROBE Router [{routerGuid}] — {devices.Count} discoverable device(s){filterSuffix}:");
+        if (devices.Count == 0)
+        {
+            comp.History.Add("  (no matching discoverable devices responded)");
+            return;
+        }
+
+        comp.History.Add("  GUID      TYPE          AUTH                NAME | DETAILS");
+        foreach (var dev in devices)
+        {
+            var extraPart = string.IsNullOrEmpty(dev.ExtraInfo) ? string.Empty : $" | {dev.ExtraInfo}";
+            comp.History.Add($"  {dev.Guid,-9} {dev.DeviceType,-13} {dev.AuthSummary,-19} {dev.Name}{extraPart}");
+        }
+    }
+
+    private void HandleDiscoverableCommand(EntityUid compUid, TerminalProgramComponent comp, string? arg)
+    {
+        if (!_computerQuery.TryComp(compUid, out var oxydComp))
+            return;
+
+        if (string.IsNullOrWhiteSpace(arg) || arg.Equals("status", StringComparison.OrdinalIgnoreCase))
+        {
+            comp.History.Add($"discoverable: {(oxydComp.NetworkDiscoverable ? "ON (visible to netprobe)" : "OFF (hidden from netprobe)")}");
+            return;
+        }
+
+        if (arg.Equals("on", StringComparison.OrdinalIgnoreCase) || arg.Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            oxydComp.NetworkDiscoverable = true;
+            Dirty(compUid, oxydComp);
+            comp.History.Add("discoverable: ON — this device now advertises itself to network probes.");
+            return;
+        }
+
+        if (arg.Equals("off", StringComparison.OrdinalIgnoreCase) || arg.Equals("false", StringComparison.OrdinalIgnoreCase))
+        {
+            oxydComp.NetworkDiscoverable = false;
+            Dirty(compUid, oxydComp);
+            comp.History.Add("discoverable: OFF — this device is now hidden from network probes.");
+            return;
+        }
+
+        comp.History.Add("Usage: discoverable [on|off|status]");
     }
 
     private void AppendDirectoryListing(EntityUid compUid, string dir, TerminalProgramComponent comp)
@@ -1192,7 +1700,7 @@ public sealed partial class TerminalSystem : EntitySystem
         }
 
         comp.History.Add($"Hardware Telemetry [{guid}]:");
-        comp.History.Add($"  CPU: {(s.HasCpu ? $"{s.CpuFrequencyMhz} MHz (load {s.CurrentCpuLoadPercent:0.#}%, max {s.MaxConcurrentPrograms} procs)" : "NONE")}");
+        comp.History.Add($"  CPU: {(s.HasCpu ? $"{s.CpuFrequencyMhz} MHz (load {s.CurrentCpuLoadPercent:0.#}%, {s.UsedCpuUnits:0.#}/{s.CpuCapacity:0} units)" : "NONE")}");
         comp.History.Add($"  RAM: {s.UsedRamMb} / {s.RamMb} QB");
         comp.History.Add($"  HDD: {ComputerSizeFormat.FormatStorageQb(s.UsedStorageBytes)} / {ComputerSizeFormat.FormatStorageQb(s.StorageBytes)} ({(s.HasHardDrive ? "ONLINE" : "MISSING")})");
         comp.History.Add($"  NIC: {(s.HasNetworkCard ? $"DL={ComputerSizeFormat.FormatRateQb(s.NetworkBandwidthBps)} UL={ComputerSizeFormat.FormatRateQb(s.NetworkUploadBandwidthBps)}" : "NONE")}");
@@ -1233,9 +1741,13 @@ public sealed partial class TerminalSystem : EntitySystem
     private static string BuildPrompt(string localGuid, TerminalProgramComponent comp)
     {
         if (comp.ConnectedRemoteGuid != null)
-            return comp.SshLocalMode
-                ? $"[LOCAL {localGuid}]$ "
-                : $"{comp.ConnectedRemoteUser ?? "admin"}@{comp.ConnectedRemoteGuid}:{comp.RemoteDirectory}$ ";
+        {
+            if (comp.SshLocalMode)
+                return $"[LOCAL {localGuid}]$ ";
+            if (comp.IsPhysicalLink)
+                return $"[JTAG:{comp.ConnectedRemoteGuid}:{comp.RemoteDirectory}]$ ";
+            return $"{comp.ConnectedRemoteUser ?? "admin"}@{comp.ConnectedRemoteGuid}:{comp.RemoteDirectory}$ ";
+        }
         return $"[{localGuid}:{comp.CurrentDirectory}]$ ";
     }
 
@@ -1262,18 +1774,33 @@ public sealed partial class TerminalSystem : EntitySystem
             var viewer = comp.ActiveViewers.FirstOrDefault(v => Exists(v));
             if (comp.IsScreenAttached &&
                 comp.ConnectedRemoteGuid != null &&
-                viewer.IsValid() &&
-                _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out var targetUid))
+                viewer.IsValid())
             {
-                if (_remoteScreen.TryBuildRemoteScreenState(progUid, targetUid, viewer, out remoteScreen, out _))
-                    _bandwidth.RecordScreenSharingBandwidth(targetUid, compUid, 256);
+                EntityUid screenTargetUid = default;
+                var hasScreenTarget = comp.IsPhysicalLink &&
+                                      IsPhysicalLinkActive(compUid, comp, out screenTargetUid, out _);
+                if (!hasScreenTarget && !comp.IsPhysicalLink)
+                    hasScreenTarget = _router.TryFindDeviceByGuid(comp.ConnectedRemoteGuid, out screenTargetUid);
+
+                if (hasScreenTarget && _remoteScreen.TryBuildRemoteScreenState(progUid, screenTargetUid, viewer, out remoteScreen, out _))
+                {
+                    if (!comp.IsPhysicalLink)
+                        _bandwidth.RecordScreenSharingBandwidth(screenTargetUid, compUid, 256);
+                }
                 else
+                {
                     comp.IsScreenAttached = false;
+                    _computer.SetProgramDynamicCpuBonus(progUid, 0f);
+                }
             }
 
             var hasNic = _router.HasActiveNetworkCard(compUid);
             var routerOnline = hasNic && _router.IsNetworkConnected(compUid);
-            var networkLabel = routerOnline ? _router.GetConnectedNetworkLabel(compUid) : null;
+            var networkLabel = comp.IsPhysicalLink && comp.ConnectedRemoteGuid != null
+                ? $"JTAG CABLE -> {comp.ConnectedRemoteGuid}"
+                : routerOnline
+                    ? _router.GetConnectedNetworkLabel(compUid)
+                    : null;
 
             var state = new TerminalUiState(
                 new List<string>(comp.History),
@@ -1286,7 +1813,8 @@ public sealed partial class TerminalSystem : EntitySystem
                 hasNic,
                 routerOnline,
                 remoteScreen,
-                networkLabel);
+                networkLabel,
+                comp.IsPhysicalLink);
 
             if (_ui.HasUi(progUid, ProgramUiKey.Key))
                 _ui.SetUiState(progUid, ProgramUiKey.Key, state);

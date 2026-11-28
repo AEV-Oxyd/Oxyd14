@@ -44,6 +44,7 @@ public sealed class PdaOsUiState : BoundUserInterfaceState
     public List<OsProgramEntryDto> RunningPrograms { get; }
     public List<MirroredDevicePortInfo> DevicePorts { get; }
     public OsHardwareSummaryDto Hardware { get; }
+    public string? OsAuthLabel { get; }
 
     public PdaOsUiState(
         string hostTitle,
@@ -67,7 +68,8 @@ public sealed class PdaOsUiState : BoundUserInterfaceState
         List<OsProgramEntryDto> installedExecutables,
         List<OsProgramEntryDto> runningPrograms,
         List<MirroredDevicePortInfo> devicePorts,
-        OsHardwareSummaryDto hardware)
+        OsHardwareSummaryDto hardware,
+        string? osAuthLabel = null)
     {
         HostTitle = hostTitle;
         HostSubtitle = hostSubtitle;
@@ -91,6 +93,7 @@ public sealed class PdaOsUiState : BoundUserInterfaceState
         RunningPrograms = runningPrograms;
         DevicePorts = devicePorts;
         Hardware = hardware;
+        OsAuthLabel = osAuthLabel;
     }
 }
 
@@ -170,5 +173,10 @@ public sealed class PdaOsInvokeDevicePortMessage : BoundUserInterfaceMessage
 
 [Serializable, NetSerializable]
 public sealed class PdaOsShutDownMessage : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
+public sealed class PdaOsLogoutAuthMessage : BoundUserInterfaceMessage
 {
 }

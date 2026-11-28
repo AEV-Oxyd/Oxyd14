@@ -21,6 +21,12 @@ public sealed partial class ComputerPacket : ISignalNetworkPayload
     /// </summary>
     public Dictionary<string, EntityUid> ProtectedReferences = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Server-internal flag indicating a VFS packet write should mark the updated database as tampered
+    /// so auto-sync does not immediately overwrite it. Never exposed in <see cref="Data"/>, logs, or Packet Sniffer.
+    /// </summary>
+    public bool InternalMarkTampered;
+
     public ComputerPacket()
     {
     }

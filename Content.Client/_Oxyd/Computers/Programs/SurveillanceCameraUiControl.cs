@@ -120,7 +120,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         _authStatusLabel = new ContentLabel
         {
             Name = "CameraAuthStatusLabel",
-            Text = "AUTH: LOCKED (ID / .acc)",
+            Text = "AUTH: LOCKED",
             FontColorOverride = Color.FromHex("#FFD166"),
             HorizontalExpand = true,
             WordWrap = false,
@@ -544,7 +544,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         // Update Authorization Panel
         _authStatusLabel.Text = state.IsAuthorized
             ? $"AUTH: {(string.IsNullOrWhiteSpace(state.AuthorizedByLabel) ? "UNLOCKED" : state.AuthorizedByLabel)}"
-            : "AUTH: LOCKED (Swipe ID or .acc)";
+            : "AUTH: LOCKED";
         _authStatusLabel.ToolTip = _authStatusLabel.Text;
         _authStatusLabel.FontColorOverride = state.IsAuthorized
             ? Color.FromHex("#66EEAA")
@@ -567,19 +567,6 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
                 accBtn.OnPressed += _ => SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.AuthorizeWithAcc, zone: pathCopy));
                 _authButtonsWrap.AddChild(accBtn);
             }
-        }
-
-        if (state.IsAuthorized)
-        {
-            var lockBtn = new ContentButton
-            {
-                Name = "CameraRevokeAuthButton",
-                Text = "Deauth",
-                MinHeight = 24f
-            };
-            lockBtn.Label.Margin = new Thickness(5, 2);
-            lockBtn.OnPressed += _ => SendProgramMessage(new SurveillanceCameraActionMessage(SurveillanceCameraAction.RevokeAuth));
-            _authButtonsWrap.AddChild(lockBtn);
         }
 
         // Rebuild zone buttons
@@ -786,10 +773,13 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             var micSuffix = cam.HasMicrophone ? " [MIC]" : string.Empty;
             var stateTag = cam.Active ? string.Empty : " [OFF]";
             var display = $"{livePrefix}{cam.Name}{micSuffix}{stateTag}";
+            var tooltipName = string.Equals(cam.Name, cam.CameraGuid, StringComparison.OrdinalIgnoreCase)
+                ? $"Camera [{cam.CameraGuid}]"
+                : $"{cam.Name} [{cam.CameraGuid}]";
             var btn = new ContentButton
             {
                 Text = display,
-                ToolTip = $"{cam.Name} [{cam.CameraGuid}] ({cam.Zone}){(cam.HasMicrophone ? " • Mic" : string.Empty)}{(isLive ? " • STREAMING" : string.Empty)}",
+                ToolTip = $"{tooltipName} ({cam.Zone}){(cam.HasMicrophone ? " • Mic" : string.Empty)}{(isLive ? " • STREAMING" : string.Empty)}",
                 HorizontalExpand = true,
                 MinHeight = 28f,
                 Disabled = !cam.Active,
@@ -923,7 +913,9 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         var hasFocused = focusedNet != null && feeds.Count > 0;
         if (hasFocused)
         {
-            var title = $"{state.ActiveCameraName} [{state.ActiveCameraGuid}] ({state.ActiveCameraZone})";
+            var title = string.Equals(state.ActiveCameraName, state.ActiveCameraGuid, StringComparison.OrdinalIgnoreCase)
+                ? $"Camera [{state.ActiveCameraGuid}] ({state.ActiveCameraZone})"
+                : $"{state.ActiveCameraName} [{state.ActiveCameraGuid}] ({state.ActiveCameraZone})";
             _activeCamTitleLabel.Text = title;
             _activeCamTitleLabel.ToolTip = title;
         }
@@ -1182,7 +1174,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
             _emptyLabel = new ContentLabel
             {
                 Name = "CameraNoFeedLabel",
-                Text = "SELECT UP TO 6 WI-FI CAMERAS — Shift+Click or Right-Click inside any live feed to examine entities",
+                Text = "NO CAMERA FEED SELECTED",
                 FontColorOverride = Color.FromHex("#6B8FA3"),
                 HorizontalAlignment = HAlignment.Stretch,
                 TextAlignment = HAlignment.Center,
@@ -1491,7 +1483,7 @@ public sealed partial class SurveillanceCameraUiControl : ProgramUiControl
         public void UpdateFeed(ActiveCameraFeedDto feed, IEye? eye, bool focused, bool solo, bool multiActive)
         {
             _titleBtn.Text = feed.Name;
-            _titleBtn.ToolTip = $"{feed.Name} [{feed.CameraGuid}] ({feed.Zone}) — click to focus";
+            _titleBtn.ToolTip = $"{feed.Name} [{feed.CameraGuid}] ({feed.Zone})";
             _titleBtn.Pressed = focused;
 
             _micTag.Visible = feed.HasMicrophone;

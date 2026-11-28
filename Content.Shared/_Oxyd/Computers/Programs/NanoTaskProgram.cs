@@ -71,11 +71,19 @@ public sealed class NanoTaskUiState : BoundUserInterfaceState
 {
     public bool HasHardDrive { get; }
     public List<NanoTaskItemAndId> Tasks { get; }
+    public bool HasPrinterModule { get; }
+    public string StatusMessage { get; }
 
-    public NanoTaskUiState(bool hasHardDrive, List<NanoTaskItemAndId> tasks)
+    public NanoTaskUiState(
+        bool hasHardDrive,
+        List<NanoTaskItemAndId> tasks,
+        bool hasPrinterModule = false,
+        string statusMessage = "")
     {
         HasHardDrive = hasHardDrive;
         Tasks = tasks;
+        HasPrinterModule = hasPrinterModule;
+        StatusMessage = statusMessage;
     }
 }
 

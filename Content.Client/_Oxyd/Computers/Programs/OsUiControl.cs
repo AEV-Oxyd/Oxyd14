@@ -5,6 +5,7 @@ using Content.Client.GameTicking;
 using Content.Client.UserInterface.Controls;
 using Content.Shared._Oxyd.Computers;
 using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Clock;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -38,6 +39,8 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly List<Control> _runningAppTabs = new();
     private readonly ContentLabel _clockBadgeLabel;
     private readonly ContentButton _topEjectDiskBtn;
+    private readonly ContentButton _osAuthLogoutBtn;
+    private bool _hasOsAuth;
 
     private readonly ContentScrollContainer _desktopScroll;
     private readonly ContentLabel _desktopTitleLabel;
@@ -47,6 +50,8 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly ContentBoxContainer _systemView;
     private readonly ContentLabel _hwDetailsLabel;
     private readonly ContentWrapContainer _slotActionsWrap;
+    private readonly ContentLabel _componentsHeaderLabel;
+    private readonly ContentBoxContainer _componentsContainer;
     private readonly ContentBoxContainer _portsContainer;
 
     private readonly ContentBoxContainer _childViewport;
@@ -154,6 +159,23 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         };
         _topEjectDiskBtn.OnPressed += _ => SendProgramMessage(new OsHardwareActionMessage("eject_disk"));
         rightBar.AddChild(_topEjectDiskBtn);
+
+        _osAuthLogoutBtn = new ContentButton
+        {
+            Name = "OsAuthLogoutButton",
+            Text = "Swipe ID",
+            ToolTip = "Swipe ID card to authenticate OS session",
+            Visible = true,
+            VerticalAlignment = VAlignment.Center
+        };
+        _osAuthLogoutBtn.OnPressed += _ =>
+        {
+            if (_hasOsAuth)
+                SendProgramMessage(new OsLogoutAuthMessage());
+            else
+                SendProgramMessage(new OsSwipeAuthMessage());
+        };
+        rightBar.AddChild(_osAuthLogoutBtn);
 
         var clockBox = new ContentBoxContainer
         {
@@ -332,9 +354,49 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         hwCard.AddChild(hwCol);
         sysInner.AddChild(hwCard);
 
+        var compCard = new ContentPanelContainer
+        {
+            Name = "SystemComponentsCard",
+            HorizontalExpand = true,
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = Color.FromHex("#0D1824"),
+                BorderColor = Color.FromHex("#1F4B66"),
+                BorderThickness = new Thickness(1),
+                ContentMarginLeftOverride = 10,
+                ContentMarginRightOverride = 10,
+                ContentMarginTopOverride = 8,
+                ContentMarginBottomOverride = 8
+            }
+        };
+        var compCol = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 6
+        };
+        _componentsHeaderLabel = new ContentLabel
+        {
+            Name = "SystemInstalledComponentsHeader",
+            Text = "INSTALLED COMPONENTS (0)",
+            FontColorOverride = Color.FromHex("#00D4FF"),
+            HorizontalExpand = true
+        };
+        compCol.AddChild(_componentsHeaderLabel);
+        _componentsContainer = new ContentBoxContainer
+        {
+            Name = "SystemInstalledComponentsContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        compCol.AddChild(_componentsContainer);
+        compCard.AddChild(compCol);
+        sysInner.AddChild(compCard);
+
         sysInner.AddChild(new ContentLabel
         {
-            Text = "MIRRORED DEVICELINK PORTS",
+            Text = "DEVICE LINK PORTS",
             FontColorOverride = Color.FromHex("#00D4FF"),
             HorizontalExpand = true
         });
@@ -375,21 +437,25 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
 
     private void UpdateClock(bool force)
     {
-        var elapsed = TimeSpan.Zero;
-        if (_entMan.TrySystem<ClientGameTicker>(out var ticker))
+        var stationTime = TimeSpan.Zero;
+        if (_entMan.TrySystem<SharedClockSystem>(out var clock))
         {
-            elapsed = _timing.CurTime - ticker.RoundStartTimeSpan;
-            if (elapsed < TimeSpan.Zero)
-                elapsed = TimeSpan.Zero;
+            stationTime = clock.GetStationTime();
+        }
+        else if (_entMan.TrySystem<ClientGameTicker>(out var ticker))
+        {
+            stationTime = _timing.CurTime - ticker.RoundStartTimeSpan;
         }
 
-        var totalSeconds = (int) elapsed.TotalSeconds;
+        if (stationTime < TimeSpan.Zero)
+            stationTime = TimeSpan.Zero;
+
+        var totalSeconds = (int) stationTime.TotalSeconds;
         if (!force && totalSeconds == _lastRoundSeconds)
             return;
 
         _lastRoundSeconds = totalSeconds;
-        var hours = (int) elapsed.TotalHours;
-        _clockBadgeLabel.Text = $"{hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+        _clockBadgeLabel.Text = $"{stationTime.Hours:D2}:{stationTime.Minutes:D2}:{stationTime.Seconds:D2}";
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -410,6 +476,27 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
         _childViewport.Visible = activeView == 3;
 
         _topEjectDiskBtn.Visible = !string.IsNullOrWhiteSpace(state.InsertedDiskName);
+        _hasOsAuth = !string.IsNullOrWhiteSpace(state.OsAuthLabel);
+        if (_hasOsAuth)
+        {
+            _osAuthLogoutBtn.Visible = true;
+            _osAuthLogoutBtn.Text = $"Logout: {state.OsAuthLabel}";
+            _osAuthLogoutBtn.Disabled = false;
+            _osAuthLogoutBtn.ToolTip = "Clear active OS user authentication session";
+        }
+        else if (state.Hardware.HasInsertedIdCard)
+        {
+            _osAuthLogoutBtn.Visible = false;
+        }
+        else
+        {
+            _osAuthLogoutBtn.Visible = true;
+            _osAuthLogoutBtn.Text = "Swipe ID";
+            _osAuthLogoutBtn.Disabled = !state.Hardware.HasIdSlot;
+            _osAuthLogoutBtn.ToolTip = state.Hardware.HasIdSlot
+                ? "Swipe ID card to authenticate OS session"
+                : "No ID card reader installed";
+        }
 
         var hw = state.Hardware;
         var ownerPart = !string.IsNullOrWhiteSpace(state.OwnerName)
@@ -449,34 +536,85 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
                 continue;
 
             var isFocused = activeView == 3 && prog.RunningEntity == state.ActiveChildProgram;
-            var tabPair = new ContentBoxContainer
-            {
-                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-                SeparationOverride = 1
-            };
+            var tabPill = CreateRunningAppTabPill(
+                prog.Name,
+                _icons.ResolveProgramIcon(prog),
+                new Vector2(15, 15),
+                isFocused,
+                disabled: false,
+                onSelect: () => SendProgramMessage(new OsSwitchProgramMessage(rEnt)),
+                onClose: () => SendProgramMessage(new OsCloseProgramMessage(rEnt)));
 
-            var tabBtn = new ContentButton
-            {
-                Text = prog.Name,
-                Icon = _icons.ResolveProgramIcon(prog),
-                IconSize = new Vector2(15, 15),
-                IconModulate = Color.White,
-                Pressed = isFocused
-            };
-            tabBtn.OnPressed += _ => SendProgramMessage(new OsSwitchProgramMessage(rEnt));
-            tabPair.AddChild(tabBtn);
+            _runningAppTabs.Add(tabPill);
+            _unifiedTabBar.AddChild(tabPill);
+        }
+    }
 
+    internal static ContentPanelContainer CreateRunningAppTabPill(
+        string name,
+        Texture? icon,
+        Vector2 iconSize,
+        bool isFocused,
+        bool disabled,
+        Action onSelect,
+        Action? onClose = null)
+    {
+        var pill = new ContentPanelContainer
+        {
+            Name = "OsRunningAppTabPill",
+            PanelOverride = new StyleBoxFlat
+            {
+                BackgroundColor = disabled
+                    ? Color.FromHex("#1A1D24")
+                    : isFocused
+                        ? Color.FromHex("#00D4FF44")
+                        : Color.FromHex("#151D28"),
+                BorderColor = disabled
+                    ? Color.FromHex("#2C3240")
+                    : isFocused
+                        ? Color.FromHex("#00D4FF")
+                        : Color.FromHex("#2C3A4D"),
+                BorderThickness = new Thickness(1)
+            }
+        };
+
+        var row = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            SeparationOverride = 0
+        };
+
+        var tabBtn = new ContentButton
+        {
+            Text = name,
+            Icon = icon,
+            IconSize = iconSize,
+            IconModulate = Color.White,
+            Pressed = isFocused,
+            Disabled = disabled,
+            Borderless = true
+        };
+        tabBtn.Label.Margin = new Thickness(onClose != null ? 6 : 8, 4, onClose != null ? 4 : 8, 4);
+        tabBtn.OnPressed += _ => onSelect();
+        row.AddChild(tabBtn);
+
+        if (onClose != null)
+        {
             var closeBtn = new ContentButton
             {
                 Text = "x",
-                MinWidth = 22
+                MinWidth = 20,
+                Disabled = disabled,
+                Borderless = true,
+                HoverColorOverride = Color.FromHex("#FF555538")
             };
-            closeBtn.OnPressed += _ => SendProgramMessage(new OsCloseProgramMessage(rEnt));
-            tabPair.AddChild(closeBtn);
-
-            _runningAppTabs.Add(tabPair);
-            _unifiedTabBar.AddChild(tabPair);
+            closeBtn.Label.Margin = new Thickness(4, 4, 6, 4);
+            closeBtn.OnPressed += _ => onClose();
+            row.AddChild(closeBtn);
         }
+
+        pill.AddChild(row);
+        return pill;
     }
 
     private void RebuildDesktopAppGrid(OsUiState state)
@@ -671,12 +809,14 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             _slotActionsWrap.AddChild(ejId);
         }
 
+        PopulateInstalledComponents(_componentsContainer, _componentsHeaderLabel, hw.InstalledComponents);
+
         _portsContainer.RemoveAllChildren();
         if (state.DevicePorts.Count == 0)
         {
             _portsContainer.AddChild(new ContentLabel
             {
-                Text = "No mirrored DeviceLink ports exposed.",
+                Text = "No device link ports available.",
                 FontColorOverride = Color.FromHex("#8899AA")
             });
             return;
@@ -708,6 +848,143 @@ public sealed class OsUiControl : ProgramUiControl, IOsProgramUiHost
             row.AddChild(trigBtn);
 
             _portsContainer.AddChild(row);
+        }
+    }
+
+    internal static void PopulateInstalledComponents(
+        ContentBoxContainer container,
+        ContentLabel headerLabel,
+        List<OsHardwareComponentDto> components)
+    {
+        headerLabel.Text = $"INSTALLED COMPONENTS ({components.Count})";
+        container.RemoveAllChildren();
+
+        if (components.Count == 0)
+        {
+            container.AddChild(new ContentLabel
+            {
+                Text = "No hardware components detected.",
+                FontColorOverride = Color.FromHex("#8899AA")
+            });
+            return;
+        }
+
+        foreach (var comp in components)
+        {
+            var badgeHex = comp.Category switch
+            {
+                "CPU" => "#00D4FF",
+                "RAM" => "#66EEAA",
+                "HDD" => "#FFB74D",
+                "NIC" => "#7C9EFF",
+                "ID" => "#E080FF",
+                "DISK" => "#FFD54F",
+                "BAT" => "#AED581",
+                "PORT" => "#80CBC4",
+                _ => "#90A4AE"
+            };
+            var badgeColor = Color.FromHex(badgeHex);
+            var statusColor = comp.IsHealthy ? Color.FromHex("#66EEAA") : Color.FromHex("#FF6666");
+
+            var rowPanel = new ContentPanelContainer
+            {
+                Name = $"InstalledComponentRow_{comp.Category}",
+                HorizontalExpand = true,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = Color.FromHex("#0A131E"),
+                    BorderColor = Color.FromHex("#1A354B"),
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 8,
+                    ContentMarginRightOverride = 8,
+                    ContentMarginTopOverride = 5,
+                    ContentMarginBottomOverride = 5
+                }
+            };
+
+            var row = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+                HorizontalExpand = true,
+                SeparationOverride = 8
+            };
+
+            var catPill = new ContentPanelContainer
+            {
+                MinWidth = 48,
+                VerticalAlignment = VAlignment.Center,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = new Color(badgeColor.R, badgeColor.G, badgeColor.B, 0.16f),
+                    BorderColor = badgeColor,
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 5,
+                    ContentMarginRightOverride = 5,
+                    ContentMarginTopOverride = 2,
+                    ContentMarginBottomOverride = 2
+                }
+            };
+            catPill.AddChild(new ContentLabel
+            {
+                Name = "InstalledComponentCategoryLabel",
+                Text = comp.Category,
+                WordWrap = false,
+                HorizontalAlignment = HAlignment.Center,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = badgeColor
+            });
+            row.AddChild(catPill);
+
+            var infoCol = new ContentBoxContainer
+            {
+                Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+                HorizontalExpand = true,
+                SeparationOverride = 1
+            };
+            infoCol.AddChild(new ContentLabel
+            {
+                Name = "InstalledComponentNameLabel",
+                Text = $"{comp.Name}  [{comp.SlotName}]",
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#E6F7FF")
+            });
+            infoCol.AddChild(new ContentLabel
+            {
+                Name = "InstalledComponentDetailsLabel",
+                Text = comp.Details,
+                HorizontalExpand = true,
+                FontColorOverride = Color.FromHex("#8EB4C8")
+            });
+            row.AddChild(infoCol);
+
+            var statusPill = new ContentPanelContainer
+            {
+                MinWidth = 68,
+                VerticalAlignment = VAlignment.Center,
+                PanelOverride = new StyleBoxFlat
+                {
+                    BackgroundColor = new Color(statusColor.R, statusColor.G, statusColor.B, 0.14f),
+                    BorderColor = statusColor,
+                    BorderThickness = new Thickness(1),
+                    ContentMarginLeftOverride = 6,
+                    ContentMarginRightOverride = 6,
+                    ContentMarginTopOverride = 2,
+                    ContentMarginBottomOverride = 2
+                }
+            };
+            statusPill.AddChild(new ContentLabel
+            {
+                Name = "InstalledComponentStatusLabel",
+                Text = comp.Status,
+                WordWrap = false,
+                HorizontalAlignment = HAlignment.Center,
+                VerticalAlignment = VAlignment.Center,
+                FontColorOverride = statusColor
+            });
+            row.AddChild(statusPill);
+
+            rowPanel.AddChild(row);
+            container.AddChild(rowPanel);
         }
     }
 
@@ -785,10 +1062,15 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
     private const string LatheAppPath = "/bin/lathe_control.nte";
     private const string TerminalAppPath = "/bin/terminal.nte";
     private const string IconSystem = "/Textures/Interface/VerbIcons/settings.svg.192dpi.png";
+    private const string IconClock = "/Textures/Interface/VerbIcons/clock.svg.192dpi.png";
 
     private readonly IEntityManager _entMan;
     private readonly ProgramIconResolver _icons;
     private readonly ContentWrapContainer _topTabBar;
+    private readonly ContentLabel _clockBadgeLabel;
+    private readonly ContentButton _osAuthBtn;
+    private bool _hasOsAuth;
+    private int _lastStationSeconds = -1;
     private readonly ContentButton _simpleControllerTabBtn;
     private readonly ContentButton _simpleTerminalTabBtn;
     private readonly ContentButton _appViewBtn;
@@ -800,6 +1082,8 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
     private readonly ContentBoxContainer _portsView;
     private readonly ContentWrapContainer _appsGrid;
     private readonly ContentLabel _sysDetailsLabel;
+    private readonly ContentLabel _embeddedComponentsHeaderLabel;
+    private readonly ContentBoxContainer _embeddedComponentsContainer;
     private readonly ContentBoxContainer _portsContainer;
     private readonly HardwareLockOverlayControl _lockOverlay;
     private readonly Dictionary<EntityUid, ProgramUiControl> _mountedChildren = new();
@@ -901,6 +1185,48 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             HorizontalExpand = true,
             SeparationOverride = 6
         };
+        var embClockBox = new ContentBoxContainer
+        {
+            Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
+            VerticalAlignment = VAlignment.Center,
+            SeparationOverride = 4
+        };
+        var embClockTex = _icons.TryLoadTexture(IconClock);
+        if (embClockTex != null)
+        {
+            embClockBox.AddChild(new ContentTextureRect
+            {
+                Texture = embClockTex,
+                DisplaySize = new Vector2(13, 13),
+                Modulate = Color.FromHex("#00D4FF"),
+                VerticalAlignment = VAlignment.Center
+            });
+        }
+        _clockBadgeLabel = new ContentLabel
+        {
+            Name = "EmbeddedClockLabel",
+            Text = "00:00:00",
+            WordWrap = false,
+            FontColorOverride = Color.FromHex("#88DCE8"),
+            VerticalAlignment = VAlignment.Center
+        };
+        embClockBox.AddChild(_clockBadgeLabel);
+
+        _osAuthBtn = new ContentButton
+        {
+            Name = "EmbeddedOsAuthButton",
+            Text = "Swipe ID",
+            ToolTip = "Swipe ID card to authenticate OS session",
+            VerticalAlignment = VAlignment.Center
+        };
+        _osAuthBtn.OnPressed += _ =>
+        {
+            if (_hasOsAuth)
+                SendProgramMessage(new EmbeddedOsLogoutAuthMessage());
+            else
+                SendProgramMessage(new EmbeddedOsSwipeAuthMessage());
+        };
+
         var shutDownBtn = new ContentButton
         {
             Name = "EmbeddedOsShutDownButton",
@@ -911,6 +1237,8 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         shutDownBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsShutDownMessage());
 
         barRow.AddChild(_topTabBar);
+        barRow.AddChild(_osAuthBtn);
+        barRow.AddChild(embClockBox);
         barRow.AddChild(shutDownBtn);
         barPanel.AddChild(barRow);
         root.AddChild(barPanel);
@@ -962,6 +1290,22 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
             FontColorOverride = Color.FromHex("#B8E0EE")
         };
         pInner.AddChild(_sysDetailsLabel);
+        _embeddedComponentsHeaderLabel = new ContentLabel
+        {
+            Name = "EmbeddedInstalledComponentsHeader",
+            Text = "INSTALLED COMPONENTS (0)",
+            HorizontalExpand = true,
+            FontColorOverride = Color.FromHex("#00D4FF")
+        };
+        pInner.AddChild(_embeddedComponentsHeaderLabel);
+        _embeddedComponentsContainer = new ContentBoxContainer
+        {
+            Name = "SystemInstalledComponentsContainer",
+            Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
+            HorizontalExpand = true,
+            SeparationOverride = 4
+        };
+        pInner.AddChild(_embeddedComponentsContainer);
         _portsContainer = new ContentBoxContainer
         {
             Orientation = ContentBoxContainer.LayoutOrientation.Vertical,
@@ -980,6 +1324,29 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
 
         AddChild(root);
         AddChild(_lockOverlay);
+        UpdateEmbeddedClock(force: true);
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+        UpdateEmbeddedClock(force: false);
+    }
+
+    private void UpdateEmbeddedClock(bool force)
+    {
+        var stationTime = _entMan.TrySystem<SharedClockSystem>(out var clock)
+            ? clock.GetStationTime()
+            : TimeSpan.Zero;
+        if (stationTime < TimeSpan.Zero)
+            stationTime = TimeSpan.Zero;
+
+        var totalSeconds = (int) stationTime.TotalSeconds;
+        if (!force && totalSeconds == _lastStationSeconds)
+            return;
+
+        _lastStationSeconds = totalSeconds;
+        _clockBadgeLabel.Text = $"{stationTime.Hours:D2}:{stationTime.Minutes:D2}:{stationTime.Seconds:D2}";
     }
 
     public override void UpdateProgramState(BoundUserInterfaceState raw)
@@ -1007,11 +1374,33 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
                 _terminalRunningEnt = rEnt;
         }
 
-        _lockOverlay.Visible = state.IsHostLocked;
-        if (state.IsHostLocked)
+        // Hardware lock overlay is rendered at the ComputerDisplayWindow level for all hosts.
+        _lockOverlay.Visible = false;
+
+        _hasOsAuth = !string.IsNullOrWhiteSpace(state.OsAuthLabel);
+        if (isSimpleTwoTabMode)
         {
-            var deviceName = string.IsNullOrWhiteSpace(state.HostName) ? "device" : state.HostName;
-            _lockOverlay.SetSubtitle($"Swipe authorized ID card on {deviceName} to unlock");
+            _osAuthBtn.Visible = false;
+        }
+        else if (_hasOsAuth)
+        {
+            _osAuthBtn.Visible = true;
+            _osAuthBtn.Text = $"Logout: {state.OsAuthLabel}";
+            _osAuthBtn.Disabled = false;
+            _osAuthBtn.ToolTip = "Clear active OS user authentication session";
+        }
+        else if (hw.HasInsertedIdCard)
+        {
+            _osAuthBtn.Visible = false;
+        }
+        else
+        {
+            _osAuthBtn.Visible = true;
+            _osAuthBtn.Text = "Swipe ID";
+            _osAuthBtn.Disabled = !hw.HasIdSlot;
+            _osAuthBtn.ToolTip = hw.HasIdSlot
+                ? "Swipe ID card to authenticate OS session"
+                : "No ID card reader installed";
         }
 
         ClearInlineRunningTabs();
@@ -1062,32 +1451,18 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
                 continue;
 
             var isFocused = state.CurrentView == 0 && state.ActiveChildProgram == ent;
-            var tabPair = new ContentBoxContainer
-            {
-                Orientation = ContentBoxContainer.LayoutOrientation.Horizontal,
-                SeparationOverride = 1
-            };
-            var btn = new ContentButton
-            {
-                Text = rp.Name,
-                Icon = _icons.ResolveProgramIcon(rp),
-                IconSize = new Vector2(14, 14),
-                IconModulate = Color.White,
-                Pressed = isFocused,
-                Disabled = state.IsHostLocked
-            };
-            btn.OnPressed += _ => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent));
-            tabPair.AddChild(btn);
+            var canClose = !string.Equals(rp.FilePath, _defaultAppPath, StringComparison.OrdinalIgnoreCase);
+            var tabPill = OsUiControl.CreateRunningAppTabPill(
+                rp.Name,
+                _icons.ResolveProgramIcon(rp),
+                new Vector2(14, 14),
+                isFocused,
+                disabled: state.IsHostLocked,
+                onSelect: () => SendProgramMessage(new EmbeddedOsSwitchProgramMessage(ent)),
+                onClose: canClose ? () => SendProgramMessage(new EmbeddedOsCloseProgramMessage(ent)) : null);
 
-            if (!string.Equals(rp.FilePath, _defaultAppPath, StringComparison.OrdinalIgnoreCase))
-            {
-                var closeBtn = new ContentButton { Text = "x", MinWidth = 22, Disabled = state.IsHostLocked };
-                closeBtn.OnPressed += _ => SendProgramMessage(new EmbeddedOsCloseProgramMessage(ent));
-                tabPair.AddChild(closeBtn);
-            }
-
-            _inlineRunningTabs.Add(tabPair);
-            _topTabBar.AddChild(tabPair);
+            _inlineRunningTabs.Add(tabPill);
+            _topTabBar.AddChild(tabPill);
         }
 
         var nicText = hw.HasNetworkCard
@@ -1096,6 +1471,8 @@ public sealed class EmbeddedOsUiControl : ProgramUiControl, IOsProgramUiHost
         _sysDetailsLabel.Text =
             $"Host: {state.HostName}   |   GUID: {state.DeviceGuid}\n" +
             $"CPU: {hw.CpuMhz} MHz   |   RAM: {hw.RamUsedMb}/{hw.RamTotalMb} QB   |   HDD: {Content.Shared._Oxyd.Computers.FileSystem.ComputerSizeFormat.FormatStorageQb(hw.StorageUsedBytes)}   |   NIC: {nicText}   |   DataPort: {(hw.HasDataPort ? "OK" : "NO")}";
+
+        OsUiControl.PopulateInstalledComponents(_embeddedComponentsContainer, _embeddedComponentsHeaderLabel, hw.InstalledComponents);
 
         _appsGrid.RemoveAllChildren();
         foreach (var exec in state.InstalledExecutables)
