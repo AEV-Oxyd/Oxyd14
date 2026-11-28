@@ -1,18 +1,21 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Content.Server.Access.Systems;
-using Content.Server.Chat.Managers;
+using Content.Server.AlertLevel;
 using Content.Server.Instruments;
+using Content.Server.Light.EntitySystems;
 using Content.Server.PDA.Ringer;
 using Content.Server.Station.Systems;
 using Content.Server.Store.Systems;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Packets;
 using Content.Shared.Access.Components;
 using Content.Shared.AlertLevel;
-using Content.Shared.CartridgeLoader;
-using Content.Shared.Chat;
-using Content.Shared.DeviceNetwork;
-using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.Implants;
+using Content.Shared.DeviceLinking;
+using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Events;
+using Content.Shared.DeviceLinking.Systems;
+using Content.Shared.Interaction;
 using Content.Shared.Inventory;
 using Content.Shared.Light;
 using Content.Shared.Light.EntitySystems;
@@ -20,58 +23,214 @@ using Content.Shared.PDA;
 using Content.Shared.PDA.Ringer;
 using Content.Shared.Store.Components;
 using Content.Shared.VoiceMask;
-using Robust.Server.Containers;
-using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
-using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
-using Robust.Shared.Utility;
 
 namespace Content.Server.PDA
 {
+    /// <summary>
+    /// Physical PDA hardware shell host (slots for ID, Pen, pAI, Data Disk, Flashlight, Ringer/Uplink, Instrument).
+    /// All software, filesystems, and UI programs run inside its separate encapsulated computer entity
+    /// and interface strictly through DeviceLink.
+    /// </summary>
     public sealed partial class PdaSystem : SharedPdaSystem
     {
-        [Dependency] private CartridgeLoaderSystem _cartridgeLoader = default!;
         [Dependency] private InstrumentSystem _instrument = default!;
         [Dependency] private RingerSystem _ringer = default!;
         [Dependency] private ServerStationSystem _station = default!;
         [Dependency] private StoreSystem _store = default!;
-        [Dependency] private IChatManager _chatManager = default!;
-        [Dependency] private UserInterfaceSystem _ui = default!;
         [Dependency] private UnpoweredFlashlightSystem _unpoweredFlashlight = default!;
-        [Dependency] private ContainerSystem _containerSystem = default!;
         [Dependency] private IdCardSystem _idCard = default!;
-        [Dependency] private IPrototypeManager _prototype = default!;
+        [Dependency] private DeviceLinkSystem _deviceLink = default!;
+        [Dependency] private SharedContainerSystem _container = default!;
+        [Dependency] private SharedInteractionSystem _interaction = default!;
+
+        private static readonly ProtoId<SourcePortPrototype> PortMachineStatusSender = "MachineStatusSender";
+        private static readonly ProtoId<SourcePortPrototype> PortFlashlightStatusSource = "PdaFlashlightStatusSource";
 
         public override void Initialize()
         {
             base.Initialize();
 
             SubscribeLocalEvent<PdaComponent, LightToggleEvent>(OnLightToggle);
-
-            // UI Events:
-            SubscribeLocalEvent<PdaComponent, BoundUIOpenedEvent>(OnPdaOpen);
-            SubscribeLocalEvent<PdaComponent, PdaRequestUpdateInterfaceMessage>(OnUiMessage);
-            SubscribeLocalEvent<PdaComponent, PdaToggleFlashlightMessage>(OnUiMessage);
-            SubscribeLocalEvent<PdaComponent, PdaShowRingtoneMessage>(OnUiMessage);
-            SubscribeLocalEvent<PdaComponent, PdaShowMusicMessage>(OnUiMessage);
-            SubscribeLocalEvent<PdaComponent, PdaShowUplinkMessage>(OnUiMessage);
-            SubscribeLocalEvent<PdaComponent, PdaLockUplinkMessage>(OnUiMessage);
-
-            SubscribeLocalEvent<PdaComponent, CartridgeLoaderNotificationSentEvent>(OnNotification);
-
             SubscribeLocalEvent<StationRenamedEvent>(OnStationRenamed);
-            SubscribeLocalEvent<EntityRenamedEvent>(OnEntityRenamed, after: new[] { typeof(IdCardSystem) });
             SubscribeLocalEvent<AlertLevelChangedEvent>(OnAlertLevelChanged);
+            SubscribeLocalEvent<EntityRenamedEvent>(OnEntityRenamed, after: new[] { typeof(IdCardSystem) });
             SubscribeLocalEvent<PdaComponent, InventoryRelayedEvent<ChameleonControllerOutfitSelectedEvent>>(OnRelayedEventToIdCard);
             SubscribeLocalEvent<PdaComponent, InventoryRelayedEvent<VoiceMaskNameUpdatedEvent>>(OnRelayedEventToIdCard);
+
+            SubscribeLocalEvent<PdaComponent, SignalReceivedEvent>(OnPdaSignalReceived);
+            SubscribeLocalEvent<PdaComponent, SignalReceivedEvent<ComputerDeviceLinkPayload>>(OnPdaDeviceLinkPayload);
+            SubscribeLocalEvent<PdaComponent, SignalReceivedEvent<ComputerPacket>>(OnPdaPacketSignalReceived);
         }
 
-        private void OnRelayedEventToIdCard<T>(Entity<PdaComponent> ent, ref InventoryRelayedEvent<T> args)
+        private void OnPdaSignalReceived(Entity<PdaComponent> ent, ref SignalReceivedEvent args)
         {
-            // Relay it to your ID so it can update as well.
-            if (ent.Comp.ContainedId != null)
-                RaiseLocalEvent(ent.Comp.ContainedId.Value, args);
+            HandlePdaPortCommand(ent, args.Port, string.Empty, args.Trigger);
+        }
+
+        private void OnPdaDeviceLinkPayload(Entity<PdaComponent> ent, ref SignalReceivedEvent<ComputerDeviceLinkPayload> args)
+        {
+            var cmd = string.IsNullOrWhiteSpace(args.Data.Command) ? args.Port.Id : args.Data.Command;
+            HandlePdaPortCommand(ent, args.Port, cmd, args.Trigger);
+        }
+
+        private void OnPdaPacketSignalReceived(Entity<PdaComponent> ent, ref SignalReceivedEvent<ComputerPacket> args)
+        {
+            EntityUid? actor = args.Data.ProtectedReferences.TryGetValue("Actor", out var actUid) ? actUid : args.Trigger;
+            HandlePdaPortCommand(ent, args.Port, args.Data.PacketType, actor);
+        }
+
+        private void HandlePdaPortCommand(Entity<PdaComponent> ent, string port, string cmd, EntityUid? actor)
+        {
+            var c = cmd.Trim().ToLowerInvariant();
+            if (port == "PdaFlashlightToggleSink" || c == "toggle_flashlight")
+            {
+                _unpoweredFlashlight.TryToggleLight(ent.Owner);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (port == "PdaIdSlotEjectSink" || c == "eject_id")
+            {
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaIdSlotId, actor);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (port == "PdaPenSlotEjectSink" || c == "eject_pen")
+            {
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaPenSlotId, actor);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (c == "eject_disk")
+            {
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaDiskSlotId, actor);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (c == "eject_pai")
+            {
+                TryEjectPdaSlot(ent.Owner, PdaComponent.PdaPaiSlotId, actor);
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                return;
+            }
+
+            if (actor is { } user)
+            {
+                if (c == "show_ringtone")
+                    _ringer.TryToggleRingerUi(ent.Owner, user);
+                else if (c == "show_music")
+                    _instrument.ToggleInstrumentUi(ent.Owner, user);
+                else if (c == "show_uplink" &&
+                         (IsHeldOrWornByUser(ent.Owner, user) || _interaction.InRangeUnobstructed(user, ent.Owner)) &&
+                         TryGetUnlockedStore(ent.Owner, out var store))
+                {
+                    if (store != ent.Owner)
+                    {
+                        if (TryComp<RemoteStoreComponent>(ent.Owner, out var remoteStore))
+                            remoteStore.Store = store;
+                        _store.ToggleUi(user, store.Value, remoteAccess: ent.Owner);
+                    }
+                    else
+                    {
+                        _store.ToggleUi(user, store.Value);
+                    }
+                }
+                else if (c == "lock_uplink" && TryComp<RingerUplinkComponent>(ent.Owner, out var uplink))
+                {
+                    if (TryComp<RemoteStoreComponent>(ent.Owner, out var remoteStore))
+                        remoteStore.Store = null;
+                    _ringer.LockUplink((ent.Owner, uplink));
+                    NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+                }
+            }
+
+            if (c is "status" or "status_request")
+                NotifyHardwareStateChanged(ent.Owner, ent.Comp);
+        }
+
+        private void TryEjectPdaSlot(EntityUid pdaUid, string slotId, EntityUid? actor)
+        {
+            if (!ItemSlotsSystem.TryGetSlot(pdaUid, slotId, out var slot))
+                return;
+
+            if (actor is { } user &&
+                (IsHeldOrWornByUser(pdaUid, user) || _interaction.InRangeUnobstructed(user, pdaUid)))
+            {
+                ItemSlotsSystem.TryEjectToHands(pdaUid, slot, user);
+            }
+            else
+            {
+                ItemSlotsSystem.TryEject(pdaUid, slot, null, out _);
+            }
+        }
+
+        private bool IsHeldOrWornByUser(EntityUid entity, EntityUid user)
+        {
+            var current = entity;
+            while (_container.TryGetContainingContainer((current, null), out var container))
+            {
+                if (container.Owner == user)
+                    return true;
+                current = container.Owner;
+            }
+
+            return false;
+        }
+
+        protected override void OnItemInserted(EntityUid uid, PdaComponent pda, EntInsertedIntoContainerMessage args)
+        {
+            base.OnItemInserted(uid, pda, args);
+
+            if (args.Container.ID == PdaComponent.PdaIdSlotId && TryComp<IdCardComponent>(args.Entity, out var idCard))
+            {
+                pda.OwnerName = idCard.FullName;
+                Dirty(uid, pda);
+            }
+            else if (args.Container.ID == PdaComponent.PdaDiskSlotId)
+            {
+                Dirty(uid, pda);
+            }
+
+            NotifyHardwareStateChanged(uid, pda);
+        }
+
+        protected override void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
+        {
+            base.OnItemRemoved(uid, pda, args);
+
+            if (args.Container.ID == PdaComponent.PdaIdSlotId)
+            {
+                pda.OwnerName = null;
+                Dirty(uid, pda);
+            }
+            else if (args.Container.ID == PdaComponent.PdaDiskSlotId)
+            {
+                Dirty(uid, pda);
+            }
+
+            NotifyHardwareStateChanged(uid, pda);
+        }
+
+        private void OnLightToggle(EntityUid uid, PdaComponent pda, LightToggleEvent args)
+        {
+            pda.FlashlightOn = args.IsOn;
+            Dirty(uid, pda);
+            NotifyHardwareStateChanged(uid, pda);
+        }
+
+        private void OnStationRenamed(StationRenamedEvent ev)
+        {
+            UpdateStationDataOnAllPdas();
+        }
+
+        private void OnAlertLevelChanged(ref AlertLevelChangedEvent args)
+        {
+            UpdateStationDataOnAllPdas();
         }
 
         private void OnEntityRenamed(ref EntityRenamedEvent ev)
@@ -82,228 +241,25 @@ namespace Content.Server.PDA
             if (_idCard.TryFindIdCard(ev.Uid, out var idCard))
             {
                 var query = EntityQueryEnumerator<PdaComponent>();
-
                 while (query.MoveNext(out var uid, out var comp))
                 {
-                    if (comp.ContainedId == idCard)
+                    if (comp.ContainedId == idCard.Owner)
                     {
-                        SetOwner(uid, comp, ev.Uid, ev.NewName);
+                        comp.OwnerName = idCard.Comp.FullName;
+                        Dirty(uid, comp);
+                        NotifyHardwareStateChanged(uid, comp);
                     }
                 }
             }
         }
 
-        protected override void OnComponentInit(EntityUid uid, PdaComponent pda, ComponentInit args)
+        private void OnRelayedEventToIdCard<T>(Entity<PdaComponent> ent, ref InventoryRelayedEvent<T> args)
         {
-            base.OnComponentInit(uid, pda, args);
-
-            if (!HasComp<UserInterfaceComponent>(uid))
-                return;
-
-            UpdateAlertLevel(uid, pda);
-            UpdateStationName(uid, pda);
+            if (ent.Comp.ContainedId != null)
+                RaiseLocalEvent(ent.Comp.ContainedId.Value, args);
         }
 
-        protected override void OnItemInserted(EntityUid uid, PdaComponent pda, EntInsertedIntoContainerMessage args)
-        {
-            base.OnItemInserted(uid, pda, args);
-            var id = CompOrNull<IdCardComponent>(pda.ContainedId);
-            if (id != null)
-                pda.OwnerName = id.FullName;
-            UpdatePdaUi(uid, pda);
-        }
-
-        protected override void OnItemRemoved(EntityUid uid, PdaComponent pda, EntRemovedFromContainerMessage args)
-        {
-            if (args.Container.ID != pda.IdSlot.ID && args.Container.ID != pda.PenSlot.ID && args.Container.ID != pda.PaiSlot.ID)
-                return;
-
-            // TODO: This is super cursed just use compstates please.
-            if (MetaData(uid).EntityLifeStage >= EntityLifeStage.Terminating)
-                return;
-
-            base.OnItemRemoved(uid, pda, args);
-            UpdatePdaUi(uid, pda);
-        }
-
-        private void OnLightToggle(EntityUid uid, PdaComponent pda, LightToggleEvent args)
-        {
-            pda.FlashlightOn = args.IsOn;
-            UpdatePdaUi(uid, pda);
-        }
-
-        private void OnStationRenamed(StationRenamedEvent ev)
-        {
-            UpdateAllPdaUisOnStation();
-        }
-
-        private void OnAlertLevelChanged(ref AlertLevelChangedEvent args)
-        {
-            UpdateAllPdaUisOnStation();
-        }
-
-        private void UpdateAllPdaUisOnStation()
-        {
-            var query = AllEntityQuery<PdaComponent>();
-            while (query.MoveNext(out var ent, out var comp))
-            {
-                UpdatePdaUi(ent, comp);
-            }
-        }
-
-        private void OnNotification(Entity<PdaComponent> ent, ref CartridgeLoaderNotificationSentEvent args)
-        {
-            _ringer.RingerPlayRingtone(ent.Owner);
-
-            if (!_containerSystem.TryGetContainingContainer((ent, null, null), out var container)
-                || !TryComp<ActorComponent>(container.Owner, out var actor))
-                return;
-
-            var message = FormattedMessage.EscapeText(args.Message);
-            var wrappedMessage = Loc.GetString("pda-notification-message",
-                ("header", args.Header),
-                ("message", message));
-
-            _chatManager.ChatMessageToOne(
-                ChatChannel.Notifications,
-                message,
-                wrappedMessage,
-                EntityUid.Invalid,
-                false,
-                actor.PlayerSession.Channel);
-        }
-
-        /// <summary>
-        /// Send new UI state to clients, call if you modify something like uplink.
-        /// </summary>
-        public override void UpdatePdaUi(EntityUid uid, PdaComponent? pda = null)
-        {
-            if (!Resolve(uid, ref pda, false))
-                return;
-
-            if (!_ui.HasUi(uid, PdaUiKey.Key))
-                return;
-
-            var address = GetDeviceNetAddress(uid);
-            var hasInstrument = HasComp<InstrumentComponent>(uid);
-            var showUplink = TryGetUnlockedStore(uid, out _);
-
-            UpdateStationName(uid, pda);
-            UpdateAlertLevel(uid, pda);
-            // TODO: Update the level and name of the station with each call to UpdatePdaUi is only needed for latejoin players.
-            // TODO: If someone can implement changing the level and name of the station when changing the PDA grid, this can be removed.
-
-            // TODO don't make this depend on cartridge loader!?!?
-            if (!TryComp(uid, out CartridgeLoaderComponent? loader))
-                return;
-
-            var programs = GetNetEntityList(_cartridgeLoader.GetAllPrograms(uid).ToList());
-            var id = CompOrNull<IdCardComponent>(pda.ContainedId);
-            var state = new PdaUpdateState(
-                programs,
-                GetNetEntity(loader.ActiveProgram),
-                pda.FlashlightOn,
-                pda.PenSlot.HasItem,
-                pda.PaiSlot.HasItem,
-                new PdaIdInfoText
-                {
-                    ActualOwnerName = pda.OwnerName,
-                    IdOwner = id?.FullName,
-                    JobTitle = id?.LocalizedJobTitle,
-                    StationAlertLevel = pda.StationAlertLevel,
-                    StationAlertColor = pda.StationAlertColor
-                },
-                pda.StationName,
-                showUplink,
-                hasInstrument,
-                address);
-
-            _ui.SetUiState(uid, PdaUiKey.Key, state);
-        }
-
-        private void OnPdaOpen(Entity<PdaComponent> ent, ref BoundUIOpenedEvent args)
-        {
-            if (!PdaUiKey.Key.Equals(args.UiKey))
-                return;
-
-            UpdatePdaUi(ent.Owner, ent.Comp);
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaRequestUpdateInterfaceMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            UpdatePdaUi(uid, pda);
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaToggleFlashlightMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            // TODO PREDICTION
-            // When moving this to shared, fill in the user field
-            _unpoweredFlashlight.TryToggleLight(uid, user: null);
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaShowRingtoneMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            if (HasComp<RingerComponent>(uid))
-                _ringer.TryToggleRingerUi(uid, msg.Actor);
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaShowMusicMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            if (TryComp<InstrumentComponent>(uid, out var instrument))
-                _instrument.ToggleInstrumentUi(uid, msg.Actor, instrument);
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaShowUplinkMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            // check if its locked again to prevent malicious clients opening locked uplinks
-            if (TryGetUnlockedStore(uid, out var store))
-            {
-                if (store != uid)
-                {
-                    if (TryComp<RemoteStoreComponent>(uid, out var remoteStore))
-                        remoteStore.Store = store;
-                    _store.ToggleUi(msg.Actor, store.Value, remoteAccess: uid);
-                }
-                else
-                {
-                    _store.ToggleUi(msg.Actor, store.Value);
-                }
-            }
-        }
-
-        private void OnUiMessage(EntityUid uid, PdaComponent pda, PdaLockUplinkMessage msg)
-        {
-            if (!PdaUiKey.Key.Equals(msg.UiKey))
-                return;
-
-            if (TryComp<RingerUplinkComponent>(uid, out var uplink))
-            {
-                if (TryComp<RemoteStoreComponent>(uid, out var remoteStore))
-                    remoteStore.Store = null;
-                _ringer.LockUplink((uid, uplink));
-                UpdatePdaUi(uid, pda);
-            }
-        }
-
-        /// <summary>
-        /// Returns the currently unlocked store, if there is one.
-        /// </summary>
-        private bool TryGetUnlockedStore(EntityUid uid, [NotNullWhen(true)] out EntityUid? store)
+        public bool TryGetUnlockedStore(EntityUid uid, [NotNullWhen(true)] out EntityUid? store)
         {
             store = null;
             if (!TryComp<RingerUplinkComponent>(uid, out var uplink) || !uplink.Unlocked)
@@ -313,32 +269,39 @@ namespace Content.Server.PDA
             return store != null;
         }
 
-        private void UpdateStationName(EntityUid uid, PdaComponent pda)
+        public override void NotifyHardwareStateChanged(EntityUid uid, PdaComponent? pda = null)
         {
-            var station = _station.GetOwningStation(uid);
-            pda.StationName = station is null ? null : Name(station.Value);
-        }
-
-        private void UpdateAlertLevel(EntityUid uid, PdaComponent pda)
-        {
-            var station = _station.GetOwningStation(uid);
-            if (!TryComp(station, out AlertLevelComponent? alertComp))
+            if (TerminatingOrDeleted(uid)
+                || !TryComp<DeviceLinkSourceComponent>(uid, out var srcComp)
+                || !Resolve(uid, ref pda, false))
                 return;
-            pda.StationAlertLevel = alertComp.CurrentAlertLevel;
-            if (_prototype.Resolve(alertComp.CurrentAlertLevel, out var level))
-                pda.StationAlertColor = level.Color;
+
+            var jobTitle = pda.ContainedId is { } idUid && TryComp<IdCardComponent>(idUid, out var idCard)
+                ? idCard.LocalizedJobTitle ?? string.Empty
+                : string.Empty;
+
+            var pkt = new ComputerPacket("PdaHardwareStatus");
+            pkt.Set("FlashlightOn", pda.FlashlightOn.ToString());
+            pkt.Set("OwnerName", pda.OwnerName ?? string.Empty);
+            pkt.Set("JobTitle", jobTitle);
+            pkt.Set("StationName", pda.StationName ?? string.Empty);
+
+            _deviceLink.InvokePort((uid, srcComp), PortMachineStatusSender, ref pkt);
+            _deviceLink.InvokePort((uid, srcComp), PortFlashlightStatusSource, ref pkt);
         }
 
-        private string? GetDeviceNetAddress(EntityUid uid)
+        private void UpdateStationDataOnAllPdas()
         {
-            string? address = null;
-
-            if (TryComp(uid, out DeviceNetworkComponent? deviceNetworkComponent))
+            var query = EntityQueryEnumerator<PdaComponent>();
+            while (query.MoveNext(out var uid, out var comp))
             {
-                address = DeviceLocalizationHelpers.GetAddressFromId(deviceNetworkComponent);
+                var st = _station.GetOwningStation(uid);
+                comp.StationName = st is null ? null : Name(st.Value);
+                if (st != null && TryComp<AlertLevelComponent>(st.Value, out var alert))
+                    comp.StationAlertLevel = alert.CurrentAlertLevel;
+                Dirty(uid, comp);
+                NotifyHardwareStateChanged(uid, comp);
             }
-
-            return address;
         }
     }
 }

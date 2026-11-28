@@ -105,8 +105,8 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
     [Dependency] private  IUserInterfaceManager _uiManager = default!;
     private OxTagController tags = default!;
     [Dependency] private  IGameTiming _timing = default!;
-    public bool mousedDown = false;
-    public bool altDown = false;
+    [ViewVariables] public bool mousedDown = false;
+    [ViewVariables] public bool altDown = false;
     public EntityUid crossed = EntityUid.Invalid;
     /// <inheritdoc/>
     public override void Initialize()
@@ -213,12 +213,12 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
                 inView = true;
         }
 
-        Log.Debug($"Mouse: {inView}");
+        Log.Debug($"Mouse: {inView}, {args.State == BoundKeyState.Down}");
         var handled = false;
         if(args.State == BoundKeyState.Down)
-            handled = HandleMouseDisabled(args.Session, args.Coordinates, args.EntityUid, inView);
-        else
             handled = HandleMouseEnabled(args.Session, args.Coordinates, args.EntityUid, inView);
+        else
+            handled = HandleMouseDisabled(args.Session, args.Coordinates, args.EntityUid, inView);
         return handled;
     }
 
@@ -234,6 +234,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
         mouseData.mouseEntity = coords;
+        mousedDown = true;
         var ev = new SyncedEntityEventArgs<MouseDownEvent>()
         {
             self = new MouseDownEvent()
@@ -275,7 +276,6 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
             evAltClicked.Execute();
         }
         var active = _handsSystem.GetActiveHandEntity();
-        mousedDown = true;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();
@@ -309,6 +309,7 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
         var mouseData = EnsureComp<OxydMouseDataComponent>(session.AttachedEntity.Value);
         mouseData.lastClicked = uid;
         mouseData.mouseMap = _transformSystem.ToMapCoordinates(coords);
+        mousedDown = false;
         var evUp = new SyncedEntityEventArgs<MouseUpEvent>()
         {
             self = new MouseUpEvent()
@@ -322,7 +323,6 @@ public sealed partial  class OxydMouseHandlingSystem : EntitySystem
         RaiseLocalEvent(evUp);
         evUp.Execute();
         var active = _handsSystem.GetActiveHandEntity();
-        mousedDown = false;
         if (active is null)
             return false;
         var heldItems = _handsSystem.EnumerateHeld(session.AttachedEntity.Value).ToList();

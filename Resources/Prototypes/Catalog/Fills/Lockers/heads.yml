@@ -10,7 +10,7 @@
       prob: 0.50
     - id: ClothingHeadsetAltCargo
     - id: DoorRemoteCargo
-    - id: AstroNavCartridge
+    - id: ProgramDiskAstroNav
     - id: ClothingHandsKnuckleDustersQM
     - id: PlushieLizardJobQuartermaster
       prob: 0.02
@@ -215,7 +215,7 @@
     - id: ClothingBeltMedicalFilled
     - id: HandheldCrewMonitor
     - id: Hypospray
-    - id: MedTekCartridge
+    - id: ProgramDiskMedTek
     # Standard command gear
     - id: RubberStampCMO
     - id: ClothingHeadsetAltMedical
@@ -332,7 +332,7 @@
     - id: RubberStampHos
     - id: BoxHoSCircuitboards
     - id: WeaponDisabler
-    - id: WantedListCartridge
+    - id: ProgramDiskWantedList
     - id: DrinkHosFlask
     - id: PlushieLizardJobHeadofsecurity
       prob: 0.02

@@ -1,12 +1,9 @@
-using System.Linq;
+using Content.Server.GameTicking;
+using Content.Server.Station.Systems;
 using Content.Shared.CriminalRecords;
 using Content.Shared.CriminalRecords.Systems;
 using Content.Shared.Security;
 using Content.Shared.StationRecords;
-using Content.Server.GameTicking;
-using Content.Server.Station.Systems;
-using Content.Shared.CartridgeLoader;
-using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Shared.StationRecords.Events;
 using Content.Shared.StationRecords.Systems;
 
@@ -24,18 +21,12 @@ public sealed partial class CriminalRecordsSystem : SharedCriminalRecordsSystem
 {
     [Dependency] private ServerGameTicker _ticker = default!;
     [Dependency] private StationRecordsSystem _records = default!;
-    [Dependency] private ServerStationSystem _station = default!;
-    [Dependency] private CartridgeLoaderSystem _cartridge = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
         SubscribeLocalEvent<GeneralRecordCreatedEvent>(OnGeneralRecordCreated);
-        SubscribeLocalEvent<WantedListCartridgeComponent, CriminalRecordChangedEvent>(OnRecordChanged);
-        SubscribeLocalEvent<WantedListCartridgeComponent, CartridgeUiReadyEvent>(OnCartridgeUiReady);
-        SubscribeLocalEvent<WantedListCartridgeComponent, CriminalHistoryAddedEvent>(OnHistoryAdded);
-        SubscribeLocalEvent<WantedListCartridgeComponent, CriminalHistoryRemovedEvent>(OnHistoryRemoved);
     }
 
     private void OnGeneralRecordCreated(ref GeneralRecordCreatedEvent ev)
@@ -77,11 +68,7 @@ public sealed partial class CriminalRecordsSystem : SharedCriminalRecordsSystem
         _records.Synchronize(key);
 
         var args = new CriminalRecordChangedEvent(record);
-        var query = EntityQueryEnumerator<WantedListCartridgeComponent>();
-        while (query.MoveNext(out var readerUid, out _))
-        {
-            RaiseLocalEvent(readerUid, ref args);
-        }
+        RaiseLocalEvent(ref args);
     }
 
     /// <summary>
@@ -96,11 +83,7 @@ public sealed partial class CriminalRecordsSystem : SharedCriminalRecordsSystem
         record.History.Add(entry);
 
         var args = new CriminalHistoryAddedEvent(entry);
-        var query = EntityQueryEnumerator<WantedListCartridgeComponent>();
-        while (query.MoveNext(out var readerUid, out _))
-        {
-            RaiseLocalEvent(readerUid, ref args);
-        }
+        RaiseLocalEvent(ref args);
 
         return true;
     }
@@ -130,54 +113,8 @@ public sealed partial class CriminalRecordsSystem : SharedCriminalRecordsSystem
         record.History.RemoveAt((int) index);
 
         var args = new CriminalHistoryRemovedEvent(history);
-        var query = EntityQueryEnumerator<WantedListCartridgeComponent>();
-        while (query.MoveNext(out var readerUid, out _))
-        {
-            RaiseLocalEvent(readerUid, ref args);
-        }
+        RaiseLocalEvent(ref args);
 
         return true;
-    }
-
-    private void OnRecordChanged(Entity<WantedListCartridgeComponent> ent, ref CriminalRecordChangedEvent args) =>
-        StateChanged(ent);
-
-    private void OnHistoryAdded(Entity<WantedListCartridgeComponent> ent, ref CriminalHistoryAddedEvent args) =>
-        StateChanged(ent);
-
-    private void OnHistoryRemoved(Entity<WantedListCartridgeComponent> ent, ref CriminalHistoryRemovedEvent args) =>
-        StateChanged(ent);
-
-    private void StateChanged(Entity<WantedListCartridgeComponent> ent)
-    {
-        if (Comp<CartridgeComponent>(ent).LoaderUid is not { } loaderUid)
-            return;
-
-        UpdateReaderUi(ent, loaderUid);
-    }
-
-    private void OnCartridgeUiReady(Entity<WantedListCartridgeComponent> ent, ref CartridgeUiReadyEvent args)
-    {
-        UpdateReaderUi(ent, args.Loader);
-    }
-
-    private void UpdateReaderUi(Entity<WantedListCartridgeComponent> ent, EntityUid loaderUid)
-    {
-        if (_station.GetOwningStation(ent) is not { } station)
-            return;
-
-        var records = _records.GetRecordsOfType<CriminalRecord>(station)
-            .Where(cr => cr.Item2.Status is not SecurityStatus.None || cr.Item2.History.Count > 0)
-            .Select(cr =>
-            {
-                var (i, r) = cr;
-                var key = new StationRecordKey(i, station);
-                // Hopefully it will work smoothly.....
-                _records.TryGetRecord(key, out GeneralStationRecord? generalRecord);
-                return new WantedRecord(generalRecord!, r.Status, r.Reason, r.InitiatorName, r.History);
-            });
-        var state = new WantedListUiState(records.ToList());
-
-        _cartridge.UpdateCartridgeUiState(loaderUid, state);
     }
 }

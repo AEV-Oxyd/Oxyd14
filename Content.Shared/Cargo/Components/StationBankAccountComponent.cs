@@ -44,6 +44,18 @@ public sealed partial class StationBankAccountComponent : Component
     };
 
     /// <summary>
+    /// Optional per-station overrides for bank account ID codes (falls back to <see cref="CargoAccountPrototype.DefaultAccountId"/>).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public Dictionary<ProtoId<CargoAccountPrototype>, string> AccountIds = new();
+
+    /// <summary>
+    /// Optional per-station overrides for bank account PINs (falls back to <see cref="CargoAccountPrototype.DefaultPin"/>).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public Dictionary<ProtoId<CargoAccountPrototype>, string> AccountPins = new();
+
+    /// <summary>
     /// A baseline distribution used for income and dispersing leftovers after sale.
     /// </summary>
     [DataField, AutoNetworkedField]

@@ -30,6 +30,7 @@ using Content.Shared.Timing.Systems;
 using Content.Shared.UserInterface;
 using Content.Shared.Verbs;
 using Content.Shared.Wall;
+using Content.Shared._Oxyd.Computers.ScreenSharing;
 using JetBrains.Annotations;
 using Robust.Shared.Containers;
 using Robust.Shared.Input;
@@ -72,6 +73,7 @@ namespace Content.Shared.Interaction
         [Dependency] private SharedPlayerRateLimitManager _rateLimit = default!;
         [Dependency] private TagSystem _tagSystem = default!;
         [Dependency] private UseDelaySystem _useDelay = default!;
+        [Dependency] private SharedRemoteScreenSystem _remoteScreen = default!;
 
         [Dependency] private EntityQuery<IgnoreUIRangeComponent> _ignoreUiRangeQuery = default!;
         [Dependency] private EntityQuery<FixturesComponent> _fixtureQuery = default!;
@@ -163,6 +165,9 @@ namespace Content.Shared.Interaction
                 }
             }
 
+            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+                return;
+
             var range = _ui.GetUiRange(ev.Target, ev.UiKey);
 
             if (range > 0 && !UiRangeCheck(ev.Actor, ev.Target, range))
@@ -206,7 +211,20 @@ namespace Content.Shared.Interaction
             if (target.Comp.ParentUid == user.Owner)
                 return true;
 
-            return InRangeAndAccessible(user, target, range) || _ignoreUiRangeQuery.HasComp(user);
+            if (target.Comp.ParentUid.IsValid())
+            {
+                var curParent = target.Comp.ParentUid;
+                while (curParent.IsValid())
+                {
+                    if (HasComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(curParent))
+                        return UiRangeCheck(user, curParent, range);
+                    if (!Exists(curParent))
+                        break;
+                    curParent = Transform(curParent).ParentUid;
+                }
+            }
+
+            return InRangeAndAccessible(user, target, range) || _ignoreUiRangeQuery.HasComp(user) || _remoteScreen.IsRemoteScreenAuthorized(user.Owner, target.Owner);
         }
 
         /// <summary>
@@ -1322,6 +1340,19 @@ namespace Content.Shared.Interaction
             if (ev.Handled)
                 return ev.Accessible;
 
+            if (target.Comp != null && target.Comp.ParentUid.IsValid())
+            {
+                var curParent = target.Comp.ParentUid;
+                while (curParent.IsValid())
+                {
+                    if (HasComp<Content.Shared._Oxyd.Computers.EmbeddedComputerHostComponent>(curParent))
+                        return IsAccessible(user, curParent);
+                    if (!Exists(curParent))
+                        break;
+                    curParent = Transform(curParent).ParentUid;
+                }
+            }
+
             return CanAccess(user, target);
         }
 
@@ -1448,6 +1479,12 @@ namespace Content.Shared.Interaction
         {
             if (ev.Result == BoundUserInterfaceRangeResult.Fail)
                 return;
+
+            if (_remoteScreen.IsRemoteScreenAuthorized(ev.Actor, ev.Target))
+            {
+                ev.Result = BoundUserInterfaceRangeResult.Pass;
+                return;
+            }
 
             ev.Result = UiRangeCheck(ev.Actor!, ev.Target, ev.Data.InteractionRange)
                     ? BoundUserInterfaceRangeResult.Pass

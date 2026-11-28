@@ -104,6 +104,7 @@ public sealed partial class DeviceLinkSystem
         }
 
         RemoveSinkFromSource(source, sink);
+        var addedAny = false;
         foreach (var (sourcePort, sinkPort) in links)
         {
             DebugTools.Assert(ProtoMan.HasIndex(sourcePort));
@@ -117,12 +118,13 @@ public sealed partial class DeviceLinkSystem
 
             source.Comp.Outputs.GetOrNew(sourcePort).Add(sink);
             source.Comp.LinkedPorts.GetOrNew(sink).Add(new DeviceLink(sourcePort, sinkPort));
+            addedAny = true;
 
             SendNewLinkEvent(userId, source, sourcePort, sink, sinkPort);
             Dirty(source);
         }
 
-        if (links.Count > 0)
+        if (addedAny)
             sink.Comp.LinkedSources.Add(source);
 
         DirtyField(sink, nameof(DeviceLinkSinkComponent.LinkedSources));
@@ -320,7 +322,7 @@ public sealed partial class DeviceLinkSystem
         RaiseLocalEvent(sinkUid, ref linkAttemptEvent, true);
         if (linkAttemptEvent.Cancelled && userId.HasValue)
         {
-            _popup.PopupCursor(Loc.GetString("signal-linker-component-connection-refused", ("machine", sourcePort)), userId.Value);
+            _popup.PopupCursor(Loc.GetString("signal-linker-component-connection-refused", ("machine", sinkPort)), userId.Value);
             return false;
         }
 

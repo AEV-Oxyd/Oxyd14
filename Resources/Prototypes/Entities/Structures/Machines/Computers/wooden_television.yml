@@ -1,5 +1,5 @@
 - type: entity
-  parent: ComputerSurveillanceWirelessCameraMonitor
+  parent: BaseLegacyWirelessCameraMonitor
   id: ComputerTelevision
   name: wooden television
   description: Finally, some decent reception around here...

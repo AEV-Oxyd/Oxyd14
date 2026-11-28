@@ -44,7 +44,7 @@ steal-target-groups-cargo-shuttle-console-circuitboard = cargo shuttle console b
 steal-target-groups-bible = bible
 steal-target-groups-clothing-neck-goldmedal = gold medal of crewmanship
 steal-target-groups-clothing-neck-clownmedal = clown medal
-steal-target-groups-wanted-list-cartridge = wanted list cartridge
+steal-target-groups-wanted-list-cartridge = wanted list disk
 steal-target-groups-belt-ce = chief engineer's toolbelt
 steal-target-groups-captain-sword = captain's sabre
 

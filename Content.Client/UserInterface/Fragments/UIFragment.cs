@@ -22,4 +22,11 @@ public abstract partial class UIFragment
 
     public abstract void UpdateState(BoundUserInterfaceState state);
 
+    public virtual void Detach()
+    {
+    }
+
+    public virtual void Reset()
+    {
+    }
 }

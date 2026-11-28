@@ -1,4 +1,5 @@
 using Content.Server.Administration.Logs;
+using Content.Shared._Oxyd.Computers.Cameras;
 using Content.Shared.Database;
 using Content.Shared.DeviceNetwork.Components;
 using Content.Shared.DeviceNetwork.Events;
@@ -262,6 +263,14 @@ public sealed partial class SurveillanceCameraSystem : SharedSurveillanceCameraS
 
         component.ActivePvsViewers.Add(player);
 
+        var viewerComp = EnsureComp<ActiveCameraViewerComponent>(player);
+        var camNet = GetNetEntity(camera);
+        if (!viewerComp.ActiveCameras.Contains(camNet))
+        {
+            viewerComp.ActiveCameras.Add(camNet);
+            Dirty(player, viewerComp);
+        }
+
         if (monitor != null)
         {
             component.ActiveMonitors.Add(monitor.Value);
@@ -316,13 +325,25 @@ public sealed partial class SurveillanceCameraSystem : SharedSurveillanceCameraS
 
     public void RemoveActiveViewer(EntityUid camera, EntityUid player, EntityUid? monitor = null, SurveillanceCameraComponent? component = null, ActorComponent? actor = null)
     {
-        if (!Resolve(camera, ref component))
+        if (!Resolve(camera, ref component, false))
             return;
 
-        if (Resolve(player, ref actor))
+        if (Exists(player) && Resolve(player, ref actor, false))
             _viewSubscriberSystem.RemoveViewSubscriber(camera, actor.PlayerSession);
 
         component.ActivePvsViewers.Remove(player);
+
+        if (Exists(player) && !TerminatingOrDeleted(player) && TryComp<ActiveCameraViewerComponent>(player, out var viewerComp))
+        {
+            var camNet = GetNetEntity(camera);
+            if (viewerComp.ActiveCameras.Remove(camNet))
+            {
+                if (viewerComp.ActiveCameras.Count == 0)
+                    RemCompDeferred<ActiveCameraViewerComponent>(player);
+                else
+                    Dirty(player, viewerComp);
+            }
+        }
 
         if (monitor != null)
         {
@@ -330,6 +351,15 @@ public sealed partial class SurveillanceCameraSystem : SharedSurveillanceCameraS
         }
 
         UpdateVisuals(camera, component);
+    }
+
+    public void RemoveActiveViewerSession(EntityUid camera, Robust.Shared.Player.ICommonSession session, EntityUid player, EntityUid? monitor = null, SurveillanceCameraComponent? component = null)
+    {
+        if (!Resolve(camera, ref component, false))
+            return;
+
+        _viewSubscriberSystem.RemoveViewSubscriber(camera, session);
+        RemoveActiveViewer(camera, player, monitor, component);
     }
 
     public void RemoveActiveViewers(EntityUid camera, HashSet<EntityUid> players, EntityUid? monitor = null, SurveillanceCameraComponent? component = null)

@@ -41,12 +41,14 @@
       - Lawyer
       - Maintenance
       - Medical
+      - Network
       - Quartermaster
       - Research
       - ResearchDirector
       - Salvage
       - Security
       - Service
+      - SystemAdmin
       - Theatre
       - GenpopEnter
       - GenpopLeave
@@ -115,6 +117,7 @@
     - Lawyer
     - Maintenance
     - Medical
+    - Network
     - Quartermaster
     - Research
     - ResearchDirector
@@ -122,6 +125,7 @@
     - Security
     - Service
     - StationAi
+    - SystemAdmin
     - Theatre
     - CentralCommand
     - NuclearOperative

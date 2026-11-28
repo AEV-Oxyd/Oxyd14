@@ -27,10 +27,17 @@ public sealed partial class NetworkConfiguratorLinkBoundUserInterface(EntityUid 
     {
         base.Open();
 
+        if (_linkMenu != null && !_linkMenu.Disposed)
+        {
+            Update();
+            return;
+        }
+
         _linkMenu = this.CreateWindow<NetworkConfiguratorLinkMenu>();
         _linkMenu.OnLinkDefaults += args => SendPredictedMessage(new NetworkConfiguratorLinkSaveMessage(args));
         _linkMenu.OnToggleLink += link => SendPredictedMessage(new NetworkConfiguratorLinkToggleMessage(link));
         _linkMenu.OnClearLinks += () => SendPredictedMessage(new NetworkConfiguratorLinkClearMessage());
+        Update();
     }
 
     public override void Update()

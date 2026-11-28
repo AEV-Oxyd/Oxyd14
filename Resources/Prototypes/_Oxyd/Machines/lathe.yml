@@ -12,5 +12,5 @@
       diskSlot:
         whitelist:
           components:
-            - DigitalDataHolder
+            - FileSystem
       staticPacks: []

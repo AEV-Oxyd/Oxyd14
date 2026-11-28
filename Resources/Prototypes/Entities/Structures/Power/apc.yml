@@ -22,6 +22,12 @@
     netsync: false
   - type: AccessReader
     access: [["Engineering"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
   - type: Sprite
     drawdepth: WallMountedItems
     sprite: Structures/Wallmounts/apc.rsi
@@ -71,16 +77,33 @@
     voltage: Apc
   - type: Apc
     voltage: Apc
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydApcEmbeddedController
+    borderColor: "#e5821e"
+    accentHColor: "#ffa726"
+    accentVColor: "#8a5200"
+    title: "AREA POWER CONTROLLER"
+    subtitle: ""
+  - type: ContainerContainer
+    containers:
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSink
+    ports:
+    - ApcCommandSink
+    - MachineCommandReceiver
+  - type: DeviceLinkSource
+    ports:
+    - ApcStatusSource
+    - MachineStatusSender
   - type: ExtensionCableProvider
   - type: UserInterface
     interfaces:
-      enum.ApcUiKey.Key:
-        type: ApcBoundUserInterface
       enum.WiresUiKey.Key:
         type: WiresBoundUserInterface
   - type: ActivatableUI
     inHandsOnly: false
     key: enum.ApcUiKey.Key
+    singleUser: false
   - type: Construction
     graph: APC
     node: apc

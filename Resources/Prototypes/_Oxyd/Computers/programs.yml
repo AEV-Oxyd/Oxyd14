@@ -1,0 +1,791 @@
+# ==============================================================================
+# NTOS Program Entities (.nte Runtime Process Entities)
+# Each running program is a real EntityUid inside program_container with its own
+# UserInterfaceComponent delivering direct BoundUserInterface states.
+# ==============================================================================
+
+- type: entity
+  abstract: true
+  id: BaseOxydProgram
+  name: computer program
+  components:
+  - type: Program
+  - type: Tag
+    tags:
+    - Oxyd
+    - Program
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydOsProgram
+  name: NTOS system
+  description: Core operating system kernel handling system settings, hardware diagnostics, DeviceLink ports, and launching child programs.
+  components:
+  - type: Program
+    title: "NTOS System"
+    isOperatingSystem: true
+    ramUsageMb: 128
+    fileSizeBytes: 196608
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+  - type: OsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: OsProgramBui
+
+- type: entity
+  parent: OxydOsProgram
+  id: OxydJailbrokenOsProgram
+  name: NTOS Jailbreak
+  description: Modified operating system kernel with corporate remote management stripped out and local security restrictions removed.
+  components:
+  - type: Program
+    title: "NTOS Jailbreak"
+    isOperatingSystem: true
+    isJailbrokenOs: true
+    ramUsageMb: 128
+    fileSizeBytes: 196608
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydPdaOsProgram
+  name: NTOS Pocket (PDA OS)
+  description: Dedicated handheld PDA operating system managing pocket hardware slots, station status, utilities, and mobile apps.
+  components:
+  - type: Program
+    title: "NTOS Pocket"
+    isOperatingSystem: true
+    ramUsageMb: 20
+    fileSizeBytes: 163840
+    cpuUsagePercent: 20.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda
+  - type: PdaOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: PdaOsProgramBui
+
+- type: entity
+  parent: OxydPdaOsProgram
+  id: OxydJailbrokenPdaOsProgram
+  name: NTOS Pocket [JB]
+  description: Jailbroken handheld PDA operating system with all remote control interfaces disabled and unrestricted local security controls.
+  components:
+  - type: Program
+    title: "NTOS Pocket [JB]"
+    isOperatingSystem: true
+    isJailbrokenOs: true
+    ramUsageMb: 20
+    fileSizeBytes: 163840
+    cpuUsagePercent: 20.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydEmbeddedOsProgram
+  name: embedded system controller
+  description: Core embedded controller operating system for machinery, APCs, life support, and industrial DeviceLink supervision.
+  components:
+  - type: Program
+    title: "Embedded Controller OS"
+    isOperatingSystem: true
+    ramUsageMb: 64
+    fileSizeBytes: 147456
+    cpuUsagePercent: 40.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: ai_core
+  - type: EmbeddedOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: EmbeddedOsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydApcControlProgram
+  name: APC controller program
+  description: Interfaces with an Area Power Controller via DeviceLink ports.
+  components:
+  - type: Program
+    title: "APC Control"
+    screenState: "power_monitor"
+    ramUsageMb: 64
+    fileSizeBytes: 212992
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Engineering
+    - SystemAdmin
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: storage
+  - type: ApcControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: ApcControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydLatheControlProgram
+  name: lathe controller program
+  description: Interfaces with an autolathe via DeviceLink ports and reads HDD/disk .lathe blueprints.
+  components:
+  - type: Program
+    title: "Lathe Control"
+    screenState: "rdcomp"
+    ramUsageMb: 48
+    fileSizeBytes: 90112
+    cpuUsagePercent: 60.0
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: wiredmachine
+  - type: LatheControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: LatheControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydAtmosControlProgram
+  name: air alarm controller program
+  description: Interfaces with an atmospheric alarm via DeviceLink ports.
+  components:
+  - type: Program
+    title: "Atmos Control"
+    screenState: "area_atmos"
+    ramUsageMb: 64
+    fileSizeBytes: 229376
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Atmospherics
+    - Engineering
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/pda.rsi
+      state: pda-atmos
+  - type: AtmosControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AtmosControlProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydFileBrowserProgram
+  name: file browser program
+  description: Inspects local hard drive files, optical data disks, and runs .nte executables.
+  components:
+  - type: Program
+    title: "File Browser"
+    screenState: "comm_monitor"
+    ramUsageMb: 10
+    fileSizeBytes: 65536
+    cpuUsagePercent: 15.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: station_records
+  - type: FileBrowserProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: FileBrowserProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydTerminalProgram
+  name: terminal program
+  description: Interactive NTOS command shell with SSH, file transfers, DeviceLink commands, and remote display streaming.
+  components:
+  - type: Program
+    title: "Terminal"
+    screenState: "command"
+    ramUsageMb: 12
+    fileSizeBytes: 86016
+    cpuUsagePercent: 20.0
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: comms_console
+  - type: TerminalProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: TerminalProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydDownloaderProgram
+  name: central downloader program
+  description: Downloads and uploads .nte programs, .lathe blueprints, and databases via station data servers.
+  components:
+  - type: Program
+    title: "Downloader"
+    screenState: "tech"
+    ramUsageMb: 12
+    fileSizeBytes: 77824
+    cpuUsagePercent: 15.0
+    icon:
+      sprite: Structures/Machines/server.rsi
+      state: server
+  - type: DownloaderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: DownloaderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydRouterProgram
+  name: router admin program
+  description: Manages connected network devices, active sessions, DNS records, and GUID firewalls.
+  components:
+  - type: Program
+    title: "Router Admin"
+    screenState: "comm_monitor"
+    ramUsageMb: 64
+    fileSizeBytes: 196608
+    cpuUsagePercent: 90.0
+    requiredDownloadAccess:
+    - Network
+    - SystemAdmin
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: RouterProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: RouterProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydPacketSnifferProgram
+  name: packet sniffer program
+  description: Captures and inspects routed network frames, dumps captures to HDD, and injects raw packets.
+  components:
+  - type: Program
+    title: "Packet Sniffer"
+    screenState: "radar"
+    ramUsageMb: 64
+    fileSizeBytes: 131072
+    cpuUsagePercent: 95.0
+    requiredDownloadAccess:
+    - Network
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: mass_scanner
+  - type: PacketSnifferProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: PacketSnifferProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydNetNavigatorProgram
+  name: net navigator program
+  description: Probes the station network to discover reachable devices, GUIDs, types, auth requirements, and services.
+  components:
+  - type: Program
+    title: "NetNavigator"
+    screenState: "radar"
+    ramUsageMb: 16
+    fileSizeBytes: 114688
+    cpuUsagePercent: 25.0
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: NetNavigatorProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetNavigatorProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydSecurityLockProgram
+  name: security lock program
+  description: Locks a computer behind a password, key-based password (.key file), and/or required ID card access levels.
+  components:
+  - type: Program
+    title: "Security Lock"
+    screenState: "comm_monitor"
+    ramUsageMb: 8
+    fileSizeBytes: 81920
+    cpuUsagePercent: 10.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: SecurityLockProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SecurityLockProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NotekeeperProgram
+  name: notekeeper
+  description: Creates, edits, and stores boot-resistant .txt notes on the local hard drive.
+  components:
+  - type: Program
+    title: "Notekeeper"
+    screenState: "comm_monitor"
+    ramUsageMb: 8
+    fileSizeBytes: 32768
+    cpuUsagePercent: 10.0
+    icon:
+      sprite: Objects/Misc/books.rsi
+      state: book_icon
+  - type: NotekeeperProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NotekeeperProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NanoTaskProgram
+  name: task manager
+  description: Manages checklists persisted to /tasks/tasks.tsk on the local hard drive.
+  components:
+  - type: Program
+    title: "Tasks"
+    screenState: "comm_monitor"
+    ramUsageMb: 8
+    fileSizeBytes: 36864
+    cpuUsagePercent: 10.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: nano_task
+  - type: NanoTaskProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NanoTaskProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CrewManifestProgram
+  name: crew manifest
+  description: Syncs station personnel roster over the network into /records/crew_manifest.db.
+  components:
+  - type: Program
+    title: "Crew Manifest"
+    screenState: "medcomp"
+    ramUsageMb: 8
+    fileSizeBytes: 45056
+    cpuUsagePercent: 12.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: crew_manifest
+  - type: CrewManifestProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CrewManifestProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NewsReaderProgram
+  name: news reader
+  description: Fetches and caches station news feeds into /news/articles.db.
+  components:
+  - type: Program
+    title: "News Reader"
+    screenState: "comm_monitor"
+    ramUsageMb: 8
+    fileSizeBytes: 40960
+    cpuUsagePercent: 10.0
+    icon:
+      sprite: Interface/Misc/program_icons.rsi
+      state: news_read
+  - type: NewsReaderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NewsReaderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: WantedListProgram
+  name: wanted list
+  description: Fetches and caches station criminal security records into /records/wanted_list.db.
+  components:
+  - type: Program
+    title: "Wanted List"
+    screenState: "security"
+    ramUsageMb: 10
+    fileSizeBytes: 49152
+    cpuUsagePercent: 15.0
+    requiredDownloadAccess:
+    - Security
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: WantedListProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: WantedListProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: NetProbeProgram
+  name: netprobe scanner
+  description: Probes DeviceNetwork transceivers in the field and logs discoveries to /logs/netprobe.db.
+  components:
+  - type: Program
+    title: "NetProbe"
+    ramUsageMb: 10
+    fileSizeBytes: 65536
+    cpuUsagePercent: 15.0
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-y
+  - type: NetProbeProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetProbeProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: LogProbeProgram
+  name: logprobe auditor
+  description: Pulls access reader logs and saves audit snapshots to /logs/logprobe.db.
+  components:
+  - type: Program
+    title: "LogProbe"
+    ramUsageMb: 10
+    fileSizeBytes: 65536
+    cpuUsagePercent: 15.0
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-log
+  - type: LogProbeProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: LogProbeProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: MedTekProgram
+  name: medtek diagnostics
+  description: Activates biometric health scanning capability on portable terminals.
+  components:
+  - type: Program
+    title: "MedTek"
+    screenState: "medcomp"
+    ramUsageMb: 12
+    fileSizeBytes: 73728
+    cpuUsagePercent: 18.0
+    requiredDownloadAccess:
+    - Medical
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-med
+  - type: MedTekProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: MedTekProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: AstroNavProgram
+  name: astronav telemetry
+  description: Activates GPS transponder tracking on portable terminals.
+  components:
+  - type: Program
+    title: "AstroNav"
+    screenState: "helm"
+    ramUsageMb: 10
+    fileSizeBytes: 73728
+    cpuUsagePercent: 15.0
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-nav
+  - type: AstroNavProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AstroNavProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: AccessEncoderProgram
+  name: ID access encoder
+  description: Extracts access codes from an ID card inserted into an ID card slot (or PDA slot) and saves them as .acc files in /keys/.
+  components:
+  - type: Program
+    title: "ID Access Encoder"
+    screenState: "id"
+    ramUsageMb: 12
+    fileSizeBytes: 81920
+    cpuUsagePercent: 18.0
+    requiredDownloadAccess:
+    - Command
+    - Security
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: AccessEncoderProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: AccessEncoderProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: IdModifierProgram
+  name: ID access modifier
+  description: Security & command ID card modification console requiring dual ID card slots to authorize and rewrite target ID credentials.
+  components:
+  - type: Program
+    title: "ID Access Modifier"
+    screenState: "id"
+    ramUsageMb: 64
+    fileSizeBytes: 114688
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - HeadOfPersonnel
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Objects/Misc/module.rsi
+      state: id_mod
+  - type: IdModifierProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: IdModifierProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: OxydNetworkCoreOsProgram
+  name: station network core OS
+  description: Specialized station network core operating system that automatically provisions joining crew into Data Server databases and supervises routing, DNS, firewall, and Wi-Fi cameras.
+  components:
+  - type: Program
+    title: "Network Core OS"
+    isOperatingSystem: true
+    ramUsageMb: 128
+    fileSizeBytes: 229376
+    cpuUsagePercent: 120.0
+    requiredDownloadAccess:
+    - SystemAdmin
+    icon:
+      sprite: Objects/Tools/network_configurator.rsi
+      state: icon
+  - type: NetworkCoreOsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: NetworkCoreOsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: StationRecordsProgram
+  name: station records manager
+  description: Views and edits authoritative station personnel records stored in /records/station_records.db on Data Servers.
+  components:
+  - type: Program
+    title: "Station Records"
+    screenState: "medcomp"
+    ramUsageMb: 64
+    fileSizeBytes: 118784
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - HeadOfPersonnel
+    - Security
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: station_records
+  - type: StationRecordsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: StationRecordsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CriminalRecordsProgram
+  name: criminal records manager
+  description: Security records application for managing crew security statuses and crime history in /records/criminal_records.db on Data Servers.
+  components:
+  - type: Program
+    title: "Criminal Records"
+    screenState: "security"
+    ramUsageMb: 64
+    fileSizeBytes: 122880
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Security
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-sec
+  - type: CriminalRecordsProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CriminalRecordsProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: SurveillanceCameraProgram
+  name: surveillance camera monitor
+  description: Connects via the closest Station Network Router to Wi-Fi surveillance cameras with full examine support, live microphone audio, and downloadable witness logs.
+  components:
+  - type: Program
+    title: "Surveillance Cameras"
+    screenState: "cameras"
+    ramUsageMb: 96
+    fileSizeBytes: 262144
+    cpuUsagePercent: 100.0
+    requiredDownloadAccess:
+    - Security
+    - Engineering
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Structures/Wallmounts/camera.rsi
+      state: camera
+  - type: SurveillanceCameraProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SurveillanceCameraProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CargoOrdersProgram
+  name: cargo orders & bank manager
+  description: Authenticates station bank accounts via Account ID and PIN to withdraw funds and place or approve cargo supply orders.
+  components:
+  - type: Program
+    title: "Cargo Orders"
+    screenState: "request"
+    ramUsageMb: 64
+    fileSizeBytes: 106496
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Cargo
+    - Quartermaster
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Objects/Devices/cartridge.rsi
+      state: cart-y
+  - type: CargoOrdersProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CargoOrdersProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CrewMonitorProgram
+  name: crew suit sensor monitor
+  description: Displays live crew suit sensor vitals and coordinates across the station.
+  components:
+  - type: Program
+    title: "Crew Monitor"
+    screenState: "crew"
+    ramUsageMb: 64
+    fileSizeBytes: 131072
+    cpuUsagePercent: 90.0
+    requiredDownloadAccess:
+    - Medical
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: crew_monitor
+  - type: CrewMonitorProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CrewMonitorProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: CommsConsoleProgram
+  name: station communications console
+  description: Broadcasts station-wide announcements and manages station alert levels.
+  components:
+  - type: Program
+    title: "Communications"
+    screenState: "comm"
+    ramUsageMb: 64
+    fileSizeBytes: 126976
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Command
+    - SystemAdmin
+    icon:
+      sprite: Interface/Actions/actions_ai.rsi
+      state: comms_console
+  - type: CommsConsoleProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: CommsConsoleProgramBui
+
+- type: entity
+  parent: BaseOxydProgram
+  id: SolarControlProgram
+  name: solar array tracking controller
+  description: Monitors solar power generation and adjusts solar array angle and tracking velocity.
+  components:
+  - type: Program
+    title: "Solar Control"
+    screenState: "solar_screen"
+    ramUsageMb: 64
+    fileSizeBytes: 98304
+    cpuUsagePercent: 85.0
+    requiredDownloadAccess:
+    - Engineering
+    - SystemAdmin
+    icon:
+      sprite: Structures/Power/power.rsi
+      state: storage
+  - type: SolarControlProgram
+  - type: UserInterface
+    interfaces:
+      enum.ProgramUiKey.Key:
+        type: SolarControlProgramBui

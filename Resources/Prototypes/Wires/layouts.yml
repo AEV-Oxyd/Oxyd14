@@ -233,3 +233,13 @@
   wires:
   - !type:AccessWireAction
   - !type:AiInteractWireAction
+
+- type: wireLayout
+  id: OxydComputerMotherboard
+  wires:
+    - !type:ComputerPowerWireAction
+    - !type:ComputerRemoteWireAction
+    - !type:ComputerNetworkWireAction
+    - !type:ComputerStorageWireAction
+    - !type:ComputerDeviceLinkWireAction
+  dummyWires: 1

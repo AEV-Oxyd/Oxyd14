@@ -70,7 +70,7 @@ public sealed partial class SurveillanceCameraMicrophoneSystem : EntitySystem
         if (!TryComp(uid, out SurveillanceCameraComponent? camera))
             return;
 
-        var ev = new SurveillanceCameraSpeechSendEvent(args.Source, args.Message);
+        var ev = new SurveillanceCameraSpeechSendEvent(args.Source, args.Message, uid);
 
         foreach (var monitor in camera.ActiveMonitors)
         {
@@ -99,11 +99,13 @@ public sealed class SurveillanceCameraSpeechSendEvent : EntityEventArgs
 {
     public EntityUid Speaker { get; }
     public string Message { get; }
+    public EntityUid? Camera { get; }
 
-    public SurveillanceCameraSpeechSendEvent(EntityUid speaker, string message)
+    public SurveillanceCameraSpeechSendEvent(EntityUid speaker, string message, EntityUid? camera = null)
     {
         Speaker = speaker;
         Message = message;
+        Camera = camera;
     }
 }
 

@@ -1,23 +1,17 @@
 <PanelContainer xmlns="https://spacestation14.io"
-                HorizontalExpand="True">
-    <BoxContainer Orientation="Horizontal">
-        <TextureRect Name="Icon"
-                     Access="Public"
-                     MinSize="32 32"
-                     RectClipContent="True" />
-        <BoxContainer Orientation="Vertical"
-                      HorizontalExpand="True"
-                      VerticalExpand="False">
-            <Label Name="ProductName"
-                   Access="Public"
-                   HorizontalExpand="True"
-                   ClipText="True"
-                   Margin="4 4 4 4"/>
-        </BoxContainer>
-        <BoxContainer Name="Content"
-                      Orientation="Horizontal"
-                      HorizontalAlignment="Right">
-            <!--Here go buttons which added in c#-->
-        </BoxContainer>
-    </BoxContainer>
+                MinSize="80 80"
+                SetSize="80 80"
+                StyleClasses="PanelDeep"
+                Margin="1">
+    <TextureRect Name="Icon"
+                 Access="Public"
+                 Stretch="KeepAspectCentered"
+                 MouseFilter="Ignore" />
+
+    <Label Name="CountOverlay"
+           Access="Public"
+           Text="0"
+           StyleClasses="LabelKeyText"
+           FontColorOverride="#FFFFFF"
+           MouseFilter="Ignore" />
 </PanelContainer>

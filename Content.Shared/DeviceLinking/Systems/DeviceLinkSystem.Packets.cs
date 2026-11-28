@@ -1,4 +1,4 @@
-﻿using Content.Shared.DeviceLinking.Components;
+using Content.Shared.DeviceLinking.Components;
 using Content.Shared.DeviceLinking.Events;
 using Content.Shared.DeviceLinking.Payloads;
 using Content.Shared.DeviceNetwork;
@@ -20,12 +20,16 @@ public sealed partial class DeviceLinkSystem
     [PublicAPI]
     public void InvokePort(Entity<DeviceLinkSourceComponent?> ent, [ForbidLiteral] ProtoId<SourcePortPrototype> port)
     {
-        if (!_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp)
+        if (TerminatingOrDeleted(ent.Owner)
+            || !_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp, logMissing: false)
             || !ent.Comp.Outputs.TryGetValue(port, out var sinks))
             return;
 
         foreach (var sinkUid in sinks)
         {
+            if (TerminatingOrDeleted(sinkUid))
+                continue;
+
             if (!ent.Comp.LinkedPorts.TryGetValue(sinkUid, out var links))
                 continue;
 
@@ -53,12 +57,16 @@ public sealed partial class DeviceLinkSystem
         [ForbidLiteral] ProtoId<SourcePortPrototype> port,
         ref T data) where T : ISignalNetworkPayload
     {
-        if (!_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp)
+        if (TerminatingOrDeleted(ent.Owner)
+            || !_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp, logMissing: false)
             || !ent.Comp.Outputs.TryGetValue(port, out var sinks))
             return;
 
         foreach (var sinkUid in sinks)
         {
+            if (TerminatingOrDeleted(sinkUid))
+                continue;
+
             if (!ent.Comp.LinkedPorts.TryGetValue(sinkUid, out var links))
                 continue;
 
@@ -81,11 +89,13 @@ public sealed partial class DeviceLinkSystem
         Entity<DeviceLinkSinkComponent?> sink,
         ProtoId<SinkPortPrototype> sinkPort)
     {
-        if (!_deviceLinkSinkQuery.Resolve(sink, ref sink.Comp))
+        if (TerminatingOrDeleted(source.Owner)
+            || TerminatingOrDeleted(sink.Owner)
+            || !_deviceLinkSinkQuery.Resolve(sink, ref sink.Comp, logMissing: false))
             return;
 
         var invokeCounter = GetEffectiveInvokeCounter(sink.Comp);
-        if (invokeCounter > sink.Comp.InvokeLimit)
+        if (sink.Comp.InvokeLimit > 0 && invokeCounter > sink.Comp.InvokeLimit)
         {
             SetInvokeCounter(sink!, 0);
             var args = new DeviceLinkOverloadedEvent();
@@ -128,11 +138,13 @@ public sealed partial class DeviceLinkSystem
         ref T data)
         where T : ISignalNetworkPayload
     {
-        if (!_deviceLinkSinkQuery.Resolve(sink, ref sink.Comp))
+        if (TerminatingOrDeleted(source.Owner)
+            || TerminatingOrDeleted(sink.Owner)
+            || !_deviceLinkSinkQuery.Resolve(sink, ref sink.Comp, logMissing: false))
             return;
 
         var invokeCounter = GetEffectiveInvokeCounter(sink.Comp);
-        if (invokeCounter > sink.Comp.InvokeLimit)
+        if (sink.Comp.InvokeLimit > 0 && invokeCounter > sink.Comp.InvokeLimit)
         {
             SetInvokeCounter(sink!, 0);
             var args = new DeviceLinkOverloadedEvent();
@@ -143,11 +155,22 @@ public sealed partial class DeviceLinkSystem
 
         SetInvokeCounter(sink!, invokeCounter + 1);
 
-        //Just skip using device networking if the source or the sink doesn't support it
+        // Non-logic typed payloads (e.g. ComputerPacket / ComputerDeviceLinkPayload) dispatch directly
+        // without firing an untyped SignalReceivedEvent so plain button/switch handlers do not double-trigger.
+        if (data is not LogicStatePayload)
+        {
+            var eventWithData = new SignalReceivedEvent<T>(sinkPort, data, source);
+            RaiseLocalEvent(sink, ref eventWithData);
+            return;
+        }
+
+        // Just skip using device networking if the source or the sink doesn't support it
         if (!_deviceNetworkQuery.HasComp(source) || !_deviceNetworkQuery.TryComp(sink, out var sinkNetwork))
         {
             var eventArgs = new SignalReceivedEvent(sinkPort, source);
             RaiseLocalEvent(sink, ref eventArgs);
+            var eventWithData = new SignalReceivedEvent<T>(sinkPort, data, source);
+            RaiseLocalEvent(sink, ref eventWithData);
             return;
         }
 
@@ -164,13 +187,37 @@ public sealed partial class DeviceLinkSystem
         _deviceNetwork.SendPacket(source.Owner, sinkNetwork.Address, ref payload, sinkNetwork.ReceiveFrequency, network);
     }
 
+    [PublicAPI]
+    public void InvokeDirect<T>(
+        EntityUid source,
+        [ForbidLiteral] ProtoId<SourcePortPrototype> sourcePort,
+        T data) where T : ISignalNetworkPayload
+    {
+        InvokePort(source, sourcePort, ref data);
+    }
+
+    [PublicAPI]
+    public void InvokeDirect<T>(
+        EntityUid source,
+        EntityUid sink,
+        [ForbidLiteral] ProtoId<SinkPortPrototype> sinkPort,
+        T data) where T : ISignalNetworkPayload
+    {
+        if (TerminatingOrDeleted(source)
+            || TerminatingOrDeleted(sink)
+            || !TryComp<DeviceLinkSourceComponent>(source, out var srcComp))
+            return;
+        InvokeDirect((source, srcComp), sink, sinkPort, ref data);
+    }
+
     /// <summary>
     /// Helper function that invokes a port with a high/low binary logic signal.
     /// </summary>
     [PublicAPI]
     public void SendSignal(Entity<DeviceLinkSourceComponent?> ent, [ForbidLiteral] ProtoId<SourcePortPrototype> port, bool signal)
     {
-        if (!_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp))
+        if (TerminatingOrDeleted(ent.Owner)
+            || !_deviceLinkSourceQuery.Resolve(ent.Owner, ref ent.Comp, logMissing: false))
             return;
 
         var data = new LogicStatePayload
@@ -191,7 +238,8 @@ public sealed partial class DeviceLinkSystem
     [PublicAPI]
     public void ClearSignal(Entity<DeviceLinkSourceComponent?> ent, [ForbidLiteral] ProtoId<SourcePortPrototype> port)
     {
-        if (!_deviceLinkSourceQuery.Resolve(ent, ref ent.Comp))
+        if (TerminatingOrDeleted(ent.Owner)
+            || !_deviceLinkSourceQuery.Resolve(ent, ref ent.Comp, logMissing: false))
             return;
 
         ent.Comp.LastSignals.Remove(port);

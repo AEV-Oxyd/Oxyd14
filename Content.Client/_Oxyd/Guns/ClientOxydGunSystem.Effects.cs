@@ -13,7 +13,7 @@ public sealed partial class ClientOxydGunSystem
         // dont spam to overwhelm.
         //if (_gameTiming.RealTime - lastBroadcast < _gameTiming.TickPeriod * 2)
         //    return;
-        Log.Debug($"Sending mouse data at {_gameTiming.RealTime}");
+        Log.Debug($"#55 Sending mouse data at {_gameTiming.RealTime}, with held {_mouseSys.mousedDown}");
         RaiseNetworkEvent(new FiremodeMouseStatus()
         {
             clientTick = _gameTiming.CurTick,

@@ -1,0 +1,374 @@
+using System.Numerics;
+using Content.Client.UserInterface.Controls;
+using Robust.Client.Graphics;
+using Robust.Client.UserInterface;
+using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Graphics;
+using Robust.Shared.Input;
+using Robust.Shared.Maths;
+using Robust.Shared.Timing;
+
+namespace Content.Client._Oxyd.Computers.ScreenSharing;
+
+/// <summary>
+/// Registry of active <see cref="PipScreenSurface"/> controls indexed by device GUID.
+/// Allows <see cref="RemoteScreenView"/> instances to locate the live offscreen render texture
+/// of an ancestor or open device screen without recursive widget parenting.
+/// </summary>
+public static class PipSurfaceRegistry
+{
+    private static ClientRemoteScreenSystem RemoteSys => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>();
+
+    public static void Register(string guid, PipScreenSurface surface)
+    {
+        RemoteSys.RegisterPipSurface(guid, surface);
+    }
+
+    public static void Unregister(string guid, PipScreenSurface surface)
+    {
+        RemoteSys.UnregisterPipSurface(guid, surface);
+    }
+
+    /// <summary>
+    /// Returns true if any ancestor <see cref="PipScreenSurface"/> of <paramref name="start"/>
+    /// represents <paramref name="deviceGuid"/>.
+    /// </summary>
+    public static bool IsDeviceInAncestorChain(Control start, string? deviceGuid)
+    {
+        return FindAncestorSurface(start, deviceGuid) != null;
+    }
+
+    /// <summary>
+    /// Walks the UI parent chain from <paramref name="start"/> upward to locate an ancestor
+    /// <see cref="PipScreenSurface"/> matching <paramref name="deviceGuid"/>.
+    /// </summary>
+    public static PipScreenSurface? FindAncestorSurface(Control start, string? deviceGuid)
+    {
+        if (string.IsNullOrWhiteSpace(deviceGuid))
+            return null;
+
+        for (var cur = start.Parent; cur != null; cur = cur.Parent)
+        {
+            if (cur is PipScreenSurface surface &&
+                !surface.Disposed &&
+                string.Equals(surface.DeviceGuid, deviceGuid, StringComparison.OrdinalIgnoreCase))
+            {
+                return surface;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves the best <see cref="PipScreenSurface"/> for <paramref name="deviceGuid"/> relative
+    /// to <paramref name="requester"/>: prefers any surface that already has a valid captured texture,
+    /// then the ancestor surface in the same UI hierarchy, falling back to any visible registered surface.
+    /// </summary>
+    public static PipScreenSurface? ResolveSurface(Control requester, string? deviceGuid)
+    {
+        return RemoteSys.ResolvePipSurface(requester, deviceGuid);
+    }
+
+    /// <summary>
+    /// Invalidates all registered <see cref="PipScreenSurface"/> instances observing <paramref name="deviceGuid"/>.
+    /// </summary>
+    public static void InvalidateDevice(string? deviceGuid, int cascadeBounces = 3)
+    {
+        RemoteSys.InvalidatePipDevice(deviceGuid, cascadeBounces);
+    }
+}
+
+/// <summary>
+/// Wraps a device's screen content and captures its rendered output into a ping-pong pair of
+/// offscreen <see cref="IRenderTexture"/>s whenever a <see cref="RemoteScreenView"/> observes it.
+/// Enables real-time Picture-in-Picture (PiP) and infinite Hall-of-Mirrors (Droste) cascades
+/// without physical widget re-parenting or recursive stack overflows.
+/// </summary>
+[Virtual]
+public partial class PipScreenSurface : BoxContainer, IInputRelayTarget
+{
+    public virtual void RelayKeyBindDown(GUIBoundKeyEventArgs args) => KeyBindDown(args);
+    public virtual void RelayKeyBindUp(GUIBoundKeyEventArgs args) => KeyBindUp(args);
+    public virtual void RelayMouseMove(GUIMouseMoveEventArgs args) => MouseMove(args);
+    public virtual void RelayMouseWheel(GUIMouseWheelEventArgs args) => MouseWheel(args);
+    public virtual void RelayMouseEntered() => MouseEntered();
+    public virtual void RelayMouseExited() => MouseExited();
+    public virtual void RelayKeyHeld(GUIKeyEventArgs args) => KeyHeld(args);
+    public virtual void RelayTextEntered(GUITextEnteredEventArgs args) => TextEntered(args);
+    public virtual void RelayTextEditing(GUITextEditingEventArgs args) => TextEditing(args);
+    public virtual void RelayKeyboardFocusEntered() => KeyboardFocusEntered();
+    public virtual void RelayKeyboardFocusExited() => KeyboardFocusExited();
+    public virtual void RelayControlFocusExited() => ControlFocusExited();
+    [Dependency] private IClyde _clyde = default!;
+    [Dependency] private IEntityManager _entManager = default!;
+    private ClientRemoteScreenSystem? _remoteSys;
+    private ClientRemoteScreenSystem RemoteSys => _remoteSys ??= _entManager.System<ClientRemoteScreenSystem>();
+
+    /// <summary>
+    /// Maximum nested offscreen capture depth per UI frame.
+    /// Depth 2 allows A -> B -> A mutual screen-sharing to capture both hops live and sample
+    /// the ping-pong <see cref="ReadTexture"/> at the cycle boundary to build an infinite Droste cascade.
+    /// </summary>
+    public const int MaxCaptureDepth = 2;
+
+    /// <summary>
+    /// Minimum interval between steady-state background captures once the initial cascade bounces are seeded.
+    /// </summary>
+    private const float BackgroundCaptureIntervalSeconds = 0.05f;
+
+    public static bool IsCapturingOffscreen => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().IsCapturingOffscreen;
+    public static int CaptureDepth => IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().CaptureDepth;
+
+    public static void BeginUiFrame()
+    {
+        IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().BeginPipUiFrame();
+    }
+
+    /// <summary>
+    /// Enqueues a render target for disposal outside the Clyde render pass so a texture handle
+    /// is never deleted while draw batches referencing it are still queued in Clyde.
+    /// </summary>
+    public static void DeferDispose(IRenderTexture? target)
+    {
+        if (target != null)
+            IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().DeferPipDispose(target);
+    }
+
+    /// <summary>
+    /// Disposes all retired render targets when not inside an active render pass.
+    /// </summary>
+    public static void FlushDeferredDisposals()
+    {
+        IoCManager.Resolve<IEntityManager>().System<ClientRemoteScreenSystem>().FlushDeferredPipDisposals();
+    }
+
+    private string? _deviceGuid;
+    private IRenderTexture? _readTarget;
+    private IRenderTexture? _writeTarget;
+    private bool _hasValidReadFrame;
+    private bool _isCapturing;
+    private int _observedFramesRemaining;
+    private int _dirtyPassesRemaining = 3;
+    private float _timeSinceLastCapture;
+    private Vector2i _lastCapturedSize;
+
+    public bool IsCapturing => _isCapturing;
+    public bool HasValidReadFrame => _hasValidReadFrame;
+    public Vector2i LastCapturedSize => _lastCapturedSize;
+    public int DirtyPassesRemaining => _dirtyPassesRemaining;
+
+    /// <summary>
+    /// Returns true if an offscreen capture is needed (no valid frame captured, size changed,
+    /// dirty passes remaining, or periodic background refresh interval elapsed).
+    /// </summary>
+    public bool NeedsCapture(Vector2i targetSize)
+    {
+        if (!_hasValidReadFrame)
+            return true;
+
+        var clampedSize = Vector2i.ComponentMin(
+            Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
+            new Vector2i(2048, 2048));
+
+        if (_lastCapturedSize != clampedSize)
+            return true;
+
+        if (_dirtyPassesRemaining > 0)
+            return true;
+
+        if (_timeSinceLastCapture >= 0.1f)
+            return true;
+
+        return false;
+    }
+
+    public string? DeviceGuid
+    {
+        get => _deviceGuid;
+        set
+        {
+            if (string.Equals(_deviceGuid, value, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (_deviceGuid != null)
+                PipSurfaceRegistry.Unregister(_deviceGuid, this);
+
+            _deviceGuid = value;
+
+            if (_deviceGuid != null && !Disposed)
+            {
+                PipSurfaceRegistry.Register(_deviceGuid, this);
+                InvalidateCapture();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The most recently captured offscreen texture of this surface, or null if no frame has been captured yet.
+    /// Double-buffered so a nested <see cref="RemoteScreenView"/> can safely sample <see cref="ReadTexture"/>
+    /// while this surface renders its next frame into the write buffer.
+    /// </summary>
+    public Texture? ReadTexture => _hasValidReadFrame && !Disposed ? _readTarget?.Texture : null;
+
+    public PipScreenSurface()
+    {
+        IoCManager.InjectDependencies(this);
+        Orientation = LayoutOrientation.Vertical;
+        HorizontalExpand = true;
+        VerticalExpand = true;
+    }
+
+    /// <summary>
+    /// Returns true if this surface can safely capture <paramref name="control"/> right now without
+    /// re-entering an already active capture target or exceeding <see cref="MaxCaptureDepth"/>.
+    /// </summary>
+    public bool CanCapture(Control control, string? targetGuid = null)
+    {
+        if (_isCapturing)
+            return false;
+
+        return RemoteSys.CanCapturePip(control, targetGuid ?? _deviceGuid);
+    }
+
+    /// <summary>
+    /// Marks this surface as actively observed by a <see cref="RemoteScreenView"/> for the next N frames.
+    /// </summary>
+    public void RequestCaptureFrame(int frames = 3)
+    {
+        if (_observedFramesRemaining <= 0)
+            _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, 3);
+
+        _observedFramesRemaining = Math.Max(_observedFramesRemaining, frames);
+    }
+
+    /// <summary>
+    /// Marks the surface content as changed so the next 3 cascade bounces are captured promptly.
+    /// </summary>
+    public void InvalidateCapture(int cascadeBounces = 3)
+    {
+        _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, cascadeBounces);
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+        _timeSinceLastCapture += args.DeltaSeconds;
+        RemoteSys.FlushDeferredPipDisposals();
+    }
+
+    protected override void PostRenderChildren(ref ControlRenderArguments args)
+    {
+        base.PostRenderChildren(ref args);
+
+        if (_observedFramesRemaining <= 0 || RemoteSys.IsCapturingOffscreen || _isCapturing)
+            return;
+
+        _observedFramesRemaining--;
+
+        if (!_hasValidReadFrame || _lastCapturedSize != PixelSize)
+            _dirtyPassesRemaining = Math.Max(_dirtyPassesRemaining, 3);
+
+        if (_dirtyPassesRemaining <= 0 && _timeSinceLastCapture < BackgroundCaptureIntervalSeconds)
+            return;
+
+        if (CaptureToTarget(args.Handle))
+        {
+            _timeSinceLastCapture = 0f;
+            _lastCapturedSize = PixelSize;
+            if (_dirtyPassesRemaining > 0)
+                _dirtyPassesRemaining--;
+        }
+    }
+
+    /// <summary>
+    /// Renders any specified control tree offscreen into this surface's double-buffered render target.
+    /// Double-buffered so viewports observing this surface's <see cref="DeviceGuid"/> can immediately sample <see cref="ReadTexture"/>.
+    /// </summary>
+    public bool CaptureControl(IRenderHandle renderHandle, Control control, Vector2i targetSize)
+    {
+        if (targetSize.X <= 4 || targetSize.Y <= 4)
+            return false;
+
+        if (!CanCapture(control, _deviceGuid))
+            return false;
+
+        var clampedSize = Vector2i.ComponentMin(
+            Vector2i.ComponentMax(targetSize, new Vector2i(32, 32)),
+            new Vector2i(2048, 2048));
+
+        EnsureWriteTarget(clampedSize);
+        if (_writeTarget == null)
+            return false;
+
+        _isCapturing = true;
+        try
+        {
+            RemoteSys.RenderPipToTarget(renderHandle, _writeTarget, control, _deviceGuid);
+        }
+        finally
+        {
+            _isCapturing = false;
+        }
+
+        (_readTarget, _writeTarget) = (_writeTarget, _readTarget);
+        _hasValidReadFrame = true;
+        _timeSinceLastCapture = 0f;
+        _lastCapturedSize = clampedSize;
+        if (_dirtyPassesRemaining > 0)
+            _dirtyPassesRemaining--;
+
+        if (_writeTarget != null && _writeTarget.Size != clampedSize)
+        {
+            RemoteSys.DeferPipDispose(_writeTarget);
+            _writeTarget = null;
+        }
+
+        return true;
+    }
+
+    private bool CaptureToTarget(IRenderHandle renderHandle)
+    {
+        return CaptureControl(renderHandle, this, PixelSize);
+    }
+
+    private void EnsureWriteTarget(Vector2i size)
+    {
+        if (_writeTarget != null && _writeTarget.Size == size)
+            return;
+
+        if (_writeTarget != null)
+        {
+            RemoteSys.DeferPipDispose(_writeTarget);
+            _writeTarget = null;
+        }
+
+        var format = new RenderTargetFormatParameters(RenderTargetColorFormat.Rgba8Srgb);
+        var sampleParams = new TextureSampleParameters { Filter = true };
+        var label = string.IsNullOrEmpty(_deviceGuid) ? "Unknown" : _deviceGuid;
+
+        _writeTarget = _clyde.CreateRenderTarget(size, format, sampleParams, $"PipSurface_{label}_Buffer");
+    }
+
+    private void DisposeRenderTargets()
+    {
+        RemoteSys.DeferPipDispose(_readTarget);
+        _readTarget = null;
+        RemoteSys.DeferPipDispose(_writeTarget);
+        _writeTarget = null;
+        _hasValidReadFrame = false;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_deviceGuid != null)
+                PipSurfaceRegistry.Unregister(_deviceGuid, this);
+
+            DisposeRenderTargets();
+        }
+
+        base.Dispose(disposing);
+    }
+}

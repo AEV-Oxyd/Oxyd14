@@ -178,7 +178,8 @@ public sealed partial class StationRecordsSystem : EntitySystem
             Gender = gender,
             DisplayPriority = displayPriority,
             Fingerprint = mobFingerprint,
-            DNA = dna
+            DNA = dna,
+            CharacterProfile = new HumanoidCharacterProfile(profile)
         };
 
         var key = AddRecordEntry(station.AsNullable(), record);

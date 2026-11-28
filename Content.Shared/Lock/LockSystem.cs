@@ -1,3 +1,7 @@
+using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.Hardware;
+using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Access.Components;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Construction.Components;
 using Content.Shared.DoAfter;
@@ -6,6 +10,7 @@ using Content.Shared.Examine;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
+using Content.Shared.PDA;
 using Content.Shared.Popups;
 using Content.Shared.Storage;
 using Content.Shared.Storage.Components;
@@ -44,6 +49,7 @@ public sealed partial class LockSystem : EntitySystem
         SubscribeLocalEvent<LockComponent, ComponentStartup>(OnStartup);
         SubscribeLocalEvent<LockComponent, ActivateInWorldEvent>(OnActivated, before: [typeof(ActivatableUISystem)]);
         SubscribeLocalEvent<LockComponent, UseInHandEvent>(OnUseInHand, before: [typeof(ActivatableUISystem)]);
+        SubscribeLocalEvent<LockComponent, InteractUsingEvent>(OnInteractUsing);
         SubscribeLocalEvent<LockComponent, StorageOpenAttemptEvent>(OnStorageOpenAttempt);
         SubscribeLocalEvent<LockComponent, ExaminedEvent>(OnExamined);
         SubscribeLocalEvent<LockComponent, GetVerbsEvent<AlternativeVerb>>(AddToggleLockVerb);
@@ -101,6 +107,81 @@ public sealed partial class LockSystem : EntitySystem
             args.Handled = true;
             TryLock(uid, args.User, lockComp);
         }
+    }
+
+    private void OnInteractUsing(EntityUid uid, LockComponent lockComp, InteractUsingEvent args)
+    {
+        if (args.Handled || !lockComp.ToggleOnIdSwipe)
+            return;
+
+        if (!TryGetSwipedIdCard(args.Used, out var swipedCard))
+            return;
+
+        if (TryComp<EmbeddedComputerHostComponent>(uid, out var compHost))
+        {
+            if (compHost.ComputerEntity is not { } hostCompUid ||
+                !TryComp<ComputerStatsComponent>(hostCompUid, out var compStats) ||
+                !compStats.HasIdSlotModule)
+            {
+                args.Handled = true;
+                _sharedPopupSystem.PopupEntity("No ID card scanner or card slot hardware installed.", uid, args.User);
+                return;
+            }
+        }
+
+        args.Handled = true;
+
+        if (!CanToggleLock((uid, lockComp), args.User, quiet: false))
+            return;
+
+        if (lockComp.UseAccess && !HasUserAccess((uid, lockComp), swipedCard, quiet: true))
+        {
+            _sharedPopupSystem.PopupEntity(Loc.GetString(_defaultDenyReason), uid, args.User);
+            return;
+        }
+
+        if (lockComp.Locked)
+            Unlock(uid, args.User, lockComp);
+        else
+            Lock(uid, args.User, lockComp);
+    }
+
+    private bool TryGetSwipedIdCard(EntityUid used, out EntityUid card)
+    {
+        if (HasComp<IdCardComponent>(used))
+        {
+            card = used;
+            return true;
+        }
+
+        if (TryComp<PdaComponent>(used, out var pda))
+        {
+            // Keep PDA probe tools (LogProbe / NetProbe) working when clicking devices.
+            if (TryComp<EmbeddedComputerHostComponent>(used, out var host) &&
+                host.ComputerEntity is { } compUid &&
+                TryComp<OxydComputerComponent>(compUid, out var comp) &&
+                comp.IsBooted)
+            {
+                foreach (var progUid in comp.RunningPrograms)
+                {
+                    if (HasComp<LogProbeProgramComponent>(progUid) || HasComp<NetProbeProgramComponent>(progUid))
+                    {
+                        card = EntityUid.Invalid;
+                        return false;
+                    }
+                }
+            }
+
+            var pdaCard = pda.IdSlot.Item ?? pda.ContainedId;
+            if (pdaCard is { Valid: true } idUid && HasComp<IdCardComponent>(idUid))
+            {
+                card = idUid;
+                return true;
+            }
+        }
+
+        card = EntityUid.Invalid;
+        return false;
     }
 
     private void OnStorageOpenAttempt(EntityUid uid, LockComponent component, ref StorageOpenAttemptEvent args)

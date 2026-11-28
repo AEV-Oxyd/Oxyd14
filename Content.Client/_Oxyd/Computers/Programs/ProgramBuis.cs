@@ -1,0 +1,39 @@
+using Content.Client._Oxyd.Computers.UI;
+
+namespace Content.Client._Oxyd.Computers.Programs;
+
+/// <summary>
+/// Concrete BoundUserInterface types registered in YAML for every NTOS Program Entity.
+/// </summary>
+public sealed class OsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<OsUiControl>(owner, uiKey);
+public sealed class PdaOsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<PdaOsUiControl>(owner, uiKey);
+public sealed class EmbeddedOsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<EmbeddedOsUiControl>(owner, uiKey);
+public sealed class TerminalProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<TerminalUiControl>(owner, uiKey);
+public sealed class FileBrowserProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<FileBrowserUiControl>(owner, uiKey);
+public sealed class DownloaderProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<DownloaderUiControl>(owner, uiKey);
+public sealed class RouterProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<RouterUiControl>(owner, uiKey);
+public sealed class PacketSnifferProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<PacketSnifferUiControl>(owner, uiKey);
+public sealed class NetNavigatorProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NetNavigatorUiControl>(owner, uiKey);
+public sealed class SecurityLockProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SecurityLockUiControl>(owner, uiKey);
+public sealed class ApcControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<ApcControlUiControl>(owner, uiKey);
+public sealed class AtmosControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<AtmosControlUiControl>(owner, uiKey);
+public sealed class LatheControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<LatheControlUiControl>(owner, uiKey);
+public sealed class NotekeeperProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NotekeeperUiControl>(owner, uiKey);
+public sealed class NanoTaskProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NanoTaskUiControl>(owner, uiKey);
+public sealed class CrewManifestProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CrewManifestUiControl>(owner, uiKey);
+public sealed class NewsReaderProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NewsReaderUiControl>(owner, uiKey);
+public sealed class WantedListProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<WantedListUiControl>(owner, uiKey);
+public sealed class NetProbeProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NetProbeUiControl>(owner, uiKey);
+public sealed class LogProbeProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<LogProbeUiControl>(owner, uiKey);
+public sealed class MedTekProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<UtilityProgramUiControl>(owner, uiKey);
+public sealed class AstroNavProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<UtilityProgramUiControl>(owner, uiKey);
+public sealed class AccessEncoderProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<AccessEncoderUiControl>(owner, uiKey);
+public sealed class IdModifierProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<IdModifierUiControl>(owner, uiKey);
+public sealed class NetworkCoreOsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<NetworkCoreOsUiControl>(owner, uiKey);
+public sealed class StationRecordsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<StationRecordsUiControl>(owner, uiKey);
+public sealed class CriminalRecordsProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CriminalRecordsUiControl>(owner, uiKey);
+public sealed class SurveillanceCameraProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SurveillanceCameraUiControl>(owner, uiKey);
+public sealed class CargoOrdersProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CargoOrdersUiControl>(owner, uiKey);
+public sealed class CrewMonitorProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CrewMonitorUiControl>(owner, uiKey);
+public sealed class CommsConsoleProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<CommsConsoleUiControl>(owner, uiKey);
+public sealed class SolarControlProgramBui(EntityUid owner, Enum uiKey) : ProgramBoundUserInterface<SolarControlUiControl>(owner, uiKey);

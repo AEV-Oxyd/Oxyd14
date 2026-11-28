@@ -1,0 +1,160 @@
+- type: sourcePort
+  id: ComputerCommandSender
+  name: signal-port-oxyd-computer-command-sender
+  description: signal-port-desc-oxyd-computer-command-sender
+  defaultLinks: [ MachineCommandReceiver ]
+
+- type: sinkPort
+  id: ComputerStatusReceiver
+  name: signal-port-oxyd-computer-status-receiver
+  description: signal-port-desc-oxyd-computer-status-receiver
+
+- type: sinkPort
+  id: MachineCommandReceiver
+  name: signal-port-oxyd-machine-command-receiver
+  description: signal-port-desc-oxyd-machine-command-receiver
+
+- type: sourcePort
+  id: MachineStatusSender
+  name: signal-port-oxyd-machine-status-sender
+  description: signal-port-desc-oxyd-machine-status-sender
+  defaultLinks: [ ComputerStatusReceiver ]
+
+# ==============================================================================
+# Base Embedded Computer Ports
+# ==============================================================================
+
+- type: sourcePort
+  id: PowerTrigger
+  name: signal-port-oxyd-power-trigger-out
+  description: signal-port-desc-oxyd-power-trigger-out
+
+- type: sinkPort
+  id: PowerTrigger
+  name: signal-port-oxyd-power-trigger-in
+  description: signal-port-desc-oxyd-power-trigger-in
+
+- type: sourcePort
+  id: InternetLink
+  name: signal-port-oxyd-internet-link-out
+  description: signal-port-desc-oxyd-internet-link-out
+
+- type: sinkPort
+  id: InternetLink
+  name: signal-port-oxyd-internet-link-in
+  description: signal-port-desc-oxyd-internet-link-in
+
+- type: sourcePort
+  id: TerminalLink
+  name: signal-port-oxyd-terminal-link-out
+  description: signal-port-desc-oxyd-terminal-link-out
+
+- type: sinkPort
+  id: TerminalLink
+  name: signal-port-oxyd-terminal-link-in
+  description: signal-port-desc-oxyd-terminal-link-in
+
+- type: sourcePort
+  id: OutputTrigger1
+  name: signal-port-oxyd-output-trigger-1
+  description: signal-port-desc-oxyd-output-trigger-1
+
+- type: sourcePort
+  id: OutputTrigger2
+  name: signal-port-oxyd-output-trigger-2
+  description: signal-port-desc-oxyd-output-trigger-2
+
+- type: sinkPort
+  id: InputTrigger1
+  name: signal-port-oxyd-input-trigger-1
+  description: signal-port-desc-oxyd-input-trigger-1
+
+- type: sinkPort
+  id: InputTrigger2
+  name: signal-port-oxyd-input-trigger-2
+  description: signal-port-desc-oxyd-input-trigger-2
+
+# ==============================================================================
+# APC & Air Alarm Ports
+# ==============================================================================
+
+- type: sinkPort
+  id: ApcCommandSink
+  name: signal-port-oxyd-apc-command-sink
+  description: signal-port-desc-oxyd-apc-command-sink
+
+- type: sourcePort
+  id: ApcStatusSource
+  name: signal-port-oxyd-apc-status-source
+  description: signal-port-desc-oxyd-apc-status-source
+  defaultLinks: [ ComputerStatusReceiver ]
+
+- type: sinkPort
+  id: AirAlarmCommandSink
+  name: signal-port-oxyd-air-alarm-command-sink
+  description: signal-port-desc-oxyd-air-alarm-command-sink
+
+- type: sourcePort
+  id: AirAlarmStatusSource
+  name: signal-port-oxyd-air-alarm-status-source
+  description: signal-port-desc-oxyd-air-alarm-status-source
+  defaultLinks: [ ComputerStatusReceiver ]
+
+# ==============================================================================
+# Autolathe Ports
+# ==============================================================================
+
+- type: sinkPort
+  id: AutolatheBlueprintSink
+  name: signal-port-oxyd-autolathe-blueprint-sink
+  description: signal-port-desc-oxyd-autolathe-blueprint-sink
+
+- type: sinkPort
+  id: AutolatheCommandSink
+  name: signal-port-oxyd-autolathe-command-sink
+  description: signal-port-desc-oxyd-autolathe-command-sink
+
+- type: sinkPort
+  id: AutolatheSetRecipeSink
+  name: signal-port-oxyd-autolathe-set-recipe-sink
+  description: signal-port-desc-oxyd-autolathe-set-recipe-sink
+
+- type: sourcePort
+  id: AutolatheStatusSource
+  name: signal-port-oxyd-autolathe-status-source
+  description: signal-port-desc-oxyd-autolathe-status-source
+  defaultLinks: [ ComputerStatusReceiver ]
+
+# ==============================================================================
+# PDA Machine Ports
+# ==============================================================================
+
+- type: sinkPort
+  id: PdaFlashlightToggleSink
+  name: signal-port-oxyd-pda-flashlight-toggle
+  description: signal-port-desc-oxyd-pda-flashlight-toggle
+
+- type: sourcePort
+  id: PdaFlashlightStatusSource
+  name: signal-port-oxyd-pda-flashlight-status
+  description: signal-port-desc-oxyd-pda-flashlight-status
+
+- type: sinkPort
+  id: PdaIdSlotEjectSink
+  name: signal-port-oxyd-pda-id-eject
+  description: signal-port-desc-oxyd-pda-id-eject
+
+- type: sourcePort
+  id: PdaIdSlotStatusSource
+  name: signal-port-oxyd-pda-id-status
+  description: signal-port-desc-oxyd-pda-id-status
+
+- type: sinkPort
+  id: PdaPenSlotEjectSink
+  name: signal-port-oxyd-pda-pen-eject
+  description: signal-port-desc-oxyd-pda-pen-eject
+
+- type: sourcePort
+  id: PdaPenSlotStatusSource
+  name: signal-port-oxyd-pda-pen-status
+  description: signal-port-desc-oxyd-pda-pen-status

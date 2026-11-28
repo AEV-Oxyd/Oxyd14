@@ -1,0 +1,153 @@
+- type: entity
+  id: BaseDataServer
+  parent: [ BaseMachinePowered, ConstructibleMachine, StructureHealthMachineStrong ]
+  name: data server
+  description: A high-capacity network server hosting station databases and network files via its internal computer module.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/server.rsi
+    snapCardinals: true
+    layers:
+    - state: server-off
+    - state: server-on
+      visible: false
+      map: [ "enum.PowerDeviceVisualLayers.Powered" ]
+    - state: variant-crew
+    - state: server_o
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: DeviceNetwork
+    deviceNetId: Wired
+    autoConnect: true
+  - type: DataServer
+    serverProtocols:
+      - ManifestService
+      - StationRecordsService
+      - NewsService
+  - type: AccessReader
+    access: [["SystemAdmin"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydServerEmbeddedController
+    borderColor: "#00D4FF"
+    title: "DATA SERVER"
+    subtitle: " | Mainframe Host"
+  - type: ContainerContainer
+    containers:
+      machine_board: !type:Container
+      machine_parts: !type:Container
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: ExtensionCableReceiver
+  - type: ActivatableUI
+    key: enum.ComputerUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: Appearance
+
+- type: entity
+  id: StationManifestServer
+  parent: BaseDataServer
+  name: crew manifest server
+  description: Physical mainframe maintaining the station crew roster and department allocations.
+  components:
+  - type: DataServer
+    serverProtocols:
+      - ManifestService
+
+- type: entity
+  id: StationRecordsServer
+  parent: BaseDataServer
+  name: station records server
+  description: Secure database server hosting personnel employment and security records.
+  components:
+  - type: DataServer
+    serverProtocols:
+      - StationRecordsService
+
+- type: entity
+  id: HardwareDebuggingTerminal
+  parent: BaseItem
+  name: hardware debugging terminal
+  description: Diagnostic handheld terminal used to connect locally to computer data ports for circuit, DeviceLink, and filesystem debugging.
+  components:
+  - type: Sprite
+    sprite: Objects/Tools/multitool.rsi
+    state: icon
+  - type: HardwareDebugger
+  - type: UserInterface
+    interfaces:
+      enum.HardwareDebuggerUiKey.Key:
+        type: HardwareDebuggerBoundUserInterface
+
+- type: entity
+  id: StationNetworkRouter
+  parent: [ BaseMachinePowered, ConstructibleMachine, StructureHealthMachineStrong ]
+  name: station network router
+  description: High-throughput core network routing appliance directing, caching, and filtering station packet traffic.
+  components:
+  - type: Sprite
+    sprite: Structures/Machines/server.rsi
+    snapCardinals: true
+    layers:
+    - state: server-off
+    - state: server-on
+      visible: false
+      map: [ "enum.PowerDeviceVisualLayers.Powered" ]
+    - state: variant-crew
+    - state: server_o
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: DeviceNetwork
+    deviceNetId: Wired
+    autoConnect: true
+  - type: DeviceNetworkRouter
+  - type: NetworkRouter
+  - type: AccessReader
+    access: [["Network"], ["SystemAdmin"]]
+  - type: Lock
+    locked: true
+    unlockOnClick: false
+    lockOnClick: false
+    showLockVerbs: false
+    toggleOnIdSwipe: true
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydRouterEmbeddedController
+    borderColor: "#00D4FF"
+    title: "STATION ROUTER"
+    subtitle: " | Packet Core"
+  - type: ContainerContainer
+    containers:
+      machine_board: !type:Container
+      machine_parts: !type:Container
+      computer_board: !type:ContainerSlot {}
+  - type: DeviceLinkSource
+    ports:
+    - MachineStatusSender
+  - type: DeviceLinkSink
+    ports:
+    - MachineCommandReceiver
+  - type: ApcPowerReceiver
+    powerLoad: 250
+  - type: ExtensionCableReceiver
+  - type: ActivatableUI
+    key: enum.ComputerUiKey.Key
+    singleUser: false
+  - type: UserInterface
+    interfaces:
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: Appearance

@@ -287,7 +287,7 @@
       - id: Binoculars
       - id: LanternFlash
       - id: PowerCellHigh
-      - id: NetProbeCartridge
+      - id: ProgramDiskNetProbe
       - id: WelderIndustrial
       - id: SheetPlasteel10
       - id: ClothingMaskGasExplorer

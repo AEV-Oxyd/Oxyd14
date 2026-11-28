@@ -31,6 +31,7 @@
   - type: WiresPanel
   - type: ActivatableUI
     key: enum.LatheUiKey.Key
+    singleUser: false
   - type: ActivatableUIRequiresPower
   - type: UserInterface
     interfaces:
@@ -109,8 +110,25 @@
       map: ["enum.MaterialStorageVisualLayers.Inserting"]
     - state: panel
       map: ["enum.WiresVisualLayers.MaintenancePanel"]
-  - type: Machine
-    board: AutolatheMachineCircuitboard
+  - type: EmbeddedComputerHost
+    computerPrototype: BaseOxydLatheEmbeddedController
+    borderColor: "#5c6b73"
+    accentHColor: "#90a4ae"
+    accentVColor: "#37474f"
+    title: "FABRICATION TERMINAL"
+    subtitle: " | Autolathe Subsystem"
+  - type: DeviceLinkSink
+    invokeLimit: 0
+    ports:
+    - AutolatheBlueprintSink
+    - AutolatheCommandSink
+    - AutolatheSetRecipeSink
+    - MachineCommandReceiver
+  - type: DeviceLinkSource
+    ports:
+    - AutolatheStatusSource
+    - MachineStatusSender
+  - type: ItemSlots
   - type: MaterialStorage
     whitelist: &StandardMaterialWhitelist
       tags:
@@ -123,6 +141,11 @@
     runningState: building
     unlitIdleState: unlit
     unlitRunningState: unlit-building
+    diskSlot:
+      name: Data Disk
+      whitelist:
+        components:
+        - FileSystem
     staticPacks:
     - ToolsStatic
     - PartsStatic
@@ -152,9 +175,12 @@
       machine_board: !type:Container
       machine_parts: !type:Container
       blueprint: !type:Container
+      disk_slot: !type:ContainerSlot
+      computer_board: !type:ContainerSlot {}
   - type: EmptyOnMachineDeconstruct
     containers:
     - blueprint
+    - disk_slot
 
 - type: entity
   id: AutolatheHyperConvection

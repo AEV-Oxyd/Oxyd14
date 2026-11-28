@@ -1,0 +1,66 @@
+file-browser-program-name = File Browser
+terminal-program-name = Terminal (SSH)
+downloader-program-name = Central Downloader
+pda-slot-component-slot-name-disk = Data Disk Slot
+oxyd-open-terminal-verb = Open Terminal
+
+signal-port-oxyd-computer-command-sender = Computer Command Output
+signal-port-desc-oxyd-computer-command-sender = Transmits terminal and program commands from an Oxyd computer to a linked machine.
+signal-port-oxyd-computer-status-receiver = Computer Status Input
+signal-port-desc-oxyd-computer-status-receiver = Receives machine telemetry and status updates on an Oxyd computer.
+signal-port-oxyd-machine-command-receiver = Machine Command Input
+signal-port-desc-oxyd-machine-command-receiver = Receives control commands from a linked Oxyd computer.
+signal-port-oxyd-machine-status-sender = Machine Status Output
+signal-port-desc-oxyd-machine-status-sender = Transmits machine telemetry and status changes to a linked Oxyd computer.
+
+signal-port-oxyd-power-trigger-out = Power Trigger Output
+signal-port-desc-oxyd-power-trigger-out = Emits a trigger to turn computer power ON or OFF.
+signal-port-oxyd-power-trigger-in = Power Trigger Input
+signal-port-desc-oxyd-power-trigger-in = Receives a trigger to turn computer power ON or OFF.
+signal-port-oxyd-internet-link-out = Internet Packet Output
+signal-port-desc-oxyd-internet-link-out = Transmits internet packets across network routers and switches.
+signal-port-oxyd-internet-link-in = Internet Packet Input
+signal-port-desc-oxyd-internet-link-in = Receives internet packets from network routers and switches.
+signal-port-oxyd-terminal-link-out = Terminal Stream Output
+signal-port-desc-oxyd-terminal-link-out = Transmits terminal text and remote console interactions.
+signal-port-oxyd-terminal-link-in = Terminal Stream Input
+signal-port-desc-oxyd-terminal-link-in = Receives terminal text and remote console interactions.
+signal-port-oxyd-output-trigger-1 = Digital Output 1
+signal-port-desc-oxyd-output-trigger-1 = Configurable general-purpose digital output trigger 1.
+signal-port-oxyd-output-trigger-2 = Digital Output 2
+signal-port-desc-oxyd-output-trigger-2 = Configurable general-purpose digital output trigger 2.
+signal-port-oxyd-input-trigger-1 = Digital Input 1
+signal-port-desc-oxyd-input-trigger-1 = Configurable general-purpose digital input trigger 1.
+signal-port-oxyd-input-trigger-2 = Digital Input 2
+signal-port-desc-oxyd-input-trigger-2 = Configurable general-purpose digital input trigger 2.
+
+signal-port-oxyd-apc-command-sink = APC Command Input
+signal-port-desc-oxyd-apc-command-sink = Receives breaker and status query commands over DeviceLink.
+signal-port-oxyd-apc-status-source = APC Status Output
+signal-port-desc-oxyd-apc-status-source = Emits APC breaker, charge, load, and supply telemetry packets.
+signal-port-oxyd-air-alarm-command-sink = Air Alarm Command Input
+signal-port-desc-oxyd-air-alarm-command-sink = Receives mode, auto-mode, resync, and telemetry commands over DeviceLink.
+signal-port-oxyd-air-alarm-status-source = Air Alarm Status Output
+signal-port-desc-oxyd-air-alarm-status-source = Emits atmospheric alarm level, gas readings, vent and scrubber status packets.
+
+signal-port-oxyd-autolathe-blueprint-sink = Autolathe Blueprint Input
+signal-port-desc-oxyd-autolathe-blueprint-sink = Receives blueprint and recipe file references from linked programs or disks.
+signal-port-oxyd-autolathe-command-sink = Autolathe Command Input
+signal-port-desc-oxyd-autolathe-command-sink = Receives print, cancel, and material ejection commands via packet.
+signal-port-oxyd-autolathe-set-recipe-sink = Set Recipe
+signal-port-desc-oxyd-autolathe-set-recipe-sink = Selects or cycles the active recipe remembered by the autolathe for signal-triggered printing.
+signal-port-oxyd-autolathe-status-source = Autolathe Status Output
+signal-port-desc-oxyd-autolathe-status-source = Transmits operational telemetry (standby, printing, materials, queue).
+
+signal-port-oxyd-pda-flashlight-toggle = PDA Flashlight Toggle
+signal-port-desc-oxyd-pda-flashlight-toggle = Toggles the built-in flashlight on or off.
+signal-port-oxyd-pda-flashlight-status = PDA Flashlight Status
+signal-port-desc-oxyd-pda-flashlight-status = Reports the current flashlight state.
+signal-port-oxyd-pda-id-eject = PDA ID Eject
+signal-port-desc-oxyd-pda-id-eject = Ejects the inserted ID card from the PDA slot.
+signal-port-oxyd-pda-id-status = PDA ID Slot Status
+signal-port-desc-oxyd-pda-id-status = Reports ID card presence and owner credentials.
+signal-port-oxyd-pda-pen-eject = PDA Pen Eject
+signal-port-desc-oxyd-pda-pen-eject = Ejects the inserted pen from the PDA slot.
+signal-port-oxyd-pda-pen-status = PDA Pen Slot Status
+signal-port-desc-oxyd-pda-pen-status = Reports pen presence in the PDA.

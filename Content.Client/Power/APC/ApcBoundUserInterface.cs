@@ -1,4 +1,5 @@
 using Content.Client.Power.APC.UI;
+using Content.Client.UserInterface.StateRouting;
 using Content.Shared.Access.Systems;
 using Content.Shared.APC;
 using JetBrains.Annotations;
@@ -8,7 +9,7 @@ using Robust.Shared.Player;
 namespace Content.Client.Power.APC
 {
     [UsedImplicitly]
-    public sealed class ApcBoundUserInterface : BoundUserInterface
+    public sealed class ApcBoundUserInterface : RoutedBoundUserInterface
     {
         [ViewVariables]
         private ApcMenu? _menu;
@@ -21,6 +22,7 @@ namespace Content.Client.Power.APC
         {
             base.Open();
             _menu = this.CreateWindow<ApcMenu>();
+            SetStateScopeRoot(_menu);
             _menu.SetEntity(Owner);
             _menu.OnBreaker += BreakerPressed;
 

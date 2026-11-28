@@ -93,7 +93,7 @@ public sealed partial class MaterialStorageControl : ScrollContainer
         }
 
         _currentMaterials = mats;
-        NoMatsLabel.Visible = MaterialList.ChildCount == 1;
+        NoMatsLabel.Visible = MaterialList.ChildCount == 0;
         SiloLinkedLabel.Visible = _entityManager.TryGetComponent<OreSiloClientComponent>(_owner.Value, out var client) && client.Silo != null;
     }
 }

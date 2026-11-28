@@ -14,10 +14,8 @@ using DependencyAttribute = Robust.Shared.IoC.DependencyAttribute;
 
 namespace Content.Server._Oxyd.Framework.ViewCalc;
 
-public sealed class ViewTickEvent : EntityEventArgs
-{
-    public required HashSet<EntityUid> seen;
-}
+[ByRefEvent]
+public readonly record struct ViewTickEvent(HashSet<EntityUid> seen);
 
 /// <summary>
 /// Handles Line-Of-Sight view perception calculations for ViewTickerComponent entities.
@@ -40,6 +38,8 @@ public sealed partial class ViewCalcSystem : EntitySystem
     private EntityQuery<OccluderComponent> _occluderQuery;
     private EntityQuery<TransformComponent> _xformQuery;
     private EntityQuery<MapGridComponent> _gridQuery;
+    private EntityQuery<ViewTickerComponent> _tickerQuery;
+    private EntityQuery<ViewRelevantComponent> _relevantQuery;
 
     private readonly QueryFilter _opaqueFilter = new()
     {
@@ -69,7 +69,22 @@ public sealed partial class ViewCalcSystem : EntitySystem
         _occluderQuery = GetEntityQuery<OccluderComponent>();
         _xformQuery = GetEntityQuery<TransformComponent>();
         _gridQuery = GetEntityQuery<MapGridComponent>();
+        _tickerQuery = GetEntityQuery<ViewTickerComponent>();
+        _relevantQuery = GetEntityQuery<ViewRelevantComponent>();
         _viewJob = new ViewJob { System = this };
+
+        SubscribeLocalEvent<ViewTickerComponent, ComponentShutdown>(OnTickerShutdown);
+        SubscribeLocalEvent<ViewTickerComponent, ComponentRemove>(OnTickerRemove);
+    }
+
+    private void OnTickerShutdown(EntityUid uid, ViewTickerComponent comp, ComponentShutdown args)
+    {
+        comp.lastSeen.Clear();
+    }
+
+    private void OnTickerRemove(EntityUid uid, ViewTickerComponent comp, ComponentRemove args)
+    {
+        comp.lastSeen.Clear();
     }
 
     public override void Update(float frameTime)
@@ -83,6 +98,10 @@ public sealed partial class ViewCalcSystem : EntitySystem
 
         while (query.MoveNext(out var uid, out var ticker, out var xform))
         {
+            // Viewer lifecycle check: ensure deleted, terminating, or non-running components are skipped
+            if (TerminatingOrDeleted(uid) || ticker.LifeStage > ComponentLifeStage.Running)
+                continue;
+
             // Work spreading: partition viewers across targetInterval ticks (e.g. 30 ticks = 1 sec at 30Hz)
             if ((curTick + (uint)uid.Id) % targetInterval != 0)
                 continue;
@@ -95,8 +114,11 @@ public sealed partial class ViewCalcSystem : EntitySystem
                 distSq < 2f &&
                 curTime - ticker.lastTickTime <= TimeSpan.FromSeconds(5))
             {
-                // Fix: targeted event dispatch to uid so subscribers receive cached ticks
-                RaiseLocalEvent(uid, new ViewTickEvent { seen = ticker.lastSeen });
+                if (!TerminatingOrDeleted(uid) && ticker.LifeStage == ComponentLifeStage.Running)
+                {
+                    var ev = new ViewTickEvent(ticker.lastSeen);
+                    RaiseLocalEvent(uid, ref ev);
+                }
                 continue;
             }
 
@@ -120,19 +142,44 @@ public sealed partial class ViewCalcSystem : EntitySystem
         // Phase 1: Parallel Compute (Read-only LOS calculation using dedicated IParallelManager job)
         _parallel.ProcessNow(_viewJob, activeCount);
 
-        // Phase 2: Sequential Event Dispatch on Main Thread (Ensures thread-safe ECS event delivery)
-        for (var i = 0; i < activeCount; i++)
+        try
         {
-            var active = _activeViewers[i];
-            var ticker = active.Ticker;
+            // Phase 2: Sequential Event Dispatch on Main Thread (Ensures thread-safe ECS event delivery)
+            for (var i = 0; i < activeCount; i++)
+            {
+                var active = _activeViewers[i];
+                var ticker = active.Ticker;
 
-            ticker.lastTickTime = curTime;
-            ticker.lastTickPosition = active.Coordinates;
+                // Safety guard: ensure viewer was not deleted / component removed during or after parallel phase
+                if (TerminatingOrDeleted(active.Uid) ||
+                    ticker.Deleted ||
+                    ticker.LifeStage > ComponentLifeStage.Running ||
+                    !_tickerQuery.HasComp(active.Uid))
+                {
+                    continue;
+                }
 
-            ticker.lastSeen.Clear();
-            ticker.lastSeen.UnionWith(active.Seen);
+                ticker.lastTickTime = curTime;
+                ticker.lastTickPosition = active.Coordinates;
 
-            RaiseLocalEvent(active.Uid, new ViewTickEvent { seen = ticker.lastSeen });
+                ticker.lastSeen = active.Seen;
+                var ev = new ViewTickEvent(ticker.lastSeen);
+                RaiseLocalEvent(active.Uid, ref ev);
+            }
+        }
+        finally
+        {
+            // Clear pooled data references to prevent holding dead entities or components in memory
+            for (var i = 0; i < activeCount; i++)
+            {
+                var active = _activeViewers[i];
+                active.Uid = EntityUid.Invalid;
+                active.Ticker = null!;
+                active.Grid = null;
+                active.GridUid = null;
+                active.Candidates.Clear();
+                active.Seen.Clear();
+            }
         }
     }
 
@@ -142,11 +189,17 @@ public sealed partial class ViewCalcSystem : EntitySystem
         data.Candidates.Clear();
         data.Seen.Clear();
 
+        if (TerminatingOrDeleted(data.Uid) || data.Ticker.Deleted || data.Ticker.LifeStage > ComponentLifeStage.Running)
+            return;
+
         _entlook.GetEntitiesInRange(data.Coordinates, data.Ticker.range, data.Candidates, LookupFlags.Approximate);
 
         foreach (var candidate in data.Candidates)
         {
             if (candidate.Owner == data.Uid)
+                continue;
+
+            if (TerminatingOrDeleted(candidate.Owner) || !_relevantQuery.HasComp(candidate.Owner))
                 continue;
 
             var candXform = _xformQuery.GetComponent(candidate.Owner);
@@ -268,6 +321,9 @@ public sealed partial class ViewCalcSystem : EntitySystem
         foreach (var ent in candidates)
         {
             var targetUid = ent.Owner;
+            if (TerminatingOrDeleted(targetUid) || !_relevantQuery.HasComp(targetUid))
+                continue;
+
             var targetXform = _xformQuery.GetComponent(targetUid);
             var targetPos = _transform.GetMapCoordinates(targetUid, targetXform);
 

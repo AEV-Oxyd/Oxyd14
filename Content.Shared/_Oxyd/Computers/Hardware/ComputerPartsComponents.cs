@@ -1,0 +1,169 @@
+using Robust.Shared.GameStates;
+
+namespace Content.Shared._Oxyd.Computers.Hardware;
+
+public enum HardwarePartSize : byte
+{
+    Small = 0,
+    Medium = 1,
+    Large = 2
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerCpuComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public int FrequencyMhz = 800;
+
+    [DataField, AutoNetworkedField]
+    public int MaxConcurrentPrograms = 4;
+
+    /// <summary>
+    /// Total dynamic CPU processing units this CPU can sustain at 100% load.
+    /// When &lt;= 0, derived automatically from FrequencyMhz / 4f (minimum 50).
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public float CpuCapacity;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerRamComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public int SizeMb = 512;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerHardDriveComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public int CapacityBytes = 8388608;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Medium;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerNetworkCardComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public int BandwidthBps = 500000;
+
+    [DataField, AutoNetworkedField]
+    public int MaxUploadBps = 250000;
+
+    [DataField, AutoNetworkedField]
+    public int BufferQueueLimit = 50;
+
+    [DataField, AutoNetworkedField]
+    public bool SupportsWired = true;
+
+    [DataField, AutoNetworkedField]
+    public bool SupportsWireless = true;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerBatteryModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public float MaxCharge = 1000f;
+
+    [DataField, AutoNetworkedField]
+    public float CurrentCharge = 1000f;
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerSensorModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// Biometric health scanner sensor hardware module required for MedTek diagnostics.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerHealthScannerModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// Thermal paper printer hardware module required for printing notes and tasks.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerPrinterModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// How an ID card reader hardware module handles cards presented to its computer.
+/// </summary>
+public enum ComputerCardReaderMode : byte
+{
+    /// <summary>Swipe-only scanner: reads a card presented to the computer without retaining it.</summary>
+    Scanner,
+
+    /// <summary>Card slot: physically holds an inserted ID card until ejected.</summary>
+    Slot,
+}
+
+/// <summary>
+/// ID card scanner / card slot hardware part. Any system that reads ID cards on a computer
+/// (swiping, ID modification, camera / APC / atmos authorization) must go through this hardware.
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerIdCardSlotModuleComponent : Component
+{
+    public const string DefaultCardSlotId = "card_slot";
+
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+
+    /// <summary>Scanner reads cards transiently; Slot holds one card in <see cref="CardSlotId"/> on this part.</summary>
+    [DataField, AutoNetworkedField]
+    public ComputerCardReaderMode Mode = ComputerCardReaderMode.Slot;
+
+    /// <summary>Id of the item slot (on this part entity) that holds the card when <see cref="Mode"/> is Slot.</summary>
+    [DataField]
+    public string CardSlotId = DefaultCardSlotId;
+}
+
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerDiskSlotModuleComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public HardwarePartSize Size = HardwarePartSize.Small;
+}
+
+/// <summary>
+/// Attached to computer entities equipped with a physical data port jack,
+/// allowing local terminal connection via diagnostic tools (such as the Hardware Debugging Terminal).
+/// </summary>
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+public sealed partial class ComputerDataPortComponent : Component
+{
+    [DataField, AutoNetworkedField]
+    public bool Enabled = true;
+
+    [DataField, AutoNetworkedField]
+    public string PortLabel = "JTAG-0";
+
+    [DataField, AutoNetworkedField]
+    public bool RequireMaintenancePanelOpen;
+}

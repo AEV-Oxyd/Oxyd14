@@ -1,0 +1,7 @@
+- type: accessLevel
+  id: Network
+  name: id-card-access-level-network
+
+- type: accessLevel
+  id: SystemAdmin
+  name: id-card-access-level-system-admin

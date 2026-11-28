@@ -77,6 +77,36 @@ namespace Content.Shared.Lathe
         /// <returns></returns>
         [DataField(required: false)] public ItemSlot? diskSlot = null;
 
+        /// <summary>
+        /// The currently selected blueprint file on the inserted disk (full path, e.g. /blueprints/handcuffs.lathe).
+        /// If null, all available recipes are shown.
+        /// </summary>
+        [DataField]
+        public string? SelectedBlueprintFile = null;
+
+        /// <summary>
+        /// Remembered recipe selected for external signal-triggered printing (via UI or SetRecipe port).
+        /// Persists across UI closes and only clears if physical access to its disk or blueprint file is lost.
+        /// </summary>
+        [DataField]
+        public ProtoId<LatheRecipePrototype>? SelectedRecipeId;
+
+        [DataField]
+        public string? SelectedRecipeFilePath;
+
+        [DataField]
+        public bool SelectedRecipeFromDisk;
+
+        [ViewVariables]
+        public EntityUid? SelectedRecipeDriveUid;
+
+        /// <summary>
+        /// Tracks whether default static blueprints have already been materialized into the
+        /// lathe's embedded computer VFS memory (/blueprints/*.lathe).
+        /// </summary>
+        [DataField]
+        public bool EmbeddedBlueprintsSeeded;
+
         #region MachineUpgrading
         /// <summary>
         /// A modifier that changes how long it takes to print a recipe

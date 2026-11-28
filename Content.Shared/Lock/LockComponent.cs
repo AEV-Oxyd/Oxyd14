@@ -125,6 +125,13 @@ public sealed partial class LockComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public bool AllowRepeatedLocking = true;
+
+    /// <summary>
+    /// If true, using an ID card (or a PDA containing an ID card) on this entity toggles the lock
+    /// after checking the swiped card's access against this entity's access reader.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public bool ToggleOnIdSwipe;
 }
 
 /// <summary>

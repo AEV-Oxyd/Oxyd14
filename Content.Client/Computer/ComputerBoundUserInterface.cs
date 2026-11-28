@@ -1,3 +1,4 @@
+using Content.Client.UserInterface.StateRouting;
 using Robust.Client.GameObjects;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.CustomControls;
@@ -19,6 +20,7 @@ namespace Content.Client.Computer
             base.Open();
 
             _window = this.CreateWindow<TWindow>();
+            SetStateScopeRoot(_window);
             _window.SetupComputerWindow(this);
         }
 
@@ -50,7 +52,7 @@ namespace Content.Client.Computer
     /// We could instead qualify a lot of generics even further, but that is a waste of time.
     /// </summary>
     [Virtual]
-    public class ComputerBoundUserInterfaceBase : BoundUserInterface
+    public class ComputerBoundUserInterfaceBase : RoutedBoundUserInterface
     {
         public ComputerBoundUserInterfaceBase(EntityUid owner, Enum uiKey) : base(owner, uiKey)
         {

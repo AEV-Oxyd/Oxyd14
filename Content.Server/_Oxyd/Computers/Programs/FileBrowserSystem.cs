@@ -1,0 +1,321 @@
+using System.Linq;
+using Content.Shared._Oxyd.Computers;
+using Content.Shared._Oxyd.Computers.FileSystem;
+using Content.Shared._Oxyd.Computers.Hardware;
+using Content.Shared._Oxyd.Computers.Network;
+using Content.Shared._Oxyd.Computers.Programs;
+using Content.Shared.Containers.ItemSlots;
+using Content.Shared.Interaction;
+using Content.Shared.PDA;
+using Robust.Shared.Containers;
+
+namespace Content.Server._Oxyd.Computers.Programs;
+
+public sealed partial class FileBrowserSystem : EntitySystem
+{
+    [Dependency] private OxydComputerSystem _computer = default!;
+    [Dependency] private SharedFileSystemSystem _fileSystem = default!;
+    [Dependency] private SharedDeviceGuidSystem _guid = default!;
+    [Dependency] private ItemSlotsSystem _itemSlots = default!;
+    [Dependency] private SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private SharedContainerSystem _container = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
+
+    [Dependency] private EntityQuery<ProgramComponent> _programQuery = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        Subs.BuiEvents<FileBrowserProgramComponent>(ProgramUiKey.Key, subs =>
+        {
+            subs.Event<FileBrowserActionMessage>(OnUiAction);
+        });
+    }
+
+    [SubscribeLocalEvent]
+    private void OnStartup(Entity<FileBrowserProgramComponent> ent, ref ProgramStartupEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnActivated(Entity<FileBrowserProgramComponent> ent, ref ProgramActivatedEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnDeviceLink(Entity<FileBrowserProgramComponent> ent, ref ProgramDeviceLinkReceivedEvent args)
+    {
+        UpdateUi(ent.Owner, args.ComputerUid, ent.Comp);
+    }
+
+    private bool TryGetInsertedDisk(EntityUid compUid, out EntityUid diskUid, out FileSystemComponent? diskFs, out string diskName)
+    {
+        diskUid = EntityUid.Invalid;
+        diskFs = null;
+        diskName = "Data Disk";
+
+        if (!TryComp<OxydComputerComponent>(compUid, out var comp))
+            return false;
+
+        if (comp.HostMachine is { } hostUid &&
+            TryComp<PdaComponent>(hostUid, out var pda) &&
+            pda.ContainedDisk is { } pDisk &&
+            TryComp<FileSystemComponent>(pDisk, out diskFs))
+        {
+            diskUid = pDisk;
+            diskName = MetaData(pDisk).EntityName;
+            return true;
+        }
+
+        if (_itemSlots.TryGetSlot(compUid, ModularComputerComponent.SlotDiskModule, out var modSlot) &&
+            modSlot.Item is { } mDisk &&
+            TryComp<FileSystemComponent>(mDisk, out diskFs))
+        {
+            diskUid = mDisk;
+            diskName = MetaData(mDisk).EntityName;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void OnUiAction(Entity<FileBrowserProgramComponent> ent, ref FileBrowserActionMessage args)
+    {
+        if (!_programQuery.TryComp(ent.Owner, out var prog) || prog.Computer is not { } compUid)
+            return;
+
+        if (!_computer.CanExecuteProgramAction(ent.Owner, args.Actor, out var blockReason))
+        {
+            ent.Comp.StatusMessage = blockReason;
+            UpdateUi(ent.Owner, compUid, ent.Comp);
+            return;
+        }
+
+        _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fsComp);
+        var cleanPath = SharedFileSystemSystem.NormalizePath(args.Path ?? string.Empty);
+
+        switch (args.Action)
+        {
+            case FileBrowserAction.ChangeDirectory:
+                ent.Comp.CurrentDirectory = string.IsNullOrWhiteSpace(args.Path) ? "/" : SharedFileSystemSystem.NormalizeDirectory(args.Path);
+                ent.Comp.ViewedFilePath = null;
+                break;
+
+            case FileBrowserAction.ViewFile:
+                ent.Comp.ViewedFilePath = cleanPath;
+                ent.Comp.ViewedFileIsOnDisk = ent.Comp.CurrentDirectory == "/disk/";
+                break;
+
+            case FileBrowserAction.CloseView:
+                ent.Comp.ViewedFilePath = null;
+                break;
+
+            case FileBrowserAction.DeleteFile:
+                if (ent.Comp.CurrentDirectory == "/disk/" && TryGetInsertedDisk(compUid, out var delDisk, out var delDiskFs, out _))
+                {
+                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(delDisk, cleanPath, delDiskFs)
+                        ? $"Deleted disk file '{cleanPath}'."
+                        : $"Cannot delete '{cleanPath}'.";
+                }
+                else if (driveUid != null && fsComp != null)
+                {
+                    ent.Comp.StatusMessage = _fileSystem.TryDeleteFile(driveUid.Value, cleanPath, fsComp)
+                        ? $"Deleted '{cleanPath}'."
+                        : $"Cannot delete '{cleanPath}' (read-only or missing).";
+                }
+                break;
+
+            case FileBrowserAction.RunProgram:
+                if (_computer.TryLaunchExecutable(compUid, cleanPath, out _, out var err, args.Actor))
+                    ent.Comp.StatusMessage = $"Launched '{cleanPath}'.";
+                else
+                    ent.Comp.StatusMessage = err;
+                break;
+
+            case FileBrowserAction.CopyToDisk:
+                if (driveUid != null && fsComp != null &&
+                    _fileSystem.TryGetFile<VirtualFile>(driveUid.Value, cleanPath, out var srcFile, fsComp) &&
+                    TryGetInsertedDisk(compUid, out var dstDisk, out var dstDiskFs, out _))
+                {
+                    if (_fileSystem.IsCopyProtectedBlueprint(srcFile))
+                    {
+                        ent.Comp.StatusMessage = "Cannot copy encrypted recipe file — encrypted blueprints are hardware-locked to their disk.";
+                        break;
+                    }
+
+                    var clone = srcFile.Clone();
+                    clone.IsReadOnly = false;
+                    ent.Comp.StatusMessage = _fileSystem.TryWriteFile(dstDisk, clone, dstDiskFs)
+                        ? $"Copied '{cleanPath}' to disk."
+                        : "Copy failed: Disk full or read-only.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = "No writable data disk inserted.";
+                }
+                break;
+
+            case FileBrowserAction.CopyToInternal:
+                if (driveUid != null && fsComp != null &&
+                    TryGetInsertedDisk(compUid, out var srcDisk, out var srcDiskFs, out _) &&
+                    _fileSystem.TryGetFile<VirtualFile>(srcDisk, cleanPath, out var diskFile, srcDiskFs))
+                {
+                    if (_fileSystem.IsCopyProtectedBlueprint(diskFile))
+                    {
+                        ent.Comp.StatusMessage = "Cannot copy encrypted recipe file — encrypted blueprints are hardware-locked to their disk.";
+                        break;
+                    }
+
+                    var clone = diskFile.Clone();
+                    clone.IsReadOnly = false;
+                    ent.Comp.StatusMessage = _fileSystem.TryWriteFile(driveUid.Value, clone, fsComp)
+                        ? $"Copied '{cleanPath}' to hard drive."
+                        : "Copy failed: Hard drive full.";
+                }
+                else
+                {
+                    ent.Comp.StatusMessage = "Copy failed: Missing hard drive or file.";
+                }
+                break;
+
+            case FileBrowserAction.CreateFile:
+                if (driveUid != null && fsComp != null)
+                {
+                    var count = 1;
+                    while (_fileSystem.TryGetFile<TextVirtualFile>(driveUid.Value, $"/notes/note_{count}.txt", out _, fsComp))
+                        count++;
+
+                    var newFile = new TextVirtualFile
+                    {
+                        Name = $"note_{count}",
+                        Extension = "txt",
+                        Directory = "/notes/",
+                        TextContent = "Created in File Browser.",
+                        Size = 128
+                    };
+                    ent.Comp.StatusMessage = _fileSystem.TryWriteFile(driveUid.Value, newFile, fsComp)
+                        ? $"Created /notes/{newFile.Name}.txt"
+                        : "Insufficient drive space.";
+                }
+                break;
+
+            case FileBrowserAction.EjectDisk:
+                if (TryComp<OxydComputerComponent>(compUid, out var oxyd) &&
+                    oxyd.HostMachine is { } hostUid &&
+                    _itemSlots.TryGetSlot(hostUid, PdaComponent.PdaDiskSlotId, out var diskSlot))
+                {
+                    if (IsHeldOrWornByUser(hostUid, args.Actor) || _interaction.InRangeUnobstructed(args.Actor, hostUid))
+                        _itemSlots.TryEjectToHands(hostUid, diskSlot, args.Actor);
+                    else
+                        _itemSlots.TryEject(hostUid, diskSlot, null, out _);
+                }
+                break;
+        }
+
+        UpdateUi(ent.Owner, compUid, ent.Comp);
+    }
+
+    private bool IsHeldOrWornByUser(EntityUid entity, EntityUid user)
+    {
+        var current = entity;
+        while (_container.TryGetContainingContainer((current, null), out var container))
+        {
+            if (container.Owner == user)
+                return true;
+            current = container.Owner;
+        }
+
+        return false;
+    }
+
+    public void UpdateUi(EntityUid progUid, EntityUid compUid, FileBrowserProgramComponent comp)
+    {
+        var files = new List<FileBrowserItemDto>();
+        var hasHdd = _fileSystem.TryFindFileSystem(compUid, out var driveUid, out var fsComp);
+
+        if (hasHdd && fsComp != null)
+        {
+            foreach (var f in fsComp.Files.Values)
+            {
+                int? uses = f is RecipeBlueprintFile bp ? bp.RemainingUses : null;
+                var enc = _fileSystem.IsCopyProtectedBlueprint(f);
+                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: false, lastModified: f.LastModified));
+            }
+        }
+
+        var hasDisk = TryGetInsertedDisk(compUid, out var diskUid, out var diskFs, out var diskName);
+        if (hasDisk && diskFs != null)
+        {
+            foreach (var f in diskFs.Files.Values)
+            {
+                int? uses = f is RecipeBlueprintFile bp ? bp.RemainingUses : null;
+                var enc = _fileSystem.IsCopyProtectedBlueprint(f);
+                files.Add(new FileBrowserItemDto(f.Name, f.Extension, f.Directory, f.Size, f.IsReadOnly, enc, uses, isOnDisk: true, lastModified: f.LastModified));
+            }
+        }
+
+        string? viewedName = null;
+        string? viewedContent = null;
+        TimeSpan? viewedLastModified = null;
+        if (!string.IsNullOrEmpty(comp.ViewedFilePath))
+        {
+            VirtualFile? targetFile = null;
+            if (comp.ViewedFileIsOnDisk && diskFs != null)
+                diskFs.Files.TryGetValue(comp.ViewedFilePath, out targetFile);
+            else if (fsComp != null)
+                fsComp.Files.TryGetValue(comp.ViewedFilePath, out targetFile);
+
+            if (targetFile != null)
+            {
+                viewedName = $"{targetFile.Name}.{targetFile.Extension}";
+                viewedContent = FormatFileContent(targetFile);
+                viewedLastModified = targetFile.LastModified;
+            }
+        }
+
+        var stats = CompOrNull<ComputerStatsComponent>(compUid);
+        var bw = CompOrNull<NetworkBandwidthComponent>(compUid);
+
+        var state = new FileBrowserUiState(
+            comp.CurrentDirectory,
+            files,
+            _guid.GetGuid(compUid),
+            stats?.CurrentCpuLoadPercent ?? 0f,
+            stats?.UsedRamMb ?? 0,
+            stats?.RamMb ?? 0,
+            fsComp?.UsedStorageBytes ?? 0,
+            fsComp?.MaxStorageBytes ?? 0,
+            stats?.NetworkBandwidthBps ?? 0,
+            bw?.IsSaturated ?? false,
+            comp.StatusMessage,
+            hasHdd,
+            viewedName,
+            viewedContent,
+            comp.ViewedFileIsOnDisk,
+            hasDisk,
+            hasDisk ? diskName : null,
+            diskFs?.UsedStorageBytes,
+            diskFs?.MaxStorageBytes,
+            viewedLastModified);
+
+        if (_ui.HasUi(progUid, ProgramUiKey.Key))
+            _ui.SetUiState(progUid, ProgramUiKey.Key, state);
+    }
+
+    private static string FormatFileContent(VirtualFile f)
+    {
+        return f switch
+        {
+            TextVirtualFile tf => tf.TextContent,
+            ProgramVirtualFile pf => $"NTOS Application\nProgram Prototype: {pf.ProgramId}\nTitle: {pf.Title}\nSize: {ComputerSizeFormat.FormatStorageQb(pf.Size)}\nRAM Footprint: {pf.RamUsageMb} QB\nCPU Budget: {pf.CpuUsagePercent:0.#}%",
+            RecipeBlueprintFile bf => $"Autolathe Blueprint (.lathe)\nRecipes ({bf.GetAllRecipes().Count()}): {string.Join(", ", bf.GetAllRecipes())}\nSize: {ComputerSizeFormat.FormatStorageQb(bf.Size)}\nCopy-Protected: {(bf.IsEncrypted ? "Yes (Encrypted Disk-Only)" : "No")}\nRemaining Uses: {bf.RemainingUses?.ToString() ?? "Unlimited"}",
+            DatabaseVirtualFile df => $"Database Table: {df.TableName}\nEntries: {df.Data.Count}\n" + string.Join("\n", df.Data.Select(kv => $"  {kv.Key}: {kv.Value}")),
+            TaskListVirtualFile tk => $"NanoTask Checklist ({tk.Tasks.Count} items)\n" + string.Join("\n", tk.Tasks.Select(t => $"  [{(t.IsTaskDone ? "x" : " ")}] #{t.Id} {t.Description} -> {t.TaskIsFor}")),
+            AccessCodesVirtualFile acc => $"ID Access Codes (.acc)\nHolder: {acc.OwnerName}{(string.IsNullOrWhiteSpace(acc.JobTitle) ? "" : $" ({acc.JobTitle})")}\nAccess Levels ({acc.AccessTags.Count}): {(acc.AccessTags.Count > 0 ? string.Join(", ", acc.AccessTags.Select(t => t.Id)) : "(none)")}",
+            _ => $"{f.Name}.{f.Extension} ({ComputerSizeFormat.FormatStorageQb(f.Size)})"
+        };
+    }
+}

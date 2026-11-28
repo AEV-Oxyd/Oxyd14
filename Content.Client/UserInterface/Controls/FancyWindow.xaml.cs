@@ -72,8 +72,27 @@ namespace Content.Client.UserInterface.Controls
             _guidebookSystem.OpenHelp(HelpGuidebookIds);
         }
 
+        private bool _isEmbedded;
+        public bool IsEmbedded
+        {
+            get => _isEmbedded;
+            set
+            {
+                _isEmbedded = value;
+                HeaderContainer.Visible = !value;
+                HeaderDivider.Visible = !value;
+                WindowBackground.Visible = !value;
+                CloseButton.Visible = !value;
+                if (value)
+                    HelpButton.Visible = false;
+            }
+        }
+
         protected override DragMode GetDragModeFor(Vector2 relativeMousePos)
         {
+            if (IsEmbedded)
+                return DragMode.None;
+
             var mode = DragMode.Move;
 
             if (Resizable)

@@ -97,9 +97,9 @@ namespace Content.Client.Examine
 
             if (examinerComp.CheckInRangeUnOccluded)
             {
-                // TODO fix this. This should be using the examiner's eye component, not eye manager.
+                // Allow examining entities inside either the player's main viewport or an actively viewed surveillance camera feed.
                 var b = _eyeManager.GetWorldViewbounds();
-                if (!b.Contains(target.Position))
+                if (!b.Contains(target.Position) && !IsTargetNearActiveCamera(examiner, target, GetExaminerRange(examiner)))
                     return false;
             }
 
@@ -196,8 +196,17 @@ namespace Content.Client.Examine
             }
             else
             {
-                _popupPos = _eyeManager.CoordinatesToScreen(Transform(target).Coordinates);
-                _popupPos = _userInterfaceManager.ScreenToUIPosition(_popupPos);
+                var targetWorld = _transform.GetMapCoordinates(target);
+                if (_eyeManager.GetWorldViewbounds().Contains(targetWorld.Position))
+                {
+                    _popupPos = _eyeManager.CoordinatesToScreen(Transform(target).Coordinates);
+                    _popupPos = _userInterfaceManager.ScreenToUIPosition(_popupPos);
+                }
+                else
+                {
+                    // When examining via a secondary camera viewport, open the tooltip at the cursor so it stays on-screen.
+                    _popupPos = _userInterfaceManager.MousePositionScaled;
+                }
             }
 
             // Actually open the tooltip.

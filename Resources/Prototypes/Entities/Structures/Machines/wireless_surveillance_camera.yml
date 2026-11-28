@@ -9,6 +9,11 @@
   components:
     - type: InteractionOutline
     - type: Eye
+    - type: DeviceGuid
+    - type: SurveillanceCameraLog
+      maxMemoryBytes: 4096
+      witnessRange: 8.5
+      hasMicrophoneUpgrade: true
     - type: WirelessNetwork
       range: 200
     - type: Damageable
